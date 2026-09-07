@@ -65,7 +65,7 @@ docs = [
 dev = [
     "pytest>=8",
     "pytest-asyncio>=0.24",
-    "ruff==0.16.5",
+    "ruff==0.16.6",
     # The UI conformance loop drives a real browser. Dev-only by principle 5:
     # a plant PC renders the screens; it never carries the tooling that
     # audits them.
