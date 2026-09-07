@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Certificates — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/coa.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="coa"></header>
+
+  <section class="object-head no-print">
+    <div class="object-title">
+      <h1>Certificates of analysis</h1>
+      <span class="spacer"></span>
+      <form id="find" class="row">
+        <input id="q" type="search" placeholder="Order code or pallet serial" aria-label="Order code or pallet serial" data-assist="coa-search">
+        <button id="find-submit">Open</button>
+      </form>
+      <button id="print" class="ghost" type="button">Print</button>
+    </div>
+    <p class="muted small">Issued when an order completes. Immutable once issued; a correction issues a
+      superseding revision that names the original. Every figure is read from the MES's own records.</p>
+  </section>
+
+  <p id="banner" class="banner hidden no-print"></p>
+
+  <main class="object-main">
+    <section id="cert-panel" class="panel certificate" hidden>
+      <div class="cert-meta no-print">
+        <span id="cert-code" class="mono"></span>
+        <span id="cert-revisions" class="muted small"></span>
+        <span class="spacer"></span>
+        <button id="reissue" class="ghost small" type="button" data-needs-cap="quality.close_nc">Reissue</button>
+      </div>
+      <article id="cert-body" class="cert-body" data-assist="coa-body"></article>
+    </section>
+
+    <section id="list-panel" class="panel no-print">
+      <h2>In force <span id="list-count" class="muted"></span></h2>
+      <div class="filter-bar" data-assist="coa-filters">
+        <input id="list-q" type="search" placeholder="Order code" aria-label="Filter by order code">
+        <select id="list-material" aria-label="Material"><option value="">Any material</option></select>
+      </div>
+      <div class="table-wrap"><table id="list-table" class="row-select">
+        <thead><tr><th>Order</th><th>Material</th><th class="num">Revision</th><th>Issued</th><th>By</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div id="list-pager" class="pager"></div>
+    </section>
+  </main>
+
+  <p class="screen-source no-print">certificates /coa · one /coa/{order} · reissue /coa/{order} · pallet /coa/pallet/{serial}, /coa/pallet/{serial}/data</p>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/coa.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+[Unit]
+Description=nightly fsmes night shift
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+# main is LUKS-encrypted and often off overnight; a missed night runs on the
+# next boot instead of silently not happening (same policy as the rollup).
+Persistent=true
+
+[Install]
+WantedBy=timers.target

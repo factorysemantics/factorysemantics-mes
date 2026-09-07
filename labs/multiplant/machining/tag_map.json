@@ -1,0 +1,53 @@
+{
+  "_comment": "Northgate Machining, served in the twin's own address space by `mes run-opc-sim --replay`. Objects and tag names match the generated CSV tables exactly. Read-only (`order_tag` null) because a replayed CSV cannot be written to - production still books, because a counter delta auto-starts a released operation.",
+  "_cycle_seconds": "60 / rate_per_min from line.json: Saw 22/min, Mill 18/min, Deburr 25/min. These are the ideal cycle times OEE performance is measured against - a guessed one turns performance into fiction, so they are derived, not invented.",
+  "_state_map": "Same site decision as the bottling line, and the same consequences: starved and blocked are IDLE (healthy machine, nothing to do), changeover is SETUP (planned - must not count against availability), only a genuine fault is DOWN.",
+  "machines": [
+    {
+      "equipment": "SAW01",
+      "object": "Saw",
+      "cycle_seconds": 2.727,
+      "analog": "BladeLoad",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MILL01",
+      "object": "Mill",
+      "cycle_seconds": 3.333,
+      "analog": "SpindleTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "DEB01",
+      "object": "Deburr",
+      "cycle_seconds": 2.4,
+      "analog": "CycleForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    }
+  ],
+  "_tags": "Each machine subscribes to everything its line publishes: the loader fills that in from the generated tags.json. Set extra_tags on a machine only to pin a hand-picked subset, which is what a real server needs."
+}

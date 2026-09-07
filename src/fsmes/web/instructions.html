@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Work Instructions — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/orders.css">
+<link rel="stylesheet" href="/static/instructions.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="instructions"></header>
+
+  <main class="instructions-layout">
+    <section class="panel">
+      <h2>Controlled documents <span id="catalogue-count" class="muted"></span></h2>
+      <p class="muted small">The revision in force is the one the floor follows.
+        Approving freezes it — a change opens the next revision and leaves the
+        old one readable, because “what did it say in March” is a question a
+        plant has to be able to answer.</p>
+      <div class="filter-bar" data-assist="instruction-filters">
+        <input id="doc-q" type="search" placeholder="Code or title" aria-label="Document code or title">
+        <select id="doc-state" aria-label="State">
+          <option value="">Any state</option>
+          <option value="in_force">in force</option>
+          <option value="draft">draft only</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table id="catalogue" data-assist="instruction-list">
+          <thead><tr><th>Document</th><th>Title</th><th>In force</th><th>State</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="doc-pager" class="pager"></div>
+      <p id="empty" class="muted hidden" style="padding:14px 2px">
+        No instructions yet. An admin can draft one for every specification and
+        routing with <code>fsmes draft-instructions</code>, or write one here.
+      </p>
+      <form id="form-doc" class="stack" data-needs-cap="documents.write" data-assist="instruction-new">
+        <h3 class="mt">New document</h3>
+        <div class="row">
+          <input name="code" placeholder="Code (WI-…)" required>
+          <input name="title" placeholder="Title" required>
+        </div>
+        <textarea name="body" rows="4" placeholder="The procedure, in markdown. It arrives as a draft; a person approves it."></textarea>
+        <div class="row"><button>Create draft</button></div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2 id="doc-title">Select a document</h2>
+      <div id="doc-empty" class="muted" style="padding:24px 2px">
+        Choose a document on the left to read it.
+      </div>
+
+      <div id="doc" class="hidden">
+        <div class="doc-meta">
+          <span class="pill" id="doc-status">—</span>
+          <span class="muted" id="doc-rev">—</span>
+          <span class="muted" id="doc-approval">—</span>
+        </div>
+        <div id="doc-anchors" class="anchors"></div>
+        <div id="doc-model" class="drafted hidden"></div>
+
+        <article id="doc-body" class="doc-body" data-assist="instruction-body"></article>
+
+        <div class="doc-actions" id="doc-actions"></div>
+
+        <h3 class="mt">Revision history</h3>
+        <div class="table-wrap">
+          <table id="history">
+            <thead><tr><th>Rev</th><th>State</th><th>Drafted by</th><th>Approved by</th><th>When</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/instructions.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

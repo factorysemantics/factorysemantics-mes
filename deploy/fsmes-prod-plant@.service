@@ -1,0 +1,20 @@
+[Unit]
+Description=fsmes prod plant %i - the public demo environment
+After=network-online.target
+
+[Service]
+# prod is a checkout pinned to a release tag, changed only by deploy/promote.sh.
+# Its registry, data and secrets live under ~/.config/fsmes/prod, never in the
+# checkout, so a promote never touches them.
+Environment=FSMES_PLANT_REGISTRY=%h/.config/fsmes/prod/plants.toml
+# The design chat is a development tool; the public never sees it.
+Environment=MES_DESIGN_CHAT=0
+EnvironmentFile=%h/.config/fsmes/prod/env
+Type=simple
+WorkingDirectory=%h/Projects/fsmes-prod
+ExecStart=%h/Projects/fsmes-prod/.venv/bin/fsmes plant %i run --root %h/Projects/fsmes-prod
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

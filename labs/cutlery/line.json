@@ -1,0 +1,6872 @@
+{
+  "_what": "A cutlery plant giving 60,041,666 things a day their own id, each judged by a vision station: 9 moulding lines, 32 stackers, 16 wrappers, 4 palletizers. Built by build_config.py; the flow between lines is carried by the replay's inspection groups.",
+  "_plant": {
+    "pieces_per_type_per_day": 10000000,
+    "pieces_per_day": 30000000,
+    "stacks_per_day": 10000000,
+    "plates_per_day": 10000000,
+    "wraps_per_day": 10000000,
+    "pallets_per_day": 41666,
+    "ids_per_day": 60041666,
+    "inspection_events_per_day": 50000000,
+    "wraps_per_pallet": 240,
+    "stacker_cycle_s": 0.276,
+    "wrapper_cycle_s": 0.138,
+    "pallet_cycle_s": 8.3
+  },
+  "lines": [
+    {
+      "name": "FORK1",
+      "seed": 9200,
+      "duration_s": 3600,
+      "buffers": {
+        "capacity": 3000,
+        "initial": 600
+      },
+      "stations": [
+        {
+          "name": "Mold",
+          "rate_per_min": 2342.59,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "MeltTemp",
+              "base": 214.0,
+              "noise": 2.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "MeltTempSP",
+                "min": 200.0,
+                "max": 235.0,
+                "lag_s": 120.0
+              }
+            },
+            {
+              "name": "CycleTime",
+              "base": 8.2,
+              "noise": 0.15,
+              "unit": "s"
+            }
+          ]
+        },
+        {
+          "name": "Degate",
+          "rate_per_min": 2310.19,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "BladeWear",
+              "base": 15.0,
+              "noise": 0.8,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Mark",
+          "rate_per_min": 2314.81,
+          "scrap_pct": 0.15,
+          "analogs": [
+            {
+              "name": "LaserPower",
+              "base": 18.0,
+              "noise": 0.4,
+              "unit": "W"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.97,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "piece",
+            "prefix": "F1",
+            "material": "UT-FORK",
+            "attributes": [
+              {
+                "name": "Length",
+                "unit": "mm",
+                "nominal": 165.0,
+                "min": 164.0,
+                "max": 166.0,
+                "sigma": 0.25
+              },
+              {
+                "name": "TineGap",
+                "unit": "mm",
+                "nominal": 3.2,
+                "min": 2.9,
+                "max": 3.5,
+                "sigma": 0.07
+              },
+              {
+                "name": "Flash",
+                "unit": "mm",
+                "nominal": 0.05,
+                "min": 0.0,
+                "max": 0.2,
+                "sigma": 0.03
+              },
+              {
+                "name": "Gloss",
+                "unit": "GU",
+                "nominal": 82.0,
+                "min": 75.0,
+                "max": 90.0,
+                "sigma": 1.8
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Mold",
+          "start": 600,
+          "end": 690
+        },
+        {
+          "type": "micro_stops",
+          "station": "Mark",
+          "every_s": [
+            240,
+            420
+          ],
+          "duration_s": [
+            6,
+            14
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "utensil",
+        "area": "Moulding",
+        "utensil": "FORK",
+        "material": {
+          "code": "UT-FORK",
+          "name": "Fork (PP)",
+          "unit": "ea"
+        },
+        "raw": {
+          "code": "RAW-PP",
+          "name": "Polypropylene resin",
+          "unit": "kg"
+        },
+        "marker": "FORK1_Mark",
+        "dimensional_specs": [
+          [
+            "length_mm",
+            "mm",
+            164.0,
+            166.0,
+            165.0
+          ],
+          [
+            "width_mm",
+            "mm",
+            24.0,
+            26.0,
+            25.0
+          ],
+          [
+            "thickness_mm",
+            "mm",
+            1.9,
+            2.3,
+            2.1
+          ],
+          [
+            "weight_g",
+            "g",
+            3.6,
+            4.2,
+            3.9
+          ],
+          [
+            "tine_gap_mm",
+            "mm",
+            2.9,
+            3.5,
+            3.2
+          ]
+        ]
+      }
+    },
+    {
+      "name": "FORK2",
+      "seed": 9201,
+      "duration_s": 3600,
+      "buffers": {
+        "capacity": 3000,
+        "initial": 600
+      },
+      "stations": [
+        {
+          "name": "Mold",
+          "rate_per_min": 2342.59,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "MeltTemp",
+              "base": 214.0,
+              "noise": 2.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "MeltTempSP",
+                "min": 200.0,
+                "max": 235.0,
+                "lag_s": 120.0
+              }
+            },
+            {
+              "name": "CycleTime",
+              "base": 8.2,
+              "noise": 0.15,
+              "unit": "s"
+            }
+          ]
+        },
+        {
+          "name": "Degate",
+          "rate_per_min": 2310.19,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "BladeWear",
+              "base": 18.0,
+              "noise": 0.8,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Mark",
+          "rate_per_min": 2314.81,
+          "scrap_pct": 0.15,
+          "analogs": [
+            {
+              "name": "LaserPower",
+              "base": 18.0,
+              "noise": 0.4,
+              "unit": "W"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.97,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "piece",
+            "prefix": "F2",
+            "material": "UT-FORK",
+            "attributes": [
+              {
+                "name": "Length",
+                "unit": "mm",
+                "nominal": 165.0,
+                "min": 164.0,
+                "max": 166.0,
+                "sigma": 0.25
+              },
+              {
+                "name": "TineGap",
+                "unit": "mm",
+                "nominal": 3.2,
+                "min": 2.9,
+                "max": 3.5,
+                "sigma": 0.07
+              },
+              {
+                "name": "Flash",
+                "unit": "mm",
+                "nominal": 0.05,
+                "min": 0.0,
+                "max": 0.2,
+                "sigma": 0.03
+              },
+              {
+                "name": "Gloss",
+                "unit": "GU",
+                "nominal": 82.0,
+                "min": 75.0,
+                "max": 90.0,
+                "sigma": 1.8
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Mold",
+          "start": 840,
+          "end": 930
+        },
+        {
+          "type": "micro_stops",
+          "station": "Mark",
+          "every_s": [
+            240,
+            420
+          ],
+          "duration_s": [
+            6,
+            14
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "utensil",
+        "area": "Moulding",
+        "utensil": "FORK",
+        "material": {
+          "code": "UT-FORK",
+          "name": "Fork (PP)",
+          "unit": "ea"
+        },
+        "raw": {
+          "code": "RAW-PP",
+          "name": "Polypropylene resin",
+          "unit": "kg"
+        },
+        "marker": "FORK2_Mark",
+        "dimensional_specs": [
+          [
+            "length_mm",
+            "mm",
+            164.0,
+            166.0,
+            165.0
+          ],
+          [
+            "width_mm",
+            "mm",
+            24.0,
+            26.0,
+            25.0
+          ],
+          [
+            "thickness_mm",
+            "mm",
+            1.9,
+            2.3,
+            2.1
+          ],
+          [
+            "weight_g",
+            "g",
+            3.6,
+            4.2,
+            3.9
+          ],
+          [
+            "tine_gap_mm",
+            "mm",
+            2.9,
+            3.5,
+            3.2
+          ]
+        ]
+      }
+    },
+    {
+      "name": "FORK3",
+      "seed": 9202,
+      "duration_s": 3600,
+      "buffers": {
+        "capacity": 3000,
+        "initial": 600
+      },
+      "stations": [
+        {
+          "name": "Mold",
+          "rate_per_min": 2342.59,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "MeltTemp",
+              "base": 214.0,
+              "noise": 2.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "MeltTempSP",
+                "min": 200.0,
+                "max": 235.0,
+                "lag_s": 120.0
+              }
+            },
+            {
+              "name": "CycleTime",
+              "base": 8.2,
+              "noise": 0.15,
+              "unit": "s"
+            }
+          ]
+        },
+        {
+          "name": "Degate",
+          "rate_per_min": 2310.19,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "BladeWear",
+              "base": 21.0,
+              "noise": 0.8,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Mark",
+          "rate_per_min": 2314.81,
+          "scrap_pct": 0.15,
+          "analogs": [
+            {
+              "name": "LaserPower",
+              "base": 18.0,
+              "noise": 0.4,
+              "unit": "W"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.97,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "piece",
+            "prefix": "F3",
+            "material": "UT-FORK",
+            "attributes": [
+              {
+                "name": "Length",
+                "unit": "mm",
+                "nominal": 165.0,
+                "min": 164.0,
+                "max": 166.0,
+                "sigma": 0.25
+              },
+              {
+                "name": "TineGap",
+                "unit": "mm",
+                "nominal": 3.2,
+                "min": 2.9,
+                "max": 3.5,
+                "sigma": 0.07
+              },
+              {
+                "name": "Flash",
+                "unit": "mm",
+                "nominal": 0.05,
+                "min": 0.0,
+                "max": 0.2,
+                "sigma": 0.03
+              },
+              {
+                "name": "Gloss",
+                "unit": "GU",
+                "nominal": 82.0,
+                "min": 75.0,
+                "max": 90.0,
+                "sigma": 1.8
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Mold",
+          "start": 1080,
+          "end": 1170
+        },
+        {
+          "type": "micro_stops",
+          "station": "Mark",
+          "every_s": [
+            240,
+            420
+          ],
+          "duration_s": [
+            6,
+            14
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "utensil",
+        "area": "Moulding",
+        "utensil": "FORK",
+        "material": {
+          "code": "UT-FORK",
+          "name": "Fork (PP)",
+          "unit": "ea"
+        },
+        "raw": {
+          "code": "RAW-PP",
+          "name": "Polypropylene resin",
+          "unit": "kg"
+        },
+        "marker": "FORK3_Mark",
+        "dimensional_specs": [
+          [
+            "length_mm",
+            "mm",
+            164.0,
+            166.0,
+            165.0
+          ],
+          [
+            "width_mm",
+            "mm",
+            24.0,
+            26.0,
+            25.0
+          ],
+          [
+            "thickness_mm",
+            "mm",
+            1.9,
+            2.3,
+            2.1
+          ],
+          [
+            "weight_g",
+            "g",
+            3.6,
+            4.2,
+            3.9
+          ],
+          [
+            "tine_gap_mm",
+            "mm",
+            2.9,
+            3.5,
+            3.2
+          ]
+        ]
+      }
+    },
+    {
+      "name": "SPOON1",
+      "seed": 9203,
+      "duration_s": 3600,
+      "buffers": {
+        "capacity": 3000,
+        "initial": 600
+      },
+      "stations": [
+        {
+          "name": "Mold",
+          "rate_per_min": 2342.59,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "MeltTemp",
+              "base": 218.0,
+              "noise": 2.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "MeltTempSP",
+                "min": 200.0,
+                "max": 235.0,
+                "lag_s": 120.0
+              }
+            },
+            {
+              "name": "CycleTime",
+              "base": 8.2,
+              "noise": 0.15,
+              "unit": "s"
+            }
+          ]
+        },
+        {
+          "name": "Degate",
+          "rate_per_min": 2310.19,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "BladeWear",
+              "base": 15.0,
+              "noise": 0.8,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Mark",
+          "rate_per_min": 2314.81,
+          "scrap_pct": 0.15,
+          "analogs": [
+            {
+              "name": "LaserPower",
+              "base": 18.0,
+              "noise": 0.4,
+              "unit": "W"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.97,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "piece",
+            "prefix": "S1",
+            "material": "UT-SPOON",
+            "attributes": [
+              {
+                "name": "Length",
+                "unit": "mm",
+                "nominal": 160.0,
+                "min": 159.0,
+                "max": 161.0,
+                "sigma": 0.25
+              },
+              {
+                "name": "BowlDepth",
+                "unit": "mm",
+                "nominal": 9.0,
+                "min": 8.5,
+                "max": 9.5,
+                "sigma": 0.12
+              },
+              {
+                "name": "Flash",
+                "unit": "mm",
+                "nominal": 0.05,
+                "min": 0.0,
+                "max": 0.2,
+                "sigma": 0.03
+              },
+              {
+                "name": "Gloss",
+                "unit": "GU",
+                "nominal": 82.0,
+                "min": 75.0,
+                "max": 90.0,
+                "sigma": 1.8
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Mold",
+          "start": 1320,
+          "end": 1410
+        },
+        {
+          "type": "micro_stops",
+          "station": "Mark",
+          "every_s": [
+            240,
+            420
+          ],
+          "duration_s": [
+            6,
+            14
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "utensil",
+        "area": "Moulding",
+        "utensil": "SPOON",
+        "material": {
+          "code": "UT-SPOON",
+          "name": "Spoon (PP)",
+          "unit": "ea"
+        },
+        "raw": {
+          "code": "RAW-PP",
+          "name": "Polypropylene resin",
+          "unit": "kg"
+        },
+        "marker": "SPOON1_Mark",
+        "dimensional_specs": [
+          [
+            "length_mm",
+            "mm",
+            159.0,
+            161.0,
+            160.0
+          ],
+          [
+            "width_mm",
+            "mm",
+            33.0,
+            35.0,
+            34.0
+          ],
+          [
+            "thickness_mm",
+            "mm",
+            1.9,
+            2.3,
+            2.1
+          ],
+          [
+            "weight_g",
+            "g",
+            4.4,
+            5.0,
+            4.7
+          ],
+          [
+            "bowl_depth_mm",
+            "mm",
+            8.5,
+            9.5,
+            9.0
+          ]
+        ]
+      }
+    },
+    {
+      "name": "SPOON2",
+      "seed": 9204,
+      "duration_s": 3600,
+      "buffers": {
+        "capacity": 3000,
+        "initial": 600
+      },
+      "stations": [
+        {
+          "name": "Mold",
+          "rate_per_min": 2342.59,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "MeltTemp",
+              "base": 218.0,
+              "noise": 2.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "MeltTempSP",
+                "min": 200.0,
+                "max": 235.0,
+                "lag_s": 120.0
+              }
+            },
+            {
+              "name": "CycleTime",
+              "base": 8.2,
+              "noise": 0.15,
+              "unit": "s"
+            }
+          ]
+        },
+        {
+          "name": "Degate",
+          "rate_per_min": 2310.19,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "BladeWear",
+              "base": 18.0,
+              "noise": 0.8,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Mark",
+          "rate_per_min": 2314.81,
+          "scrap_pct": 0.15,
+          "analogs": [
+            {
+              "name": "LaserPower",
+              "base": 18.0,
+              "noise": 0.4,
+              "unit": "W"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.97,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "piece",
+            "prefix": "S2",
+            "material": "UT-SPOON",
+            "attributes": [
+              {
+                "name": "Length",
+                "unit": "mm",
+                "nominal": 160.0,
+                "min": 159.0,
+                "max": 161.0,
+                "sigma": 0.25
+              },
+              {
+                "name": "BowlDepth",
+                "unit": "mm",
+                "nominal": 9.0,
+                "min": 8.5,
+                "max": 9.5,
+                "sigma": 0.12
+              },
+              {
+                "name": "Flash",
+                "unit": "mm",
+                "nominal": 0.05,
+                "min": 0.0,
+                "max": 0.2,
+                "sigma": 0.03
+              },
+              {
+                "name": "Gloss",
+                "unit": "GU",
+                "nominal": 82.0,
+                "min": 75.0,
+                "max": 90.0,
+                "sigma": 1.8
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Mold",
+          "start": 1560,
+          "end": 1650
+        },
+        {
+          "type": "micro_stops",
+          "station": "Mark",
+          "every_s": [
+            240,
+            420
+          ],
+          "duration_s": [
+            6,
+            14
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "utensil",
+        "area": "Moulding",
+        "utensil": "SPOON",
+        "material": {
+          "code": "UT-SPOON",
+          "name": "Spoon (PP)",
+          "unit": "ea"
+        },
+        "raw": {
+          "code": "RAW-PP",
+          "name": "Polypropylene resin",
+          "unit": "kg"
+        },
+        "marker": "SPOON2_Mark",
+        "dimensional_specs": [
+          [
+            "length_mm",
+            "mm",
+            159.0,
+            161.0,
+            160.0
+          ],
+          [
+            "width_mm",
+            "mm",
+            33.0,
+            35.0,
+            34.0
+          ],
+          [
+            "thickness_mm",
+            "mm",
+            1.9,
+            2.3,
+            2.1
+          ],
+          [
+            "weight_g",
+            "g",
+            4.4,
+            5.0,
+            4.7
+          ],
+          [
+            "bowl_depth_mm",
+            "mm",
+            8.5,
+            9.5,
+            9.0
+          ]
+        ]
+      }
+    },
+    {
+      "name": "SPOON3",
+      "seed": 9205,
+      "duration_s": 3600,
+      "buffers": {
+        "capacity": 3000,
+        "initial": 600
+      },
+      "stations": [
+        {
+          "name": "Mold",
+          "rate_per_min": 2342.59,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "MeltTemp",
+              "base": 218.0,
+              "noise": 2.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "MeltTempSP",
+                "min": 200.0,
+                "max": 235.0,
+                "lag_s": 120.0
+              }
+            },
+            {
+              "name": "CycleTime",
+              "base": 8.2,
+              "noise": 0.15,
+              "unit": "s"
+            }
+          ]
+        },
+        {
+          "name": "Degate",
+          "rate_per_min": 2310.19,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "BladeWear",
+              "base": 21.0,
+              "noise": 0.8,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Mark",
+          "rate_per_min": 2314.81,
+          "scrap_pct": 0.15,
+          "analogs": [
+            {
+              "name": "LaserPower",
+              "base": 18.0,
+              "noise": 0.4,
+              "unit": "W"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.97,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "piece",
+            "prefix": "S3",
+            "material": "UT-SPOON",
+            "attributes": [
+              {
+                "name": "Length",
+                "unit": "mm",
+                "nominal": 160.0,
+                "min": 159.0,
+                "max": 161.0,
+                "sigma": 0.25
+              },
+              {
+                "name": "BowlDepth",
+                "unit": "mm",
+                "nominal": 9.0,
+                "min": 8.5,
+                "max": 9.5,
+                "sigma": 0.12
+              },
+              {
+                "name": "Flash",
+                "unit": "mm",
+                "nominal": 0.05,
+                "min": 0.0,
+                "max": 0.2,
+                "sigma": 0.03
+              },
+              {
+                "name": "Gloss",
+                "unit": "GU",
+                "nominal": 82.0,
+                "min": 75.0,
+                "max": 90.0,
+                "sigma": 1.8
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Mold",
+          "start": 1800,
+          "end": 1890
+        },
+        {
+          "type": "micro_stops",
+          "station": "Mark",
+          "every_s": [
+            240,
+            420
+          ],
+          "duration_s": [
+            6,
+            14
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "utensil",
+        "area": "Moulding",
+        "utensil": "SPOON",
+        "material": {
+          "code": "UT-SPOON",
+          "name": "Spoon (PP)",
+          "unit": "ea"
+        },
+        "raw": {
+          "code": "RAW-PP",
+          "name": "Polypropylene resin",
+          "unit": "kg"
+        },
+        "marker": "SPOON3_Mark",
+        "dimensional_specs": [
+          [
+            "length_mm",
+            "mm",
+            159.0,
+            161.0,
+            160.0
+          ],
+          [
+            "width_mm",
+            "mm",
+            33.0,
+            35.0,
+            34.0
+          ],
+          [
+            "thickness_mm",
+            "mm",
+            1.9,
+            2.3,
+            2.1
+          ],
+          [
+            "weight_g",
+            "g",
+            4.4,
+            5.0,
+            4.7
+          ],
+          [
+            "bowl_depth_mm",
+            "mm",
+            8.5,
+            9.5,
+            9.0
+          ]
+        ]
+      }
+    },
+    {
+      "name": "KNIFE1",
+      "seed": 9206,
+      "duration_s": 3600,
+      "buffers": {
+        "capacity": 3000,
+        "initial": 600
+      },
+      "stations": [
+        {
+          "name": "Mold",
+          "rate_per_min": 2342.59,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "MeltTemp",
+              "base": 222.0,
+              "noise": 2.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "MeltTempSP",
+                "min": 200.0,
+                "max": 235.0,
+                "lag_s": 120.0
+              }
+            },
+            {
+              "name": "CycleTime",
+              "base": 8.2,
+              "noise": 0.15,
+              "unit": "s"
+            }
+          ]
+        },
+        {
+          "name": "Degate",
+          "rate_per_min": 2310.19,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "BladeWear",
+              "base": 15.0,
+              "noise": 0.8,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Mark",
+          "rate_per_min": 2314.81,
+          "scrap_pct": 0.15,
+          "analogs": [
+            {
+              "name": "LaserPower",
+              "base": 18.0,
+              "noise": 0.4,
+              "unit": "W"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.97,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "piece",
+            "prefix": "K1",
+            "material": "UT-KNIFE",
+            "attributes": [
+              {
+                "name": "Length",
+                "unit": "mm",
+                "nominal": 175.0,
+                "min": 174.0,
+                "max": 176.0,
+                "sigma": 0.25
+              },
+              {
+                "name": "EdgeStraightness",
+                "unit": "mm",
+                "nominal": 0.1,
+                "min": 0.0,
+                "max": 0.4,
+                "sigma": 0.07
+              },
+              {
+                "name": "Flash",
+                "unit": "mm",
+                "nominal": 0.05,
+                "min": 0.0,
+                "max": 0.2,
+                "sigma": 0.03
+              },
+              {
+                "name": "Gloss",
+                "unit": "GU",
+                "nominal": 82.0,
+                "min": 75.0,
+                "max": 90.0,
+                "sigma": 1.8
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Mold",
+          "start": 2040,
+          "end": 2130
+        },
+        {
+          "type": "micro_stops",
+          "station": "Mark",
+          "every_s": [
+            240,
+            420
+          ],
+          "duration_s": [
+            6,
+            14
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "utensil",
+        "area": "Moulding",
+        "utensil": "KNIFE",
+        "material": {
+          "code": "UT-KNIFE",
+          "name": "Knife (PP)",
+          "unit": "ea"
+        },
+        "raw": {
+          "code": "RAW-PP",
+          "name": "Polypropylene resin",
+          "unit": "kg"
+        },
+        "marker": "KNIFE1_Mark",
+        "dimensional_specs": [
+          [
+            "length_mm",
+            "mm",
+            174.0,
+            176.0,
+            175.0
+          ],
+          [
+            "width_mm",
+            "mm",
+            17.0,
+            19.0,
+            18.0
+          ],
+          [
+            "thickness_mm",
+            "mm",
+            1.9,
+            2.3,
+            2.1
+          ],
+          [
+            "weight_g",
+            "g",
+            4.0,
+            4.6,
+            4.3
+          ],
+          [
+            "edge_straightness_mm",
+            "mm",
+            0.0,
+            0.4,
+            0.1
+          ]
+        ]
+      }
+    },
+    {
+      "name": "KNIFE2",
+      "seed": 9207,
+      "duration_s": 3600,
+      "buffers": {
+        "capacity": 3000,
+        "initial": 600
+      },
+      "stations": [
+        {
+          "name": "Mold",
+          "rate_per_min": 2342.59,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "MeltTemp",
+              "base": 222.0,
+              "noise": 2.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "MeltTempSP",
+                "min": 200.0,
+                "max": 235.0,
+                "lag_s": 120.0
+              }
+            },
+            {
+              "name": "CycleTime",
+              "base": 8.2,
+              "noise": 0.15,
+              "unit": "s"
+            }
+          ]
+        },
+        {
+          "name": "Degate",
+          "rate_per_min": 2310.19,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "BladeWear",
+              "base": 18.0,
+              "noise": 0.8,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Mark",
+          "rate_per_min": 2314.81,
+          "scrap_pct": 0.15,
+          "analogs": [
+            {
+              "name": "LaserPower",
+              "base": 18.0,
+              "noise": 0.4,
+              "unit": "W"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.97,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "piece",
+            "prefix": "K2",
+            "material": "UT-KNIFE",
+            "attributes": [
+              {
+                "name": "Length",
+                "unit": "mm",
+                "nominal": 175.0,
+                "min": 174.0,
+                "max": 176.0,
+                "sigma": 0.25
+              },
+              {
+                "name": "EdgeStraightness",
+                "unit": "mm",
+                "nominal": 0.1,
+                "min": 0.0,
+                "max": 0.4,
+                "sigma": 0.07
+              },
+              {
+                "name": "Flash",
+                "unit": "mm",
+                "nominal": 0.05,
+                "min": 0.0,
+                "max": 0.2,
+                "sigma": 0.03
+              },
+              {
+                "name": "Gloss",
+                "unit": "GU",
+                "nominal": 82.0,
+                "min": 75.0,
+                "max": 90.0,
+                "sigma": 1.8
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Mold",
+          "start": 2280,
+          "end": 2370
+        },
+        {
+          "type": "micro_stops",
+          "station": "Mark",
+          "every_s": [
+            240,
+            420
+          ],
+          "duration_s": [
+            6,
+            14
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "utensil",
+        "area": "Moulding",
+        "utensil": "KNIFE",
+        "material": {
+          "code": "UT-KNIFE",
+          "name": "Knife (PP)",
+          "unit": "ea"
+        },
+        "raw": {
+          "code": "RAW-PP",
+          "name": "Polypropylene resin",
+          "unit": "kg"
+        },
+        "marker": "KNIFE2_Mark",
+        "dimensional_specs": [
+          [
+            "length_mm",
+            "mm",
+            174.0,
+            176.0,
+            175.0
+          ],
+          [
+            "width_mm",
+            "mm",
+            17.0,
+            19.0,
+            18.0
+          ],
+          [
+            "thickness_mm",
+            "mm",
+            1.9,
+            2.3,
+            2.1
+          ],
+          [
+            "weight_g",
+            "g",
+            4.0,
+            4.6,
+            4.3
+          ],
+          [
+            "edge_straightness_mm",
+            "mm",
+            0.0,
+            0.4,
+            0.1
+          ]
+        ]
+      }
+    },
+    {
+      "name": "KNIFE3",
+      "seed": 9208,
+      "duration_s": 3600,
+      "buffers": {
+        "capacity": 3000,
+        "initial": 600
+      },
+      "stations": [
+        {
+          "name": "Mold",
+          "rate_per_min": 2342.59,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "MeltTemp",
+              "base": 222.0,
+              "noise": 2.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "MeltTempSP",
+                "min": 200.0,
+                "max": 235.0,
+                "lag_s": 120.0
+              }
+            },
+            {
+              "name": "CycleTime",
+              "base": 8.2,
+              "noise": 0.15,
+              "unit": "s"
+            }
+          ]
+        },
+        {
+          "name": "Degate",
+          "rate_per_min": 2310.19,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "BladeWear",
+              "base": 21.0,
+              "noise": 0.8,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Mark",
+          "rate_per_min": 2314.81,
+          "scrap_pct": 0.15,
+          "analogs": [
+            {
+              "name": "LaserPower",
+              "base": 18.0,
+              "noise": 0.4,
+              "unit": "W"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.97,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "piece",
+            "prefix": "K3",
+            "material": "UT-KNIFE",
+            "attributes": [
+              {
+                "name": "Length",
+                "unit": "mm",
+                "nominal": 175.0,
+                "min": 174.0,
+                "max": 176.0,
+                "sigma": 0.25
+              },
+              {
+                "name": "EdgeStraightness",
+                "unit": "mm",
+                "nominal": 0.1,
+                "min": 0.0,
+                "max": 0.4,
+                "sigma": 0.07
+              },
+              {
+                "name": "Flash",
+                "unit": "mm",
+                "nominal": 0.05,
+                "min": 0.0,
+                "max": 0.2,
+                "sigma": 0.03
+              },
+              {
+                "name": "Gloss",
+                "unit": "GU",
+                "nominal": 82.0,
+                "min": 75.0,
+                "max": 90.0,
+                "sigma": 1.8
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Mold",
+          "start": 2520,
+          "end": 2610
+        },
+        {
+          "type": "micro_stops",
+          "station": "Mark",
+          "every_s": [
+            240,
+            420
+          ],
+          "duration_s": [
+            6,
+            14
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "utensil",
+        "area": "Moulding",
+        "utensil": "KNIFE",
+        "material": {
+          "code": "UT-KNIFE",
+          "name": "Knife (PP)",
+          "unit": "ea"
+        },
+        "raw": {
+          "code": "RAW-PP",
+          "name": "Polypropylene resin",
+          "unit": "kg"
+        },
+        "marker": "KNIFE3_Mark",
+        "dimensional_specs": [
+          [
+            "length_mm",
+            "mm",
+            174.0,
+            176.0,
+            175.0
+          ],
+          [
+            "width_mm",
+            "mm",
+            17.0,
+            19.0,
+            18.0
+          ],
+          [
+            "thickness_mm",
+            "mm",
+            1.9,
+            2.3,
+            2.1
+          ],
+          [
+            "weight_g",
+            "g",
+            4.0,
+            4.6,
+            4.3
+          ],
+          [
+            "edge_straightness_mm",
+            "mm",
+            0.0,
+            0.4,
+            0.1
+          ]
+        ]
+      }
+    },
+    {
+      "name": "STACK01",
+      "seed": 9301,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST01",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 1,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Stacker",
+          "every_s": [
+            300,
+            500
+          ],
+          "duration_s": [
+            5,
+            12
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 1,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK01_Stacker"
+      }
+    },
+    {
+      "name": "STACK02",
+      "seed": 9302,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST02",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 1,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 1,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK02_Stacker"
+      }
+    },
+    {
+      "name": "STACK03",
+      "seed": 9303,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST03",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 2,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Stacker",
+          "every_s": [
+            300,
+            500
+          ],
+          "duration_s": [
+            5,
+            12
+          ]
+        },
+        {
+          "type": "down",
+          "station": "Stacker",
+          "start": 1590,
+          "end": 1650
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 2,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK03_Stacker"
+      }
+    },
+    {
+      "name": "STACK04",
+      "seed": 9304,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST04",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 2,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 2,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK04_Stacker"
+      }
+    },
+    {
+      "name": "STACK05",
+      "seed": 9305,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST05",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 3,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Stacker",
+          "every_s": [
+            300,
+            500
+          ],
+          "duration_s": [
+            5,
+            12
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 3,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK05_Stacker"
+      }
+    },
+    {
+      "name": "STACK06",
+      "seed": 9306,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST06",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 3,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 3,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK06_Stacker"
+      }
+    },
+    {
+      "name": "STACK07",
+      "seed": 9307,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST07",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 4,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Stacker",
+          "every_s": [
+            300,
+            500
+          ],
+          "duration_s": [
+            5,
+            12
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 4,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK07_Stacker"
+      }
+    },
+    {
+      "name": "STACK08",
+      "seed": 9308,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST08",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 4,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 4,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK08_Stacker"
+      }
+    },
+    {
+      "name": "STACK09",
+      "seed": 9309,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST09",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 5,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Stacker",
+          "every_s": [
+            300,
+            500
+          ],
+          "duration_s": [
+            5,
+            12
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 5,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK09_Stacker"
+      }
+    },
+    {
+      "name": "STACK10",
+      "seed": 9310,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST10",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 5,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 5,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK10_Stacker"
+      }
+    },
+    {
+      "name": "STACK11",
+      "seed": 9311,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST11",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 6,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Stacker",
+          "every_s": [
+            300,
+            500
+          ],
+          "duration_s": [
+            5,
+            12
+          ]
+        },
+        {
+          "type": "down",
+          "station": "Stacker",
+          "start": 1830,
+          "end": 1890
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 6,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK11_Stacker"
+      }
+    },
+    {
+      "name": "STACK12",
+      "seed": 9312,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST12",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 6,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 6,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK12_Stacker"
+      }
+    },
+    {
+      "name": "STACK13",
+      "seed": 9313,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST13",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 7,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Stacker",
+          "every_s": [
+            300,
+            500
+          ],
+          "duration_s": [
+            5,
+            12
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 7,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK13_Stacker"
+      }
+    },
+    {
+      "name": "STACK14",
+      "seed": 9314,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST14",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 7,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 7,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK14_Stacker"
+      }
+    },
+    {
+      "name": "STACK15",
+      "seed": 9315,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST15",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 8,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Stacker",
+          "every_s": [
+            300,
+            500
+          ],
+          "duration_s": [
+            5,
+            12
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 8,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK15_Stacker"
+      }
+    },
+    {
+      "name": "STACK16",
+      "seed": 9316,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST16",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 8,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 8,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK16_Stacker"
+      }
+    },
+    {
+      "name": "STACK17",
+      "seed": 9317,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST17",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 9,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Stacker",
+          "every_s": [
+            300,
+            500
+          ],
+          "duration_s": [
+            5,
+            12
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 9,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK17_Stacker"
+      }
+    },
+    {
+      "name": "STACK18",
+      "seed": 9318,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST18",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 9,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 9,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK18_Stacker"
+      }
+    },
+    {
+      "name": "STACK19",
+      "seed": 9319,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST19",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 10,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Stacker",
+          "every_s": [
+            300,
+            500
+          ],
+          "duration_s": [
+            5,
+            12
+          ]
+        },
+        {
+          "type": "down",
+          "station": "Stacker",
+          "start": 2070,
+          "end": 2130
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 10,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK19_Stacker"
+      }
+    },
+    {
+      "name": "STACK20",
+      "seed": 9320,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST20",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 10,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 10,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK20_Stacker"
+      }
+    },
+    {
+      "name": "STACK21",
+      "seed": 9321,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST21",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 11,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Stacker",
+          "every_s": [
+            300,
+            500
+          ],
+          "duration_s": [
+            5,
+            12
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 11,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK21_Stacker"
+      }
+    },
+    {
+      "name": "STACK22",
+      "seed": 9322,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST22",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 11,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 11,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK22_Stacker"
+      }
+    },
+    {
+      "name": "STACK23",
+      "seed": 9323,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST23",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 12,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Stacker",
+          "every_s": [
+            300,
+            500
+          ],
+          "duration_s": [
+            5,
+            12
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 12,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK23_Stacker"
+      }
+    },
+    {
+      "name": "STACK24",
+      "seed": 9324,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST24",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 12,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 12,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK24_Stacker"
+      }
+    },
+    {
+      "name": "STACK25",
+      "seed": 9325,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST25",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 13,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Stacker",
+          "every_s": [
+            300,
+            500
+          ],
+          "duration_s": [
+            5,
+            12
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 13,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK25_Stacker"
+      }
+    },
+    {
+      "name": "STACK26",
+      "seed": 9326,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST26",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 13,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 13,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK26_Stacker"
+      }
+    },
+    {
+      "name": "STACK27",
+      "seed": 9327,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST27",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 14,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Stacker",
+          "every_s": [
+            300,
+            500
+          ],
+          "duration_s": [
+            5,
+            12
+          ]
+        },
+        {
+          "type": "down",
+          "station": "Stacker",
+          "start": 2310,
+          "end": 2370
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 14,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK27_Stacker"
+      }
+    },
+    {
+      "name": "STACK28",
+      "seed": 9328,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST28",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 14,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 14,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK28_Stacker"
+      }
+    },
+    {
+      "name": "STACK29",
+      "seed": 9329,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST29",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 15,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Stacker",
+          "every_s": [
+            300,
+            500
+          ],
+          "duration_s": [
+            5,
+            12
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 15,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK29_Stacker"
+      }
+    },
+    {
+      "name": "STACK30",
+      "seed": 9330,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST30",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 15,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 15,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK30_Stacker"
+      }
+    },
+    {
+      "name": "STACK31",
+      "seed": 9331,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST31",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 16,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Stacker",
+          "every_s": [
+            300,
+            500
+          ],
+          "duration_s": [
+            5,
+            12
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 16,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK31_Stacker"
+      }
+    },
+    {
+      "name": "STACK32",
+      "seed": 9332,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Stacker",
+          "rate_per_min": 217.01,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "GripForce",
+              "base": 9.0,
+              "noise": 0.4,
+              "unit": "N"
+            },
+            {
+              "name": "VisionScore",
+              "base": 0.98,
+              "noise": 0.01,
+              "unit": ""
+            }
+          ],
+          "inspection": {
+            "kind": "stack",
+            "prefix": "ST32",
+            "material": "STACK-3",
+            "takes": [
+              "UT-FORK",
+              "UT-SPOON",
+              "UT-KNIFE"
+            ],
+            "members": 3,
+            "cell": 16,
+            "attributes": [
+              {
+                "name": "Count",
+                "unit": "pieces",
+                "nominal": 3.0,
+                "min": 3.0,
+                "max": 3.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Alignment",
+                "unit": "mm",
+                "nominal": 0.5,
+                "min": 0.0,
+                "max": 2.0,
+                "sigma": 0.3
+              },
+              {
+                "name": "Orientation",
+                "unit": "deg",
+                "nominal": 0.0,
+                "min": -5.0,
+                "max": 5.0,
+                "sigma": 1.2
+              },
+              {
+                "name": "Height",
+                "unit": "mm",
+                "nominal": 12.0,
+                "min": 11.0,
+                "max": 13.0,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "stacker",
+        "area": "Stacking",
+        "cell": 16,
+        "material": {
+          "code": "STACK-3",
+          "name": "Fork, spoon and knife stack",
+          "unit": "ea"
+        },
+        "station": "STACK32_Stacker"
+      }
+    },
+    {
+      "name": "WRAP01",
+      "seed": 9401,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Wrapper",
+          "rate_per_min": 434.03,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 138.0,
+              "noise": 1.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "SealTempSP",
+                "min": 120.0,
+                "max": 160.0,
+                "lag_s": 60.0
+              }
+            },
+            {
+              "name": "FilmTension",
+              "base": 2.6,
+              "noise": 0.12,
+              "unit": "N"
+            }
+          ],
+          "inspection": {
+            "kind": "wrap",
+            "prefix": "W01",
+            "material": "WRAP",
+            "members": 1,
+            "cell": 1,
+            "group": 1,
+            "plate": {
+              "prefix": "PLT01",
+              "material": "RAW-PLATE"
+            },
+            "attributes": [
+              {
+                "name": "SealIntegrity",
+                "unit": "%",
+                "nominal": 99.0,
+                "min": 95.0,
+                "max": 100.0,
+                "sigma": 0.9
+              },
+              {
+                "name": "FilmTension",
+                "unit": "N",
+                "nominal": 2.6,
+                "min": 2.0,
+                "max": 3.2,
+                "sigma": 0.15
+              },
+              {
+                "name": "PlatePresent",
+                "unit": "bool",
+                "nominal": 1.0,
+                "min": 1.0,
+                "max": 1.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Weight",
+                "unit": "g",
+                "nominal": 21.5,
+                "min": 20.5,
+                "max": 22.5,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Wrapper",
+          "every_s": [
+            200,
+            400
+          ],
+          "duration_s": [
+            4,
+            10
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "wrapper",
+        "area": "Wrapping",
+        "cell": 1,
+        "group": 1,
+        "material": {
+          "code": "WRAP",
+          "name": "Wrapped cutlery set on a plate",
+          "unit": "ea"
+        },
+        "plate": {
+          "code": "RAW-PLATE",
+          "name": "Paper plate",
+          "unit": "ea"
+        },
+        "station": "WRAP01_Wrapper"
+      }
+    },
+    {
+      "name": "WRAP02",
+      "seed": 9402,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Wrapper",
+          "rate_per_min": 434.03,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 138.0,
+              "noise": 1.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "SealTempSP",
+                "min": 120.0,
+                "max": 160.0,
+                "lag_s": 60.0
+              }
+            },
+            {
+              "name": "FilmTension",
+              "base": 2.6,
+              "noise": 0.12,
+              "unit": "N"
+            }
+          ],
+          "inspection": {
+            "kind": "wrap",
+            "prefix": "W02",
+            "material": "WRAP",
+            "members": 1,
+            "cell": 2,
+            "group": 1,
+            "plate": {
+              "prefix": "PLT02",
+              "material": "RAW-PLATE"
+            },
+            "attributes": [
+              {
+                "name": "SealIntegrity",
+                "unit": "%",
+                "nominal": 99.0,
+                "min": 95.0,
+                "max": 100.0,
+                "sigma": 0.9
+              },
+              {
+                "name": "FilmTension",
+                "unit": "N",
+                "nominal": 2.6,
+                "min": 2.0,
+                "max": 3.2,
+                "sigma": 0.15
+              },
+              {
+                "name": "PlatePresent",
+                "unit": "bool",
+                "nominal": 1.0,
+                "min": 1.0,
+                "max": 1.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Weight",
+                "unit": "g",
+                "nominal": 21.5,
+                "min": 20.5,
+                "max": 22.5,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Wrapper",
+          "start": 2140,
+          "end": 2260
+        },
+        {
+          "type": "micro_stops",
+          "station": "Wrapper",
+          "every_s": [
+            200,
+            400
+          ],
+          "duration_s": [
+            4,
+            10
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "wrapper",
+        "area": "Wrapping",
+        "cell": 2,
+        "group": 1,
+        "material": {
+          "code": "WRAP",
+          "name": "Wrapped cutlery set on a plate",
+          "unit": "ea"
+        },
+        "plate": {
+          "code": "RAW-PLATE",
+          "name": "Paper plate",
+          "unit": "ea"
+        },
+        "station": "WRAP02_Wrapper"
+      }
+    },
+    {
+      "name": "WRAP03",
+      "seed": 9403,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Wrapper",
+          "rate_per_min": 434.03,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 138.0,
+              "noise": 1.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "SealTempSP",
+                "min": 120.0,
+                "max": 160.0,
+                "lag_s": 60.0
+              }
+            },
+            {
+              "name": "FilmTension",
+              "base": 2.6,
+              "noise": 0.12,
+              "unit": "N"
+            }
+          ],
+          "inspection": {
+            "kind": "wrap",
+            "prefix": "W03",
+            "material": "WRAP",
+            "members": 1,
+            "cell": 3,
+            "group": 1,
+            "plate": {
+              "prefix": "PLT03",
+              "material": "RAW-PLATE"
+            },
+            "attributes": [
+              {
+                "name": "SealIntegrity",
+                "unit": "%",
+                "nominal": 99.0,
+                "min": 95.0,
+                "max": 100.0,
+                "sigma": 0.9
+              },
+              {
+                "name": "FilmTension",
+                "unit": "N",
+                "nominal": 2.6,
+                "min": 2.0,
+                "max": 3.2,
+                "sigma": 0.15
+              },
+              {
+                "name": "PlatePresent",
+                "unit": "bool",
+                "nominal": 1.0,
+                "min": 1.0,
+                "max": 1.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Weight",
+                "unit": "g",
+                "nominal": 21.5,
+                "min": 20.5,
+                "max": 22.5,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Wrapper",
+          "every_s": [
+            200,
+            400
+          ],
+          "duration_s": [
+            4,
+            10
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "wrapper",
+        "area": "Wrapping",
+        "cell": 3,
+        "group": 1,
+        "material": {
+          "code": "WRAP",
+          "name": "Wrapped cutlery set on a plate",
+          "unit": "ea"
+        },
+        "plate": {
+          "code": "RAW-PLATE",
+          "name": "Paper plate",
+          "unit": "ea"
+        },
+        "station": "WRAP03_Wrapper"
+      }
+    },
+    {
+      "name": "WRAP04",
+      "seed": 9404,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Wrapper",
+          "rate_per_min": 434.03,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 138.0,
+              "noise": 1.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "SealTempSP",
+                "min": 120.0,
+                "max": 160.0,
+                "lag_s": 60.0
+              }
+            },
+            {
+              "name": "FilmTension",
+              "base": 2.6,
+              "noise": 0.12,
+              "unit": "N"
+            }
+          ],
+          "inspection": {
+            "kind": "wrap",
+            "prefix": "W04",
+            "material": "WRAP",
+            "members": 1,
+            "cell": 4,
+            "group": 1,
+            "plate": {
+              "prefix": "PLT04",
+              "material": "RAW-PLATE"
+            },
+            "attributes": [
+              {
+                "name": "SealIntegrity",
+                "unit": "%",
+                "nominal": 99.0,
+                "min": 95.0,
+                "max": 100.0,
+                "sigma": 0.9
+              },
+              {
+                "name": "FilmTension",
+                "unit": "N",
+                "nominal": 2.6,
+                "min": 2.0,
+                "max": 3.2,
+                "sigma": 0.15
+              },
+              {
+                "name": "PlatePresent",
+                "unit": "bool",
+                "nominal": 1.0,
+                "min": 1.0,
+                "max": 1.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Weight",
+                "unit": "g",
+                "nominal": 21.5,
+                "min": 20.5,
+                "max": 22.5,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Wrapper",
+          "every_s": [
+            200,
+            400
+          ],
+          "duration_s": [
+            4,
+            10
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "wrapper",
+        "area": "Wrapping",
+        "cell": 4,
+        "group": 1,
+        "material": {
+          "code": "WRAP",
+          "name": "Wrapped cutlery set on a plate",
+          "unit": "ea"
+        },
+        "plate": {
+          "code": "RAW-PLATE",
+          "name": "Paper plate",
+          "unit": "ea"
+        },
+        "station": "WRAP04_Wrapper"
+      }
+    },
+    {
+      "name": "WRAP05",
+      "seed": 9405,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Wrapper",
+          "rate_per_min": 434.03,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 138.0,
+              "noise": 1.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "SealTempSP",
+                "min": 120.0,
+                "max": 160.0,
+                "lag_s": 60.0
+              }
+            },
+            {
+              "name": "FilmTension",
+              "base": 2.6,
+              "noise": 0.12,
+              "unit": "N"
+            }
+          ],
+          "inspection": {
+            "kind": "wrap",
+            "prefix": "W05",
+            "material": "WRAP",
+            "members": 1,
+            "cell": 5,
+            "group": 2,
+            "plate": {
+              "prefix": "PLT05",
+              "material": "RAW-PLATE"
+            },
+            "attributes": [
+              {
+                "name": "SealIntegrity",
+                "unit": "%",
+                "nominal": 99.0,
+                "min": 95.0,
+                "max": 100.0,
+                "sigma": 0.9
+              },
+              {
+                "name": "FilmTension",
+                "unit": "N",
+                "nominal": 2.6,
+                "min": 2.0,
+                "max": 3.2,
+                "sigma": 0.15
+              },
+              {
+                "name": "PlatePresent",
+                "unit": "bool",
+                "nominal": 1.0,
+                "min": 1.0,
+                "max": 1.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Weight",
+                "unit": "g",
+                "nominal": 21.5,
+                "min": 20.5,
+                "max": 22.5,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Wrapper",
+          "every_s": [
+            200,
+            400
+          ],
+          "duration_s": [
+            4,
+            10
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "wrapper",
+        "area": "Wrapping",
+        "cell": 5,
+        "group": 2,
+        "material": {
+          "code": "WRAP",
+          "name": "Wrapped cutlery set on a plate",
+          "unit": "ea"
+        },
+        "plate": {
+          "code": "RAW-PLATE",
+          "name": "Paper plate",
+          "unit": "ea"
+        },
+        "station": "WRAP05_Wrapper"
+      }
+    },
+    {
+      "name": "WRAP06",
+      "seed": 9406,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Wrapper",
+          "rate_per_min": 434.03,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 138.0,
+              "noise": 1.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "SealTempSP",
+                "min": 120.0,
+                "max": 160.0,
+                "lag_s": 60.0
+              }
+            },
+            {
+              "name": "FilmTension",
+              "base": 2.6,
+              "noise": 0.12,
+              "unit": "N"
+            }
+          ],
+          "inspection": {
+            "kind": "wrap",
+            "prefix": "W06",
+            "material": "WRAP",
+            "members": 1,
+            "cell": 6,
+            "group": 2,
+            "plate": {
+              "prefix": "PLT06",
+              "material": "RAW-PLATE"
+            },
+            "attributes": [
+              {
+                "name": "SealIntegrity",
+                "unit": "%",
+                "nominal": 99.0,
+                "min": 95.0,
+                "max": 100.0,
+                "sigma": 0.9
+              },
+              {
+                "name": "FilmTension",
+                "unit": "N",
+                "nominal": 2.6,
+                "min": 2.0,
+                "max": 3.2,
+                "sigma": 0.15
+              },
+              {
+                "name": "PlatePresent",
+                "unit": "bool",
+                "nominal": 1.0,
+                "min": 1.0,
+                "max": 1.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Weight",
+                "unit": "g",
+                "nominal": 21.5,
+                "min": 20.5,
+                "max": 22.5,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Wrapper",
+          "every_s": [
+            200,
+            400
+          ],
+          "duration_s": [
+            4,
+            10
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "wrapper",
+        "area": "Wrapping",
+        "cell": 6,
+        "group": 2,
+        "material": {
+          "code": "WRAP",
+          "name": "Wrapped cutlery set on a plate",
+          "unit": "ea"
+        },
+        "plate": {
+          "code": "RAW-PLATE",
+          "name": "Paper plate",
+          "unit": "ea"
+        },
+        "station": "WRAP06_Wrapper"
+      }
+    },
+    {
+      "name": "WRAP07",
+      "seed": 9407,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Wrapper",
+          "rate_per_min": 434.03,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 138.0,
+              "noise": 1.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "SealTempSP",
+                "min": 120.0,
+                "max": 160.0,
+                "lag_s": 60.0
+              }
+            },
+            {
+              "name": "FilmTension",
+              "base": 2.6,
+              "noise": 0.12,
+              "unit": "N"
+            }
+          ],
+          "inspection": {
+            "kind": "wrap",
+            "prefix": "W07",
+            "material": "WRAP",
+            "members": 1,
+            "cell": 7,
+            "group": 2,
+            "plate": {
+              "prefix": "PLT07",
+              "material": "RAW-PLATE"
+            },
+            "attributes": [
+              {
+                "name": "SealIntegrity",
+                "unit": "%",
+                "nominal": 99.0,
+                "min": 95.0,
+                "max": 100.0,
+                "sigma": 0.9
+              },
+              {
+                "name": "FilmTension",
+                "unit": "N",
+                "nominal": 2.6,
+                "min": 2.0,
+                "max": 3.2,
+                "sigma": 0.15
+              },
+              {
+                "name": "PlatePresent",
+                "unit": "bool",
+                "nominal": 1.0,
+                "min": 1.0,
+                "max": 1.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Weight",
+                "unit": "g",
+                "nominal": 21.5,
+                "min": 20.5,
+                "max": 22.5,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Wrapper",
+          "every_s": [
+            200,
+            400
+          ],
+          "duration_s": [
+            4,
+            10
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "wrapper",
+        "area": "Wrapping",
+        "cell": 7,
+        "group": 2,
+        "material": {
+          "code": "WRAP",
+          "name": "Wrapped cutlery set on a plate",
+          "unit": "ea"
+        },
+        "plate": {
+          "code": "RAW-PLATE",
+          "name": "Paper plate",
+          "unit": "ea"
+        },
+        "station": "WRAP07_Wrapper"
+      }
+    },
+    {
+      "name": "WRAP08",
+      "seed": 9408,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Wrapper",
+          "rate_per_min": 434.03,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 138.0,
+              "noise": 1.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "SealTempSP",
+                "min": 120.0,
+                "max": 160.0,
+                "lag_s": 60.0
+              }
+            },
+            {
+              "name": "FilmTension",
+              "base": 2.6,
+              "noise": 0.12,
+              "unit": "N"
+            }
+          ],
+          "inspection": {
+            "kind": "wrap",
+            "prefix": "W08",
+            "material": "WRAP",
+            "members": 1,
+            "cell": 8,
+            "group": 2,
+            "plate": {
+              "prefix": "PLT08",
+              "material": "RAW-PLATE"
+            },
+            "attributes": [
+              {
+                "name": "SealIntegrity",
+                "unit": "%",
+                "nominal": 99.0,
+                "min": 95.0,
+                "max": 100.0,
+                "sigma": 0.9
+              },
+              {
+                "name": "FilmTension",
+                "unit": "N",
+                "nominal": 2.6,
+                "min": 2.0,
+                "max": 3.2,
+                "sigma": 0.15
+              },
+              {
+                "name": "PlatePresent",
+                "unit": "bool",
+                "nominal": 1.0,
+                "min": 1.0,
+                "max": 1.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Weight",
+                "unit": "g",
+                "nominal": 21.5,
+                "min": 20.5,
+                "max": 22.5,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Wrapper",
+          "every_s": [
+            200,
+            400
+          ],
+          "duration_s": [
+            4,
+            10
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "wrapper",
+        "area": "Wrapping",
+        "cell": 8,
+        "group": 2,
+        "material": {
+          "code": "WRAP",
+          "name": "Wrapped cutlery set on a plate",
+          "unit": "ea"
+        },
+        "plate": {
+          "code": "RAW-PLATE",
+          "name": "Paper plate",
+          "unit": "ea"
+        },
+        "station": "WRAP08_Wrapper"
+      }
+    },
+    {
+      "name": "WRAP09",
+      "seed": 9409,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Wrapper",
+          "rate_per_min": 434.03,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 138.0,
+              "noise": 1.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "SealTempSP",
+                "min": 120.0,
+                "max": 160.0,
+                "lag_s": 60.0
+              }
+            },
+            {
+              "name": "FilmTension",
+              "base": 2.6,
+              "noise": 0.12,
+              "unit": "N"
+            }
+          ],
+          "inspection": {
+            "kind": "wrap",
+            "prefix": "W09",
+            "material": "WRAP",
+            "members": 1,
+            "cell": 9,
+            "group": 3,
+            "plate": {
+              "prefix": "PLT09",
+              "material": "RAW-PLATE"
+            },
+            "attributes": [
+              {
+                "name": "SealIntegrity",
+                "unit": "%",
+                "nominal": 99.0,
+                "min": 95.0,
+                "max": 100.0,
+                "sigma": 0.9
+              },
+              {
+                "name": "FilmTension",
+                "unit": "N",
+                "nominal": 2.6,
+                "min": 2.0,
+                "max": 3.2,
+                "sigma": 0.15
+              },
+              {
+                "name": "PlatePresent",
+                "unit": "bool",
+                "nominal": 1.0,
+                "min": 1.0,
+                "max": 1.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Weight",
+                "unit": "g",
+                "nominal": 21.5,
+                "min": 20.5,
+                "max": 22.5,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Wrapper",
+          "every_s": [
+            200,
+            400
+          ],
+          "duration_s": [
+            4,
+            10
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "wrapper",
+        "area": "Wrapping",
+        "cell": 9,
+        "group": 3,
+        "material": {
+          "code": "WRAP",
+          "name": "Wrapped cutlery set on a plate",
+          "unit": "ea"
+        },
+        "plate": {
+          "code": "RAW-PLATE",
+          "name": "Paper plate",
+          "unit": "ea"
+        },
+        "station": "WRAP09_Wrapper"
+      }
+    },
+    {
+      "name": "WRAP10",
+      "seed": 9410,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Wrapper",
+          "rate_per_min": 434.03,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 138.0,
+              "noise": 1.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "SealTempSP",
+                "min": 120.0,
+                "max": 160.0,
+                "lag_s": 60.0
+              }
+            },
+            {
+              "name": "FilmTension",
+              "base": 2.6,
+              "noise": 0.12,
+              "unit": "N"
+            }
+          ],
+          "inspection": {
+            "kind": "wrap",
+            "prefix": "W10",
+            "material": "WRAP",
+            "members": 1,
+            "cell": 10,
+            "group": 3,
+            "plate": {
+              "prefix": "PLT10",
+              "material": "RAW-PLATE"
+            },
+            "attributes": [
+              {
+                "name": "SealIntegrity",
+                "unit": "%",
+                "nominal": 99.0,
+                "min": 95.0,
+                "max": 100.0,
+                "sigma": 0.9
+              },
+              {
+                "name": "FilmTension",
+                "unit": "N",
+                "nominal": 2.6,
+                "min": 2.0,
+                "max": 3.2,
+                "sigma": 0.15
+              },
+              {
+                "name": "PlatePresent",
+                "unit": "bool",
+                "nominal": 1.0,
+                "min": 1.0,
+                "max": 1.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Weight",
+                "unit": "g",
+                "nominal": 21.5,
+                "min": 20.5,
+                "max": 22.5,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Wrapper",
+          "every_s": [
+            200,
+            400
+          ],
+          "duration_s": [
+            4,
+            10
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "wrapper",
+        "area": "Wrapping",
+        "cell": 10,
+        "group": 3,
+        "material": {
+          "code": "WRAP",
+          "name": "Wrapped cutlery set on a plate",
+          "unit": "ea"
+        },
+        "plate": {
+          "code": "RAW-PLATE",
+          "name": "Paper plate",
+          "unit": "ea"
+        },
+        "station": "WRAP10_Wrapper"
+      }
+    },
+    {
+      "name": "WRAP11",
+      "seed": 9411,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Wrapper",
+          "rate_per_min": 434.03,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 138.0,
+              "noise": 1.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "SealTempSP",
+                "min": 120.0,
+                "max": 160.0,
+                "lag_s": 60.0
+              }
+            },
+            {
+              "name": "FilmTension",
+              "base": 2.6,
+              "noise": 0.12,
+              "unit": "N"
+            }
+          ],
+          "inspection": {
+            "kind": "wrap",
+            "prefix": "W11",
+            "material": "WRAP",
+            "members": 1,
+            "cell": 11,
+            "group": 3,
+            "plate": {
+              "prefix": "PLT11",
+              "material": "RAW-PLATE"
+            },
+            "attributes": [
+              {
+                "name": "SealIntegrity",
+                "unit": "%",
+                "nominal": 99.0,
+                "min": 95.0,
+                "max": 100.0,
+                "sigma": 0.9
+              },
+              {
+                "name": "FilmTension",
+                "unit": "N",
+                "nominal": 2.6,
+                "min": 2.0,
+                "max": 3.2,
+                "sigma": 0.15
+              },
+              {
+                "name": "PlatePresent",
+                "unit": "bool",
+                "nominal": 1.0,
+                "min": 1.0,
+                "max": 1.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Weight",
+                "unit": "g",
+                "nominal": 21.5,
+                "min": 20.5,
+                "max": 22.5,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Wrapper",
+          "start": 2320,
+          "end": 2440
+        },
+        {
+          "type": "micro_stops",
+          "station": "Wrapper",
+          "every_s": [
+            200,
+            400
+          ],
+          "duration_s": [
+            4,
+            10
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "wrapper",
+        "area": "Wrapping",
+        "cell": 11,
+        "group": 3,
+        "material": {
+          "code": "WRAP",
+          "name": "Wrapped cutlery set on a plate",
+          "unit": "ea"
+        },
+        "plate": {
+          "code": "RAW-PLATE",
+          "name": "Paper plate",
+          "unit": "ea"
+        },
+        "station": "WRAP11_Wrapper"
+      }
+    },
+    {
+      "name": "WRAP12",
+      "seed": 9412,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Wrapper",
+          "rate_per_min": 434.03,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 138.0,
+              "noise": 1.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "SealTempSP",
+                "min": 120.0,
+                "max": 160.0,
+                "lag_s": 60.0
+              }
+            },
+            {
+              "name": "FilmTension",
+              "base": 2.6,
+              "noise": 0.12,
+              "unit": "N"
+            }
+          ],
+          "inspection": {
+            "kind": "wrap",
+            "prefix": "W12",
+            "material": "WRAP",
+            "members": 1,
+            "cell": 12,
+            "group": 3,
+            "plate": {
+              "prefix": "PLT12",
+              "material": "RAW-PLATE"
+            },
+            "attributes": [
+              {
+                "name": "SealIntegrity",
+                "unit": "%",
+                "nominal": 99.0,
+                "min": 95.0,
+                "max": 100.0,
+                "sigma": 0.9
+              },
+              {
+                "name": "FilmTension",
+                "unit": "N",
+                "nominal": 2.6,
+                "min": 2.0,
+                "max": 3.2,
+                "sigma": 0.15
+              },
+              {
+                "name": "PlatePresent",
+                "unit": "bool",
+                "nominal": 1.0,
+                "min": 1.0,
+                "max": 1.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Weight",
+                "unit": "g",
+                "nominal": 21.5,
+                "min": 20.5,
+                "max": 22.5,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Wrapper",
+          "every_s": [
+            200,
+            400
+          ],
+          "duration_s": [
+            4,
+            10
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "wrapper",
+        "area": "Wrapping",
+        "cell": 12,
+        "group": 3,
+        "material": {
+          "code": "WRAP",
+          "name": "Wrapped cutlery set on a plate",
+          "unit": "ea"
+        },
+        "plate": {
+          "code": "RAW-PLATE",
+          "name": "Paper plate",
+          "unit": "ea"
+        },
+        "station": "WRAP12_Wrapper"
+      }
+    },
+    {
+      "name": "WRAP13",
+      "seed": 9413,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Wrapper",
+          "rate_per_min": 434.03,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 138.0,
+              "noise": 1.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "SealTempSP",
+                "min": 120.0,
+                "max": 160.0,
+                "lag_s": 60.0
+              }
+            },
+            {
+              "name": "FilmTension",
+              "base": 2.6,
+              "noise": 0.12,
+              "unit": "N"
+            }
+          ],
+          "inspection": {
+            "kind": "wrap",
+            "prefix": "W13",
+            "material": "WRAP",
+            "members": 1,
+            "cell": 13,
+            "group": 4,
+            "plate": {
+              "prefix": "PLT13",
+              "material": "RAW-PLATE"
+            },
+            "attributes": [
+              {
+                "name": "SealIntegrity",
+                "unit": "%",
+                "nominal": 99.0,
+                "min": 95.0,
+                "max": 100.0,
+                "sigma": 0.9
+              },
+              {
+                "name": "FilmTension",
+                "unit": "N",
+                "nominal": 2.6,
+                "min": 2.0,
+                "max": 3.2,
+                "sigma": 0.15
+              },
+              {
+                "name": "PlatePresent",
+                "unit": "bool",
+                "nominal": 1.0,
+                "min": 1.0,
+                "max": 1.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Weight",
+                "unit": "g",
+                "nominal": 21.5,
+                "min": 20.5,
+                "max": 22.5,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Wrapper",
+          "every_s": [
+            200,
+            400
+          ],
+          "duration_s": [
+            4,
+            10
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "wrapper",
+        "area": "Wrapping",
+        "cell": 13,
+        "group": 4,
+        "material": {
+          "code": "WRAP",
+          "name": "Wrapped cutlery set on a plate",
+          "unit": "ea"
+        },
+        "plate": {
+          "code": "RAW-PLATE",
+          "name": "Paper plate",
+          "unit": "ea"
+        },
+        "station": "WRAP13_Wrapper"
+      }
+    },
+    {
+      "name": "WRAP14",
+      "seed": 9414,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Wrapper",
+          "rate_per_min": 434.03,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 138.0,
+              "noise": 1.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "SealTempSP",
+                "min": 120.0,
+                "max": 160.0,
+                "lag_s": 60.0
+              }
+            },
+            {
+              "name": "FilmTension",
+              "base": 2.6,
+              "noise": 0.12,
+              "unit": "N"
+            }
+          ],
+          "inspection": {
+            "kind": "wrap",
+            "prefix": "W14",
+            "material": "WRAP",
+            "members": 1,
+            "cell": 14,
+            "group": 4,
+            "plate": {
+              "prefix": "PLT14",
+              "material": "RAW-PLATE"
+            },
+            "attributes": [
+              {
+                "name": "SealIntegrity",
+                "unit": "%",
+                "nominal": 99.0,
+                "min": 95.0,
+                "max": 100.0,
+                "sigma": 0.9
+              },
+              {
+                "name": "FilmTension",
+                "unit": "N",
+                "nominal": 2.6,
+                "min": 2.0,
+                "max": 3.2,
+                "sigma": 0.15
+              },
+              {
+                "name": "PlatePresent",
+                "unit": "bool",
+                "nominal": 1.0,
+                "min": 1.0,
+                "max": 1.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Weight",
+                "unit": "g",
+                "nominal": 21.5,
+                "min": 20.5,
+                "max": 22.5,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Wrapper",
+          "every_s": [
+            200,
+            400
+          ],
+          "duration_s": [
+            4,
+            10
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "wrapper",
+        "area": "Wrapping",
+        "cell": 14,
+        "group": 4,
+        "material": {
+          "code": "WRAP",
+          "name": "Wrapped cutlery set on a plate",
+          "unit": "ea"
+        },
+        "plate": {
+          "code": "RAW-PLATE",
+          "name": "Paper plate",
+          "unit": "ea"
+        },
+        "station": "WRAP14_Wrapper"
+      }
+    },
+    {
+      "name": "WRAP15",
+      "seed": 9415,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Wrapper",
+          "rate_per_min": 434.03,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 138.0,
+              "noise": 1.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "SealTempSP",
+                "min": 120.0,
+                "max": 160.0,
+                "lag_s": 60.0
+              }
+            },
+            {
+              "name": "FilmTension",
+              "base": 2.6,
+              "noise": 0.12,
+              "unit": "N"
+            }
+          ],
+          "inspection": {
+            "kind": "wrap",
+            "prefix": "W15",
+            "material": "WRAP",
+            "members": 1,
+            "cell": 15,
+            "group": 4,
+            "plate": {
+              "prefix": "PLT15",
+              "material": "RAW-PLATE"
+            },
+            "attributes": [
+              {
+                "name": "SealIntegrity",
+                "unit": "%",
+                "nominal": 99.0,
+                "min": 95.0,
+                "max": 100.0,
+                "sigma": 0.9
+              },
+              {
+                "name": "FilmTension",
+                "unit": "N",
+                "nominal": 2.6,
+                "min": 2.0,
+                "max": 3.2,
+                "sigma": 0.15
+              },
+              {
+                "name": "PlatePresent",
+                "unit": "bool",
+                "nominal": 1.0,
+                "min": 1.0,
+                "max": 1.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Weight",
+                "unit": "g",
+                "nominal": 21.5,
+                "min": 20.5,
+                "max": 22.5,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Wrapper",
+          "every_s": [
+            200,
+            400
+          ],
+          "duration_s": [
+            4,
+            10
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "wrapper",
+        "area": "Wrapping",
+        "cell": 15,
+        "group": 4,
+        "material": {
+          "code": "WRAP",
+          "name": "Wrapped cutlery set on a plate",
+          "unit": "ea"
+        },
+        "plate": {
+          "code": "RAW-PLATE",
+          "name": "Paper plate",
+          "unit": "ea"
+        },
+        "station": "WRAP15_Wrapper"
+      }
+    },
+    {
+      "name": "WRAP16",
+      "seed": 9416,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Wrapper",
+          "rate_per_min": 434.03,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 138.0,
+              "noise": 1.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "SealTempSP",
+                "min": 120.0,
+                "max": 160.0,
+                "lag_s": 60.0
+              }
+            },
+            {
+              "name": "FilmTension",
+              "base": 2.6,
+              "noise": 0.12,
+              "unit": "N"
+            }
+          ],
+          "inspection": {
+            "kind": "wrap",
+            "prefix": "W16",
+            "material": "WRAP",
+            "members": 1,
+            "cell": 16,
+            "group": 4,
+            "plate": {
+              "prefix": "PLT16",
+              "material": "RAW-PLATE"
+            },
+            "attributes": [
+              {
+                "name": "SealIntegrity",
+                "unit": "%",
+                "nominal": 99.0,
+                "min": 95.0,
+                "max": 100.0,
+                "sigma": 0.9
+              },
+              {
+                "name": "FilmTension",
+                "unit": "N",
+                "nominal": 2.6,
+                "min": 2.0,
+                "max": 3.2,
+                "sigma": 0.15
+              },
+              {
+                "name": "PlatePresent",
+                "unit": "bool",
+                "nominal": 1.0,
+                "min": 1.0,
+                "max": 1.0,
+                "sigma": 0.0
+              },
+              {
+                "name": "Weight",
+                "unit": "g",
+                "nominal": 21.5,
+                "min": 20.5,
+                "max": 22.5,
+                "sigma": 0.25
+              }
+            ]
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "micro_stops",
+          "station": "Wrapper",
+          "every_s": [
+            200,
+            400
+          ],
+          "duration_s": [
+            4,
+            10
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "wrapper",
+        "area": "Wrapping",
+        "cell": 16,
+        "group": 4,
+        "material": {
+          "code": "WRAP",
+          "name": "Wrapped cutlery set on a plate",
+          "unit": "ea"
+        },
+        "plate": {
+          "code": "RAW-PLATE",
+          "name": "Paper plate",
+          "unit": "ea"
+        },
+        "station": "WRAP16_Wrapper"
+      }
+    },
+    {
+      "name": "PAL1",
+      "seed": 9501,
+      "duration_s": 3600,
+      "buffers": {
+        "capacity": 8,
+        "initial": 2
+      },
+      "stations": [
+        {
+          "name": "Palletizer",
+          "rate_per_min": 7.38,
+          "scrap_pct": 0.0,
+          "analogs": [
+            {
+              "name": "StackHeight",
+              "base": 1.6,
+              "noise": 0.03,
+              "unit": "m"
+            }
+          ],
+          "inspection": {
+            "kind": "pallet",
+            "prefix": "PL1",
+            "material": "PALLET",
+            "members": 240,
+            "group": 1,
+            "attributes": []
+          }
+        },
+        {
+          "name": "StretchWrap",
+          "rate_per_min": 7.38,
+          "scrap_pct": 0.0,
+          "analogs": [
+            {
+              "name": "FilmTension",
+              "base": 3.1,
+              "noise": 0.1,
+              "unit": "N"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "palletizer",
+        "area": "Palletizing",
+        "group": 1,
+        "material": {
+          "code": "PALLET",
+          "name": "Outbound pallet of wrapped sets",
+          "unit": "ea"
+        },
+        "station": "PAL1_Palletizer",
+        "wraps_per_pallet": 240
+      }
+    },
+    {
+      "name": "PAL2",
+      "seed": 9502,
+      "duration_s": 3600,
+      "buffers": {
+        "capacity": 8,
+        "initial": 2
+      },
+      "stations": [
+        {
+          "name": "Palletizer",
+          "rate_per_min": 7.38,
+          "scrap_pct": 0.0,
+          "analogs": [
+            {
+              "name": "StackHeight",
+              "base": 1.6,
+              "noise": 0.03,
+              "unit": "m"
+            }
+          ],
+          "inspection": {
+            "kind": "pallet",
+            "prefix": "PL2",
+            "material": "PALLET",
+            "members": 240,
+            "group": 2,
+            "attributes": []
+          }
+        },
+        {
+          "name": "StretchWrap",
+          "rate_per_min": 7.38,
+          "scrap_pct": 0.0,
+          "analogs": [
+            {
+              "name": "FilmTension",
+              "base": 3.1,
+              "noise": 0.1,
+              "unit": "N"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "palletizer",
+        "area": "Palletizing",
+        "group": 2,
+        "material": {
+          "code": "PALLET",
+          "name": "Outbound pallet of wrapped sets",
+          "unit": "ea"
+        },
+        "station": "PAL2_Palletizer",
+        "wraps_per_pallet": 240
+      }
+    },
+    {
+      "name": "PAL3",
+      "seed": 9503,
+      "duration_s": 3600,
+      "buffers": {
+        "capacity": 8,
+        "initial": 2
+      },
+      "stations": [
+        {
+          "name": "Palletizer",
+          "rate_per_min": 7.38,
+          "scrap_pct": 0.0,
+          "analogs": [
+            {
+              "name": "StackHeight",
+              "base": 1.6,
+              "noise": 0.03,
+              "unit": "m"
+            }
+          ],
+          "inspection": {
+            "kind": "pallet",
+            "prefix": "PL3",
+            "material": "PALLET",
+            "members": 240,
+            "group": 3,
+            "attributes": []
+          }
+        },
+        {
+          "name": "StretchWrap",
+          "rate_per_min": 7.38,
+          "scrap_pct": 0.0,
+          "analogs": [
+            {
+              "name": "FilmTension",
+              "base": 3.1,
+              "noise": 0.1,
+              "unit": "N"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "palletizer",
+        "area": "Palletizing",
+        "group": 3,
+        "material": {
+          "code": "PALLET",
+          "name": "Outbound pallet of wrapped sets",
+          "unit": "ea"
+        },
+        "station": "PAL3_Palletizer",
+        "wraps_per_pallet": 240
+      }
+    },
+    {
+      "name": "PAL4",
+      "seed": 9504,
+      "duration_s": 3600,
+      "buffers": {
+        "capacity": 8,
+        "initial": 2
+      },
+      "stations": [
+        {
+          "name": "Palletizer",
+          "rate_per_min": 7.38,
+          "scrap_pct": 0.0,
+          "analogs": [
+            {
+              "name": "StackHeight",
+              "base": 1.6,
+              "noise": 0.03,
+              "unit": "m"
+            }
+          ],
+          "inspection": {
+            "kind": "pallet",
+            "prefix": "PL4",
+            "material": "PALLET",
+            "members": 240,
+            "group": 4,
+            "attributes": []
+          }
+        },
+        {
+          "name": "StretchWrap",
+          "rate_per_min": 7.38,
+          "scrap_pct": 0.0,
+          "analogs": [
+            {
+              "name": "FilmTension",
+              "base": 3.1,
+              "noise": 0.1,
+              "unit": "N"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "kind": "palletizer",
+        "area": "Palletizing",
+        "group": 4,
+        "material": {
+          "code": "PALLET",
+          "name": "Outbound pallet of wrapped sets",
+          "unit": "ea"
+        },
+        "station": "PAL4_Palletizer",
+        "wraps_per_pallet": 240
+      }
+    }
+  ]
+}

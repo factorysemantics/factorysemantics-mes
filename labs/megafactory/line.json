@@ -1,0 +1,507 @@
+{
+  "_what": "The mega-factory scale spike: 5 lines, 27 stations, one shared workforce and quality system. Built by build_config.py rather than hand-typed - see that script to add a sixth line for the full 100-machine build.",
+  "lines": [
+    {
+      "name": "FILL",
+      "seed": 4242,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Loader",
+          "rate_per_min": 40,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "InfeedRate",
+              "base": 40.0,
+              "noise": 2.0,
+              "unit": "bpm"
+            }
+          ]
+        },
+        {
+          "name": "Washer",
+          "rate_per_min": 40,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "WashTemp",
+              "base": 65.0,
+              "noise": 1.0,
+              "unit": "C",
+              "setpoint": {
+                "name": "WashTempSP",
+                "min": 55.0,
+                "max": 80.0,
+                "lag_s": 90.0
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filler",
+          "rate_per_min": 38,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "FillWeight",
+              "base": 500.0,
+              "noise": 1.5,
+              "unit": "g"
+            }
+          ]
+        },
+        {
+          "name": "Capper",
+          "rate_per_min": 38,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "TorqueLevel",
+              "base": 12.0,
+              "noise": 0.6,
+              "unit": "Nm"
+            }
+          ]
+        },
+        {
+          "name": "Labeler",
+          "rate_per_min": 38,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "LabelTension",
+              "base": 3.0,
+              "noise": 0.2,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Palletizer",
+          "rate_per_min": 36,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "StackHeight",
+              "base": 1.2,
+              "noise": 0.05,
+              "unit": "m"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "drift",
+          "station": "Washer",
+          "start": 1500,
+          "end": 1800,
+          "to": 74.0,
+          "effects": [
+            {
+              "station": "Filler",
+              "analog": "FillWeight",
+              "offset": -9.0
+            }
+          ]
+        },
+        {
+          "type": "down",
+          "station": "Capper",
+          "start": 2400,
+          "end": 2450
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ]
+    },
+    {
+      "name": "MACH",
+      "seed": 4242,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Saw",
+          "rate_per_min": 22,
+          "scrap_pct": 0.8,
+          "analogs": [
+            {
+              "name": "BladeLoad",
+              "base": 42.0,
+              "noise": 2.5,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Mill",
+          "rate_per_min": 18,
+          "scrap_pct": 0.6,
+          "analogs": [
+            {
+              "name": "SpindleTemp",
+              "base": 55.0,
+              "noise": 3.0,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Deburr",
+          "rate_per_min": 25,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "CycleForce",
+              "base": 30.0,
+              "noise": 1.5,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Inspect",
+          "rate_per_min": 24,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "GaugeReading",
+              "base": 10.0,
+              "noise": 0.1,
+              "unit": "mm"
+            }
+          ]
+        },
+        {
+          "name": "Pack",
+          "rate_per_min": 24,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 120.0,
+              "noise": 2.0,
+              "unit": "C"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Mill",
+          "start": 900,
+          "end": 960
+        },
+        {
+          "type": "drift",
+          "station": "Saw",
+          "start": 2000,
+          "end": 2200,
+          "to": 55.0
+        },
+        {
+          "type": "micro_stops",
+          "station": "Deburr"
+        }
+      ]
+    },
+    {
+      "name": "ASSEM",
+      "seed": 4242,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Kit",
+          "rate_per_min": 30,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "PickRate",
+              "base": 30.0,
+              "noise": 1.0,
+              "unit": "ppm"
+            }
+          ]
+        },
+        {
+          "name": "Assemble1",
+          "rate_per_min": 28,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "PressForce",
+              "base": 200.0,
+              "noise": 8.0,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Assemble2",
+          "rate_per_min": 28,
+          "scrap_pct": 0.6,
+          "analogs": [
+            {
+              "name": "PressForce",
+              "base": 210.0,
+              "noise": 8.0,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Torque",
+          "rate_per_min": 27,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "TorqueLevel",
+              "base": 8.0,
+              "noise": 0.4,
+              "unit": "Nm",
+              "setpoint": {
+                "name": "TorqueLevelSP",
+                "min": 5.0,
+                "max": 12.0,
+                "lag_s": 20.0
+              }
+            }
+          ]
+        },
+        {
+          "name": "Test",
+          "rate_per_min": 27,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "TestCurrent",
+              "base": 1.2,
+              "noise": 0.05,
+              "unit": "A"
+            }
+          ]
+        },
+        {
+          "name": "Pack2",
+          "rate_per_min": 27,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 118.0,
+              "noise": 2.0,
+              "unit": "C"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "scrap_burst",
+          "station": "Assemble2",
+          "start": 1200,
+          "end": 1260,
+          "scrap_pct": 18
+        },
+        {
+          "type": "down",
+          "station": "Torque",
+          "start": 2600,
+          "end": 2700
+        },
+        {
+          "type": "changeover",
+          "start": 3200,
+          "end": 3260
+        }
+      ]
+    },
+    {
+      "name": "WELD",
+      "seed": 4242,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Cut",
+          "rate_per_min": 20,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "FeedRate",
+              "base": 15.0,
+              "noise": 0.8,
+              "unit": "m/min"
+            }
+          ]
+        },
+        {
+          "name": "Weld1",
+          "rate_per_min": 16,
+          "scrap_pct": 0.9,
+          "analogs": [
+            {
+              "name": "ArcCurrent",
+              "base": 180.0,
+              "noise": 6.0,
+              "unit": "A"
+            }
+          ]
+        },
+        {
+          "name": "Weld2",
+          "rate_per_min": 16,
+          "scrap_pct": 0.9,
+          "analogs": [
+            {
+              "name": "ArcCurrent",
+              "base": 185.0,
+              "noise": 6.0,
+              "unit": "A"
+            }
+          ]
+        },
+        {
+          "name": "Grind",
+          "rate_per_min": 19,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "MotorTemp",
+              "base": 48.0,
+              "noise": 2.0,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Paint",
+          "rate_per_min": 18,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "BoothPressure",
+              "base": 1.0,
+              "noise": 0.05,
+              "unit": "bar"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "drift",
+          "station": "Weld1",
+          "start": 500,
+          "end": 700,
+          "to": 210.0
+        },
+        {
+          "type": "down",
+          "station": "Grind",
+          "start": 1800,
+          "end": 1850
+        }
+      ]
+    },
+    {
+      "name": "EXTRUDE",
+      "seed": 4242,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Extrude",
+          "rate_per_min": 12,
+          "scrap_pct": 0.7,
+          "analogs": [
+            {
+              "name": "MeltTemp",
+              "base": 210.0,
+              "noise": 3.0,
+              "unit": "C",
+              "setpoint": {
+                "name": "MeltTempSP",
+                "min": 190.0,
+                "max": 230.0,
+                "lag_s": 120.0
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cool",
+          "rate_per_min": 12,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "WaterTemp",
+              "base": 18.0,
+              "noise": 0.5,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Trim",
+          "rate_per_min": 12,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "BladeSpeed",
+              "base": 900.0,
+              "noise": 20.0,
+              "unit": "rpm"
+            }
+          ]
+        },
+        {
+          "name": "QC",
+          "rate_per_min": 12,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "Thickness",
+              "base": 2.0,
+              "noise": 0.05,
+              "unit": "mm"
+            }
+          ]
+        },
+        {
+          "name": "Pack3",
+          "rate_per_min": 12,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 115.0,
+              "noise": 2.0,
+              "unit": "C"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Extrude",
+          "start": 300,
+          "end": 400
+        },
+        {
+          "type": "micro_stops",
+          "station": "Trim"
+        },
+        {
+          "type": "changeover",
+          "start": 2800,
+          "end": 2860
+        }
+      ]
+    }
+  ]
+}

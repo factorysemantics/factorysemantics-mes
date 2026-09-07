@@ -1,0 +1,234 @@
+/* MES-TWIN line view.
+   The 3D scene owns the screen; every piece of chrome floats over it and stays
+   out of the way. Same palette as the operator dashboard, because state colour
+   has to mean the same thing on both screens. */
+
+:root {
+  --bg: #0e1116;
+  --panel: #161b22;
+  --panel-2: #1c232c;
+  --line: #263040;
+  --text: #e6edf3;
+  --muted: #8b98a5;
+  --accent: #4a9eff;
+  --running: #3fb950;
+  --idle: #d29922;
+  --down: #f85149;
+  --setup: #a371f7;
+  --unknown: #6e7681;
+  --radius: 10px;
+  --mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  overflow: hidden;
+}
+
+.hidden { display: none !important; }
+.spacer { flex: 1; }
+
+#stage {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ---------- top bar ---------- */
+#bar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  background: linear-gradient(180deg, rgba(14, 17, 22, .92) 0%, rgba(14, 17, 22, 0) 100%);
+  pointer-events: none;
+}
+#bar > * { pointer-events: auto; }
+
+.brand {
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: var(--text);
+  text-decoration: none;
+}
+.brand span { color: var(--accent); }
+
+.sep { width: 1px; height: 20px; background: var(--line); }
+
+.line-name { color: var(--muted); font-size: 14px; }
+
+.badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.badge.demo { border-color: var(--setup); color: var(--setup); }
+/* Provenance: which OPC server is actually feeding this picture. */
+.badge.source { border-color: var(--line); color: var(--muted); cursor: help; }
+.badge.source.kepware { border-color: var(--running); color: var(--running); }
+.badge.source.warn { border-color: var(--down); color: var(--down); }
+
+.live { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); }
+.dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--unknown);
+  box-shadow: 0 0 0 3px rgba(110, 118, 129, .18);
+}
+.dot.ok { background: var(--running); box-shadow: 0 0 0 3px rgba(63, 185, 80, .18); }
+.dot.bad { background: var(--down); box-shadow: 0 0 0 3px rgba(248, 81, 73, .18); }
+
+.ghost {
+  font: inherit;
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+  background: rgba(28, 35, 44, .8);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 12px;
+}
+.ghost:hover { color: var(--text); border-color: var(--accent); }
+
+/* ---------- corner readout ---------- */
+.readout {
+  position: fixed;
+  top: 62px;
+  left: 18px;
+  display: grid;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  min-width: 168px;
+}
+.stat {
+  display: grid;
+  gap: 2px;
+  padding: 9px 13px;
+  background: rgba(22, 27, 34, .88);
+  backdrop-filter: blur(6px);
+}
+.stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .7px;
+  color: var(--muted);
+}
+.stat-value {
+  font-family: var(--mono);
+  font-size: 21px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+.stat-value small { font-size: 11px; color: var(--muted); margin-left: 2px; }
+.stat-value.small { font-size: 13px; }
+
+/* ---------- station strip ---------- */
+.stations {
+  position: fixed;
+  right: 18px;
+  top: 62px;
+  bottom: 62px;
+  width: 218px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.station {
+  background: rgba(22, 27, 34, .88);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--unknown);
+  border-radius: 8px;
+  padding: 8px 11px;
+  display: grid;
+  gap: 3px;
+}
+.station.running { border-left-color: var(--running); }
+.station.idle    { border-left-color: var(--idle); }
+.station.down    { border-left-color: var(--down); }
+.station.setup   { border-left-color: var(--setup); }
+
+.station-head { display: flex; align-items: baseline; gap: 8px; }
+.station-code { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+.station-state { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-left: auto; }
+.station.running .station-state { color: var(--running); }
+.station.down    .station-state { color: var(--down); }
+.station.setup   .station-state { color: var(--setup); }
+.station-name { font-size: 11px; color: var(--muted); }
+.station-analog { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.station-analog strong { color: var(--text); font-weight: 600; }
+
+/* ---------- footer ---------- */
+#foot {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 18px;
+  font-size: 12px;
+  color: var(--muted);
+  background: linear-gradient(0deg, rgba(14, 17, 22, .92) 0%, rgba(14, 17, 22, 0) 100%);
+  pointer-events: none;
+}
+.legend { display: flex; gap: 14px; }
+.legend span { display: flex; align-items: center; gap: 6px; }
+.swatch { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.swatch.running { background: var(--running); }
+.swatch.idle    { background: var(--idle); }
+.swatch.down    { background: var(--down); }
+.swatch.setup   { background: var(--setup); }
+
+.truth { margin: 0; text-align: right; max-width: 46ch; }
+.truth strong { color: var(--text); font-family: var(--mono); }
+
+/* ---------- fatal ---------- */
+.fatal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(14, 17, 22, .95);
+  text-align: center;
+  padding: 24px;
+}
+.fatal h1 { font-size: 20px; margin: 0 0 8px; }
+.fatal p { color: var(--muted); margin: 0; max-width: 52ch; }
+
+@media (max-width: 900px) {
+  .stations { display: none; }
+  .truth { display: none; }
+}
+
+/* The line's name and provenance badges lived in its bespoke header;
+   the shared header has no slot for them, and they matter (the source
+   badge is principle 4 for this screen). A slim strip below. */
+#line-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2) var(--s4);
+  border-bottom: 1px solid var(--line);
+}
+
+/* Embedded in the Line page as a tab: one header is enough. */
+.embedded header, .embedded .design-launch, .embedded .assist-launch { display: none !important; }

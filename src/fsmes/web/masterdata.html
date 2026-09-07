@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Master data — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/station.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="masterdata"></header>
+
+  <section class="object-head">
+    <div class="object-title">
+      <h1>Master data <span class="muted">— what the plant is made of</span></h1>
+    </div>
+    <p class="muted small">Equipment, materials and their bills of material, quality specifications, people.
+      Reads are open to everyone; writing needs <code>masterdata.write</code> (people: <code>users.manage</code>).</p>
+  </section>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <div class="tabs" role="tablist" data-assist="masterdata-tabs">
+    <button class="tab" role="tab" data-tab="equipment">Equipment</button>
+    <button class="tab" role="tab" data-tab="materials">Materials</button>
+    <button class="tab" role="tab" data-tab="specs">Specifications</button>
+    <button class="tab" role="tab" data-tab="people">People</button>
+  </div>
+
+  <main class="object-main">
+    <section class="tab-panel" data-panel="equipment">
+      <div class="panel" data-needs-cap="masterdata.write">
+        <h2>Add equipment</h2>
+        <form id="eq-form" class="stack" data-assist="masterdata-equipment-form">
+          <div class="row">
+            <input id="eq-code" placeholder="Code" required>
+            <input id="eq-name" placeholder="Name" required>
+            <select id="eq-level" aria-label="Level">
+              <option value="work_unit">machine (work unit)</option>
+              <option value="work_center">line (work center)</option>
+              <option value="area">area</option>
+              <option value="site">site</option>
+              <option value="enterprise">enterprise</option>
+            </select>
+            <select id="eq-parent" aria-label="Parent"><option value="">no parent</option></select>
+            <input id="eq-cycle" type="number" step="any" placeholder="Rated cycle (s)">
+            <input id="eq-cc" placeholder="Cost center">
+            <button id="eq-submit">Add</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Equipment <span id="eq-count" class="muted"></span></h2>
+        <div class="filter-bar" data-assist="masterdata-equipment-filters">
+          <input id="eq-q" type="search" placeholder="Code or name" aria-label="Equipment code or name">
+          <select id="eq-filter-level" aria-label="Level">
+            <option value="">Any level</option>
+            <option value="work_unit">machine</option>
+            <option value="work_center">line</option>
+            <option value="area">area</option>
+            <option value="site">site</option>
+            <option value="enterprise">enterprise</option>
+          </select>
+        </div>
+        <div class="table-wrap"><table id="eq-table">
+          <thead><tr><th>Code</th><th>Name</th><th>Level</th><th>Parent</th><th class="num">Rated cycle</th><th>Cost center</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <div id="eq-pager" class="pager"></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="materials">
+      <div class="panel" data-needs-cap="masterdata.write">
+        <h2>Add a material</h2>
+        <form id="mat-form" class="stack" data-assist="masterdata-material-form">
+          <div class="row">
+            <input id="mat-code" placeholder="Code" required>
+            <input id="mat-name" placeholder="Name" required>
+            <input id="mat-unit" placeholder="Unit" value="ea">
+            <select id="mat-type" aria-label="Type">
+              <option value="raw">raw</option><option value="intermediate">intermediate</option><option value="finished">finished</option>
+            </select>
+            <button id="mat-submit">Add</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Materials <span id="mat-count" class="muted"></span></h2>
+        <div class="filter-bar" data-assist="masterdata-material-filters">
+          <input id="mat-q" type="search" placeholder="Code or name" aria-label="Material code or name">
+          <select id="mat-filter-type" aria-label="Type">
+            <option value="">Any type</option>
+            <option value="raw">raw</option>
+            <option value="intermediate">intermediate</option>
+            <option value="finished">finished</option>
+          </select>
+        </div>
+        <div class="table-wrap"><table id="mat-table" class="row-select">
+          <thead><tr><th>Code</th><th>Name</th><th>Unit</th><th>Type</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <div id="mat-pager" class="pager"></div>
+      </div>
+      <div class="panel">
+        <h2>Bill of material <span id="bom-title" class="muted">— pick a material</span></h2>
+        <div class="table-wrap"><table id="bom-table">
+          <thead><tr><th>Component</th><th class="num">Quantity</th><th>Enters at operation</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <form id="bom-form" class="stack" data-needs-cap="masterdata.write">
+          <div class="row">
+            <select id="bom-component" aria-label="Component"></select>
+            <input id="bom-qty" type="number" step="any" min="0" placeholder="Quantity per unit" required>
+            <input id="bom-seq" type="number" step="10" placeholder="Operation seq (optional)">
+            <button id="bom-submit">Add component</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="specs">
+      <div class="panel" data-needs-cap="masterdata.write">
+        <h2>Add a specification</h2>
+        <form id="spec-form" class="stack" data-assist="masterdata-spec-form">
+          <div class="row">
+            <select id="spec-material" aria-label="Material"></select>
+            <input id="spec-char" placeholder="Characteristic" required>
+            <input id="spec-unit" placeholder="Unit">
+            <input id="spec-min" type="number" step="any" placeholder="Min">
+            <input id="spec-max" type="number" step="any" placeholder="Max">
+            <button id="spec-submit">Add</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Specifications <span id="spec-count" class="muted"></span></h2>
+        <div class="filter-bar" data-assist="masterdata-spec-filters">
+          <input id="spec-q" type="search" placeholder="Material or characteristic" aria-label="Material or characteristic">
+          <select id="spec-filter-material" aria-label="Material"><option value="">Any material</option></select>
+        </div>
+        <div class="table-wrap"><table id="spec-table">
+          <thead><tr><th>Material</th><th>Characteristic</th><th class="num">Min</th><th class="num">Max</th><th>Unit</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <div id="spec-pager" class="pager"></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="people">
+      <div class="panel" data-needs-cap="users.manage">
+        <h2>Add a person <span class="muted">— without a sign-in; accounts are made on Admin</span></h2>
+        <form id="person-form" class="stack">
+          <div class="row">
+            <input id="person-code" placeholder="Code" required>
+            <input id="person-name" placeholder="Name" required>
+            <input id="person-role" placeholder="Role" value="operator">
+            <button id="person-submit">Add</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>People <span id="person-count" class="muted"></span></h2>
+        <div class="filter-bar" data-assist="masterdata-people-filters">
+          <input id="person-q" type="search" placeholder="Code or name" aria-label="Person code or name">
+          <select id="person-filter-role" aria-label="Role"><option value="">Any role</option></select>
+        </div>
+        <div class="table-wrap"><table id="person-table">
+          <thead><tr><th>Code</th><th>Name</th><th>Role</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <div id="person-pager" class="pager"></div>
+      </div>
+    </section>
+  </main>
+
+  <p class="screen-source">equipment /masterdata/equipment · materials /masterdata/materials · bom /masterdata/materials/{code}/bom ·
+    specs /quality/specs · people /masterdata/personnel</p>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/masterdata.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

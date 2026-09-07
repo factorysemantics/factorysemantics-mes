@@ -1,0 +1,36 @@
+# The mega-factory's own registry - the scale test's environment.
+#
+# Deliberately not an entry in labs/multiplant/plants.toml: the scale test is a
+# measurement, not a fourth lab plant, and the lab registry is what the two
+# standing plants and the nightly rollup read. This file is used the way the
+# prod registry is (PR #19: the registry is the environment):
+#
+#     FSMES_PLANT_REGISTRY=labs/megafactory/registry.toml fsmes plant megafactory init
+#     FSMES_PLANT_REGISTRY=labs/megafactory/registry.toml fsmes plant megafactory run
+#
+# and the same variable points the sim and product MCP servers at it (with
+# FSMES_ROOT naming the checkout the paths below are relative to). Line data
+# under labs/megafactory/full/out is generated, never committed - run
+# labs/megafactory/full/run_full.py (or build_config.py + make_tag_map.py +
+# `fsmes sim-generate`) first.
+
+[environment]
+data_dir = "labs/megafactory/.data"
+
+[plants.megafactory]
+label      = "Mega-Factory Works — 20 lines, 108 stations, ~290 people, 50 measurement types (scale test)"
+# On the tailnet so the 100-station screens can be walked from the laptop.
+api_host   = "127.0.0.1"   # the interface to serve on; a LAN or tailnet address to share it
+api_port   = 8030
+opc_port   = 4843
+tag_map    = "labs/megafactory/full/tag_map.json"
+replay_dir = "labs/megafactory/full/out"
+init       = "labs/megafactory/full/init.py"
+# Runs once the API is up, alongside the shop-floor process: the workforce,
+# shift patterns and quality system through the public API, then inspectors
+# recording checks for as long as the plant runs.
+post_boot  = "labs/megafactory/full/seed_breadth.py"
+# A standing instance replays at 10x: 108 stations x 10 is a third of what
+# one replay process sustained in the spike, so the screens show live data
+# with the pipeline never behind. A scored run passes its own --speed.
+speed      = 10

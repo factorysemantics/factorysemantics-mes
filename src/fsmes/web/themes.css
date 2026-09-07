@@ -1,0 +1,104 @@
+/* Themes.
+
+   Every screen already drew its colours from custom properties on :root, so a
+   theme is a block of overrides and nothing else - no component knows a theme
+   exists.
+
+   These are not four shades of taste. A control room at night, a shop floor
+   under daylight and a screen somebody has to read at arm's length through
+   safety glasses are genuinely different problems, and high contrast is an
+   accessibility requirement in plenty of plants rather than a preference. */
+
+/* --- Control room (the default): dim, so a wall panel is not a light source */
+:root,
+:root[data-theme="control-room"] {
+  --bg: #0e1116;
+  --panel: #161b22;
+  --panel-2: #1c232c;
+  --line: #263040;
+  --text: #e6edf3;
+  --muted: #8b98a5;
+  --accent: #4a9eff;
+  --running: #3fb950;
+  --idle: #d29922;
+  --down: #f85149;
+  --setup: #a371f7;
+  --unknown: #6e7681;
+  --quality: #db6ec4;
+  --glow: #17324f;
+  --track: #0d1117;
+}
+
+/* --- Daylight: a shop floor with windows, where dark grey is unreadable */
+:root[data-theme="daylight"] {
+  --bg: #eef1f5;
+  --panel: #ffffff;
+  --panel-2: #e3e8ef;
+  --line: #c6cedb;
+  --text: #131922;
+  --muted: #55606f;
+  --accent: #0b5fbe;
+  --running: #10713a;
+  --idle: #8a5a00;
+  --down: #b3251c;
+  --setup: #6b34b0;
+  --unknown: #6b7684;
+  --quality: #a3348a;
+  --glow: #cfdcec;
+  --track: #d3dae4;
+}
+
+/* --- High contrast: readable through safety glasses, at arm's length,
+       and by anyone the other palettes fail. Every pair here clears WCAG AA
+       against its own ground. */
+:root[data-theme="high-contrast"] {
+  --bg: #000000;
+  --panel: #0a0a0a;
+  --panel-2: #161616;
+  --line: #6a6a6a;
+  --text: #ffffff;
+  --muted: #cfcfcf;
+  --accent: #4cc2ff;
+  --running: #4ff08a;
+  --idle: #ffd23f;
+  --down: #ff6b5e;
+  --setup: #d19cff;
+  --unknown: #b0b0b0;
+  --quality: #ff8fd8;
+  --glow: #10233a;
+  --track: #1e1e1e;
+}
+
+/* --- Night shift: no blue, low output, for a darkened line at 3am where a
+       bright screen ruins whatever night vision an operator has. */
+:root[data-theme="night-shift"] {
+  --bg: #100b06;
+  --panel: #1a120a;
+  --panel-2: #241810;
+  --line: #3d2a19;
+  --text: #ffcf9a;
+  --muted: #b58a5e;
+  --accent: #ffab4c;
+  --running: #c8b45a;
+  --idle: #d99b3f;
+  --down: #ff7a5c;
+  --setup: #d3a06b;
+  --unknown: #8a6a4a;
+  --quality: #d98fa0;
+  --glow: #2a1a0c;
+  --track: #1c1309;
+}
+
+/* The picker itself. Lives in the header on every screen. */
+.theme-pick {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 7px;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.theme-pick:hover { color: var(--text); }
+.theme-pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

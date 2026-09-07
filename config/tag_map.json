@@ -1,0 +1,7 @@
+{
+  "_comment": "Maps MES equipment (by code) to OPC UA objects. `object` is the browse name under the server's Objects folder; `cycle_seconds` is the simulator's rated cycle time. The agent and the simulator both read this file, so it is the single wiring diagram between MES and machine layer.",
+  "machines": [
+    { "equipment": "MIX01", "object": "MIX01", "cycle_seconds": 4.0 },
+    { "equipment": "PACK01", "object": "PACK01", "cycle_seconds": 3.0 }
+  ]
+}

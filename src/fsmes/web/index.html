@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FactorySemantics MES — Plant Floor</title>
+  <link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🏭</text></svg>">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+
+<div id="login" class="login-screen hidden">
+  <form id="login-form" class="login-card">
+    <h1>FactorySemantics<span> MES</span></h1>
+    <p class="sub">Manufacturing Execution System</p>
+    <label>Operator ID<input name="code" autocomplete="username" autofocus required></label>
+    <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+    <button type="submit">Sign in</button>
+    <p id="login-error" class="error"></p>
+    <p class="hint">Demo accounts — <code>ADMIN</code>/admin, <code>SCOTT</code>/operator</p>
+  </form>
+</div>
+
+<div id="app" class="hidden">
+  <header data-nav="floor"></header>
+
+  <section class="kpis">
+    <div class="kpi"><span class="kpi-label">Machines running</span><span id="kpi-machines" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Active orders</span><span id="kpi-orders" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Plant OEE</span><span id="kpi-oee" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">ERP queue</span><span id="kpi-erp" class="kpi-value">—</span></div>
+  </section>
+
+  <main>
+    <!-- The things a person came here to DO sit first and apart from the
+         things they came here to watch: at a hundred machines the action
+         forms were a screen and a half below the fold. -->
+    <section class="panel actions span-2" data-assist="shop-floor-actions">
+      <h2>Shop-floor actions <span class="muted">— what you can do from here</span></h2>
+      <div class="forms">
+      <form id="form-report" class="stack" data-assist="report-form" data-needs-cap="production.book">
+        <h3>Book output</h3>
+        <div class="row">
+          <select name="equipment" data-fill="machines" aria-label="Machine" data-assist="report-equipment"></select>
+          <select name="order" aria-label="Order" data-assist="report-order"
+                  title="Which order this output books against"></select>
+          <input name="good" type="number" step="1" min="0" placeholder="Good" value="1" data-assist="report-good">
+          <input name="scrap" type="number" step="1" min="0" placeholder="Scrap" value="0" data-assist="report-scrap">
+          <button data-assist="report-submit">Book</button>
+        </div>
+      </form>
+      <form id="form-consume" class="stack" data-assist="consume-form" data-needs-cap="production.consume">
+        <h3>Issue material</h3>
+        <div class="row">
+          <select name="order" data-fill="orders" aria-label="Order" data-assist="consume-order"></select>
+          <select name="lot" data-fill="lots" aria-label="Lot" data-assist="consume-lot"></select>
+          <input name="quantity" type="number" step="0.1" min="0" placeholder="Qty" value="1" data-assist="consume-quantity">
+          <button data-assist="consume-submit">Issue</button>
+        </div>
+      </form>
+      <form id="form-quality" class="stack" data-assist="quality-form" data-needs-cap="quality.record">
+        <h3>Quality check</h3>
+        <div class="row">
+          <select name="spec" data-fill="specs" aria-label="Characteristic" data-assist="quality-spec"></select>
+          <input name="value" type="number" step="0.1" placeholder="Measured" required data-assist="quality-value">
+          <button data-assist="quality-submit">Record</button>
+        </div>
+      </form>
+      </div>
+    </section>
+
+    <section class="panel span-2">
+      <h2>Machines <span id="m-count" class="muted count">—</span></h2>
+      <div class="filter-bar" data-assist="machine-filters">
+        <input id="m-q" type="search" placeholder="Machine code or name" aria-label="Machine code or name">
+        <select id="m-line" aria-label="Line"><option value="">Any line</option></select>
+        <select id="m-state" aria-label="State">
+          <option value="">Any state</option>
+          <option value="running">running</option>
+          <option value="idle">idle</option>
+          <option value="down">down</option>
+          <option value="setup">setup</option>
+          <option value="unknown">unknown</option>
+        </select>
+        <button id="m-clear" class="ghost" type="button">Clear</button>
+      </div>
+      <div id="machines" class="machine-grid"></div>
+      <div id="m-pager" class="pager"></div>
+    </section>
+
+    <section class="panel span-2">
+      <h2>Work orders <span id="o-count" class="muted count">—</span></h2>
+      <div class="filter-bar" data-assist="order-filters">
+        <input id="o-q" type="search" placeholder="Order or material code" aria-label="Order or material code">
+        <select id="o-status" aria-label="Status">
+          <option value="released,running">Open (released + running)</option>
+          <option value="planned">planned</option>
+          <option value="released">released</option>
+          <option value="running">running</option>
+          <option value="on_hold">on hold</option>
+          <option value="completed">completed</option>
+          <option value="">Any status</option>
+        </select>
+        <a class="ghost" href="/dashboard/orders">All orders →</a>
+      </div>
+      <div class="table-wrap">
+        <table id="orders">
+          <thead><tr><th>Order</th><th>Material</th><th>Status</th><th>Progress</th><th class="num">Good</th><th class="num">Scrap</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="o-pager" class="pager"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Activity <span class="muted">— audit trail, last 12</span></h2>
+      <ul id="audit" class="feed"></ul>
+    </section>
+    <section class="panel">
+      <h2>Active alarms</h2>
+      <ul id="alarms" class="feed"></ul>
+      <h2 class="mt">Open non-conformances <span class="muted">— newest 5</span></h2>
+      <ul id="ncs" class="feed"></ul>
+    </section>
+  </main>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/app.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

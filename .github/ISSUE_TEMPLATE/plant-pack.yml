@@ -1,0 +1,26 @@
+name: A plant needed a code change
+description: House rule 4 says adding a plant is configuration, not code. If yours needed code, that is a bug — tell us which.
+labels: [bug, from-the-field]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the plant in the abstract (line shape, number of stations, what the PLCs expose). No company names, no real tag names.
+  - type: textarea
+    id: plant
+    attributes:
+      label: The plant, in the abstract
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: The code change it needed
+      description: What you had to edit under `src/` and why the tag map or plant pack could not express it.
+    validations:
+      required: true
+  - type: textarea
+    id: info
+    attributes:
+      label: fsmes info
+      render: text

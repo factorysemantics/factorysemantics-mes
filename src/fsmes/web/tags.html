@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tags — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="tags"></header>
+
+  <section class="kpis">
+    <div class="kpi"><span class="kpi-label">Tags</span><span id="kpi-tags" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Machines quiet</span><span id="kpi-quiet" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Stale tags</span><span id="kpi-stale" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Machines in alarm</span><span id="kpi-alarms" class="kpi-value">—</span></div>
+  </section>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <main class="object-main" data-assist="tags-page">
+    <section class="panel">
+      <h2>Machines <span class="muted">— is each one still talking, and what is it saying</span></h2>
+      <div id="health" class="health-strip"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Every tag <span id="row-count" class="muted"></span></h2>
+      <div class="filter-bar" data-assist="tags-filters">
+        <input id="q" type="search" placeholder="Tag or machine" aria-label="Search tags">
+        <select id="machine" aria-label="Machine"><option value="">Any machine</option></select>
+        <select id="kind" aria-label="Kind">
+          <option value="">Any kind</option>
+          <option value="pv">process value</option>
+          <option value="sp">setpoint</option>
+          <option value="counter">counter</option>
+          <option value="state">state</option>
+          <option value="alarm">alarm</option>
+        </select>
+        <label class="pick"><input id="only-stale" type="checkbox"> stale only</label>
+        <label class="pick"><input id="only-writable" type="checkbox"> writable only</label>
+      </div>
+      <p class="muted small">Click a tag to trend it on its machine's page. A setpoint's bounds are the
+        limits any write - human or agent - must stay inside; nothing writes them yet.</p>
+      <div class="table-wrap"><table id="tags-table" class="row-select">
+        <thead><tr><th>Machine</th><th>Tag</th><th class="num">Value</th><th>Unit</th><th>Kind</th><th>Bounds</th><th>Age</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div id="tag-pager" class="pager"></div>
+    </section>
+  </main>
+
+  <p class="screen-source">tags /equipment/tags · machines link to /dashboard/machine/{code}</p>
+</div>
+<script src="/static/common.js"></script>
+<script src="/static/kit.js"></script>
+<script src="/static/tags.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orders — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/orders.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="orders"></header>
+
+  <section class="kpis">
+    <button type="button" class="kpi kpi-action" id="card-open" data-assist="kpi-open"
+            title="Show released and running orders">
+      <span class="kpi-label">Open orders</span><span id="kpi-open" class="kpi-value">—</span></button>
+    <button type="button" class="kpi kpi-action" id="card-running"
+            title="Show the orders running now">
+      <span class="kpi-label">On the floor</span><span id="kpi-running" class="kpi-value">—</span></button>
+    <button type="button" class="kpi kpi-action" id="card-done"
+            title="Show completed and closed orders">
+      <span class="kpi-label">Completed</span><span id="kpi-done" class="kpi-value">—</span></button>
+    <a class="kpi kpi-action" id="card-yield" href="/dashboard/analysis"
+       title="Open the analysis screen">
+      <span class="kpi-label">Yield</span><span id="kpi-yield" class="kpi-value">—</span></a>
+  </section>
+
+  <main class="orders-layout">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Work orders <span id="order-count" class="muted count">—</span></h2>
+        <span class="spacer"></span>
+        <button id="new-order" class="ghost" type="button" data-assist="order-create"
+                data-needs-cap="orders.create">New order</button>
+      </div>
+      <div class="filter-bar" data-assist="order-filters">
+        <input id="f-text" type="search" placeholder="Order code" aria-label="Order code">
+        <select id="f-material" aria-label="Material">
+          <option value="">Any material</option>
+        </select>
+        <div class="popover-host">
+          <button id="due-toggle" class="ghost" type="button" aria-expanded="false">Due ▾</button>
+          <div id="due-pop" class="popover hidden">
+            <div class="field">
+              <label for="f-due-after">Due from</label>
+              <input id="f-due-after" type="date" aria-label="Due from">
+            </div>
+            <div class="field">
+              <label for="f-due-before">Due to</label>
+              <input id="f-due-before" type="date" aria-label="Due to">
+            </div>
+          </div>
+        </div>
+        <div class="popover-host">
+          <button id="status-toggle" class="ghost" type="button" aria-expanded="false">Status ▾</button>
+          <div id="status-pop" class="popover hidden">
+            <div class="field">
+              <label for="f-status">Status</label>
+              <select id="f-status" aria-label="Status">
+                <option value="">Any status</option>
+                <option value="released,running">Open (released + running)</option>
+                <option value="completed,closed">Finished (completed + closed)</option>
+                <option value="planned">planned</option>
+                <option value="released">released</option>
+                <option value="running">running</option>
+                <option value="on_hold">on hold</option>
+                <option value="completed">completed</option>
+                <option value="closed">closed</option>
+                <option value="cancelled">cancelled</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <button id="f-clear" class="ghost hidden" type="button">Clear</button>
+      </div>
+
+      <div id="new-order-form" class="popover new-order hidden" data-needs-cap="orders.create">
+        <div class="field">
+          <label for="no-code">Order code</label>
+          <input id="no-code" placeholder="WO-…" data-assist="order-new-code">
+        </div>
+        <div class="field">
+          <label for="no-material">Material</label>
+          <select id="no-material" data-assist="order-new-material"></select>
+        </div>
+        <div class="field">
+          <label for="no-qty">Quantity</label>
+          <input id="no-qty" type="number" min="1" step="1" value="1000" data-assist="order-new-qty">
+        </div>
+        <div class="field">
+          <label for="no-due">Due</label>
+          <input id="no-due" type="date">
+        </div>
+        <label class="check" data-needs-cap="orders.release">
+          <input id="no-release" type="checkbox" checked data-assist="order-new-release"> Release to the floor now
+        </label>
+        <div class="row">
+          <button id="no-cancel" class="ghost" type="button">Cancel</button>
+          <button id="no-create" type="button" data-assist="order-new-create">Create</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="order-list" data-assist="order-list">
+          <thead><tr>
+            <th>Order</th><th>Material</th><th>Status</th><th>Due</th><th>Progress</th>
+            <th class="num">Qty</th><th class="num">Good</th><th class="num">Scrap</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="pager">
+        <span id="page-where" class="muted small"></span>
+        <button id="page-prev" class="ghost" type="button">‹ Prev</button>
+        <button id="page-next" class="ghost" type="button">Next ›</button>
+      </div>
+    </section>
+
+    <section class="panel" id="detail-panel">
+      <h2>Order <span id="detail-code" class="muted">— select one</span></h2>
+      <div id="detail-empty" class="empty">
+        Pick an order on the left to see its route, its yield at each step,
+        what material went into it, and whether the plan says it lands on time.
+      </div>
+      <div id="detail" class="hidden">
+        <div class="detail-head">
+          <div><span class="kpi-label">Material</span><strong id="d-material">—</strong></div>
+          <div><span class="kpi-label">Quantity</span><strong id="d-qty">—</strong></div>
+          <div><span class="kpi-label">Status</span><strong id="d-status">—</strong></div>
+          <div><span class="kpi-label">Yield</span><strong id="d-yield">—</strong></div>
+          <div><span class="kpi-label">Plan says</span><strong id="d-promise" class="muted">—</strong></div>
+        </div>
+
+        <div id="order-actions" class="order-actions" data-assist="order-actions"></div>
+        <div id="hold-pop" class="popover hidden">
+          <div class="field">
+            <label for="hold-reason">Why is this order being held?</label>
+            <input id="hold-reason" placeholder="e.g. suspect raw material lot">
+          </div>
+          <div class="row">
+            <button id="hold-cancel" class="ghost" type="button">Never mind</button>
+            <button id="hold-confirm" type="button">Hold order</button>
+          </div>
+        </div>
+
+        <h3 data-assist="order-route">Route</h3>
+        <p class="muted small">Where the order is. Each step shows what that station
+          actually booked, so a losing operation is visible rather than averaged away.</p>
+        <div class="table-wrap">
+          <table id="ops">
+            <thead><tr><th>Seq</th><th>Operation</th><th>Machine</th><th>Status</th>
+              <th class="num">Good</th><th class="num">Scrap</th><th class="num">Yield</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <h3 class="mt" data-assist="order-staging">Staging</h3>
+        <p class="muted small">What each station still needs for the rest of this
+          order, against what has been issued and what is in stock.</p>
+        <div class="table-wrap">
+          <table id="staging">
+            <thead><tr><th>Station</th><th>Component</th><th class="num">Need</th>
+              <th class="num">Issued</th><th class="num">Stock</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p id="staging-verdict" class="muted small"></p>
+
+        <h3 class="mt" data-assist="order-genealogy">Genealogy</h3>
+        <p class="muted small">What went in and what came out. This is the question a
+          recall asks, and it is answered from the audit trail rather than reconstructed.</p>
+        <div class="genealogy">
+          <div>
+            <h4>Consumed</h4>
+            <ul id="consumed" class="feed"></ul>
+          </div>
+          <div>
+            <h4>Produced</h4>
+            <ul id="produced" class="feed"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/orders.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

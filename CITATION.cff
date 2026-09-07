@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+title: FactorySemantics MES
+message: If you use this software in research, please cite it as below.
+type: software
+authors:
+  - family-names: Kalwei
+    given-names: Scott
+repository-code: https://github.com/factorysemantics/factorysemantics-mes
+url: https://factorysemantics.com
+license: Apache-2.0
+version: 0.1.0
+abstract: An open-source, modular, agent-native Manufacturing Execution System with OPC UA connectivity, honest OEE, quality with SPC and gauges, scheduling, traceability, an ERPNext connector and an MCP agent surface.

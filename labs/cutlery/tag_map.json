@@ -1,0 +1,1252 @@
+{
+  "_comment": "The cutlery plant, derived mechanically from line.json by make_tag_map.py - see build_config.py for the plant itself.",
+  "_cycle_seconds": "60 / rate_per_min, same rule as every other plant.",
+  "machines": [
+    {
+      "equipment": "FORK1_Mold",
+      "object": "FORK1_Mold",
+      "cycle_seconds": 0.026,
+      "analog": "MeltTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FORK1_Degate",
+      "object": "FORK1_Degate",
+      "cycle_seconds": 0.026,
+      "analog": "BladeWear",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FORK1_Mark",
+      "object": "FORK1_Mark",
+      "cycle_seconds": 0.026,
+      "analog": "LaserPower",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FORK2_Mold",
+      "object": "FORK2_Mold",
+      "cycle_seconds": 0.026,
+      "analog": "MeltTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FORK2_Degate",
+      "object": "FORK2_Degate",
+      "cycle_seconds": 0.026,
+      "analog": "BladeWear",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FORK2_Mark",
+      "object": "FORK2_Mark",
+      "cycle_seconds": 0.026,
+      "analog": "LaserPower",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FORK3_Mold",
+      "object": "FORK3_Mold",
+      "cycle_seconds": 0.026,
+      "analog": "MeltTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FORK3_Degate",
+      "object": "FORK3_Degate",
+      "cycle_seconds": 0.026,
+      "analog": "BladeWear",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FORK3_Mark",
+      "object": "FORK3_Mark",
+      "cycle_seconds": 0.026,
+      "analog": "LaserPower",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "SPOON1_Mold",
+      "object": "SPOON1_Mold",
+      "cycle_seconds": 0.026,
+      "analog": "MeltTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "SPOON1_Degate",
+      "object": "SPOON1_Degate",
+      "cycle_seconds": 0.026,
+      "analog": "BladeWear",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "SPOON1_Mark",
+      "object": "SPOON1_Mark",
+      "cycle_seconds": 0.026,
+      "analog": "LaserPower",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "SPOON2_Mold",
+      "object": "SPOON2_Mold",
+      "cycle_seconds": 0.026,
+      "analog": "MeltTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "SPOON2_Degate",
+      "object": "SPOON2_Degate",
+      "cycle_seconds": 0.026,
+      "analog": "BladeWear",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "SPOON2_Mark",
+      "object": "SPOON2_Mark",
+      "cycle_seconds": 0.026,
+      "analog": "LaserPower",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "SPOON3_Mold",
+      "object": "SPOON3_Mold",
+      "cycle_seconds": 0.026,
+      "analog": "MeltTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "SPOON3_Degate",
+      "object": "SPOON3_Degate",
+      "cycle_seconds": 0.026,
+      "analog": "BladeWear",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "SPOON3_Mark",
+      "object": "SPOON3_Mark",
+      "cycle_seconds": 0.026,
+      "analog": "LaserPower",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "KNIFE1_Mold",
+      "object": "KNIFE1_Mold",
+      "cycle_seconds": 0.026,
+      "analog": "MeltTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "KNIFE1_Degate",
+      "object": "KNIFE1_Degate",
+      "cycle_seconds": 0.026,
+      "analog": "BladeWear",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "KNIFE1_Mark",
+      "object": "KNIFE1_Mark",
+      "cycle_seconds": 0.026,
+      "analog": "LaserPower",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "KNIFE2_Mold",
+      "object": "KNIFE2_Mold",
+      "cycle_seconds": 0.026,
+      "analog": "MeltTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "KNIFE2_Degate",
+      "object": "KNIFE2_Degate",
+      "cycle_seconds": 0.026,
+      "analog": "BladeWear",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "KNIFE2_Mark",
+      "object": "KNIFE2_Mark",
+      "cycle_seconds": 0.026,
+      "analog": "LaserPower",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "KNIFE3_Mold",
+      "object": "KNIFE3_Mold",
+      "cycle_seconds": 0.026,
+      "analog": "MeltTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "KNIFE3_Degate",
+      "object": "KNIFE3_Degate",
+      "cycle_seconds": 0.026,
+      "analog": "BladeWear",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "KNIFE3_Mark",
+      "object": "KNIFE3_Mark",
+      "cycle_seconds": 0.026,
+      "analog": "LaserPower",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK01_Stacker",
+      "object": "STACK01_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK02_Stacker",
+      "object": "STACK02_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK03_Stacker",
+      "object": "STACK03_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK04_Stacker",
+      "object": "STACK04_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK05_Stacker",
+      "object": "STACK05_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK06_Stacker",
+      "object": "STACK06_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK07_Stacker",
+      "object": "STACK07_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK08_Stacker",
+      "object": "STACK08_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK09_Stacker",
+      "object": "STACK09_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK10_Stacker",
+      "object": "STACK10_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK11_Stacker",
+      "object": "STACK11_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK12_Stacker",
+      "object": "STACK12_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK13_Stacker",
+      "object": "STACK13_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK14_Stacker",
+      "object": "STACK14_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK15_Stacker",
+      "object": "STACK15_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK16_Stacker",
+      "object": "STACK16_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK17_Stacker",
+      "object": "STACK17_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK18_Stacker",
+      "object": "STACK18_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK19_Stacker",
+      "object": "STACK19_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK20_Stacker",
+      "object": "STACK20_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK21_Stacker",
+      "object": "STACK21_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK22_Stacker",
+      "object": "STACK22_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK23_Stacker",
+      "object": "STACK23_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK24_Stacker",
+      "object": "STACK24_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK25_Stacker",
+      "object": "STACK25_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK26_Stacker",
+      "object": "STACK26_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK27_Stacker",
+      "object": "STACK27_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK28_Stacker",
+      "object": "STACK28_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK29_Stacker",
+      "object": "STACK29_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK30_Stacker",
+      "object": "STACK30_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK31_Stacker",
+      "object": "STACK31_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "STACK32_Stacker",
+      "object": "STACK32_Stacker",
+      "cycle_seconds": 0.276,
+      "analog": "GripForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WRAP01_Wrapper",
+      "object": "WRAP01_Wrapper",
+      "cycle_seconds": 0.138,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WRAP02_Wrapper",
+      "object": "WRAP02_Wrapper",
+      "cycle_seconds": 0.138,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WRAP03_Wrapper",
+      "object": "WRAP03_Wrapper",
+      "cycle_seconds": 0.138,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WRAP04_Wrapper",
+      "object": "WRAP04_Wrapper",
+      "cycle_seconds": 0.138,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WRAP05_Wrapper",
+      "object": "WRAP05_Wrapper",
+      "cycle_seconds": 0.138,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WRAP06_Wrapper",
+      "object": "WRAP06_Wrapper",
+      "cycle_seconds": 0.138,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WRAP07_Wrapper",
+      "object": "WRAP07_Wrapper",
+      "cycle_seconds": 0.138,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WRAP08_Wrapper",
+      "object": "WRAP08_Wrapper",
+      "cycle_seconds": 0.138,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WRAP09_Wrapper",
+      "object": "WRAP09_Wrapper",
+      "cycle_seconds": 0.138,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WRAP10_Wrapper",
+      "object": "WRAP10_Wrapper",
+      "cycle_seconds": 0.138,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WRAP11_Wrapper",
+      "object": "WRAP11_Wrapper",
+      "cycle_seconds": 0.138,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WRAP12_Wrapper",
+      "object": "WRAP12_Wrapper",
+      "cycle_seconds": 0.138,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WRAP13_Wrapper",
+      "object": "WRAP13_Wrapper",
+      "cycle_seconds": 0.138,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WRAP14_Wrapper",
+      "object": "WRAP14_Wrapper",
+      "cycle_seconds": 0.138,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WRAP15_Wrapper",
+      "object": "WRAP15_Wrapper",
+      "cycle_seconds": 0.138,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WRAP16_Wrapper",
+      "object": "WRAP16_Wrapper",
+      "cycle_seconds": 0.138,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAL1_Palletizer",
+      "object": "PAL1_Palletizer",
+      "cycle_seconds": 8.13,
+      "analog": "StackHeight",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAL1_StretchWrap",
+      "object": "PAL1_StretchWrap",
+      "cycle_seconds": 8.13,
+      "analog": "FilmTension",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAL2_Palletizer",
+      "object": "PAL2_Palletizer",
+      "cycle_seconds": 8.13,
+      "analog": "StackHeight",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAL2_StretchWrap",
+      "object": "PAL2_StretchWrap",
+      "cycle_seconds": 8.13,
+      "analog": "FilmTension",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAL3_Palletizer",
+      "object": "PAL3_Palletizer",
+      "cycle_seconds": 8.13,
+      "analog": "StackHeight",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAL3_StretchWrap",
+      "object": "PAL3_StretchWrap",
+      "cycle_seconds": 8.13,
+      "analog": "FilmTension",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAL4_Palletizer",
+      "object": "PAL4_Palletizer",
+      "cycle_seconds": 8.13,
+      "analog": "StackHeight",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAL4_StretchWrap",
+      "object": "PAL4_StretchWrap",
+      "cycle_seconds": 8.13,
+      "analog": "FilmTension",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    }
+  ],
+  "_tags": "Each machine subscribes to everything its line publishes; filled in from the generated manifest at load time."
+}

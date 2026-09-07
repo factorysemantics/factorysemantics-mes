@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trace — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/station.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="trace"></header>
+
+  <section class="object-head">
+    <div class="object-title">
+      <h1>Trace <span class="muted">— a thing, not a batch</span></h1>
+      <span class="spacer"></span>
+      <form id="find" class="row">
+        <input id="q" type="search" placeholder="Serial or lot code" aria-label="Serial or lot code" data-assist="trace-search">
+        <button id="find-submit">Look up</button>
+      </form>
+    </div>
+    <p class="muted small">A serial answers what is inside it and what went into it. A lot answers where it
+      went - as packages a warehouse can pull, not a list of ten thousand bottles.</p>
+  </section>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <main class="object-main">
+    <section id="serial-panels" class="tab-panel" hidden>
+      <div class="panel">
+        <h2>Unit <span id="s-serial" class="mono"></span></h2>
+        <div class="object-facts">
+          <span>Material <strong id="s-material">—</strong></span>
+          <span>Status <strong id="s-status">—</strong></span>
+          <span>Order <strong id="s-order">—</strong></span>
+          <span>Made on <strong id="s-equipment">—</strong></span>
+          <span>Packed into <strong id="s-parent">—</strong></span>
+          <span>Produced <strong id="s-produced">—</strong></span>
+          <span id="s-certificate"></span>
+        </div>
+        <p id="s-note" class="muted small"></p>
+        <div class="row" data-needs-cap="quality.close_nc" data-assist="trace-status">
+          <select id="st-status" aria-label="Status">
+            <option value="quarantined">quarantine</option>
+            <option value="released">release</option>
+            <option value="scrapped">scrap</option>
+          </select>
+          <input id="st-note" placeholder="Why">
+          <label class="pick"><input id="st-cascade" type="checkbox" checked> and everything inside</label>
+          <button id="st-submit" type="button">Set status</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Contains <span id="s-count" class="muted"></span></h2>
+        <ul id="s-tree" class="tree"></ul>
+        <div class="row" data-needs-cap="production.book">
+          <input id="pack-into" placeholder="Pack this unit into (serial)">
+          <button id="pack-submit" type="button" class="ghost">Pack</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>What went into it <span id="s-components-count" class="muted"></span></h2>
+        <div class="table-wrap"><table id="s-components">
+          <thead><tr><th>Lot</th><th>Material</th><th class="num">Units carrying it</th><th>Basis</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section id="lot-panels" class="tab-panel" hidden>
+      <div class="panel">
+        <h2>Lot <span id="l-lot" class="mono"></span> <span id="l-verdict" class="muted"></span></h2>
+        <div class="object-facts">
+          <span>Material <strong id="l-material">—</strong></span>
+          <span>Units carrying it <strong id="l-units">—</strong></span>
+          <span>Packages to hold <strong id="l-packages">—</strong></span>
+        </div>
+        <div class="table-wrap"><table id="l-table">
+          <thead><tr><th>Package</th><th>Material</th><th>Status</th><th class="num">Units inside carrying the lot</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section id="produce-panel" class="panel" data-needs-cap="production.book">
+      <h2>Produce identified units</h2>
+      <form id="produce" class="row" data-assist="trace-produce">
+        <input id="p-material" placeholder="Material code" required>
+        <input id="p-order" placeholder="Order (optional)">
+        <input id="p-equipment" placeholder="Machine (optional)">
+        <input id="p-count" type="number" min="1" value="1">
+        <button id="p-submit">Produce</button>
+      </form>
+      <p id="p-result" class="muted small"></p>
+    </section>
+  </main>
+
+  <p class="screen-source">unit /trace/units/{serial} · components /trace/units/{serial}/trace · lot /trace/where-used/{lot} ·
+    produce /trace/units · pack /trace/units/pack · status /trace/units/{serial}/status</p>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/trace.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

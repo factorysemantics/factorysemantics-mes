@@ -1,0 +1,140 @@
+/* Shift analysis. Shares styles.css tokens — same palette, same state colours,
+   so a red bar here means exactly what a red tile means on the dashboard. */
+
+.page-title { font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
+
+.pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.pick.inline { margin-left: 10px; font-weight: 400; }
+.pick select {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font: inherit;
+}
+
+.hint-inline { color: var(--muted); font-style: normal; font-size: 11px; opacity: 0.75; }
+.kpi-sub { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.banner {
+  margin: 0 16px 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: rgba(210, 153, 34, 0.12);
+  border: 1px solid rgba(210, 153, 34, 0.35);
+  color: var(--idle);
+  font-size: 13px;
+}
+
+.chart { width: 100%; overflow-x: auto; }
+.chart svg { display: block; max-width: 100%; }
+
+.legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 10px 2px 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.sw-avail { background: var(--down); }
+.sw-perf { background: var(--idle); }
+.sw-qual { background: var(--quality); }
+.sw-oee { background: var(--running); }
+
+/* ---------- OEE by station ---------- */
+.oee-list { display: flex; flex-direction: column; gap: 10px; }
+
+.oee-row {
+  display: grid;
+  grid-template-columns: 130px 1fr 62px;
+  align-items: center;
+  gap: 12px;
+}
+.oee-row .who { display: flex; flex-direction: column; min-width: 0; }
+.oee-row .code { font-weight: 600; font-family: var(--mono); font-size: 13px; }
+.oee-row .name {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.oee-row .score {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 17px;
+}
+.oee-row.is-constraint .code::after {
+  content: "constraint";
+  margin-left: 8px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--down);
+  border: 1px solid var(--down);
+  border-radius: 4px;
+  padding: 0 4px;
+  vertical-align: 1px;
+}
+
+.bar {
+  position: relative;
+  height: 22px;
+  background: var(--panel-2);
+  border-radius: 5px;
+  overflow: hidden;
+  display: flex;
+}
+.bar > i { display: block; height: 100%; }
+.bar .b-oee { background: var(--running); }
+.bar .b-avail { background: var(--down); opacity: 0.75; }
+.bar .b-perf { background: var(--idle); opacity: 0.7; }
+.bar .b-qual { background: var(--quality); opacity: 0.7; }
+.bar .b-unknown {
+  background: repeating-linear-gradient(45deg, var(--unknown) 0 6px, transparent 6px 12px);
+  opacity: 0.45;
+  flex: 1;
+}
+
+/* ---------- SVG chart bits ---------- */
+.axis { fill: var(--muted); font-size: 10px; }
+.grid-line { stroke: var(--line); stroke-width: 1; }
+.row-label { fill: var(--text); font-size: 11px; font-family: var(--mono); }
+.bar-label { fill: var(--text); font-size: 11px; }
+.series-good { fill: var(--running); }
+.series-scrap { fill: var(--down); }
+.trend-band { fill: var(--accent); opacity: 0.18; }
+.trend-line { fill: none; stroke: var(--accent); stroke-width: 1.6; }
+.cum-line { fill: none; stroke: var(--idle); stroke-width: 1.4; stroke-dasharray: 3 3; }
+
+.empty {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 18px 2px;
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px 24px;
+  font-size: 12px;
+}
+.foot .spacer { flex: 1; }
+
+a.link { text-decoration: none; }
+
+/* The line/window pickers, moved out of the header - no other screen
+   puts controls there, and the shared header has no slot for them. */
+.picks { padding: var(--s2) var(--s4) 0; }

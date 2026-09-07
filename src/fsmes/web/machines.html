@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Machines — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="machines"></header>
+
+  <section class="kpis">
+    <div class="kpi"><span class="kpi-label">Machines</span><span id="kpi-machines" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Running</span><span id="kpi-running" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Down</span><span id="kpi-down" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Machines in alarm</span><span id="kpi-alarms" class="kpi-value">—</span></div>
+  </section>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <main class="object-main" data-assist="machines-page">
+    <section class="panel">
+      <h2 id="tree-title">The plant <span class="muted">— site, lines, cells, machines, and whose cost center each bills to</span></h2>
+      <nav id="tree-crumbs" class="crumbs" aria-label="Where this node sits"></nav>
+      <ul id="tree" class="tree"></ul>
+    </section>
+    <section class="panel">
+      <h2>Active alarms</h2>
+      <ul id="alarms" class="alarm-list"></ul>
+    </section>
+  </main>
+
+  <p class="screen-source">tree /equipment/tree · alarms /equipment/alarms</p>
+</div>
+<script src="/static/common.js"></script>
+<script src="/static/machines.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

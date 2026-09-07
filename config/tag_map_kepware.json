@@ -1,0 +1,61 @@
+{
+  "_comment": "The same KepSim six-station line, but read from a real KEPServerEX instead of the twin's replay server. Identical equipment, tags and state mapping as tag_map_kepsim.json — only the addressing changes, which is exactly the point: swapping the machine layer is a config change, not a code change.",
+  "_addressing": "Flat string node ids, channel.device.tag, in Kepware's namespace (ns=2 on a default install). The tag segment is NOT the bare column name: the Advanced Simulator generates tags as <table>_<column>, and the table is the file (LD.csv), so the dot is sanitised and State becomes LD_csv_State. Verified 2026-08-18 against a live KEPServerEX 7.1 - 48 tags generated across 7 devices. `node_id` present makes the agent skip browsing, so `opc_namespace` is irrelevant for these machines.",
+  "_security": "Kepware's UA endpoint typically refuses anonymous, no-security connections. Set MES_OPC_SECURITY, MES_OPC_USER and MES_OPC_PASSWORD (see .env.example) before pointing the agent here, and trust the client certificate once in Kepware's OPC UA Configuration Manager.",
+  "machines": [
+    {
+      "equipment": "LD01",
+      "object": "LD",
+      "node_id": "ns=2;s=SimLine.LD.LD_csv_{tag}",
+      "cycle_seconds": 0.545,
+      "analog": "FeedRate",
+      "order_tag": null,
+      "state_map": { "0": "idle", "1": "running", "2": "idle", "3": "idle", "4": "down", "5": "setup" }
+    },
+    {
+      "equipment": "RD01",
+      "object": "RD",
+      "node_id": "ns=2;s=SimLine.RD.RD_csv_{tag}",
+      "cycle_seconds": 0.556,
+      "analog": "MotorTemp",
+      "order_tag": null,
+      "state_map": { "0": "idle", "1": "running", "2": "idle", "3": "idle", "4": "down", "5": "setup" }
+    },
+    {
+      "equipment": "WASH01",
+      "object": "Washer",
+      "node_id": "ns=2;s=SimLine.Washer.Washer_csv_{tag}",
+      "cycle_seconds": 0.522,
+      "analog": "WashTemp",
+      "order_tag": null,
+      "state_map": { "0": "idle", "1": "running", "2": "idle", "3": "idle", "4": "down", "5": "setup" }
+    },
+    {
+      "equipment": "QI01",
+      "object": "QI",
+      "node_id": "ns=2;s=SimLine.QI.QI_csv_{tag}",
+      "cycle_seconds": 0.536,
+      "analog": "RejectPct",
+      "order_tag": null,
+      "state_map": { "0": "idle", "1": "running", "2": "idle", "3": "idle", "4": "down", "5": "setup" }
+    },
+    {
+      "equipment": "FILL01",
+      "object": "Refill",
+      "node_id": "ns=2;s=SimLine.Refill.Refill_csv_{tag}",
+      "cycle_seconds": 0.571,
+      "analog": "FillWeight",
+      "order_tag": null,
+      "state_map": { "0": "idle", "1": "running", "2": "idle", "3": "idle", "4": "down", "5": "setup" }
+    },
+    {
+      "equipment": "PAL01",
+      "object": "Palletiser",
+      "node_id": "ns=2;s=SimLine.Palletiser.Palletiser_csv_{tag}",
+      "cycle_seconds": 0.588,
+      "analog": "AirPressure",
+      "order_tag": null,
+      "state_map": { "0": "idle", "1": "running", "2": "idle", "3": "idle", "4": "down", "5": "setup" }
+    }
+  ]
+}

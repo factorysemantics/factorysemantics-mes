@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FactorySemantics MES — Line View</title>
+  <link rel="stylesheet" href="/static/themes.css">
+  <link rel="stylesheet" href="/static/line.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🏭</text></svg>">
+
+  <!--
+    No bundler, no CDN. three.js is committed under /static/vendor and loaded
+    straight by the browser; the import map is what lets the vendored addons keep
+    importing the bare specifier "three". See vendor/README.md.
+  -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/static/vendor/three.module.min.js",
+      "three/addons/controls/OrbitControls.js": "/static/vendor/OrbitControls.js"
+    }
+  }
+  </script>
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+<script>
+  /* Inside the Line page's 3D tab the shared header would be a second
+     header; the frame hides it and the page is otherwise the same. */
+  if (window.self !== window.top) document.documentElement.classList.add("embedded");
+</script>
+</head>
+<body>
+
+<canvas id="stage"></canvas>
+
+  <header data-nav="line"></header>
+  <div id="line-strip">
+    <span id="line-name" class="line-name">loading…</span>
+    <span id="demo-badge" class="badge demo hidden">recorded hour</span>
+    <span id="source-badge" class="badge source hidden" title=""></span>
+  </div>
+
+<section id="readout" class="readout">
+  <div class="stat">
+    <span class="stat-label">Line rate</span>
+    <span id="stat-rate" class="stat-value">—<small>/min</small></span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Order</span>
+    <span id="stat-order" class="stat-value small">—</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Good</span>
+    <span id="stat-good" class="stat-value">—</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Scrap</span>
+    <span id="stat-scrap" class="stat-value">—</span>
+  </div>
+</section>
+
+<section id="stations" class="stations"></section>
+
+<footer id="foot">
+  <div class="legend">
+    <span><i class="swatch running"></i>running</span>
+    <span><i class="swatch idle"></i>idle</span>
+    <span><i class="swatch down"></i>down</span>
+    <span><i class="swatch setup"></i>changeover</span>
+  </div>
+  <div class="spacer"></div>
+  <p class="truth">
+    Every unit on the belts is one the MES booked.
+    <span id="filling-note">Belts are still filling — the line was already running when this opened.</span>
+    <span id="unmatched-note" class="hidden">
+      <strong id="stat-unmatched">0</strong> consumed with nothing tracked upstream — WIP the counters never showed us.
+    </span>
+  </p>
+</footer>
+
+<div id="fatal" class="fatal hidden"><div><h1>Line view unavailable</h1><p id="fatal-text"></p></div></div>
+
+<script src="/static/common.js"></script>
+<script type="module" src="/static/line/app.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

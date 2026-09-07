@@ -1,0 +1,23 @@
+name: Welcome
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  first-interaction:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/first-interaction@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-message: |
+            Thanks for the first issue. The maintainer reads everything and answers within a few days. If this is about a real plant, please make sure nothing in it identifies the plant or its owner — the simulator is the place to reproduce.
+          pr-message: |
+            Thanks for the first pull request. Checks: every commit signed off (`git commit -s`), `ruff` and `pytest` green, and the house-rules checklist in the template. The maintainer reviews within a few days.

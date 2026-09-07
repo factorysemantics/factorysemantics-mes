@@ -1,0 +1,30 @@
+# The plant registry.
+#
+# Adding a plant is an entry in this file plus a tag map and generated line
+# data. It is never a change under src/. If a new plant ever needs product
+# code, that code contains a tenant literal and the tenant literal is the bug.
+#
+# Every field below becomes an MES_* environment variable, which is the whole
+# reason two plants can run side by side with no multi-tenant code path: the
+# bottling API cannot reach the machining database because it was never told
+# machining exists.
+
+[plants.bottling]
+label      = "ACME Beverages / Kansas City — 6-station bottling line"
+# On the tailnet, not loopback, so the dashboard can be opened from the laptop
+# or a phone. It is behind a sign-in, and the tailnet is the blast radius.
+api_host   = "127.0.0.1"   # the interface to serve on; a LAN or tailnet address to share it
+api_port   = 8010
+opc_port   = 4841
+tag_map    = "config/tag_map_kepsim.json"
+replay_dir = "labs/kepsim/out"
+init       = "labs/multiplant/bottling/init.py"
+
+[plants.machining]
+label      = "Northgate Machining / Cell A — 3-station machining cell"
+api_host   = "127.0.0.1"   # the interface to serve on; a LAN or tailnet address to share it
+api_port   = 8020
+opc_port   = 4842
+tag_map    = "labs/multiplant/machining/tag_map.json"
+replay_dir = "labs/multiplant/machining/out"
+init       = "labs/multiplant/machining/seed.py"

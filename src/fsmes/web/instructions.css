@@ -1,0 +1,81 @@
+/* Work instructions: a catalogue beside a reader. The reader renders a small,
+   deliberate subset of Markdown - no library, because principle 5 says a plant
+   PC renders this for years with no toolchain. */
+
+.instructions-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 16px;
+  padding: 0 16px 16px;
+}
+@media (max-width: 1000px) { .instructions-layout { grid-template-columns: 1fr; } }
+
+#catalogue tbody tr { cursor: pointer; }
+#catalogue tbody tr:hover { background: var(--panel-2); }
+#catalogue tbody tr.selected {
+  background: var(--panel-2);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.doc-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0 8px; }
+.anchors { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
+.anchor {
+  font-family: var(--mono); font-size: 11px;
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 3px; padding: 1px 7px; color: var(--muted);
+}
+.anchor b { color: var(--text); font-weight: 500; }
+
+.drafted {
+  font-size: 12px; color: var(--idle);
+  border-left: 3px solid var(--idle);
+  padding: 5px 10px; margin-bottom: 12px;
+  background: color-mix(in srgb, var(--idle) 8%, transparent);
+}
+
+.doc-body {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--panel-2); padding: 16px 18px;
+  font-size: 14px; line-height: 1.65;
+}
+.doc-body p { margin: 0 0 10px; }
+.doc-body ol, .doc-body ul { margin: 0 0 10px; padding-left: 22px; }
+.doc-body li { margin: 4px 0; }
+.doc-body h4 { margin: 14px 0 6px; font-size: 14px; }
+.doc-body strong { color: var(--text); }
+.doc-body .purpose {
+  border-left: 3px solid var(--accent);
+  padding-left: 10px; color: var(--text); margin-bottom: 12px;
+}
+
+.doc-actions { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+.doc-actions button {
+  background: var(--accent); color: #06121f; border: none;
+  border-radius: 7px; padding: 6px 13px; font: inherit; font-weight: 600;
+  font-size: 13px; cursor: pointer;
+}
+.doc-actions button.ghost {
+  background: transparent; color: var(--muted); border: 1px solid var(--line); font-weight: 400;
+}
+
+.pill.approved { background: color-mix(in srgb, var(--running) 18%, transparent); color: var(--running); }
+.pill.draft { background: color-mix(in srgb, var(--idle) 18%, transparent); color: var(--idle); }
+.pill.superseded, .pill.withdrawn { background: var(--panel-2); color: var(--muted); }
+
+/* Instructions surfaced beside the work, on other screens. */
+.wi-inline {
+  border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  border-radius: 8px; background: var(--panel-2);
+  padding: 10px 12px; margin-top: 10px; font-size: 13px;
+}
+.wi-inline h4 { margin: 0 0 4px; font-size: 13px; }
+.wi-inline .muted { font-size: 11.5px; }
+.wi-inline a { color: var(--accent); text-decoration: none; }
+.wi-inline a:hover { text-decoration: underline; }
+.mt { margin-top: 18px; }
+.small { font-size: 12px; }
+
+/* a recorded walkthrough, read as text */
+.walk-steps { padding-left: 22px; display: flex; flex-direction: column; gap: 10px; }
+.walk-steps li p { margin: 2px 0 4px; color: var(--muted); }
+.walk-steps li code { font-family: var(--mono); font-size: 11px; color: var(--muted); }

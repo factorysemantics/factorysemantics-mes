@@ -1,0 +1,29 @@
+# The cutlery plant's own registry - the one live plant on this machine.
+#
+#     FSMES_PLANT_REGISTRY=labs/cutlery/registry.toml fsmes plant cutlery init
+#     FSMES_PLANT_REGISTRY=labs/cutlery/registry.toml fsmes plant cutlery start
+#
+# Line data under labs/cutlery/out is generated, never committed - run
+# build_config.py + make_tag_map.py + `fsmes sim-generate labs/cutlery/line.json`
+# (or labs/cutlery/run_cutlery.py) first.
+
+[environment]
+data_dir = "labs/cutlery/.data"
+
+[plants.cutlery]
+label      = "Cutlery Works — 60 million ids a day, every one judged by a vision station"
+api_host   = "127.0.0.1"   # the interface to serve on; a LAN or tailnet address to share it
+api_port   = 8040
+opc_port   = 4844
+tag_map    = "labs/cutlery/tag_map.json"
+replay_dir = "labs/cutlery/out"
+init       = "labs/cutlery/init.py"
+# The large plant's storage: PostgreSQL, the password read from a file the
+# registry never contains. Leave both out and the plant is one SQLite file.
+database_url           = "postgresql+psycopg://fsmes@localhost:5433/fsmes"
+database_password_file = "~/.config/fsmes/pg-password"
+# Real time: the point is the rate. A scored run passes its own --speed.
+speed = 1
+# The quality plan: every dimensional specification, every fifteen minutes.
+inspect_every = 900
+inspect_all   = true

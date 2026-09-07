@@ -1,0 +1,1627 @@
+{
+  "_comment": "Mega-factory scale spike, derived mechanically from line.json by make_tag_map.py - see build_config.py for the factory description itself.",
+  "_cycle_seconds": "60 / rate_per_min, same rule as every other plant.",
+  "machines": [
+    {
+      "equipment": "FILL1_Loader",
+      "object": "FILL1_Loader",
+      "cycle_seconds": 1.5,
+      "analog": "InfeedRate",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL1_Washer",
+      "object": "FILL1_Washer",
+      "cycle_seconds": 1.5,
+      "analog": "WashTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL1_Filler",
+      "object": "FILL1_Filler",
+      "cycle_seconds": 1.579,
+      "analog": "FillWeight",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL1_Capper",
+      "object": "FILL1_Capper",
+      "cycle_seconds": 1.579,
+      "analog": "TorqueLevel",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL1_Labeler",
+      "object": "FILL1_Labeler",
+      "cycle_seconds": 1.579,
+      "analog": "LabelTension",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL1_Palletizer",
+      "object": "FILL1_Palletizer",
+      "cycle_seconds": 1.667,
+      "analog": "StackHeight",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL2_Loader",
+      "object": "FILL2_Loader",
+      "cycle_seconds": 1.5,
+      "analog": "InfeedRate",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL2_Washer",
+      "object": "FILL2_Washer",
+      "cycle_seconds": 1.5,
+      "analog": "WashTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL2_Filler",
+      "object": "FILL2_Filler",
+      "cycle_seconds": 1.579,
+      "analog": "FillWeight",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL2_Capper",
+      "object": "FILL2_Capper",
+      "cycle_seconds": 1.579,
+      "analog": "TorqueLevel",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL2_Labeler",
+      "object": "FILL2_Labeler",
+      "cycle_seconds": 1.579,
+      "analog": "LabelTension",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL2_Palletizer",
+      "object": "FILL2_Palletizer",
+      "cycle_seconds": 1.667,
+      "analog": "StackHeight",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL3_Loader",
+      "object": "FILL3_Loader",
+      "cycle_seconds": 1.5,
+      "analog": "InfeedRate",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL3_Washer",
+      "object": "FILL3_Washer",
+      "cycle_seconds": 1.5,
+      "analog": "WashTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL3_Filler",
+      "object": "FILL3_Filler",
+      "cycle_seconds": 1.579,
+      "analog": "FillWeight",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL3_Capper",
+      "object": "FILL3_Capper",
+      "cycle_seconds": 1.579,
+      "analog": "TorqueLevel",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL3_Labeler",
+      "object": "FILL3_Labeler",
+      "cycle_seconds": 1.579,
+      "analog": "LabelTension",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL3_Palletizer",
+      "object": "FILL3_Palletizer",
+      "cycle_seconds": 1.667,
+      "analog": "StackHeight",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MACH1_Saw",
+      "object": "MACH1_Saw",
+      "cycle_seconds": 2.727,
+      "analog": "BladeLoad",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MACH1_Mill",
+      "object": "MACH1_Mill",
+      "cycle_seconds": 3.333,
+      "analog": "SpindleTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MACH1_Deburr",
+      "object": "MACH1_Deburr",
+      "cycle_seconds": 2.4,
+      "analog": "CycleForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MACH1_Inspect",
+      "object": "MACH1_Inspect",
+      "cycle_seconds": 2.5,
+      "analog": "GaugeReading",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MACH1_Pack",
+      "object": "MACH1_Pack",
+      "cycle_seconds": 2.5,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MACH2_Saw",
+      "object": "MACH2_Saw",
+      "cycle_seconds": 2.727,
+      "analog": "BladeLoad",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MACH2_Mill",
+      "object": "MACH2_Mill",
+      "cycle_seconds": 3.333,
+      "analog": "SpindleTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MACH2_Deburr",
+      "object": "MACH2_Deburr",
+      "cycle_seconds": 2.4,
+      "analog": "CycleForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MACH2_Inspect",
+      "object": "MACH2_Inspect",
+      "cycle_seconds": 2.5,
+      "analog": "GaugeReading",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MACH2_Pack",
+      "object": "MACH2_Pack",
+      "cycle_seconds": 2.5,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MACH3_Saw",
+      "object": "MACH3_Saw",
+      "cycle_seconds": 2.727,
+      "analog": "BladeLoad",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MACH3_Mill",
+      "object": "MACH3_Mill",
+      "cycle_seconds": 3.333,
+      "analog": "SpindleTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MACH3_Deburr",
+      "object": "MACH3_Deburr",
+      "cycle_seconds": 2.4,
+      "analog": "CycleForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MACH3_Inspect",
+      "object": "MACH3_Inspect",
+      "cycle_seconds": 2.5,
+      "analog": "GaugeReading",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MACH3_Pack",
+      "object": "MACH3_Pack",
+      "cycle_seconds": 2.5,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM1_Kit",
+      "object": "ASSEM1_Kit",
+      "cycle_seconds": 2.0,
+      "analog": "PickRate",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM1_Assemble1",
+      "object": "ASSEM1_Assemble1",
+      "cycle_seconds": 2.143,
+      "analog": "PressForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM1_Assemble2",
+      "object": "ASSEM1_Assemble2",
+      "cycle_seconds": 2.143,
+      "analog": "PressForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM1_Torque",
+      "object": "ASSEM1_Torque",
+      "cycle_seconds": 2.222,
+      "analog": "TorqueLevel",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM1_Test",
+      "object": "ASSEM1_Test",
+      "cycle_seconds": 2.222,
+      "analog": "TestCurrent",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM1_Pack2",
+      "object": "ASSEM1_Pack2",
+      "cycle_seconds": 2.222,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM2_Kit",
+      "object": "ASSEM2_Kit",
+      "cycle_seconds": 2.0,
+      "analog": "PickRate",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM2_Assemble1",
+      "object": "ASSEM2_Assemble1",
+      "cycle_seconds": 2.143,
+      "analog": "PressForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM2_Assemble2",
+      "object": "ASSEM2_Assemble2",
+      "cycle_seconds": 2.143,
+      "analog": "PressForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM2_Torque",
+      "object": "ASSEM2_Torque",
+      "cycle_seconds": 2.222,
+      "analog": "TorqueLevel",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM2_Test",
+      "object": "ASSEM2_Test",
+      "cycle_seconds": 2.222,
+      "analog": "TestCurrent",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM2_Pack2",
+      "object": "ASSEM2_Pack2",
+      "cycle_seconds": 2.222,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM3_Kit",
+      "object": "ASSEM3_Kit",
+      "cycle_seconds": 2.0,
+      "analog": "PickRate",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM3_Assemble1",
+      "object": "ASSEM3_Assemble1",
+      "cycle_seconds": 2.143,
+      "analog": "PressForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM3_Assemble2",
+      "object": "ASSEM3_Assemble2",
+      "cycle_seconds": 2.143,
+      "analog": "PressForce",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM3_Torque",
+      "object": "ASSEM3_Torque",
+      "cycle_seconds": 2.222,
+      "analog": "TorqueLevel",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM3_Test",
+      "object": "ASSEM3_Test",
+      "cycle_seconds": 2.222,
+      "analog": "TestCurrent",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "ASSEM3_Pack2",
+      "object": "ASSEM3_Pack2",
+      "cycle_seconds": 2.222,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WELD1_Cut",
+      "object": "WELD1_Cut",
+      "cycle_seconds": 3.0,
+      "analog": "FeedRate",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WELD1_Weld1",
+      "object": "WELD1_Weld1",
+      "cycle_seconds": 3.75,
+      "analog": "ArcCurrent",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WELD1_Weld2",
+      "object": "WELD1_Weld2",
+      "cycle_seconds": 3.75,
+      "analog": "ArcCurrent",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WELD1_Grind",
+      "object": "WELD1_Grind",
+      "cycle_seconds": 3.158,
+      "analog": "MotorTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WELD1_Paint",
+      "object": "WELD1_Paint",
+      "cycle_seconds": 3.333,
+      "analog": "BoothPressure",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WELD2_Cut",
+      "object": "WELD2_Cut",
+      "cycle_seconds": 3.0,
+      "analog": "FeedRate",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WELD2_Weld1",
+      "object": "WELD2_Weld1",
+      "cycle_seconds": 3.75,
+      "analog": "ArcCurrent",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WELD2_Weld2",
+      "object": "WELD2_Weld2",
+      "cycle_seconds": 3.75,
+      "analog": "ArcCurrent",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WELD2_Grind",
+      "object": "WELD2_Grind",
+      "cycle_seconds": 3.158,
+      "analog": "MotorTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WELD2_Paint",
+      "object": "WELD2_Paint",
+      "cycle_seconds": 3.333,
+      "analog": "BoothPressure",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "EXTRUDE1_Extrude",
+      "object": "EXTRUDE1_Extrude",
+      "cycle_seconds": 5.0,
+      "analog": "MeltTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "EXTRUDE1_Cool",
+      "object": "EXTRUDE1_Cool",
+      "cycle_seconds": 5.0,
+      "analog": "WaterTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "EXTRUDE1_Trim",
+      "object": "EXTRUDE1_Trim",
+      "cycle_seconds": 5.0,
+      "analog": "BladeSpeed",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "EXTRUDE1_QC",
+      "object": "EXTRUDE1_QC",
+      "cycle_seconds": 5.0,
+      "analog": "Thickness",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "EXTRUDE1_Pack3",
+      "object": "EXTRUDE1_Pack3",
+      "cycle_seconds": 5.0,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "EXTRUDE2_Extrude",
+      "object": "EXTRUDE2_Extrude",
+      "cycle_seconds": 5.0,
+      "analog": "MeltTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "EXTRUDE2_Cool",
+      "object": "EXTRUDE2_Cool",
+      "cycle_seconds": 5.0,
+      "analog": "WaterTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "EXTRUDE2_Trim",
+      "object": "EXTRUDE2_Trim",
+      "cycle_seconds": 5.0,
+      "analog": "BladeSpeed",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "EXTRUDE2_QC",
+      "object": "EXTRUDE2_QC",
+      "cycle_seconds": 5.0,
+      "analog": "Thickness",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "EXTRUDE2_Pack3",
+      "object": "EXTRUDE2_Pack3",
+      "cycle_seconds": 5.0,
+      "analog": "SealTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAINT1_Prep",
+      "object": "PAINT1_Prep",
+      "cycle_seconds": 3.0,
+      "analog": "BlastPressure",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAINT1_Prime",
+      "object": "PAINT1_Prime",
+      "cycle_seconds": 3.0,
+      "analog": "FilmBuild",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAINT1_Topcoat",
+      "object": "PAINT1_Topcoat",
+      "cycle_seconds": 3.0,
+      "analog": "FilmBuild",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAINT1_Cure",
+      "object": "PAINT1_Cure",
+      "cycle_seconds": 3.0,
+      "analog": "OvenTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAINT1_Inspect",
+      "object": "PAINT1_Inspect",
+      "cycle_seconds": 3.0,
+      "analog": "Gloss",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAINT2_Prep",
+      "object": "PAINT2_Prep",
+      "cycle_seconds": 3.0,
+      "analog": "BlastPressure",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAINT2_Prime",
+      "object": "PAINT2_Prime",
+      "cycle_seconds": 3.0,
+      "analog": "FilmBuild",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAINT2_Topcoat",
+      "object": "PAINT2_Topcoat",
+      "cycle_seconds": 3.0,
+      "analog": "FilmBuild",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAINT2_Cure",
+      "object": "PAINT2_Cure",
+      "cycle_seconds": 3.0,
+      "analog": "OvenTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAINT2_Inspect",
+      "object": "PAINT2_Inspect",
+      "cycle_seconds": 3.0,
+      "analog": "Gloss",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PACK1_Case",
+      "object": "PACK1_Case",
+      "cycle_seconds": 2.0,
+      "analog": "CaseRate",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PACK1_Shrink",
+      "object": "PACK1_Shrink",
+      "cycle_seconds": 2.0,
+      "analog": "TunnelTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PACK1_Palletize",
+      "object": "PACK1_Palletize",
+      "cycle_seconds": 2.143,
+      "analog": "StackHeight",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PACK1_Wrap",
+      "object": "PACK1_Wrap",
+      "cycle_seconds": 2.143,
+      "analog": "FilmTension",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PACK1_Label",
+      "object": "PACK1_Label",
+      "cycle_seconds": 2.143,
+      "analog": "PrintDensity",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PACK1_Ship",
+      "object": "PACK1_Ship",
+      "cycle_seconds": 2.308,
+      "analog": "DockTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PACK2_Case",
+      "object": "PACK2_Case",
+      "cycle_seconds": 2.0,
+      "analog": "CaseRate",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PACK2_Shrink",
+      "object": "PACK2_Shrink",
+      "cycle_seconds": 2.0,
+      "analog": "TunnelTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PACK2_Palletize",
+      "object": "PACK2_Palletize",
+      "cycle_seconds": 2.143,
+      "analog": "StackHeight",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PACK2_Wrap",
+      "object": "PACK2_Wrap",
+      "cycle_seconds": 2.143,
+      "analog": "FilmTension",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PACK2_Label",
+      "object": "PACK2_Label",
+      "cycle_seconds": 2.143,
+      "analog": "PrintDensity",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PACK2_Ship",
+      "object": "PACK2_Ship",
+      "cycle_seconds": 2.308,
+      "analog": "DockTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MOLD1_Dry",
+      "object": "MOLD1_Dry",
+      "cycle_seconds": 4.0,
+      "analog": "DryerTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MOLD1_Mold",
+      "object": "MOLD1_Mold",
+      "cycle_seconds": 4.0,
+      "analog": "MeltTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MOLD1_Cool",
+      "object": "MOLD1_Cool",
+      "cycle_seconds": 4.0,
+      "analog": "MoldTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MOLD1_Trim",
+      "object": "MOLD1_Trim",
+      "cycle_seconds": 4.0,
+      "analog": "BladeSpeed",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MOLD1_Inspect",
+      "object": "MOLD1_Inspect",
+      "cycle_seconds": 4.0,
+      "analog": "PartWeight",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MOLD2_Dry",
+      "object": "MOLD2_Dry",
+      "cycle_seconds": 4.0,
+      "analog": "DryerTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MOLD2_Mold",
+      "object": "MOLD2_Mold",
+      "cycle_seconds": 4.0,
+      "analog": "MeltTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MOLD2_Cool",
+      "object": "MOLD2_Cool",
+      "cycle_seconds": 4.0,
+      "analog": "MoldTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MOLD2_Trim",
+      "object": "MOLD2_Trim",
+      "cycle_seconds": 4.0,
+      "analog": "BladeSpeed",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MOLD2_Inspect",
+      "object": "MOLD2_Inspect",
+      "cycle_seconds": 4.0,
+      "analog": "PartWeight",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MOLD3_Dry",
+      "object": "MOLD3_Dry",
+      "cycle_seconds": 4.0,
+      "analog": "DryerTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MOLD3_Mold",
+      "object": "MOLD3_Mold",
+      "cycle_seconds": 4.0,
+      "analog": "MeltTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MOLD3_Cool",
+      "object": "MOLD3_Cool",
+      "cycle_seconds": 4.0,
+      "analog": "MoldTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MOLD3_Trim",
+      "object": "MOLD3_Trim",
+      "cycle_seconds": 4.0,
+      "analog": "BladeSpeed",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "MOLD3_Inspect",
+      "object": "MOLD3_Inspect",
+      "cycle_seconds": 4.0,
+      "analog": "PartWeight",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    }
+  ],
+  "_tags": "Each machine subscribes to everything its line publishes; filled in from the generated manifest at load time."
+}

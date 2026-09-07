@@ -1,0 +1,54 @@
+/* Operations. Dense on purpose - this screen is read when something is wrong,
+   and scrolling is the enemy then. */
+
+.ops-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 0 16px 16px;
+}
+.ops-layout .span-2 { grid-column: span 2; }
+@media (max-width: 1000px) {
+  .ops-layout { grid-template-columns: 1fr; }
+  .ops-layout .span-2 { grid-column: span 1; }
+}
+
+.denied { margin: 16px; padding: 24px; }
+
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px 18px; }
+.fact { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fact .k {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted);
+}
+.fact .v { font-family: var(--mono); font-size: 12.5px; overflow-wrap: anywhere; }
+
+.components { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.component {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--panel-2); padding: 10px 12px;
+}
+.component .top { display: flex; align-items: center; gap: 8px; }
+.component .name { font-family: var(--mono); font-size: 13px; }
+.component .purpose { font-size: 12px; color: var(--muted); margin: 4px 0 6px; }
+.component .meta { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.component.stale { border-color: var(--idle); }
+.component.down { border-color: var(--down); }
+
+.log-controls { display: flex; align-items: center; gap: 8px; padding: 6px 0 10px; flex-wrap: wrap; }
+.log-controls .spacer { flex: 1; }
+.log-controls select, .log-controls input {
+  background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+  border-radius: 7px; padding: 5px 9px; font: inherit; font-size: 13px;
+}
+
+.logs { max-height: 380px; overflow: auto; }
+.logs table { font-size: 12.5px; }
+.logs td { vertical-align: top; }
+.logs .ts, .logs .who { font-family: var(--mono); font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.logs .detail { font-family: var(--mono); font-size: 11.5px; color: var(--muted); overflow-wrap: anywhere; }
+.lvl { font-family: var(--mono); font-size: 11px; text-transform: uppercase; }
+.lvl.error, .lvl.critical { color: var(--down); font-weight: 600; }
+.lvl.warning { color: var(--idle); }
+.lvl.info, .lvl.debug { color: var(--muted); }
+.small { font-size: 12px; }

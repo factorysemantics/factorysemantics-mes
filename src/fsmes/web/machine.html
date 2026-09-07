@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Machine — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/analysis.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="machines"></header>
+
+  <section class="object-head" data-assist="machine-head">
+    <nav id="crumbs" class="crumbs" aria-label="Where this machine sits"></nav>
+    <div class="object-title">
+      <h1><span id="m-code" class="mono">—</span> <span id="m-name" class="muted"></span></h1>
+      <span id="m-state" class="pill unknown">—</span>
+      <span id="m-since" class="muted small"></span>
+      <span class="spacer"></span>
+      <label class="pick">Window <select id="hours"></select></label>
+    </div>
+    <div class="object-facts">
+      <span>Order <strong id="m-order">—</strong></span>
+      <span>Operation <strong id="m-op">—</strong></span>
+      <span>Cost center <strong id="m-cc">—</strong></span>
+      <span>Rated cycle <strong id="m-cycle">—</strong></span>
+    </div>
+  </section>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <div class="tabs" role="tablist" data-assist="machine-tabs">
+    <button class="tab" role="tab" data-tab="now">Now</button>
+    <button class="tab" role="tab" data-tab="trend">Trend</button>
+    <button class="tab" role="tab" data-tab="timeline">Timeline</button>
+    <button class="tab" role="tab" data-tab="oee">OEE</button>
+    <button class="tab" role="tab" data-tab="maintenance">Maintenance</button>
+    <button class="tab" role="tab" data-tab="operate">Operate</button>
+  </div>
+
+  <main class="object-main">
+    <section class="tab-panel" data-panel="now">
+      <div class="panel">
+        <h2>Alarms <span id="alarm-count" class="muted"></span></h2>
+        <ul id="alarms" class="alarm-list"></ul>
+        <h3 class="muted small">Raised in the window <span id="alarm-history-count"></span></h3>
+        <ul id="alarm-history" class="alarm-list small" data-assist="machine-alarm-history"></ul>
+      </div>
+      <div class="panel">
+        <h2>Tags <span id="tag-count" class="muted"></span></h2>
+        <p class="muted small">Every tag this machine publishes, live. A setpoint sits beside the
+          value it drives; a tag that has stopped arriving says so.</p>
+        <div class="table-wrap"><table id="tags-table" class="row-select">
+          <thead><tr><th>Tag</th><th class="num">Value</th><th>Unit</th><th>Setpoint</th><th>Kind</th><th>Age</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="trend">
+      <div class="panel">
+        <h2>Trend <label class="pick inline">of <select id="trend-tag"></select></label></h2>
+        <div id="trend" class="chart"></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="timeline">
+      <div class="panel">
+        <h2>State timeline</h2>
+        <div id="tl" class="chart"></div>
+        <p class="legend">
+          <span><i class="sw" style="background:var(--running)"></i>running</span>
+          <span><i class="sw" style="background:var(--idle)"></i>idle</span>
+          <span><i class="sw" style="background:var(--down)"></i>down</span>
+          <span><i class="sw" style="background:var(--setup)"></i>setup</span>
+        </p>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="oee">
+      <div class="panel">
+        <h2>OEE <span id="oee-window" class="muted"></span></h2>
+        <div id="oee-bars" class="bars"></div>
+        <p id="oee-facts" class="muted small"></p>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="maintenance">
+      <div class="panel" data-needs-cap="maintenance.perform">
+        <h2>Raise corrective work</h2>
+        <form id="corrective" class="stack">
+          <div class="row">
+            <input id="cm-summary" placeholder="What needs doing" required>
+            <input id="cm-reason" placeholder="Why (optional)">
+            <button id="cm-submit">Raise</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Plans on this machine</h2>
+        <ul id="maint-plans" class="queue"></ul>
+      </div>
+      <div class="panel">
+        <h2>Work, newest first</h2>
+        <ul id="maint-orders" class="queue"></ul>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="operate">
+      <div class="panel">
+        <h2>Queue</h2>
+        <ul id="queue" class="queue"></ul>
+        <p class="muted small">Booking, material and state changes happen on the station screen,
+          which is built for gloves.</p>
+        <a id="operate-link" class="ghost" href="/dashboard/station">Open the station screen</a>
+      </div>
+    </section>
+  </main>
+
+  <p class="screen-source">head /equipment/{code} · tags /equipment/{code}/tags · alarms /equipment/{code}/alarms ·
+    trend /analysis/tag/{code}?tag= · timeline /analysis/timeline?equipment= · oee /equipment/{code}/oee ·
+    maintenance /maintenance/plans, /maintenance/orders · queue /workorders/dispatch</p>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/kit.js"></script>
+<script src="/static/machine.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

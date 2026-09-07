@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schedule — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/analysis.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="schedule"></header>
+
+  <section class="kpis">
+    <div class="kpi"><span class="kpi-label">Booked</span><span id="kpi-booked" class="kpi-value">—</span>
+      <span id="kpi-horizon" class="kpi-sub"></span></div>
+    <div class="kpi"><span class="kpi-label">Maintenance in plan</span><span id="kpi-maint" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Orders promised</span><span id="kpi-promised" class="kpi-value">—</span>
+      <span id="kpi-unscheduled" class="kpi-sub"></span></div>
+    <div class="kpi"><span class="kpi-label">Promised late</span><span id="kpi-late" class="kpi-value">—</span></div>
+  </section>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <div class="tabs" role="tablist" data-assist="schedule-tabs">
+    <button class="tab" role="tab" data-tab="board">Board</button>
+    <button class="tab" role="tab" data-tab="promises">Promises</button>
+    <button class="tab" role="tab" data-tab="calendar">Calendar</button>
+  </div>
+
+  <main class="object-main">
+    <section class="tab-panel" data-panel="board">
+      <div class="panel">
+        <h2>The board <span class="muted">— each machine, time across, maintenance beside the work</span>
+          <label class="pick inline">next <select id="horizon">
+            <option value="8">8 hours</option><option value="24" selected>24 hours</option>
+            <option value="72">3 days</option><option value="168">7 days</option></select></label>
+        </h2>
+        <div id="board" class="chart"></div>
+        <p class="legend">
+          <span><i class="sw" style="background:var(--running)"></i>production</span>
+          <span><i class="sw" style="background:var(--setup)"></i>maintenance placed before it</span>
+        </p>
+      </div>
+      <div class="panel" data-needs-cap="scheduling.plan">
+        <h2>Plan</h2>
+        <p class="muted small">Planning replaces an order's slots rather than adding to them, walks the
+          routing in sequence through working time only, and puts owed maintenance before production -
+          a plan through a service the machine owes is a prediction that something will go wrong.</p>
+        <div class="row">
+          <button id="plan-all" data-assist="schedule-plan-all">Plan every open order</button>
+          <input id="plan-order" placeholder="WO-… (one order)">
+          <button id="plan-one" class="ghost">Plan this order</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="promises">
+      <div class="panel">
+        <h2>What the plan promises <span id="promise-count" class="muted"></span></h2>
+        <div class="table-wrap"><table id="promises-table">
+          <thead><tr><th>Order</th><th>Material</th><th>Status</th><th>Due</th><th>Plan says</th><th>Verdict</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="calendar">
+      <div class="panel">
+        <h2>Shifts <span class="muted">— every promised date rests on these</span></h2>
+        <p id="calendar-note" class="muted small"></p>
+        <div class="table-wrap"><table id="shifts-table">
+          <thead><tr><th>Shift</th><th>Starts</th><th>Ends</th><th>Days</th><th>Applies to</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <form id="shift-form" class="stack" data-needs-cap="scheduling.plan" data-assist="schedule-shift-form">
+          <h3>Add a shift</h3>
+          <div class="row">
+            <input id="shift-code" placeholder="Code (DAY)" required>
+            <input id="shift-name" placeholder="Name" required>
+            <input id="shift-starts" type="time" value="06:00" required>
+            <input id="shift-ends" type="time" value="14:00" required>
+            <input id="shift-days" placeholder="Days Mon→Sun, 1111100" value="1111100" pattern="[01]{7}" required>
+            <button id="shift-submit">Add shift</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Exceptions <span class="muted">— shutdown days remove capacity, overtime days add it</span></h2>
+        <div class="table-wrap"><table id="exceptions-table">
+          <thead><tr><th>Day</th><th>Kind</th><th>Reason</th><th>Applies to</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <form id="exception-form" class="stack" data-needs-cap="scheduling.plan">
+          <h3>Add an exception</h3>
+          <div class="row">
+            <input id="exc-day" type="date" required>
+            <select id="exc-kind" aria-label="Kind"><option value="shutdown">shutdown</option><option value="overtime">overtime</option></select>
+            <input id="exc-reason" placeholder="Reason" required>
+            <button id="exc-submit">Add</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <p class="screen-source">board /scheduling/board · promises /scheduling/promise/{code} over /workorders ·
+    plan /scheduling/plan, /scheduling/plan/{code} · calendar /scheduling/calendar, /scheduling/calendar/shifts, /scheduling/calendar/exceptions</p>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/kit.js"></script>
+<script src="/static/schedule.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>
