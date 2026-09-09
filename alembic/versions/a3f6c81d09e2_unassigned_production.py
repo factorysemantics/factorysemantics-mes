@@ -6,14 +6,14 @@ becomes nullable. Nothing existing changes: every row written before this
 has an order, and keeps it.
 
 Revision ID: a3f6c81d09e2
-Revises: 153379d6cf19
+Revises: a4d9c2e70f18
 """
 
 import sqlalchemy as sa
 from alembic import op
 
 revision = "a3f6c81d09e2"
-down_revision = "153379d6cf19"
+down_revision = "a4d9c2e70f18"
 branch_labels = None
 depends_on = None
 

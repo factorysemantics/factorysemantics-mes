@@ -15,7 +15,8 @@ from fsmes.cli import _loop_verdict
 
 COMPLETE = {
     "status": "completed",
-    "confirmations": [{"good_qty": 15.0, "scrap_qty": 0.0, "lot": "LOT-FG-001"}],
+    "completion": {"kind": "order_completion", "order": "WO-DEMO", "ordered_qty": 15.0,
+                   "good_qty": 15.0, "scrap_qty": 0.0, "over_qty": 0.0, "lot": "LOT-FG-001"},
     "genealogy": {"consumed": [{"lot": "LOT-SUGAR-001"}], "produced": [{"lot": "LOT-FG-001"}]},
     "oee": {"availability": 0.9, "performance": 0.8, "quality": 1.0, "oee": 0.72},
 }
@@ -37,11 +38,14 @@ def test_an_order_that_never_completed_is_named_with_the_state_it_stopped_in():
 def test_the_wheel_that_shipped_as_0_1_0_would_have_been_caught():
     # Nothing ran, so nothing completed and nothing was confirmed. This is the
     # exact shape of the 0.1.0 demo, which exited 0 anyway.
-    assert _loop_verdict("released", [], {}, {}) is not None
+    assert _loop_verdict("released", None, {}, {}) is not None
 
 
 def test_a_completed_order_the_erp_was_never_told_about_is_not_a_closed_loop():
-    assert _verdict(confirmations=[]) is not None
+    """The order completion, not any confirmation. The operation
+    confirmations go out first, so a run whose order was never closed to the
+    ERP would otherwise have passed on the strength of those."""
+    assert _verdict(completion=None) is not None
 
 
 def test_a_completed_order_with_no_finished_lot_is_not_a_closed_loop():

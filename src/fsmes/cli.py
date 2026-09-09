@@ -397,14 +397,15 @@ def demo(duration: int = 90) -> None:
     typer.echo("Demo result: full loop closed - order booked, ERP confirmed, OEE reported.")
 
 
-def _loop_verdict(status: str, confirmations: list[dict], genealogy: dict, oee: dict) -> str | None:
+def _loop_verdict(status: str, completion: dict | None, genealogy: dict, oee: dict) -> str | None:
     """Why the demo's loop did not close, or None when it did.
 
     This exists because from the outside a demo that books nothing looked
     exactly like one that books everything. 0.1.0 shipped a wheel with no
     config files, so the simulator had no line to run, the order sat at
     `released` for the whole window, and `fsmes demo` still exited 0. The
-    three facts the demo claims - the order completed, the ERP was told, a
+    three facts the demo claims - the order completed, the ERP was told the
+    order was done, a
     finished lot exists - are checked here so the exit code means something
     and a release can be gated on it.
 
@@ -414,8 +415,11 @@ def _loop_verdict(status: str, confirmations: list[dict], genealogy: dict, oee: 
     """
     if status != "completed":
         return f"the order was still {status} when the demo stopped watching"
-    if not confirmations:
-        return "the ERP never received a confirmation"
+    if not completion:
+        # The order completion specifically, not any message: the operation
+        # confirmations go out first, so "some confirmation arrived" would
+        # have passed a run whose order was never closed to the ERP at all.
+        return "the ERP never received the order completion"
     if not genealogy.get("produced"):
         return "no finished lot was booked"
     if "oee" not in oee:
@@ -519,7 +523,7 @@ async def _demo(settings: Settings, duration: int) -> str | None:
             if status != "completed":
                 typer.echo(f"      Order still {status} after {duration}s - leaving it running; "
                            "check /kpis/orders when you come back.")
-                return _loop_verdict(status, [], {}, {})
+                return _loop_verdict(status, None, {}, {})
 
             typer.echo("[5/5] Order completed - the MES books the finished lot and confirms to the ERP")
             deadline = asyncio.get_event_loop().time() + 15
@@ -559,7 +563,7 @@ async def _demo(settings: Settings, duration: int) -> str | None:
                        f"performance {oee['performance']:.0%}, quality {oee['quality']:.0%} "
                        f"-> OEE {oee['oee']:.0%}" if oee["oee"] is not None else f"OEE MIX01: {oee}")
             typer.echo("The audit trail, tag history, and ERP message log for all of this are in the database.")
-            return _loop_verdict(status, confirmations, genealogy, oee)
+            return _loop_verdict(status, completion, genealogy, oee)
     finally:
         # Teardown: clients first (their worker threads drain against live
         # servers), then a graceful server exit. Noise here is not signal.
