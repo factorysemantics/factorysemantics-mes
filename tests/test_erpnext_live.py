@@ -72,7 +72,7 @@ def client() -> ErpNextClient:
 
 
 @pytest.fixture(scope="module")
-def seeded(client: ErpNextClient) -> None:
+def seeded(client: ErpNextClient) -> str:
     """The site must already carry the plant and the custom fields.
 
     `labs/erpnext/seed_erpnext.py` puts them there. Checking here means a

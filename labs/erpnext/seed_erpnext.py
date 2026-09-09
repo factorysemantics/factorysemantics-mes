@@ -12,6 +12,13 @@ the same tag map the OPC agent reads.
 Idempotent: every step checks before it creates, so running it twice is a
 no-op and running it after a partial failure finishes the job.
 
+Expects a site whose setup wizard has already been run. A site straight out
+of `bench new-site` has no company, no chart of accounts, no fiscal year and
+none of the Warehouse Types that creating a Company links to, so the first
+step here fails on it with `Could not find Warehouse Type: Transit`. Every
+ERPNext a person actually uses has been through the wizard;
+`labs/erpnext/docker-compose.yml` runs it for the one in CI.
+
 This writes into ONE site of a possibly shared bench, chosen by the Host
 header (MES_ERPNEXT_SITE, default mes.localhost). That is deliberate — the
 same bench also serves Shortline Filtration Works for factorysemantics, and

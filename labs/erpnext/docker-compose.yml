@@ -101,6 +101,36 @@ services:
       configurator:
         condition: service_completed_successfully
 
+  # `bench new-site` leaves a site nobody has ever finished installing: no
+  # company, no chart of accounts, no fiscal year, not even the Warehouse
+  # Types that Company creation links to. No real ERPNext is in that state —
+  # every one of them has had the setup wizard run. Seeding into a site that
+  # has not would be testing a fiction, and the first run of this job proved
+  # it by failing on `Could not find Warehouse Type: Transit`.
+  #
+  # The company here is the demo plant's, so the seeder that follows finds it
+  # already present. The fiscal year is the current one, read in the
+  # container, because a hard-coded year would quietly stop covering today's
+  # postings next January.
+  setup-site:
+    <<: *erpnext
+    entrypoint: ["bash", "-c"]
+    command:
+      - >
+        year=$$(date +%Y);
+        bench --site mes.localhost execute
+        frappe.desk.page.setup_wizard.setup_wizard.setup_complete
+        --kwargs "{'args': {'language': 'english', 'country': 'United States',
+        'timezone': 'America/New_York', 'currency': 'USD',
+        'company_name': 'ACME Beverages', 'company_abbr': 'ACME',
+        'chart_of_accounts': 'Standard', 'fy_start_date': '$$year-01-01',
+        'fy_end_date': '$$year-12-31', 'full_name': 'MES Lab',
+        'email': 'mes-lab@example.com', 'password': 'admin',
+        'industry': 'Manufacturing', 'company_tagline': 'Lab fixture'}}"
+    depends_on:
+      create-site:
+        condition: service_completed_successfully
+
   backend:
     <<: *erpnext
     environment:
@@ -109,7 +139,7 @@ services:
       MYSQL_ROOT_PASSWORD: admin
       MARIADB_ROOT_PASSWORD: admin
     depends_on:
-      create-site:
+      setup-site:
         condition: service_completed_successfully
 
   websocket:
@@ -119,7 +149,7 @@ services:
       FRAPPE_REDIS_CACHE: redis://redis-cache:6379
       FRAPPE_REDIS_QUEUE: redis://redis-queue:6379
     depends_on:
-      create-site:
+      setup-site:
         condition: service_completed_successfully
 
   queue-short:
@@ -129,7 +159,7 @@ services:
       FRAPPE_REDIS_CACHE: redis://redis-cache:6379
       FRAPPE_REDIS_QUEUE: redis://redis-queue:6379
     depends_on:
-      create-site:
+      setup-site:
         condition: service_completed_successfully
 
   queue-long:
@@ -139,7 +169,7 @@ services:
       FRAPPE_REDIS_CACHE: redis://redis-cache:6379
       FRAPPE_REDIS_QUEUE: redis://redis-queue:6379
     depends_on:
-      create-site:
+      setup-site:
         condition: service_completed_successfully
 
   # FRAPPE_SITE_NAME_HEADER is `$$host` — nginx reads the site out of the Host
