@@ -1,12 +1,20 @@
 # The ERPNext connector
 
-*How-to. Work orders in, confirmations out, against an ERPNext site, with nothing installed on the ERPNext side.*
+*How-to. Work orders in, confirmations out, against an ERPNext site. One
+command prepares the ERPNext side; no Frappe app is installed.*
 
 The connector is a module inside this package, registered as the
 `fsmes.modules` entry point `erpnext`, and selected by `MES_ERP_MODE=erpnext`.
 It speaks ERPNext's REST API as a user or API key; it does not install a
 Frappe app. (A thin Frappe-side app for the Marketplace is planned and not
 built, as of 2026-09-07.)
+
+What it does need is four custom fields on ERPNext's Work Order doctype. They
+carry the two things ERPNext has nowhere to put — whether the MES has taken
+an order, and what the machines actually counted — and `fsmes erp setup`
+creates them (see [below](#prepare-the-erpnext-side)). Until it has run, the
+connector cannot work. **Before 2026-09-09 this page said nothing was needed
+on the ERPNext side. That was wrong.**
 
 ## Configure
 
@@ -16,7 +24,7 @@ MES_ERPNEXT_BASE_URL=http://erpnext.example:8080
 MES_ERPNEXT_SITE=mes.example          # the Host header; required on a multi-site bench
 MES_ERPNEXT_API_KEY=...               # User → API Access in ERPNext; preferred for a worker
 MES_ERPNEXT_API_SECRET=...
-MES_ERPNEXT_COMPANY="Your Company"
+MES_ERPNEXT_COMPANY="Your Company"    # optional; empty imports every company on the site
 MES_ERPNEXT_POST_STOCK_ENTRY=true     # false records what the MES counted without moving stock
 MES_ERP_POLL_SECONDS=5
 ```
@@ -24,14 +32,54 @@ MES_ERP_POLL_SECONDS=5
 Username and password (`MES_ERPNEXT_USER`, `MES_ERPNEXT_PASSWORD`) work too;
 the defaults are the Frappe development bench's.
 
-Run the worker: `fsmes run-erp-sync`. In Compose it is the `erp-sync`
-service.
+## Prepare the ERPNext side
+
+| Field on Work Order | Type | What it carries |
+|---|---|---|
+| `custom_mes_synced` | Check | The MES has imported this order. Clear it to re-send. |
+| `custom_mes_good_qty` | Float | Good quantity the machines counted. |
+| `custom_mes_scrap_qty` | Float | Machine-counted scrap. ERPNext has no native field for it. |
+| `custom_mes_lot` | Data | The finished lot the MES booked. |
+
+Four fields, all `allow_on_submit`, because a submitted work order is
+precisely when they change. With the connection configured above:
+
+```bash
+fsmes erp setup      # creates any of the four that are missing; safe to run twice
+fsmes erp check      # says whether URL, credentials, fields and company are all in order
+```
+
+`fsmes erp check` exits non-zero if anything would stop the connector
+working, so it can gate a deployment. It names the field that is wrong rather
+than saying the configuration is bad.
+
+The account you configure needs permission to create a Custom Field —
+System Manager, in a stock ERPNext — for `setup` only. The sync worker itself
+needs no more than read and write on Work Order and Stock Entry.
+
+### If a field is missing
+
+Frappe accepts a `PUT` naming a field its doctype does not have. It answers
+`200` and drops the value. So a missing field does not look like an error at
+the HTTP level — it looks like success with the number gone.
+
+The MES therefore reads back every write and compares it against what it
+sent. A field that did not survive raises, the confirmation stays in the
+outbox and retries, and the log names the field. The MES cannot end up
+believing a number reached ERPNext when it did not. `fsmes run-erp-sync`
+also checks the four fields when it starts and says on the console if any are
+missing; it starts anyway, because an ERP that is briefly unreachable is not
+a reason to refuse to run.
+
+## Run it
+
+`fsmes run-erp-sync`. In Compose it is the `erp-sync` service.
 
 ## What crosses the boundary
 
 | Direction | ERPNext object | MES object |
 |---|---|---|
-| in | submitted **Work Order** (docstatus 1) for the company | production request → work order with the routing's operations |
+| in | submitted **Work Order** (docstatus 1), not yet taken by the MES, of `MES_ERPNEXT_COMPANY` if one is set | production request → work order with the routing's operations |
 | out, per operation | a comment on the Work Order: operation, equipment, cost centre, good and scrap, machine minutes, lots consumed | operation confirmation from the outbox |
 | out, on completion | quantities recorded on the Work Order; a **Manufacture stock entry** when `POST_STOCK_ENTRY` is on | order confirmation |
 
@@ -42,6 +90,11 @@ nowhere native for it.
 Confirmations go through an outbox with retry and backoff; an ERPNext that
 is down for an hour gets the hour's confirmations when it returns, in order.
 
+Leaving `MES_ERPNEXT_COMPANY` empty imports the work orders of every company
+on the site, which is what a single-company ERPNext wants. A bench that holds
+more than one company's books must set it, or this MES will run another
+business's orders.
+
 ## Verified against
 
 A local Frappe bench during development (2026-08). **Not yet verified
@@ -49,6 +102,13 @@ against a current stable ERPNext release in a clean container** — that test
 is on the list before the connector is called supported. See
 [compatibility](compatibility.md). If you run it against a real site, an
 issue with the versions of both sides is the most useful thing you can send.
+
+Specifically unverified, as of 2026-09-09: that Frappe silently drops a `PUT`
+to a field the doctype does not have. That is what Frappe's own document
+layer does when you read it, and it is why the read-back check exists — but
+nobody here has watched a live ERPNext do it. If you have one, `fsmes erp
+check` on a site without the fields, and then `fsmes run-erp-sync`, would
+settle it.
 
 ## See also
 
