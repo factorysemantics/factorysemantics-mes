@@ -22,9 +22,11 @@ from fsmes.config import Settings
 from fsmes.domain import (
     Equipment,
     EquipmentLevel,
+    EquipmentStateName,
     ErpMessage,
     MessageDirection,
     MessageStatus,
+    ProductionSource,
     UnsPublication,
 )
 from fsmes.integrations.uns import publisher
@@ -36,7 +38,7 @@ from fsmes.integrations.uns.transport import (
     MqttTransport,
     make_transport,
 )
-from fsmes.services import erp, uns
+from fsmes.services import equipment, erp, execution, uns, workorders
 
 # ------------------------------------------------------------------ doubles
 
@@ -273,6 +275,64 @@ def test_a_kind_the_publisher_has_never_seen_is_published_rather_than_dropped(se
     run_cycle(broker, scope, settings_for())
 
     assert broker.topics() == ["umh/v1/ACME/KC1/PKG/LINE1/PACK01/_mes/hold_placed"]
+
+
+def test_a_machine_changing_state_reaches_the_namespace_on_its_own_topic(session, scope):
+    """The reason the outbox became an event log. A state change is recorded
+    by the MES, published under the machine it happened on, and carries what
+    the machine left as well as what it entered."""
+    equipment.set_state(session, equipment_code="MIX01",
+                        state=EquipmentStateName.RUNNING, actor="opc")
+    equipment.set_state(session, equipment_code="MIX01",
+                        state=EquipmentStateName.DOWN, reason="jam", actor="opc")
+    session.flush()
+    broker = FakeBroker()
+
+    run_cycle(broker, scope, settings_for())
+
+    topics = broker.topics()
+    assert topics == ["umh/v1/ACME/KC1/PKG/LINE1/MIX01/_mes/equipment_state_change"] * 2
+    _topic, body, _qos, _retain = broker.received[-1]
+    assert body["kind"] == "equipment_state_change"
+    assert body["payload"]["state"] == "down" and body["payload"]["reason"] == "jam"
+    assert body["payload"]["previous_state"] == "running"
+    assert body["payload"]["work_center"] == "LINE1"
+
+
+def test_the_first_state_of_a_machine_publishes_an_unknown_previous_run_not_a_zero_one(session, scope):
+    """What reaches the broker keeps the MES's own answer: null, because
+    nothing was observed before it, not zero seconds of running."""
+    equipment.set_state(session, equipment_code="MIX01",
+                        state=EquipmentStateName.RUNNING, actor="opc")
+    session.flush()
+    broker = FakeBroker()
+
+    run_cycle(broker, scope, settings_for())
+
+    _topic, body, _qos, _retain = broker.received[0]
+    assert body["payload"]["previous_state"] is None
+    assert body["payload"]["previous_seconds"] is None
+
+
+def test_an_order_going_on_hold_publishes_at_the_site_with_its_reason(session, scope):
+    """A hold is an order-level fact: no machine, so it hangs at the site,
+    the same rule an order completion follows."""
+    workorders.create(session, code="WO-UNS-H", material_code="FG-COLA", quantity=4, actor="test")
+    workorders.release(session, "WO-UNS-H", actor="test")
+    execution.report(session, equipment_code="MIX01", good=1, source=ProductionSource.OPC)
+    workorders.hold(session, "WO-UNS-H", "awaiting a quality decision", actor="SUP")
+    session.flush()
+    broker = FakeBroker()
+
+    run_cycle(broker, scope, settings_for())
+
+    held = [(topic, body) for topic, body, _q, _r in broker.received
+            if body["kind"] == "order_hold"]
+    assert len(held) == 1
+    topic, body = held[0]
+    assert topic == "umh/v1/ACME/KC1/_mes/order_hold"
+    assert body["payload"]["reason"] == "awaiting a quality decision"
+    assert body["payload"]["previous_status"] == "running"
 
 
 def test_the_qos_and_retain_settings_reach_the_broker(session, scope):

@@ -108,6 +108,18 @@ class OrderCompletion(BaseModel):
 
 Confirmation = OperationConfirmation | OrderCompletion
 
+# The outbox kinds this contract can parse, and therefore the only ones the
+# ERP sync may take. The outbox is a domain event log now - it also carries
+# equipment state changes, holds and resumes for the namespace - and a
+# reader that parsed every row it found would try to post a machine going
+# idle as a production confirmation. `production_confirmation` is the
+# pre-contract spelling of an order completion and is still delivered.
+CONFIRMATION_KINDS = frozenset({
+    "operation_confirmation",
+    "order_completion",
+    "production_confirmation",
+})
+
 
 def parse_confirmation(payload: dict) -> Confirmation:
     """A stored outbox payload back into its model. The pre-contract kind

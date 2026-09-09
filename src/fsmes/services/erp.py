@@ -28,6 +28,7 @@ from fsmes.domain import (
     WorkOrderOperation,
 )
 from fsmes.integrations.erp.contract import (
+    CONFIRMATION_KINDS,
     ComponentUse,
     Confirmation,
     OperationConfirmation,
@@ -35,7 +36,7 @@ from fsmes.integrations.erp.contract import (
     ProductionRequest,
     as_payload,
 )
-from fsmes.services import Invalid, MesError, NotFound, audit, masterdata, workorders
+from fsmes.services import Invalid, MesError, NotFound, audit, masterdata, outbox, workorders
 
 MAX_ATTEMPTS = 8
 BASE_BACKOFF_SECONDS = 5
@@ -92,14 +93,8 @@ def process_inbound(session: Session, request: ProductionRequest | dict,
 
 def _enqueue(session: Session, confirmation: Confirmation) -> ErpMessage:
     """Idempotent by message key: the same event queued twice is one message."""
-    existing = session.scalar(select(ErpMessage).where(ErpMessage.message_key == confirmation.message_key))
-    if existing is not None:
-        return existing
-    message = ErpMessage(direction=MessageDirection.OUT, kind=confirmation.kind,
-                         payload=as_payload(confirmation), message_key=confirmation.message_key)
-    session.add(message)
-    session.flush()
-    return message
+    return outbox.record(session, kind=confirmation.kind, payload=as_payload(confirmation),
+                         message_key=confirmation.message_key)
 
 
 def operation_confirmation(session: Session, op: WorkOrderOperation) -> OperationConfirmation:
@@ -147,11 +142,19 @@ def enqueue_confirmation(session: Session, wo: WorkOrder) -> ErpMessage:
 
 
 def pending_outbound(session: Session, now: datetime | None = None) -> list[ErpMessage]:
-    """What is due for delivery: pending, and not backing off."""
+    """What is due for delivery to the ERP: a kind this contract can parse,
+    pending, and not backing off.
+
+    The kind filter is what lets the outbox be a domain event log. Equipment
+    state changes, holds and resumes sit in the same table for the namespace
+    publisher; they are not addressed to an ERP, so they are never selected
+    here, never attempted, and never counted against anyone's retries.
+    """
     now = now or utcnow()
     return list(session.scalars(
         select(ErpMessage)
         .where(ErpMessage.direction == MessageDirection.OUT,
+               ErpMessage.kind.in_(CONFIRMATION_KINDS),
                ErpMessage.status == MessageStatus.PENDING,
                (ErpMessage.next_attempt_at.is_(None)) | (ErpMessage.next_attempt_at <= now))
         .order_by(ErpMessage.id)))
@@ -199,19 +202,36 @@ def retry(session: Session, message_id: int, actor: str = "system") -> ErpMessag
 
 
 def outbox_summary(session: Session, limit: int = 30) -> dict:
-    """The queue as a person or an agent needs to see it."""
+    """The queue as a person or an agent needs to see it.
+
+    `counts` is about the ERP and only the ERP. The same table also holds the
+    plant events the namespace publisher reads, and counting those as pending
+    ERP work would report a backlog that does not exist - "pending: 4000"
+    when the ERP is owed nothing is exactly the kind of convincing wrong
+    number the house rules exist to stop. They are still stated, as
+    `other_outbound` and in `kinds`, so nothing is hidden either.
+    """
+    erp_rows = (ErpMessage.direction == MessageDirection.OUT,
+                ErpMessage.kind.in_(CONFIRMATION_KINDS))
     counts = {status.value: 0 for status in MessageStatus}
     for status, n in session.execute(
-            select(ErpMessage.status, func.count()).where(ErpMessage.direction == MessageDirection.OUT)
+            select(ErpMessage.status, func.count()).where(*erp_rows)
             .group_by(ErpMessage.status)):
         counts[status.value] = n
     kinds = {kind: n for kind, n in session.execute(
         select(ErpMessage.kind, func.count()).group_by(ErpMessage.kind))}
+    other_outbound = session.scalar(
+        select(func.count()).select_from(ErpMessage)
+        .where(ErpMessage.direction == MessageDirection.OUT,
+               ErpMessage.kind.not_in(CONFIRMATION_KINDS))) or 0
     oldest = session.scalar(select(func.min(ErpMessage.created_at)).where(
-        ErpMessage.direction == MessageDirection.OUT, ErpMessage.status == MessageStatus.PENDING))
+        *erp_rows, ErpMessage.status == MessageStatus.PENDING))
     recent = session.scalars(select(ErpMessage).order_by(ErpMessage.id.desc()).limit(limit)).all()
     return {
         "counts": counts,
+        # What the ERP sync will never take: the domain events in the same
+        # log, waiting for a different reader.
+        "other_outbound": other_outbound,
         "kinds": kinds,
         "oldest_pending_seconds": round((utcnow() - oldest).total_seconds(), 1) if oldest else None,
         "recent": [
