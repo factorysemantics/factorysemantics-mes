@@ -37,6 +37,23 @@ jobs:
       - name: Test
         run: python -m pytest
 
+  wheel-demo:
+    # The check that would have caught 0.1.0. `test` above proves the source
+    # works; this proves the *artifact* works — installed into a fresh venv in
+    # an empty directory, which is all a stranger with pipx ever has. One cell
+    # on Ubuntu and one Python is enough: what this catches is missing package
+    # data, not a platform difference.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip build
+      - run: python -m build --wheel
+      - name: The wheel runs the demo from an empty directory
+        run: .github/scripts/demo_from_wheel.sh "$(ls dist/*.whl)"
+
   audit:
     # Known-vulnerable pins. Advisory until the first public release has
     # shaken it out; then it becomes required.

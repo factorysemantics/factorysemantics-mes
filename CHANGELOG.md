@@ -24,6 +24,19 @@ goes under Honesty with a migration line, so plant people can find it.
   `MES_UNS_MODE=log` prints the whole namespace without a broker.
   `fsmes uns topics` and `fsmes uns queue` show the tree and the backlog.
   Off by default. See [the unified namespace](docs/operate/uns.md).
+- CI builds the wheel and runs `fsmes demo` from it in a fresh virtual
+  environment in an empty directory, on every pull request and every push to
+  `main`. The same check runs against the exact wheel a tag is about to
+  publish, before it reaches PyPI. This is the clean-machine install that
+  0.1.0 needed and did not get.
+
+### Changed
+- `fsmes demo` exits non-zero, with the reason, when its loop does not close:
+  the order never completed, the ERP was never told, or no finished lot was
+  booked. It used to exit 0 either way, which is why a wheel that booked
+  nothing looked like a success. A final line now says which happened. An OEE
+  component reported as null is still a closed loop — that is an honest
+  answer, not a failure.
 
 ## [0.1.2] — 2026-09-08
 
