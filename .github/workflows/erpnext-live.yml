@@ -54,6 +54,12 @@ jobs:
 
     env:
       COMPOSE: labs/erpnext/docker-compose.yml
+      # The whole connection, set the way docs/operate/erpnext.md tells an
+      # operator to set it. MES_ERP_MODE is part of that: `fsmes erp setup`
+      # and `fsmes erp check` refuse to touch a site when the MES is not
+      # configured to talk to ERPNext at all, which is the right refusal and
+      # a red job here until the job says which ERP it means.
+      MES_ERP_MODE: erpnext
       MES_ERPNEXT_BASE_URL: http://127.0.0.1:8080
       MES_ERPNEXT_SITE: mes.localhost
       MES_ERPNEXT_USER: Administrator
