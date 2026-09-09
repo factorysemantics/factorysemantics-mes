@@ -43,5 +43,11 @@ def test_a_missing_path_with_no_packaged_copy_stays_as_given(tmp_path, monkeypat
 def test_settings_fall_back_only_when_the_field_was_not_set(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("MES_TAG_MAP_FILE", "config/mine.json")
-    settings = config.get_settings()
+    # get_settings is cached for the life of a process; this test wants a
+    # fresh read of the environment, and must not leak its own to the next.
+    config.get_settings.cache_clear()
+    try:
+        settings = config.get_settings()
+    finally:
+        config.get_settings.cache_clear()
     assert settings.tag_map_file == Path("config/mine.json")
