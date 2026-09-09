@@ -279,6 +279,77 @@ def run_erp_sync() -> None:
     asyncio.run(sync.run(adapter, settings.erp_poll_seconds))
 
 
+uns_app = typer.Typer(help="Unified namespace: relay MES events to an MQTT broker.")
+app.add_typer(uns_app, name="uns")
+
+
+@uns_app.command("publish")
+def uns_publish(once: bool = False) -> None:
+    """Publish the MES's events to the unified namespace (MQTT), forever.
+
+    `--once` runs a single cycle and reports what it did, which is what a
+    cron-shaped deployment or a person checking a new broker wants.
+    """
+    from fsmes.integrations.uns import publisher
+    from fsmes.integrations.uns.transport import make_transport
+
+    settings = get_settings()
+    setup_logging(settings.log_level, settings.log_dir, "uns-publish")
+    transport = make_transport(settings)
+    if transport is None:
+        typer.echo("MES_UNS_MODE is 'off' — nothing to run. Set it to 'mqtt', "
+                   "or to 'log' to see the topics without a broker.")
+        raise typer.Exit(1)
+    if not once:
+        asyncio.run(publisher.run(transport, settings))
+        return
+
+    from fsmes.db import session_scope
+
+    async def _one() -> dict:
+        try:
+            return await publisher.cycle(transport, session_scope, settings)
+        finally:
+            await transport.close()
+
+    counted = asyncio.run(_one())
+    typer.echo(f"enrolled {counted['enrolled']}, due {counted['due']}, "
+               f"published {counted['published']}, failed {counted['failed']}")
+
+
+@uns_app.command("topics")
+def uns_topics() -> None:
+    """Print the topic every machine in this plant publishes under.
+
+    The tree as it would appear on the broker, before a single event has
+    been produced — the check that the prefix, the enterprise and the site
+    are what the plant's other systems expect.
+    """
+    from fsmes.db import session_scope
+    from fsmes.integrations.uns.topics import equipment_topics
+
+    settings = get_settings()
+    with session_scope() as session:
+        topics = equipment_topics(session, settings)
+    for topic in topics:
+        typer.echo(f"{topic}/<event kind>")
+    typer.echo(f"{len(topics)} work units. Order-level events publish at the site, "
+               f"without a machine segment.")
+
+
+@uns_app.command("queue")
+def uns_queue(limit: int = 30) -> None:
+    """What the namespace has been told and what it still owes."""
+    import json as _json
+
+    from fsmes.db import session_scope
+    from fsmes.services import uns as uns_service
+
+    with session_scope() as session:
+        typer.echo(_json.dumps(uns_service.queue_summary(session, limit=limit),
+                               indent=2, default=str))
+
+
 @app.command()
 def run_mock_erp(host: str = "127.0.0.1", port: int = 8001) -> None:
     """Run the mock ERP (the business-system side of the twin)."""
