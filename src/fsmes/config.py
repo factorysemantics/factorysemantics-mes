@@ -6,6 +6,7 @@ SQLite database, local simulator endpoints, relative folders.
 
 import secrets
 from functools import lru_cache
+from importlib import resources
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -101,9 +102,32 @@ class Settings(BaseSettings):
     opc_endpoints: str = ""
 
 
+def packaged_default(path: Path) -> Path:
+    """The path as given if it exists; otherwise the copy the wheel carries.
+
+    The defaults are relative (`config/tag_map.json`) because a checkout has
+    them and a laptop should run with zero setup. An install from PyPI has no
+    checkout, so the same files ship as package data under `fsmes/data/`.
+    A path someone set deliberately is returned unchanged whether or not it
+    exists: a wrong path should fail loudly, not silently use the demo's.
+    """
+    if path.exists() or path.is_absolute():
+        return path
+    candidate = resources.files("fsmes") / "data" / path.as_posix()
+    try:
+        if candidate.is_file():
+            return Path(str(candidate))
+    except (OSError, TypeError):
+        pass
+    return path
+
+
 @lru_cache
 def get_settings() -> Settings:
     settings = Settings()
     if not settings.secret_key:
         settings.secret_key = secrets.token_urlsafe(32)
+    for field in ("tag_map_file", "line_layout_file"):
+        if field not in settings.model_fields_set:
+            setattr(settings, field, packaged_default(getattr(settings, field)))
     return settings

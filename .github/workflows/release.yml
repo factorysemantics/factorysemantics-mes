@@ -25,6 +25,15 @@ jobs:
         run: |
           v="${GITHUB_REF_NAME#v}"
           ls dist/ | grep -q "factorysemantics_mes-${v}-" || { echo "::error::tag $GITHUB_REF_NAME but wheel is $(ls dist/)"; exit 1; }
+      - name: The wheel carries the demo's config files
+        run: |
+          python - <<'PY'
+          import glob, sys, zipfile
+          names = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
+          need = ["fsmes/data/config/tag_map.json", "fsmes/data/config/line_layout.json"]
+          missing = [n for n in need if n not in names]
+          sys.exit(f"::error::wheel lacks {missing}" if missing else 0)
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: dist
