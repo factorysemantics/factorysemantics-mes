@@ -66,8 +66,12 @@ jobs:
         with:
           python-version: "3.12"
 
+      # The same extras as ci.yml. Fewer would be enough to run the ERPNext
+      # tests, but pytest collects the whole tree before it selects, and a
+      # module that cannot import is a collection error rather than a
+      # deselected test.
       - name: Install
-        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,mcp,agent]"
 
       # Timed on purpose: the cost of this job is an argument people will
       # want to have, and it should be settled with the numbers in the log.
