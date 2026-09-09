@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maintenance — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/station.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="maintenance"></header>
+
+  <section class="kpis">
+    <div class="kpi"><span class="kpi-label">Due now</span><span id="kpi-due" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Due soon</span><span id="kpi-soon" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Open work</span><span id="kpi-open" class="kpi-value">—</span>
+      <span id="kpi-open-split" class="kpi-sub"></span></div>
+    <div class="kpi"><span class="kpi-label">Expected downtime</span><span id="kpi-downtime" class="kpi-value">—</span>
+      <span class="kpi-sub">to clear the open work</span></div>
+  </section>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <div class="tabs" role="tablist" data-assist="maintenance-tabs">
+    <button class="tab" role="tab" data-tab="due">Due</button>
+    <button class="tab" role="tab" data-tab="work">Work</button>
+    <button class="tab" role="tab" data-tab="plans">Plans</button>
+    <button class="tab" role="tab" data-tab="history">History</button>
+  </div>
+
+  <main class="object-main">
+    <section class="tab-panel" data-panel="due">
+      <div class="panel">
+        <h2>Plans that have come due <span class="muted">— on use, not on a date</span></h2>
+        <p class="muted small">A plan counts what its machine actually did: hours it ran, units it made,
+          or days since the last service. Raising turns every due plan into work, once - a plan with
+          work already open is not raised again.</p>
+        <div class="row" data-needs-cap="maintenance.perform">
+          <button id="raise-due" data-assist="maintenance-raise">Raise due work</button>
+        </div>
+        <ul id="due-list" class="queue"></ul>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="work">
+      <div class="panel" data-needs-cap="maintenance.perform">
+        <h2>Raise corrective work <span class="muted">— something broke</span></h2>
+        <form id="corrective" class="stack" data-assist="maintenance-corrective">
+          <div class="row">
+            <select id="cm-machine" aria-label="Machine" required data-assist="maintenance-cm-machine"></select>
+            <input id="cm-summary" placeholder="What needs doing" required data-assist="maintenance-cm-summary">
+            <input id="cm-reason" placeholder="Why (optional)" data-assist="maintenance-cm-reason">
+            <button id="cm-submit" data-assist="maintenance-cm-submit">Raise</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Open work <span id="work-count" class="muted"></span></h2>
+        <div class="filter-bar">
+          <select id="work-machine" aria-label="Machine"><option value="">Any machine</option></select>
+        </div>
+        <ul id="work-list" class="queue" data-assist="maintenance-work"></ul>
+        <div id="complete-box" class="reason hidden">
+          <div class="field">
+            <label for="findings">What was found / done?</label>
+            <input id="findings" placeholder="e.g. seals replaced, no scoring on the shaft">
+          </div>
+          <div class="row">
+            <button id="complete-cancel" class="ghost" type="button">Back</button>
+            <button id="complete-confirm" type="button">Complete job</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="plans">
+      <div class="panel" data-needs-cap="maintenance.plan">
+        <h2>New plan</h2>
+        <form id="plan-form" class="stack" data-assist="maintenance-plan-form">
+          <div class="row">
+            <input id="plan-code" placeholder="Code (PM-WASH-SEALS)" required>
+            <input id="plan-name" placeholder="Name" required>
+            <select id="plan-machine" aria-label="Machine" required></select>
+          </div>
+          <div class="row">
+            <select id="plan-trigger" aria-label="Trigger">
+              <option value="runtime_hours">every N hours run</option>
+              <option value="produced_qty">every N units made</option>
+              <option value="calendar_days">every N days</option>
+            </select>
+            <input id="plan-interval" type="number" min="0.1" step="0.1" placeholder="N" required>
+            <input id="plan-minutes" type="number" min="1" step="1" placeholder="Expected minutes" value="30">
+            <input id="plan-document" placeholder="Instruction code (optional)">
+            <button id="plan-submit">Create plan</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Every plan <span id="plan-count" class="muted"></span></h2>
+        <div class="filter-bar" data-assist="maintenance-plan-filters">
+          <input id="plan-q" type="search" placeholder="Plan code or name" aria-label="Plan code or name">
+          <select id="plan-filter-machine" aria-label="Machine"><option value="">Any machine</option></select>
+          <select id="plan-filter-trigger" aria-label="Trigger">
+            <option value="">Any trigger</option>
+            <option value="runtime_hours">runtime hours</option>
+            <option value="produced_qty">units produced</option>
+            <option value="calendar_days">calendar days</option>
+          </select>
+        </div>
+        <div class="table-wrap"><table id="plans-table">
+          <thead><tr><th>Plan</th><th>Machine</th><th>Trigger</th><th>Progress</th><th class="num">Used</th><th class="num">Interval</th><th>Last done</th><th>Instruction</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <div id="plan-pager" class="pager"></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="history">
+      <div class="panel">
+        <h2>Completed work <span id="history-count" class="muted"></span></h2>
+        <div class="filter-bar" data-assist="maintenance-history-filters">
+          <input id="history-q" type="search" placeholder="Order, summary or findings" aria-label="Order, summary or findings">
+          <select id="history-machine" aria-label="Machine"><option value="">Any machine</option></select>
+          <select id="history-kind" aria-label="Kind">
+            <option value="">Any kind</option>
+            <option value="preventive">preventive</option>
+            <option value="corrective">corrective</option>
+          </select>
+        </div>
+        <div class="table-wrap"><table id="history-table">
+          <thead><tr><th>Order</th><th>Machine</th><th>Kind</th><th>Summary</th><th>Findings</th><th class="num">Down (min)</th><th>By</th><th>Completed</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <div id="history-pager" class="pager"></div>
+      </div>
+    </section>
+  </main>
+
+  <p class="screen-source">due /maintenance/due · plans /maintenance/plans · work /maintenance/orders ·
+    raise /maintenance/raise, /maintenance/corrective · start/complete /maintenance/orders/{code}/start|complete</p>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/kit.js"></script>
+<script src="/static/maintenance.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

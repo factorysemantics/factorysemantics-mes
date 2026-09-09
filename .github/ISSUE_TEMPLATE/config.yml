@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question
+    url: https://github.com/factorysemantics/factorysemantics-mes/discussions/categories/q-a
+    about: Ask in Discussions — searchable, and someone else probably had it too.
+  - name: Idea or design change
+    url: https://github.com/factorysemantics/factorysemantics-mes/discussions/categories/ideas
+    about: Propose it in Ideas first; accepted ideas become decision records.
+  - name: Security vulnerability
+    url: https://github.com/factorysemantics/factorysemantics-mes/security/advisories/new
+    about: Never in a public issue. Use private reporting or security@factorysemantics.com.

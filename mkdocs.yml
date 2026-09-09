@@ -1,0 +1,128 @@
+site_name: FactorySemantics MES
+site_url: https://docs.factorysemantics.com/
+site_description: An open-source, modular, agent-native Manufacturing Execution System.
+repo_url: https://github.com/factorysemantics/factorysemantics-mes
+repo_name: factorysemantics/factorysemantics-mes
+edit_uri: edit/main/docs/
+copyright: Apache-2.0. Every number on this site comes from a simulated plant unless it says otherwise.
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.tabs.link
+    - content.code.copy
+    - content.action.edit
+    - search.suggest
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      accent: deep orange
+      toggle:
+        icon: material/weather-night
+        name: Dark
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue grey
+      accent: deep orange
+      toggle:
+        icon: material/weather-sunny
+        name: Light
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: false
+            docstring_style: google
+            members_order: source
+
+hooks:
+  - docs/hooks/generate.py
+
+extra:
+  version:
+    provider: mike
+    default: latest
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/factorysemantics/factorysemantics-mes
+    - icon: fontawesome/solid/globe
+      link: https://factorysemantics.com
+
+not_in_nav: |
+  ai/*
+  design/backlog/*
+  onboarding/README.md
+
+nav:
+  - Home: index.md
+  - Plant:
+      - plant/index.md
+      - Tutorial — your first line: plant/first-line.md
+      - How-to — connect to Kepware:
+          - For IT: onboarding/GUIDE-IT.md
+          - For Engineering: onboarding/GUIDE-ENGINEERING.md
+      - How-to — read OEE: plant/reading-oee.md
+      - Explanation — never invent production: plant/never-invent-production.md
+  - Operate:
+      - operate/index.md
+      - Tutorial — deploy: operate/deploy.md
+      - How-to — plants from a registry: operate/registry.md
+      - How-to — the ERPNext connector: operate/erpnext.md
+      - Reference — settings: reference/settings.md
+      - Reference — CLI: reference/cli.md
+      - Reference — REST API: reference/api.md
+      - Explanation — compatibility: operate/compatibility.md
+      - Explanation — security: operate/security.md
+  - Develop:
+      - develop/index.md
+      - Architecture: ARCHITECTURE.md
+      - Tutorial — your first module: develop/your-first-module.md
+      - Style: design/STYLE.md
+      - Decisions:
+          - decisions/index.md
+          - decisions/0001-apache-2-with-dco.md
+          - decisions/0002-kernel-and-modules.md
+          - decisions/0003-one-mcp-server.md
+          - decisions/0004-never-invent-production.md
+          - decisions/0005-plain-html-no-build-step.md
+          - decisions/0006-sqlite-laptop-postgresql-plant.md
+          - decisions/0007-fresh-public-history.md
+          - decisions/0008-erp-connectors-are-modules.md
+          - Template: decisions/TEMPLATE.md
+  - Agents:
+      - agents/index.md
+      - How-to — connect an MCP client: agents/connect-mcp-client.md
+      - Reference — tools: reference/tools.md
+      - Explanation — the write discipline: agents/write-discipline.md
+      - Explanation — evals: agents/evals.md
+  - History:
+      - Landscape: LANDSCAPE.md
+      - The private era: history/private-era.md

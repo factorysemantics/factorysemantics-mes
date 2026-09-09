@@ -1,0 +1,436 @@
+/* MES-TWIN plant-floor dashboard.
+   Dark by default: these screens live on a factory wall, often in low light,
+   and state colour is the primary signal — everything else stays quiet. */
+
+/* Colour lives in themes.css - one place, four palettes. What is left
+   here is everything that is not a colour and does not vary by theme. */
+:root {
+  --radius: 10px;
+  --radius-sm: 8px;
+  --radius-pill: 999px;
+  --mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+
+  /* Spacing and type scales. Before these existed there were thirteen
+     distinct paddings and eleven font sizes in use - every gap a fresh
+     invention. New rules reach for a step; old rules migrate as screens are
+     touched. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --fs-xs: 11px;
+  --fs-sm: 13px;
+  --fs-base: 15px;
+  --fs-lg: 18px;
+  --fs-xl: 28px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.hidden { display: none !important; }
+.muted { color: var(--muted); font-weight: 400; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---------- Login ---------- */
+.login-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(1200px 600px at 50% -10%, var(--glow) 0%, var(--bg) 60%);
+}
+.login-card {
+  width: min(360px, 92vw);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 32px;
+  display: grid;
+  gap: 14px;
+}
+.login-card h1 { margin: 0; font-size: 28px; letter-spacing: -0.5px; }
+.login-card h1 span { color: var(--accent); }
+.login-card .sub { margin: -10px 0 6px; color: var(--muted); font-size: 13px; }
+.login-card label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.login-card .hint { margin: 4px 0 0; font-size: 12px; color: var(--muted); text-align: center; }
+.login-card code { color: var(--text); background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
+.error { color: var(--down); font-size: 13px; margin: 0; min-height: 18px; text-align: center; }
+
+input, select, button {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 11px;
+}
+input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+button {
+  background: var(--accent);
+  border-color: transparent;
+  color: #06121f;
+  font-weight: 600;
+  cursor: pointer;
+}
+button:hover { filter: brightness(1.1); }
+button:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+button.ghost { background: transparent; color: var(--muted); border-color: var(--line); font-weight: 500; }
+button.ghost:hover { color: var(--text); }
+/* The same chip as a link, for the 3D line view in the header. */
+a.ghost {
+  font: inherit;
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 14px;
+}
+a.ghost:hover { color: var(--text); border-color: var(--accent); }
+button.small { padding: 5px 10px; font-size: 13px; }
+
+/* ---------- Layout ---------- */
+header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.brand { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+.brand span { color: var(--accent); }
+.spacer { flex: 1; }
+.live { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--unknown); }
+.dot.ok { background: var(--running); box-shadow: 0 0 0 3px rgba(63, 185, 80, 0.18); }
+.dot.bad { background: var(--down); box-shadow: 0 0 0 3px rgba(248, 81, 73, 0.18); }
+.user { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 20px;
+  padding: 1px 9px;
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  padding: 18px 20px 4px;
+}
+.kpi {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: grid;
+  gap: 2px;
+}
+.kpi-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+.kpi-value { font-size: 28px; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+main {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 14px;
+  padding: 14px 20px 32px;
+  align-items: start;
+}
+.span-2 { grid-column: 1 / -1; }
+@media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 18px 18px;
+}
+.panel h2 { margin: 0 0 14px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text); }
+.panel h2.mt { margin-top: 22px; }
+.panel h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
+
+/* ---------- Machines ---------- */
+.machine-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.machine {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--unknown);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.machine.running { border-left-color: var(--running); }
+.machine.idle    { border-left-color: var(--idle); }
+.machine.down    { border-left-color: var(--down); }
+.machine.setup   { border-left-color: var(--setup); }
+
+.machine-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.machine-code { font-weight: 700; font-size: 16px; }
+.machine-name { color: var(--muted); font-size: 13px; }
+.state {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  padding: 2px 9px;
+  border-radius: 20px;
+}
+.state.running { background: rgba(63,185,80,.16); color: var(--running); }
+.state.idle    { background: rgba(210,153,34,.16); color: var(--idle); }
+.state.down    { background: rgba(248,81,73,.16); color: var(--down); }
+.state.setup   { background: rgba(163,113,247,.16); color: var(--setup); }
+.state.unknown { background: rgba(110,118,129,.16); color: var(--unknown); }
+
+.machine-meta { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+.machine-meta strong { color: var(--text); font-weight: 600; font-family: var(--mono); font-size: 12px; }
+
+.bars { display: grid; gap: 6px; }
+.bar-row { display: grid; grid-template-columns: 78px 1fr 44px; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.bar { height: 6px; background: var(--track); border-radius: 3px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width .4s ease; }
+.bar-row .num { color: var(--text); font-size: 12px; font-family: var(--mono); }
+.bar-row.total .num { font-weight: 700; }
+.bar-row.total > i, .bar-row.total .bar > i { background: var(--running); }
+
+/* ---------- Tables ---------- */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 0 10px 8px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+td { padding: 10px; border-bottom: 1px solid rgba(38,48,64,.5); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+td.code { font-family: var(--mono); font-size: 13px; }
+
+.pill {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 9px;
+  border-radius: 20px;
+  background: var(--panel-2);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.pill.released  { background: rgba(74,158,255,.16); color: var(--accent); }
+.pill.running   { background: rgba(63,185,80,.16);  color: var(--running); }
+.pill.completed { background: rgba(163,113,247,.16); color: var(--setup); }
+.pill.planned   { background: rgba(139,152,165,.16); color: var(--muted); }
+
+.progress { display: flex; align-items: center; gap: 9px; min-width: 150px; }
+.progress .bar { flex: 1; height: 7px; }
+.progress span { font-family: var(--mono); font-size: 12px; color: var(--muted); min-width: 34px; text-align: right; }
+
+/* ---------- Actions & feeds ---------- */
+.actions .stack { margin-bottom: 18px; }
+.actions .stack:last-child { margin-bottom: 0; }
+/* The action forms side by side on a wide panel; the panel itself keeps
+   its own chrome (STYLE.md rule 1) - the difference is the heading colour
+   and the layout inside. */
+.actions > h2 { color: var(--accent); }
+.actions .forms { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.actions .forms .stack { margin-bottom: 0; }
+.machine-line { flex-basis: 100%; font-size: 12px; }
+
+/* One pager under every paged list: "1–24 of 108" and two buttons. */
+.pager { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; }
+.pager .muted { margin-right: auto; }
+.panel h2 .count { font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; }
+
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row > select { flex: 1 1 120px; min-width: 0; }
+.row > input { flex: 0 1 90px; min-width: 0; }
+
+.feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 320px; overflow-y: auto; }
+.feed li { display: grid; gap: 2px; font-size: 13px; padding-bottom: 8px; border-bottom: 1px solid rgba(38,48,64,.5); }
+.feed li:last-child { border-bottom: none; padding-bottom: 0; }
+.feed .when { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.feed .what { color: var(--text); }
+.feed .what b { font-weight: 600; color: var(--accent); font-family: var(--mono); font-size: 12px; }
+.feed .nc { color: var(--down); }
+.feed .empty { color: var(--muted); font-style: italic; }
+
+.toast {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 11px 18px;
+  font-size: 14px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.5);
+  z-index: 50;
+}
+.toast.bad { border-left-color: var(--down); }
+.toast.good { border-left-color: var(--running); }
+
+
+/* ==========================================================================
+   Shared components, promoted from per-screen CSS.
+   One chip, one selectable row, one filter bar, one two-column layout, one
+   labelled field - each of these existed in three to five private variants
+   before, and the drift between them is where the label-misalignment bug
+   lived.
+   ========================================================================== */
+
+/* ---------- nav chips (rendered by common.js from the manifest) ---------- */
+nav.nav { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+.chip {
+  display: inline-block;
+  color: var(--muted);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 7px 14px;
+  font-size: 14px;
+  background: transparent;
+  cursor: pointer;
+}
+.chip:hover { color: var(--text); border-color: var(--accent); }
+.chip.active { color: var(--text); border-color: var(--accent); }
+.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The one grouped menu. <details>, because a menu that is native needs no
+   script and never traps focus. */
+.nav-group { position: relative; }
+.nav-group > summary { list-style: none; user-select: none; }
+.nav-group > summary::-webkit-details-marker { display: none; }
+.nav-group .caret { font-size: 10px; color: var(--muted); }
+.nav-group[open] > summary { color: var(--text); border-color: var(--accent); }
+.nav-pop {
+  position: absolute;
+  top: calc(100% + var(--s1));
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  min-width: 160px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: var(--s2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.nav-pop .chip { border: none; padding: 7px 10px; text-align: left; }
+
+/* ---------- selectable table rows ---------- */
+.row-select tbody tr { cursor: pointer; }
+.row-select tbody tr:hover { background: var(--panel-2); }
+.row-select tbody tr.selected {
+  background: var(--panel-2);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* ---------- the filter bar ----------
+   One row, 40px tall, compact controls. The old pattern - full-size form
+   controls in a wrapping flex row - put a ~130px slab of chrome above a
+   table; this one holds the line. Long tails go behind a .popover. */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s1) 0 var(--s3);
+}
+.filter-bar input,
+.filter-bar select,
+.filter-bar button {
+  padding: 5px 9px;
+  font-size: var(--fs-sm);
+  border-radius: var(--radius-sm);
+}
+.filter-bar input[type="search"] { flex: 1 1 120px; min-width: 0; }
+
+.popover-host { position: relative; }
+.popover {
+  position: absolute;
+  top: calc(100% + var(--s1));
+  left: 0;
+  z-index: 30;
+  display: grid;
+  gap: var(--s2);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: var(--s3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  min-width: 220px;
+}
+
+/* ---------- a labelled field ----------
+   Label above control, always. The inline-label idiom is what floated the
+   word "Due" four pixels off its baseline. */
+.field { display: grid; gap: var(--s1); }
+.field > label {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ---------- shared layout ---------- */
+.layout-2col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s4);
+  padding: 0 var(--s4) var(--s4);
+}
+.layout-2col .span-2 { grid-column: span 2; }
+@media (max-width: 1000px) {
+  .layout-2col { grid-template-columns: 1fr; }
+  .layout-2col .span-2 { grid-column: span 1; }
+}
+
+/* ---------- principle 4, as a component ----------
+   Every screen states its data source; this is the one style for saying it. */
+.screen-source {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  padding: var(--s2) var(--s4) var(--s3);
+}
+
+/* ---------- workspaces ----------
+   The header's chips are workspaces; this row is the screens inside the
+   one you are in. Rendered by common.js from the manifest; absent when a
+   workspace has a single screen. */
+.subnav {
+  display: flex;
+  gap: var(--s2);
+  padding: var(--s2) var(--s4);
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.subnav .chip { padding: 4px 12px; font-size: var(--fs-sm); }
+
+/* ---------- object links ----------
+   Every mention of a machine or a line is a way to its page. */
+a.obj { color: var(--accent); text-decoration: none; font-family: var(--mono); }
+a.obj:hover { text-decoration: underline; }

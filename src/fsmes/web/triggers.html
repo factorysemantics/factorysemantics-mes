@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Triggers — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/station.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="triggers"></header>
+
+  <section class="kpis">
+    <div class="kpi"><span class="kpi-label">In force</span><span id="kpi-approved" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Drafts awaiting approval</span><span id="kpi-drafts" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Fired in 24 h</span><span id="kpi-fired" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Never fired</span><span id="kpi-silent" class="kpi-value">—</span>
+      <span class="kpi-sub">in force, no firing yet</span></div>
+  </section>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <div class="tabs" role="tablist" data-assist="triggers-tabs">
+    <button class="tab" role="tab" data-tab="triggers">Triggers</button>
+    <button class="tab" role="tab" data-tab="firings">What fired</button>
+  </div>
+
+  <main class="object-main">
+    <section class="tab-panel" data-panel="triggers">
+      <div class="panel" data-needs-cap="triggers.write">
+        <h2>Draft a trigger <span class="muted">— a condition on a tag, then one action from the catalog</span></h2>
+        <form id="trigger-form" class="stack" data-assist="trigger-form">
+          <div class="row">
+            <input id="t-code" placeholder="Code (T-WASH-HOT)" required data-assist="trigger-code">
+            <input id="t-name" placeholder="Name" required data-assist="trigger-name">
+            <select id="t-machine" aria-label="Machine" data-assist="trigger-machine"><option value="">any machine</option></select>
+            <input id="t-tag" placeholder="Tag (WashTemp)" required list="tag-names" data-assist="trigger-tag">
+            <datalist id="tag-names"></datalist>
+          </div>
+          <div class="row">
+            <select id="t-condition" aria-label="Condition" data-assist="trigger-condition"></select>
+            <input id="t-threshold" type="number" step="any" placeholder="Threshold" required data-assist="trigger-threshold">
+            <input id="t-sustained" type="number" min="0" step="1" value="0" placeholder="Sustained (s)" data-assist="trigger-sustained">
+            <input id="t-cooldown" type="number" min="0" step="1" value="300" placeholder="Cooldown (s)" data-assist="trigger-cooldown">
+          </div>
+          <div class="row">
+            <select id="t-action" aria-label="Action" data-assist="trigger-action"></select>
+            <input id="t-params" placeholder='Action params as JSON, e.g. {"severity": "major"}' data-assist="trigger-params">
+            <button id="t-submit">Save draft</button data-assist="trigger-submit">
+          </div>
+          <p id="action-help" class="muted small"></p>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Every trigger <span id="trigger-count" class="muted"></span></h2>
+        <p class="muted small">A draft watches nothing. Approval puts it in force; the OPC agent picks it up within
+          half a minute. Withdrawing takes it out. A trigger that never fires and one that fires every minute
+          are both findings.</p>
+        <div class="filter-bar" data-assist="trigger-filters">
+          <input id="tr-q" type="search" placeholder="Code, name or tag" aria-label="Trigger code, name or tag">
+          <select id="tr-status" aria-label="Status">
+            <option value="">Any status</option>
+            <option value="draft">draft</option>
+            <option value="approved">in force</option>
+            <option value="withdrawn">withdrawn</option>
+          </select>
+          <select id="tr-machine" aria-label="Machine"><option value="">Any machine</option></select>
+        </div>
+        <div class="table-wrap"><table id="triggers-table">
+          <thead><tr><th>Trigger</th><th>Watches</th><th>Condition</th><th>Then</th><th>Status</th><th class="num">Fired</th><th>Last fired</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <div id="tr-pager" class="pager"></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="firings">
+      <div class="panel">
+        <h2>What fired <span id="firing-count" class="muted">— last 24 hours</span></h2>
+        <div class="filter-bar" data-assist="firing-filters">
+          <select id="f-machine" aria-label="Machine"><option value="">Any machine</option></select>
+          <select id="f-ok" aria-label="Outcome">
+            <option value="">Any outcome</option>
+            <option value="true">succeeded</option>
+            <option value="false">failed</option>
+          </select>
+        </div>
+        <div class="table-wrap"><table id="firings-table">
+          <thead><tr><th>When</th><th>Trigger</th><th>Machine</th><th>Tag</th><th class="num">Value</th><th>Action</th><th>Outcome</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <div id="f-pager" class="pager"></div>
+      </div>
+    </section>
+  </main>
+
+  <p class="screen-source">triggers /triggers · catalog /triggers/catalog · firings /triggers/firings, /triggers/{code}/firings ·
+    approve/withdraw /triggers/{code}/approve|withdraw · tags /equipment/tags</p>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/kit.js"></script>
+<script src="/static/triggers.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

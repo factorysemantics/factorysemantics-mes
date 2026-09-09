@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Administration — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/orders.css">
+<link rel="stylesheet" href="/static/admin.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="admin"></header>
+
+  <div id="denied" class="panel denied hidden">
+    <h2>Not your screen</h2>
+    <p class="muted">Administration needs the <code>users.manage</code> capability.
+      You are signed in as <strong id="denied-who"></strong>.</p>
+  </div>
+
+  <main id="admin-main" class="admin-layout hidden">
+    <section class="panel">
+      <h2>People <span id="user-count" class="muted"></span></h2>
+      <p class="muted small">Assigning a role takes effect on that person's very
+        next action — capabilities are read live, not baked into their session.</p>
+      <div class="filter-bar" data-assist="user-filters">
+        <input id="u-q" type="search" placeholder="Code or name" aria-label="Person code or name">
+        <select id="u-role" aria-label="Role"><option value="">Any role</option></select>
+      </div>
+      <div class="table-wrap">
+        <table id="users" data-assist="user-table">
+          <thead><tr><th>Code</th><th>Name</th><th>Role</th><th>Can sign in</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="u-pager" class="pager"></div>
+
+      <h3 class="mt">Add someone</h3>
+      <form id="form-user" class="stack" data-assist="user-form">
+        <div class="row">
+          <input name="code" placeholder="Code (e.g. JSMITH)" required>
+          <input name="name" placeholder="Full name" required>
+        </div>
+        <div class="row">
+          <input name="password" type="text" placeholder="Initial password" required>
+          <select name="role" id="new-user-role" aria-label="Role"></select>
+          <button>Create</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Roles</h2>
+      <p class="muted small">A role is a bundle of capabilities, not a rank. That
+        is what lets “Quality Inspector” exist: it records inspections and
+        nothing else.</p>
+      <div id="roles" class="role-list" data-assist="role-list"></div>
+
+      <h3 class="mt">Define a role</h3>
+      <form id="form-role" class="stack" data-assist="role-form">
+        <div class="row">
+          <input name="code" placeholder="Code (e.g. line_lead)" required>
+          <input name="name" placeholder="Display name" required>
+        </div>
+        <input name="description" placeholder="What this role is for">
+        <fieldset class="caps">
+          <legend class="muted small">Capabilities</legend>
+          <div id="cap-checks" class="cap-grid" data-assist="cap-checks"></div>
+        </fieldset>
+        <div class="row"><button>Create role</button></div>
+      </form>
+    </section>
+
+    <section class="panel span-2">
+      <h2>Routings <span id="routing-count" class="muted"></span></h2>
+      <p class="muted small">A routing is the ordered path a material takes
+        through the plant. Operations run in sequence, each on a named machine.</p>
+      <div class="filter-bar" data-assist="routing-filters">
+        <input id="r-q" type="search" placeholder="Code or name" aria-label="Routing code or name">
+        <select id="r-material" aria-label="Material"><option value="">Any material</option></select>
+      </div>
+      <div class="table-wrap">
+        <table id="routings">
+          <thead><tr><th>Code</th><th>Name</th><th>Material</th><th>Operations</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="r-pager" class="pager"></div>
+
+      <h3 class="mt">Define a routing</h3>
+      <form id="form-routing" class="stack" data-assist="routing-form">
+        <div class="row">
+          <input name="code" placeholder="Code (e.g. RT-BOTTLE-2)" required>
+          <input name="name" placeholder="Name" required>
+          <select name="material" id="routing-material" aria-label="Material"></select>
+        </div>
+        <div id="ops" class="ops" data-assist="routing-ops"></div>
+        <div class="row">
+          <button type="button" id="add-op" class="ghost">Add operation</button>
+          <button>Create routing</button>
+        </div>
+      </form>
+    </section>
+  </main>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/admin.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[docs,mcp]"
+      - name: Build (strict — a broken link fails)
+        run: mkdocs build --strict
+      - name: Publish dev docs
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          mike deploy --push --update-aliases dev
+      - name: Publish release docs
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          v="${GITHUB_REF_NAME#v}"; mm="${v%.*}"
+          mike deploy --push --update-aliases "$mm" latest
+          mike set-default --push latest

@@ -1,0 +1,88 @@
+/* The station view: one machine, arm's length, maybe gloves.
+
+   Everything interactive is at least 48px tall - the .touch modifier does
+   that wholesale so the rule cannot be forgotten control by control. */
+
+.touch input,
+.touch select,
+.touch button {
+  min-height: 48px;
+  font-size: var(--fs-lg);
+}
+
+.station-pick {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid var(--line);
+}
+.station-pick select { min-width: 180px; font-family: var(--mono); }
+
+.station-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s4);
+  padding: var(--s4);
+}
+.station-layout .span-2 { grid-column: span 2; }
+@media (max-width: 900px) {
+  .station-layout { grid-template-columns: 1fr; }
+  .station-layout .span-2 { grid-column: span 1; }
+}
+
+/* ---------- state buttons ---------- */
+.state-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--s2);
+}
+.state-btn {
+  min-height: 64px;
+  border-radius: var(--radius);
+  border: 2px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  cursor: pointer;
+}
+.state-btn.running { border-color: var(--running); }
+.state-btn.idle { border-color: var(--idle); }
+.state-btn.down { border-color: var(--down); }
+.state-btn.setup { border-color: var(--setup); }
+.state-btn.current {
+  color: var(--bg);
+}
+.state-btn.current.running { background: var(--running); }
+.state-btn.current.idle { background: var(--idle); }
+.state-btn.current.down { background: var(--down); }
+.state-btn.current.setup { background: var(--setup); }
+.state-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.reason {
+  margin-top: var(--s3);
+  display: grid;
+  gap: var(--s2);
+  border: 1px solid var(--down);
+  border-radius: var(--radius-sm);
+  padding: var(--s3);
+}
+
+/* ---------- the queue ---------- */
+.queue { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
+.queue li {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: var(--s2) var(--s3);
+}
+.queue li.running-op { border-color: var(--running); }
+.queue .what { flex: 1; min-width: 0; }
+.queue .mono { font-family: var(--mono); font-size: var(--fs-sm); }
+.queue button { font-size: var(--fs-sm); min-height: 40px; }
+
+.big-io { align-items: end; }
+.big-io input { width: 110px; font-variant-numeric: tabular-nums; }

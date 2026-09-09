@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Claude Code worktrees
+.claude/worktrees/
+.claude/settings.local.json
+
+# ---------------------------------------------------------------------------
+# Plant data and secrets. These rules are deliberately WHOLESALE rather than an
+# enumerated list of subdirectories: an enumerated rule goes stale silently the
+# first time the code writes somewhere new. Learned on factorysemantics.com,
+# where `drops/ curated/ mlflow/` were listed and the node had since started
+# writing archive/ and audit/ that nothing covered.
+# ---------------------------------------------------------------------------
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.parquet
+logs/
+*.log
+
+# Secrets. `.env*` (not just `.env`) because a plain `.env` rule does not match
+# an editor's `.env.bak` — which is a committable copy of a credentials file.
+.env
+.env.*
+!.env.example
+.secrets/
+*.token
+certs/
+*.pem
+*.key
+
+# Generated simulator output
+sim/out/
+
+# ---------------------------------------------------------------------------
+# Carried in from MES-TWIN at the merge. Same wholesale-over-enumerated rule as
+# above: labs/**/out/ rather than naming each lab, because the enumerated form
+# went stale the moment labs/multiplant/ started generating its own CSVs.
+# ---------------------------------------------------------------------------
+erp_exchange/
+labs/**/out/
+labs/**/certs/
+labs/multiplant/.data/
+labs/megafactory/.data/
+labs/cutlery/.data/
+
+# Docs site: generated reference pages and the built site
+docs/reference/
+docs/llms.txt
+site/

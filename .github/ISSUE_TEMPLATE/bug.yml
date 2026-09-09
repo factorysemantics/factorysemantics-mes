@@ -1,0 +1,49 @@
+name: Bug
+description: Something the MES did that it should not have, or did not do that it should have.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks. Please use the simulator to reproduce where you can, and never paste real plant data, tag names that identify a customer, or screenshots with company names.
+  - type: textarea
+    id: info
+    attributes:
+      label: fsmes info
+      description: Paste the output of `fsmes info` (version, install location, modules).
+      render: text
+    validations:
+      required: true
+  - type: dropdown
+    id: plant
+    attributes:
+      label: Simulated or real?
+      options:
+        - Simulated (fsmes demo, fsmes plant, fsmes score)
+        - Real plant (no data in this report)
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant lines from `logs/`, with anything identifying removed.
+      render: text

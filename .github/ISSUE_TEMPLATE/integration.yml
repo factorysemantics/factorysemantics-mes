@@ -1,0 +1,31 @@
+name: Integration problem
+description: The MES and another system (ERPNext, Kepware, an OPC UA server, an MCP client) do not agree.
+labels: [integration]
+body:
+  - type: input
+    id: partner
+    attributes:
+      label: The other system and its version
+      placeholder: ERPNext v16.3 / KEPServerEX 6.17 / Claude Desktop 1.x
+    validations:
+      required: true
+  - type: textarea
+    id: info
+    attributes:
+      label: fsmes info
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: fails
+    attributes:
+      label: What fails, exactly
+      description: The request or message on our side, and what came back. No credentials, no real data.
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant configuration
+      description: The MES_… settings involved, with secrets removed.
+      render: text

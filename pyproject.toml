@@ -1,0 +1,126 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "factorysemantics-mes"
+version = "0.1.0"
+description = "An open-source, modular, agent-native Manufacturing Execution System"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.12"
+authors = [{ name = "Scott Kalwei" }]
+keywords = [
+    "mes",
+    "manufacturing",
+    "manufacturing-execution-system",
+    "isa-95",
+    "opc-ua",
+    "oee",
+    "spc",
+    "mcp",
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Manufacturing",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Typing :: Typed",
+]
+# Merged from both projects at the MES-TWIN adoption. The M0 note about only
+# declaring what the code imports still holds — every dependency below is
+# imported by code now in this repo, because the engine arrived with it.
+dependencies = [
+    "sqlalchemy>=2.0",
+    "typer>=0.12",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "alembic>=1.13",
+    "pydantic-settings>=2.4",
+    "structlog>=24.1",
+    "httpx>=0.27",
+    "asyncua>=1.1.5",
+]
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.2"]
+# The simulation MCP server. Deliberately optional: a plant PC runs the MES,
+# not the tooling that tests it, and principle 5 says that PC should stay as
+# thin as it can.
+mcp = ["mcp>=2"]
+# The agent behind the floor assistant: a cloud model working the plant's
+# own tools from the same registry the MCP server serves. Optional for the
+# same reason: a plant with no key and no internet still answers and guides.
+agent = ["anthropic>=1.2", "mcp>=2"]
+docs = [
+    "mkdocs-material>=9.6",
+    "mkdocstrings[python]>=0.27",
+    "mike>=2.1",
+    "mkdocs-redirects>=1.2",
+]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+    "ruff==0.16.5",
+    # The UI conformance loop drives a real browser. Dev-only by principle 5:
+    # a plant PC renders the screens; it never carries the tooling that
+    # audits them.
+    "playwright>=1.49",
+]
+
+[project.urls]
+Homepage = "https://factorysemantics.com"
+Documentation = "https://docs.factorysemantics.com"
+Source = "https://github.com/factorysemantics/factorysemantics-mes"
+Changelog = "https://github.com/factorysemantics/factorysemantics-mes/blob/main/CHANGELOG.md"
+Issues = "https://github.com/factorysemantics/factorysemantics-mes/issues"
+Discussions = "https://github.com/factorysemantics/factorysemantics-mes/discussions"
+Roadmap = "https://github.com/factorysemantics/factorysemantics-mes/blob/main/ROADMAP.md"
+
+# Modules register here. `fsmes info` lists what is installed by reading this
+# group, and the ERP factory resolves any mode it does not know built-in by
+# name, so a connector published as its own package plugs in the same way.
+[project.entry-points."fsmes.modules"]
+erpnext = "fsmes.integrations.erp.erpnext_adapter:from_settings"
+
+[project.scripts]
+fsmes = "fsmes.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fsmes"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [".claude/", "site/", "docs/reference/"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["src", "tests"]
+# Executed notebooks are exports, not source; their cells are linted where they are written (build_notebook.py).
+extend-exclude = ["*.ipynb"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["SIM108"]
+
+[tool.ruff.lint.per-file-ignores]
+# FastAPI's Depends()/Query() and typer's Option()/Argument() in defaults are
+# those frameworks' own idiom, not the mutable-default trap B008 exists for.
+"src/fsmes/api/**" = ["B008"]
+"src/fsmes/cli.py" = ["B008"]
+# Alembic generates migrations at whatever width it likes.
+"alembic/versions/*" = ["E501"]
+# Notebook cells, written as strings: a long line there is a long line in a cell.
+"labs/cutlery/analysis/build_notebook.py" = ["E501"]
+"labs/cutlery/analysis/build_report.py" = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q -m 'not slow'"
+markers = [
+    "slow: tests that start real servers or drive a simulated plant end to end",
+]

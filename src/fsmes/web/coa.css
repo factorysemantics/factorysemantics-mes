@@ -1,0 +1,19 @@
+/* The certificate: readable on a screen, honest on paper. */
+
+.certificate { max-width: 960px; }
+.cert-meta { display: flex; align-items: center; gap: var(--s3); margin-bottom: var(--s3); }
+.cert-meta .spacer { flex: 1; }
+.cert-body h2 { font-size: var(--fs-xl); text-transform: none; letter-spacing: 0; margin: 0 0 var(--s3); }
+.cert-body h3 { font-size: var(--fs-lg); text-transform: none; letter-spacing: 0; color: var(--text); margin: var(--s5) 0 var(--s2); }
+.cert-body p { margin: 0 0 var(--s2); }
+.cert-table { width: 100%; border-collapse: collapse; margin: var(--s2) 0 var(--s3); font-size: var(--fs-sm); }
+.cert-table th, .cert-table td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+.cert-table td:nth-child(n+3) { font-variant-numeric: tabular-nums; }
+.cert-body hr { border: 0; border-top: 1px solid var(--line); margin: var(--s4) 0; }
+
+@media print {
+  .no-print, header, .subnav, .design-launch, .assist-launch, #toast, .screen-source { display: none !important; }
+  body { background: white; color: black; }
+  .certificate { border: none; box-shadow: none; max-width: none; }
+  .cert-table th, .cert-table td { border-bottom: 1px solid currentColor; }
+}

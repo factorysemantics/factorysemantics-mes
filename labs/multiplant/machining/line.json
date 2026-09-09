@@ -1,0 +1,165 @@
+{
+  "_what": "Northgate Machining - a deliberately SMALL plant. Three stations, one shift, one breakdown and a rash of micro-stops. It exists to sit beside the six-station bottling line and prove the same MES serves both without a code change: 'as big or as small as a customer requires'.",
+  "_why_different": "Everything a plant can disagree about, this one disagrees about - station count, station names, analog names and units, cycle rates, buffer sizes, order numbering. If any of that leaks into MES code rather than config, running these two side by side is where it shows.",
+  "channel": "Northgate",
+  "dsn": "NorthgateCSV",
+  "seed": 7,
+  "duration_s": 3600,
+  "orders": [
+    7001,
+    7002
+  ],
+  "buffers": {
+    "capacity": 6,
+    "initial": 2
+  },
+  "stations": [
+    {
+      "name": "Saw",
+      "rate_per_min": 22,
+      "scrap_pct": 0.8,
+      "analogs": [
+        {
+          "name": "BladeLoad",
+          "base": 42.0,
+          "noise": 2.5,
+          "running_only": true,
+          "setpoint": {
+            "name": "BladeLoadSP",
+            "min": 20.0,
+            "max": 70.0,
+            "lag_s": 12.0
+          },
+          "unit": "%"
+        },
+        {
+          "name": "CoolantFlow",
+          "base": 12.5,
+          "noise": 0.4,
+          "running_only": true,
+          "decimals": 2,
+          "unit": "L/min"
+        },
+        {
+          "name": "BladeRpm",
+          "base": 1450.0,
+          "noise": 12.0,
+          "running_only": true,
+          "decimals": 0,
+          "unit": "rpm"
+        }
+      ]
+    },
+    {
+      "name": "Mill",
+      "rate_per_min": 18,
+      "scrap_pct": 2.4,
+      "analogs": [
+        {
+          "name": "SpindleTemp",
+          "base": 58.0,
+          "noise": 1.2
+        },
+        {
+          "name": "SpindleRpm",
+          "base": 8200.0,
+          "noise": 45.0,
+          "running_only": true,
+          "decimals": 0,
+          "unit": "rpm",
+          "setpoint": {
+            "name": "SpindleRpmSP",
+            "min": 4000.0,
+            "max": 12000.0,
+            "lag_s": 8.0
+          }
+        },
+        {
+          "name": "AxisLoadPct",
+          "base": 46.0,
+          "noise": 2.0,
+          "running_only": true,
+          "decimals": 1,
+          "unit": "%"
+        },
+        {
+          "name": "CoolantTemp",
+          "base": 24.0,
+          "noise": 0.5,
+          "decimals": 2,
+          "unit": "degC"
+        }
+      ]
+    },
+    {
+      "name": "Deburr",
+      "rate_per_min": 25,
+      "scrap_pct": 0.4,
+      "analogs": [
+        {
+          "name": "CycleForce",
+          "base": 12.5,
+          "noise": 0.4,
+          "setpoint": {
+            "name": "CycleForceSP",
+            "min": 6.0,
+            "max": 20.0,
+            "lag_s": 10.0
+          },
+          "unit": "N"
+        },
+        {
+          "name": "BrushWearPct",
+          "base": 22.0,
+          "noise": 0.6,
+          "decimals": 1,
+          "unit": "%"
+        },
+        {
+          "name": "AirFlow",
+          "base": 55.0,
+          "noise": 1.5,
+          "running_only": true,
+          "decimals": 1,
+          "unit": "L/min"
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "_why": "tool change on the mill - a PLANNED stop, and the constraint station at that, so if the MES counts it as downtime this plant's availability is a lie",
+      "type": "changeover",
+      "start": 1500,
+      "end": 1740
+    },
+    {
+      "_why": "the spindle heats before it fails - the precursor an agent should catch",
+      "type": "drift",
+      "station": "Mill",
+      "to": 74.0,
+      "start": 2100,
+      "end": 2700
+    },
+    {
+      "_why": "and then it fails. With buffers of only 6, this starves and blocks almost immediately - a small plant has nowhere to hide",
+      "type": "down",
+      "station": "Mill",
+      "start": 2700,
+      "end": 2880
+    },
+    {
+      "_why": "the saw nickels and dimes you all shift - pure OEE performance loss, invisible in an availability number",
+      "type": "micro_stops",
+      "station": "Saw",
+      "every_s": [
+        70,
+        130
+      ],
+      "duration_s": [
+        6,
+        14
+      ]
+    }
+  ]
+}

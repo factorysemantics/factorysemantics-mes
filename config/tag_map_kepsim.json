@@ -1,0 +1,97 @@
+{
+  "_comment": "The KepSim six-station line (labs/kepsim) served in the twin's OWN address space by `mes run-opc-sim --replay`. Objects and tag names match the CSV tables exactly, so the same data reads identically here and through Kepware \u2014 only the addressing differs (see tag_map_kepware.json). Every machine is read-only: `order_tag` is null because a CSV replay cannot be written to. Orders still flow, because OPC counter deltas auto-start a released operation.",
+  "_state_map": "The line's State column is a PLC-style integer. Mapping it is a site decision with real consequences: starved and blocked are IDLE (the machine is healthy, it just has nothing to do), changeover is SETUP (a planned stop, which must not count against availability), and only a genuine fault is DOWN.",
+  "machines": [
+    {
+      "equipment": "LD01",
+      "object": "LD",
+      "cycle_seconds": 0.545,
+      "analog": "FeedRate",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "RD01",
+      "object": "RD",
+      "cycle_seconds": 0.556,
+      "analog": "MotorTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "WASH01",
+      "object": "Washer",
+      "cycle_seconds": 0.522,
+      "analog": "WashTemp",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "QI01",
+      "object": "QI",
+      "cycle_seconds": 0.536,
+      "analog": "RejectPct",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "FILL01",
+      "object": "Refill",
+      "cycle_seconds": 0.571,
+      "analog": "FillWeight",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    },
+    {
+      "equipment": "PAL01",
+      "object": "Palletiser",
+      "cycle_seconds": 0.588,
+      "analog": "AirPressure",
+      "order_tag": null,
+      "state_map": {
+        "0": "idle",
+        "1": "running",
+        "2": "idle",
+        "3": "idle",
+        "4": "down",
+        "5": "setup"
+      }
+    }
+  ],
+  "_tags": "Each machine subscribes to everything its line publishes: the loader fills that in from the generated tags.json. Set extra_tags on a machine only to pin a hand-picked subset, which is what a real server needs."
+}

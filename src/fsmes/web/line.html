@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Line — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/analysis.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="line"></header>
+
+  <section class="object-head" data-assist="line-head">
+    <div class="object-title">
+      <h1><span id="l-code" class="mono">—</span> <span id="l-name" class="muted"></span></h1>
+      <span class="spacer"></span>
+      <label class="pick">Line <select id="line"></select></label>
+      <label class="pick">Window <select id="hours"></select></label>
+    </div>
+    <div class="object-facts">
+      <span>Cost center <strong id="l-cc">—</strong></span>
+      <span>Machines <strong id="l-machines">—</strong></span>
+      <span>Orders on the floor <strong id="l-orders">—</strong></span>
+      <span>WIP <strong id="l-wip">—</strong></span>
+      <span>Line OEE <strong id="l-oee">—</strong></span>
+    </div>
+  </section>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <div class="tabs" role="tablist" data-assist="line-tabs">
+    <button class="tab" role="tab" data-tab="overview">Overview</button>
+    <button class="tab" role="tab" data-tab="timeline">Timeline</button>
+    <button class="tab" role="tab" data-tab="analysis">Analysis</button>
+    <button class="tab" role="tab" data-tab="scene">3D</button>
+  </div>
+
+  <main class="object-main">
+    <section class="tab-panel" data-panel="overview">
+      <div class="panel">
+        <h2>Machines <span class="muted">— state, alarms, and how well each ran in the window</span></h2>
+        <div id="tiles" class="health-tiles"></div>
+      </div>
+      <div class="panel">
+        <h2>Work in progress <span id="wip-note" class="muted"></span></h2>
+        <p class="muted small">Units that have reached a station and not yet left it, summed over
+          the orders on the floor. A negative number is a counter that disagrees with the route,
+          and it is shown rather than hidden.</p>
+        <div id="wip" class="wip-strip"></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="timeline">
+      <div class="panel">
+        <h2>State timeline <span class="muted">— a stop walking down the line</span></h2>
+        <div id="tl" class="chart"></div>
+        <p class="legend">
+          <span><i class="sw" style="background:var(--running)"></i>running</span>
+          <span><i class="sw" style="background:var(--idle)"></i>idle</span>
+          <span><i class="sw" style="background:var(--down)"></i>down</span>
+          <span><i class="sw" style="background:var(--setup)"></i>setup</span>
+        </p>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="analysis">
+      <div class="panel">
+        <h2>Analysis</h2>
+        <p class="muted small">OEE losses by station, downtime pareto and production over the window,
+          for this line.</p>
+        <a id="analysis-link" class="ghost" href="/dashboard/analysis">Open shift analysis for this line</a>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="scene">
+      <div class="panel">
+        <h2>The line, drawn <span class="muted">— every unit on the belts is one the MES booked</span></h2>
+        <iframe id="scene" class="scene-frame" title="3D line view" loading="lazy"></iframe>
+      </div>
+    </section>
+  </main>
+
+  <p class="screen-source">machines /dashboard/summary?line= · alarms /equipment/alarms · wip /line/wip?line= ·
+    oee /analysis/oee?line= · timeline /analysis/timeline?line= · scene /dashboard/line/3d</p>
+</div>
+<script src="/static/common.js"></script>
+<script src="/static/kit.js"></script>
+<script src="/static/line-page.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

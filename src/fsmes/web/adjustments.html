@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adjustments — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/station.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="adjustments"></header>
+
+  <section class="kpis">
+    <div class="kpi"><span class="kpi-label">Awaiting a decision</span><span id="kpi-proposed" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Approved, not yet written</span><span id="kpi-approved" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Verified followed</span><span id="kpi-verified" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Failed</span><span id="kpi-failed" class="kpi-value">—</span>
+      <span class="kpi-sub">refused by a guard, or the process did not follow</span></div>
+  </section>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <main class="object-main">
+    <section class="panel" data-needs-cap="adjustments.propose">
+      <h2>Propose a setpoint change <span class="muted">— a recommendation, never a write</span></h2>
+      <form id="propose-form" class="stack" data-assist="adjustment-form">
+        <div class="row">
+          <select id="p-machine" aria-label="Machine" required></select>
+          <select id="p-tag" aria-label="Setpoint" required></select>
+          <input id="p-value" type="number" step="any" placeholder="New value" required>
+          <span id="p-bounds" class="muted small"></span>
+        </div>
+        <div class="row">
+          <input id="p-rationale" placeholder="What you saw, and why this value" required>
+          <button id="p-submit">Propose</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>The queue <span id="queue-count" class="muted"></span></h2>
+      <div class="filter-bar" data-assist="adjustment-filters">
+        <select id="q-status" aria-label="Status">
+          <option value="">Any status</option>
+          <option value="proposed">proposed</option>
+          <option value="approved">approved</option>
+          <option value="written">written</option>
+          <option value="verified">verified</option>
+          <option value="failed">failed</option>
+          <option value="rejected">rejected</option>
+        </select>
+        <select id="q-machine" aria-label="Machine"><option value="">Any machine</option></select>
+      </div>
+      <p class="muted small">Three guards, each checked on its own: the tag manifest must declare the tag
+        writable with bounds; the API checks the bounds again at approval; the OPC agent refuses anything
+        outside its own copy of the bounds at the moment of writing. After the write the process value is
+        read back and the outcome recorded - written and not followed is a finding, not a success.</p>
+      <div class="table-wrap"><table id="queue-table">
+        <thead><tr><th>Code</th><th>Machine</th><th>Setpoint</th><th class="num">From</th><th class="num">To</th><th>Why</th><th>By</th><th>Status</th><th>Outcome</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div id="q-pager" class="pager"></div>
+    </section>
+  </main>
+
+  <p class="screen-source">queue /adjustments · propose /adjustments · decide /adjustments/{code}/approve|reject ·
+    setpoints /equipment/tags (writable)</p>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/kit.js"></script>
+<script src="/static/adjustments.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

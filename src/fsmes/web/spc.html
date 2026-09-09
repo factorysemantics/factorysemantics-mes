@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPC — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/analysis.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="spc"></header>
+
+  <section class="object-head">
+    <div class="object-title">
+      <h1>Statistical process control</h1>
+      <span class="spacer"></span>
+      <label class="pick">Characteristic <select id="spec"></select></label>
+    </div>
+    <div class="object-facts">
+      <span>Readings <strong id="f-n">—</strong></span>
+      <span>Centre <strong id="f-centre">—</strong></span>
+      <span>Sigma (within) <strong id="f-sigma">—</strong></span>
+      <span>Cp <strong id="f-cp">—</strong></span>
+      <span>Cpk <strong id="f-cpk">—</strong></span>
+      <span>Pp <strong id="f-pp">—</strong></span>
+    </div>
+  </section>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <main class="object-main" data-assist="spc-page">
+    <section class="panel">
+      <h2>Verdict</h2>
+      <p id="verdict" class="verdict">—</p>
+      <p class="muted small">Control limits come from the process's own variation, not the tolerance:
+        a process can sit inside spec while drifting badly, and a chart drawn against the specification
+        never shows it. Capability is withheld while the process is out of control - Cpk on an
+        unstable process describes a process that no longer exists.</p>
+    </section>
+    <section class="panel">
+      <h2>Individuals chart <span id="chart-note" class="muted"></span></h2>
+      <div id="chart" class="chart"></div>
+      <p class="legend">
+        <span><i class="sw" style="background:var(--accent)"></i>reading</span>
+        <span><i class="sw" style="background:var(--running)"></i>centre line</span>
+        <span><i class="sw" style="background:var(--idle)"></i>control limits (±3σ)</span>
+        <span><i class="sw" style="background:var(--down)"></i>specification limits</span>
+        <span><i class="sw" style="background:var(--quality)"></i>rule fired</span>
+      </p>
+    </section>
+    <section class="panel">
+      <h2>Rules that fired <span id="signal-count" class="muted"></span></h2>
+      <div class="table-wrap"><table id="signals">
+        <thead><tr><th>Rule</th><th>Where</th><th>What it means</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+  </main>
+
+  <p class="screen-source">chart /quality/spc/{material}/{characteristic} · characteristics /quality/specs</p>
+</div>
+<script src="/static/common.js"></script>
+<script src="/static/kit.js"></script>
+<script src="/static/spc.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

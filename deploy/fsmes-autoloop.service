@@ -1,0 +1,9 @@
+[Unit]
+Description=fsmes night shift - score, gather, brief the agent, write the morning note
+
+[Service]
+Type=oneshot
+# A login shell, deliberately: claude lives in mise's shims, and a bare
+# systemd PATH has never heard of them.
+ExecStart=/usr/bin/bash -lc 'cd %h/Projects/factorysemantics-mes && .venv/bin/fsmes autoloop'
+TimeoutStartSec=5h

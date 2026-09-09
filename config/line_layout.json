@@ -1,0 +1,42 @@
+{
+  "_comment": "Geometry for the 3D line view (/dashboard/line). Entirely optional: a line with no entry here is laid out from its routing order, evenly spaced, with each machine's silhouette inferred from its name. This file is where you correct that — give a station an explicit `kind` when the guess is wrong, or explicit `x`/`z`/`rot` (metres, degrees) when the line is not a straight run.",
+  "_kinds": "depalletiser | denester | washer | inspector | filler | palletiser | mixer | packer | generic",
+  "_why_not_the_tag_map": "The tag map is the wiring diagram between MES equipment and OPC objects. Where a machine physically stands is a different question, edited by different people at different times, so it lives in a different file.",
+
+  "defaults": {
+    "spacing": 9.0,
+    "conveyor_capacity": 20,
+    "units_per_tray": 12,
+    "unit_label": "unit"
+  },
+
+  "lines": {
+    "SIMLINE": {
+      "_comment": "The KepSim returnable-bottle line: trays of empties in at LD01, filled bottles palletised at PAL01.",
+      "unit_label": "bottle",
+      "units_per_tray": 12,
+      "conveyor_capacity": 20,
+      "spacing": 9.0,
+      "stations": {
+        "LD01": { "kind": "depalletiser" },
+        "RD01": { "kind": "denester" },
+        "WASH01": { "kind": "washer" },
+        "QI01": { "kind": "inspector" },
+        "FILL01": { "kind": "filler" },
+        "PAL01": { "kind": "palletiser" }
+      }
+    },
+
+    "LINE1": {
+      "_comment": "The seeded cola line. Two machines, so it renders short — the same scene, honestly reflecting a smaller plant.",
+      "unit_label": "bottle",
+      "units_per_tray": 6,
+      "conveyor_capacity": 16,
+      "spacing": 11.0,
+      "stations": {
+        "MIX01": { "kind": "mixer" },
+        "PACK01": { "kind": "packer" }
+      }
+    }
+  }
+}

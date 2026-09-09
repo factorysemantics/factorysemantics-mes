@@ -1,0 +1,302 @@
+{
+  "_what": "ACME Beverages, Kansas City \u2014 the six-station bottling line. This is the reference plant: the one CI replays, the one the demo shows, and the one the honesty scores are measured against.",
+  "_why_data": "Until 2026-08-31 this line lived in labs/kepsim/generate_line.py as hardcoded Python. That made it unscoreable \u2014 a scorer needs ground truth it can read, and a scripted event buried in a loop body is not readable. Describing the line as data is what turned 'the MES seems fine' into a number.",
+  "_states": "State column values: 0 stopped, 1 running, 2 starved, 3 blocked, 4 down, 5 changeover. Stations sit behind finite buffers, so a 'down' event genuinely starves everything downstream and blocks everything upstream.",
+  "channel": "SimLine",
+  "dsn": "LineSimCSV",
+  "seed": 42,
+  "duration_s": 3600,
+  "orders": [
+    4711,
+    4712
+  ],
+  "buffers": {
+    "capacity": 20,
+    "initial": 10
+  },
+  "stations": [
+    {
+      "name": "LD",
+      "rate_per_min": 110,
+      "scrap_pct": 0.5,
+      "analogs": [
+        {
+          "name": "FeedRate",
+          "base": 110.0,
+          "noise": 1.5,
+          "running_only": true,
+          "decimals": 1,
+          "setpoint": {
+            "name": "FeedRateSP",
+            "min": 60.0,
+            "max": 140.0,
+            "lag_s": 20.0
+          },
+          "unit": "bpm"
+        },
+        {
+          "name": "InfeedPressure",
+          "base": 4.4,
+          "noise": 0.08,
+          "decimals": 2,
+          "unit": "bar"
+        },
+        {
+          "name": "MotorCurrent",
+          "base": 11.2,
+          "noise": 0.4,
+          "running_only": true,
+          "decimals": 2,
+          "unit": "A"
+        }
+      ]
+    },
+    {
+      "name": "RD",
+      "rate_per_min": 108,
+      "scrap_pct": 1.0,
+      "_why_two": "A real machine exposes more than one signal, and the one that warns you is not the only one on the box. PressForce is healthy throughout; MotorTemp is the precursor. A scorer that cannot tell them apart would credit the MES for watching the wrong tag.",
+      "analogs": [
+        {
+          "name": "PressForce",
+          "base": 180.0,
+          "noise": 2.0,
+          "running_only": true,
+          "decimals": 1,
+          "setpoint": {
+            "name": "PressForceSP",
+            "min": 120.0,
+            "max": 240.0,
+            "lag_s": 15.0
+          },
+          "unit": "N"
+        },
+        {
+          "name": "MotorTemp",
+          "base": 62.0,
+          "noise": 0.6,
+          "decimals": 1
+        },
+        {
+          "name": "MotorCurrent",
+          "base": 14.8,
+          "noise": 0.5,
+          "running_only": true,
+          "decimals": 2,
+          "unit": "A"
+        },
+        {
+          "name": "VibrationRms",
+          "base": 1.8,
+          "noise": 0.15,
+          "decimals": 2,
+          "unit": "mm/s"
+        }
+      ]
+    },
+    {
+      "name": "Washer",
+      "rate_per_min": 115,
+      "scrap_pct": 1.0,
+      "analogs": [
+        {
+          "name": "WashTemp",
+          "base": 71.0,
+          "noise": 0.8,
+          "decimals": 1,
+          "setpoint": {
+            "name": "WashTempSP",
+            "min": 55.0,
+            "max": 85.0,
+            "lag_s": 90.0
+          },
+          "unit": "degC"
+        },
+        {
+          "name": "RinsePressure",
+          "base": 3.2,
+          "noise": 0.09,
+          "decimals": 2,
+          "unit": "bar"
+        },
+        {
+          "name": "ConductivityUs",
+          "base": 240.0,
+          "noise": 6.0,
+          "decimals": 1,
+          "unit": "uS"
+        },
+        {
+          "name": "DetergentPct",
+          "base": 1.8,
+          "noise": 0.05,
+          "decimals": 2,
+          "unit": "%"
+        }
+      ]
+    },
+    {
+      "name": "QI",
+      "rate_per_min": 112,
+      "scrap_pct": 1.5,
+      "analogs": [
+        {
+          "name": "RejectPct",
+          "base": 2.0,
+          "noise": 0.5,
+          "decimals": 2
+        },
+        {
+          "name": "CameraLux",
+          "base": 820.0,
+          "noise": 12.0,
+          "decimals": 1,
+          "unit": "lx"
+        },
+        {
+          "name": "InspectMs",
+          "base": 42.0,
+          "noise": 2.5,
+          "running_only": true,
+          "decimals": 1,
+          "unit": "ms"
+        }
+      ]
+    },
+    {
+      "name": "Refill",
+      "rate_per_min": 105,
+      "scrap_pct": 0.8,
+      "analogs": [
+        {
+          "name": "FillWeight",
+          "base": 500.0,
+          "noise": 2.0,
+          "decimals": 1,
+          "setpoint": {
+            "name": "FillWeightSP",
+            "min": 480.0,
+            "max": 520.0,
+            "lag_s": 30.0
+          },
+          "unit": "g"
+        },
+        {
+          "name": "NozzlePressure",
+          "base": 2.6,
+          "noise": 0.07,
+          "decimals": 2,
+          "unit": "bar"
+        },
+        {
+          "name": "ProductTemp",
+          "base": 8.4,
+          "noise": 0.3,
+          "decimals": 2,
+          "unit": "degC"
+        }
+      ]
+    },
+    {
+      "name": "Palletiser",
+      "rate_per_min": 102,
+      "scrap_pct": 0.2,
+      "analogs": [
+        {
+          "name": "AirPressure",
+          "base": 6.0,
+          "noise": 0.05,
+          "decimals": 2,
+          "setpoint": {
+            "name": "AirPressureSP",
+            "min": 4.5,
+            "max": 7.5,
+            "lag_s": 10.0
+          },
+          "unit": "bar"
+        },
+        {
+          "name": "GripperCycles",
+          "base": 3.1,
+          "noise": 0.1,
+          "running_only": true,
+          "decimals": 2,
+          "unit": "1/s"
+        },
+        {
+          "name": "ArmTemp",
+          "base": 38.0,
+          "noise": 0.7,
+          "decimals": 1,
+          "unit": "degC"
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "_why": "a stop too short to ripple through buffers of 20 \u2014 the MES should see downtime on LD and no disturbance anywhere else",
+      "type": "down",
+      "station": "LD",
+      "start": 600,
+      "end": 612
+    },
+    {
+      "_why": "the precursor: the motor heats for ten minutes before it fails. An agent that reads tag history should be able to warn before the breakdown, and this is the window where that is provable",
+      "type": "drift",
+      "station": "RD",
+      "analog": "MotorTemp",
+      "to": 88.0,
+      "start": 900,
+      "end": 1500
+    },
+    {
+      "_why": "and then it fails. Buffers of 20 mean the ripple takes a while \u2014 starved walks downstream, blocked walks upstream. Contrast with Northgate's buffers of 6, where it is nearly instant",
+      "type": "down",
+      "station": "RD",
+      "start": 1500,
+      "end": 1620
+    },
+    {
+      "_why": "the washer story. A quality excursion tied to its process cause: scrap climbs while the wash runs three degrees hot, and downstream the filler underweights every bottle by nine grams - warm, wet bottles fill short - with no alarm of its own. The failed fill-weight checks land on the filler; the cause is the washer. An agent is scored on naming the cause, not the symptom (agent eval fill_weight_cause)",
+      "type": "scrap_burst",
+      "station": "Washer",
+      "scrap_pct": 10.0,
+      "analog_offset": 3.0,
+      "start": 1800,
+      "end": 2100,
+      "effects": [
+        {
+          "station": "Refill",
+          "analog": "FillWeight",
+          "offset": -9.0
+        }
+      ]
+    },
+    {
+      "_why": "a PLANNED stop, whole line, order 4711 -> 4712. If the MES books this as downtime every availability figure it reports is a lie. This is the single mapping decision with real consequences",
+      "type": "changeover",
+      "start": 2400,
+      "end": 2640
+    },
+    {
+      "_why": "the counter snaps to zero mid-run, as a PLC does after a power blip. Never invent production: a reset must re-baseline and book nothing",
+      "type": "counter_reset",
+      "station": "RD",
+      "at": 3000
+    },
+    {
+      "_why": "death by a thousand cuts on the palletiser \u2014 pure OEE performance loss, and invisible in an availability number",
+      "type": "micro_stops",
+      "station": "Palletiser",
+      "every_s": [
+        110,
+        130
+      ],
+      "duration_s": [
+        8,
+        18
+      ]
+    }
+  ]
+}

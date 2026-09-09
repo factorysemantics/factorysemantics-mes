@@ -1,0 +1,231 @@
+[
+  {
+    "code": "WT-PALLET",
+    "title": "Open a pallet and see everything on it",
+    "needs": "plant.read",
+    "body": "Recorded for the cutlery plant. Every pallet, wrap, stack, plate and piece carries its own id; this walks one pallet from its serial down to the pieces and up to the lots that fed it.",
+    "steps": [
+      {
+        "page": "/dashboard/trace",
+        "anchor": "trace-search",
+        "fill": {
+          "value": "PL1-000000350"
+        },
+        "title": "Type a pallet serial and press Look up",
+        "body": "Pallet serials start with the palletizer: PL1, PL2, PL3, PL4, then a running number. The same box takes a wrap (W01-…), a stack, a plate, a single fork or a lot code."
+      },
+      {
+        "page": "/dashboard/trace",
+        "anchor": "trace-status",
+        "title": "Read the unit, then open its tree",
+        "body": "Above this row: what it is, its status, the order and the machine that made it, and when. Below it, the tree: 240 wraps, in each a stack and a plate, in each stack a fork, a spoon and a knife, 1,440 units in all. Nothing on the pallet was minted from a count; every id is something a station saw."
+      },
+      {
+        "page": "/dashboard/trace",
+        "anchor": "trace-search",
+        "title": "Read the lots underneath it",
+        "body": "The components table at the bottom lists every resin and plate lot that went into anything on this pallet, and which wraps used each. That is the recall question answered in advance."
+      },
+      {
+        "page": "/dashboard/coa",
+        "anchor": "coa-search",
+        "fill": {
+          "value": "PL1-000000350"
+        },
+        "title": "Then open the same pallet's certificate",
+        "body": "The certificate of analysis is rendered from the same record. Press Open."
+      }
+    ]
+  },
+  {
+    "code": "WT-RECALL",
+    "title": "Find where a resin lot went",
+    "needs": "plant.read",
+    "body": "Recorded for the cutlery plant. The one question that grows with the plant: a supplier calls about a lot, and the plant needs the pallets to hold.",
+    "steps": [
+      {
+        "page": "/dashboard/trace",
+        "anchor": "trace-search",
+        "fill": {
+          "value": "LOT-PP-FORK1-001"
+        },
+        "title": "Type the lot code and press Look up",
+        "body": "Resin lots are LOT-PP-<line>-<n>; plate lots are LOT-PLATE-<wrapper>-<n>. A lot code opens the where-used view instead of a unit."
+      },
+      {
+        "page": "/dashboard/trace",
+        "anchor": "trace-search",
+        "title": "Read the verdict: units affected, packages to hold",
+        "body": "The panel states how many units carry the lot and lists every package to hold, pallet by pallet with the count on each. Loose units not yet packed are counted separately and said so. Over a third of an hour's production, this answer took about a second and a half on the measured plant."
+      }
+    ]
+  },
+  {
+    "code": "WT-COA",
+    "title": "Read a pallet's certificate of analysis",
+    "needs": "plant.read",
+    "body": "Recorded for the cutlery plant. A certificate is issued immutable from the record: the dimensional checks on record up to the pallet's close, the automated inspections, and everything on it.",
+    "steps": [
+      {
+        "page": "/dashboard/coa",
+        "anchor": "coa-search",
+        "fill": {
+          "value": "PL1-000000350"
+        },
+        "title": "Type a pallet serial and press Open",
+        "body": "An order code opens that order's issued certificate; a pallet serial renders the pallet's certificate on demand from the containment record."
+      },
+      {
+        "page": "/dashboard/coa",
+        "anchor": "coa-body",
+        "title": "Read it top to bottom",
+        "body": "The window the pallet was built in, units by material and by status, how many the vision stations inspected and how many failed on the pallet. Then, per characteristic: the checks on record, the spec limits, min, mean, max and Cpk. Under twelve checks the certificate says 'no capability' outright instead of printing a Cpk that means nothing. This early pallet has three checks per characteristic, so that is what you will see."
+      },
+      {
+        "page": "/dashboard/coa",
+        "anchor": "coa-filters",
+        "title": "Certificates in force, by order",
+        "body": "Issued order certificates are listed here and filterable by order and material. Print gives the certificate alone, without the screen around it."
+      }
+    ]
+  },
+  {
+    "code": "WT-SPC",
+    "title": "Check a characteristic against its limits",
+    "needs": "plant.read",
+    "body": "Recorded for the cutlery plant. Every fifteen minutes an inspector records five characteristics per utensil; this is where those readings are judged.",
+    "steps": [
+      {
+        "page": "/dashboard/quality",
+        "anchor": "measurement-filters",
+        "title": "Pick a material and a characteristic",
+        "body": "Try UT-FORK and length_mm: the spec is 164 to 166 mm. The list only offers characteristics that have a specification, because a reading with nothing to judge it against cannot pass or fail."
+      },
+      {
+        "page": "/dashboard/quality",
+        "anchor": "measurement-chart",
+        "title": "Read the readings against the band",
+        "body": "Each point is one recorded check, plotted against the specification limits. An out-of-spec reading raised a non-conformance the moment it was recorded; that is the system working."
+      },
+      {
+        "page": "/dashboard/quality",
+        "anchor": "instruction-inline",
+        "title": "The approved procedure sits beside the chart",
+        "body": "Choosing a characteristic shows the instruction in force for it, so the method is read where the measurement is judged."
+      },
+      {
+        "page": "/dashboard/spc",
+        "anchor": "spc-page",
+        "title": "Then the control chart",
+        "body": "The verdict, the individuals chart, and which Western Electric rules fired. Capability is withheld until there are twelve points; a chart with fewer says so rather than reporting a comfortable number."
+      }
+    ]
+  },
+  {
+    "code": "WT-FLOOR",
+    "title": "See what is running, what stopped, and why",
+    "needs": "plant.read",
+    "body": "Recorded for the cutlery plant: nine moulding lines, 32 stackers, 16 wrappers, four palletizers, 83 stations. Fifteen breakdowns were scripted into the measured hour and the MES saw all fifteen.",
+    "steps": [
+      {
+        "page": "/dashboard",
+        "anchor": "machine-filters",
+        "title": "Filter the machines by line or state",
+        "body": "Type a machine code, or pick a line and a state. 'down' shows what is stopped now; a stop nobody has labelled is reported as unlabelled, never hidden inside running time."
+      },
+      {
+        "page": "/dashboard/machines",
+        "anchor": "machines-page",
+        "title": "The whole plant on one screen",
+        "body": "Every station with its state and the alarms active on it. States follow PackML names; a machine that has not reported is shown as unknown, not as running."
+      },
+      {
+        "page": "/dashboard/analysis",
+        "anchor": "analysis-page",
+        "title": "OEE by station, the state timeline, the downtime pareto",
+        "body": "Production is booked from counter deltas, so a counter that reset books nothing. Where a value cannot be known the screen says unknown; a zero here is a real zero."
+      }
+    ]
+  },
+  {
+    "code": "WT-ORDER",
+    "title": "Follow a work order through the plant",
+    "needs": "plant.read",
+    "body": "Recorded for the cutlery plant. Sixty-one orders run the hour: one per moulding line, stacker, wrapper and palletizer.",
+    "steps": [
+      {
+        "page": "/dashboard/orders",
+        "anchor": "order-filters",
+        "title": "Find the order",
+        "body": "Filter by code or status. WO-PAL1 is the first palletizer's order; WO-FORK1 the first moulding line's."
+      },
+      {
+        "page": "/dashboard/orders",
+        "anchor": "order-list",
+        "title": "Read its quantities",
+        "body": "Planned, good and scrap, booked by the stations themselves. No manual booking was made anywhere in the measured hour."
+      },
+      {
+        "page": "/dashboard/orders",
+        "anchor": "order-route",
+        "title": "The route: which operations, on which machines",
+        "body": "Each operation names the station it ran on and what it booked."
+      },
+      {
+        "page": "/dashboard/orders",
+        "anchor": "order-genealogy",
+        "title": "The genealogy: what went in, what came out",
+        "body": "Lots consumed and units produced, the same record the trace and certificate screens read. Open a serial from here to walk it."
+      }
+    ]
+  },
+  {
+    "code": "WT-HOLD",
+    "title": "Quarantine a pallet and everything on it",
+    "needs": "quality.close_nc",
+    "body": "Recorded for the cutlery plant, for supervisors. A status change on a pallet cascades to every unit inside it and is written to the audit trail under your name.",
+    "steps": [
+      {
+        "page": "/dashboard/trace",
+        "anchor": "trace-search",
+        "fill": {
+          "value": "PL1-000000350"
+        },
+        "title": "Open the pallet",
+        "body": "Type the serial and press Look up. On the public demo the data resets, so a hold here is not permanent; on a plant it is."
+      },
+      {
+        "page": "/dashboard/trace",
+        "anchor": "trace-status",
+        "title": "Choose quarantine and say why",
+        "body": "The reason is required and is what the audit trail keeps. Release is the same control, later, with its own reason. The cascade to 1,440 units took thirty to sixty milliseconds on the measured plant."
+      },
+      {
+        "page": "/dashboard/quality",
+        "anchor": "nc-list",
+        "title": "Check the non-conformance it belongs to",
+        "body": "A hold usually answers an open non-conformance; disposing of that is a separate act, by a separate role, on purpose."
+      }
+    ]
+  },
+  {
+    "code": "WT-AGENT",
+    "title": "Ask the assistant, and see what it may do",
+    "needs": "plant.read",
+    "body": "Recorded for the cutlery plant. The assistant reads through the same API as this screen, proposes rather than acts, and can do exactly what your account may do.",
+    "steps": [
+      {
+        "page": "/dashboard",
+        "anchor": "shop-floor-actions",
+        "title": "Open the assistant from any screen",
+        "body": "Ask 'what is running right now, and is anything down?' and it answers from the machines tool, naming the stations. Ask 'how do I…' and it offers a walkthrough like this one."
+      },
+      {
+        "page": "/dashboard/instructions",
+        "anchor": "instruction-list",
+        "title": "Walkthroughs are documents in force, listed here",
+        "body": "A recorded walkthrough is a controlled document like an instruction: drafted, approved by a supervisor, revised with history. Any of them plays from this list, and the assistant offers the ones your role can follow."
+      }
+    ]
+  }
+]

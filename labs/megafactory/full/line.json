@@ -1,0 +1,3488 @@
+{
+  "_what": "The full mega-factory: 20 lines from 8 templates, 108 stations, one plant. Built by build_config.py - edit that, not this.",
+  "lines": [
+    {
+      "name": "FILL1",
+      "seed": 7101,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Loader",
+          "rate_per_min": 40,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "InfeedRate",
+              "base": 40.0,
+              "noise": 2.0,
+              "unit": "bpm"
+            }
+          ]
+        },
+        {
+          "name": "Washer",
+          "rate_per_min": 40,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "WashTemp",
+              "base": 65.0,
+              "noise": 1.0,
+              "unit": "C",
+              "setpoint": {
+                "name": "WashTempSP",
+                "min": 55.0,
+                "max": 80.0,
+                "lag_s": 90.0
+              }
+            },
+            {
+              "name": "RinsePressure",
+              "base": 2.4,
+              "noise": 0.08,
+              "unit": "bar"
+            }
+          ]
+        },
+        {
+          "name": "Filler",
+          "rate_per_min": 38,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "FillWeight",
+              "base": 500.0,
+              "noise": 1.5,
+              "unit": "g"
+            },
+            {
+              "name": "FillTemp",
+              "base": 4.0,
+              "noise": 0.3,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Capper",
+          "rate_per_min": 38,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "TorqueLevel",
+              "base": 12.0,
+              "noise": 0.6,
+              "unit": "Nm"
+            }
+          ]
+        },
+        {
+          "name": "Labeler",
+          "rate_per_min": 38,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "LabelTension",
+              "base": 3.0,
+              "noise": 0.2,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Palletizer",
+          "rate_per_min": 36,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "StackHeight",
+              "base": 1.2,
+              "noise": 0.05,
+              "unit": "m"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "drift",
+          "station": "Washer",
+          "analog": "WashTemp",
+          "start": 1500,
+          "end": 1800,
+          "to": 74.0,
+          "effects": [
+            {
+              "station": "Filler",
+              "analog": "FillWeight",
+              "offset": -9.0
+            }
+          ]
+        },
+        {
+          "type": "down",
+          "station": "Capper",
+          "start": 2400,
+          "end": 2450
+        },
+        {
+          "type": "micro_stops",
+          "station": "Labeler"
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "FILL",
+        "area": "Filling",
+        "material": {
+          "code": "FG-FILL1",
+          "name": "Bottled Product (FILL1)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "fill_weight",
+            "kind": "variable",
+            "unit": "g",
+            "min": 494.0,
+            "max": 506.0,
+            "measured": [
+              "Filler",
+              "FillWeight"
+            ]
+          },
+          {
+            "name": "cap_torque",
+            "kind": "variable",
+            "unit": "Nm",
+            "min": 8.0,
+            "max": 16.0
+          },
+          {
+            "name": "net_content",
+            "kind": "variable",
+            "unit": "ml",
+            "min": 497.0,
+            "max": 503.0
+          },
+          {
+            "name": "label_position",
+            "kind": "variable",
+            "unit": "mm",
+            "min": -1.5,
+            "max": 1.5
+          },
+          {
+            "name": "brix",
+            "kind": "variable",
+            "unit": "Bx",
+            "min": 10.2,
+            "max": 10.8
+          },
+          {
+            "name": "cap_present",
+            "kind": "go_nogo",
+            "unit": ""
+          },
+          {
+            "name": "visual_defect",
+            "kind": "pass_fail",
+            "unit": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "FILL2",
+      "seed": 7102,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Loader",
+          "rate_per_min": 40,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "InfeedRate",
+              "base": 40.0,
+              "noise": 2.0,
+              "unit": "bpm"
+            }
+          ]
+        },
+        {
+          "name": "Washer",
+          "rate_per_min": 40,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "WashTemp",
+              "base": 65.0,
+              "noise": 1.0,
+              "unit": "C",
+              "setpoint": {
+                "name": "WashTempSP",
+                "min": 55.0,
+                "max": 80.0,
+                "lag_s": 90.0
+              }
+            },
+            {
+              "name": "RinsePressure",
+              "base": 2.4,
+              "noise": 0.08,
+              "unit": "bar"
+            }
+          ]
+        },
+        {
+          "name": "Filler",
+          "rate_per_min": 38,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "FillWeight",
+              "base": 500.0,
+              "noise": 1.5,
+              "unit": "g"
+            },
+            {
+              "name": "FillTemp",
+              "base": 4.0,
+              "noise": 0.3,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Capper",
+          "rate_per_min": 38,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "TorqueLevel",
+              "base": 12.0,
+              "noise": 0.6,
+              "unit": "Nm"
+            }
+          ]
+        },
+        {
+          "name": "Labeler",
+          "rate_per_min": 38,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "LabelTension",
+              "base": 3.0,
+              "noise": 0.2,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Palletizer",
+          "rate_per_min": 36,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "StackHeight",
+              "base": 1.2,
+              "noise": 0.05,
+              "unit": "m"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "drift",
+          "station": "Washer",
+          "analog": "WashTemp",
+          "start": 1711,
+          "end": 2011,
+          "to": 74.0,
+          "effects": [
+            {
+              "station": "Filler",
+              "analog": "FillWeight",
+              "offset": -9.0
+            }
+          ]
+        },
+        {
+          "type": "down",
+          "station": "Capper",
+          "start": 2611,
+          "end": 2661
+        },
+        {
+          "type": "micro_stops",
+          "station": "Labeler"
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "FILL",
+        "area": "Filling",
+        "material": {
+          "code": "FG-FILL2",
+          "name": "Bottled Product (FILL2)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "fill_weight",
+            "kind": "variable",
+            "unit": "g",
+            "min": 494.0,
+            "max": 506.0,
+            "measured": [
+              "Filler",
+              "FillWeight"
+            ]
+          },
+          {
+            "name": "cap_torque",
+            "kind": "variable",
+            "unit": "Nm",
+            "min": 8.0,
+            "max": 16.0
+          },
+          {
+            "name": "net_content",
+            "kind": "variable",
+            "unit": "ml",
+            "min": 497.0,
+            "max": 503.0
+          },
+          {
+            "name": "label_position",
+            "kind": "variable",
+            "unit": "mm",
+            "min": -1.5,
+            "max": 1.5
+          },
+          {
+            "name": "brix",
+            "kind": "variable",
+            "unit": "Bx",
+            "min": 10.2,
+            "max": 10.8
+          },
+          {
+            "name": "cap_present",
+            "kind": "go_nogo",
+            "unit": ""
+          },
+          {
+            "name": "visual_defect",
+            "kind": "pass_fail",
+            "unit": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "FILL3",
+      "seed": 7103,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Loader",
+          "rate_per_min": 40,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "InfeedRate",
+              "base": 40.0,
+              "noise": 2.0,
+              "unit": "bpm"
+            }
+          ]
+        },
+        {
+          "name": "Washer",
+          "rate_per_min": 40,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "WashTemp",
+              "base": 65.0,
+              "noise": 1.0,
+              "unit": "C",
+              "setpoint": {
+                "name": "WashTempSP",
+                "min": 55.0,
+                "max": 80.0,
+                "lag_s": 90.0
+              }
+            },
+            {
+              "name": "RinsePressure",
+              "base": 2.4,
+              "noise": 0.08,
+              "unit": "bar"
+            }
+          ]
+        },
+        {
+          "name": "Filler",
+          "rate_per_min": 38,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "FillWeight",
+              "base": 500.0,
+              "noise": 1.5,
+              "unit": "g"
+            },
+            {
+              "name": "FillTemp",
+              "base": 4.0,
+              "noise": 0.3,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Capper",
+          "rate_per_min": 38,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "TorqueLevel",
+              "base": 12.0,
+              "noise": 0.6,
+              "unit": "Nm"
+            }
+          ]
+        },
+        {
+          "name": "Labeler",
+          "rate_per_min": 38,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "LabelTension",
+              "base": 3.0,
+              "noise": 0.2,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Palletizer",
+          "rate_per_min": 36,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "StackHeight",
+              "base": 1.2,
+              "noise": 0.05,
+              "unit": "m"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "drift",
+          "station": "Washer",
+          "analog": "WashTemp",
+          "start": 1922,
+          "end": 2222,
+          "to": 74.0,
+          "effects": [
+            {
+              "station": "Filler",
+              "analog": "FillWeight",
+              "offset": -9.0
+            }
+          ]
+        },
+        {
+          "type": "down",
+          "station": "Capper",
+          "start": 2822,
+          "end": 2872
+        },
+        {
+          "type": "micro_stops",
+          "station": "Labeler"
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "FILL",
+        "area": "Filling",
+        "material": {
+          "code": "FG-FILL3",
+          "name": "Bottled Product (FILL3)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "fill_weight",
+            "kind": "variable",
+            "unit": "g",
+            "min": 494.0,
+            "max": 506.0,
+            "measured": [
+              "Filler",
+              "FillWeight"
+            ]
+          },
+          {
+            "name": "cap_torque",
+            "kind": "variable",
+            "unit": "Nm",
+            "min": 8.0,
+            "max": 16.0
+          },
+          {
+            "name": "net_content",
+            "kind": "variable",
+            "unit": "ml",
+            "min": 497.0,
+            "max": 503.0
+          },
+          {
+            "name": "label_position",
+            "kind": "variable",
+            "unit": "mm",
+            "min": -1.5,
+            "max": 1.5
+          },
+          {
+            "name": "brix",
+            "kind": "variable",
+            "unit": "Bx",
+            "min": 10.2,
+            "max": 10.8
+          },
+          {
+            "name": "cap_present",
+            "kind": "go_nogo",
+            "unit": ""
+          },
+          {
+            "name": "visual_defect",
+            "kind": "pass_fail",
+            "unit": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "MACH1",
+      "seed": 7201,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Saw",
+          "rate_per_min": 22,
+          "scrap_pct": 0.8,
+          "analogs": [
+            {
+              "name": "BladeLoad",
+              "base": 42.0,
+              "noise": 2.5,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Mill",
+          "rate_per_min": 18,
+          "scrap_pct": 0.6,
+          "analogs": [
+            {
+              "name": "SpindleTemp",
+              "base": 55.0,
+              "noise": 3.0,
+              "unit": "C"
+            },
+            {
+              "name": "SpindleLoad",
+              "base": 61.0,
+              "noise": 4.0,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Deburr",
+          "rate_per_min": 25,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "CycleForce",
+              "base": 30.0,
+              "noise": 1.5,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Inspect",
+          "rate_per_min": 24,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "GaugeReading",
+              "base": 10.0,
+              "noise": 0.1,
+              "unit": "mm"
+            }
+          ]
+        },
+        {
+          "name": "Pack",
+          "rate_per_min": 24,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 120.0,
+              "noise": 2.0,
+              "unit": "C"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Mill",
+          "start": 900,
+          "end": 960
+        },
+        {
+          "type": "drift",
+          "station": "Saw",
+          "start": 2000,
+          "end": 2200,
+          "to": 55.0
+        },
+        {
+          "type": "micro_stops",
+          "station": "Deburr"
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "MACH",
+        "area": "Machining",
+        "material": {
+          "code": "FG-MACH1",
+          "name": "Machined Part (MACH1)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "bore_diameter",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 9.85,
+            "max": 10.15,
+            "measured": [
+              "Inspect",
+              "GaugeReading"
+            ]
+          },
+          {
+            "name": "surface_finish_ra",
+            "kind": "variable",
+            "unit": "um",
+            "min": 0.4,
+            "max": 3.2
+          },
+          {
+            "name": "flatness",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 0.0,
+            "max": 0.05
+          },
+          {
+            "name": "hardness",
+            "kind": "variable",
+            "unit": "HRC",
+            "min": 38.0,
+            "max": 44.0
+          },
+          {
+            "name": "thread_gauge",
+            "kind": "go_nogo",
+            "unit": ""
+          },
+          {
+            "name": "burr_count",
+            "kind": "count",
+            "unit": "count",
+            "max": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "MACH2",
+      "seed": 7202,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Saw",
+          "rate_per_min": 22,
+          "scrap_pct": 0.8,
+          "analogs": [
+            {
+              "name": "BladeLoad",
+              "base": 42.0,
+              "noise": 2.5,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Mill",
+          "rate_per_min": 18,
+          "scrap_pct": 0.6,
+          "analogs": [
+            {
+              "name": "SpindleTemp",
+              "base": 55.0,
+              "noise": 3.0,
+              "unit": "C"
+            },
+            {
+              "name": "SpindleLoad",
+              "base": 61.0,
+              "noise": 4.0,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Deburr",
+          "rate_per_min": 25,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "CycleForce",
+              "base": 30.0,
+              "noise": 1.5,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Inspect",
+          "rate_per_min": 24,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "GaugeReading",
+              "base": 10.0,
+              "noise": 0.1,
+              "unit": "mm"
+            }
+          ]
+        },
+        {
+          "name": "Pack",
+          "rate_per_min": 24,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 120.0,
+              "noise": 2.0,
+              "unit": "C"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Mill",
+          "start": 1111,
+          "end": 1171
+        },
+        {
+          "type": "drift",
+          "station": "Saw",
+          "start": 2211,
+          "end": 2411,
+          "to": 55.0
+        },
+        {
+          "type": "micro_stops",
+          "station": "Deburr"
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "MACH",
+        "area": "Machining",
+        "material": {
+          "code": "FG-MACH2",
+          "name": "Machined Part (MACH2)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "bore_diameter",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 9.85,
+            "max": 10.15,
+            "measured": [
+              "Inspect",
+              "GaugeReading"
+            ]
+          },
+          {
+            "name": "surface_finish_ra",
+            "kind": "variable",
+            "unit": "um",
+            "min": 0.4,
+            "max": 3.2
+          },
+          {
+            "name": "flatness",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 0.0,
+            "max": 0.05
+          },
+          {
+            "name": "hardness",
+            "kind": "variable",
+            "unit": "HRC",
+            "min": 38.0,
+            "max": 44.0
+          },
+          {
+            "name": "thread_gauge",
+            "kind": "go_nogo",
+            "unit": ""
+          },
+          {
+            "name": "burr_count",
+            "kind": "count",
+            "unit": "count",
+            "max": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "MACH3",
+      "seed": 7203,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Saw",
+          "rate_per_min": 22,
+          "scrap_pct": 0.8,
+          "analogs": [
+            {
+              "name": "BladeLoad",
+              "base": 42.0,
+              "noise": 2.5,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Mill",
+          "rate_per_min": 18,
+          "scrap_pct": 0.6,
+          "analogs": [
+            {
+              "name": "SpindleTemp",
+              "base": 55.0,
+              "noise": 3.0,
+              "unit": "C"
+            },
+            {
+              "name": "SpindleLoad",
+              "base": 61.0,
+              "noise": 4.0,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Deburr",
+          "rate_per_min": 25,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "CycleForce",
+              "base": 30.0,
+              "noise": 1.5,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Inspect",
+          "rate_per_min": 24,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "GaugeReading",
+              "base": 10.0,
+              "noise": 0.1,
+              "unit": "mm"
+            }
+          ]
+        },
+        {
+          "name": "Pack",
+          "rate_per_min": 24,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 120.0,
+              "noise": 2.0,
+              "unit": "C"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Mill",
+          "start": 1322,
+          "end": 1382
+        },
+        {
+          "type": "drift",
+          "station": "Saw",
+          "start": 2422,
+          "end": 2622,
+          "to": 55.0
+        },
+        {
+          "type": "micro_stops",
+          "station": "Deburr"
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "MACH",
+        "area": "Machining",
+        "material": {
+          "code": "FG-MACH3",
+          "name": "Machined Part (MACH3)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "bore_diameter",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 9.85,
+            "max": 10.15,
+            "measured": [
+              "Inspect",
+              "GaugeReading"
+            ]
+          },
+          {
+            "name": "surface_finish_ra",
+            "kind": "variable",
+            "unit": "um",
+            "min": 0.4,
+            "max": 3.2
+          },
+          {
+            "name": "flatness",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 0.0,
+            "max": 0.05
+          },
+          {
+            "name": "hardness",
+            "kind": "variable",
+            "unit": "HRC",
+            "min": 38.0,
+            "max": 44.0
+          },
+          {
+            "name": "thread_gauge",
+            "kind": "go_nogo",
+            "unit": ""
+          },
+          {
+            "name": "burr_count",
+            "kind": "count",
+            "unit": "count",
+            "max": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "ASSEM1",
+      "seed": 7301,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Kit",
+          "rate_per_min": 30,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "PickRate",
+              "base": 30.0,
+              "noise": 1.0,
+              "unit": "ppm"
+            }
+          ]
+        },
+        {
+          "name": "Assemble1",
+          "rate_per_min": 28,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "PressForce",
+              "base": 200.0,
+              "noise": 8.0,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Assemble2",
+          "rate_per_min": 28,
+          "scrap_pct": 0.6,
+          "analogs": [
+            {
+              "name": "PressForce",
+              "base": 210.0,
+              "noise": 8.0,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Torque",
+          "rate_per_min": 27,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "TorqueLevel",
+              "base": 8.0,
+              "noise": 0.4,
+              "unit": "Nm",
+              "setpoint": {
+                "name": "TorqueLevelSP",
+                "min": 5.0,
+                "max": 12.0,
+                "lag_s": 20.0
+              }
+            }
+          ]
+        },
+        {
+          "name": "Test",
+          "rate_per_min": 27,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "TestCurrent",
+              "base": 1.2,
+              "noise": 0.05,
+              "unit": "A"
+            },
+            {
+              "name": "LeakRate",
+              "base": 0.8,
+              "noise": 0.1,
+              "unit": "sccm"
+            }
+          ]
+        },
+        {
+          "name": "Pack2",
+          "rate_per_min": 27,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 118.0,
+              "noise": 2.0,
+              "unit": "C"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "scrap_burst",
+          "station": "Assemble2",
+          "start": 1200,
+          "end": 1260,
+          "scrap_pct": 18
+        },
+        {
+          "type": "down",
+          "station": "Torque",
+          "start": 2100,
+          "end": 2200
+        },
+        {
+          "type": "drift",
+          "station": "Assemble1",
+          "start": 400,
+          "end": 700,
+          "to": 235.0,
+          "effects": [
+            {
+              "station": "Test",
+              "analog": "LeakRate",
+              "offset": 1.4
+            }
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "ASSEM",
+        "area": "Assembly",
+        "material": {
+          "code": "FG-ASSEM1",
+          "name": "Assembled Unit (ASSEM1)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "press_force_peak",
+            "kind": "variable",
+            "unit": "N",
+            "min": 180.0,
+            "max": 230.0
+          },
+          {
+            "name": "torque_final",
+            "kind": "variable",
+            "unit": "Nm",
+            "min": 6.5,
+            "max": 9.5
+          },
+          {
+            "name": "test_current",
+            "kind": "variable",
+            "unit": "A",
+            "min": 1.05,
+            "max": 1.35
+          },
+          {
+            "name": "leak_rate",
+            "kind": "variable",
+            "unit": "sccm",
+            "min": 0.0,
+            "max": 1.5,
+            "measured": [
+              "Test",
+              "LeakRate"
+            ]
+          },
+          {
+            "name": "functional_test",
+            "kind": "pass_fail",
+            "unit": ""
+          },
+          {
+            "name": "missing_part",
+            "kind": "pass_fail",
+            "unit": ""
+          },
+          {
+            "name": "scratch_count",
+            "kind": "count",
+            "unit": "count",
+            "max": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "ASSEM2",
+      "seed": 7302,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Kit",
+          "rate_per_min": 30,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "PickRate",
+              "base": 30.0,
+              "noise": 1.0,
+              "unit": "ppm"
+            }
+          ]
+        },
+        {
+          "name": "Assemble1",
+          "rate_per_min": 28,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "PressForce",
+              "base": 200.0,
+              "noise": 8.0,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Assemble2",
+          "rate_per_min": 28,
+          "scrap_pct": 0.6,
+          "analogs": [
+            {
+              "name": "PressForce",
+              "base": 210.0,
+              "noise": 8.0,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Torque",
+          "rate_per_min": 27,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "TorqueLevel",
+              "base": 8.0,
+              "noise": 0.4,
+              "unit": "Nm",
+              "setpoint": {
+                "name": "TorqueLevelSP",
+                "min": 5.0,
+                "max": 12.0,
+                "lag_s": 20.0
+              }
+            }
+          ]
+        },
+        {
+          "name": "Test",
+          "rate_per_min": 27,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "TestCurrent",
+              "base": 1.2,
+              "noise": 0.05,
+              "unit": "A"
+            },
+            {
+              "name": "LeakRate",
+              "base": 0.8,
+              "noise": 0.1,
+              "unit": "sccm"
+            }
+          ]
+        },
+        {
+          "name": "Pack2",
+          "rate_per_min": 27,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 118.0,
+              "noise": 2.0,
+              "unit": "C"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "scrap_burst",
+          "station": "Assemble2",
+          "start": 1411,
+          "end": 1471,
+          "scrap_pct": 18
+        },
+        {
+          "type": "down",
+          "station": "Torque",
+          "start": 2311,
+          "end": 2411
+        },
+        {
+          "type": "drift",
+          "station": "Assemble1",
+          "start": 611,
+          "end": 911,
+          "to": 235.0,
+          "effects": [
+            {
+              "station": "Test",
+              "analog": "LeakRate",
+              "offset": 1.4
+            }
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "ASSEM",
+        "area": "Assembly",
+        "material": {
+          "code": "FG-ASSEM2",
+          "name": "Assembled Unit (ASSEM2)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "press_force_peak",
+            "kind": "variable",
+            "unit": "N",
+            "min": 180.0,
+            "max": 230.0
+          },
+          {
+            "name": "torque_final",
+            "kind": "variable",
+            "unit": "Nm",
+            "min": 6.5,
+            "max": 9.5
+          },
+          {
+            "name": "test_current",
+            "kind": "variable",
+            "unit": "A",
+            "min": 1.05,
+            "max": 1.35
+          },
+          {
+            "name": "leak_rate",
+            "kind": "variable",
+            "unit": "sccm",
+            "min": 0.0,
+            "max": 1.5,
+            "measured": [
+              "Test",
+              "LeakRate"
+            ]
+          },
+          {
+            "name": "functional_test",
+            "kind": "pass_fail",
+            "unit": ""
+          },
+          {
+            "name": "missing_part",
+            "kind": "pass_fail",
+            "unit": ""
+          },
+          {
+            "name": "scratch_count",
+            "kind": "count",
+            "unit": "count",
+            "max": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "ASSEM3",
+      "seed": 7303,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Kit",
+          "rate_per_min": 30,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "PickRate",
+              "base": 30.0,
+              "noise": 1.0,
+              "unit": "ppm"
+            }
+          ]
+        },
+        {
+          "name": "Assemble1",
+          "rate_per_min": 28,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "PressForce",
+              "base": 200.0,
+              "noise": 8.0,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Assemble2",
+          "rate_per_min": 28,
+          "scrap_pct": 0.6,
+          "analogs": [
+            {
+              "name": "PressForce",
+              "base": 210.0,
+              "noise": 8.0,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Torque",
+          "rate_per_min": 27,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "TorqueLevel",
+              "base": 8.0,
+              "noise": 0.4,
+              "unit": "Nm",
+              "setpoint": {
+                "name": "TorqueLevelSP",
+                "min": 5.0,
+                "max": 12.0,
+                "lag_s": 20.0
+              }
+            }
+          ]
+        },
+        {
+          "name": "Test",
+          "rate_per_min": 27,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "TestCurrent",
+              "base": 1.2,
+              "noise": 0.05,
+              "unit": "A"
+            },
+            {
+              "name": "LeakRate",
+              "base": 0.8,
+              "noise": 0.1,
+              "unit": "sccm"
+            }
+          ]
+        },
+        {
+          "name": "Pack2",
+          "rate_per_min": 27,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 118.0,
+              "noise": 2.0,
+              "unit": "C"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "scrap_burst",
+          "station": "Assemble2",
+          "start": 1622,
+          "end": 1682,
+          "scrap_pct": 18
+        },
+        {
+          "type": "down",
+          "station": "Torque",
+          "start": 2522,
+          "end": 2622
+        },
+        {
+          "type": "drift",
+          "station": "Assemble1",
+          "start": 822,
+          "end": 1122,
+          "to": 235.0,
+          "effects": [
+            {
+              "station": "Test",
+              "analog": "LeakRate",
+              "offset": 1.4
+            }
+          ]
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "ASSEM",
+        "area": "Assembly",
+        "material": {
+          "code": "FG-ASSEM3",
+          "name": "Assembled Unit (ASSEM3)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "press_force_peak",
+            "kind": "variable",
+            "unit": "N",
+            "min": 180.0,
+            "max": 230.0
+          },
+          {
+            "name": "torque_final",
+            "kind": "variable",
+            "unit": "Nm",
+            "min": 6.5,
+            "max": 9.5
+          },
+          {
+            "name": "test_current",
+            "kind": "variable",
+            "unit": "A",
+            "min": 1.05,
+            "max": 1.35
+          },
+          {
+            "name": "leak_rate",
+            "kind": "variable",
+            "unit": "sccm",
+            "min": 0.0,
+            "max": 1.5,
+            "measured": [
+              "Test",
+              "LeakRate"
+            ]
+          },
+          {
+            "name": "functional_test",
+            "kind": "pass_fail",
+            "unit": ""
+          },
+          {
+            "name": "missing_part",
+            "kind": "pass_fail",
+            "unit": ""
+          },
+          {
+            "name": "scratch_count",
+            "kind": "count",
+            "unit": "count",
+            "max": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "WELD1",
+      "seed": 7401,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Cut",
+          "rate_per_min": 20,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "FeedRate",
+              "base": 15.0,
+              "noise": 0.8,
+              "unit": "m/min"
+            }
+          ]
+        },
+        {
+          "name": "Weld1",
+          "rate_per_min": 16,
+          "scrap_pct": 0.9,
+          "analogs": [
+            {
+              "name": "ArcCurrent",
+              "base": 180.0,
+              "noise": 6.0,
+              "unit": "A"
+            },
+            {
+              "name": "WireFeed",
+              "base": 7.5,
+              "noise": 0.3,
+              "unit": "m/min"
+            }
+          ]
+        },
+        {
+          "name": "Weld2",
+          "rate_per_min": 16,
+          "scrap_pct": 0.9,
+          "analogs": [
+            {
+              "name": "ArcCurrent",
+              "base": 185.0,
+              "noise": 6.0,
+              "unit": "A"
+            }
+          ]
+        },
+        {
+          "name": "Grind",
+          "rate_per_min": 19,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "MotorTemp",
+              "base": 48.0,
+              "noise": 2.0,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Paint",
+          "rate_per_min": 18,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "BoothPressure",
+              "base": 1.0,
+              "noise": 0.05,
+              "unit": "bar"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "drift",
+          "station": "Weld1",
+          "analog": "ArcCurrent",
+          "start": 500,
+          "end": 700,
+          "to": 210.0
+        },
+        {
+          "type": "down",
+          "station": "Grind",
+          "start": 1800,
+          "end": 1850
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "WELD",
+        "area": "Welding",
+        "material": {
+          "code": "FG-WELD1",
+          "name": "Weldment (WELD1)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "weld_penetration",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 2.0,
+            "max": 4.0
+          },
+          {
+            "name": "weld_width",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 5.0,
+            "max": 8.0
+          },
+          {
+            "name": "leg_length",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 5.5,
+            "max": 7.5
+          },
+          {
+            "name": "tensile",
+            "kind": "variable",
+            "unit": "kN",
+            "min": 18.0,
+            "max": 30.0
+          },
+          {
+            "name": "porosity_grade",
+            "kind": "ordinal",
+            "unit": "grade",
+            "max": 1,
+            "top": 4
+          },
+          {
+            "name": "spatter",
+            "kind": "pass_fail",
+            "unit": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "WELD2",
+      "seed": 7402,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Cut",
+          "rate_per_min": 20,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "FeedRate",
+              "base": 15.0,
+              "noise": 0.8,
+              "unit": "m/min"
+            }
+          ]
+        },
+        {
+          "name": "Weld1",
+          "rate_per_min": 16,
+          "scrap_pct": 0.9,
+          "analogs": [
+            {
+              "name": "ArcCurrent",
+              "base": 180.0,
+              "noise": 6.0,
+              "unit": "A"
+            },
+            {
+              "name": "WireFeed",
+              "base": 7.5,
+              "noise": 0.3,
+              "unit": "m/min"
+            }
+          ]
+        },
+        {
+          "name": "Weld2",
+          "rate_per_min": 16,
+          "scrap_pct": 0.9,
+          "analogs": [
+            {
+              "name": "ArcCurrent",
+              "base": 185.0,
+              "noise": 6.0,
+              "unit": "A"
+            }
+          ]
+        },
+        {
+          "name": "Grind",
+          "rate_per_min": 19,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "MotorTemp",
+              "base": 48.0,
+              "noise": 2.0,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Paint",
+          "rate_per_min": 18,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "BoothPressure",
+              "base": 1.0,
+              "noise": 0.05,
+              "unit": "bar"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "drift",
+          "station": "Weld1",
+          "analog": "ArcCurrent",
+          "start": 711,
+          "end": 911,
+          "to": 210.0
+        },
+        {
+          "type": "down",
+          "station": "Grind",
+          "start": 2011,
+          "end": 2061
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "WELD",
+        "area": "Welding",
+        "material": {
+          "code": "FG-WELD2",
+          "name": "Weldment (WELD2)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "weld_penetration",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 2.0,
+            "max": 4.0
+          },
+          {
+            "name": "weld_width",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 5.0,
+            "max": 8.0
+          },
+          {
+            "name": "leg_length",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 5.5,
+            "max": 7.5
+          },
+          {
+            "name": "tensile",
+            "kind": "variable",
+            "unit": "kN",
+            "min": 18.0,
+            "max": 30.0
+          },
+          {
+            "name": "porosity_grade",
+            "kind": "ordinal",
+            "unit": "grade",
+            "max": 1,
+            "top": 4
+          },
+          {
+            "name": "spatter",
+            "kind": "pass_fail",
+            "unit": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "EXTRUDE1",
+      "seed": 7501,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Extrude",
+          "rate_per_min": 12,
+          "scrap_pct": 0.7,
+          "analogs": [
+            {
+              "name": "MeltTemp",
+              "base": 210.0,
+              "noise": 3.0,
+              "unit": "C",
+              "setpoint": {
+                "name": "MeltTempSP",
+                "min": 190.0,
+                "max": 230.0,
+                "lag_s": 120.0
+              }
+            },
+            {
+              "name": "ScrewSpeed",
+              "base": 45.0,
+              "noise": 1.0,
+              "unit": "rpm"
+            }
+          ]
+        },
+        {
+          "name": "Cool",
+          "rate_per_min": 12,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "WaterTemp",
+              "base": 18.0,
+              "noise": 0.5,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Trim",
+          "rate_per_min": 12,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "BladeSpeed",
+              "base": 900.0,
+              "noise": 20.0,
+              "unit": "rpm"
+            }
+          ]
+        },
+        {
+          "name": "QC",
+          "rate_per_min": 12,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "Thickness",
+              "base": 2.0,
+              "noise": 0.05,
+              "unit": "mm"
+            }
+          ]
+        },
+        {
+          "name": "Pack3",
+          "rate_per_min": 12,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 115.0,
+              "noise": 2.0,
+              "unit": "C"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Extrude",
+          "start": 300,
+          "end": 400
+        },
+        {
+          "type": "drift",
+          "station": "Extrude",
+          "analog": "MeltTemp",
+          "start": 1300,
+          "end": 1600,
+          "to": 226.0,
+          "effects": [
+            {
+              "station": "QC",
+              "analog": "Thickness",
+              "offset": -0.25
+            }
+          ]
+        },
+        {
+          "type": "micro_stops",
+          "station": "Trim"
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "EXTRUDE",
+        "area": "Extrusion",
+        "material": {
+          "code": "FG-EXTRUDE1",
+          "name": "Extruded Profile (EXTRUDE1)",
+          "unit": "m"
+        },
+        "characteristics": [
+          {
+            "name": "thickness",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 1.8,
+            "max": 2.2,
+            "measured": [
+              "QC",
+              "Thickness"
+            ]
+          },
+          {
+            "name": "width",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 49.5,
+            "max": 50.5
+          },
+          {
+            "name": "moisture",
+            "kind": "variable",
+            "unit": "%",
+            "min": 0.0,
+            "max": 0.4
+          },
+          {
+            "name": "melt_flow_index",
+            "kind": "variable",
+            "unit": "g/10min",
+            "min": 2.0,
+            "max": 4.0
+          },
+          {
+            "name": "cut_length",
+            "kind": "variable",
+            "unit": "m",
+            "min": 5.98,
+            "max": 6.02
+          },
+          {
+            "name": "surface_defect_code",
+            "kind": "categorical",
+            "unit": "code",
+            "codes": [
+              "NONE",
+              "DIE_LINE",
+              "BUBBLE",
+              "SCRATCH",
+              "DISCOLOUR"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "EXTRUDE2",
+      "seed": 7502,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Extrude",
+          "rate_per_min": 12,
+          "scrap_pct": 0.7,
+          "analogs": [
+            {
+              "name": "MeltTemp",
+              "base": 210.0,
+              "noise": 3.0,
+              "unit": "C",
+              "setpoint": {
+                "name": "MeltTempSP",
+                "min": 190.0,
+                "max": 230.0,
+                "lag_s": 120.0
+              }
+            },
+            {
+              "name": "ScrewSpeed",
+              "base": 45.0,
+              "noise": 1.0,
+              "unit": "rpm"
+            }
+          ]
+        },
+        {
+          "name": "Cool",
+          "rate_per_min": 12,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "WaterTemp",
+              "base": 18.0,
+              "noise": 0.5,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Trim",
+          "rate_per_min": 12,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "BladeSpeed",
+              "base": 900.0,
+              "noise": 20.0,
+              "unit": "rpm"
+            }
+          ]
+        },
+        {
+          "name": "QC",
+          "rate_per_min": 12,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "Thickness",
+              "base": 2.0,
+              "noise": 0.05,
+              "unit": "mm"
+            }
+          ]
+        },
+        {
+          "name": "Pack3",
+          "rate_per_min": 12,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "SealTemp",
+              "base": 115.0,
+              "noise": 2.0,
+              "unit": "C"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Extrude",
+          "start": 511,
+          "end": 611
+        },
+        {
+          "type": "drift",
+          "station": "Extrude",
+          "analog": "MeltTemp",
+          "start": 1511,
+          "end": 1811,
+          "to": 226.0,
+          "effects": [
+            {
+              "station": "QC",
+              "analog": "Thickness",
+              "offset": -0.25
+            }
+          ]
+        },
+        {
+          "type": "micro_stops",
+          "station": "Trim"
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "EXTRUDE",
+        "area": "Extrusion",
+        "material": {
+          "code": "FG-EXTRUDE2",
+          "name": "Extruded Profile (EXTRUDE2)",
+          "unit": "m"
+        },
+        "characteristics": [
+          {
+            "name": "thickness",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 1.8,
+            "max": 2.2,
+            "measured": [
+              "QC",
+              "Thickness"
+            ]
+          },
+          {
+            "name": "width",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 49.5,
+            "max": 50.5
+          },
+          {
+            "name": "moisture",
+            "kind": "variable",
+            "unit": "%",
+            "min": 0.0,
+            "max": 0.4
+          },
+          {
+            "name": "melt_flow_index",
+            "kind": "variable",
+            "unit": "g/10min",
+            "min": 2.0,
+            "max": 4.0
+          },
+          {
+            "name": "cut_length",
+            "kind": "variable",
+            "unit": "m",
+            "min": 5.98,
+            "max": 6.02
+          },
+          {
+            "name": "surface_defect_code",
+            "kind": "categorical",
+            "unit": "code",
+            "codes": [
+              "NONE",
+              "DIE_LINE",
+              "BUBBLE",
+              "SCRATCH",
+              "DISCOLOUR"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "PAINT1",
+      "seed": 7601,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Prep",
+          "rate_per_min": 20,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "BlastPressure",
+              "base": 6.0,
+              "noise": 0.2,
+              "unit": "bar"
+            }
+          ]
+        },
+        {
+          "name": "Prime",
+          "rate_per_min": 20,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "FilmBuild",
+              "base": 25.0,
+              "noise": 1.5,
+              "unit": "um"
+            }
+          ]
+        },
+        {
+          "name": "Topcoat",
+          "rate_per_min": 20,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "FilmBuild",
+              "base": 60.0,
+              "noise": 3.0,
+              "unit": "um"
+            },
+            {
+              "name": "BoothHumidity",
+              "base": 55.0,
+              "noise": 3.0,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Cure",
+          "rate_per_min": 20,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "OvenTemp",
+              "base": 160.0,
+              "noise": 2.0,
+              "unit": "C",
+              "setpoint": {
+                "name": "OvenTempSP",
+                "min": 140.0,
+                "max": 180.0,
+                "lag_s": 180.0
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inspect",
+          "rate_per_min": 20,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "Gloss",
+              "base": 85.0,
+              "noise": 2.0,
+              "unit": "GU"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "drift",
+          "station": "Cure",
+          "analog": "OvenTemp",
+          "start": 800,
+          "end": 1100,
+          "to": 148.0,
+          "effects": [
+            {
+              "station": "Inspect",
+              "analog": "Gloss",
+              "offset": -9.0
+            }
+          ]
+        },
+        {
+          "type": "down",
+          "station": "Topcoat",
+          "start": 2200,
+          "end": 2260
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "PAINT",
+        "area": "Paint",
+        "material": {
+          "code": "FG-PAINT1",
+          "name": "Painted Panel (PAINT1)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "dry_film_thickness",
+            "kind": "variable",
+            "unit": "um",
+            "min": 50.0,
+            "max": 70.0,
+            "measured": [
+              "Topcoat",
+              "FilmBuild"
+            ]
+          },
+          {
+            "name": "gloss",
+            "kind": "variable",
+            "unit": "GU",
+            "min": 80.0,
+            "max": 90.0,
+            "measured": [
+              "Inspect",
+              "Gloss"
+            ]
+          },
+          {
+            "name": "colour_delta_e",
+            "kind": "variable",
+            "unit": "dE",
+            "min": 0.0,
+            "max": 1.0
+          },
+          {
+            "name": "paint_defect_code",
+            "kind": "categorical",
+            "unit": "code",
+            "codes": [
+              "NONE",
+              "RUN",
+              "SAG",
+              "DIRT",
+              "ORANGE_PEEL",
+              "FISHEYE"
+            ]
+          },
+          {
+            "name": "adhesion_grade",
+            "kind": "ordinal",
+            "unit": "grade",
+            "max": 1,
+            "top": 5
+          }
+        ]
+      }
+    },
+    {
+      "name": "PAINT2",
+      "seed": 7602,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Prep",
+          "rate_per_min": 20,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "BlastPressure",
+              "base": 6.0,
+              "noise": 0.2,
+              "unit": "bar"
+            }
+          ]
+        },
+        {
+          "name": "Prime",
+          "rate_per_min": 20,
+          "scrap_pct": 0.4,
+          "analogs": [
+            {
+              "name": "FilmBuild",
+              "base": 25.0,
+              "noise": 1.5,
+              "unit": "um"
+            }
+          ]
+        },
+        {
+          "name": "Topcoat",
+          "rate_per_min": 20,
+          "scrap_pct": 0.5,
+          "analogs": [
+            {
+              "name": "FilmBuild",
+              "base": 60.0,
+              "noise": 3.0,
+              "unit": "um"
+            },
+            {
+              "name": "BoothHumidity",
+              "base": 55.0,
+              "noise": 3.0,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Cure",
+          "rate_per_min": 20,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "OvenTemp",
+              "base": 160.0,
+              "noise": 2.0,
+              "unit": "C",
+              "setpoint": {
+                "name": "OvenTempSP",
+                "min": 140.0,
+                "max": 180.0,
+                "lag_s": 180.0
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inspect",
+          "rate_per_min": 20,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "Gloss",
+              "base": 85.0,
+              "noise": 2.0,
+              "unit": "GU"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "drift",
+          "station": "Cure",
+          "analog": "OvenTemp",
+          "start": 1011,
+          "end": 1311,
+          "to": 148.0,
+          "effects": [
+            {
+              "station": "Inspect",
+              "analog": "Gloss",
+              "offset": -9.0
+            }
+          ]
+        },
+        {
+          "type": "down",
+          "station": "Topcoat",
+          "start": 2411,
+          "end": 2471
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "PAINT",
+        "area": "Paint",
+        "material": {
+          "code": "FG-PAINT2",
+          "name": "Painted Panel (PAINT2)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "dry_film_thickness",
+            "kind": "variable",
+            "unit": "um",
+            "min": 50.0,
+            "max": 70.0,
+            "measured": [
+              "Topcoat",
+              "FilmBuild"
+            ]
+          },
+          {
+            "name": "gloss",
+            "kind": "variable",
+            "unit": "GU",
+            "min": 80.0,
+            "max": 90.0,
+            "measured": [
+              "Inspect",
+              "Gloss"
+            ]
+          },
+          {
+            "name": "colour_delta_e",
+            "kind": "variable",
+            "unit": "dE",
+            "min": 0.0,
+            "max": 1.0
+          },
+          {
+            "name": "paint_defect_code",
+            "kind": "categorical",
+            "unit": "code",
+            "codes": [
+              "NONE",
+              "RUN",
+              "SAG",
+              "DIRT",
+              "ORANGE_PEEL",
+              "FISHEYE"
+            ]
+          },
+          {
+            "name": "adhesion_grade",
+            "kind": "ordinal",
+            "unit": "grade",
+            "max": 1,
+            "top": 5
+          }
+        ]
+      }
+    },
+    {
+      "name": "PACK1",
+      "seed": 7701,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Case",
+          "rate_per_min": 30,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "CaseRate",
+              "base": 30.0,
+              "noise": 1.0,
+              "unit": "cpm"
+            }
+          ]
+        },
+        {
+          "name": "Shrink",
+          "rate_per_min": 30,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "TunnelTemp",
+              "base": 180.0,
+              "noise": 3.0,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Palletize",
+          "rate_per_min": 28,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "StackHeight",
+              "base": 1.4,
+              "noise": 0.05,
+              "unit": "m"
+            }
+          ]
+        },
+        {
+          "name": "Wrap",
+          "rate_per_min": 28,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "FilmTension",
+              "base": 4.0,
+              "noise": 0.2,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Label",
+          "rate_per_min": 28,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "PrintDensity",
+              "base": 92.0,
+              "noise": 1.5,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Ship",
+          "rate_per_min": 26,
+          "scrap_pct": 0.0,
+          "analogs": [
+            {
+              "name": "DockTemp",
+              "base": 21.0,
+              "noise": 0.5,
+              "unit": "C"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Shrink",
+          "start": 1000,
+          "end": 1070
+        },
+        {
+          "type": "micro_stops",
+          "station": "Label"
+        },
+        {
+          "type": "drift",
+          "station": "Label",
+          "start": 1900,
+          "end": 2100,
+          "to": 80.0
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "PACK",
+        "area": "Packing",
+        "material": {
+          "code": "FG-PACK1",
+          "name": "Shipping Case (PACK1)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "case_weight",
+            "kind": "variable",
+            "unit": "kg",
+            "min": 11.8,
+            "max": 12.2
+          },
+          {
+            "name": "seal_strength",
+            "kind": "variable",
+            "unit": "N",
+            "min": 12.0,
+            "max": 20.0
+          },
+          {
+            "name": "pallet_height",
+            "kind": "variable",
+            "unit": "m",
+            "min": 1.3,
+            "max": 1.5
+          },
+          {
+            "name": "label_present",
+            "kind": "go_nogo",
+            "unit": ""
+          },
+          {
+            "name": "barcode_scan",
+            "kind": "pass_fail",
+            "unit": ""
+          },
+          {
+            "name": "wrap_layers_short",
+            "kind": "count",
+            "unit": "count",
+            "max": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "PACK2",
+      "seed": 7702,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Case",
+          "rate_per_min": 30,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "CaseRate",
+              "base": 30.0,
+              "noise": 1.0,
+              "unit": "cpm"
+            }
+          ]
+        },
+        {
+          "name": "Shrink",
+          "rate_per_min": 30,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "TunnelTemp",
+              "base": 180.0,
+              "noise": 3.0,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Palletize",
+          "rate_per_min": 28,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "StackHeight",
+              "base": 1.4,
+              "noise": 0.05,
+              "unit": "m"
+            }
+          ]
+        },
+        {
+          "name": "Wrap",
+          "rate_per_min": 28,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "FilmTension",
+              "base": 4.0,
+              "noise": 0.2,
+              "unit": "N"
+            }
+          ]
+        },
+        {
+          "name": "Label",
+          "rate_per_min": 28,
+          "scrap_pct": 0.2,
+          "analogs": [
+            {
+              "name": "PrintDensity",
+              "base": 92.0,
+              "noise": 1.5,
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "Ship",
+          "rate_per_min": 26,
+          "scrap_pct": 0.0,
+          "analogs": [
+            {
+              "name": "DockTemp",
+              "base": 21.0,
+              "noise": 0.5,
+              "unit": "C"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "down",
+          "station": "Shrink",
+          "start": 1211,
+          "end": 1281
+        },
+        {
+          "type": "micro_stops",
+          "station": "Label"
+        },
+        {
+          "type": "drift",
+          "station": "Label",
+          "start": 2111,
+          "end": 2311,
+          "to": 80.0
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "PACK",
+        "area": "Packing",
+        "material": {
+          "code": "FG-PACK2",
+          "name": "Shipping Case (PACK2)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "case_weight",
+            "kind": "variable",
+            "unit": "kg",
+            "min": 11.8,
+            "max": 12.2
+          },
+          {
+            "name": "seal_strength",
+            "kind": "variable",
+            "unit": "N",
+            "min": 12.0,
+            "max": 20.0
+          },
+          {
+            "name": "pallet_height",
+            "kind": "variable",
+            "unit": "m",
+            "min": 1.3,
+            "max": 1.5
+          },
+          {
+            "name": "label_present",
+            "kind": "go_nogo",
+            "unit": ""
+          },
+          {
+            "name": "barcode_scan",
+            "kind": "pass_fail",
+            "unit": ""
+          },
+          {
+            "name": "wrap_layers_short",
+            "kind": "count",
+            "unit": "count",
+            "max": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "MOLD1",
+      "seed": 7801,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Dry",
+          "rate_per_min": 15,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "DryerTemp",
+              "base": 80.0,
+              "noise": 1.0,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Mold",
+          "rate_per_min": 15,
+          "scrap_pct": 0.6,
+          "analogs": [
+            {
+              "name": "MeltTemp",
+              "base": 230.0,
+              "noise": 2.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "MeltTempSP",
+                "min": 210.0,
+                "max": 250.0,
+                "lag_s": 150.0
+              }
+            },
+            {
+              "name": "InjectionPressure",
+              "base": 850.0,
+              "noise": 15.0,
+              "unit": "bar"
+            }
+          ]
+        },
+        {
+          "name": "Cool",
+          "rate_per_min": 15,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "MoldTemp",
+              "base": 40.0,
+              "noise": 1.0,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Trim",
+          "rate_per_min": 15,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "BladeSpeed",
+              "base": 700.0,
+              "noise": 15.0,
+              "unit": "rpm"
+            }
+          ]
+        },
+        {
+          "name": "Inspect",
+          "rate_per_min": 15,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "PartWeight",
+              "base": 42.0,
+              "noise": 0.3,
+              "unit": "g"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "drift",
+          "station": "Mold",
+          "analog": "MeltTemp",
+          "start": 600,
+          "end": 900,
+          "to": 246.0,
+          "effects": [
+            {
+              "station": "Inspect",
+              "analog": "PartWeight",
+              "offset": -1.1
+            }
+          ]
+        },
+        {
+          "type": "down",
+          "station": "Dry",
+          "start": 1500,
+          "end": 1560
+        },
+        {
+          "type": "scrap_burst",
+          "station": "Trim",
+          "start": 2300,
+          "end": 2350,
+          "scrap_pct": 12
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "MOLD",
+        "area": "Moulding",
+        "material": {
+          "code": "FG-MOLD1",
+          "name": "Moulded Housing (MOLD1)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "part_weight",
+            "kind": "variable",
+            "unit": "g",
+            "min": 41.0,
+            "max": 43.0,
+            "measured": [
+              "Inspect",
+              "PartWeight"
+            ]
+          },
+          {
+            "name": "dimension_a",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 119.8,
+            "max": 120.2
+          },
+          {
+            "name": "dimension_b",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 79.85,
+            "max": 80.15
+          },
+          {
+            "name": "short_shot",
+            "kind": "pass_fail",
+            "unit": ""
+          },
+          {
+            "name": "flash",
+            "kind": "pass_fail",
+            "unit": ""
+          },
+          {
+            "name": "sink_mark_count",
+            "kind": "count",
+            "unit": "count",
+            "max": 1
+          },
+          {
+            "name": "colour_match",
+            "kind": "categorical",
+            "unit": "code",
+            "codes": [
+              "OK",
+              "LIGHT",
+              "DARK",
+              "STREAK"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "MOLD2",
+      "seed": 7802,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Dry",
+          "rate_per_min": 15,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "DryerTemp",
+              "base": 80.0,
+              "noise": 1.0,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Mold",
+          "rate_per_min": 15,
+          "scrap_pct": 0.6,
+          "analogs": [
+            {
+              "name": "MeltTemp",
+              "base": 230.0,
+              "noise": 2.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "MeltTempSP",
+                "min": 210.0,
+                "max": 250.0,
+                "lag_s": 150.0
+              }
+            },
+            {
+              "name": "InjectionPressure",
+              "base": 850.0,
+              "noise": 15.0,
+              "unit": "bar"
+            }
+          ]
+        },
+        {
+          "name": "Cool",
+          "rate_per_min": 15,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "MoldTemp",
+              "base": 40.0,
+              "noise": 1.0,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Trim",
+          "rate_per_min": 15,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "BladeSpeed",
+              "base": 700.0,
+              "noise": 15.0,
+              "unit": "rpm"
+            }
+          ]
+        },
+        {
+          "name": "Inspect",
+          "rate_per_min": 15,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "PartWeight",
+              "base": 42.0,
+              "noise": 0.3,
+              "unit": "g"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "drift",
+          "station": "Mold",
+          "analog": "MeltTemp",
+          "start": 811,
+          "end": 1111,
+          "to": 246.0,
+          "effects": [
+            {
+              "station": "Inspect",
+              "analog": "PartWeight",
+              "offset": -1.1
+            }
+          ]
+        },
+        {
+          "type": "down",
+          "station": "Dry",
+          "start": 1711,
+          "end": 1771
+        },
+        {
+          "type": "scrap_burst",
+          "station": "Trim",
+          "start": 2511,
+          "end": 2561,
+          "scrap_pct": 12
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "MOLD",
+        "area": "Moulding",
+        "material": {
+          "code": "FG-MOLD2",
+          "name": "Moulded Housing (MOLD2)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "part_weight",
+            "kind": "variable",
+            "unit": "g",
+            "min": 41.0,
+            "max": 43.0,
+            "measured": [
+              "Inspect",
+              "PartWeight"
+            ]
+          },
+          {
+            "name": "dimension_a",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 119.8,
+            "max": 120.2
+          },
+          {
+            "name": "dimension_b",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 79.85,
+            "max": 80.15
+          },
+          {
+            "name": "short_shot",
+            "kind": "pass_fail",
+            "unit": ""
+          },
+          {
+            "name": "flash",
+            "kind": "pass_fail",
+            "unit": ""
+          },
+          {
+            "name": "sink_mark_count",
+            "kind": "count",
+            "unit": "count",
+            "max": 1
+          },
+          {
+            "name": "colour_match",
+            "kind": "categorical",
+            "unit": "code",
+            "codes": [
+              "OK",
+              "LIGHT",
+              "DARK",
+              "STREAK"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "MOLD3",
+      "seed": 7803,
+      "duration_s": 3600,
+      "stations": [
+        {
+          "name": "Dry",
+          "rate_per_min": 15,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "DryerTemp",
+              "base": 80.0,
+              "noise": 1.0,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Mold",
+          "rate_per_min": 15,
+          "scrap_pct": 0.6,
+          "analogs": [
+            {
+              "name": "MeltTemp",
+              "base": 230.0,
+              "noise": 2.5,
+              "unit": "C",
+              "setpoint": {
+                "name": "MeltTempSP",
+                "min": 210.0,
+                "max": 250.0,
+                "lag_s": 150.0
+              }
+            },
+            {
+              "name": "InjectionPressure",
+              "base": 850.0,
+              "noise": 15.0,
+              "unit": "bar"
+            }
+          ]
+        },
+        {
+          "name": "Cool",
+          "rate_per_min": 15,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "MoldTemp",
+              "base": 40.0,
+              "noise": 1.0,
+              "unit": "C"
+            }
+          ]
+        },
+        {
+          "name": "Trim",
+          "rate_per_min": 15,
+          "scrap_pct": 0.3,
+          "analogs": [
+            {
+              "name": "BladeSpeed",
+              "base": 700.0,
+              "noise": 15.0,
+              "unit": "rpm"
+            }
+          ]
+        },
+        {
+          "name": "Inspect",
+          "rate_per_min": 15,
+          "scrap_pct": 0.1,
+          "analogs": [
+            {
+              "name": "PartWeight",
+              "base": 42.0,
+              "noise": 0.3,
+              "unit": "g"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "drift",
+          "station": "Mold",
+          "analog": "MeltTemp",
+          "start": 1022,
+          "end": 1322,
+          "to": 246.0,
+          "effects": [
+            {
+              "station": "Inspect",
+              "analog": "PartWeight",
+              "offset": -1.1
+            }
+          ]
+        },
+        {
+          "type": "down",
+          "station": "Dry",
+          "start": 1922,
+          "end": 1982
+        },
+        {
+          "type": "scrap_burst",
+          "station": "Trim",
+          "start": 2722,
+          "end": 2772,
+          "scrap_pct": 12
+        },
+        {
+          "type": "changeover",
+          "start": 3000,
+          "end": 3060
+        }
+      ],
+      "_meta": {
+        "template": "MOLD",
+        "area": "Moulding",
+        "material": {
+          "code": "FG-MOLD3",
+          "name": "Moulded Housing (MOLD3)",
+          "unit": "ea"
+        },
+        "characteristics": [
+          {
+            "name": "part_weight",
+            "kind": "variable",
+            "unit": "g",
+            "min": 41.0,
+            "max": 43.0,
+            "measured": [
+              "Inspect",
+              "PartWeight"
+            ]
+          },
+          {
+            "name": "dimension_a",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 119.8,
+            "max": 120.2
+          },
+          {
+            "name": "dimension_b",
+            "kind": "variable",
+            "unit": "mm",
+            "min": 79.85,
+            "max": 80.15
+          },
+          {
+            "name": "short_shot",
+            "kind": "pass_fail",
+            "unit": ""
+          },
+          {
+            "name": "flash",
+            "kind": "pass_fail",
+            "unit": ""
+          },
+          {
+            "name": "sink_mark_count",
+            "kind": "count",
+            "unit": "count",
+            "max": 1
+          },
+          {
+            "name": "colour_match",
+            "kind": "categorical",
+            "unit": "code",
+            "codes": [
+              "OK",
+              "LIGHT",
+              "DARK",
+              "STREAK"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

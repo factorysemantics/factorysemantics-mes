@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quality — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/orders.css">
+<link rel="stylesheet" href="/static/quality.css">
+<link rel="stylesheet" href="/static/instructions.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="quality"></header>
+
+  <section class="kpis">
+    <div class="kpi"><span class="kpi-label">Checks recorded</span><span id="kpi-checks" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Pass rate, all time</span><span id="kpi-pass" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Open non-conformances</span><span id="kpi-ncs" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Characteristics</span><span id="kpi-specs" class="kpi-value">—</span></div>
+  </section>
+
+  <main class="quality-layout">
+    <section class="panel span-2">
+      <h2>Measurements <span id="chart-label" class="muted"></span></h2>
+      <p class="muted small">Every recorded check against its specification limits.
+        A point outside the band is a failure, and each one opened the
+        non-conformance listed below — the link is the audit trail, not an
+        inference.</p>
+      <div class="filter-bar" data-assist="measurement-filters">
+        <select id="q-material" aria-label="Material"><option value="">Choose a material</option></select>
+        <span id="q-scope" class="muted small"></span>
+      </div>
+      <div id="spec-tabs" class="tabs"></div>
+      <div id="chart-wrap" class="chart-wrap" data-assist="measurement-chart">
+        <svg id="chart" viewBox="0 0 900 260" preserveAspectRatio="none"
+             role="img" aria-label="Measurements against specification limits"></svg>
+      </div>
+      <div id="chart-empty" class="empty hidden">
+        No checks recorded yet for this characteristic.
+      </div>
+      <div id="wi-inline" class="wi-inline hidden" data-assist="instruction-inline"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Specifications <span id="s-count" class="muted count">—</span></h2>
+      <div class="filter-bar" data-assist="spec-filters">
+        <input id="s-q" type="search" placeholder="Material or characteristic" aria-label="Material or characteristic">
+        <select id="s-material" aria-label="Material"><option value="">Any material</option></select>
+      </div>
+      <div class="table-wrap">
+        <table id="specs">
+          <thead><tr><th>Material</th><th>Characteristic</th><th class="num">Min</th>
+            <th class="num">Max</th><th>Unit</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="s-pager" class="pager"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Non-conformances <span id="n-count" class="muted count">—</span></h2>
+      <p class="muted small">Raised automatically when a measurement falls outside
+        spec. Closing one is a supervisor action and is recorded against them.</p>
+      <div class="filter-bar" data-assist="nc-filters">
+        <select id="n-status" aria-label="Status">
+          <option value="open">Open</option>
+          <option value="closed">Closed</option>
+          <option value="">Any status</option>
+        </select>
+        <input id="n-q" type="search" placeholder="Code, order or text" aria-label="Code, order or text">
+      </div>
+      <ul id="ncs" class="feed" data-assist="nc-list"></ul>
+      <div id="n-pager" class="pager"></div>
+    </section>
+
+    <section class="panel span-2">
+      <h2>Inspection history <span id="h-count" class="muted count">—</span></h2>
+      <div class="filter-bar" data-assist="history-filters">
+        <select id="h-material" aria-label="Material"><option value="">Any material</option></select>
+        <select id="h-char" aria-label="Characteristic"><option value="">Any characteristic</option></select>
+        <select id="h-result" aria-label="Result">
+          <option value="">Pass and fail</option>
+          <option value="fail">Failures only</option>
+          <option value="pass">Passes only</option>
+        </select>
+        <button id="h-clear" class="ghost" type="button">Clear</button>
+      </div>
+      <div class="table-wrap">
+        <table id="checks">
+          <thead><tr><th>When</th><th>Material</th><th>Characteristic</th>
+            <th class="num">Measured</th><th>Result</th><th>Inspector</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="h-pager" class="pager"></div>
+    </section>
+  </main>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/quality.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

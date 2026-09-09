@@ -1,0 +1,55 @@
+/* Administration. Two columns of forms plus a full-width routing builder. */
+
+.admin-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 0 16px 16px;
+}
+.admin-layout .span-2 { grid-column: span 2; }
+@media (max-width: 1000px) {
+  .admin-layout { grid-template-columns: 1fr; }
+  .admin-layout .span-2 { grid-column: span 1; }
+}
+
+.denied { margin: 16px; padding: 24px; }
+
+.role-list { display: flex; flex-direction: column; gap: 10px; }
+.role {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  background: var(--panel-2);
+}
+.role-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.role-head strong { font-size: 15px; }
+.role-head .code { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.role p { margin: 4px 0 6px; font-size: 12.5px; color: var(--muted); max-width: none; }
+.grants { display: flex; flex-wrap: wrap; gap: 4px; }
+.grant {
+  font-family: var(--mono); font-size: 11px;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 3px; padding: 1px 6px; color: var(--muted);
+}
+.role-actions { margin-top: 8px; display: flex; gap: 6px; }
+
+.caps { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; margin: 0; }
+.caps legend { padding: 0 6px; }
+.cap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 4px 14px; }
+.cap {
+  display: flex; align-items: baseline; gap: 7px;
+  font-size: 12.5px; padding: 2px 0; cursor: pointer;
+}
+.cap input { margin: 0; }
+.cap code { font-size: 11.5px; }
+.cap .what { color: var(--muted); }
+
+.ops { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.op-row { display: grid; grid-template-columns: 70px 1fr 1fr 34px; gap: 6px; }
+.op-row button {
+  background: transparent; border: 1px solid var(--line);
+  color: var(--muted); border-radius: 6px; cursor: pointer;
+}
+.op-row button:hover { color: var(--down); border-color: var(--down); }
+.mt { margin-top: 18px; }
+.small { font-size: 12px; }

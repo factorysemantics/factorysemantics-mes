@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows is a first-class target, not an afterthought: this MES is
+        # expected to run on plant PCs, and the single-writer lock exists in
+        # its O_EXCL form precisely because there is no fcntl there.
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,mcp,agent]"
+
+      - name: Lint
+        run: python -m ruff check .
+
+      - name: Test
+        run: python -m pytest
+
+  audit:
+    # Known-vulnerable pins. Advisory until the first public release has
+    # shaken it out; then it becomes required.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      # Editable install and --skip-editable, without --strict: the package
+      # under test is not on PyPI at the version being built (or at all,
+      # before the first release), and pip-audit must not count that as a
+      # finding. Vulnerabilities in the dependencies still fail the job.
+      - run: python -m pip install --upgrade pip pip-audit && python -m pip install -e ".[mcp,agent,postgres]"
+      - run: python -m pip_audit --skip-editable

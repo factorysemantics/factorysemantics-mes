@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operations — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/orders.css">
+<link rel="stylesheet" href="/static/ops.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="ops"></header>
+
+  <div id="denied" class="panel denied hidden">
+    <h2>Not your screen</h2>
+    <p class="muted">Operations needs the <code>audit.read</code> capability.
+      You are signed in as <strong id="denied-who"></strong>.</p>
+  </div>
+
+  <main id="ops-main" class="ops-layout hidden">
+    <section class="panel span-2">
+      <h2>This plant</h2>
+      <div id="plant-facts" class="facts"></div>
+    </section>
+
+    <section class="panel span-2">
+      <h2>Components</h2>
+      <p class="muted small">A log that has stopped growing is the loudest sign
+        a component is stuck, and the one nobody notices without looking.</p>
+      <div id="components" class="components" data-assist="ops-components"></div>
+      <p id="retention-line" class="muted small"></p>
+    </section>
+
+    <section class="panel span-2" id="erp-section">
+      <h2>ERP <span class="muted">— the outbox: what is waiting, what failed, what died</span></h2>
+      <div id="erp-facts" class="facts"></div>
+      <div class="table-wrap">
+        <table id="erp-table" data-assist="ops-erp">
+          <thead><tr><th>#</th><th>Kind</th><th>Order</th><th>Status</th><th class="num">Attempts</th><th>Error</th><th>Created</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel span-2 hidden" id="ai-section">
+      <h2>Local AI <span class="muted">— what the model is doing, and where it goes</span></h2>
+      <div id="ai-head" class="facts"></div>
+      <div class="table-wrap">
+        <table id="ai-consumers" data-assist="ops-ai">
+          <thead><tr><th>Job</th><th>Runs when</th><th>Last activity</th>
+            <th>Output goes to</th><th>State</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="muted small" id="ai-budget"></p>
+    </section>
+
+    <section class="panel span-2">
+      <h2>Log <span id="log-which" class="muted"></span></h2>
+      <div class="row log-controls">
+        <div id="log-tabs" class="tabs"></div>
+        <span class="spacer"></span>
+        <select id="log-level" aria-label="Level">
+          <option value="">all levels</option>
+          <option value="error">error</option>
+          <option value="warning">warning</option>
+          <option value="info">info</option>
+        </select>
+      </div>
+      <div class="table-wrap logs" data-assist="ops-log">
+        <table id="log">
+          <thead><tr><th>Time</th><th>Level</th><th>Event</th><th>Detail</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel span-2">
+      <h2>Activity <span class="muted">— the audit trail</span></h2>
+      <p class="muted small">Humans and agents in the same spine. Filter by
+        <code>AGENT</code> to see everything an agent has done to this plant.</p>
+      <div class="row log-controls">
+        <select id="actor-filter" aria-label="Who"></select>
+        <input id="action-filter" placeholder="action starts with… e.g. quality.">
+        <span class="spacer"></span>
+      </div>
+      <div class="table-wrap logs" data-assist="ops-activity">
+        <table id="activity">
+          <thead><tr><th>Time</th><th>Who</th><th>Did</th><th>To</th><th>Detail</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/ops.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

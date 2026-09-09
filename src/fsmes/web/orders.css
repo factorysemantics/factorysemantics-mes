@@ -1,0 +1,126 @@
+/* Orders screen. Leans on styles.css for everything shared; only the
+   two-column split and the route table are new. */
+
+.orders-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 16px;
+  padding: 0 16px 16px;
+}
+@media (max-width: 1100px) {
+  .orders-layout { grid-template-columns: 1fr; }
+}
+
+
+#order-list tbody tr { cursor: pointer; }
+#order-list tbody tr:hover { background: var(--panel-2); }
+#order-list tbody tr.selected {
+  background: var(--panel-2);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.detail-head {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  padding: 12px 0 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.detail-head div { display: flex; flex-direction: column; gap: 2px; }
+.detail-head strong { font-size: 18px; }
+
+.genealogy {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 700px) { .genealogy { grid-template-columns: 1fr; } }
+.genealogy h4 { margin: 8px 0 4px; font-size: 13px; color: var(--muted); font-weight: 600; }
+
+.empty {
+  padding: 32px 8px;
+  color: var(--muted);
+  text-align: center;
+}
+.small { font-size: 12px; margin: 2px 0 10px; }
+.hint-line { font-size: 12px; padding: 8px 2px 0; }
+.mt { margin-top: 18px; }
+
+.yield-good { color: var(--running); }
+.yield-warn { color: var(--idle); }
+.yield-bad  { color: var(--down); }
+
+/* A supervisor's first question is never "show me everything" - it is "my
+   material, due this week", so the controls that answer it sit above the list
+   rather than behind a menu. */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 2px 10px;
+}
+
+.pager {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 2px 0;
+}
+.pager #order-count { flex: 1 1 auto; }
+.pager button[disabled] { opacity: .4; cursor: default; }
+
+td.due { white-space: nowrap; }
+td.due.late { color: var(--down); font-weight: 600; }
+
+/* The tiles are the way into the list rather than decoration above it, and
+   they must look exactly like the cards they already were.
+
+   A <button> arrives wearing the browser's own chrome, so this strips only
+   what the user agent imposes and sets nothing `.kpi` already owns. The first
+   version set `border: 1px solid transparent` here, which overrode `.kpi`'s
+   outline and quietly deleted the card: an affordance is not allowed to
+   restyle the thing it sits on. Hover moves the border *colour* only, so
+   nothing on the page shifts by a pixel. */
+.kpi-action {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color .12s ease;
+}
+.kpi-action:hover { border-color: var(--muted); }
+.kpi-action:focus-visible { outline: 2px solid var(--muted); outline-offset: 2px; }
+
+/* ---------- redesign additions ---------- */
+
+.panel-head { display: flex; align-items: center; gap: var(--s3); }
+.panel-head h2 { margin: 0; }
+.panel-head .count { font-size: var(--fs-sm); font-weight: 400; }
+
+/* A selected tile says so. Separate block on purpose: the base .kpi-action
+   block is pinned by a test, and selection is its own concern. */
+.kpi-action[aria-pressed="true"] {
+  border-color: var(--accent);
+}
+.kpi-action[aria-pressed="true"] .kpi-label {
+  color: var(--accent);
+}
+
+/* A filter button that is doing something says what. */
+.filter-bar .ghost.filtering { color: var(--text); border-color: var(--accent); }
+
+.order-actions { display: flex; gap: var(--s2); flex-wrap: wrap; padding: 0 0 var(--s3); }
+.order-actions button { font-size: var(--fs-sm); padding: 6px 12px; }
+.order-actions .danger { color: var(--down); border-color: var(--down); }
+
+.new-order { right: var(--s4); left: auto; top: 110px; z-index: 35; }
+.new-order .check { display: flex; gap: var(--s2); align-items: center; font-size: var(--fs-sm); }
+
+#staging .short { color: var(--down); font-weight: 600; }
+#staging td.station { font-family: var(--mono); font-size: var(--fs-xs); color: var(--muted); }

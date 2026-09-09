@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FactorySemantics MES — Shift Analysis</title>
+  <link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/analysis.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📊</text></svg>">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+
+<div id="app">
+  <header data-nav="analysis"></header>
+  <div class="picks filter-bar">
+    <label class="pick">Line
+      <select id="line"></select>
+    </label>
+    <label class="pick">Window
+      <select id="hours">
+        <option value="0.25">15 min</option>
+        <option value="1">1 hour</option>
+        <option value="8" selected>8 hours</option>
+        <option value="24">24 hours</option>
+        <option value="168">7 days</option>
+      </select>
+    </label>
+  </div>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <section class="kpis">
+    <div class="kpi">
+      <span class="kpi-label">Line OEE <em class="hint-inline">worst station</em></span>
+      <span id="kpi-oee" class="kpi-value">—</span>
+      <span id="kpi-constraint" class="kpi-sub"></span>
+    </div>
+    <div class="kpi"><span class="kpi-label">Good</span><span id="kpi-good" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Scrap</span><span id="kpi-scrap" class="kpi-value">—</span>
+      <span id="kpi-scrap-pct" class="kpi-sub"></span></div>
+    <div class="kpi"><span class="kpi-label">Downtime</span><span id="kpi-downtime" class="kpi-value">—</span>
+      <span id="kpi-unlabelled" class="kpi-sub"></span></div>
+  </section>
+
+  <main data-assist="analysis-page">
+    <section class="panel span-2">
+      <h2>OEE by station <span class="muted">— where the losses actually are</span></h2>
+      <div id="oee" class="oee-list"></div>
+      <p class="legend">
+        <span><i class="sw sw-avail"></i>Availability loss</span>
+        <span><i class="sw sw-perf"></i>Performance loss</span>
+        <span><i class="sw sw-qual"></i>Quality loss</span>
+        <span><i class="sw sw-oee"></i>OEE</span>
+      </p>
+    </section>
+
+    <section class="panel span-2">
+      <h2>State timeline <span class="muted">— a stop walking down the line</span></h2>
+      <div id="timeline" class="chart"></div>
+      <p class="legend">
+        <span><i class="sw" style="background:var(--running)"></i>running</span>
+        <span><i class="sw" style="background:var(--idle)"></i>idle</span>
+        <span><i class="sw" style="background:var(--down)"></i>down</span>
+        <span><i class="sw" style="background:var(--setup)"></i>setup</span>
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>Downtime pareto</h2>
+      <div id="pareto" class="chart"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Production</h2>
+      <div id="production" class="chart"></div>
+    </section>
+
+    <section class="panel span-2">
+      <h2>Process value
+        <label class="pick inline">on
+          <select id="tag-machine"></select>
+        </label>
+      </h2>
+      <div id="tag" class="chart"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span id="window-note" class="muted"></span>
+    <span class="spacer"></span>
+    <button id="refresh" class="ghost">Refresh</button>
+  </footer>
+</div>
+
+<script src="/static/common.js"></script>
+<script src="/static/kit.js"></script>
+<script src="/static/analysis.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

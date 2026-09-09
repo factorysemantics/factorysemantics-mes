@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Station — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/station.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="station"></header>
+
+  <div class="station-pick touch">
+    <label for="machine" class="muted">Machine</label>
+    <select id="machine" data-assist="station-machine" aria-label="Machine"></select>
+    <a id="machine-page" class="ghost" href="/dashboard/machines">Machine page</a>
+    <span class="spacer"></span>
+    <span id="machine-state" class="pill unknown" data-assist="station-pill">—</span>
+    <span id="machine-since" class="muted small"></span>
+  </div>
+
+  <main class="station-layout touch">
+    <section class="panel" data-needs-cap="equipment.state">
+      <h2>State</h2>
+      <p class="muted small">What this machine is doing right now. Going down
+        asks why — an unlabelled stop is the row the pareto cannot explain.</p>
+      <div id="state-buttons" class="state-grid" data-assist="station-state"></div>
+      <div id="reason-box" class="reason hidden" data-assist="station-reason">
+        <div class="field">
+          <label for="down-reason">Why is it down?</label>
+          <input id="down-reason" placeholder="e.g. jam at infeed, waiting on fitter">
+        </div>
+        <div class="row">
+          <button id="reason-cancel" class="ghost" type="button">Never mind</button>
+          <button id="reason-confirm" type="button" disabled>It is down</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Queue</h2>
+      <p class="muted small">What this machine is meant to run, in order.</p>
+      <ul id="queue" class="queue" data-assist="station-queue"></ul>
+    </section>
+
+    <section class="panel" data-needs-cap="production.book">
+      <h2>Book output</h2>
+      <form id="book" class="stack">
+        <div class="field">
+          <label for="book-order">Against</label>
+          <select id="book-order" data-assist="station-book-order"></select>
+        </div>
+        <div class="row big-io">
+          <div class="field">
+            <label for="book-good">Good</label>
+            <input id="book-good" type="number" inputmode="numeric" min="0" step="1" value="0">
+          </div>
+          <div class="field">
+            <label for="book-scrap">Scrap</label>
+            <input id="book-scrap" type="number" inputmode="numeric" min="0" step="1" value="0">
+          </div>
+          <button id="book-submit" data-assist="station-book-submit">Book</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel" data-needs-cap="production.consume">
+      <h2>Issue material</h2>
+      <form id="issue" class="stack">
+        <div class="row big-io">
+          <div class="field">
+            <label for="issue-lot">Lot</label>
+            <select id="issue-lot"></select>
+          </div>
+          <div class="field">
+            <label for="issue-qty">Quantity</label>
+            <input id="issue-qty" type="number" inputmode="decimal" min="0" step="0.1" value="1">
+          </div>
+          <button id="issue-submit">Issue</button>
+        </div>
+        <p id="issue-where" class="muted small"></p>
+      </form>
+    </section>
+
+    <section class="panel span-2" data-needs-cap="maintenance.perform">
+      <h2>Maintenance on this machine</h2>
+      <ul id="maint" class="queue" data-assist="station-maintenance"></ul>
+      <div id="maint-complete" class="reason hidden">
+        <div class="field">
+          <label for="maint-findings">What was found / done?</label>
+          <input id="maint-findings" placeholder="e.g. seals replaced, no scoring on the shaft">
+        </div>
+        <div class="row">
+          <button id="maint-cancel" class="ghost" type="button">Back</button>
+          <button id="maint-confirm" type="button">Complete job</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <p class="screen-source">state /equipment/states · queue /workorders/dispatch ·
+    output /execution/report · material /execution/consume · maintenance /maintenance/orders</p>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/station.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

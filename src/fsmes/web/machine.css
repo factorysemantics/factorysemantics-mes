@@ -1,0 +1,88 @@
+/* Object pages: one head, a row of tabs, one panel at a time.
+   Colour only from themes.css; chrome from styles.css. This file adds the
+   shapes an object page has that a list screen does not. */
+
+.object-head {
+  padding: var(--s3) var(--s4) 0;
+  display: grid;
+  gap: var(--s2);
+}
+.crumbs { display: flex; gap: var(--s2); align-items: center; font-size: var(--fs-sm); color: var(--muted); }
+.crumbs .sep { opacity: 0.6; }
+.crumbs a.obj { color: var(--accent); text-decoration: none; }
+.crumbs a.obj:hover { text-decoration: underline; }
+.object-title { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; }
+.object-title h1 { margin: 0; font-size: var(--fs-xl); font-weight: 650; letter-spacing: -0.3px; }
+.object-title h1 .muted { font-size: var(--fs-lg); font-weight: 400; }
+.object-title .spacer { flex: 1; }
+.object-facts { display: flex; gap: var(--s5); flex-wrap: wrap; font-size: var(--fs-sm); color: var(--muted); }
+.object-facts strong { color: var(--text); font-family: var(--mono); font-weight: 600; }
+.mono { font-family: var(--mono); }
+.small { font-size: var(--fs-sm); }
+
+/* ---------- tabs ---------- */
+.tabs {
+  display: flex;
+  gap: var(--s1);
+  padding: var(--s3) var(--s4) 0;
+  border-bottom: 1px solid var(--line);
+}
+.tab {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  padding: 8px 14px;
+  font-weight: 500;
+}
+.tab:hover { color: var(--text); filter: none; }
+.tab[aria-selected="true"] { color: var(--text); background: var(--panel); border-color: var(--line); }
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.object-main { display: grid; grid-template-columns: 1fr; gap: var(--s4); padding: var(--s4); }
+.tab-panel { display: grid; gap: var(--s4); }
+.tab-panel[hidden] { display: none; }
+
+/* ---------- now ---------- */
+.alarm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s1); }
+.alarm-list .alarm { color: var(--down); font-weight: 600; }
+.alarm-list .alarm::before { content: "▲ "; }
+#tags-table tr.stale td { color: var(--muted); }
+#tags-table td .pill { margin-left: 6px; }
+
+/* ---------- oee ---------- */
+.bar > i.unknown { background: repeating-linear-gradient(45deg, var(--unknown) 0 6px, transparent 6px 12px); width: 100% !important; opacity: 0.45; }
+
+/* ---------- the machine tree (Engineering › Machines) ---------- */
+.tree { list-style: none; margin: 0; padding: 0; }
+.tree ul { list-style: none; margin: 0; padding-left: var(--s5); }
+.tree li { padding: var(--s1) 0; }
+.tree .node { display: flex; align-items: center; gap: var(--s3); }
+.tree .level { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); min-width: 92px; }
+.tree .cc { font-family: var(--mono); font-size: var(--fs-xs); color: var(--muted); }
+.tree a.obj { color: var(--accent); text-decoration: none; font-family: var(--mono); }
+.tree a.obj:hover { text-decoration: underline; }
+
+/* ---------- the line page ---------- */
+.health-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--s3); }
+.wip-strip { display: flex; align-items: stretch; gap: var(--s2); overflow-x: auto; padding-bottom: var(--s2); }
+.wip-station { min-width: 150px; display: grid; gap: 2px; padding: var(--s2) var(--s3); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--panel-2); }
+.wip-station .qty { font-size: var(--fs-xl); font-weight: 650; font-variant-numeric: tabular-nums; }
+.wip-station .qty.negative { color: var(--down); }
+.wip-arrow { align-self: center; color: var(--muted); }
+.limit-line { stroke: var(--idle); stroke-width: 1; stroke-dasharray: 4 3; }
+.scene-frame { width: 100%; height: 70vh; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
+
+/* ---------- the tag browser ---------- */
+.health-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--s3); }
+.health-tile .machine-meta { flex-direction: column; gap: 2px; margin-bottom: 0; }
+
+/* ---------- SPC ---------- */
+.spec-line { stroke: var(--down); stroke-width: 1; stroke-dasharray: 6 3; }
+.centre-line { stroke: var(--running); stroke-width: 1.2; }
+.spc-dot { fill: var(--accent); }
+.spc-flag { fill: var(--quality); stroke: var(--text); stroke-width: 0.8; }
+.verdict { font-size: var(--fs-lg); font-weight: 600; margin: 0 0 var(--s2); }
+.verdict.bad { color: var(--down); }
+.verdict.good { color: var(--running); }

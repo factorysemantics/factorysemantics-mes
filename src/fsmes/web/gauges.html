@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gauges — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/station.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="gauges"></header>
+
+  <section class="kpis">
+    <div class="kpi"><span class="kpi-label">Gauges</span><span id="kpi-gauges" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Out of calibration</span><span id="kpi-overdue" class="kpi-value">—</span>
+      <span id="kpi-verdict" class="kpi-sub"></span></div>
+    <div class="kpi"><span class="kpi-label">Due within 30 days</span><span id="kpi-soon" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Out of service</span><span id="kpi-oos" class="kpi-value">—</span></div>
+  </section>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <main class="object-main" data-assist="gauges-page">
+    <section class="panel">
+      <h2>The register <span id="register-count" class="muted"></span> <span class="muted">— a gauge never calibrated is not fine until proven otherwise</span></h2>
+      <div class="filter-bar" data-assist="gauge-filters">
+        <input id="g-q" type="search" placeholder="Gauge, name or location" aria-label="Gauge, name or location">
+        <select id="g-state" aria-label="Calibration state">
+          <option value="">Any state</option>
+          <option value="overdue">out of calibration</option>
+          <option value="due_soon">due within 30 days</option>
+          <option value="ok">in calibration</option>
+          <option value="off_floor">out of service or lost</option>
+        </select>
+      </div>
+      <div class="table-wrap"><table id="gauges-table" class="row-select">
+        <thead><tr><th>Gauge</th><th>Kind</th><th>Where</th><th>Status</th><th class="num">Resolution</th><th>Last calibrated</th><th>Due</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div id="g-pager" class="pager"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Record a calibration <span class="muted">— found out of tolerance takes it off the floor</span></h2>
+      <form id="cal-form" class="stack" data-needs-cap="quality.close_nc" data-assist="gauge-calibrate">
+        <div class="row">
+          <select id="cal-gauge" aria-label="Gauge" required></select>
+          <select id="cal-result" aria-label="Result">
+            <option value="pass">pass</option>
+            <option value="adjusted">adjusted</option>
+            <option value="fail_as_found">fail as found</option>
+          </select>
+          <input id="cal-by" placeholder="Performed by" required>
+          <input id="cal-on" type="date">
+          <input id="cal-cert" placeholder="Certificate (optional)">
+          <button id="cal-submit">Record</button>
+        </div>
+      </form>
+      <div id="cal-result-box" class="reason hidden">
+        <p id="cal-result-text"></p>
+        <ul id="cal-suspect" class="queue"></ul>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>What a gauge measured <span id="impact-title" class="muted"></span></h2>
+      <p class="muted small">Everything measured with the selected gauge since its last calibration -
+        the set a failure would invalidate. Click a gauge in the register.</p>
+      <p id="impact" class="muted">—</p>
+      <div class="row">
+        <input id="res-tolerance" type="number" step="any" placeholder="Tolerance to judge">
+        <button id="res-check" class="ghost" type="button">Can it judge this tolerance?</button>
+        <span id="res-verdict" class="muted small"></span>
+      </div>
+    </section>
+
+    <section class="panel" data-needs-cap="masterdata.write">
+      <h2>Register a gauge</h2>
+      <form id="reg-form" class="stack" data-assist="gauge-register">
+        <div class="row">
+          <input id="reg-code" placeholder="Code (SCALE-01)" required>
+          <input id="reg-name" placeholder="Name" required>
+          <input id="reg-kind" placeholder="Kind" value="general">
+          <input id="reg-interval" type="number" min="1" value="365" placeholder="Interval (days)">
+          <input id="reg-resolution" type="number" step="any" placeholder="Resolution">
+          <input id="reg-location" placeholder="Location">
+          <button id="reg-submit">Register</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <p class="screen-source">register /quality/gauges · calibrate /quality/gauges/{code}/calibrate ·
+    impact /quality/gauges/{code}/impact · resolution /quality/gauges/{code}/resolution</p>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/gauges.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>
