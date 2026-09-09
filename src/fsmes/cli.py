@@ -374,7 +374,37 @@ def demo(duration: int = 90) -> None:
     init_db()
     with session_scope() as session:
         seed_demo_plant(session)
-    asyncio.run(_demo(settings, duration))
+    problem = asyncio.run(_demo(settings, duration))
+    if problem:
+        typer.echo(f"Demo result: the loop did not close - {problem}.")
+        raise typer.Exit(1)
+    typer.echo("Demo result: full loop closed - order booked, ERP confirmed, OEE reported.")
+
+
+def _loop_verdict(status: str, confirmations: list[dict], genealogy: dict, oee: dict) -> str | None:
+    """Why the demo's loop did not close, or None when it did.
+
+    This exists because from the outside a demo that books nothing looked
+    exactly like one that books everything. 0.1.0 shipped a wheel with no
+    config files, so the simulator had no line to run, the order sat at
+    `released` for the whole window, and `fsmes demo` still exited 0. The
+    three facts the demo claims - the order completed, the ERP was told, a
+    finished lot exists - are checked here so the exit code means something
+    and a release can be gated on it.
+
+    OEE is required to *answer*, not to be a number: a component that cannot
+    be computed is reported as null on purpose, and failing on that would be
+    asking the demo to guess.
+    """
+    if status != "completed":
+        return f"the order was still {status} when the demo stopped watching"
+    if not confirmations:
+        return "the ERP never received a confirmation"
+    if not genealogy.get("produced"):
+        return "no finished lot was booked"
+    if "oee" not in oee:
+        return "the OEE endpoint did not answer"
+    return None
 
 
 async def _wait_for(http, url: str, timeout: float = 30.0) -> None:
@@ -393,7 +423,8 @@ async def _wait_for(http, url: str, timeout: float = 30.0) -> None:
         await asyncio.sleep(0.5)
 
 
-async def _demo(settings: Settings, duration: int) -> None:
+async def _demo(settings: Settings, duration: int) -> str | None:
+    """Run the loop and return why it did not close, or None when it did."""
     import httpx
     import uvicorn
 
@@ -472,7 +503,7 @@ async def _demo(settings: Settings, duration: int) -> None:
             if status != "completed":
                 typer.echo(f"      Order still {status} after {duration}s - leaving it running; "
                            "check /kpis/orders when you come back.")
-                return
+                return _loop_verdict(status, [], {}, {})
 
             typer.echo("[5/5] Order completed - the MES books the finished lot and confirms to the ERP")
             deadline = asyncio.get_event_loop().time() + 15
@@ -498,6 +529,7 @@ async def _demo(settings: Settings, duration: int) -> None:
                        f"performance {oee['performance']:.0%}, quality {oee['quality']:.0%} "
                        f"-> OEE {oee['oee']:.0%}" if oee["oee"] is not None else f"OEE MIX01: {oee}")
             typer.echo("The audit trail, tag history, and ERP message log for all of this are in the database.")
+            return _loop_verdict(status, confirmations, genealogy, oee)
     finally:
         # Teardown: clients first (their worker threads drain against live
         # servers), then a graceful server exit. Noise here is not signal.
