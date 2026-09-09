@@ -362,6 +362,22 @@ def run_mock_erp(host: str = "127.0.0.1", port: int = 8001) -> None:
     uvicorn.run(erp_app, host=host, port=port, log_config=None)
 
 
+def _order_completion(confirmations: list[dict], order_code: str) -> dict | None:
+    """The order completion for this order, out of everything the ERP holds.
+
+    Not `confirmations[-1]`. Operation confirmations and the order completion
+    are different messages with different fields — an operation does not make
+    a finished-goods lot, so it has no `lot` — and they arrive in whatever
+    order the outbox delivers them. Reading the last one that happened to
+    land is how the release check crashed on `KeyError: 'lot'`.
+    """
+    for message in reversed(confirmations):
+        if (message.get("kind", "production_confirmation") != "operation_confirmation"
+                and str(message.get("order")) == order_code):
+            return message
+    return None
+
+
 @app.command()
 def demo(duration: int = 90) -> None:
     """Run the entire twin in one process and push one order through the full loop:
@@ -507,10 +523,11 @@ async def _demo(settings: Settings, duration: int) -> str | None:
 
             typer.echo("[5/5] Order completed - the MES books the finished lot and confirms to the ERP")
             deadline = asyncio.get_event_loop().time() + 15
-            confirmations = []
-            while not confirmations and asyncio.get_event_loop().time() < deadline:
+            completion = None
+            while completion is None and asyncio.get_event_loop().time() < deadline:
                 await asyncio.sleep(1)
-                confirmations = (await http.get(f"{erp_url}/confirmations")).json()
+                completion = _order_completion(
+                    (await http.get(f"{erp_url}/confirmations")).json(), code)
 
             genealogy = (await http.get(f"{api_url}/execution/genealogy/{code}", headers=operator)).json()
             # OEE over the actual production window, so availability means something
@@ -518,10 +535,23 @@ async def _demo(settings: Settings, duration: int) -> str | None:
             oee = (await http.get(f"{api_url}/kpis/oee/MIX01", params={"hours": window_hours}, headers=operator)).json()
 
             typer.echo("\n=== MES-TWIN full-loop demo: complete ===")
-            if confirmations:
-                c = confirmations[-1]
-                typer.echo(f"ERP received the confirmation: {c['good_qty']:.0f} good / {c['scrap_qty']:.0f} scrap, "
-                           f"lot {c['lot']} (ref {c.get('erp_reference')})")
+            if completion:
+                over = float(completion.get("over_qty") or 0)
+                typer.echo(f"ERP received the confirmation: {completion['good_qty']:.0f} good / "
+                           f"{completion['scrap_qty']:.0f} scrap"
+                           + (f" ({over:.0f} over the ordered "
+                              f"{completion['ordered_qty']:.0f})" if over else "")
+                           + f", lot {completion.get('lot') or 'none'} "
+                             f"(ref {completion.get('erp_reference')})")
+            else:
+                typer.echo(f"ERP has not received the completion for {code} yet "
+                           "- check /erp/outbox; the operation confirmations may already be there.")
+
+            unassigned = (await http.get(f"{api_url}/execution/unassigned", headers=operator)).json()
+            if unassigned["total"]:
+                typer.echo(f"Unassigned production: {unassigned['good_total']:.0f} good / "
+                           f"{unassigned['scrap_total']:.0f} scrap counted with no order open "
+                           f"to book them against, in {unassigned['total']} bookings.")
             consumed = ", ".join(f"{c['lot']} ({c['quantity']:g})" for c in genealogy["consumed"])
             produced = ", ".join(f"{p['lot']} ({p['quantity']:g})" for p in genealogy["produced"])
             typer.echo(f"Genealogy: consumed {consumed} -> produced {produced}")
