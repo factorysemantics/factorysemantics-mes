@@ -26,7 +26,7 @@ the MES has taken the order, and what the MES actually counted. Both are
 import httpx
 import structlog
 
-from fsmes.integrations.erp.contract import as_payload
+from fsmes.integrations.erp.contract import ProductionRequest, as_payload
 
 log = structlog.get_logger("erp.erpnext")
 
@@ -186,7 +186,7 @@ class ErpNextAdapter:
         self.post_stock_entry = post_stock_entry
 
     # ------------------------------------------------------------- inbound
-    def fetch_orders(self) -> list[dict]:
+    def fetch_orders(self) -> list[ProductionRequest]:
         rows = self.client.list(
             "Work Order",
             filters=[
@@ -201,13 +201,15 @@ class ErpNextAdapter:
         # inventing one here would outrank the MES's own dispatch ordering with
         # a number nobody set. services.erp applies its default instead.
         return [
-            {
-                "code": row["name"],
-                "material": row["production_item"],
-                "quantity": row.get("qty") or 0,
-                "due_date": row.get("planned_end_date") or row.get("expected_delivery_date"),
-                "erp_reference": row["name"],
-            }
+            ProductionRequest.from_payload(
+                {
+                    "code": row["name"],
+                    "material": row["production_item"],
+                    "quantity": row.get("qty") or 0,
+                    "due_date": row.get("planned_end_date") or row.get("expected_delivery_date"),
+                    "erp_reference": row["name"],
+                }
+            )
             for row in rows
         ]
 

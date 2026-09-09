@@ -9,10 +9,12 @@ is reachable.
 """
 
 import json
+from datetime import datetime
 
 import httpx
 import pytest
 
+from fsmes.integrations.erp.contract import ProductionRequest
 from fsmes.integrations.erp.erpnext_adapter import ErpNextAdapter, ErpNextClient, ErpNextError
 
 
@@ -90,13 +92,11 @@ def test_work_orders_map_onto_the_mes_order_contract():
         ]
     )
     [order] = make_adapter(fake).fetch_orders()
-    assert order == {
-        "code": "MFG-WO-2026-00007",
-        "material": "FG-BOTTLE",
-        "quantity": 400.0,
-        "due_date": "2026-08-20 17:00:00",  # planned end wins over delivery date
-        "erp_reference": "MFG-WO-2026-00007",
-    }
+    assert order.code == "MFG-WO-2026-00007"
+    assert order.material == "FG-BOTTLE"
+    assert order.quantity == 400.0
+    assert order.due_date == datetime(2026, 8, 20, 17, 0)  # planned end wins over delivery date
+    assert order.erp_reference == "MFG-WO-2026-00007"
 
 
 def test_no_priority_is_invented():
@@ -104,7 +104,18 @@ def test_no_priority_is_invented():
     outrank the MES's own dispatch order with a number nobody set."""
     fake = FakeErpNext(work_orders=[{"name": "WO-1", "production_item": "FG-BOTTLE", "qty": 5}])
     [order] = make_adapter(fake).fetch_orders()
-    assert "priority" not in order
+    assert order.priority == ProductionRequest.model_fields["priority"].default
+
+
+def test_the_sync_worker_can_acknowledge_what_fetch_orders_returned():
+    """The worker reads `request.code` off every order it imports. A plain dict
+    has no `.code`, so an adapter that returns dicts imports an order and then
+    fails to mark it taken — forever, once per poll."""
+    fake = FakeErpNext(work_orders=[{"name": "WO-1", "production_item": "FG-BOTTLE", "qty": 5}])
+    adapter = make_adapter(fake)
+    [order] = adapter.fetch_orders()
+    adapter.acknowledge(order.code)
+    assert fake.updates == [("WO-1", {"custom_mes_synced": 1})]
 
 
 def test_only_released_unsynced_orders_are_asked_for():
