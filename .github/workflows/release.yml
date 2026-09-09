@@ -39,8 +39,27 @@ jobs:
           name: dist
           path: dist/
 
-  pypi:
+  wheel-demo:
+    # The `build` job checks the wheel's filename and that the config files
+    # are inside it. Both were true of a wheel that still did not run. This
+    # runs the demo from the exact artifact about to be published — not a
+    # rebuild of it — so a tag cannot publish a wheel that does not work.
     needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: The wheel that is about to be published runs the demo
+        run: .github/scripts/demo_from_wheel.sh "$(ls dist/*.whl)"
+
+  pypi:
+    needs: [build, wheel-demo]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
