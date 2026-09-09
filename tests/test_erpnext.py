@@ -129,6 +129,23 @@ def test_only_released_unsynced_orders_are_asked_for():
     assert set(filters[("status", "in")]) == {"Not Started", "In Process"}
 
 
+def test_a_shared_bench_only_gives_up_the_configured_company_s_orders():
+    """One ERPNext can hold several companies' books. Without this filter the
+    MES imports work orders belonging to a business it has never heard of."""
+    fake = FakeErpNext()
+    make_adapter(fake, company="Widgets Ltd").fetch_orders()
+    filters = {tuple(f[:2]): f[2] for f in fake.last_filters}
+    assert filters[("company", "=")] == "Widgets Ltd"
+
+
+def test_no_company_set_means_every_company_rather_than_a_guessed_one():
+    """A single-company site should not have to name itself, and the MES must
+    not silently substitute the demo's company and import nothing."""
+    fake = FakeErpNext()
+    make_adapter(fake).fetch_orders()
+    assert not any(f[0] == "company" for f in fake.last_filters)
+
+
 def test_acknowledge_marks_the_order_taken():
     fake = FakeErpNext()
     make_adapter(fake).acknowledge("MFG-WO-2026-00007")

@@ -175,25 +175,33 @@ def from_settings(settings) -> "ErpNextAdapter":
             api_secret=settings.erpnext_api_secret,
         ),
         post_stock_entry=settings.erpnext_post_stock_entry,
+        company=settings.erpnext_company,
     )
 
 
 class ErpNextAdapter:
     """Transport only — every MES-side rule stays in services.erp."""
 
-    def __init__(self, client: ErpNextClient, *, post_stock_entry: bool = True):
+    def __init__(self, client: ErpNextClient, *, post_stock_entry: bool = True, company: str = ""):
         self.client = client
         self.post_stock_entry = post_stock_entry
+        # Empty means every company on the site. A bench that serves more than
+        # one company needs this set, or one company's MES runs another's
+        # orders; a single-company site is right to leave it alone.
+        self.company = company
 
     # ------------------------------------------------------------- inbound
     def fetch_orders(self) -> list[ProductionRequest]:
+        filters = [
+            ["docstatus", "=", 1],
+            ["status", "in", list(_OPEN_STATUSES)],
+            ["custom_mes_synced", "=", 0],
+        ]
+        if self.company:
+            filters.append(["company", "=", self.company])
         rows = self.client.list(
             "Work Order",
-            filters=[
-                ["docstatus", "=", 1],
-                ["status", "in", list(_OPEN_STATUSES)],
-                ["custom_mes_synced", "=", 0],
-            ],
+            filters=filters,
             fields=["name", "production_item", "qty", "planned_end_date", "expected_delivery_date"],
             order_by="planned_start_date asc",
         )
