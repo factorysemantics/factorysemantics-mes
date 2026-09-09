@@ -26,7 +26,11 @@ cd "$work"
 python -m venv .venv
 .venv/bin/python -m pip install --quiet --upgrade pip
 .venv/bin/python -m pip install --quiet "$wheel"
-.venv/bin/fsmes --version
+# Read the version from the installed distribution's metadata rather than
+# `fsmes --version`, which reports a hand-maintained constant and was a
+# version behind when this was written.
+echo "wheel: $(basename "$wheel")"
+.venv/bin/python -c "from importlib.metadata import version; print('installed:', version('factorysemantics-mes'))"
 
 set +e
 timeout 900 .venv/bin/fsmes demo --duration "$duration" 2>&1 | tee demo.log
