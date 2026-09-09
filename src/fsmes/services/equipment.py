@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from fsmes.db import utcnow
 from fsmes.domain import Equipment, EquipmentLevel, EquipmentState, EquipmentStateName, ProductionLog
-from fsmes.services import audit, masterdata
+from fsmes.services import audit, masterdata, outbox
 
 # Below this much observed runtime history, OEE components are reported as
 # unknown rather than computed from a near-zero denominator.
@@ -35,6 +35,7 @@ def set_state(
         current.ended_at = now
     new = EquipmentState(equipment_id=equipment.id, state=state, reason=reason, started_at=now)
     session.add(new)
+    session.flush()
     audit.record(
         session,
         actor=actor,
@@ -44,6 +45,11 @@ def set_state(
         before={"state": current.state.value} if current else None,
         after={"state": state.value, "reason": reason},
     )
+    # The same transaction that moved the machine writes the event, so the
+    # namespace can never disagree with the state history about what
+    # happened. Nothing is delivered from here; the publisher reads the log.
+    outbox.equipment_state_changed(session, equipment=equipment, opened=new, closed=current,
+                                   actor=actor)
     return new
 
 

@@ -81,6 +81,17 @@ class Settings(BaseSettings):
     # record what the MES counted without moving ERPNext's stock.
     erpnext_post_stock_entry: bool = True
 
+    # --- The outbox as an event log ---------------------------------------
+    # The outbox carries ERP confirmations and, when this is on, the plant
+    # events no ERP asked for: equipment state changes, order holds and
+    # resumes. They are what a unified namespace, a historian or a Node-RED
+    # flow reads. The ERP sync ignores them; it selects the kinds its own
+    # contract can parse.
+    # Turning this off keeps the log to what the ERP is owed - one row per
+    # operation and per order instead of one per state change - at the cost
+    # of a namespace that shows only the ERP's half of the plant.
+    outbox_domain_events: bool = True
+
     # --- Unified namespace (fsmes uns publish) ----------------------------
     # The MES's outbox, relayed to an MQTT broker as JSON under an ISA-95
     # topic tree. Off by default: a plant that has no broker should not have

@@ -19,7 +19,7 @@ from fsmes.domain import (
     WorkOrder,
     WorkOrderOperation,
 )
-from fsmes.services import Conflict, Invalid, NotFound, audit, masterdata
+from fsmes.services import Conflict, Invalid, NotFound, audit, masterdata, outbox
 
 _TRANSITIONS: dict[OrderStatus, set[OrderStatus]] = {
     OrderStatus.PLANNED: {OrderStatus.RELEASED, OrderStatus.CANCELLED},
@@ -147,12 +147,18 @@ def hold(session: Session, code: str, reason: str, actor: str = "system") -> Wor
     if not (reason or "").strip():
         raise Invalid("a hold needs a reason - the person resuming it has to know why")
     wo = get(session, code)
+    was = wo.status
     _transition(session, wo, OrderStatus.ON_HOLD, actor)
     # The transition audit carries only the status pair; the reason is the
     # part someone will actually search for.
     audit.record(session, actor=actor, action="workorder.hold_reason",
                  entity_type="workorder", entity_id=code,
                  after={"reason": reason.strip()})
+    # A hold is the fact a namespace most wants and least often gets: a line
+    # that has stopped looks the same as a line nobody is watching until
+    # somebody says which. Written in this transaction, with the reason.
+    outbox.order_held(session, order=wo, reason=reason.strip(), previous_status=was,
+                      at=utcnow(), actor=actor)
     return wo
 
 
@@ -165,9 +171,11 @@ def resume(session: Session, code: str, actor: str = "system") -> WorkOrder:
     wo = get(session, code)
     if wo.status is not OrderStatus.ON_HOLD:
         raise Conflict(f"work order {code} is {wo.status.value}, not on hold")
+    was = wo.status
     started = any(op.status is not OperationStatus.PENDING for op in wo.operations)
     _transition(session, wo,
                 OrderStatus.RUNNING if started else OrderStatus.RELEASED, actor)
+    outbox.order_resumed(session, order=wo, previous_status=was, at=utcnow(), actor=actor)
     return wo
 
 

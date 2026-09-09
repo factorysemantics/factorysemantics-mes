@@ -11,6 +11,19 @@ goes under Honesty with a migration line, so plant people can find it.
 ## [Unreleased]
 
 ### Added
+- **The outbox is a domain event log.** It carried ERP confirmations and
+  nothing else, because the ERP sync read every pending row as one. It now
+  selects the kinds its contract can parse, which leaves room for the plant
+  events no ERP asked for: **equipment state changes** (the state entered,
+  the reason, the state left and how long that had been open) and **order
+  holds and resumes**, with the reason a hold always carries. Each is
+  written in the same transaction as the fact it describes, so an event
+  cannot exist without its fact or a fact without its event. The
+  unified-namespace publisher picks them up with no change: a machine going
+  down reaches
+  `umh/v1/<enterprise>/<site>/…/<machine>/_mes/equipment_state_change`, and
+  a hold reaches the site. `MES_OUTBOX_DOMAIN_EVENTS=false` keeps the log to
+  what the ERP is owed. See [the unified namespace](docs/operate/uns.md).
 - **A unified-namespace publisher.** `fsmes uns publish` relays the MES's
   own event stream — the transactional outbox the ERP connector already
   delivers from — to an MQTT broker as JSON, under an ISA-95 topic tree
@@ -45,6 +58,13 @@ goes under Honesty with a migration line, so plant people can find it.
   no way to read one from the package — so it was corrected from the stale
   `0.1.0` to `0.1.2`, and the release workflow now refuses a tag that
   disagrees with it.
+### Honesty
+- **`fsmes erp outbox` counts the ERP's own queue, not the whole log.** The
+  same table now holds plant events waiting for a different reader, and
+  counting those as pending ERP work would report a backlog that does not
+  exist. The status counts cover the confirmation kinds only; the rest are
+  stated as `other_outbound` and broken down by kind, so nothing is hidden
+  either.
 
 ### Changed
 - `fsmes demo` exits non-zero, with the reason, when its loop does not close:
