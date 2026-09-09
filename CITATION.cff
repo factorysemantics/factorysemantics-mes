@@ -8,5 +8,5 @@ authors:
 repository-code: https://github.com/factorysemantics/factorysemantics-mes
 url: https://factorysemantics.com
 license: Apache-2.0
-version: 0.1.0
+version: 0.1.2
 abstract: An open-source, modular, agent-native Manufacturing Execution System with OPC UA connectivity, honest OEE, quality with SPC and gauges, scheduling, traceability, an ERPNext connector and an MCP agent surface.

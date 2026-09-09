@@ -25,6 +25,17 @@ jobs:
         run: |
           v="${GITHUB_REF_NAME#v}"
           ls dist/ | grep -q "factorysemantics_mes-${v}-" || { echo "::error::tag $GITHUB_REF_NAME but wheel is $(ls dist/)"; exit 1; }
+      # The wheel's filename comes from src/fsmes/__init__.py now, so the step
+      # above already ties the tag to the number the CLI reports. CITATION.cff
+      # is the one version left that a human types: the citation file format
+      # has no way to read it from the package. It was a release behind when
+      # this check was written, and 0.1.2 is what a wrong number costs. A tag
+      # whose citation disagrees stops here, before anything is published.
+      - name: The tag and the citation file agree
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          cited="$(sed -n 's/^version: *//p' CITATION.cff)"
+          [ "$cited" = "$v" ] || { echo "::error::tag $GITHUB_REF_NAME but CITATION.cff says ${cited:-nothing}"; exit 1; }
       - name: The wheel carries the demo's config files
         run: |
           python - <<'PY'

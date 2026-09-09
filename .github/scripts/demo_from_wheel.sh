@@ -26,11 +26,22 @@ cd "$work"
 python -m venv .venv
 .venv/bin/python -m pip install --quiet --upgrade pip
 .venv/bin/python -m pip install --quiet "$wheel"
-# Read the version from the installed distribution's metadata rather than
-# `fsmes --version`, which reports a hand-maintained constant and was a
-# version behind when this was written.
+# What the wheel says it is, asked two ways: the distribution metadata pip
+# installed, and the answer a user gets from the command line. These were a
+# version apart in 0.1.2 — the metadata said 0.1.2, `fsmes --version` said
+# 0.1.0 — because the number was written down twice. It is written down once
+# now (src/fsmes/__init__.py, which hatchling stamps the metadata from), and
+# this is the line that keeps it that way: a wheel whose two answers disagree
+# never reaches PyPI.
 echo "wheel: $(basename "$wheel")"
-.venv/bin/python -c "from importlib.metadata import version; print('installed:', version('factorysemantics-mes'))"
+metadata_version="$(.venv/bin/python -c "from importlib.metadata import version; print(version('factorysemantics-mes'))")"
+reported_version="$(.venv/bin/fsmes --version)"
+echo "installed: ${metadata_version}"
+echo "fsmes --version: ${reported_version}"
+if [ "$reported_version" != "fsmes ${metadata_version}" ]; then
+    echo "::error::the wheel's metadata says ${metadata_version} but 'fsmes --version' says '${reported_version}'"
+    exit 1
+fi
 
 set +e
 timeout 900 .venv/bin/fsmes demo --duration "$duration" 2>&1 | tee demo.log
