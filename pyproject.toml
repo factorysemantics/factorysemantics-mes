@@ -150,4 +150,8 @@ testpaths = ["tests"]
 addopts = "-q -m 'not slow'"
 markers = [
     "slow: tests that start real servers or drive a simulated plant end to end",
+    # Deselected by default like every slow test, and selected on purpose by
+    # the erpnext-live workflow: `pytest -m erpnext_live`. These need a real
+    # ERPNext and fail, rather than skip, when there is not one.
+    "erpnext_live: the ERPNext round trip, against a real ERPNext",
 ]
