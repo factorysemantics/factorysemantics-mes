@@ -13,6 +13,10 @@ MES already wrote to its transactional outbox — the same stream the ERP
 connector delivers from — so nothing published here was invented for the
 broker's benefit, and turning the publisher off loses nothing.
 
+One log, two readers, and neither owns it: the ERP sync takes only the
+kinds its own contract can parse, so a machine going down sits in the same
+table without ever being posted to an ERP as a production confirmation.
+
 ## Configure
 
 ```bash
@@ -68,7 +72,9 @@ For the demo plant (`ACME` → `KC1` → `PKG` → `LINE1` → `MIX01`):
 | Event | Topic |
 |---|---|
 | operation confirmation on a machine | `umh/v1/ACME/KC1/PKG/LINE1/MIX01/_mes/operation_confirmation` |
+| equipment state change on a machine | `umh/v1/ACME/KC1/PKG/LINE1/MIX01/_mes/equipment_state_change` |
 | order completion (no machine) | `umh/v1/ACME/KC1/_mes/order_completion` |
+| order hold (no machine) | `umh/v1/ACME/KC1/_mes/order_hold` |
 
 Three rules that are house rules rather than MQTT rules:
 
@@ -152,12 +158,47 @@ it returns. The MES itself never blocks on the broker.
 
 ## What is published today
 
-The events the outbox carries: **operation confirmations** (what one
-operation of one order did — quantities, times, cost centre, lots consumed)
-and **order completions**. Equipment state changes, holds and OEE windows
-are recorded by the MES but are not in the outbox yet; when they are, the
-publisher picks them up with no change here, because it publishes whatever
-kind it finds.
+Four kinds, and this list is the whole of it:
+
+| Kind | What it says | Where it hangs |
+|---|---|---|
+| `operation_confirmation` | what one operation of one order did — input, good, scrap, WIP, setup, machine and labour time, cost centre, lots consumed | the machine |
+| `order_completion` | the order closed: ordered, good and scrap totals and the finished-goods lot | the site |
+| `equipment_state_change` | a machine moved between running, idle, down and setup — the state it entered, the reason if there was one, the state it left and how long that had been open | the machine |
+| `order_hold` / `order_resume` | an order stopped without being finished, with the reason, and later went back to work | the site |
+
+Two things that list does not include, said plainly rather than left to be
+discovered:
+
+- **OEE windows are not published.** OEE is computed over a window when
+  somebody asks for one; it is not a fact the MES records at a moment, so
+  there is nothing in the log to relay. Publishing it would mean choosing a
+  cadence and a window length on the plant's behalf, and an availability
+  figure whose `unknown` share had been rounded into it is the worst kind
+  of wrong number. Read it from the API for now.
+- **Quality checks and non-conformances are not published yet.** They are
+  recorded, and they are the obvious next kinds.
+
+Nothing is dropped for being new: the publisher gives a kind it has never
+seen its own topic, so a kind added to the MES reaches the broker without a
+change here.
+
+### Turning the plant events off
+
+```bash
+MES_OUTBOX_DOMAIN_EVENTS=false        # default: true
+```
+
+The MES's event log is one table. Confirmations go in it because the ERP
+connector delivers from it; state changes, holds and resumes go in it
+because this publisher does. A plant with no broker and no other reader can
+set this to `false` and keep the log to what the ERP is owed — one row per
+operation and per order instead of one per state change.
+
+What it costs is exactly what this page promises: with it off, the
+namespace shows the ERP's half of the plant and nothing else. The MES's own
+state history, audit trail and OEE are unaffected either way; only the
+event log is.
 
 Sparkplug B is a later envelope over the same work — see the
 [roadmap](https://github.com/factorysemantics/factorysemantics-mes/blob/main/ROADMAP.md).

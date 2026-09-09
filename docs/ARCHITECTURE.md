@@ -70,7 +70,7 @@ Always present; everything else optional. Contents:
 | `material_lots`, `lot_consumptions` | Material lot / sublot, material actual | MES-TWIN |
 | `equipment_states` | Equipment state intervals | MES-TWIN (+ PackML vocabulary, + `planned_stop`) |
 | `audit_log` | — (Part 11 pattern) | MES-TWIN |
-| `erp_messages` | B2M transaction inbox/outbox | MES-TWIN |
+| `erp_messages` | B2M transaction inbox/outbox, and the domain event log the namespace publisher reads | MES-TWIN |
 | module tables (`downtime_reasons`, `shifts`, `quality_checks`, `gauges`, `pm_schedules`, ...) | Part 3 quality/maintenance/inventory domains | new, per module |
 
 Known model upgrades over MES-TWIN (deliberate, scheduled in the roadmap): routing **versioning/effectivity** and alternates (one routing per material, first-match-wins is v0 behavior); operations get **planned start/end** (M5); machine states adopt the **PackML 17-state vocabulary** with per-driver mapping, collapsed to running/idle/down/setup/planned_stop for OEE buckets (M2); **site scoping** on kernel tables (M8); serialization below lot level (M6).
