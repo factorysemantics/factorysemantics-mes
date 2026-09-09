@@ -1010,6 +1010,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="What is published today">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#turning-the-plant-events-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Turning the plant events off
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2419,6 +2436,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="What is published today">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#turning-the-plant-events-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Turning the plant events off
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2479,6 +2513,9 @@ worker that relays the MES's own event stream to MQTT as JSON.</p>
 MES already wrote to its transactional outbox — the same stream the ERP
 connector delivers from — so nothing published here was invented for the
 broker's benefit, and turning the publisher off loses nothing.</p>
+<p>One log, two readers, and neither owns it: the ERP sync takes only the
+kinds its own contract can parse, so a machine going down sits in the same
+table without ever being posted to an ERP as a production confirmation.</p>
 <h2 id="configure">Configure<a class="headerlink" href="#configure" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="nv">MES_UNS_MODE</span><span class="o">=</span>mqtt<span class="w">                     </span><span class="c1"># off (default) | mqtt | log</span>
 <span class="nv">MES_UNS_BROKER_URL</span><span class="o">=</span>mqtt://broker.plant.example:1883<span class="w">   </span><span class="c1"># mqtts:// for TLS</span>
@@ -2530,8 +2567,16 @@ its lines and its machines publishes the cells too.</p>
 <td><code>umh/v1/ACME/KC1/PKG/LINE1/MIX01/_mes/operation_confirmation</code></td>
 </tr>
 <tr>
+<td>equipment state change on a machine</td>
+<td><code>umh/v1/ACME/KC1/PKG/LINE1/MIX01/_mes/equipment_state_change</code></td>
+</tr>
+<tr>
 <td>order completion (no machine)</td>
 <td><code>umh/v1/ACME/KC1/_mes/order_completion</code></td>
+</tr>
+<tr>
+<td>order hold (no machine)</td>
+<td><code>umh/v1/ACME/KC1/_mes/order_hold</code></td>
 </tr>
 </tbody>
 </table>
@@ -2604,12 +2649,65 @@ as a burst of production that happened at reconnect time.</p>
 goes away mid-shift, events queue in the database and go out in order when
 it returns. The MES itself never blocks on the broker.</p>
 <h2 id="what-is-published-today">What is published today<a class="headerlink" href="#what-is-published-today" title="Permanent link">&para;</a></h2>
-<p>The events the outbox carries: <strong>operation confirmations</strong> (what one
-operation of one order did — quantities, times, cost centre, lots consumed)
-and <strong>order completions</strong>. Equipment state changes, holds and OEE windows
-are recorded by the MES but are not in the outbox yet; when they are, the
-publisher picks them up with no change here, because it publishes whatever
-kind it finds.</p>
+<p>Four kinds, and this list is the whole of it:</p>
+<table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>What it says</th>
+<th>Where it hangs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>operation_confirmation</code></td>
+<td>what one operation of one order did — input, good, scrap, WIP, setup, machine and labour time, cost centre, lots consumed</td>
+<td>the machine</td>
+</tr>
+<tr>
+<td><code>order_completion</code></td>
+<td>the order closed: ordered, good and scrap totals and the finished-goods lot</td>
+<td>the site</td>
+</tr>
+<tr>
+<td><code>equipment_state_change</code></td>
+<td>a machine moved between running, idle, down and setup — the state it entered, the reason if there was one, the state it left and how long that had been open</td>
+<td>the machine</td>
+</tr>
+<tr>
+<td><code>order_hold</code> / <code>order_resume</code></td>
+<td>an order stopped without being finished, with the reason, and later went back to work</td>
+<td>the site</td>
+</tr>
+</tbody>
+</table>
+<p>Two things that list does not include, said plainly rather than left to be
+discovered:</p>
+<ul>
+<li><strong>OEE windows are not published.</strong> OEE is computed over a window when
+  somebody asks for one; it is not a fact the MES records at a moment, so
+  there is nothing in the log to relay. Publishing it would mean choosing a
+  cadence and a window length on the plant's behalf, and an availability
+  figure whose <code>unknown</code> share had been rounded into it is the worst kind
+  of wrong number. Read it from the API for now.</li>
+<li><strong>Quality checks and non-conformances are not published yet.</strong> They are
+  recorded, and they are the obvious next kinds.</li>
+</ul>
+<p>Nothing is dropped for being new: the publisher gives a kind it has never
+seen its own topic, so a kind added to the MES reaches the broker without a
+change here.</p>
+<h3 id="turning-the-plant-events-off">Turning the plant events off<a class="headerlink" href="#turning-the-plant-events-off" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nv">MES_OUTBOX_DOMAIN_EVENTS</span><span class="o">=</span><span class="nb">false</span><span class="w">        </span><span class="c1"># default: true</span>
+</code></pre></div>
+<p>The MES's event log is one table. Confirmations go in it because the ERP
+connector delivers from it; state changes, holds and resumes go in it
+because this publisher does. A plant with no broker and no other reader can
+set this to <code>false</code> and keep the log to what the ERP is owed — one row per
+operation and per order instead of one per state change.</p>
+<p>What it costs is exactly what this page promises: with it off, the
+namespace shows the ERP's half of the plant and nothing else. The MES's own
+state history, audit trail and OEE are unaffected either way; only the
+event log is.</p>
 <p>Sparkplug B is a later envelope over the same work — see the
 <a href="https://github.com/factorysemantics/factorysemantics-mes/blob/main/ROADMAP.md">roadmap</a>.
 MQTT-JSON first, because it is what a Node-RED flow can read in an
