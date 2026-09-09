@@ -30,6 +30,22 @@ goes under Honesty with a migration line, so plant people can find it.
   publish, before it reaches PyPI. This is the clean-machine install that
   0.1.0 needed and did not get.
 
+### Fixed
+- **`fsmes --version` told you the wrong version.** A 0.1.2 install answered
+  `0.1.0`, because the number was written down twice — in `pyproject.toml`
+  and again in `src/fsmes/__init__.py` — and only one copy was bumped for
+  either release. It is written down once now: `src/fsmes/__init__.py` holds
+  it, and hatchling stamps the wheel, the sdist and the container tag from
+  that line, so a release bumps one file. The first question a new user asks
+  their install now gets a true answer. A test compares what the CLI prints
+  with the installed distribution's metadata, and the wheel check that runs
+  on every pull request asks the built artifact the same question two ways
+  and fails if the answers differ, so a mismatch cannot reach PyPI.
+  `CITATION.cff` still carries a hand-typed version — the citation format has
+  no way to read one from the package — so it was corrected from the stale
+  `0.1.0` to `0.1.2`, and the release workflow now refuses a tag that
+  disagrees with it.
+
 ### Changed
 - `fsmes demo` exits non-zero, with the reason, when its loop does not close:
   the order never completed, the ERP was never told, or no finished lot was

@@ -4,7 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "factorysemantics-mes"
-version = "0.1.2"
+# The version is not written here. Hatchling reads it out of
+# `src/fsmes/__init__.py` (see [tool.hatch.version] below), so the number the
+# software states about itself and the number stamped into the wheel cannot be
+# two different facts. 0.1.2 shipped with them a version apart.
+dynamic = ["version"]
 description = "An open-source, modular, agent-native Manufacturing Execution System"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -93,6 +97,15 @@ erpnext = "fsmes.integrations.erp.erpnext_adapter:from_settings"
 
 [project.scripts]
 fsmes = "fsmes.cli:app"
+
+# One number, in one file. `__version__` is what `fsmes --version`, `fsmes info`
+# and the API's OpenAPI document report, and it is what hatchling stamps into
+# the distribution metadata — so a release bumps `src/fsmes/__init__.py` and
+# nothing else. Reading it here rather than reading the metadata from the
+# package means the number is also correct in a source checkout, where there is
+# no installed distribution to ask.
+[tool.hatch.version]
+path = "src/fsmes/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fsmes"]
