@@ -259,7 +259,11 @@ def unassigned_production(session: Session, *, equipment_code: str | None = None
 
     rows = session.scalars(
         query.order_by(ProductionLog.id.desc()).limit(limit).offset(offset)).all()
-    codes = {e.id: e.code for e in session.scalars(select(Equipment))}
+    # Only the machines this page mentions. A plant with three thousand of
+    # them should not read the equipment table to label fifty rows.
+    ids = {row.equipment_id for row in rows if row.equipment_id is not None}
+    codes = dict(session.execute(
+        select(Equipment.id, Equipment.code).where(Equipment.id.in_(ids))).all()) if ids else {}
     return {
         "items": [
             {
