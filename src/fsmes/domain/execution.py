@@ -63,12 +63,20 @@ class ProductionSource(enum.StrEnum):
 
 
 class ProductionLog(Base):
-    """Every quantity booking, whether typed by an operator or counted by a machine."""
+    """Every quantity booking, whether typed by an operator or counted by a machine.
+
+    `work_order_id` is nullable, and that is the whole point of this table
+    rather than a column on the operation: a machine that counts past its
+    order, or between orders, has still made something. Those units are
+    recorded here against the equipment with no order - *unassigned
+    production* - because the alternative is a warning line, and a unit the
+    plant made may not disappear because the MES had nowhere tidy to put it.
+    """
 
     __tablename__ = "production_logs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    work_order_id: Mapped[int] = mapped_column(ForeignKey("work_orders.id"), index=True)
+    work_order_id: Mapped[int | None] = mapped_column(ForeignKey("work_orders.id"), index=True)
     operation_id: Mapped[int | None] = mapped_column(ForeignKey("work_order_operations.id"))
     equipment_id: Mapped[int | None] = mapped_column(ForeignKey("equipment.id"), index=True)
     good_qty: Mapped[float] = mapped_column(default=0.0)

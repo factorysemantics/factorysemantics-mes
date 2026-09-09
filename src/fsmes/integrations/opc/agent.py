@@ -500,7 +500,12 @@ class _Handler:
                     op = execution.report(session, equipment_code=code, source=ProductionSource.OPC,
                                           actor="opc-agent", **quantities)
                 if op is None:
-                    log.warning("machine counted with no active order", equipment=code, **quantities)
+                    # Not a drop: execution.report has written the units to
+                    # the unassigned production list, where they can be
+                    # counted and argued about. The line stays so the log
+                    # still shows when a machine ran without an order.
+                    log.info("machine counted with no active order; recorded as unassigned production",
+                             equipment=code, **quantities)
             except Exception:
                 log.exception("failed to book production", equipment=code, **quantities)
 
