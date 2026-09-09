@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "factorysemantics-mes"
-version = "0.1.1"
+version = "0.1.2"
 description = "An open-source, modular, agent-native Manufacturing Execution System"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -92,6 +92,16 @@ fsmes = "fsmes.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fsmes"]
+
+# The demo and the defaults read config/*.json relative to the working
+# directory, which exists in a checkout and nowhere else. The wheel carries
+# the same files as package data; Settings falls back to them when the
+# relative path is absent (see fsmes.config.packaged_default).
+[tool.hatch.build.targets.wheel.force-include]
+"config/tag_map.json" = "fsmes/data/config/tag_map.json"
+"config/line_layout.json" = "fsmes/data/config/line_layout.json"
+"config/tag_map_kepsim.json" = "fsmes/data/config/tag_map_kepsim.json"
+"config/tag_map_kepware.json" = "fsmes/data/config/tag_map_kepware.json"
 
 [tool.hatch.build.targets.sdist]
 exclude = [".claude/", "site/", "docs/reference/"]

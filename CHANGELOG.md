@@ -10,6 +10,18 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-09-08
+
+### Fixed
+- `pipx install factorysemantics-mes && fsmes demo` did not run: the wheel
+  carried no `config/tag_map.json` or `config/line_layout.json`, so the
+  simulator had no line to run and nothing was ever booked. The four
+  default config files now ship as package data, and the settings fall
+  back to them when the relative path is absent (a path you set yourself is
+  never replaced). The release workflow refuses a wheel without them.
+- The release workflow's SBOM step asked for an image tag that does not
+  exist (#5); the docs workflow serialises pushes to `gh-pages` (#5).
+
 ## [0.1.1] — 2026-09-08
 
 ### Fixed
