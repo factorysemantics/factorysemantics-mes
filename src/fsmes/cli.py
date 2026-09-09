@@ -339,7 +339,7 @@ def _erpnext_client():
 def erp_setup() -> None:
     """Create the custom fields the ERPNext connector needs, on the configured site.
 
-    Four fields on Work Order. ERPNext does not have them and will not
+    Five fields on Work Order. ERPNext does not have them and will not
     complain about writes to them, so until this has run the MES cannot see
     which orders it has taken and its numbers go nowhere. Safe to run twice:
     a field that exists is left exactly as it is.

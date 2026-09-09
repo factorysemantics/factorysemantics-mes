@@ -9,7 +9,7 @@ It speaks ERPNext's REST API as a user or API key; it does not install a
 Frappe app. (A thin Frappe-side app for the Marketplace is planned and not
 built, as of 2026-09-07.)
 
-What it does need is four custom fields on ERPNext's Work Order doctype. They
+What it does need is five custom fields on ERPNext's Work Order doctype. They
 carry the two things ERPNext has nowhere to put — whether the MES has taken
 an order, and what the machines actually counted — and `fsmes erp setup`
 creates them (see [below](#prepare-the-erpnext-side)). Until it has run, the
@@ -39,13 +39,14 @@ the defaults are the Frappe development bench's.
 | `custom_mes_synced` | Check | The MES has imported this order. Clear it to re-send. |
 | `custom_mes_good_qty` | Float | Good quantity the machines counted. |
 | `custom_mes_scrap_qty` | Float | Machine-counted scrap. ERPNext has no native field for it. |
+| `custom_mes_over_qty` | Float | How far past the ordered quantity the line ran. |
 | `custom_mes_lot` | Data | The finished lot the MES booked. |
 
-Four fields, all `allow_on_submit`, because a submitted work order is
+Five fields, all `allow_on_submit`, because a submitted work order is
 precisely when they change. With the connection configured above:
 
 ```bash
-fsmes erp setup      # creates any of the four that are missing; safe to run twice
+fsmes erp setup      # creates any of the five that are missing; safe to run twice
 fsmes erp check      # says whether URL, credentials, fields and company are all in order
 ```
 
@@ -67,7 +68,7 @@ The MES therefore reads back every write and compares it against what it
 sent. A field that did not survive raises, the confirmation stays in the
 outbox and retries, and the log names the field. The MES cannot end up
 believing a number reached ERPNext when it did not. `fsmes run-erp-sync`
-also checks the four fields when it starts and says on the console if any are
+also checks all five when it starts and says on the console if any are
 missing; it starts anyway, because an ERP that is briefly unreachable is not
 a reason to refuse to run.
 

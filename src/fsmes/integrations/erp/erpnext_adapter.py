@@ -18,7 +18,7 @@ costing all land where ERPNext expects them. That is deliberately not a comment
 or a custom field: production the MES has committed to should be visible to the
 business as stock, not as a note somebody has to read.
 
-Four custom fields on Work Order carry what ERPNext has nowhere to put — whether
+Five custom fields on Work Order carry what ERPNext has nowhere to put — whether
 the MES has taken the order, and what the MES actually counted. All are
 `allow_on_submit`, because a submitted work order is exactly when they change.
 They are defined in `erpnext_setup.py` and created by `fsmes erp setup`; a

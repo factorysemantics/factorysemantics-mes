@@ -25,15 +25,15 @@ goes under Honesty with a migration line, so plant people can find it.
   a hold reaches the site. `MES_OUTBOX_DOMAIN_EVENTS=false` keeps the log to
   what the ERP is owed. See [the unified namespace](docs/operate/uns.md).
 - **`fsmes erp setup` and `fsmes erp check`.** The ERPNext connector needs
-  four custom fields on Work Order (`custom_mes_synced`,
-  `custom_mes_good_qty`, `custom_mes_scrap_qty`, `custom_mes_lot`). Until
-  now the only thing that created them was a demo seeding script in `labs/`,
-  which is not in the wheel — so nobody who installed the package could
-  create them at all. The definitions moved into the package,
-  `fsmes erp setup` creates any that are missing and is safe to run twice,
-  and `fsmes erp check` says in words whether the URL, the credentials, the
-  four fields and the company are each in order, exiting non-zero if the
-  connector would not work. `fsmes run-erp-sync` runs the field check when it
+  five custom fields on Work Order (`custom_mes_synced`,
+  `custom_mes_good_qty`, `custom_mes_scrap_qty`, `custom_mes_over_qty`,
+  `custom_mes_lot`). Until now the only thing that created them was a demo
+  seeding script in `labs/`, which is not in the wheel — so nobody who
+  installed the package could create them at all. The definitions moved into
+  the package, `fsmes erp setup` creates any that are missing and is safe to
+  run twice, and `fsmes erp check` says in words whether the URL, the
+  credentials, all five fields and the company are each in order, exiting
+  non-zero if the connector would not work. `fsmes run-erp-sync` runs the field check when it
   starts and says so on the console; it still starts, because an ERP that is
   briefly unreachable is not a reason to refuse to run. The `labs/` seeder
   now uses the same definitions.

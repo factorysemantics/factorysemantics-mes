@@ -1,6 +1,6 @@
 """Preparing the ERPNext side, and saying plainly whether it is prepared.
 
-The connector needs four custom fields on ERPNext's Work Order doctype. They
+The connector needs five custom fields on ERPNext's Work Order doctype. They
 are not optional and they are not created by ERPNext: without them the MES
 cannot tell which orders it has taken, and the numbers it counted have
 nowhere to land. This module is the one place they are defined, so the
@@ -48,10 +48,22 @@ CUSTOM_FIELDS: list[dict] = [
         "description": "Machine-counted scrap. ERPNext has no native field for this.",
     },
     {
+        "fieldname": "custom_mes_over_qty",
+        "label": "MES Over Qty",
+        "fieldtype": "Float",
+        "insert_after": "custom_mes_scrap_qty",
+        "allow_on_submit": 1,
+        "read_only": 1,
+        "description": "How far past the ordered quantity the line actually ran. A counter "
+                       "delta can carry more than one unit, so an order for 15 can finish at "
+                       "16 good; this is the number that says so, rather than leaving a "
+                       "reader to notice that the good qty exceeds the order.",
+    },
+    {
         "fieldname": "custom_mes_lot",
         "label": "MES Lot",
         "fieldtype": "Data",
-        "insert_after": "custom_mes_scrap_qty",
+        "insert_after": "custom_mes_over_qty",
         "allow_on_submit": 1,
         "read_only": 1,
     },
@@ -105,7 +117,7 @@ def field_problems(client: ErpNextClient) -> list[str]:
 
 
 def ensure_custom_fields(client: ErpNextClient) -> list[tuple[str, str]]:
-    """Create the four fields if they are not there. Idempotent.
+    """Create any of the fields that are not there. Idempotent.
 
     Returns one `(fieldname, what happened)` pair per field, so the caller can
     print exactly what it did rather than a count nobody can check.

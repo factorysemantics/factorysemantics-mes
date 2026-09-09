@@ -293,6 +293,32 @@ def test_the_site_header_is_sent_so_a_shared_bench_writes_to_the_right_company()
 # ------------------------------------------------- a site nobody prepared
 
 
+def test_every_field_the_adapter_writes_is_one_that_setup_creates():
+    """The same defect one layer up, and the one that actually happened: a
+    field added to a write without being added to the definitions
+    `fsmes erp setup` installs is a field nothing creates — on a site
+    `fsmes erp check` would call ready. `custom_mes_over_qty` arrived that way
+    while these definitions were being moved into the package."""
+    fake = FakeErpNext()
+    adapter = make_adapter(fake)
+    adapter.acknowledge("MFG-WO-2026-00007")
+    adapter.send_confirmation(_confirmation())
+    written = {key for _, values in fake.updates for key in values}
+    assert written <= set(erpnext_setup.FIELD_NAMES), (
+        f"the adapter writes {sorted(written - set(erpnext_setup.FIELD_NAMES))}, "
+        f"which fsmes erp setup does not create"
+    )
+
+
+def test_the_over_run_reaches_the_ERP_as_its_own_number():
+    """An order for 400 that finished at 402 says so in a field of its own,
+    rather than leaving a reader to notice the good qty exceeds the order."""
+    fake = FakeErpNext()
+    make_adapter(fake).send_confirmation(_confirmation(good_qty=402.0, over_qty=2.0))
+    assert fake.updates[0][1]["custom_mes_over_qty"] == 2.0
+
+
+
 def test_a_field_ERPNext_silently_dropped_is_not_reported_as_delivered():
     """Frappe answers 200 to a PUT naming a field the doctype does not have,
     and the number is gone. If the MES took that for success it would mark the
