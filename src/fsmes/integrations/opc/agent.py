@@ -438,6 +438,13 @@ class _Handler:
     # machines were "never observed" for an hour, because a State arrives
     # only when it changes. Dropping readings the plant sent is the one
     # outcome this module may not have; a moment's lock is not a reason to.
+    #
+    # It is not what stops "database is locked" any more, and it never
+    # should have been: booking opens a savepoint and writes inside it, and
+    # db.py now begins that transaction with the write lock already taken.
+    # What is left for this retry is a database genuinely busy for longer
+    # than busy_timeout, and any other transient failure - not a bug being
+    # slept through.
     BOOK_ATTEMPTS = 4
     BOOK_BACKOFF_S = 0.5
 
@@ -809,7 +816,10 @@ async def _adjustment_loop(node_info: dict, machines: list[MachineMap], manifest
         try:
             # Remember the driven PV before writing, so verification can say
             # how far the process travelled rather than only where it ended.
-            with session_scope() as session:
+            # Read-only, and it says so: this transaction stays open across
+            # OPC reads, and on SQLite a writing transaction holds the one
+            # write lock for as long as it is open.
+            with session_scope(write=False) as session:
                 from fsmes.services import adjustments
                 for rec in adjustments.approved_writes(session):
                     pv = nodes.get((rec["equipment"], rec["drives"])) if rec["drives"] else None

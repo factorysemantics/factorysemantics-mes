@@ -38,6 +38,20 @@ goes under Honesty with a migration line, so plant people can find it.
   component reported as null is still a closed loop — that is an honest
   answer, not a failure.
 
+### Fixed
+- `database is locked` under concurrent writes on SQLite. WAL and
+  `busy_timeout` were set and their comment claimed that prevented it; they
+  do not. A transaction already open when it first writes has to upgrade to
+  SQLite's single write lock, and SQLite refuses that upgrade outright
+  instead of waiting — `busy_timeout` covers waiting, not a refusal. The OPC
+  agent's booking is that shape: it opens a savepoint per state change and
+  writes inside it, which is why one CI run of `fsmes demo` lost two batches
+  of plant readings to it. Writing transactions on SQLite now begin with
+  `BEGIN IMMEDIATE`, so the refusal becomes a wait that `busy_timeout` does
+  cover. `busy_timeout` is also set before the WAL switch rather than after
+  it, so a new connection meeting a lock waits rather than failing.
+  PostgreSQL is untouched — the change is gated on the SQLite dialect.
+
 ## [0.1.2] — 2026-09-08
 
 ### Fixed
