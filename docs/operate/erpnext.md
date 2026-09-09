@@ -62,7 +62,9 @@ needs no more than read and write on Work Order and Stock Entry.
 
 Frappe accepts a `PUT` naming a field its doctype does not have. It answers
 `200` and drops the value. So a missing field does not look like an error at
-the HTTP level — it looks like success with the number gone.
+the HTTP level — it looks like success with the number gone. That is
+[measured against a live ERPNext](#what-a-missing-custom-field-actually-does),
+not inferred from Frappe's source.
 
 The MES therefore reads back every write and compares it against what it
 sent. A field that did not survive raises, the confirmation stays in the
@@ -98,18 +100,50 @@ business's orders.
 
 ## Verified against
 
-A local Frappe bench during development (2026-08). **Not yet verified
-against a current stable ERPNext release in a clean container** — that test
-is on the list before the connector is called supported. See
-[compatibility](compatibility.md). If you run it against a real site, an
-issue with the versions of both sides is the most useful thing you can send.
+**ERPNext v15.120.0** — Frappe v15, MariaDB 10.6 — in a clean container, on
+every pull request that touches this connector. The `ERPNext (live)` job
+brings the site up from `labs/erpnext/docker-compose.yml` (images pinned to
+digests, listed in `labs/erpnext/VERSIONS.md`), runs ERPNext's setup wizard
+and `labs/erpnext/seed_erpnext.py`, and then runs `tests/test_erpnext_live.py`.
 
-Specifically unverified, as of 2026-09-09: that Frappe silently drops a `PUT`
-to a field the doctype does not have. That is what Frappe's own document
-layer does when you read it, and it is why the read-back check exists — but
-nobody here has watched a live ERPNext do it. If you have one, `fsmes erp
-check` on a site without the fields, and then `fsmes run-erp-sync`, would
-settle it.
+Every assertion in that round trip reads ERPNext's own documents back. What
+the MES believes it sent is not evidence. It proves:
+
+- a submitted Work Order reaches the MES with its item, quantity and dates;
+- acknowledging it sets `custom_mes_synced` on ERPNext's document, and the
+  next fetch no longer offers it;
+- a confirmation lands as the quantity fields and the lot on the Work Order,
+  as ERPNext's own `produced_qty`, as one submitted Manufacture stock entry
+  of the right quantity, and as a comment;
+- sending the same confirmation twice still leaves exactly one stock entry —
+  the retry that would otherwise book the plant's production twice;
+- `MES_ERPNEXT_POST_STOCK_ENTRY=false` still records every number;
+- the site written to is the one the `Host` header named.
+
+**Not covered, as of 2026-09-09.** ERPNext v16 — nothing here claims
+anything about it. The sync worker and the MES-side booking that decides
+what to confirm: the round trip drives the adapter, not `fsmes run-erp-sync`.
+Over-production, where the MES has counted more than the Work Order's
+quantity and ERPNext has an allowance of its own. A bench serving more than
+one company. See [compatibility](compatibility.md). If you run this against
+a real site, an issue with the versions of both sides is the most useful
+thing you can send.
+
+### What a missing custom field actually does
+
+Measured on ERPNext v15.120.0, not reasoned about: a `PUT` to a submitted
+Work Order naming a field the doctype does not have **succeeds**. Frappe
+answers `200`, the response is a normal document, and the value is neither
+stored nor returned. Nothing anywhere says a number was dropped.
+
+The experiment is `test_erpnext_takes_a_write_to_a_field_that_does_not_exist_and_loses_it`:
+it installs a probe custom field, proves a write to it survives, deletes the
+field, writes the same shape again, and reads the document back. It runs on
+every live job, so if ERPNext ever changes its mind, that is where it shows.
+
+This is why the read-back check above exists. ERPNext gives the connector no
+signal at all, so comparing what was written against the document that comes
+back is the only way to know a number landed.
 
 ## See also
 

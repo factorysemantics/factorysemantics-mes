@@ -101,10 +101,21 @@ jobs:
           echo "the site never answered 200 (last status ${code:-none}) after 60 attempts"
           exit 1
 
-      # The same script a person would run against their own bench. If it
-      # breaks, the documented way in is broken, and that is worth a red job
-      # on its own.
-      - name: Seed the plant and the custom fields
+      # The two commands the docs tell an operator to run, run against a real
+      # ERPNext. `check` exits non-zero when the connector would not work, so
+      # a wrong field type or a missing permission is a red job here rather
+      # than a lost number on someone's plant.
+      - name: fsmes erp setup, then fsmes erp check
+        run: |
+          set -euo pipefail
+          fsmes erp setup
+          fsmes erp check
+
+      # The same script a person would run against their own bench. It seeds
+      # the plant the round trip needs — company, items, routing, BOM, stock.
+      # If it breaks, the documented way in is broken, and that is worth a red
+      # job on its own.
+      - name: Seed the plant
         run: |
           set -euo pipefail
           started=$(date +%s)
@@ -116,7 +127,10 @@ jobs:
         run: |
           set -euo pipefail
           started=$(date +%s)
-          python -m pytest -m erpnext_live -v
+          # -s so the missing-field probe's measurement is in the log of a
+          # passing run. It is the point of that test; captured output that
+          # only appears on failure would hide the evidence.
+          python -m pytest -m erpnext_live -v -s
           echo "ERPNEXT_TEST_SECONDS=$(( $(date +%s) - started ))" >> "$GITHUB_ENV"
 
       # Frappe puts the reason for a 417 in the worker log, not in the
