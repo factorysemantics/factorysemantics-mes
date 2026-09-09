@@ -9,7 +9,13 @@ supersedes the old one. Steps are validated by the plant at save time against
 its own screens; a bad step is refused with its number, and nothing partial
 is stored.
 """
-import argparse, json, os, sys, urllib.error, urllib.request, http.cookiejar
+import argparse
+import http.cookiejar
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 ap = argparse.ArgumentParser()
@@ -24,7 +30,8 @@ docs = json.loads(Path(a.file).read_text(encoding="utf-8"))
 if a.dry_run:
     from fsmes.services import walkthroughs
     for d in docs:
-        walkthroughs.validate_steps(d["steps"]); walkthroughs.validate_needs(d.get("needs"))
+        walkthroughs.validate_steps(d["steps"])
+        walkthroughs.validate_needs(d.get("needs"))
         print("ok", d["code"], len(d["steps"]), "steps")
     sys.exit(0)
 
