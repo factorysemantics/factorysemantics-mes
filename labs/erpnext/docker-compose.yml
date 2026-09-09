@@ -1,0 +1,172 @@
+# A real ERPNext, for the round-trip test in .github/workflows/erpnext-live.yml.
+#
+# Layout follows frappe_docker's pwd.yml, with three deliberate differences:
+#
+#  1. Every image is pinned to a content digest, not a tag. A test whose
+#     meaning changes when somebody else pushes an image is not a test. The
+#     versions behind these digests are recorded in VERSIONS.md next to this
+#     file, and both must be changed together.
+#  2. The site is named `mes.localhost` and nginx picks the site from the Host
+#     header, which is how the connector addresses a multi-site bench. If that
+#     stops working the round trip goes red rather than quietly writing into
+#     the wrong site.
+#  3. No `scheduler` service. Nothing in the round trip waits on a scheduled
+#     job, and a container that does nothing still costs a runner memory.
+#
+# This is a lab fixture. It is not a deployment: the passwords are `admin`,
+# the database has no volume worth keeping, and it binds to localhost only.
+#
+# Nobody has to run this by hand. `docker compose -f labs/erpnext/docker-compose.yml up -d`
+# then wait for `create-site` to exit 0; the workflow does exactly that.
+
+x-erpnext: &erpnext
+  image: frappe/erpnext@sha256:ea656debafa8a60971d3c6e3cce65579e73793dc0b448154ec875f2f285ab7da
+  networks: [frappe]
+  volumes:
+    - sites:/home/frappe/frappe-bench/sites
+    - logs:/home/frappe/frappe-bench/logs
+
+services:
+  db:
+    image: mariadb@sha256:d2605a65e15be0c5adc943b16fa7cdc445cb4f3f3a9acbeaf3af6915397bc116
+    networks: [frappe]
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MARIADB_ROOT_PASSWORD: admin
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis-cache:
+    image: redis@sha256:1e008264230a4ac642f1c1165ab8856ff0c4e72f362200e13a3b814e3cc05695
+    networks: [frappe]
+
+  redis-queue:
+    image: redis@sha256:1e008264230a4ac642f1c1165ab8856ff0c4e72f362200e13a3b814e3cc05695
+    networks: [frappe]
+
+  # Writes sites/common_site_config.json, then exits. Everything else waits
+  # for it, because a bench with no config talks to no database.
+  configurator:
+    <<: *erpnext
+    entrypoint: ["bash", "-c"]
+    command:
+      - >
+        ls -1 apps > sites/apps.txt;
+        bench set-config -g db_host $$DB_HOST;
+        bench set-config -gp db_port $$DB_PORT;
+        bench set-config -g redis_cache "redis://$$REDIS_CACHE";
+        bench set-config -g redis_queue "redis://$$REDIS_QUEUE";
+        bench set-config -g redis_socketio "redis://$$REDIS_QUEUE";
+        bench set-config -gp socketio_port $$SOCKETIO_PORT;
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      REDIS_CACHE: redis-cache:6379
+      REDIS_QUEUE: redis-queue:6379
+      SOCKETIO_PORT: "9000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # The long pole: installs ERPNext into a fresh site. Exits 0 when the site
+  # can be used; the workflow waits on exactly that.
+  create-site:
+    <<: *erpnext
+    entrypoint: ["bash", "-c"]
+    command:
+      - >
+        wait-for-it -t 180 db:3306;
+        wait-for-it -t 180 redis-cache:6379;
+        wait-for-it -t 180 redis-queue:6379;
+        if [ -d "sites/mes.localhost" ]; then
+          echo "site mes.localhost already exists";
+          exit 0;
+        fi;
+        bench new-site
+        --mariadb-user-host-login-scope='%'
+        --admin-password=admin
+        --db-root-username=root
+        --db-root-password=admin
+        --install-app erpnext
+        --set-default mes.localhost;
+    depends_on:
+      configurator:
+        condition: service_completed_successfully
+
+  backend:
+    <<: *erpnext
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      MYSQL_ROOT_PASSWORD: admin
+      MARIADB_ROOT_PASSWORD: admin
+    depends_on:
+      create-site:
+        condition: service_completed_successfully
+
+  websocket:
+    <<: *erpnext
+    command: ["node", "/home/frappe/frappe-bench/apps/frappe/socketio.js"]
+    environment:
+      FRAPPE_REDIS_CACHE: redis://redis-cache:6379
+      FRAPPE_REDIS_QUEUE: redis://redis-queue:6379
+    depends_on:
+      create-site:
+        condition: service_completed_successfully
+
+  queue-short:
+    <<: *erpnext
+    command: ["bench", "worker", "--queue", "short,default"]
+    environment:
+      FRAPPE_REDIS_CACHE: redis://redis-cache:6379
+      FRAPPE_REDIS_QUEUE: redis://redis-queue:6379
+    depends_on:
+      create-site:
+        condition: service_completed_successfully
+
+  queue-long:
+    <<: *erpnext
+    command: ["bench", "worker", "--queue", "long,default,short"]
+    environment:
+      FRAPPE_REDIS_CACHE: redis://redis-cache:6379
+      FRAPPE_REDIS_QUEUE: redis://redis-queue:6379
+    depends_on:
+      create-site:
+        condition: service_completed_successfully
+
+  # FRAPPE_SITE_NAME_HEADER is `$$host` — nginx reads the site out of the Host
+  # header, exactly as a multi-site bench does. The connector sends
+  # `Host: mes.localhost`; if it stops, this stops working.
+  frontend:
+    <<: *erpnext
+    command: ["nginx-entrypoint.sh"]
+    environment:
+      BACKEND: backend:8000
+      SOCKETIO: websocket:9000
+      FRAPPE_SITE_NAME_HEADER: $$host
+      UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
+      UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
+      UPSTREAM_REAL_IP_RECURSIVE: "off"
+      PROXY_READ_TIMEOUT: "120"
+      CLIENT_MAX_BODY_SIZE: 50m
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      - backend
+      - websocket
+
+volumes:
+  sites:
+  logs:
+
+networks:
+  frappe:
+    driver: bridge
