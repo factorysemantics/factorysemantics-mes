@@ -5,10 +5,11 @@ auto-start a pending operation and auto-complete it when the order quantity
 is reached — the machine drives, the MES keeps the books.
 """
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from fsmes.domain import (
+    Equipment,
     LotConsumption,
     LotStatus,
     MaterialLot,
@@ -131,9 +132,19 @@ def report(
     """Book produced quantities against an operation.
 
     Address it either explicitly (order_code [+ seq]) or by machine
-    (equipment_code) — the latter is how OPC counter deltas arrive. Machine
-    counts with no active order are dropped (returns None): the machine ran,
-    but there is nothing to book against.
+    (equipment_code) — the latter is how OPC counter deltas arrive.
+
+    A counter delta may carry more than one unit, so a booking can straddle
+    the ordered quantity: fourteen booked, a delta of two, sixteen good
+    against an order for fifteen. All sixteen are booked. The machine made
+    them, and the order says so through `WorkOrder.over_qty`.
+
+    A machine count arriving when no operation is open is recorded as
+    *unassigned production* — a log row against the equipment with no order
+    — and `report` returns None because there was no operation to return.
+    The units are not lost; `unassigned_production` lists them. A person
+    typing the same count still gets an error, because a typed quantity
+    with no order open is a mistake worth stopping.
     """
     if good < 0 or scrap < 0:
         raise Invalid("quantities cannot be negative")
@@ -164,6 +175,7 @@ def report(
         )
         if op is None:
             if source is ProductionSource.OPC:
+                record_unassigned(session, equipment=equipment, good=good, scrap=scrap)
                 return None
             raise Invalid(f"no active operation on equipment {equipment_code!r}")
     else:
@@ -200,6 +212,76 @@ def report(
     if source is ProductionSource.OPC and op.good_qty >= wo.quantity:
         workorders.complete_operation(session, wo.code, op.seq, actor=actor)
     return op
+
+
+def record_unassigned(session: Session, *, equipment: Equipment,
+                      good: float = 0, scrap: float = 0) -> ProductionLog:
+    """Record units a machine counted with no order open to book them against.
+
+    House rule 1 is *never invent production*; this is its mirror. Guessing
+    which order these units belong to would invent an attribution, and
+    dropping them to a log line would erase production the plant really
+    made. So they are kept with the one fact that is certain — which machine
+    counted them, and when — and no fact that is not.
+    """
+    row = ProductionLog(
+        work_order_id=None,
+        operation_id=None,
+        equipment_id=equipment.id,
+        good_qty=good,
+        scrap_qty=scrap,
+        source=ProductionSource.OPC,
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
+def unassigned_production(session: Session, *, equipment_code: str | None = None,
+                          limit: int = 50, offset: int = 0) -> dict:
+    """Production counted with no order to book it against, newest first.
+
+    States its totals — rows, good units, scrap units — over the whole
+    selection and not just the page, because a page that does not say how
+    much it left out reads as the whole story.
+    """
+    query = select(ProductionLog).where(ProductionLog.work_order_id.is_(None))
+    if equipment_code:
+        query = query.where(
+            ProductionLog.equipment_id == masterdata.get_equipment(session, equipment_code).id)
+
+    selected = query.order_by(None).subquery()
+    totals = session.execute(
+        select(func.count(),
+               func.coalesce(func.sum(selected.c.good_qty), 0.0),
+               func.coalesce(func.sum(selected.c.scrap_qty), 0.0))
+        .select_from(selected)).one()
+
+    rows = session.scalars(
+        query.order_by(ProductionLog.id.desc()).limit(limit).offset(offset)).all()
+    # Only the machines this page mentions. A plant with three thousand of
+    # them should not read the equipment table to label fifty rows.
+    ids = {row.equipment_id for row in rows if row.equipment_id is not None}
+    codes = dict(session.execute(
+        select(Equipment.id, Equipment.code).where(Equipment.id.in_(ids))).all()) if ids else {}
+    return {
+        "items": [
+            {
+                "id": row.id,
+                "equipment": codes.get(row.equipment_id),
+                # Spelled out rather than left implicit: this is what makes
+                # the row readable next to an ordinary booking.
+                "order": None,
+                "good": row.good_qty,
+                "scrap": row.scrap_qty,
+                "ts": row.ts,
+            }
+            for row in rows
+        ],
+        "total": totals[0],
+        "good_total": totals[1],
+        "scrap_total": totals[2],
+    }
 
 
 def genealogy(session: Session, order_code: str) -> dict:

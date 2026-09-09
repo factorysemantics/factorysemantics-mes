@@ -127,6 +127,7 @@ nav:
           - decisions/0016-no-trademark-registration.md
           - decisions/0017-one-public-demo-gated-and-bounded.md
           - decisions/0018-public-on-2026-09-08-and-the-pre-tag-check.md
+          - decisions/0019-count-everything-the-machine-counted.md
           - Template: decisions/TEMPLATE.md
   - Agents:
       - agents/index.md

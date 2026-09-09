@@ -50,6 +50,10 @@ def render_production_performance(payload: dict) -> str:
         ("OrderedQuantity", "ordered_qty"),
         ("GoodQuantity", "good_qty"),
         ("ScrapQuantity", "scrap_qty"),
+        # Zero on an order that stopped where it was asked to, and written
+        # anyway: a reader who never sees the element cannot tell an order
+        # that did not over-run from one whose over-run was not reported.
+        ("OverQuantity", "over_qty"),
         ("Lot", "lot"),
         ("StartedAt", "started_at"),
         ("CompletedAt", "completed_at"),

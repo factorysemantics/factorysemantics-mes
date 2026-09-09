@@ -75,10 +75,22 @@ CUSTOM_FIELDS = [
         "description": "Machine-counted scrap. ERPNext has no native field for this.",
     },
     {
+        "fieldname": "custom_mes_over_qty",
+        "label": "MES Over Qty",
+        "fieldtype": "Float",
+        "insert_after": "custom_mes_scrap_qty",
+        "allow_on_submit": 1,
+        "read_only": 1,
+        "description": "How far past the ordered quantity the line actually ran. A counter "
+                       "delta can carry more than one unit, so an order for 15 can finish at "
+                       "16 good; this is the number that says so, rather than leaving a "
+                       "reader to notice that the good qty exceeds the order.",
+    },
+    {
         "fieldname": "custom_mes_lot",
         "label": "MES Lot",
         "fieldtype": "Data",
-        "insert_after": "custom_mes_scrap_qty",
+        "insert_after": "custom_mes_over_qty",
         "allow_on_submit": 1,
         "read_only": 1,
     },

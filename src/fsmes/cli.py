@@ -362,6 +362,22 @@ def run_mock_erp(host: str = "127.0.0.1", port: int = 8001) -> None:
     uvicorn.run(erp_app, host=host, port=port, log_config=None)
 
 
+def _order_completion(confirmations: list[dict], order_code: str) -> dict | None:
+    """The order completion for this order, out of everything the ERP holds.
+
+    Not `confirmations[-1]`. Operation confirmations and the order completion
+    are different messages with different fields — an operation does not make
+    a finished-goods lot, so it has no `lot` — and they arrive in whatever
+    order the outbox delivers them. Reading the last one that happened to
+    land is how the release check crashed on `KeyError: 'lot'`.
+    """
+    for message in reversed(confirmations):
+        if (message.get("kind", "production_confirmation") != "operation_confirmation"
+                and str(message.get("order")) == order_code):
+            return message
+    return None
+
+
 @app.command()
 def demo(duration: int = 90) -> None:
     """Run the entire twin in one process and push one order through the full loop:
@@ -381,14 +397,15 @@ def demo(duration: int = 90) -> None:
     typer.echo("Demo result: full loop closed - order booked, ERP confirmed, OEE reported.")
 
 
-def _loop_verdict(status: str, confirmations: list[dict], genealogy: dict, oee: dict) -> str | None:
+def _loop_verdict(status: str, completion: dict | None, genealogy: dict, oee: dict) -> str | None:
     """Why the demo's loop did not close, or None when it did.
 
     This exists because from the outside a demo that books nothing looked
     exactly like one that books everything. 0.1.0 shipped a wheel with no
     config files, so the simulator had no line to run, the order sat at
     `released` for the whole window, and `fsmes demo` still exited 0. The
-    three facts the demo claims - the order completed, the ERP was told, a
+    three facts the demo claims - the order completed, the ERP was told the
+    order was done, a
     finished lot exists - are checked here so the exit code means something
     and a release can be gated on it.
 
@@ -398,8 +415,11 @@ def _loop_verdict(status: str, confirmations: list[dict], genealogy: dict, oee: 
     """
     if status != "completed":
         return f"the order was still {status} when the demo stopped watching"
-    if not confirmations:
-        return "the ERP never received a confirmation"
+    if not completion:
+        # The order completion specifically, not any message: the operation
+        # confirmations go out first, so "some confirmation arrived" would
+        # have passed a run whose order was never closed to the ERP at all.
+        return "the ERP never received the order completion"
     if not genealogy.get("produced"):
         return "no finished lot was booked"
     if "oee" not in oee:
@@ -503,14 +523,15 @@ async def _demo(settings: Settings, duration: int) -> str | None:
             if status != "completed":
                 typer.echo(f"      Order still {status} after {duration}s - leaving it running; "
                            "check /kpis/orders when you come back.")
-                return _loop_verdict(status, [], {}, {})
+                return _loop_verdict(status, None, {}, {})
 
             typer.echo("[5/5] Order completed - the MES books the finished lot and confirms to the ERP")
             deadline = asyncio.get_event_loop().time() + 15
-            confirmations = []
-            while not confirmations and asyncio.get_event_loop().time() < deadline:
+            completion = None
+            while completion is None and asyncio.get_event_loop().time() < deadline:
                 await asyncio.sleep(1)
-                confirmations = (await http.get(f"{erp_url}/confirmations")).json()
+                completion = _order_completion(
+                    (await http.get(f"{erp_url}/confirmations")).json(), code)
 
             genealogy = (await http.get(f"{api_url}/execution/genealogy/{code}", headers=operator)).json()
             # OEE over the actual production window, so availability means something
@@ -518,10 +539,23 @@ async def _demo(settings: Settings, duration: int) -> str | None:
             oee = (await http.get(f"{api_url}/kpis/oee/MIX01", params={"hours": window_hours}, headers=operator)).json()
 
             typer.echo("\n=== MES-TWIN full-loop demo: complete ===")
-            if confirmations:
-                c = confirmations[-1]
-                typer.echo(f"ERP received the confirmation: {c['good_qty']:.0f} good / {c['scrap_qty']:.0f} scrap, "
-                           f"lot {c['lot']} (ref {c.get('erp_reference')})")
+            if completion:
+                over = float(completion.get("over_qty") or 0)
+                typer.echo(f"ERP received the confirmation: {completion['good_qty']:.0f} good / "
+                           f"{completion['scrap_qty']:.0f} scrap"
+                           + (f" ({over:.0f} over the ordered "
+                              f"{completion['ordered_qty']:.0f})" if over else "")
+                           + f", lot {completion.get('lot') or 'none'} "
+                             f"(ref {completion.get('erp_reference')})")
+            else:
+                typer.echo(f"ERP has not received the completion for {code} yet "
+                           "- check /erp/outbox; the operation confirmations may already be there.")
+
+            unassigned = (await http.get(f"{api_url}/execution/unassigned", headers=operator)).json()
+            if unassigned["total"]:
+                typer.echo(f"Unassigned production: {unassigned['good_total']:.0f} good / "
+                           f"{unassigned['scrap_total']:.0f} scrap counted with no order open "
+                           f"to book them against, in {unassigned['total']} bookings.")
             consumed = ", ".join(f"{c['lot']} ({c['quantity']:g})" for c in genealogy["consumed"])
             produced = ", ".join(f"{p['lot']} ({p['quantity']:g})" for p in genealogy["produced"])
             typer.echo(f"Genealogy: consumed {consumed} -> produced {produced}")
@@ -529,7 +563,7 @@ async def _demo(settings: Settings, duration: int) -> str | None:
                        f"performance {oee['performance']:.0%}, quality {oee['quality']:.0%} "
                        f"-> OEE {oee['oee']:.0%}" if oee["oee"] is not None else f"OEE MIX01: {oee}")
             typer.echo("The audit trail, tag history, and ERP message log for all of this are in the database.")
-            return _loop_verdict(status, confirmations, genealogy, oee)
+            return _loop_verdict(status, completion, genealogy, oee)
     finally:
         # Teardown: clients first (their worker threads drain against live
         # servers), then a graceful server exit. Noise here is not signal.

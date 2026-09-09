@@ -25,3 +25,4 @@ Declined ideas stay, so nobody re-proposes them without new facts.
 | [0016](0016-no-trademark-registration.md) | No trademark registration for the name | 2026-09-06 |
 | [0017](0017-one-public-demo-gated-and-bounded.md) | One public demo, gated by an emailed link and bounded by limits | 2026-09-07 |
 | [0018](0018-public-on-2026-09-08-and-the-pre-tag-check.md) | Public on 2026-09-08, and a release check that runs the built wheel | 2026-09-08 |
+| [0019](0019-count-everything-the-machine-counted.md) | Count everything the machine counted: over-runs are booked, surplus is unassigned production | 2026-09-09 |

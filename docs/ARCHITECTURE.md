@@ -66,7 +66,7 @@ Always present; everything else optional. Contents:
 | `personnel` | Personnel model | MES-TWIN |
 | `routings`, `routing_operations` | Operations definition / process segments | MES-TWIN |
 | `work_orders`, `work_order_operations` | Operations request → job order | MES-TWIN |
-| `production_logs` | Job response / operations performance | MES-TWIN |
+| `production_logs` | Job response / operations performance | MES-TWIN (a row may have no work order: [unassigned production](decisions/0019-count-everything-the-machine-counted.md)) |
 | `material_lots`, `lot_consumptions` | Material lot / sublot, material actual | MES-TWIN |
 | `equipment_states` | Equipment state intervals | MES-TWIN (+ PackML vocabulary, + `planned_stop`) |
 | `audit_log` | — (Part 11 pattern) | MES-TWIN |

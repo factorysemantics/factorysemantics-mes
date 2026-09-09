@@ -113,6 +113,28 @@ def report(body: ReportIn, db: DbDep, actor: ActorDep) -> dict:
     return {"order": op.order.code, "seq": op.seq, "good_qty": op.good_qty, "scrap_qty": op.scrap_qty} if op else {}
 
 
+@router.get("/unassigned")
+def unassigned(
+    db: DbDep,
+    equipment: str | None = Query(None, description="Only this machine."),
+    limit: int = paging.LimitQuery,
+    offset: int = paging.OffsetQuery,
+) -> dict:
+    """Units a machine counted with no order open to book them against.
+
+    A counter that runs past its order, or between orders, is still counting
+    real units. They are kept here rather than dropped to a log line, with
+    the one fact that is certain — which machine, and when — and no guess
+    about which order they belonged to. `good_total` and `scrap_total` are
+    for the whole selection, not the page.
+    """
+    result = execution.unassigned_production(db, equipment_code=equipment, limit=limit, offset=offset)
+    body = paging.page(result["items"], result["total"], limit, offset)
+    body["good_total"] = result["good_total"]
+    body["scrap_total"] = result["scrap_total"]
+    return body
+
+
 @router.get("/genealogy/{order_code}")
 def genealogy(order_code: str, db: DbDep) -> dict:
     return execution.genealogy(db, order_code)

@@ -30,9 +30,13 @@ def test_opc_counts_drive_order_to_completion(session, released_order):
     assert released_order.good_qty == 4
 
 
-def test_opc_counts_without_active_order_are_dropped(session):
+def test_opc_counts_without_an_active_order_return_no_operation_but_are_kept(session):
+    # There is no operation to hand back, and the units are still real: they
+    # go to the unassigned production list. tests/test_overproduction.py
+    # pins what the list says about them.
     result = execution.report(session, equipment_code="MIX01", good=3, source=ProductionSource.OPC)
     assert result is None
+    assert execution.unassigned_production(session)["good_total"] == 3
 
 
 def test_manual_report_requires_started_operation(session, released_order):

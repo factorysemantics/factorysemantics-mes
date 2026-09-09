@@ -127,12 +127,19 @@
           which is built for gloves.</p>
         <a id="operate-link" class="ghost" href="/dashboard/station">Open the station screen</a>
       </div>
+      <div class="panel">
+        <h2>Unassigned production <span id="unassigned-count" class="muted"></span></h2>
+        <p class="muted small">Units this machine counted with no order open to book them against —
+          kept, not discarded. A number here means the counter ran past its order or between orders.</p>
+        <ul id="unassigned" class="queue"></ul>
+      </div>
     </section>
   </main>
 
   <p class="screen-source">head /equipment/{code} · tags /equipment/{code}/tags · alarms /equipment/{code}/alarms ·
     trend /analysis/tag/{code}?tag= · timeline /analysis/timeline?equipment= · oee /equipment/{code}/oee ·
-    maintenance /maintenance/plans, /maintenance/orders · queue /workorders/dispatch</p>
+    maintenance /maintenance/plans, /maintenance/orders · queue /workorders/dispatch ·
+    unassigned /execution/unassigned?equipment=</p>
 </div>
 <div id="toast" class="toast hidden"></div>
 <script src="/static/common.js"></script>

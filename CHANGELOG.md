@@ -54,6 +54,30 @@ goes under Honesty with a migration line, so plant people can find it.
   held open across a network call; the OPC agent's adjustment loop was the
   one place doing that, and a test now keeps it that way. PostgreSQL is
   untouched — the change is gated on the SQLite dialect.
+### Honesty
+- **A unit a machine counted is never discarded.** A counter delta can carry
+  more than one unit, so a booking can straddle the ordered quantity: the
+  release check saw `16/15 good` on an order for fifteen, and the next unit
+  the machine counted became a warning line and nothing else. All sixteen
+  are booked, as before — the machine made them — and the order now says how
+  far past it ran (`over_qty`, in `GET /workorders/{code}` and in the ERP
+  order completion). Units counted when no operation is open are recorded as
+  **unassigned production**: kept against the machine, with no guess about
+  which order they belonged to, and listed with their totals at
+  `GET /execution/unassigned` and on the machine page's Operate tab.
+  See [decision 0019](docs/decisions/0019-count-everything-the-machine-counted.md).
+  Migration: `a3f6c81d09e2` makes `production_logs.work_order_id` nullable.
+  Existing rows are untouched. A plant that has been reading
+  `SUM(production_logs.good_qty)` as order-attributed production should now
+  filter on `work_order_id IS NOT NULL`, or read the wider number knowing
+  what it includes.
+
+### Fixed
+- `fsmes demo` crashed with `KeyError: 'lot'` at the end of a run. It printed
+  whichever ERP confirmation happened to arrive last, and an operation
+  confirmation has no finished-goods lot because an operation does not make
+  one. It now looks for the order completion for its own order, and says so
+  plainly if the completion has not arrived rather than crashing.
 
 ## [0.1.2] — 2026-09-08
 

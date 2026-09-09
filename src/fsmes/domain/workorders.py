@@ -70,6 +70,18 @@ class WorkOrder(Base):
     def scrap_qty(self) -> float:
         return sum(op.scrap_qty for op in self.operations)
 
+    @property
+    def over_qty(self) -> float:
+        """How far past the ordered quantity the line actually ran.
+
+        Counter deltas coalesce, so one booking can carry several units and
+        land the order on sixteen good against an order for fifteen. Sixteen
+        is what the machine counted and sixteen is what gets booked; this is
+        the number that says so out loud, instead of leaving a reader of the
+        screen to notice that 16/15 is not a typo.
+        """
+        return max(self.good_qty - self.quantity, 0.0)
+
 
 class WorkOrderOperation(Base):
     """A routing operation copied onto a specific order at creation time,
