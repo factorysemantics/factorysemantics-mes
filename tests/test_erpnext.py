@@ -14,20 +14,40 @@ from datetime import datetime
 import httpx
 import pytest
 
+from fsmes.integrations.erp import erpnext_setup
 from fsmes.integrations.erp.contract import ProductionRequest
 from fsmes.integrations.erp.erpnext_adapter import ErpNextAdapter, ErpNextClient, ErpNextError
 
+FIELD_TYPES = {f["fieldname"]: f["fieldtype"] for f in erpnext_setup.CUSTOM_FIELDS}
+
 
 class FakeErpNext:
-    """A scripted Frappe: records what it was asked, answers what it was told to."""
+    """A scripted Frappe: records what it was asked, answers what it was told to.
 
-    def __init__(self, work_orders=None, produced=0.0):
+    It keeps Frappe's one dangerous habit — a PUT naming a field the doctype
+    does not have succeeds, and the value is silently dropped from the
+    document that comes back. `custom_fields` says which of the MES's fields
+    this pretend site has; the default is a site that has been set up.
+    """
+
+    ALL_MES_FIELDS = tuple(erpnext_setup.FIELD_NAMES)
+
+    def __init__(self, work_orders=None, produced=0.0, custom_fields=ALL_MES_FIELDS, field_types=None):
         self.work_orders = work_orders if work_orders is not None else []
         self.produced = produced
+        self.custom_fields = list(custom_fields)
+        # A site where somebody made one of them by hand, with the wrong type.
+        self.field_types = dict(FIELD_TYPES, **(field_types or {}))
         self.updates: list[tuple[str, dict]] = []
         self.comments: list[str] = []
         self.stock_entries: list[dict] = []
         self.calls: list[str] = []
+
+    def _stored(self, name: str, values: dict) -> dict:
+        """What Frappe would return: the document, minus fields it has no column for."""
+        doc = {"name": name, "produced_qty": self.produced}
+        doc.update({key: value for key, value in values.items() if key in self.custom_fields})
+        return doc
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path
@@ -36,6 +56,19 @@ class FakeErpNext:
         if path == "/api/method/login":
             return httpx.Response(200, json={"message": "Logged In"})
 
+        if path == "/api/resource/Custom Field" and request.method == "GET":
+            asked = json.loads(request.url.params.get("filters", "[]"))
+            wanted = next((f[2] for f in asked if f[0] == "fieldname"), self.custom_fields)
+            return httpx.Response(200, json={"data": [
+                {"fieldname": f, "fieldtype": self.field_types.get(f, "Data"), "allow_on_submit": 1}
+                for f in self.custom_fields if f in wanted
+            ]})
+
+        if path == "/api/resource/Custom Field" and request.method == "POST":
+            doc = json.loads(request.content)
+            self.custom_fields.append(doc["fieldname"])
+            return httpx.Response(200, json={"data": doc})
+
         if path == "/api/resource/Work Order" and request.method == "GET":
             self.last_filters = json.loads(request.url.params.get("filters", "[]"))
             return httpx.Response(200, json={"data": self.work_orders})
@@ -43,8 +76,9 @@ class FakeErpNext:
         if path.startswith("/api/resource/Work Order/"):
             name = path.rsplit("/", 1)[-1].replace("%20", " ")
             if request.method == "PUT":
-                self.updates.append((name, json.loads(request.content)))
-                return httpx.Response(200, json={"data": {"name": name}})
+                values = json.loads(request.content)
+                self.updates.append((name, values))
+                return httpx.Response(200, json={"data": self._stored(name, values)})
             return httpx.Response(200, json={"data": {"name": name, "produced_qty": self.produced}})
 
         if path.endswith("work_order.make_stock_entry"):
@@ -67,13 +101,16 @@ class FakeErpNext:
         return httpx.Response(404, json={"exception": f"no route for {path}"})
 
 
-def make_adapter(fake: FakeErpNext, **kwargs) -> ErpNextAdapter:
-    client = ErpNextClient(
+def _client(fake: FakeErpNext) -> ErpNextClient:
+    return ErpNextClient(
         "http://erp.test",
         site="mes.localhost",
         client=httpx.Client(base_url="http://erp.test", transport=httpx.MockTransport(fake.handler)),
     )
-    return ErpNextAdapter(client, **kwargs)
+
+
+def make_adapter(fake: FakeErpNext, **kwargs) -> ErpNextAdapter:
+    return ErpNextAdapter(_client(fake), **kwargs)
 
 
 # ------------------------------------------------------------------- inbound
@@ -251,6 +288,113 @@ def test_the_site_header_is_sent_so_a_shared_bench_writes_to_the_right_company()
         ),
     ).list("Work Order")
     assert seen["host"] == "mes.localhost"
+
+
+# ------------------------------------------------- a site nobody prepared
+
+
+def test_a_field_ERPNext_silently_dropped_is_not_reported_as_delivered():
+    """Frappe answers 200 to a PUT naming a field the doctype does not have,
+    and the number is gone. If the MES took that for success it would mark the
+    confirmation delivered and the plant's count would exist nowhere."""
+    fake = FakeErpNext(custom_fields=[])
+    with pytest.raises(ErpNextError, match="custom_mes_good_qty"):
+        make_adapter(fake).send_confirmation(_confirmation())
+
+
+def test_an_order_cannot_look_acknowledged_on_a_site_without_the_field():
+    """Otherwise the same order is imported again on the next poll, forever,
+    while the log says it was acknowledged."""
+    fake = FakeErpNext(custom_fields=[])
+    with pytest.raises(ErpNextError, match="custom_mes_synced"):
+        make_adapter(fake).acknowledge("WO-1")
+
+
+def test_the_error_says_what_to_run():
+    fake = FakeErpNext(custom_fields=[])
+    with pytest.raises(ErpNextError, match="fsmes erp setup"):
+        make_adapter(fake).acknowledge("WO-1")
+
+
+def test_a_value_the_ERP_changed_is_not_reported_as_delivered():
+    """A field that exists but truncates, rounds hard, or is the wrong type is
+    the same failure wearing a different hat."""
+    fake = FakeErpNext()
+    original = fake._stored
+
+    def truncating(name, values):
+        doc = original(name, values)
+        if "custom_mes_lot" in doc:
+            doc["custom_mes_lot"] = doc["custom_mes_lot"][:4]
+        return doc
+
+    fake._stored = truncating
+    with pytest.raises(ErpNextError, match="custom_mes_lot"):
+        make_adapter(fake).send_confirmation(_confirmation())
+
+
+def test_the_rounding_a_real_ERPNext_does_is_not_treated_as_a_lost_number():
+    """ERPNext stores floats at the site's precision. Two decimals is a
+    rounding, not a dropped field, and must not fail a confirmation."""
+    fake = FakeErpNext()
+    original = fake._stored
+
+    def rounding(name, values):
+        doc = original(name, values)
+        for key in ("custom_mes_good_qty", "custom_mes_scrap_qty"):
+            if key in doc:
+                doc[key] = round(doc[key] + 0.004, 2)
+        return doc
+
+    fake._stored = rounding
+    make_adapter(fake).send_confirmation(_confirmation())
+    assert fake.stock_entries  # it got all the way through
+
+
+def test_setup_creates_the_four_fields_and_saying_it_twice_changes_nothing():
+    fake = FakeErpNext(custom_fields=[])
+    client = _client(fake)
+    first = erpnext_setup.ensure_custom_fields(client)
+    assert [what for _, what in first] == ["created"] * len(erpnext_setup.CUSTOM_FIELDS)
+    second = erpnext_setup.ensure_custom_fields(client)
+    assert [what for _, what in second] == ["already there"] * len(erpnext_setup.CUSTOM_FIELDS)
+    assert erpnext_setup.field_problems(client) == []
+
+
+def test_check_names_the_field_that_is_missing_rather_than_saying_misconfigured():
+    fake = FakeErpNext(custom_fields=["custom_mes_synced"])
+    ok, lines = erpnext_setup.check(_client(fake))
+    assert not ok
+    report = "\n".join(lines)
+    assert "custom_mes_good_qty is missing" in report
+    assert "custom_mes_lot is missing" in report
+    assert "fsmes erp setup" in report
+
+
+def test_check_fails_a_field_of_the_wrong_type_even_though_it_exists():
+    fake = FakeErpNext(field_types={"custom_mes_good_qty": "Data"})
+    ok, lines = erpnext_setup.check(_client(fake))
+    assert not ok
+    assert any("custom_mes_good_qty is a Data field" in line for line in lines)
+
+
+def test_check_says_so_when_the_site_cannot_be_reached_and_does_not_go_on():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403, json={"exception": "frappe.exceptions.PermissionError"})
+
+    client = ErpNextClient(
+        "http://erp.test", client=httpx.Client(base_url="http://erp.test", transport=httpx.MockTransport(handler))
+    )
+    ok, lines = erpnext_setup.check(client)
+    assert not ok
+    assert "cannot read Work Order" in lines[0]
+    assert len(lines) == 2  # the failure and what to check, not four more of the same
+
+
+def test_check_passes_on_a_prepared_site():
+    ok, lines = erpnext_setup.check(_client(FakeErpNext()))
+    assert ok
+    assert all(line.startswith("ok") for line in lines)
 
 
 # ----------------------------------------------------------------- live ERPNext
