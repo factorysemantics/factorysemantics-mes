@@ -7,8 +7,8 @@ run that proved the new pin green in the pull request.
 | Service | Image | Version | Digest |
 |---|---|---|---|
 | ERPNext / Frappe | `frappe/erpnext` | **v15.120.0** (released 2026-09-02) | `sha256:ea656debafa8a60971d3c6e3cce65579e73793dc0b448154ec875f2f285ab7da` |
-| Database | `mariadb` | 10.6 | `sha256:d2605a65e15be0c5adc943b16fa7cdc445cb4f3f3a9acbeaf3af6915397bc116` |
-| Redis (cache and queue) | `redis` | 6.2-alpine | `sha256:1e008264230a4ac642f1c1165ab8856ff0c4e72f362200e13a3b814e3cc05695` |
+| Database | `mariadb` | 10.6 | `sha256:1e008264230a4ac642f1c1165ab8856ff0c4e72f362200e13a3b814e3cc05695` |
+| Redis (cache and queue) | `redis` | 6.2-alpine | `sha256:d0c875bdacfb5c4d2c2d9124de3f53cee1dc9ceff8936bd459fabc135cb33015` |
 
 Digests read from Docker Hub on 2026-09-09. They are multi-architecture
 index digests; the workflow runs on `ubuntu-latest`, so what is actually
