@@ -46,11 +46,14 @@ goes under Honesty with a migration line, so plant people can find it.
   instead of waiting — `busy_timeout` covers waiting, not a refusal. The OPC
   agent's booking is that shape: it opens a savepoint per state change and
   writes inside it, which is why one CI run of `fsmes demo` lost two batches
-  of plant readings to it. Writing transactions on SQLite now begin with
+  of plant readings to it. Transactions on SQLite now begin with
   `BEGIN IMMEDIATE`, so the refusal becomes a wait that `busy_timeout` does
   cover. `busy_timeout` is also set before the WAL switch rather than after
-  it, so a new connection meeting a lock waits rather than failing.
-  PostgreSQL is untouched — the change is gated on the SQLite dialect.
+  it, so a new connection meeting a lock waits rather than failing. SQLite
+  now serialises transactions rather than only writes, so no session may be
+  held open across a network call; the OPC agent's adjustment loop was the
+  one place doing that, and a test now keeps it that way. PostgreSQL is
+  untouched — the change is gated on the SQLite dialect.
 
 ## [0.1.2] — 2026-09-08
 
