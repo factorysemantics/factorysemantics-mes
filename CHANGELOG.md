@@ -10,6 +10,21 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+### Added
+- **A unified-namespace publisher.** `fsmes uns publish` relays the MES's
+  own event stream — the transactional outbox the ERP connector already
+  delivers from — to an MQTT broker as JSON, under an ISA-95 topic tree
+  read out of the equipment model (`umh/v1/<enterprise>/<site>/<area>/<line>/<machine>/_mes/<kind>`).
+  Broker, credentials, prefix and the enterprise and site names are
+  settings; every rung between them comes from the plant's own equipment
+  codes, at whatever depth it modelled them. Delivery is at-least-once with
+  the outbox's retry, backoff and dead-letter behaviour, and every payload
+  carries the event id a consumer dedupes on. The MQTT client is the new
+  `[mqtt]` extra, so the core install does not grow a dependency;
+  `MES_UNS_MODE=log` prints the whole namespace without a broker.
+  `fsmes uns topics` and `fsmes uns queue` show the tree and the backlog.
+  Off by default. See [the unified namespace](docs/operate/uns.md).
+
 ## [0.1.2] — 2026-09-08
 
 ### Fixed

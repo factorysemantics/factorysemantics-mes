@@ -133,7 +133,7 @@ One repo, one installable dist to start; entry-point discovery means external mo
 | ORM/migrations | SQLAlchemy 2 + Alembic | Ported; SQLite/Postgres portability proven |
 | OPC UA | asyncua (2.x) | Ported agent; active upstream; server side powers simulators |
 | PLC drivers (later) | pymodbus, pylogix, python-snap7 3.x | Actively maintained, permissive; **not** pycomm3 (unmaintained) or PLC4Py (alpha) |
-| MQTT/UNS (later) | aiomqtt + pysparkplug | Sparkplug 3.0 is ISO/IEC 20237; cheap UNS compatibility |
+| MQTT/UNS | aiomqtt, in the `[mqtt]` extra; pysparkplug later | Outbound MQTT-JSON ships (`fsmes uns publish`, [how-to](operate/uns.md)); Sparkplug 3.0 is ISO/IEC 20237 and is a later envelope over the same events |
 | Scheduling | OR-Tools CP-SAT via PyJobShop (MIT) | State-of-the-art job-shop as a pip install; **not** Timefold (Python solver discontinued 2025-10) |
 | SPC | built here (~500 lines, numpy) | No maintained OSS lib; pyspc is GPL + dormant; the value is the MES wiring |
 | Historian | Postgres partitioning (+pg_partman); Timescale opt-in | One DB, zero extra ops for a solo maintainer |
