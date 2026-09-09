@@ -276,7 +276,110 @@ def run_erp_sync() -> None:
     if adapter is None:
         typer.echo("ERP mode is 'off' — nothing to run.")
         raise typer.Exit(1)
+    _warn_about_erpnext_fields(settings, adapter)
     asyncio.run(sync.run(adapter, settings.erp_poll_seconds))
+
+
+def _warn_about_erpnext_fields(settings: Settings, adapter) -> None:
+    """Say at start-up if the ERPNext side was never prepared.
+
+    A warning, not a refusal: the outbox is built to survive an ERP that is
+    down for an hour, and a worker that will not start because the ERP was
+    unreachable at the wrong second is worse than one that retries. What
+    must not happen is silence — so a missing field is on the console the
+    moment the worker comes up, and every write is checked besides.
+    """
+    if settings.erp_mode != "erpnext":
+        return
+    from fsmes.integrations.erp import erpnext_setup
+
+    try:
+        problems = erpnext_setup.field_problems(adapter.client)
+    except Exception as exc:
+        typer.echo(f"Could not check the ERPNext custom fields ({type(exc).__name__}: {exc}). Starting anyway.")
+        return
+    for problem in problems:
+        typer.echo(f"ERPNext is not ready: {problem}")
+    if problems:
+        typer.echo("Run `fsmes erp setup`. Until then confirmations will fail rather than be quietly lost.")
+
+
+erp_app = typer.Typer(help="The ERP connector: prepare the ERP side, and check it.")
+app.add_typer(erp_app, name="erp")
+
+
+def _erpnext_client():
+    """The configured ERPNext, or a plain refusal if ERPNext is not the mode."""
+    from fsmes.integrations.erp.erpnext_adapter import ErpNextClient
+
+    settings = get_settings()
+    if settings.erp_mode != "erpnext":
+        typer.echo(f"MES_ERP_MODE is {settings.erp_mode!r}, not 'erpnext' — these commands have nothing to do.")
+        raise typer.Exit(1)
+    try:
+        client = ErpNextClient(
+            settings.erpnext_base_url,
+            site=settings.erpnext_site,
+            user=settings.erpnext_user,
+            password=settings.erpnext_password,
+            api_key=settings.erpnext_api_key,
+            api_secret=settings.erpnext_api_secret,
+        )
+    except Exception as exc:
+        # Signing in happens in the constructor, so this is where a wrong URL,
+        # a wrong password or a site that is simply not there shows up. A
+        # traceback would be a worse answer than a sentence.
+        typer.echo(f"NOT OK  cannot sign in to {settings.erpnext_base_url}: {type(exc).__name__}: {exc}")
+        typer.echo("        check MES_ERPNEXT_BASE_URL, MES_ERPNEXT_SITE and the credentials.")
+        raise typer.Exit(1) from exc
+    return settings, client
+
+
+@erp_app.command("setup")
+def erp_setup() -> None:
+    """Create the custom fields the ERPNext connector needs, on the configured site.
+
+    Four fields on Work Order. ERPNext does not have them and will not
+    complain about writes to them, so until this has run the MES cannot see
+    which orders it has taken and its numbers go nowhere. Safe to run twice:
+    a field that exists is left exactly as it is.
+    """
+    from fsmes.integrations.erp import erpnext_setup
+
+    settings, client = _erpnext_client()
+    typer.echo(f"ERPNext at {settings.erpnext_base_url} (site {settings.erpnext_site or 'default'})")
+    try:
+        outcome = erpnext_setup.ensure_custom_fields(client)
+    finally:
+        client.close()
+    for fieldname, what in outcome:
+        typer.echo(f"  {fieldname:<22} {what}")
+    created = sum(1 for _, what in outcome if what == "created")
+    typer.echo(f"{len(outcome)} fields on Work Order: {created} created, {len(outcome) - created} already there.")
+    typer.echo("Run `fsmes erp check` to confirm the whole connection.")
+
+
+@erp_app.command("check")
+def erp_check() -> None:
+    """Say whether this MES can actually talk to the configured ERPNext.
+
+    The URL, the credentials, the custom fields and the company, each
+    answered separately, in words. Exits non-zero if anything would stop the
+    connector working, so it can gate a deployment.
+    """
+    from fsmes.integrations.erp import erpnext_setup
+
+    settings, client = _erpnext_client()
+    typer.echo(f"ERPNext at {settings.erpnext_base_url} (site {settings.erpnext_site or 'default'})")
+    try:
+        ok, lines = erpnext_setup.check(client, company=settings.erpnext_company)
+    finally:
+        client.close()
+    for line in lines:
+        typer.echo(line)
+    typer.echo("Ready." if ok else "Not ready — the connector would not work as configured.")
+    if not ok:
+        raise typer.Exit(1)
 
 
 uns_app = typer.Typer(help="Unified namespace: relay MES events to an MQTT broker.")
