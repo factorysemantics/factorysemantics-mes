@@ -44,6 +44,7 @@
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0016-no-trademark-registration/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0017-one-public-demo-gated-and-bounded/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0018-public-on-2026-09-08-and-the-pre-tag-check/)
+- [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0019-count-everything-the-machine-counted/)
 - [Develop — Decisions — Template](https://docs.factorysemantics.com/dev/decisions/TEMPLATE/)
 - [Agents](https://docs.factorysemantics.com/dev/agents/)
 - [Agents — How-to — connect an MCP client](https://docs.factorysemantics.com/dev/agents/connect-mcp-client/)

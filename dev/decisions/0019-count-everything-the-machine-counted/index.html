@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://docs.factorysemantics.com/dev/decisions/0003-one-mcp-server/">
+        <link rel="canonical" href="https://docs.factorysemantics.com/dev/decisions/0019-count-everything-the-machine-counted/">
       
       
-        <link rel="prev" href="../0002-kernel-and-modules/">
+        <link rel="prev" href="../0018-public-on-2026-09-08-and-the-pre-tag-check/">
       
       
-        <link rel="next" href="../0004-never-invent-production/">
+        <link rel="next" href="../TEMPLATE/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>0003 — One product MCP server with per-area tool files - FactorySemantics MES</title>
+        <title>0019 — Count everything the machine counted: over-runs are booked, surplus is unassigned production - FactorySemantics MES</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#0003-one-product-mcp-server-with-per-area-tool-files" class="md-skip">
+        <a href="#0019-count-everything-the-machine-counted-over-runs-are-booked-surplus-is-unassigned-production" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              0003 — One product MCP server with per-area tool files
+              0019 — Count everything the machine counted: over-runs are booked, surplus is unassigned production
             
           </span>
         </div>
@@ -1358,37 +1358,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    0003 — One product MCP server with per-area tool files
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../0003-one-mcp-server/" class="md-nav__link">
         
   
   
@@ -1404,81 +1377,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Context
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#options-considered" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Options considered
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Decision
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Consequences
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#house-rules-touched" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        House rules touched
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1908,10 +1806,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../0019-count-everything-the-machine-counted/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0019 — Count everything the machine counted: over-runs are booked, surplus is unassigned production
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1927,6 +1852,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options-considered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options considered
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#house-rules-touched" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        House rules touched
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2387,7 +2387,7 @@
 
 
   
-    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/decisions/0003-one-mcp-server.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/decisions/0019-count-everything-the-machine-counted.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -2395,14 +2395,28 @@
   
 
 
-<h1 id="0003-one-product-mcp-server-with-per-area-tool-files">0003 — One product MCP server with per-area tool files<a class="headerlink" href="#0003-one-product-mcp-server-with-per-area-tool-files" title="Permanent link">&para;</a></h1>
+<h1 id="0019-count-everything-the-machine-counted-over-runs-are-booked-surplus-is-unassigned-production">0019 — Count everything the machine counted: over-runs are booked, surplus is unassigned production<a class="headerlink" href="#0019-count-everything-the-machine-counted-over-runs-are-booked-surplus-is-unassigned-production" title="Permanent link">&para;</a></h1>
 <ul>
 <li><strong>Status:</strong> accepted</li>
-<li><strong>Date:</strong> 2026-09-02</li>
+<li><strong>Date:</strong> 2026-09-09</li>
 <li><strong>Deciders:</strong> @kalwei</li>
 </ul>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>"Every function callable via REST and MCP" was half true — the REST half. The architecture sketch had one MCP server per module. The first real agent surface (PR #22, #23) needed to ship in an evening and be operated as one thing.</p>
+<p>On 2026-09-09 the release check ran <code>fsmes demo</code> from a built wheel and printed
+<code>Pack on PACK01: 16/15 good</code>, then <code>machine counted with no active order
+equipment=PACK01 good=1</code>, then crashed.</p>
+<p>Three facts sat behind that. Counter readings coalesce to the latest value per
+machine per batch, so one booking can carry a delta of more than one unit — 14
+booked plus a delta of 2 is 16 against an order for 15. <code>execution.report</code> books
+the delta without reference to the order quantity and only afterwards asks
+whether the operation is finished, so the order completes at 16. The next delta
+then finds no operation that is not <code>DONE</code>, and the unit the machine really made
+existed only as a warning line.</p>
+<p>Sixteen units were made. The MES kept a record of fifteen of them.</p>
+<p>The crash was separate and is fixed alongside: the demo printed
+<code>confirmations[-1]['lot']</code>, and the message that happened to land last was an
+operation confirmation, which has no finished-goods lot because an operation
+does not make one.</p>
 <h2 id="options-considered">Options considered<a class="headerlink" href="#options-considered" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2414,23 +2428,61 @@
 </thead>
 <tbody>
 <tr>
-<td>One server, one tool file per area</td>
-<td>one process, one URL for a client, one audit identity (<code>AGENT</code>), tools grouped by file for ownership</td>
-<td>a plant cannot expose a subset without configuration (capability filtering does that instead)</td>
+<td>Book it and mark it; surplus counted with no order open becomes unassigned production</td>
+<td>every unit a machine counted survives, and nothing is attributed to an order that cannot be shown to own it</td>
+<td>a nullable <code>work_order_id</code>, and a list a plant has to look at</td>
 </tr>
 <tr>
-<td>One server per module</td>
-<td>isolation, per-module deployment</td>
-<td>N processes and N client entries for a five-person shop; agents lose cross-module questions</td>
+<td>Book to the order, then keep counting as unassigned production, but cap the order at its quantity</td>
+<td>the ERP's order never exceeds what was asked for</td>
+<td>the order's own good count would then differ from what the machine counted, which is the invented number this project exists not to print</td>
+</tr>
+<tr>
+<td>Cap and refuse: book 15, raise the surplus as an exception a person resolves</td>
+<td>cleanest for the ERP; a person looks at every over-run</td>
+<td>a real unit exists and the MES says it does not, until somebody clears a queue. That is inventing production with the sign reversed</td>
+</tr>
+<tr>
+<td>Attribute the surplus to the order that just closed on that machine</td>
+<td>tidy; usually right</td>
+<td>usually is not a fact. A machine between orders, jogged by hand, or running a second order would be booked to the wrong one, and nothing downstream could tell</td>
 </tr>
 </tbody>
 </table>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
-<p>The product exposes one MCP server (<code>fsmes.mcp_server</code>) whose tools live in <code>src/fsmes/mcp/&lt;area&gt;.py</code>. All tools go through each plant's HTTP API as the <code>AGENT</code> role; nothing touches the database. The simulation server stays separate because it must never be near a real plant.</p>
+<p>The MES books every unit a machine counts, and never guesses which order a unit
+belongs to.</p>
+<p>A counter delta that straddles the ordered quantity books in full. The operation
+completes as before, and the order reports <code>over_qty</code> — how far past the ordered
+quantity the line actually ran — on <code>GET /workorders/{code}</code> and in the ERP order
+completion, so an over-run reaches the ERP as its own number rather than as a
+good quantity that happens to be larger than the order.</p>
+<p>A count arriving when no operation is open is recorded as <strong>unassigned
+production</strong>: a production log row against the equipment with no work order.
+<code>production_logs.work_order_id</code> becomes nullable to hold it. These units are
+listed, with their totals, at <code>GET /execution/unassigned</code> and on the machine
+page's Operate tab. They are never rolled into an order.</p>
+<p>This applies to counter deltas only. A person typing a quantity against a machine
+with no order open still gets an error: a typed count with nothing to book it
+against is a mistake worth stopping, not a fact worth keeping.</p>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
-<p>Easy: a client connects once and sees the whole plant. Hard: the tool count (85 on 2026-09-07) needs the server's own instructions to steer an agent; capability-filtered tool surfaces per plant are the next step.</p>
+<p>Easier: the number on the screen is the number the machine said, at every
+quantity, and an over-run is visible instead of being a 16 next to a 15 that a
+reader has to notice.</p>
+<p>Harder: <code>production_logs</code> no longer means "production against an order". Anything
+summing it for order-attributed production must filter <code>work_order_id IS NOT
+NULL</code>. OEE and the machine rollups sum by equipment and are unaffected — and
+they are now more right, because the units they count are all there.</p>
+<p>To revisit: unassigned production is currently only listed. Whether a person
+should be able to assign it to an order after the fact — with the assignment
+recorded as a decision a person made, not as a count a machine reported — is a
+real question, and one to answer once a plant has looked at a list of these and
+said what it wants to do with them. Nothing here forecloses it.</p>
 <h2 id="house-rules-touched">House rules touched<a class="headerlink" href="#house-rules-touched" title="Permanent link">&para;</a></h2>
-<p>Rule 3 (agent-native): every write takes <code>dry_run</code>, <code>on_behalf_of</code> and <code>client_ref</code> — the write discipline page.</p>
+<p>Rules 1 and 2. Never invent production: no unit is attributed to an order that
+cannot be shown to own it, and no unit is deleted for want of one. Unknown is a
+valid answer: "these units exist and we do not know which order they belong to"
+is the honest record, and it is a list with a total rather than a zero.</p>
 
 
 
@@ -2468,7 +2520,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../0002-kernel-and-modules/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 0002 — A kernel plus modules that register through entry points">
+          <a href="../0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 0018 — Public on 2026-09-08, and a release check that runs the built wheel">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2478,20 +2530,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                0002 — A kernel plus modules that register through entry points
+                0018 — Public on 2026-09-08, and a release check that runs the built wheel
               </div>
             </div>
           </a>
         
         
           
-          <a href="../0004-never-invent-production/" class="md-footer__link md-footer__link--next" aria-label="Next: 0004 — Never invent production: the counter discipline">
+          <a href="../TEMPLATE/" class="md-footer__link md-footer__link--next" aria-label="Next: Template">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                0004 — Never invent production: the counter discipline
+                Template
               </div>
             </div>
             <div class="md-footer__button md-icon">

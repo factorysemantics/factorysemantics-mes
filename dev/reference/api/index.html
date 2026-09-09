@@ -2104,6 +2104,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0019-count-everything-the-machine-counted/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0019 — Count everything the machine counted: over-runs are booked, surplus is unassigned production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -2759,7 +2787,7 @@
 
 
 <h1 id="rest-api-reference">REST API reference<a class="headerlink" href="#rest-api-reference" title="Permanent link">&para;</a></h1>
-<p>Generated from the OpenAPI document at build time: 129 paths. A running instance serves the interactive version at <code>/docs</code> and the raw document at <code>/openapi.json</code>. Sign in at <code>POST /auth/login</code> and send <code>Authorization: Bearer &lt;token&gt;</code>; every write needs a role.</p>
+<p>Generated from the OpenAPI document at build time: 130 paths. A running instance serves the interactive version at <code>/docs</code> and the raw document at <code>/openapi.json</code>. Sign in at <code>POST /auth/login</code> and send <code>Authorization: Bearer &lt;token&gt;</code>; every write needs a role.</p>
 <h2 id="adjustments">adjustments<a class="headerlink" href="#adjustments" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -3194,6 +3222,11 @@
 <td><code>GET</code></td>
 <td><code>/execution/staging/{order_code}</code></td>
 <td>Staging</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/execution/unassigned</code></td>
+<td>Unassigned</td>
 </tr>
 </tbody>
 </table>
