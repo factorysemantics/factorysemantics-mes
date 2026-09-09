@@ -28,6 +28,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "src"))
 
 from fsmes.config import get_settings  # noqa: E402
+from fsmes.integrations.erp import erpnext_setup  # noqa: E402
 from fsmes.integrations.erp.erpnext_adapter import ErpNextClient, ErpNextError  # noqa: E402
 from fsmes.integrations.opc.tag_map import load_tag_map  # noqa: E402
 from fsmes.seed_kepsim import STATIONS, TAG_MAP  # noqa: E402
@@ -44,71 +45,19 @@ RAW = [
     ("RAW-WATER", "Treated Water", "Litre", 0.5, 50000, 0.01),
 ]
 
-# What ERPNext has nowhere to put: whether the MES has taken this order, and
-# what the machines actually counted. allow_on_submit because a submitted work
-# order is precisely when these change.
-CUSTOM_FIELDS = [
-    {
-        "fieldname": "custom_mes_synced",
-        "label": "Sent to MES",
-        "fieldtype": "Check",
-        "insert_after": "status",
-        "allow_on_submit": 1,
-        "read_only": 1,
-        "description": "Set by MES-TWIN when it imports this order. Clear it to re-send.",
-    },
-    {
-        "fieldname": "custom_mes_good_qty",
-        "label": "MES Good Qty",
-        "fieldtype": "Float",
-        "insert_after": "custom_mes_synced",
-        "allow_on_submit": 1,
-        "read_only": 1,
-    },
-    {
-        "fieldname": "custom_mes_scrap_qty",
-        "label": "MES Scrap Qty",
-        "fieldtype": "Float",
-        "insert_after": "custom_mes_good_qty",
-        "allow_on_submit": 1,
-        "read_only": 1,
-        "description": "Machine-counted scrap. ERPNext has no native field for this.",
-    },
-    {
-        "fieldname": "custom_mes_over_qty",
-        "label": "MES Over Qty",
-        "fieldtype": "Float",
-        "insert_after": "custom_mes_scrap_qty",
-        "allow_on_submit": 1,
-        "read_only": 1,
-        "description": "How far past the ordered quantity the line actually ran. A counter "
-                       "delta can carry more than one unit, so an order for 15 can finish at "
-                       "16 good; this is the number that says so, rather than leaving a "
-                       "reader to notice that the good qty exceeds the order.",
-    },
-    {
-        "fieldname": "custom_mes_lot",
-        "label": "MES Lot",
-        "fieldtype": "Data",
-        "insert_after": "custom_mes_over_qty",
-        "allow_on_submit": 1,
-        "read_only": 1,
-    },
-]
-
 
 def log(message: str) -> None:
     print(message, flush=True)
 
 
 def ensure_custom_fields(client: ErpNextClient) -> None:
-    for field in CUSTOM_FIELDS:
-        name = f"Work Order-{field['fieldname']}"
-        if client.exists("Custom Field", name):
-            log(f"  custom field {field['fieldname']:<22} exists")
-            continue
-        client.insert("Custom Field", {"dt": "Work Order", **field})
-        log(f"  custom field {field['fieldname']:<22} created")
+    """The same fields `fsmes erp setup` creates, defined once in the package.
+
+    They used to be defined here, which is why a person who installed the
+    wheel had no way to create them at all.
+    """
+    for fieldname, what in erpnext_setup.ensure_custom_fields(client):
+        log(f"  custom field {fieldname:<22} {what}")
 
 
 def ensure_company(client: ErpNextClient) -> None:
