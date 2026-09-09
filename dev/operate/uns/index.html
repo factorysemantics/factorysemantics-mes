@@ -10,27 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://docs.factorysemantics.com/dev/design/backlog/scrap-reason-codes/">
+        <link rel="canonical" href="https://docs.factorysemantics.com/dev/operate/uns/">
       
       
+        <link rel="prev" href="../erpnext/">
+      
+      
+        <link rel="next" href="../../reference/settings/">
       
       
         
       
       
-      <link rel="icon" href="../../../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.7">
     
     
       
-        <title>Scrap needs a reason code - FactorySemantics MES</title>
+        <title>How-to — the unified namespace (MQTT) - FactorySemantics MES</title>
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -49,9 +53,9 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#scrap-needs-a-reason-code" class="md-skip">
+        <a href="#the-unified-namespace-mqtt" class="md-skip">
           Skip to content
         </a>
       
@@ -94,7 +98,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="FactorySemantics MES" class="md-header__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+    <a href="../.." title="FactorySemantics MES" class="md-header__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -114,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Scrap needs a reason code
+              How-to — the unified namespace (MQTT)
             
           </span>
         </div>
@@ -227,7 +231,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../.." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -248,7 +252,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../plant/" class="md-tabs__link">
+        <a href="../../plant/" class="md-tabs__link">
           
   
   
@@ -264,11 +268,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../../operate/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -288,7 +294,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../develop/" class="md-tabs__link">
+        <a href="../../develop/" class="md-tabs__link">
           
   
   
@@ -308,7 +314,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../agents/" class="md-tabs__link">
+        <a href="../../agents/" class="md-tabs__link">
           
   
   
@@ -328,7 +334,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../LANDSCAPE/" class="md-tabs__link">
+        <a href="../../LANDSCAPE/" class="md-tabs__link">
           
   
   
@@ -362,7 +368,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="FactorySemantics MES" class="md-nav__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+    <a href="../.." title="FactorySemantics MES" class="md-nav__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -392,7 +398,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -471,7 +477,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../plant/" class="md-nav__link">
+      <a href="../../plant/" class="md-nav__link">
         
   
   
@@ -499,7 +505,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../plant/first-line/" class="md-nav__link">
+      <a href="../../plant/first-line/" class="md-nav__link">
         
   
   
@@ -579,7 +585,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../onboarding/GUIDE-IT/" class="md-nav__link">
+      <a href="../../onboarding/GUIDE-IT/" class="md-nav__link">
         
   
   
@@ -607,7 +613,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../onboarding/GUIDE-ENGINEERING/" class="md-nav__link">
+      <a href="../../onboarding/GUIDE-ENGINEERING/" class="md-nav__link">
         
   
   
@@ -643,7 +649,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../plant/reading-oee/" class="md-nav__link">
+      <a href="../../plant/reading-oee/" class="md-nav__link">
         
   
   
@@ -671,7 +677,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../plant/never-invent-production/" class="md-nav__link">
+      <a href="../../plant/never-invent-production/" class="md-nav__link">
         
   
   
@@ -703,26 +709,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -740,7 +751,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -758,7 +769,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -786,7 +797,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/deploy/" class="md-nav__link">
+      <a href="../deploy/" class="md-nav__link">
         
   
   
@@ -814,7 +825,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/registry/" class="md-nav__link">
+      <a href="../registry/" class="md-nav__link">
         
   
   
@@ -842,7 +853,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/erpnext/" class="md-nav__link">
+      <a href="../erpnext/" class="md-nav__link">
         
   
   
@@ -867,10 +878,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../../operate/uns/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the unified namespace (MQTT)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -886,6 +924,120 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#configure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-topic-tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The topic tree
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The topic tree">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#matching-united-manufacturing-hub" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Matching United Manufacturing Hub
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-one-event-looks-like" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What one event looks like
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#delivery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Delivery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-published-today" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is published today
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verified-against" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verified against
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -898,7 +1050,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/settings/" class="md-nav__link">
+      <a href="../../reference/settings/" class="md-nav__link">
         
   
   
@@ -926,7 +1078,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/cli/" class="md-nav__link">
+      <a href="../../reference/cli/" class="md-nav__link">
         
   
   
@@ -954,7 +1106,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/" class="md-nav__link">
+      <a href="../../reference/api/" class="md-nav__link">
         
   
   
@@ -982,7 +1134,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/compatibility/" class="md-nav__link">
+      <a href="../compatibility/" class="md-nav__link">
         
   
   
@@ -1010,7 +1162,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/security/" class="md-nav__link">
+      <a href="../security/" class="md-nav__link">
         
   
   
@@ -1097,7 +1249,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../develop/" class="md-nav__link">
+      <a href="../../develop/" class="md-nav__link">
         
   
   
@@ -1125,7 +1277,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../ARCHITECTURE/" class="md-nav__link">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
         
   
   
@@ -1153,7 +1305,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../develop/your-first-module/" class="md-nav__link">
+      <a href="../../develop/your-first-module/" class="md-nav__link">
         
   
   
@@ -1181,7 +1333,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../STYLE/" class="md-nav__link">
+      <a href="../../design/STYLE/" class="md-nav__link">
         
   
   
@@ -1261,7 +1413,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/" class="md-nav__link">
+      <a href="../../decisions/" class="md-nav__link">
         
   
   
@@ -1289,7 +1441,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0001-apache-2-with-dco/" class="md-nav__link">
+      <a href="../../decisions/0001-apache-2-with-dco/" class="md-nav__link">
         
   
   
@@ -1317,7 +1469,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0002-kernel-and-modules/" class="md-nav__link">
+      <a href="../../decisions/0002-kernel-and-modules/" class="md-nav__link">
         
   
   
@@ -1345,7 +1497,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0003-one-mcp-server/" class="md-nav__link">
+      <a href="../../decisions/0003-one-mcp-server/" class="md-nav__link">
         
   
   
@@ -1373,7 +1525,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0004-never-invent-production/" class="md-nav__link">
+      <a href="../../decisions/0004-never-invent-production/" class="md-nav__link">
         
   
   
@@ -1401,7 +1553,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0005-plain-html-no-build-step/" class="md-nav__link">
+      <a href="../../decisions/0005-plain-html-no-build-step/" class="md-nav__link">
         
   
   
@@ -1429,7 +1581,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
+      <a href="../../decisions/0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
         
   
   
@@ -1457,7 +1609,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0007-fresh-public-history/" class="md-nav__link">
+      <a href="../../decisions/0007-fresh-public-history/" class="md-nav__link">
         
   
   
@@ -1485,7 +1637,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0008-erp-connectors-are-modules/" class="md-nav__link">
+      <a href="../../decisions/0008-erp-connectors-are-modules/" class="md-nav__link">
         
   
   
@@ -1513,7 +1665,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0009-organisation-not-personal-account/" class="md-nav__link">
+      <a href="../../decisions/0009-organisation-not-personal-account/" class="md-nav__link">
         
   
   
@@ -1541,7 +1693,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0010-github-discussions-only/" class="md-nav__link">
+      <a href="../../decisions/0010-github-discussions-only/" class="md-nav__link">
         
   
   
@@ -1569,7 +1721,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0011-mkdocs-material-generated-reference/" class="md-nav__link">
+      <a href="../../decisions/0011-mkdocs-material-generated-reference/" class="md-nav__link">
         
   
   
@@ -1597,7 +1749,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0012-contributor-covenant-3/" class="md-nav__link">
+      <a href="../../decisions/0012-contributor-covenant-3/" class="md-nav__link">
         
   
   
@@ -1625,7 +1777,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0013-governance-is-one-page/" class="md-nav__link">
+      <a href="../../decisions/0013-governance-is-one-page/" class="md-nav__link">
         
   
   
@@ -1653,7 +1805,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0014-first-public-version-is-0-1-0/" class="md-nav__link">
+      <a href="../../decisions/0014-first-public-version-is-0-1-0/" class="md-nav__link">
         
   
   
@@ -1681,7 +1833,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0015-mcp-registry-name/" class="md-nav__link">
+      <a href="../../decisions/0015-mcp-registry-name/" class="md-nav__link">
         
   
   
@@ -1709,7 +1861,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0016-no-trademark-registration/" class="md-nav__link">
+      <a href="../../decisions/0016-no-trademark-registration/" class="md-nav__link">
         
   
   
@@ -1737,7 +1889,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
+      <a href="../../decisions/0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
         
   
   
@@ -1765,7 +1917,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
+      <a href="../../decisions/0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
         
   
   
@@ -1793,7 +1945,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/TEMPLATE/" class="md-nav__link">
+      <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
   
@@ -1888,7 +2040,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../agents/" class="md-nav__link">
+      <a href="../../agents/" class="md-nav__link">
         
   
   
@@ -1916,7 +2068,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../agents/connect-mcp-client/" class="md-nav__link">
+      <a href="../../agents/connect-mcp-client/" class="md-nav__link">
         
   
   
@@ -1944,7 +2096,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/tools/" class="md-nav__link">
+      <a href="../../reference/tools/" class="md-nav__link">
         
   
   
@@ -1972,7 +2124,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../agents/write-discipline/" class="md-nav__link">
+      <a href="../../agents/write-discipline/" class="md-nav__link">
         
   
   
@@ -2000,7 +2152,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../agents/evals/" class="md-nav__link">
+      <a href="../../agents/evals/" class="md-nav__link">
         
   
   
@@ -2087,7 +2239,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../LANDSCAPE/" class="md-nav__link">
+      <a href="../../LANDSCAPE/" class="md-nav__link">
         
   
   
@@ -2115,7 +2267,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../history/private-era/" class="md-nav__link">
+      <a href="../../history/private-era/" class="md-nav__link">
         
   
   
@@ -2170,10 +2322,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-idea" class="md-nav__link">
+  <a href="#configure" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The idea
+        Configure
       
     </span>
   </a>
@@ -2181,10 +2333,38 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#assessment" class="md-nav__link">
+  <a href="#the-topic-tree" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Assessment
+        The topic tree
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The topic tree">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#matching-united-manufacturing-hub" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Matching United Manufacturing Hub
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-one-event-looks-like" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What one event looks like
       
     </span>
   </a>
@@ -2192,10 +2372,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#questions" class="md-nav__link">
+  <a href="#delivery" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Questions
+        Delivery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-published-today" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is published today
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verified-against" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verified against
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
       
     </span>
   </a>
@@ -2219,7 +2432,7 @@
 
 
   
-    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/design/backlog/scrap-reason-codes.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/operate/uns.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -2227,40 +2440,173 @@
   
 
 
-<h1 id="scrap-needs-a-reason-code">Scrap needs a reason code<a class="headerlink" href="#scrap-needs-a-reason-code" title="Permanent link">&para;</a></h1>
-<p><strong>needs-guidance</strong> — ProductionLog has no reason column, so every scrap figure is unattributed. Schema change.</p>
-<h2 id="the-idea">The idea<a class="headerlink" href="#the-idea" title="Permanent link">&para;</a></h2>
-<p>Split out of the "Report production" message: scrap is recorded as a bare
-number.</p>
-<h2 id="assessment">Assessment<a class="headerlink" href="#assessment" title="Permanent link">&para;</a></h2>
-<p><code>ProductionLog</code> has <code>good_qty</code> and <code>scrap_qty</code> and <strong>no reason column</strong>
-(<code>src/fsmes/domain/execution.py</code>). <code>WorkOrderOperation.scrap_qty</code> is likewise a
-float with nothing attached. So every scrap figure this MES holds is
-unattributed, and scrap without a reason is a number nobody can act on — it
-tells a supervisor that something is wrong and nothing about what.</p>
-<p>It is probably the highest-value single field missing from the product. It is
-also a schema change, so by rule it stops here for a decision rather than
-becoming a branch.</p>
-<h2 id="questions">Questions<a class="headerlink" href="#questions" title="Permanent link">&para;</a></h2>
-<ol>
-<li>A reason-code list as <strong>master data per plant</strong> (principle 7 — config, not
-   code), or a fixed enum in the product? Per-plant is consistent with
-   everything else here and is more work.</li>
-<li>Required when scrap &gt; 0, or optional? Required is right and will annoy
-   operators on day one. That is your call, not mine.</li>
-<li>What happens to scrap already booked — a null reason, or an explicit
-   "not recorded" code? Principle 4 argues for the explicit code: a blank reads
-   as an omission, where the truth is that the field did not exist.</li>
-</ol>
+<h1 id="the-unified-namespace-mqtt">The unified namespace (MQTT)<a class="headerlink" href="#the-unified-namespace-mqtt" title="Permanent link">&para;</a></h1>
+<p><em>How-to. Every event the MES records, on your broker, under an ISA-95 topic tree, with no code on the consumer's side.</em></p>
+<p>Plants that move data already have a broker. Node-RED, United Manufacturing
+Hub, Ignition and half the Grafana stacks on a shop floor read MQTT, and
+what they want from an MES is not an API to call — it is for the MES to
+show up in the namespace they already have. <code>fsmes uns publish</code> is that: a
+worker that relays the MES's own event stream to MQTT as JSON.</p>
+<p>It is a relay, not a second source of truth. The events are the ones the
+MES already wrote to its transactional outbox — the same stream the ERP
+connector delivers from — so nothing published here was invented for the
+broker's benefit, and turning the publisher off loses nothing.</p>
+<h2 id="configure">Configure<a class="headerlink" href="#configure" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="nv">MES_UNS_MODE</span><span class="o">=</span>mqtt<span class="w">                     </span><span class="c1"># off (default) | mqtt | log</span>
+<span class="nv">MES_UNS_BROKER_URL</span><span class="o">=</span>mqtt://broker.plant.example:1883<span class="w">   </span><span class="c1"># mqtts:// for TLS</span>
+<span class="nv">MES_UNS_USERNAME</span><span class="o">=</span>mes
+<span class="nv">MES_UNS_PASSWORD</span><span class="o">=</span>...<span class="w">                  </span><span class="c1"># beats a password written into the URL</span>
+<span class="nv">MES_UNS_CLIENT_ID</span><span class="o">=</span>fsmes<span class="w">               </span><span class="c1"># per MES instance; brokers evict a duplicate id</span>
+<span class="nv">MES_UNS_TOPIC_PREFIX</span><span class="o">=</span>umh/v1
+<span class="nv">MES_UNS_ENTERPRISE</span><span class="o">=</span><span class="w">                   </span><span class="c1"># empty: use the enterprise the equipment model holds</span>
+<span class="nv">MES_UNS_SITE</span><span class="o">=</span><span class="w">                         </span><span class="c1"># empty: use the site the equipment model holds</span>
+<span class="nv">MES_UNS_SCHEMA</span><span class="o">=</span>_mes
+<span class="nv">MES_UNS_QOS</span><span class="o">=</span><span class="m">1</span>
+<span class="nv">MES_UNS_RETAIN</span><span class="o">=</span><span class="nb">false</span>
+<span class="nv">MES_UNS_POLL_SECONDS</span><span class="o">=</span><span class="m">2</span>
+</code></pre></div>
+<p>The MQTT client is an optional extra, because a plant PC that does not
+speak MQTT should not carry an MQTT library:</p>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'factorysemantics-mes[mqtt]'</span>
+</code></pre></div>
+<p>Then run the worker:</p>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>uns<span class="w"> </span>publish<span class="w">            </span><span class="c1"># forever; this is what systemd or Compose runs</span>
+fsmes<span class="w"> </span>uns<span class="w"> </span>publish<span class="w"> </span>--once<span class="w">     </span><span class="c1"># one cycle, and say what it did</span>
+fsmes<span class="w"> </span>uns<span class="w"> </span>topics<span class="w">             </span><span class="c1"># the topic tree, before a single event exists</span>
+fsmes<span class="w"> </span>uns<span class="w"> </span>queue<span class="w">              </span><span class="c1"># what has been published and what is still owed</span>
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">No broker yet?</p>
+<p><code>MES_UNS_MODE=log</code> builds every topic and payload and writes them to the
+log without contacting anything. It is the way to agree the topic tree
+with whoever owns the broker before asking them for credentials.</p>
+</div>
+<h2 id="the-topic-tree">The topic tree<a class="headerlink" href="#the-topic-tree" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>&lt;prefix&gt;/&lt;enterprise&gt;/&lt;site&gt;/&lt;area&gt;/&lt;work centre&gt;/…/&lt;work unit&gt;/&lt;schema&gt;/&lt;event kind&gt;
+</code></pre></div>
+<p>Only the prefix, the enterprise, the site and the schema are settings.
+Everything between them is read out of the equipment model the MES already
+holds, at whatever depth the plant modelled it — a site with cells between
+its lines and its machines publishes the cells too.</p>
+<p>For the demo plant (<code>ACME</code> → <code>KC1</code> → <code>PKG</code> → <code>LINE1</code> → <code>MIX01</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Topic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>operation confirmation on a machine</td>
+<td><code>umh/v1/ACME/KC1/PKG/LINE1/MIX01/_mes/operation_confirmation</code></td>
+</tr>
+<tr>
+<td>order completion (no machine)</td>
+<td><code>umh/v1/ACME/KC1/_mes/order_completion</code></td>
+</tr>
+</tbody>
+</table>
+<p>Three rules that are house rules rather than MQTT rules:</p>
+<ul>
+<li><strong>A level the plant has not modelled is published as <code>unknown</code>.</strong> It is
+  not guessed from the level above and it is not left out, because a
+  consumer counting topics would otherwise count a machine as belonging to
+  the line above it. Two sites in one database and no <code>MES_UNS_SITE</code> set
+  gives <code>unknown</code> for order-level events, and that is the honest answer.</li>
+<li><strong>An event that names no machine publishes at the site.</strong> An order
+  completion is an order-level fact; hanging it under a machine would tell
+  the namespace that machine finished the order.</li>
+<li><strong>Nothing is dropped for being unrecognised.</strong> A confirmation naming a
+  machine the master data does not hold publishes under its own code, and
+  an event kind the publisher has never seen gets its own topic.</li>
+</ul>
+<p>Characters MQTT reserves — <code>/</code>, <code>+</code>, <code>#</code> — and anything outside
+<code>A-Z a-z 0-9 _ . : @ = -</code> are replaced with <code>_</code> in every segment.</p>
+<h3 id="matching-united-manufacturing-hub">Matching United Manufacturing Hub<a class="headerlink" href="#matching-united-manufacturing-hub" title="Permanent link">&para;</a></h3>
+<p>UMH's convention is
+<code>umh/v1/&lt;enterprise&gt;/&lt;site&gt;/&lt;area&gt;/&lt;line&gt;/&lt;cell&gt;/_&lt;schema&gt;/&lt;tag&gt;</code>. The
+defaults are already that shape; naming the enterprise and site the way
+UMH's own configuration does completes it:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">MES_UNS_TOPIC_PREFIX</span><span class="o">=</span>umh/v1
+<span class="nv">MES_UNS_ENTERPRISE</span><span class="o">=</span>acme
+<span class="nv">MES_UNS_SITE</span><span class="o">=</span>kansas-city
+<span class="nv">MES_UNS_SCHEMA</span><span class="o">=</span>_historian
+</code></pre></div>
+<p>That publishes <code>umh/v1/acme/kansas-city/PKG/LINE1/MIX01/_historian/operation_confirmation</code>.
+The area, line and machine segments stay the plant's own equipment codes,
+because those are the names the plant uses on the floor and in the MES.</p>
+<h2 id="what-one-event-looks-like">What one event looks like<a class="headerlink" href="#what-one-event-looks-like" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"schema_version"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"factorysemantics-mes"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"plant"</span><span class="p">:</span><span class="w"> </span><span class="s2">"kc1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"event_id"</span><span class="p">:</span><span class="w"> </span><span class="mi">4182</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"message_key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"WO-1004:op20"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"operation_confirmation"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"direction"</span><span class="p">:</span><span class="w"> </span><span class="s2">"out"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"recorded_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-09-09T11:04:07.221Z"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"published_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-09-09T11:04:09.008Z"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"payload"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"..."</span><span class="p">:</span><span class="w"> </span><span class="s2">"the MES's own event, unchanged"</span><span class="w"> </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><code>payload</code> is the outbox message as the MES recorded it, so a consumer that
+reads <a href="https://github.com/factorysemantics/factorysemantics-mes/blob/main/src/fsmes/integrations/erp/contract.py">the ERP contract</a>
+reads this. <code>recorded_at</code> is when the MES recorded the event, not when the
+broker heard about it — a backlog delivered after an outage must not read
+as a burst of production that happened at reconnect time.</p>
+<h2 id="delivery">Delivery<a class="headerlink" href="#delivery" title="Permanent link">&para;</a></h2>
+<p>At-least-once, and deliberately not more:</p>
+<ul>
+<li>Every outbox event is enrolled for publication exactly once, and the
+  publisher keeps its own delivery record, so it never consumes events the
+  ERP connector is still waiting to send.</li>
+<li>A publish that fails backs off — 5 s, 10 s, 20 s, up to an hour — and
+  after eight attempts the event is marked dead. Dead is not deleted: an
+  event the namespace never received is a fact somebody has to decide
+  about. <code>fsmes uns queue</code> lists them.</li>
+<li>A consumer <strong>will</strong> see the same event twice after a broker hiccup.
+  <code>event_id</code> (with <code>plant</code>, if you merge several MES databases into one
+  namespace) is what it dedupes on. There is no exactly-once here and there
+  is not going to be; that promise cannot be kept across a network.</li>
+<li>Events are not retained by default. A retained event is replayed to every
+  new subscriber as though it had just happened.</li>
+</ul>
+<p>The worker outlives the broker. If the broker is down when it starts, or
+goes away mid-shift, events queue in the database and go out in order when
+it returns. The MES itself never blocks on the broker.</p>
+<h2 id="what-is-published-today">What is published today<a class="headerlink" href="#what-is-published-today" title="Permanent link">&para;</a></h2>
+<p>The events the outbox carries: <strong>operation confirmations</strong> (what one
+operation of one order did — quantities, times, cost centre, lots consumed)
+and <strong>order completions</strong>. Equipment state changes, holds and OEE windows
+are recorded by the MES but are not in the outbox yet; when they are, the
+publisher picks them up with no change here, because it publishes whatever
+kind it finds.</p>
+<p>Sparkplug B is a later envelope over the same work — see the
+<a href="https://github.com/factorysemantics/factorysemantics-mes/blob/main/ROADMAP.md">roadmap</a>.
+MQTT-JSON first, because it is what a Node-RED flow can read in an
+afternoon.</p>
+<h2 id="verified-against">Verified against<a class="headerlink" href="#verified-against" title="Permanent link">&para;</a></h2>
+<p>The test suite, against a fake broker — this repository does not start
+brokers on the machine it is developed on. There is one test against a real
+broker (<code>test_a_running_broker_receives_what_the_publisher_sent</code>), marked
+slow and skipped unless <code>MES_UNS_TEST_BROKER</code> points at one. <strong>Not yet
+verified against a real Mosquitto, HiveMQ or UMH deployment</strong>, as of
+2026-09-09; see <a href="../compatibility/">compatibility</a>. If you run it against
+one, an issue saying which broker and what the topics looked like is the
+most useful thing you can send.</p>
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../reference/settings/">Settings reference</a> — every <code>MES_UNS_*</code> value</li>
+<li><a href="../../reference/cli/">CLI reference</a> — <code>fsmes uns</code></li>
+<li>The topic rules, in code: <code>src/fsmes/integrations/uns/topics.py</code></li>
+</ul>
 
 
 
 
 
 
-
-  
-  
 
 
 
@@ -2287,6 +2633,44 @@ becoming a branch.</p>
       
         <footer class="md-footer">
   
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../erpnext/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How-to — the ERPNext connector">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                How-to — the ERPNext connector
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../../reference/settings/" class="md-footer__link md-footer__link--next" aria-label="Next: Reference — settings">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Reference — settings
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
     
   
   <div class="md-footer-meta md-typeset">
@@ -2345,10 +2729,10 @@ becoming a branch.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "content.tabs.link", "content.code.copy", "content.action.edit", "search.suggest", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "content.tabs.link", "content.code.copy", "content.action.edit", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

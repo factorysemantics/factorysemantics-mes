@@ -15,6 +15,7 @@
 - [Operate — Tutorial — deploy](https://docs.factorysemantics.com/dev/operate/deploy/)
 - [Operate — How-to — plants from a registry](https://docs.factorysemantics.com/dev/operate/registry/)
 - [Operate — How-to — the ERPNext connector](https://docs.factorysemantics.com/dev/operate/erpnext/)
+- [Operate — How-to — the unified namespace (MQTT)](https://docs.factorysemantics.com/dev/operate/uns/)
 - [Operate — Reference — settings](https://docs.factorysemantics.com/dev/reference/settings/)
 - [Operate — Reference — CLI](https://docs.factorysemantics.com/dev/reference/cli/)
 - [Operate — Reference — REST API](https://docs.factorysemantics.com/dev/reference/api/)
