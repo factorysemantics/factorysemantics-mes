@@ -9,6 +9,11 @@ on:
 permissions:
   contents: write
 
+# One gh-pages writer at a time: a main push and a tag push racing lost one.
+concurrency:
+  group: docs-gh-pages
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
