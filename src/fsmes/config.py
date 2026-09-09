@@ -81,6 +81,44 @@ class Settings(BaseSettings):
     # record what the MES counted without moving ERPNext's stock.
     erpnext_post_stock_entry: bool = True
 
+    # --- Unified namespace (fsmes uns publish) ----------------------------
+    # The MES's outbox, relayed to an MQTT broker as JSON under an ISA-95
+    # topic tree. Off by default: a plant that has no broker should not have
+    # a worker trying to reach one.
+    #   mqtt  - a real broker (needs the [mqtt] extra)
+    #   log   - build and log every topic and payload, publish nothing.
+    #           The way to see the topic tree before a broker exists.
+    #   off   - `fsmes uns publish` refuses to start
+    uns_mode: str = "off"  # off | mqtt | log
+    uns_broker_url: str = "mqtt://127.0.0.1:1883"
+    uns_username: str = ""
+    uns_password: str = ""
+    # Identifies this MES to the broker. Brokers disconnect the older session
+    # when two clients share an id, so a plant running two MES instances must
+    # set this per instance.
+    uns_client_id: str = "fsmes"
+    # Everything the MES publishes hangs under this. `umh/v1` puts it in a
+    # United Manufacturing Hub namespace; `plant` or `mes` are fine elsewhere.
+    uns_topic_prefix: str = "umh/v1"
+    # The top two levels of the tree. Empty means "use the enterprise and site
+    # the equipment model already holds"; a level the MES does not hold at all
+    # is published as the literal `unknown`, never guessed and never dropped.
+    uns_enterprise: str = ""
+    uns_site: str = ""
+    # The schema segment before the event name, UMH's `_historian` convention.
+    # One schema, because one kind of thing is published: MES events.
+    uns_schema: str = "_mes"
+    # At-least-once: the outbox already retries, and a duplicate is harmless
+    # because every payload carries the event id a consumer dedupes on.
+    uns_qos: int = 1
+    # Events are not retained by default. A retained event is replayed to
+    # every new subscriber as though it had just happened, which is a lie
+    # about the present the moment anyone reconnects.
+    uns_retain: bool = False
+    uns_poll_seconds: float = 2.0
+    # How many due events one cycle publishes before going back for more.
+    uns_batch: int = 200
+
     sim_speed: float = 1.0
     # How often the agent asks the OPC server what changed. This is the
     # plant's observation resolution: nothing shorter than a couple of these

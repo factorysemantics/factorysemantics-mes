@@ -96,6 +96,7 @@ nav:
       - Tutorial — deploy: operate/deploy.md
       - How-to — plants from a registry: operate/registry.md
       - How-to — the ERPNext connector: operate/erpnext.md
+      - How-to — the unified namespace (MQTT): operate/uns.md
       - Reference — settings: reference/settings.md
       - Reference — CLI: reference/cli.md
       - Reference — REST API: reference/api.md

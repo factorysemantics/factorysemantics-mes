@@ -53,6 +53,7 @@ from fsmes.domain.serialization import (
 )
 from fsmes.domain.timeseries import TagValue
 from fsmes.domain.triggers import Trigger, TriggerCondition, TriggerFiring, TriggerStatus
+from fsmes.domain.uns import UnsPublication
 from fsmes.domain.workorders import OperationStatus, OrderStatus, WorkOrder, WorkOrderOperation
 
 __all__ = [
@@ -112,6 +113,7 @@ __all__ = [
     "UnitComponent",
     "UnitInspection",
     "UnitStatus",
+    "UnsPublication",
     "WorkOrder",
     "WorkOrderOperation",
 ]
