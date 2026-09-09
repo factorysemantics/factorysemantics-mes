@@ -1,0 +1,138 @@
+# The ERPNext round trip, against a real ERPNext.
+#
+# Its own workflow, not a fifth cell in CI's matrix, for two reasons. It is
+# slow — most of the wall clock is ERPNext installing itself into a fresh
+# site — and red here means something different: not "this change is wrong"
+# but "the MES and ERPNext no longer agree". Those deserve separate names in
+# the checks list.
+#
+# WHEN IT RUNS, AND WHY NOT ALWAYS. On pull requests that touch the ERPNext
+# connector, its tests, its lab fixture or this file; on the same paths when
+# they land on main; and on demand. Not on every pull request, because a job
+# that adds this much to an unrelated typo fix is a job people learn to
+# ignore. Not on a schedule either: every image is pinned to a digest, so a
+# nightly run would test the identical bytes it tested last night and prove
+# nothing. Changing the pin is what makes this worth running again, and that
+# is a pull request touching labs/erpnext/.
+
+name: ERPNext (live)
+
+# The two path lists are the same list written twice: GitHub Actions does not
+# support YAML anchors. Keep them together.
+on:
+  pull_request:
+    paths:
+      - "src/fsmes/integrations/erp/**"
+      - "tests/test_erpnext*.py"
+      - "labs/erpnext/**"
+      - "docs/operate/erpnext.md"
+      - ".github/workflows/erpnext-live.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/fsmes/integrations/erp/**"
+      - "tests/test_erpnext*.py"
+      - "labs/erpnext/**"
+      - "docs/operate/erpnext.md"
+      - ".github/workflows/erpnext-live.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erpnext-live-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  roundtrip:
+    runs-on: ubuntu-latest
+    # Generous, because a red job must be a real disagreement and not a
+    # runner having a slow morning. If it ever gets near this, the compose
+    # is the thing to fix, not the number.
+    timeout-minutes: 45
+
+    env:
+      COMPOSE: labs/erpnext/docker-compose.yml
+      MES_ERPNEXT_BASE_URL: http://127.0.0.1:8080
+      MES_ERPNEXT_SITE: mes.localhost
+      MES_ERPNEXT_USER: Administrator
+      MES_ERPNEXT_PASSWORD: admin
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+
+      # Timed on purpose: the cost of this job is an argument people will
+      # want to have, and it should be settled with the numbers in the log.
+      - name: Start ERPNext and install the site
+        run: |
+          set -euo pipefail
+          started=$(date +%s)
+          docker compose -f "$COMPOSE" up -d
+          echo "ERPNEXT_UP_SECONDS=$(( $(date +%s) - started ))" >> "$GITHUB_ENV"
+          docker compose -f "$COMPOSE" ps
+
+      - name: Wait for the site to answer on the Host header the MES sends
+        run: |
+          set -euo pipefail
+          started=$(date +%s)
+          for attempt in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' \
+              -H "Host: $MES_ERPNEXT_SITE" \
+              "$MES_ERPNEXT_BASE_URL/api/method/frappe.ping" || true)
+            if [ "$code" = "200" ]; then
+              echo "site answered on attempt $attempt of 60"
+              echo "ERPNEXT_READY_SECONDS=$(( $(date +%s) - started ))" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "the site never answered 200 (last status ${code:-none}) after 60 attempts"
+          exit 1
+
+      # The same script a person would run against their own bench. If it
+      # breaks, the documented way in is broken, and that is worth a red job
+      # on its own.
+      - name: Seed the plant and the custom fields
+        run: |
+          set -euo pipefail
+          started=$(date +%s)
+          python labs/erpnext/seed_erpnext.py \
+            --url "$MES_ERPNEXT_BASE_URL" --site "$MES_ERPNEXT_SITE"
+          echo "ERPNEXT_SEED_SECONDS=$(( $(date +%s) - started ))" >> "$GITHUB_ENV"
+
+      - name: The round trip
+        run: |
+          set -euo pipefail
+          started=$(date +%s)
+          python -m pytest -m erpnext_live -v
+          echo "ERPNEXT_TEST_SECONDS=$(( $(date +%s) - started ))" >> "$GITHUB_ENV"
+
+      # Frappe puts the reason for a 417 in the worker log, not in the
+      # response. Without this a failure here is unreadable.
+      - name: ERPNext's own logs
+        if: failure()
+        run: docker compose -f "$COMPOSE" logs --tail=400
+
+      - name: What this run cost
+        if: always()
+        run: |
+          {
+            echo "| Step | Seconds |"
+            echo "|---|---|"
+            echo "| ERPNext up, site installed | ${ERPNEXT_UP_SECONDS:-—} |"
+            echo "| Site answering | ${ERPNEXT_READY_SECONDS:-—} |"
+            echo "| Seed | ${ERPNEXT_SEED_SECONDS:-—} |"
+            echo "| Round trip | ${ERPNEXT_TEST_SECONDS:-—} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Stop ERPNext
+        if: always()
+        run: docker compose -f "$COMPOSE" down -v
