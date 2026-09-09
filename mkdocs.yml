@@ -116,6 +116,16 @@ nav:
           - decisions/0006-sqlite-laptop-postgresql-plant.md
           - decisions/0007-fresh-public-history.md
           - decisions/0008-erp-connectors-are-modules.md
+          - decisions/0009-organisation-not-personal-account.md
+          - decisions/0010-github-discussions-only.md
+          - decisions/0011-mkdocs-material-generated-reference.md
+          - decisions/0012-contributor-covenant-3.md
+          - decisions/0013-governance-is-one-page.md
+          - decisions/0014-first-public-version-is-0-1-0.md
+          - decisions/0015-mcp-registry-name.md
+          - decisions/0016-no-trademark-registration.md
+          - decisions/0017-one-public-demo-gated-and-bounded.md
+          - decisions/0018-public-on-2026-09-08-and-the-pre-tag-check.md
           - Template: decisions/TEMPLATE.md
   - Agents:
       - agents/index.md
