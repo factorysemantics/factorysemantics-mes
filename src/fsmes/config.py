@@ -76,7 +76,10 @@ class Settings(BaseSettings):
     # Token auth is preferred for a long-running worker; set both to use it.
     erpnext_api_key: str = ""
     erpnext_api_secret: str = ""
-    erpnext_company: str = "ACME Beverages"
+    # Which company's work orders to import. Empty means every company on the
+    # site, which is what a single-company ERPNext wants; a shared bench must
+    # set this or one company's MES runs another company's orders.
+    erpnext_company: str = ""
     # Post finished quantities as real Manufacture stock entries. Turn off to
     # record what the MES counted without moving ERPNext's stock.
     erpnext_post_stock_entry: bool = True

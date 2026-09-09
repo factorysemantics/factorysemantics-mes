@@ -24,6 +24,20 @@ goes under Honesty with a migration line, so plant people can find it.
   `umh/v1/<enterprise>/<site>/…/<machine>/_mes/equipment_state_change`, and
   a hold reaches the site. `MES_OUTBOX_DOMAIN_EVENTS=false` keeps the log to
   what the ERP is owed. See [the unified namespace](docs/operate/uns.md).
+- **`fsmes erp setup` and `fsmes erp check`.** The ERPNext connector needs
+  five custom fields on Work Order (`custom_mes_synced`,
+  `custom_mes_good_qty`, `custom_mes_scrap_qty`, `custom_mes_over_qty`,
+  `custom_mes_lot`). Until now the only thing that created them was a demo
+  seeding script in `labs/`, which is not in the wheel — so nobody who
+  installed the package could create them at all. The definitions moved into
+  the package, `fsmes erp setup` creates any that are missing and is safe to
+  run twice, and `fsmes erp check` says in words whether the URL, the
+  credentials, all five fields and the company are each in order, exiting
+  non-zero if the connector would not work. `fsmes run-erp-sync` runs the field check when it
+  starts and says so on the console; it still starts, because an ERP that is
+  briefly unreachable is not a reason to refuse to run. The `labs/` seeder
+  now uses the same definitions.
+  See [the ERPNext connector](docs/operate/erpnext.md).
 - **A unified-namespace publisher.** `fsmes uns publish` relays the MES's
   own event stream — the transactional outbox the ERP connector already
   delivers from — to an MQTT broker as JSON, under an ISA-95 topic tree
@@ -67,12 +81,44 @@ goes under Honesty with a migration line, so plant people can find it.
   either.
 
 ### Changed
+- `MES_ERPNEXT_COMPANY` now does something. It was defined and documented and
+  nothing read it, so a shared Frappe bench handed this MES every company's
+  work orders. Inbound orders are filtered by it. Its default changed from
+  the demo's company (`ACME Beverages`) to empty, which means every company
+  on the site — the right answer for a single-company ERPNext, and better
+  than a default that silently imports nothing on a stranger's site. A bench
+  holding more than one company's books must now set it.
 - `fsmes demo` exits non-zero, with the reason, when its loop does not close:
   the order never completed, the ERP was never told, or no finished lot was
   booked. It used to exit 0 either way, which is why a wheel that booked
   nothing looked like a success. A final line now says which happened. An OEE
   component reported as null is still a closed loop — that is an honest
   answer, not a failure.
+
+### Fixed
+- The ERPNext connector never acknowledged an order. Its `fetch_orders`
+  returned plain dicts while the sync worker reads `request.code` off each
+  one, so every inbound order raised `AttributeError` immediately after
+  being imported, `custom_mes_synced` was never set, and the same order was
+  re-imported on every poll. It now returns the `ProductionRequest` the
+  adapter contract declares, and a test acknowledges what `fetch_orders`
+  returned so the two cannot drift apart again.
+
+### Honesty
+- **`docs/operate/erpnext.md` said the connector worked "with nothing
+  installed on the ERPNext side". It did not.** It has always needed four
+  custom fields on Work Order. The page now names them, says what creates
+  them, and says what happens when they are absent.
+- **A confirmation to an ERPNext missing a field was recorded as delivered.**
+  Frappe answers `200` to a `PUT` naming a field its doctype does not have
+  and drops the value, so the MES marked the outbox message sent and the
+  plant's counted quantity existed nowhere. Every write to a Work Order is
+  now read back and compared with what was sent; a value that did not
+  survive raises, so the confirmation stays in the outbox and retries and
+  the log names the field. Rounding to the site's float precision is not
+  treated as a loss. That Frappe drops the field silently is what its
+  document layer does when read, but is **not verified against a live
+  ERPNext** — see the connector page.
 
 ### Fixed
 - `database is locked` under concurrent writes on SQLite. WAL and

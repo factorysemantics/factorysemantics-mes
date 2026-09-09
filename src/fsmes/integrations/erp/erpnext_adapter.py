@@ -18,15 +18,20 @@ costing all land where ERPNext expects them. That is deliberately not a comment
 or a custom field: production the MES has committed to should be visible to the
 business as stock, not as a note somebody has to read.
 
-Two custom fields on Work Order carry what ERPNext has nowhere to put — whether
-the MES has taken the order, and what the MES actually counted. Both are
+Five custom fields on Work Order carry what ERPNext has nowhere to put — whether
+the MES has taken the order, and what the MES actually counted. All are
 `allow_on_submit`, because a submitted work order is exactly when they change.
+They are defined in `erpnext_setup.py` and created by `fsmes erp setup`; a
+site that lacks them is not a site this adapter can be honest on, which is why
+every write is read back (see `_write`).
 """
+
+import math
 
 import httpx
 import structlog
 
-from fsmes.integrations.erp.contract import as_payload
+from fsmes.integrations.erp.contract import ProductionRequest, as_payload
 
 log = structlog.get_logger("erp.erpnext")
 
@@ -146,6 +151,23 @@ def _esc(name: str) -> str:
     return quote(str(name), safe="")
 
 
+def _same(sent, returned) -> bool:
+    """Did the ERP keep the value the MES sent?
+
+    Deliberately forgiving about form and strict about substance. Frappe
+    returns a Check field as 0/1 and a Float rounded to the site's float
+    precision, which is two decimals on some sites, so a number that agrees
+    to a hundredth agrees. Anything else is compared as text, where an empty
+    string and a null are the same absence.
+    """
+    if isinstance(sent, (int, float)) and not isinstance(sent, bool):
+        try:
+            return math.isclose(float(sent), float(returned), rel_tol=1e-3, abs_tol=0.01)
+        except (TypeError, ValueError):
+            return False
+    return str(sent or "") == str(returned or "")
+
+
 def _detail(response: httpx.Response) -> str:
     """The useful half of a Frappe error, which buries the message in JSON."""
     try:
@@ -175,25 +197,33 @@ def from_settings(settings) -> "ErpNextAdapter":
             api_secret=settings.erpnext_api_secret,
         ),
         post_stock_entry=settings.erpnext_post_stock_entry,
+        company=settings.erpnext_company,
     )
 
 
 class ErpNextAdapter:
     """Transport only — every MES-side rule stays in services.erp."""
 
-    def __init__(self, client: ErpNextClient, *, post_stock_entry: bool = True):
+    def __init__(self, client: ErpNextClient, *, post_stock_entry: bool = True, company: str = ""):
         self.client = client
         self.post_stock_entry = post_stock_entry
+        # Empty means every company on the site. A bench that serves more than
+        # one company needs this set, or one company's MES runs another's
+        # orders; a single-company site is right to leave it alone.
+        self.company = company
 
     # ------------------------------------------------------------- inbound
-    def fetch_orders(self) -> list[dict]:
+    def fetch_orders(self) -> list[ProductionRequest]:
+        filters = [
+            ["docstatus", "=", 1],
+            ["status", "in", list(_OPEN_STATUSES)],
+            ["custom_mes_synced", "=", 0],
+        ]
+        if self.company:
+            filters.append(["company", "=", self.company])
         rows = self.client.list(
             "Work Order",
-            filters=[
-                ["docstatus", "=", 1],
-                ["status", "in", list(_OPEN_STATUSES)],
-                ["custom_mes_synced", "=", 0],
-            ],
+            filters=filters,
             fields=["name", "production_item", "qty", "planned_end_date", "expected_delivery_date"],
             order_by="planned_start_date asc",
         )
@@ -201,19 +231,48 @@ class ErpNextAdapter:
         # inventing one here would outrank the MES's own dispatch ordering with
         # a number nobody set. services.erp applies its default instead.
         return [
-            {
-                "code": row["name"],
-                "material": row["production_item"],
-                "quantity": row.get("qty") or 0,
-                "due_date": row.get("planned_end_date") or row.get("expected_delivery_date"),
-                "erp_reference": row["name"],
-            }
+            ProductionRequest.from_payload(
+                {
+                    "code": row["name"],
+                    "material": row["production_item"],
+                    "quantity": row.get("qty") or 0,
+                    "due_date": row.get("planned_end_date") or row.get("expected_delivery_date"),
+                    "erp_reference": row["name"],
+                }
+            )
             for row in rows
         ]
 
     def acknowledge(self, order_code: str) -> None:
         """Mark the order as taken, so the next poll does not re-import it."""
-        self.client.update("Work Order", order_code, {"custom_mes_synced": 1})
+        self._write(order_code, {"custom_mes_synced": 1})
+
+    # -------------------------------------------------------------- writes
+    def _write(self, order: str, values: dict) -> None:
+        """Write custom fields to a Work Order and read back what landed.
+
+        Frappe accepts a PUT naming a field its doctype does not have. It
+        answers 200 and the value is gone. Without this check the MES would
+        record a delivered confirmation for a number the ERP never stored,
+        which is the exact shape of wrong the house rules exist to prevent —
+        so the returned document is compared against what was sent, and a
+        field that did not survive is an error the outbox retries and a
+        person eventually reads.
+        """
+        returned = self.client.update("Work Order", order, values)
+        lost = [name for name in values if name not in returned]
+        if lost:
+            raise ErpNextError(
+                f"ERPNext accepted the write to {order} but kept nothing in {', '.join(sorted(lost))}: "
+                f"the field does not exist on Work Order. Run `fsmes erp setup` to create it."
+            )
+        changed = [
+            f"{name} was sent as {values[name]!r} and came back as {returned[name]!r}"
+            for name in values
+            if not _same(values[name], returned[name])
+        ]
+        if changed:
+            raise ErpNextError(f"ERPNext did not store what the MES sent to {order}: " + "; ".join(changed))
 
     # ------------------------------------------------------------ outbound
     def send_confirmation(self, confirmation) -> None:
@@ -242,8 +301,7 @@ class ErpNextAdapter:
         # What the MES counted, recorded on the order itself. ERPNext has
         # nowhere native to put machine-counted scrap, and it is the number the
         # plant argues about, so it does not get to live only in a comment.
-        self.client.update(
-            "Work Order",
+        self._write(
             order,
             {"custom_mes_good_qty": good, "custom_mes_scrap_qty": scrap,
              # An over-run reaches the ERP as its own number rather than as

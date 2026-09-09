@@ -53,3 +53,38 @@ def test_info_reports_the_version_and_the_modules_that_registered_themselves():
     # so an install that lost its metadata would say "kernel only" instead —
     # "none" and "we failed to look" must not read the same on a support call.
     assert "modules       erpnext" in result.output
+
+
+def test_erp_setup_refuses_plainly_when_erpnext_is_not_the_configured_mode(monkeypatch):
+    """It would otherwise open a connection to whatever ERPNext defaults name,
+    on behalf of somebody who is not using ERPNext at all."""
+    monkeypatch.setenv("MES_ERP_MODE", "file")
+    from fsmes.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        result = runner.invoke(app, ["erp", "setup"])
+    finally:
+        get_settings.cache_clear()
+    assert result.exit_code == 1
+    assert "not 'erpnext'" in result.output
+
+
+def test_erp_check_exits_non_zero_when_the_site_cannot_be_reached(monkeypatch):
+    """`fsmes erp check` is meant to gate a deployment, so the exit code has to
+    carry the answer, and the message has to be a sentence rather than a
+    traceback."""
+    monkeypatch.setenv("MES_ERP_MODE", "erpnext")
+    monkeypatch.setenv("MES_ERPNEXT_BASE_URL", "http://127.0.0.1:9")
+    monkeypatch.setenv("MES_ERPNEXT_API_KEY", "key")
+    monkeypatch.setenv("MES_ERPNEXT_API_SECRET", "secret")
+    from fsmes.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        result = runner.invoke(app, ["erp", "check"])
+    finally:
+        get_settings.cache_clear()
+    assert result.exit_code == 1
+    assert "NOT OK" in result.output
+    assert "Traceback" not in result.output
