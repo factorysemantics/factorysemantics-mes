@@ -56,6 +56,10 @@ mcp = ["mcp>=2"]
 # own tools from the same registry the MCP server serves. Optional for the
 # same reason: a plant with no key and no internet still answers and guides.
 agent = ["anthropic>=1.2", "mcp>=2"]
+# The unified-namespace publisher's MQTT client. Optional for the same
+# reason as the rest: a plant that does not speak MQTT should not carry an
+# MQTT library, and the core install must stay as thin as it can.
+mqtt = ["aiomqtt>=2.3"]
 docs = [
     "mkdocs-material>=9.6",
     "mkdocstrings[python]>=0.27",
