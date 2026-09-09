@@ -25,7 +25,10 @@ Run them the way `.github/workflows/erpnext-live.yml` does:
 conversation between `ErpNextAdapter` and ERPNext, in both directions. It
 does not drive `integrations.erp.sync` or the MES database, so it proves
 what the connector says to ERPNext and what ERPNext does with it, not the
-MES-side booking that decides what to say. Over-production — a good quantity
+MES-side booking that decides what to say. It does assert the one thing the
+sync worker needs from the inbound half — that `fetch_orders` returns the
+typed `ProductionRequest` rather than a dict — because that mismatch is
+exactly what broke every inbound order before it was fixed. Over-production — a good quantity
 above the work order's quantity plus ERPNext's over-production allowance —
 is also not covered here; ERPNext has its own opinion about that and nobody
 has measured it yet.
@@ -36,6 +39,7 @@ import uuid
 import pytest
 
 from fsmes.config import get_settings
+from fsmes.integrations.erp.contract import ProductionRequest
 from fsmes.integrations.erp.erpnext_adapter import ErpNextAdapter, ErpNextClient, ErpNextError
 
 pytestmark = [pytest.mark.slow, pytest.mark.erpnext_live]
@@ -149,18 +153,22 @@ def test_a_submitted_work_order_reaches_the_mes_and_is_not_offered_twice(client,
     adapter = ErpNextAdapter(client)
 
     offered = adapter.fetch_orders()
-    mine = [o for o in offered if o["code"] == work_order]
+    mine = [o for o in offered if o.code == work_order]
     assert len(mine) == 1, f"{len(offered)} orders offered, {len(mine)} of them mine ({work_order})"
     [order] = mine
-    assert order["material"] == "FG-BOTTLE"
-    assert order["quantity"] == ORDERED_QTY
-    assert order["erp_reference"] == work_order
+    # The typed contract the sync worker reads, not a loose dict: it takes
+    # `request.code` off whatever this returns, so a dict here would be an
+    # AttributeError on the plant's first real order.
+    assert isinstance(order, ProductionRequest)
+    assert order.material == "FG-BOTTLE"
+    assert order.quantity == ORDERED_QTY
+    assert order.erp_reference == work_order
 
-    adapter.acknowledge(work_order)
+    adapter.acknowledge(order.code)
 
     # ERPNext's own record of the acknowledgement, not the adapter's.
     assert client.get("Work Order", work_order)["custom_mes_synced"] == 1
-    still_offered = [o["code"] for o in adapter.fetch_orders()]
+    still_offered = [o.code for o in adapter.fetch_orders()]
     assert work_order not in still_offered, (
         f"{work_order} was offered again after acknowledgement; "
         f"{len(still_offered)} orders in that second fetch"
