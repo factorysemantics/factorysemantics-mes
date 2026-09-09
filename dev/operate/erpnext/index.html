@@ -924,6 +924,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#prepare-the-erpnext-side" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prepare the ERPNext side
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Prepare the ERPNext side">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#if-a-field-is-missing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If a field is missing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run it
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-crosses-the-boundary" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2311,6 +2350,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#prepare-the-erpnext-side" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prepare the ERPNext side
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Prepare the ERPNext side">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#if-a-field-is-missing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If a field is missing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run it
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-crosses-the-boundary" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2369,26 +2447,92 @@
 
 
 <h1 id="the-erpnext-connector">The ERPNext connector<a class="headerlink" href="#the-erpnext-connector" title="Permanent link">&para;</a></h1>
-<p><em>How-to. Work orders in, confirmations out, against an ERPNext site, with nothing installed on the ERPNext side.</em></p>
+<p><em>How-to. Work orders in, confirmations out, against an ERPNext site. One
+command prepares the ERPNext side; no Frappe app is installed.</em></p>
 <p>The connector is a module inside this package, registered as the
 <code>fsmes.modules</code> entry point <code>erpnext</code>, and selected by <code>MES_ERP_MODE=erpnext</code>.
 It speaks ERPNext's REST API as a user or API key; it does not install a
 Frappe app. (A thin Frappe-side app for the Marketplace is planned and not
 built, as of 2026-09-07.)</p>
+<p>What it does need is five custom fields on ERPNext's Work Order doctype. They
+carry the two things ERPNext has nowhere to put — whether the MES has taken
+an order, and what the machines actually counted — and <code>fsmes erp setup</code>
+creates them (see <a href="#prepare-the-erpnext-side">below</a>). Until it has run, the
+connector cannot work. <strong>Before 2026-09-09 this page said nothing was needed
+on the ERPNext side. That was wrong.</strong></p>
 <h2 id="configure">Configure<a class="headerlink" href="#configure" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="nv">MES_ERP_MODE</span><span class="o">=</span>erpnext
 <span class="nv">MES_ERPNEXT_BASE_URL</span><span class="o">=</span>http://erpnext.example:8080
 <span class="nv">MES_ERPNEXT_SITE</span><span class="o">=</span>mes.example<span class="w">          </span><span class="c1"># the Host header; required on a multi-site bench</span>
 <span class="nv">MES_ERPNEXT_API_KEY</span><span class="o">=</span>...<span class="w">               </span><span class="c1"># User → API Access in ERPNext; preferred for a worker</span>
 <span class="nv">MES_ERPNEXT_API_SECRET</span><span class="o">=</span>...
-<span class="nv">MES_ERPNEXT_COMPANY</span><span class="o">=</span><span class="s2">"Your Company"</span>
+<span class="nv">MES_ERPNEXT_COMPANY</span><span class="o">=</span><span class="s2">"Your Company"</span><span class="w">    </span><span class="c1"># optional; empty imports every company on the site</span>
 <span class="nv">MES_ERPNEXT_POST_STOCK_ENTRY</span><span class="o">=</span><span class="nb">true</span><span class="w">     </span><span class="c1"># false records what the MES counted without moving stock</span>
 <span class="nv">MES_ERP_POLL_SECONDS</span><span class="o">=</span><span class="m">5</span>
 </code></pre></div>
 <p>Username and password (<code>MES_ERPNEXT_USER</code>, <code>MES_ERPNEXT_PASSWORD</code>) work too;
 the defaults are the Frappe development bench's.</p>
-<p>Run the worker: <code>fsmes run-erp-sync</code>. In Compose it is the <code>erp-sync</code>
-service.</p>
+<h2 id="prepare-the-erpnext-side">Prepare the ERPNext side<a class="headerlink" href="#prepare-the-erpnext-side" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Field on Work Order</th>
+<th>Type</th>
+<th>What it carries</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>custom_mes_synced</code></td>
+<td>Check</td>
+<td>The MES has imported this order. Clear it to re-send.</td>
+</tr>
+<tr>
+<td><code>custom_mes_good_qty</code></td>
+<td>Float</td>
+<td>Good quantity the machines counted.</td>
+</tr>
+<tr>
+<td><code>custom_mes_scrap_qty</code></td>
+<td>Float</td>
+<td>Machine-counted scrap. ERPNext has no native field for it.</td>
+</tr>
+<tr>
+<td><code>custom_mes_over_qty</code></td>
+<td>Float</td>
+<td>How far past the ordered quantity the line ran.</td>
+</tr>
+<tr>
+<td><code>custom_mes_lot</code></td>
+<td>Data</td>
+<td>The finished lot the MES booked.</td>
+</tr>
+</tbody>
+</table>
+<p>Five fields, all <code>allow_on_submit</code>, because a submitted work order is
+precisely when they change. With the connection configured above:</p>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>erp<span class="w"> </span>setup<span class="w">      </span><span class="c1"># creates any of the five that are missing; safe to run twice</span>
+fsmes<span class="w"> </span>erp<span class="w"> </span>check<span class="w">      </span><span class="c1"># says whether URL, credentials, fields and company are all in order</span>
+</code></pre></div>
+<p><code>fsmes erp check</code> exits non-zero if anything would stop the connector
+working, so it can gate a deployment. It names the field that is wrong rather
+than saying the configuration is bad.</p>
+<p>The account you configure needs permission to create a Custom Field —
+System Manager, in a stock ERPNext — for <code>setup</code> only. The sync worker itself
+needs no more than read and write on Work Order and Stock Entry.</p>
+<h3 id="if-a-field-is-missing">If a field is missing<a class="headerlink" href="#if-a-field-is-missing" title="Permanent link">&para;</a></h3>
+<p>Frappe accepts a <code>PUT</code> naming a field its doctype does not have. It answers
+<code>200</code> and drops the value. So a missing field does not look like an error at
+the HTTP level — it looks like success with the number gone.</p>
+<p>The MES therefore reads back every write and compares it against what it
+sent. A field that did not survive raises, the confirmation stays in the
+outbox and retries, and the log names the field. The MES cannot end up
+believing a number reached ERPNext when it did not. <code>fsmes run-erp-sync</code>
+also checks all five when it starts and says on the console if any are
+missing; it starts anyway, because an ERP that is briefly unreachable is not
+a reason to refuse to run.</p>
+<h2 id="run-it">Run it<a class="headerlink" href="#run-it" title="Permanent link">&para;</a></h2>
+<p><code>fsmes run-erp-sync</code>. In Compose it is the <code>erp-sync</code> service.</p>
 <h2 id="what-crosses-the-boundary">What crosses the boundary<a class="headerlink" href="#what-crosses-the-boundary" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2401,7 +2545,7 @@ service.</p>
 <tbody>
 <tr>
 <td>in</td>
-<td>submitted <strong>Work Order</strong> (docstatus 1) for the company</td>
+<td>submitted <strong>Work Order</strong> (docstatus 1), not yet taken by the MES, of <code>MES_ERPNEXT_COMPANY</code> if one is set</td>
 <td>production request → work order with the routing's operations</td>
 </tr>
 <tr>
@@ -2421,12 +2565,22 @@ comment, because it is the number the plant argues about and ERPNext has
 nowhere native for it.</p>
 <p>Confirmations go through an outbox with retry and backoff; an ERPNext that
 is down for an hour gets the hour's confirmations when it returns, in order.</p>
+<p>Leaving <code>MES_ERPNEXT_COMPANY</code> empty imports the work orders of every company
+on the site, which is what a single-company ERPNext wants. A bench that holds
+more than one company's books must set it, or this MES will run another
+business's orders.</p>
 <h2 id="verified-against">Verified against<a class="headerlink" href="#verified-against" title="Permanent link">&para;</a></h2>
 <p>A local Frappe bench during development (2026-08). <strong>Not yet verified
 against a current stable ERPNext release in a clean container</strong> — that test
 is on the list before the connector is called supported. See
 <a href="../compatibility/">compatibility</a>. If you run it against a real site, an
 issue with the versions of both sides is the most useful thing you can send.</p>
+<p>Specifically unverified, as of 2026-09-09: that Frappe silently drops a <code>PUT</code>
+to a field the doctype does not have. That is what Frappe's own document
+layer does when you read it, and it is why the read-back check exists — but
+nobody here has watched a live ERPNext do it. If you have one, <code>fsmes erp
+check</code> on a site without the fields, and then <code>fsmes run-erp-sync</code>, would
+settle it.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../reference/settings/">Settings reference</a> — every <code>MES_ERPNEXT_*</code> value</li>
