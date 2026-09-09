@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "factorysemantics-mes"
-version = "0.1.0"
+version = "0.1.1"
 description = "An open-source, modular, agent-native Manufacturing Execution System"
 readme = "README.md"
 license = { file = "LICENSE" }
