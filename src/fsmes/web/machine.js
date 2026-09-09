@@ -3,7 +3,8 @@
    The first object page. Its head is where the machine sits and what it is
    doing; its tabs are the questions people ask of a machine - what is it
    reporting right now, how has a signal moved, when was it down, how well
-   did it run, what does it owe maintenance, and what is queued on it.
+   did it run, what does it owe maintenance, what is queued on it, and what
+   it counted with nothing queued at all.
 
    Every number on this page came over OPC UA or was booked against this
    machine; the footer names the endpoint behind each tab. */
@@ -284,9 +285,38 @@ async function loadQueue() {
   }
 }
 
+async function loadUnassigned() {
+  const body = await api(`/execution/unassigned?equipment=${encodeURIComponent(CODE)}&limit=20`);
+  const list = $("#unassigned");
+  list.replaceChildren();
+  // The count states the whole selection, not the page: "showing 20 of 63"
+  // is the sentence that stops a page reading as the whole story.
+  $("#unassigned-count").textContent = body.total
+    ? `${fmt.qty(body.good_total)} good · ${fmt.qty(body.scrap_total)} scrap `
+      + `in ${body.total} booking${body.total === 1 ? "" : "s"}`
+      + (body.has_more ? ` — showing the latest ${body.items.length}` : "")
+    : "";
+  if (!body.total) {
+    list.append(el("li", "muted", "Nothing counted here without an order."));
+    return;
+  }
+  for (const row of body.items) {
+    const li = el("li");
+    const what = el("div", "what");
+    what.append(el("div", "mono", `${fmt.qty(row.good)} good · ${fmt.qty(row.scrap)} scrap`));
+    what.append(el("div", "muted small", `${fmt.clock(row.ts)} — no order`));
+    li.append(what);
+    list.append(li);
+  }
+}
+
+async function loadOperate() {
+  await Promise.all([loadQueue(), loadUnassigned()]);
+}
+
 /* ---------- tabs ---------- */
 
-const LOADERS = { trend: loadTrend, timeline: loadTimeline, oee: loadOee, maintenance: loadMaintenance, operate: loadQueue };
+const LOADERS = { trend: loadTrend, timeline: loadTimeline, oee: loadOee, maintenance: loadMaintenance, operate: loadOperate };
 
 function onTab(name) {
   clearInterval(nowTimer);

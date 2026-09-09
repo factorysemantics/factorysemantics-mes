@@ -96,6 +96,11 @@ class OrderCompletion(BaseModel):
     ordered_qty: float
     good_qty: float
     scrap_qty: float
+    # What the line made beyond what was ordered. Derivable from the two
+    # numbers above, and sent anyway: an ERP that posts `good_qty` without
+    # noticing it exceeds `ordered_qty` is exactly how an over-run becomes
+    # a stock discrepancy nobody can explain a month later.
+    over_qty: float = 0.0
     lot: str | None = None
     started_at: datetime | None = None
     completed_at: datetime | None = None

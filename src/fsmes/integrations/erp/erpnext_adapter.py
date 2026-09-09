@@ -237,6 +237,7 @@ class ErpNextAdapter:
             return
         good = float(payload.get("good_qty") or 0)
         scrap = float(payload.get("scrap_qty") or 0)
+        over = float(payload.get("over_qty") or 0)
 
         # What the MES counted, recorded on the order itself. ERPNext has
         # nowhere native to put machine-counted scrap, and it is the number the
@@ -244,7 +245,11 @@ class ErpNextAdapter:
         self.client.update(
             "Work Order",
             order,
-            {"custom_mes_good_qty": good, "custom_mes_scrap_qty": scrap, "custom_mes_lot": payload.get("lot") or ""},
+            {"custom_mes_good_qty": good, "custom_mes_scrap_qty": scrap,
+             # An over-run reaches the ERP as its own number rather than as
+             # a good quantity that happens to be larger than the order.
+             "custom_mes_over_qty": over,
+             "custom_mes_lot": payload.get("lot") or ""},
         )
 
         if good > 0 and self.post_stock_entry:
@@ -254,6 +259,7 @@ class ErpNextAdapter:
             "Work Order",
             order,
             f"MES-TWIN: {good:g} good, {scrap:g} scrap"
+            + (f", {over:g} over the ordered quantity" if over else "")
             + (f", lot {payload['lot']}" if payload.get("lot") else "")
             + (f" (completed {payload['completed_at']})" if payload.get("completed_at") else ""),
         )

@@ -141,6 +141,7 @@ def enqueue_confirmation(session: Session, wo: WorkOrder) -> ErpMessage:
         message_key=f"{wo.code}:completion",
         order=wo.code, erp_reference=wo.erp_reference, material=wo.material.code,
         ordered_qty=wo.quantity, good_qty=wo.good_qty, scrap_qty=wo.scrap_qty,
+        over_qty=wo.over_qty,
         lot=f"{wo.code}-FG" if wo.good_qty > 0 else None,
         started_at=wo.started_at, completed_at=wo.completed_at))
 

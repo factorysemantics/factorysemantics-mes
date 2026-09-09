@@ -41,6 +41,8 @@ class WorkOrderOut(BaseModel):
     erp_reference: str | None
     good_qty: float
     scrap_qty: float
+    # Zero unless the line ran past the order. See WorkOrder.over_qty.
+    over_qty: float
     operations: list[OperationOut]
 
 
@@ -55,6 +57,7 @@ def _out(wo: WorkOrder) -> WorkOrderOut:
         erp_reference=wo.erp_reference,
         good_qty=wo.good_qty,
         scrap_qty=wo.scrap_qty,
+        over_qty=wo.over_qty,
         operations=[
             OperationOut(
                 seq=op.seq,
