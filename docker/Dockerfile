@@ -3,7 +3,7 @@
 FROM python:3.13-slim
 
 WORKDIR /app
-COPY pyproject.toml README.md alembic.ini ./
+COPY pyproject.toml README.md LICENSE NOTICE alembic.ini ./
 COPY src ./src
 COPY alembic ./alembic
 COPY config ./config

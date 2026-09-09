@@ -10,6 +10,17 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-09-08
+
+### Fixed
+- The container image did not build: the Dockerfile copied `pyproject.toml`
+  without `LICENSE` and `NOTICE`, and the build backend refuses metadata
+  without the licence file. The 0.1.0 release reached PyPI but no image and
+  no GitHub Release; this version carries the same code with the image built.
+- The Scorecard workflow pinned an action version whose image had moved
+  registries (#3).
+- The cutlery walkthrough installer failed lint (#3).
+
 ## [0.1.0] — first public release
 
 The first public version. The code was developed privately from 2026-08-28
