@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://docs.factorysemantics.com/dev/reference/tools/">
+        <link rel="canonical" href="https://docs.factorysemantics.com/dev/operate/shadow-mode/">
       
       
-        <link rel="prev" href="../../agents/connect-mcp-client/">
+        <link rel="prev" href="../registry/">
       
       
-        <link rel="next" href="../../agents/write-discipline/">
+        <link rel="next" href="../erpnext/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Reference — tools - FactorySemantics MES</title>
+        <title>How-to — running beside an existing MES - FactorySemantics MES</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#mcp-tools-reference" class="md-skip">
+        <a href="#running-beside-an-existing-mes" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Reference — tools
+              How-to — running beside an existing MES
             
           </span>
         </div>
@@ -268,11 +268,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../operate/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -308,12 +310,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../../agents/" class="md-tabs__link">
           
   
@@ -709,26 +709,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -746,7 +751,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -764,7 +769,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -792,7 +797,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/first-plant/" class="md-nav__link">
+      <a href="../first-plant/" class="md-nav__link">
         
   
   
@@ -820,7 +825,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/deploy/" class="md-nav__link">
+      <a href="../deploy/" class="md-nav__link">
         
   
   
@@ -848,7 +853,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/opc-readonly/" class="md-nav__link">
+      <a href="../opc-readonly/" class="md-nav__link">
         
   
   
@@ -876,7 +881,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/registry/" class="md-nav__link">
+      <a href="../registry/" class="md-nav__link">
         
   
   
@@ -901,10 +906,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../operate/shadow-mode/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — running beside an existing MES
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -920,6 +952,92 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-guarantees" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it guarantees
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-does-not-guarantee" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it does not guarantee
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-file-handoff" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The file handoff
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-you-can-tell-it-is-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How you can tell it is on
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#turning-it-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Turning it off
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -932,7 +1050,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/erpnext/" class="md-nav__link">
+      <a href="../erpnext/" class="md-nav__link">
         
   
   
@@ -960,7 +1078,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/uns/" class="md-nav__link">
+      <a href="../uns/" class="md-nav__link">
         
   
   
@@ -988,7 +1106,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/backup/" class="md-nav__link">
+      <a href="../backup/" class="md-nav__link">
         
   
   
@@ -1016,7 +1134,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/tls/" class="md-nav__link">
+      <a href="../tls/" class="md-nav__link">
         
   
   
@@ -1044,7 +1162,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/upgrade/" class="md-nav__link">
+      <a href="../upgrade/" class="md-nav__link">
         
   
   
@@ -1072,7 +1190,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/confirmation-files/" class="md-nav__link">
+      <a href="../confirmation-files/" class="md-nav__link">
         
   
   
@@ -1100,7 +1218,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../erp-confirmations/" class="md-nav__link">
+      <a href="../../reference/erp-confirmations/" class="md-nav__link">
         
   
   
@@ -1128,7 +1246,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../settings/" class="md-nav__link">
+      <a href="../../reference/settings/" class="md-nav__link">
         
   
   
@@ -1156,7 +1274,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cli/" class="md-nav__link">
+      <a href="../../reference/cli/" class="md-nav__link">
         
   
   
@@ -1184,7 +1302,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/" class="md-nav__link">
+      <a href="../../reference/api/" class="md-nav__link">
         
   
   
@@ -1212,7 +1330,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/first-week/" class="md-nav__link">
+      <a href="../first-week/" class="md-nav__link">
         
   
   
@@ -1240,7 +1358,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/compatibility/" class="md-nav__link">
+      <a href="../compatibility/" class="md-nav__link">
         
   
   
@@ -1268,7 +1386,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/security/" class="md-nav__link">
+      <a href="../security/" class="md-nav__link">
         
   
   
@@ -2175,31 +2293,26 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
             
   
   
@@ -2217,7 +2330,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -2288,37 +2401,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Reference — tools
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../reference/tools/" class="md-nav__link">
         
   
   
@@ -2334,48 +2420,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#product-85-tools" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Product (85 tools)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#simulation-13-tools" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Simulation (13 tools)
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2586,10 +2630,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#product-85-tools" class="md-nav__link">
+  <a href="#what-it-guarantees" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Product (85 tools)
+        What it guarantees
       
     </span>
   </a>
@@ -2597,10 +2641,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#simulation-13-tools" class="md-nav__link">
+  <a href="#what-it-does-not-guarantee" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Simulation (13 tools)
+        What it does not guarantee
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-file-handoff" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The file handoff
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-you-can-tell-it-is-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How you can tell it is on
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#turning-it-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Turning it off
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related
       
     </span>
   </a>
@@ -2624,7 +2712,7 @@
 
 
   
-    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/reference/tools.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/operate/shadow-mode.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -2632,211 +2720,159 @@
   
 
 
-<h1 id="mcp-tools-reference">MCP tools reference<a class="headerlink" href="#mcp-tools-reference" title="Permanent link">&para;</a></h1>
-<p>Generated from the two servers' registries at build time. <code>?</code> marks an optional argument.</p>
-<h2 id="product-85-tools">Product (85 tools)<a class="headerlink" href="#product-85-tools" title="Permanent link">&para;</a></h2>
-<p>The MES as tools. Everything goes through a plant's HTTP API as the <code>AGENT</code> role; writes accept <code>dry_run</code>, <code>on_behalf_of</code> and <code>client_ref</code> (see the write discipline).</p>
+<h1 id="running-beside-an-existing-mes">Running beside an existing MES<a class="headerlink" href="#running-beside-an-existing-mes" title="Permanent link">&para;</a></h1>
+<p><em>How-to. For the engineer putting this MES next to a line that another
+system is already running.</em></p>
+<p>The safest way to find out whether an MES is any good is to let it watch a
+real plant for a fortnight and then compare what it says against what the
+plant actually did. The unsafe part is everything else it might do while it
+is watching. Two systems writing setpoints to the same machine, or two
+systems confirming the same production to the same ERP, is a worse problem
+than the one you were trying to solve.</p>
+<p><strong>Shadow mode is one setting that closes all of it.</strong></p>
+<div class="highlight"><pre><span></span><code><span class="nv">MES_SHADOW</span><span class="o">=</span><span class="nb">true</span>
+</code></pre></div>
+<p>Set it, restart, and this MES reads the plant's OPC UA tags and books
+production exactly as it would if it were in charge — orders, counts,
+states, downtime, OEE, quality, genealogy, the audit trail, all of it — and
+cannot act. No setpoint reaches a machine. No live ERP is contacted.
+Nothing is published to a broker. Nothing about this plant leaves the box.</p>
+<h2 id="what-it-guarantees">What it guarantees<a class="headerlink" href="#what-it-guarantees" title="Permanent link">&para;</a></h2>
+<p>Every path in the package by which this process can reach past its own
+database is listed in one place, <code>fsmes/shadow.py</code>, with what shadow mode
+does to each. You can read that list from a running installation:</p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-s<span class="w"> </span>http://localhost:8000/shadow<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq
+</code></pre></div>
+<p>Two layers hold it shut.</p>
+<p><strong>At start-up.</strong> A setting that would open a live connection is refused
+before anything starts, so a live adapter is never constructed at all:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>In shadow mode</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MES_ERP_MODE</code></td>
+<td>only <code>off</code> or <code>file</code>. <code>rest</code>, <code>erpnext</code> and any installed connector module refuse to start</td>
+</tr>
+<tr>
+<td><code>MES_UNS_MODE</code></td>
+<td>only <code>off</code> or <code>log</code>. <code>mqtt</code> refuses to start</td>
+</tr>
+</tbody>
+</table>
+<p>If you never set one of these, shadow mode leaves it off rather than
+refusing: <code>MES_ERP_MODE</code> defaults to <code>rest</code> so that a laptop runs with no
+setup, and a default is not a decision. A mode you <em>did</em> set and that shadow
+mode cannot honour is refused out loud, in one sentence, naming the
+variable. <code>/shadow</code> reports what is actually in force.</p>
+<p><strong>At the call site.</strong> The paths that settings alone cannot settle refuse
+where the work happens, and log the reason:</p>
 <ul>
-<li><strong><code>add_bom_component</code></strong> — Put a component on a material's bill, with the operation it<br />
-  no arguments</li>
-<li><strong><code>add_calendar_exception</code></strong> — A shutdown day (capacity removed) or an overtime day (capacity<br />
-  no arguments</li>
-<li><strong><code>add_person</code></strong> — Add a person without a sign-in (create_user makes an account).<br />
-  no arguments</li>
-<li><strong><code>add_shift</code></strong> — Add a shift pattern: starts/ends as HH:MM, days as seven 1/0 flags<br />
-  no arguments</li>
-<li><strong><code>adjustment</code></strong> — One recommendation in full, including the verification: the<br />
-  no arguments</li>
-<li><strong><code>adjustments</code></strong> — The recommendation queue: proposed, approved (waiting for the agent<br />
-  no arguments</li>
-<li><strong><code>assign_role</code></strong> — Put a person into a role. Effective on their very next action, because<br />
-  no arguments</li>
-<li><strong><code>audit</code></strong> — The append-only audit trail, newest first - humans and agents in the<br />
-  no arguments</li>
-<li><strong><code>bill_of_material</code></strong> — What a material is made of: each component, its quantity per unit,<br />
-  no arguments</li>
-<li><strong><code>book_output</code></strong> — Book output by hand: good and scrap counts made on a machine, against<br />
-  no arguments</li>
-<li><strong><code>browse_tags</code></strong> — Every tag on every machine, flat, with a health line per machine<br />
-  no arguments</li>
-<li><strong><code>calibrate_gauge</code></strong> — Record a calibration: pass, adjusted, or fail_as_found. A failure<br />
-  no arguments</li>
-<li><strong><code>capabilities</code></strong> — Every capability a role can grant, and what each one means.<br />
-  no arguments</li>
-<li><strong><code>certificate</code></strong> — The certificate for an order - the revision in force as Markdown,<br />
-  no arguments</li>
-<li><strong><code>certificates</code></strong> — Every certificate of analysis in force, newest first.<br />
-  no arguments</li>
-<li><strong><code>close_nonconformance</code></strong> — Close a non-conformance - a supervisor action, audited as AGENT.<br />
-  no arguments</li>
-<li><strong><code>create_document</code></strong> — Create a controlled document as a draft (documents.write). It is not<br />
-  no arguments</li>
-<li><strong><code>create_equipment</code></strong> — Add a node to the equipment tree: level is enterprise, site, area,<br />
-  no arguments</li>
-<li><strong><code>create_maintenance_plan</code></strong> — Define a preventive plan on a machine. trigger is runtime_hours,<br />
-  no arguments</li>
-<li><strong><code>create_material</code></strong> — Add a material: raw, intermediate or finished.<br />
-  no arguments</li>
-<li><strong><code>create_order</code></strong> — Create a work order (and by default release it to the floor).<br />
-  no arguments</li>
-<li><strong><code>create_role</code></strong> — Define a role as a bundle of capabilities.<br />
-  no arguments</li>
-<li><strong><code>create_routing</code></strong> — Define a routing: operations as<br />
-  no arguments</li>
-<li><strong><code>create_spec</code></strong> — Define a quality specification: a characteristic on a material with<br />
-  no arguments</li>
-<li><strong><code>create_user</code></strong> — Create a sign-in account in a role.<br />
-  no arguments</li>
-<li><strong><code>downtime</code></strong> — Downtime pareto over the window: which reasons cost what, and how much<br />
-  no arguments</li>
-<li><strong><code>draft_instruction</code></strong> — Draft a work instruction. It arrives unapproved.<br />
-  no arguments</li>
-<li><strong><code>draft_trigger</code></strong> — Draft a trigger: when <code>tag</code> on <code>machine</code> (or any machine) meets<br />
-  no arguments</li>
-<li><strong><code>equipment_tree</code></strong> — The plant as a tree - site, lines, cells, machines - with the cost<br />
-  no arguments</li>
-<li><strong><code>erp_outbox</code></strong> — The ERP interface's queue: counts by status (pending, sent, error,<br />
-  no arguments</li>
-<li><strong><code>erp_retry</code></strong> — Put a dead or failing outbox message back in the queue. Needs<br />
-  no arguments</li>
-<li><strong><code>gauge_impact</code></strong> — Every measurement taken with this gauge since its last calibration,<br />
-  no arguments</li>
-<li><strong><code>gauge_resolution</code></strong> — Can this gauge judge this tolerance? The rule of ten: resolution<br />
-  no arguments</li>
-<li><strong><code>gauges</code></strong> — The gauge register: every measuring instrument with its status,<br />
-  no arguments</li>
-<li><strong><code>instruction</code></strong> — One instruction in full. Ask for a revision to read what it said then.<br />
-  no arguments</li>
-<li><strong><code>instructions</code></strong> — Every controlled work instruction, and which revision is in force.<br />
-  no arguments</li>
-<li><strong><code>instructions_for</code></strong> — The approved instructions covering a piece of work.<br />
-  no arguments</li>
-<li><strong><code>issue_certificate</code></strong> — Issue or reissue the certificate for a completed order. Reissuing<br />
-  no arguments</li>
-<li><strong><code>issue_material</code></strong> — Issue material from a lot to an order - the consumption side of<br />
-  no arguments</li>
-<li><strong><code>issue_pallet_certificate</code></strong> — Issue a pallet's certificate of analysis - a supervisor's act<br />
-  no arguments</li>
-<li><strong><code>line_wip</code></strong> — Work in progress at each station of a line, summed over the orders<br />
-  no arguments</li>
-<li><strong><code>list_plants</code></strong> — The plants this server can operate, with reachability.<br />
-  no arguments</li>
-<li><strong><code>lots</code></strong> — Material lots and how much of each remains.<br />
-  no arguments</li>
-<li><strong><code>machine</code></strong> — One machine's head facts: where it sits, its cost center, its state<br />
-  no arguments</li>
-<li><strong><code>machine_alarms</code></strong> — Active alarm bits, by name, on one machine or on every machine.<br />
-  no arguments</li>
-<li><strong><code>machine_tags</code></strong> — Every tag the machine publishes with its latest value and age:<br />
-  no arguments</li>
-<li><strong><code>machines</code></strong> — Every machine: current state, current order, its analog value, and OEE.<br />
-  no arguments</li>
-<li><strong><code>maintenance_due</code></strong> — Plans that have come due (and those past 80%, due soon), worst<br />
-  no arguments</li>
-<li><strong><code>maintenance_plans</code></strong> — Every preventive plan with how far through its interval it is.<br />
-  no arguments</li>
-<li><strong><code>maintenance_work</code></strong> — Maintenance orders, newest first: due, in progress, or done, with<br />
-  no arguments</li>
-<li><strong><code>materials</code></strong> — Every material with its unit and type (raw, intermediate, finished);<br />
-  no arguments</li>
-<li><strong><code>order_action</code></strong> — release, hold, resume, close, or cancel an order.<br />
-  no arguments</li>
-<li><strong><code>order_detail</code></strong> — One order: route progress per operation, plus its genealogy -<br />
-  no arguments</li>
-<li><strong><code>order_promise</code></strong> — When the plan says this order finishes, and whether that misses<br />
-  no arguments</li>
-<li><strong><code>orders</code></strong> — Work orders, newest first, one page at a time.<br />
-  no arguments</li>
-<li><strong><code>pack_unit</code></strong> — Put one unit inside another: bottle into case, case onto pallet.<br />
-  no arguments</li>
-<li><strong><code>pallet_certificate</code></strong> — A pallet's certificate of analysis: the Cpk of every dimensional<br />
-  no arguments</li>
-<li><strong><code>people</code></strong> — Everyone the plant knows, with their role - or, with <code>q</code> (a code<br />
-  no arguments</li>
-<li><strong><code>perform_maintenance</code></strong> — start or complete a maintenance order. Completing re-baselines its<br />
-  no arguments</li>
-<li><strong><code>plan_all_orders</code></strong> — Schedule every open order, highest priority first.<br />
-  no arguments</li>
-<li><strong><code>plan_order</code></strong> — Schedule one order's operations in route sequence through working<br />
-  no arguments</li>
-<li><strong><code>plant_calendar</code></strong> — When the plant runs: shift patterns (with the days they run and<br />
-  no arguments</li>
-<li><strong><code>produce_batch</code></strong> — Bring a batch of identified units into existence in one call, packed:<br />
-  no arguments</li>
-<li><strong><code>produce_units</code></strong> — Bring identified units into existence for a material, optionally<br />
-  no arguments</li>
-<li><strong><code>propose_adjustment</code></strong> — Recommend a setpoint change on a machine. The tag must be one the<br />
-  no arguments</li>
-<li><strong><code>quality</code></strong> — The quality picture: specs, recent checks with pass/fail, and open<br />
-  no arguments</li>
-<li><strong><code>raise_corrective_maintenance</code></strong> — Raise corrective work on a machine because something broke, with<br />
-  no arguments</li>
-<li><strong><code>raise_due_maintenance</code></strong> — Turn every due plan into a maintenance order, once - a plan with<br />
-  no arguments</li>
-<li><strong><code>record_check</code></strong> — Record a quality measurement. Out-of-spec values automatically open a<br />
-  no arguments</li>
-<li><strong><code>register_gauge</code></strong> — Add a gauge to the register (master data - refused unless an admin<br />
-  no arguments</li>
-<li><strong><code>roles</code></strong> — Roles defined in this plant, with the capabilities each grants.<br />
-  no arguments</li>
-<li><strong><code>routings</code></strong> — Every routing: the ordered operations and the machine each runs on.<br />
-  no arguments</li>
-<li><strong><code>schedule_board</code></strong> — The schedule machine by machine over the next <code>hours</code>: production<br />
-  no arguments</li>
-<li><strong><code>set_machine_state</code></strong> — Set a machine's state (running/idle/down/setup...). Labelling downtime<br />
-  no arguments</li>
-<li><strong><code>set_unit_status</code></strong> — Quarantine, release or scrap a unit and, by default, everything<br />
-  no arguments</li>
-<li><strong><code>spc_chart</code></strong> — The individuals control chart for one characteristic: control<br />
-  no arguments</li>
-<li><strong><code>tag_trend</code></strong> — A machine's process value over time - the signal that drifts before a<br />
-  no arguments</li>
-<li><strong><code>trigger_catalog</code></strong> — The actions a trigger may take (log_event, open_nc,<br />
-  no arguments</li>
-<li><strong><code>trigger_firings</code></strong> — What fired: for one trigger, or every firing in the last <code>hours</code>,<br />
-  no arguments</li>
-<li><strong><code>triggers</code></strong> — Every trigger with its condition, action, status (draft, approved,<br />
-  no arguments</li>
-<li><strong><code>unit</code></strong> — One identified unit and everything packed inside it, as a tree:<br />
-  no arguments</li>
-<li><strong><code>unit_trace</code></strong> — What went into this unit and everything inside it: every lot, and<br />
-  no arguments</li>
-<li><strong><code>update_role</code></strong> — Change what a role grants. Effective on everyone's next action.<br />
-  no arguments</li>
-<li><strong><code>users</code></strong> — Accounts, their role, and what that role lets them do.<br />
-  no arguments</li>
-<li><strong><code>where_used</code></strong> — Every package carrying a lot - the recall question, answered as<br />
-  no arguments</li>
+<li><strong>Setpoints.</strong> An engineer can still see a recommendation, read its
+  evidence and approve it. The OPC agent will not dispatch it. Approved
+  recommendations stay approved and unwritten — they are not marked failed,
+  because nothing was attempted and a queue full of failures that never
+  happened is a lie about your plant.</li>
+<li><strong>Order codes.</strong> Normally the agent writes each machine's next dispatched
+  order into its <code>OrderCode</code> tag. That write-back was never approval-gated —
+  a machine gets an order node by default — so it is the path shadow mode
+  most needed to close. It writes nothing and says so once in the log.</li>
+<li><strong>The ERP file inbox.</strong> The file adapter normally renames a consumed file
+  into the archive folder, which is how it acknowledges. Point that inbox at
+  a folder the plant's own MES is reading and that rename takes its orders
+  away. In shadow mode nothing moves: each file is read and left exactly
+  where it was.</li>
+<li><strong>The broker.</strong> <code>MqttTransport</code> refuses to connect or publish even if
+  something builds one directly.</li>
+<li><strong>The cloud model.</strong> The optional cloud brain changes nothing in your
+  plant, but it carries your plant's numbers off the box. In shadow mode it
+  is refused and says why; the local model on the same machine still
+  answers.</li>
+<li><strong><code>fsmes demo</code>.</strong> It runs a simulated line and a mock ERP in the same
+  process, around every other gate. It refuses.</li>
 </ul>
-<h2 id="simulation-13-tools">Simulation (13 tools)<a class="headerlink" href="#simulation-13-tools" title="Permanent link">&para;</a></h2>
-<p>The simulator and scoring harness as tools, for driving and judging fake plants. Not for a real one.</p>
+<h2 id="what-it-does-not-guarantee">What it does not guarantee<a class="headerlink" href="#what-it-does-not-guarantee" title="Permanent link">&para;</a></h2>
+<p>Shadow mode changes what leaves the MES. It never changes what the MES
+records — the whole point is that the numbers are the ones it would have
+produced in charge.</p>
+<p>It is <strong>not</strong> a read-only OPC client in the protocol sense. It still opens
+an OPC UA session and subscribes, so the plant's server has to permit a
+client that reads. Give it its own account with browse and read on the tags
+in your tag map and nothing else; that account is your outer guarantee, and
+shadow mode is the inner one.</p>
+<p>It still needs an order feed. It cannot take one from a live ERP, so use
+<a href="#the-file-handoff">the file adapter</a>.</p>
+<p>It still writes files, on purpose. A file changes nothing until something
+imports it, so:</p>
+<h2 id="the-file-handoff">The file handoff<a class="headerlink" href="#the-file-handoff" title="Permanent link">&para;</a></h2>
+<p>With <code>MES_ERP_MODE=file</code>, orders arrive as XML or JSON in an inbox folder
+and one confirmation XML per operation and per order lands in an outbox
+folder. That is the shape of a shadow run: your ERP's schedule goes in, this
+MES's confirmations come out, and somebody compares them against what the
+incumbent confirmed for the same shift.</p>
+<div class="highlight"><pre><span></span><code><span class="nv">MES_SHADOW</span><span class="o">=</span><span class="nb">true</span>
+<span class="nv">MES_ERP_MODE</span><span class="o">=</span>file
+<span class="nv">MES_ERP_INBOX</span><span class="o">=</span>/srv/fsmes/erp/inbox
+<span class="nv">MES_ERP_OUTBOX</span><span class="o">=</span>/srv/fsmes/erp/outbox
+</code></pre></div>
+<blockquote>
+<p>Give both folders to this MES alone. The inbox should be a copy of the
+schedule, dropped there by whatever already drops it for the incumbent —
+shadow mode will not move or delete anything in it, but a folder two
+systems share is a folder two systems will eventually disagree about. The
+outbox must be one <strong>no ERP is watching</strong>: writing a confirmation where an
+ERP's watcher picks it up is a live ERP connection with extra steps.</p>
+<p>Config, not code, at the plant boundary. The MES will not guess which
+folder is safe.</p>
+</blockquote>
+<p>To see the plant's namespace without a broker, set <code>MES_UNS_MODE=log</code>: every
+topic and payload is built and written to the log, and nothing is published.</p>
+<h2 id="how-you-can-tell-it-is-on">How you can tell it is on<a class="headerlink" href="#how-you-can-tell-it-is-on" title="Permanent link">&para;</a></h2>
+<p>It is on every screen, at the top, above the header, on a hatched bar that
+cannot be dismissed. Deliberately not a state colour — running, idle and
+down mean machines, and this is not a machine.</p>
+<p>It is also in:</p>
 <ul>
-<li><strong><code>compare_runs</code></strong> — Put recorded scorecards side by side, and say what differs.<br />
-  no arguments</li>
-<li><strong><code>describe_line</code></strong> — What a plant's line is and what the simulator does to it.<br />
-  no arguments</li>
-<li><strong><code>ingest_dataset</code></strong> — Profile a CSV of real records so a scenario can be built from its shape.<br />
-  no arguments</li>
-<li><strong><code>job_status</code></strong> — How a scored run or sweep is getting on, and its result once finished.<br />
-  no arguments</li>
-<li><strong><code>list_datasets</code></strong> — Datasets ingested so far.<br />
-  no arguments</li>
-<li><strong><code>list_jobs</code></strong> — Jobs started this session. Restarting the server forgets them; finished<br />
-  no arguments</li>
-<li><strong><code>list_knobs</code></strong> — What a sweep is allowed to vary, and why only these.<br />
-  no arguments</li>
-<li><strong><code>list_plants</code></strong> — The simulated plants available, and whether each can be scored.<br />
-  no arguments</li>
-<li><strong><code>metric_trend</code></strong> — One metric across past runs, oldest first.<br />
-  no arguments</li>
-<li><strong><code>recent_runs</code></strong> — Scored runs already recorded, newest first.<br />
-  no arguments</li>
-<li><strong><code>run_scorecard</code></strong> — The full scorecard for one recorded run.<br />
-  no arguments</li>
-<li><strong><code>score_plant</code></strong> — Run a plant through its scripted hour and score what it reported.<br />
-  no arguments</li>
-<li><strong><code>sweep_plant</code></strong> — Vary a line, score every variant, and compare the results.<br />
-  no arguments</li>
+<li><code>fsmes info</code> — in words, with the count of closed paths.</li>
+<li><code>GET /health</code> — <code>{"status": "ok", "shadow": true}</code>. Health is the endpoint
+  everything already asks; a monitor that knows a plant is up and does not
+  know it is only watching will read its silence as everything being fine.</li>
+<li><code>GET /shadow</code> — the whole register. Public, like health: the person who
+  most needs it is deciding whether it is safe to point this at a running
+  plant, and does not have an account yet.</li>
+<li>The MCP server's description, and <code>list_plants()</code>, which reports it per
+  plant from that plant's own health. One server can operate several plants
+  and they need not agree; a plant that did not answer reports <code>null</code>, which
+  is not the same as "not shadow".</li>
+<li>The audit trail: <code>shadow.on</code> and <code>shadow.off</code>, written by the API at
+  start-up when it differs from the last thing recorded.</li>
+</ul>
+<h2 id="turning-it-off">Turning it off<a class="headerlink" href="#turning-it-off" title="Permanent link">&para;</a></h2>
+<p>Change the setting and restart. There is no runtime switch, on purpose: what
+an MES is allowed to do to a plant must not be able to change halfway
+through a shift.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># in the unit file, the compose environment, or .env</span>
+<span class="nv">MES_SHADOW</span><span class="o">=</span><span class="nb">false</span>
+</code></pre></div>
+<p>The next start-up writes <code>shadow.off</code> to the audit trail with the time. Who
+decided is in whatever change record covers the setting; when it took effect
+is here.</p>
+<p>Before you do it, the questions worth having answered: does the incumbent
+still write the setpoints, or does this one now? Which system confirms to
+the ERP, and what happens to the other one's outbox? Who is on the floor the
+first shift? None of that is a software setting.</p>
+<h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../uns/">The unified namespace (MQTT)</a> — <code>log</code> mode, which is what a
+  shadow plant runs.</li>
+<li><a href="../erpnext/">The ERPNext connector</a> — a live connector, which shadow mode
+  refuses.</li>
+<li><a href="../security/">Security</a> — the threat model, and what not to expose.</li>
+<li><a href="../../reference/settings/">Settings</a> — every variable, generated.</li>
 </ul>
 
 
@@ -2875,7 +2911,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../../agents/connect-mcp-client/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How-to — connect an MCP client">
+          <a href="../registry/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How-to — plants from a registry">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2885,20 +2921,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                How-to — connect an MCP client
+                How-to — plants from a registry
               </div>
             </div>
           </a>
         
         
           
-          <a href="../../agents/write-discipline/" class="md-footer__link md-footer__link--next" aria-label="Next: Explanation — the write discipline">
+          <a href="../erpnext/" class="md-footer__link md-footer__link--next" aria-label="Next: How-to — the ERPNext connector">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Explanation — the write discipline
+                How-to — the ERPNext connector
               </div>
             </div>
             <div class="md-footer__button md-icon">
