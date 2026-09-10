@@ -1116,6 +1116,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../shadow-scorecard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the shadow scorecard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../erpnext/" class="md-nav__link">
         
   
@@ -3134,6 +3162,11 @@ is worth comparing against the system already in charge and what is not.</p>
 <p>Run the agent under a supervisor from the first day. The window it was not
 watching is reported as <em>unknown</em> and is never reconstructed, by design;
 <a href="../deploy/">deploy</a> has the systemd units and the Compose file.</p>
+<p>At the end of the week, if you did step 5, put the two records side by side.
+Export the same period's bookings from the MES in charge and run
+<a href="../shadow-scorecard/">the shadow scorecard</a>: it reports, per order and per
+operation, where the two agree and where they do not, and — the part that
+makes it worth trusting — what it could not compare.</p>
 <h2 id="8-where-the-numbers-live-and-backing-them-up">8. Where the numbers live, and backing them up<a class="headerlink" href="#8-where-the-numbers-live-and-backing-them-up" title="Permanent link">&para;</a></h2>
 <p>Everything the MES recorded is in one database — <code>fsmes.db</code> beside where you
 run it, unless you pointed <code>MES_DATABASE_URL</code> somewhere else. Everything it
@@ -3173,6 +3206,7 @@ otherwise.</p>
 <li><a href="../opc-readonly/">Connecting read-only to an OPC UA server you do not own</a></li>
 <li><a href="../../onboarding/GUIDE-IT/">IT access request</a> · <a href="../../onboarding/GUIDE-ENGINEERING/">Engineering worksheet</a></li>
 <li><a href="../first-week/">What to expect in the first week</a></li>
+<li><a href="../shadow-scorecard/">The shadow scorecard</a></li>
 <li><a href="../backup/">Backup and restore</a> · <a href="../tls/">TLS in front of the API</a> · <a href="../upgrade/">Upgrading</a></li>
 <li><a href="../deploy/">Deploy</a> · <a href="../security/">Security</a> · <a href="../compatibility/">Compatibility</a></li>
 <li><a href="../../plant/reading-oee/">Reading OEE</a> · <a href="../../plant/never-invent-production/">Never invent production</a></li>

@@ -17,6 +17,7 @@
 - [Operate — How-to — read-only OPC UA commissioning](https://docs.factorysemantics.com/dev/operate/opc-readonly/)
 - [Operate — How-to — plants from a registry](https://docs.factorysemantics.com/dev/operate/registry/)
 - [Operate — How-to — running beside an existing MES](https://docs.factorysemantics.com/dev/operate/shadow-mode/)
+- [Operate — How-to — the shadow scorecard](https://docs.factorysemantics.com/dev/operate/shadow-scorecard/)
 - [Operate — How-to — the ERPNext connector](https://docs.factorysemantics.com/dev/operate/erpnext/)
 - [Operate — How-to — the unified namespace (MQTT)](https://docs.factorysemantics.com/dev/operate/uns/)
 - [Operate — How-to — backup and restore](https://docs.factorysemantics.com/dev/operate/backup/)
