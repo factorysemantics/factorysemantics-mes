@@ -24,6 +24,7 @@
 - [Operate — How-to — upgrading between versions](https://docs.factorysemantics.com/dev/operate/upgrade/)
 - [Operate — Explanation — the confirmation handoff](https://docs.factorysemantics.com/dev/operate/confirmation-files/)
 - [Operate — Reference — the ERP confirmation contract](https://docs.factorysemantics.com/dev/reference/erp-confirmations/)
+- [Operate — How-to — inbound events from other systems](https://docs.factorysemantics.com/dev/operate/inbound/)
 - [Operate — Reference — settings](https://docs.factorysemantics.com/dev/reference/settings/)
 - [Operate — Reference — CLI](https://docs.factorysemantics.com/dev/reference/cli/)
 - [Operate — Reference — REST API](https://docs.factorysemantics.com/dev/reference/api/)
