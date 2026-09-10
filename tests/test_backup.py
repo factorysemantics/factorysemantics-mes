@@ -8,6 +8,7 @@ no backup, because the plant finds out on the day it restores.
 
 import json
 import sqlite3
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -114,6 +115,21 @@ def test_the_copy_carries_writes_that_are_still_only_in_the_wal(tmp_path, monkey
     assert manifest["database"]["revision"] == "abc123"
 
 
+def test_the_folder_name_and_the_manifest_name_the_same_instant(tmp_path, monkeypatch):
+    """The backup reads the clock once. The folder stamp and the manifest's
+    `taken` are the same instant written two ways, so a restore that trusts
+    `taken` names the time the folder carries. The clock here moves a second
+    on every read: only a backup that reads it once can agree with itself."""
+    settings = _plant(tmp_path, monkeypatch)
+    ticks = iter(datetime(2026, 9, 10, 11, 32, 19) + timedelta(seconds=n) for n in range(100))
+    monkeypatch.setattr("fsmes.backup.utcnow", lambda: next(ticks))
+
+    manifest = back_up(settings, tmp_path / "backups")
+
+    folder = tmp_path / "backups" / sorted(p.name for p in (tmp_path / "backups").iterdir())[0]
+    assert datetime.fromisoformat(manifest["taken"]).strftime("%Y%m%d-%H%M%S") == folder.name
+
+
 def test_a_backup_never_writes_over_one_that_is_already_there(tmp_path, monkeypatch):
     """Two backups sharing a folder name is how somebody restores the wrong
     one, and the loser is the older, better copy."""
@@ -121,7 +137,7 @@ def test_a_backup_never_writes_over_one_that_is_already_there(tmp_path, monkeypa
     manifest = back_up(settings, tmp_path / "backups")
 
     with pytest.raises(BackupError, match="already exists"):
-        back_up(settings, tmp_path / "backups", now=__import__("datetime").datetime.fromisoformat(manifest["taken"]))
+        back_up(settings, tmp_path / "backups", now=datetime.fromisoformat(manifest["taken"]))
 
 
 # --------------------------------------------------------- a server database
