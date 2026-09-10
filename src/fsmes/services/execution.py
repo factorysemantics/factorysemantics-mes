@@ -5,6 +5,8 @@ auto-start a pending operation and auto-complete it when the order quantity
 is reached — the machine drives, the MES keeps the books.
 """
 
+from datetime import datetime
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -21,6 +23,13 @@ from fsmes.domain import (
     WorkOrderOperation,
 )
 from fsmes.services import Conflict, Invalid, NotFound, audit, masterdata, workorders
+
+# Counts this MES did not type in itself. Both keep units the MES has no
+# order for rather than refusing them, and both may start and finish an
+# operation, because in both cases something outside this MES was already
+# running the order. A count somebody typed *into this MES* with no order
+# open stays an error: that one is a mistake worth stopping.
+_COUNTED_ELSEWHERE = frozenset({ProductionSource.OPC, ProductionSource.EXTERNAL})
 
 
 def get_lot(session: Session, code: str) -> MaterialLot:
@@ -127,7 +136,9 @@ def report(
     good: float = 0,
     scrap: float = 0,
     source: ProductionSource = ProductionSource.MANUAL,
+    source_system: str | None = None,
     actor: str = "system",
+    ts: datetime | None = None,
 ) -> WorkOrderOperation | None:
     """Book produced quantities against an operation.
 
@@ -174,8 +185,9 @@ def report(
             .order_by(WorkOrder.priority, WorkOrder.id, WorkOrderOperation.seq)
         )
         if op is None:
-            if source is ProductionSource.OPC:
-                record_unassigned(session, equipment=equipment, good=good, scrap=scrap)
+            if source in _COUNTED_ELSEWHERE:
+                record_unassigned(session, equipment=equipment, good=good, scrap=scrap,
+                                  source=source, source_system=source_system, ts=ts)
                 return None
             raise Invalid(f"no active operation on equipment {equipment_code!r}")
     else:
@@ -183,7 +195,7 @@ def report(
 
     wo = op.order
     if op.status is OperationStatus.PENDING:
-        if source is ProductionSource.OPC:
+        if source in _COUNTED_ELSEWHERE:
             workorders.start_operation(session, wo.code, op.seq, actor=actor)
         else:
             raise Conflict(f"operation {op.seq} of {wo.code} has not been started")
@@ -198,24 +210,32 @@ def report(
             good_qty=good,
             scrap_qty=scrap,
             source=source,
+            source_system=source_system,
+            **({"ts": ts} if ts is not None else {}),
         )
     )
-    if source is ProductionSource.MANUAL:
+    # A machine counting is not an event worth an audit row per delta; a
+    # person typing, or another system telling us, is.
+    if source is not ProductionSource.OPC:
         audit.record(
             session,
             actor=actor,
             action="production.reported",
             entity_type="workorder",
             entity_id=wo.code,
-            after={"seq": op.seq, "good": good, "scrap": scrap},
+            after={"seq": op.seq, "good": good, "scrap": scrap,
+                   "source": source.value, "source_system": source_system},
         )
-    if source is ProductionSource.OPC and op.good_qty >= wo.quantity:
+    if source in _COUNTED_ELSEWHERE and op.good_qty >= wo.quantity:
         workorders.complete_operation(session, wo.code, op.seq, actor=actor)
     return op
 
 
 def record_unassigned(session: Session, *, equipment: Equipment,
-                      good: float = 0, scrap: float = 0) -> ProductionLog:
+                      good: float = 0, scrap: float = 0,
+                      source: ProductionSource = ProductionSource.OPC,
+                      source_system: str | None = None,
+                      ts: datetime | None = None) -> ProductionLog:
     """Record units a machine counted with no order open to book them against.
 
     House rule 1 is *never invent production*; this is its mirror. Guessing
@@ -223,6 +243,11 @@ def record_unassigned(session: Session, *, equipment: Equipment,
     dropping them to a log line would erase production the plant really
     made. So they are kept with the one fact that is certain — which machine
     counted them, and when — and no fact that is not.
+
+    A count supplied by another system lands here for the same reason and
+    keeps the name of the system that supplied it, so a person reading the
+    list can tell "our counter ran past its order" from "the incumbent says
+    these were made and we have no order for them".
     """
     row = ProductionLog(
         work_order_id=None,
@@ -230,7 +255,9 @@ def record_unassigned(session: Session, *, equipment: Equipment,
         equipment_id=equipment.id,
         good_qty=good,
         scrap_qty=scrap,
-        source=ProductionSource.OPC,
+        source=source,
+        source_system=source_system,
+        **({"ts": ts} if ts is not None else {}),
     )
     session.add(row)
     session.flush()
@@ -274,6 +301,11 @@ def unassigned_production(session: Session, *, equipment_code: str | None = None
                 "order": None,
                 "good": row.good_qty,
                 "scrap": row.scrap_qty,
+                # Where the number came from. Null `source_system` means
+                # this MES counted it itself; there is no other system to
+                # name, and naming one would be a guess.
+                "source": row.source.value,
+                "source_system": row.source_system,
                 "ts": row.ts,
             }
             for row in rows
