@@ -16,7 +16,7 @@
         <link rel="prev" href="../../ARCHITECTURE/">
       
       
-        <link rel="next" href="../../design/STYLE/">
+        <link rel="next" href="../erp-connectors/">
       
       
         
@@ -1294,6 +1294,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../erp-connectors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — writing an ERP connector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../design/STYLE/" class="md-nav__link">
         
   
@@ -1338,10 +1366,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_6" >
         
           
-          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4_6" id="__nav_4_6_label" tabindex="">
             
   
   
@@ -1359,8 +1387,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_5">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1937,6 +1965,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0020 — What "supported" means for an ERP connector, and what it is called before that
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -2410,18 +2466,26 @@ into entry-point modules is on the roadmap, not done.</p>
 <span class="n">erpnext</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"fsmes.integrations.erp.erpnext_adapter:from_settings"</span>
 </code></pre></div>
 <p><code>from_settings(settings)</code> builds an adapter that satisfies the <code>ErpAdapter</code>
-protocol — three methods:</p>
+protocol. Three methods move the work:</p>
 <div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ErpAdapter</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">fetch_orders</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ProductionRequest</span><span class="p">]:</span> <span class="o">...</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">acknowledge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">order_code</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">send_confirmation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">confirmation</span><span class="p">:</span> <span class="n">Confirmation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 </code></pre></div>
+<p>Three more describe the far side — <code>requirements()</code>, <code>setup()</code> and
+<code>check()</code> — and they have defaults, so a transport that needs nothing on
+the ERP side can ignore them. They are what <code>fsmes erp requirements</code>,
+<code>fsmes erp setup</code> and <code>fsmes erp check</code> run.
+<a href="../erp-connectors/">Writing an ERP connector</a> is the whole story, including
+the conformance suite a connector has to pass.</p>
 <p>The models are typed (<code>contract.py</code>); every MES-side rule lives in
 <code>services.erp</code>, so an adapter is transport only.</p>
 <h2 id="write-your-own-connector-in-its-own-package">Write your own connector, in its own package<a class="headerlink" href="#write-your-own-connector-in-its-own-package" title="Permanent link">&para;</a></h2>
 <ol>
 <li>New package, say <code>fsmes-sap</code>, depending on <code>factorysemantics-mes</code>.</li>
-<li>Implement the three methods against <code>fsmes.integrations.erp.contract</code>.</li>
+<li>Implement the port against <code>fsmes.integrations.erp.contract</code>, and run
+   <code>fsmes.integrations.erp.conformance</code> against it — see
+   <a href="../erp-connectors/">writing an ERP connector</a>.</li>
 <li>
 <p>Register:</p>
 <div class="highlight"><pre><span></span><code><span class="k">[project.entry-points.</span><span class="s2">"fsmes.modules"</span><span class="k">]</span>
@@ -2442,7 +2506,8 @@ ERPNext in-process: the shape to copy. Name tests after the promise they
 pin, not the function they call — house rule 5.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Decision records <a href="../../decisions/0002-kernel-and-modules/">0002</a> and <a href="../../decisions/0008-erp-connectors-are-modules/">0008</a></li>
+<li><a href="../erp-connectors/">Writing an ERP connector</a> — the port in full, and the bar</li>
+<li>Decision records <a href="../../decisions/0002-kernel-and-modules/">0002</a>, <a href="../../decisions/0008-erp-connectors-are-modules/">0008</a> and <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/">0020</a></li>
 <li><a href="../../operate/erpnext/">The ERPNext connector</a></li>
 </ul>
 
@@ -2499,13 +2564,13 @@ pin, not the function they call — house rule 5.</p>
         
         
           
-          <a href="../../design/STYLE/" class="md-footer__link md-footer__link--next" aria-label="Next: Style">
+          <a href="../erp-connectors/" class="md-footer__link md-footer__link--next" aria-label="Next: Reference — writing an ERP connector">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Style
+                Reference — writing an ERP connector
               </div>
             </div>
             <div class="md-footer__button md-icon">

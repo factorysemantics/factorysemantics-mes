@@ -1002,6 +1002,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — compatibility
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -1018,6 +1036,36 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#erp-connectors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ERP connectors
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1202,6 +1250,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../develop/erp-connectors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — writing an ERP connector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../design/STYLE/" class="md-nav__link">
         
   
@@ -1243,10 +1319,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_6" >
         
           
-          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_6" id="__nav_4_6_label" tabindex="0">
             
   
   
@@ -1264,8 +1340,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_5">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1842,6 +1918,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0020 — What "supported" means for an ERP connector, and what it is called before that
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -2212,6 +2316,25 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#erp-connectors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ERP connectors
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -2236,7 +2359,7 @@
 
 
 <h1 id="compatibility">Compatibility<a class="headerlink" href="#compatibility" title="Permanent link">&para;</a></h1>
-<p><em>Explanation. What has actually been tested against what, as of 2026-09-09. "Untested" is a fact, not a warning label.</em></p>
+<p><em>Explanation. What has actually been tested against what, as of 2026-09-10. "Untested" is a fact, not a warning label.</em></p>
 <table>
 <thead>
 <tr>
@@ -2262,19 +2385,9 @@
 <td>the client is <code>asyncua</code>; the tag map is the only server-specific part</td>
 </tr>
 <tr>
-<td><strong>ERPNext v15.120.0</strong></td>
-<td>tested continuously</td>
-<td>the <code>ERPNext (live)</code> job: a clean container from <code>labs/erpnext/docker-compose.yml</code>, pinned to image digests, seeded and put through the whole round trip in <code>tests/test_erpnext_live.py</code>, every pull request that touches the connector (2026-09-09)</td>
-</tr>
-<tr>
-<td>ERPNext v16</td>
-<td>untested</td>
-<td>nothing claims anything about it; the live job pins v15</td>
-</tr>
-<tr>
-<td>Odoo, SAP, Oracle</td>
-<td>not written</td>
-<td>the contract exists (<code>contract.py</code>); the modules do not</td>
+<td><strong>ERP connectors</strong></td>
+<td>see the table below</td>
+<td>they have rules of their own</td>
 </tr>
 <tr>
 <td><strong>PostgreSQL 16</strong></td>
@@ -2314,6 +2427,71 @@
 </tbody>
 </table>
 <p>When a row changes, it changes here first, with the date and what was run.</p>
+<h2 id="erp-connectors">ERP connectors<a class="headerlink" href="#erp-connectors" title="Permanent link">&para;</a></h2>
+<p>Three words, defined in decision
+<a href="../../decisions/0020-what-supported-means-for-an-erp-connector/">0020</a>, and
+nothing here uses any others:</p>
+<ul>
+<li><strong>supported</strong> — implements the ERP port, passes the conformance suite, and
+  is tested against a stated version of a real system by a job somebody
+  maintains.</li>
+<li><strong>contributed</strong> — implements the port and passes the conformance suite.
+  Nobody here has run it against a real system.</li>
+<li><strong>experimental</strong> — exists. The row says what is missing.</li>
+</ul>
+<p><strong>The rule: every row states the exact version tested and the date it was
+tested.</strong> A connector with no live test says so, in those words, in its own
+row. A connector nobody has run against a real system is not a connector
+anybody should trust with a shift, and a table that lets that be inferred
+rather than read is a table that misleads.</p>
+<table>
+<thead>
+<tr>
+<th>Connector</th>
+<th>Standing</th>
+<th>Version tested</th>
+<th>Date</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ERPNext</strong></td>
+<td>supported</td>
+<td>v15.120.0 (Frappe v15, MariaDB 10.6)</td>
+<td>2026-09-09, and on every pull request that touches it since</td>
+<td>the <code>ERPNext (live)</code> job: a clean container from <code>labs/erpnext/docker-compose.yml</code>, images pinned by digest, seeded and put through the whole round trip in <code>tests/test_erpnext_live.py</code>, asserting against ERPNext's own documents. Also passes the conformance suite</td>
+</tr>
+<tr>
+<td>ERPNext v16</td>
+<td>experimental</td>
+<td><strong>no live test</strong></td>
+<td>—</td>
+<td>nothing here claims anything about it; the live job pins v15</td>
+</tr>
+<tr>
+<td><strong>file exchange</strong> (B2MML-lite)</td>
+<td>supported</td>
+<td>not applicable — the far side is a folder</td>
+<td>2026-09-10</td>
+<td><code>tests/test_file_erp.py</code> and the conformance suite</td>
+</tr>
+<tr>
+<td><strong>REST</strong> (against the bundled mock ERP)</td>
+<td>supported</td>
+<td>not applicable — the far side ships with it</td>
+<td>2026-09-10</td>
+<td><code>tests/test_erp_contract.py</code> and the conformance suite. Against a <em>real</em> ERP's REST API it is <strong>untested</strong>, and the three endpoints it needs are in <code>fsmes erp requirements</code></td>
+</tr>
+<tr>
+<td>Odoo, SAP, Oracle, NetSuite</td>
+<td>not written</td>
+<td>—</td>
+<td>—</td>
+<td>the contract exists (<code>contract.py</code>), the conformance suite exists (<code>conformance.py</code>), the connectors do not. <a href="../../develop/erp-connectors/">How to write one</a></td>
+</tr>
+</tbody>
+</table>
 
 
 

@@ -1339,6 +1339,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../develop/erp-connectors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — writing an ERP connector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../design/STYLE/" class="md-nav__link">
         
   
@@ -1380,10 +1408,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_6" >
         
           
-          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_6" id="__nav_4_6_label" tabindex="0">
             
   
   
@@ -1401,8 +1429,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_5">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1959,6 +1987,34 @@
     
   
     0019 — Count everything the machine counted: over-runs are booked, surplus is unassigned production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0020 — What "supported" means for an ERP connector, and what it is called before that
   
 
     
@@ -2545,9 +2601,14 @@ the defaults are the Frappe development bench's.</p>
 </table>
 <p>Five fields, all <code>allow_on_submit</code>, because a submitted work order is
 precisely when they change. With the connection configured above:</p>
-<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>erp<span class="w"> </span>setup<span class="w">      </span><span class="c1"># creates any of the five that are missing; safe to run twice</span>
-fsmes<span class="w"> </span>erp<span class="w"> </span>check<span class="w">      </span><span class="c1"># says whether URL, credentials, fields and company are all in order</span>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>erp<span class="w"> </span>requirements<span class="w">   </span><span class="c1"># the five fields, and why each one exists — the list to send whoever runs the site</span>
+fsmes<span class="w"> </span>erp<span class="w"> </span>setup<span class="w">          </span><span class="c1"># creates any of the five that are missing; safe to run twice</span>
+fsmes<span class="w"> </span>erp<span class="w"> </span>check<span class="w">          </span><span class="c1"># says whether URL, credentials, fields and company are all in order</span>
 </code></pre></div>
+<p>These three commands are the ERP port's own <code>requirements()</code>, <code>setup()</code> and
+<code>check()</code>. They act on whatever <code>MES_ERP_MODE</code> names, so they read the same
+for a connector somebody else publishes — see
+<a href="../../develop/erp-connectors/">writing an ERP connector</a>.</p>
 <p><code>fsmes erp check</code> exits non-zero if anything would stop the connector
 working, so it can gate a deployment. It names the field that is wrong rather
 than saying the configuration is bad.</p>
@@ -2647,8 +2708,13 @@ signal at all, so comparing what was written against the document that comes
 back is the only way to know a number landed.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
+<li><a href="../../develop/erp-connectors/">Writing an ERP connector</a> — this connector is
+  the reference implementation of that port, and every obligation on that page
+  is something this connector got wrong first</li>
 <li><a href="../../reference/settings/">Settings reference</a> — every <code>MES_ERPNEXT_*</code> value</li>
-<li>Decision record <a href="../../decisions/0008-erp-connectors-are-modules/">0008</a></li>
+<li><a href="../compatibility/">Compatibility</a> — what is tested against what, and when</li>
+<li>Decision records <a href="../../decisions/0008-erp-connectors-are-modules/">0008</a> and
+  <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/">0020</a></li>
 <li>The typed contract: <code>src/fsmes/integrations/erp/contract.py</code></li>
 </ul>
 

@@ -10,27 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://docs.factorysemantics.com/dev/design/backlog/book-output-explicit-order/">
+        <link rel="canonical" href="https://docs.factorysemantics.com/dev/decisions/0020-what-supported-means-for-an-erp-connector/">
       
       
+        <link rel="prev" href="../0019-count-everything-the-machine-counted/">
+      
+      
+        <link rel="next" href="../TEMPLATE/">
       
       
         
       
       
-      <link rel="icon" href="../../../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.7">
     
     
       
-        <title>Name Report production what it is, and say which order - FactorySemantics MES</title>
+        <title>0020 — What "supported" means for an ERP connector, and what it is called before that - FactorySemantics MES</title>
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -49,9 +53,9 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#name-report-production-what-it-is-and-say-which-order" class="md-skip">
+        <a href="#0020-what-supported-means-for-an-erp-connector-and-what-it-is-called-before-that" class="md-skip">
           Skip to content
         </a>
       
@@ -94,7 +98,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="FactorySemantics MES" class="md-header__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+    <a href="../.." title="FactorySemantics MES" class="md-header__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -114,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Name Report production what it is, and say which order
+              0020 — What "supported" means for an ERP connector, and what it is called before that
             
           </span>
         </div>
@@ -227,7 +231,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../.." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -248,7 +252,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../plant/" class="md-tabs__link">
+        <a href="../../plant/" class="md-tabs__link">
           
   
   
@@ -268,7 +272,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../operate/" class="md-tabs__link">
+        <a href="../../operate/" class="md-tabs__link">
           
   
   
@@ -284,11 +288,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../../develop/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../develop/" class="md-tabs__link">
           
   
   
@@ -308,7 +314,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../agents/" class="md-tabs__link">
+        <a href="../../agents/" class="md-tabs__link">
           
   
   
@@ -328,7 +334,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../LANDSCAPE/" class="md-tabs__link">
+        <a href="../../LANDSCAPE/" class="md-tabs__link">
           
   
   
@@ -362,7 +368,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="FactorySemantics MES" class="md-nav__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+    <a href="../.." title="FactorySemantics MES" class="md-nav__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -392,7 +398,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -471,7 +477,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../plant/" class="md-nav__link">
+      <a href="../../plant/" class="md-nav__link">
         
   
   
@@ -499,7 +505,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../plant/first-line/" class="md-nav__link">
+      <a href="../../plant/first-line/" class="md-nav__link">
         
   
   
@@ -579,7 +585,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../onboarding/GUIDE-IT/" class="md-nav__link">
+      <a href="../../onboarding/GUIDE-IT/" class="md-nav__link">
         
   
   
@@ -607,7 +613,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../onboarding/GUIDE-ENGINEERING/" class="md-nav__link">
+      <a href="../../onboarding/GUIDE-ENGINEERING/" class="md-nav__link">
         
   
   
@@ -643,7 +649,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../plant/reading-oee/" class="md-nav__link">
+      <a href="../../plant/reading-oee/" class="md-nav__link">
         
   
   
@@ -671,7 +677,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../plant/never-invent-production/" class="md-nav__link">
+      <a href="../../plant/never-invent-production/" class="md-nav__link">
         
   
   
@@ -758,7 +764,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/" class="md-nav__link">
+      <a href="../../operate/" class="md-nav__link">
         
   
   
@@ -786,7 +792,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/deploy/" class="md-nav__link">
+      <a href="../../operate/deploy/" class="md-nav__link">
         
   
   
@@ -814,7 +820,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/registry/" class="md-nav__link">
+      <a href="../../operate/registry/" class="md-nav__link">
         
   
   
@@ -842,7 +848,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/erpnext/" class="md-nav__link">
+      <a href="../../operate/erpnext/" class="md-nav__link">
         
   
   
@@ -870,7 +876,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/uns/" class="md-nav__link">
+      <a href="../../operate/uns/" class="md-nav__link">
         
   
   
@@ -898,7 +904,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/settings/" class="md-nav__link">
+      <a href="../../reference/settings/" class="md-nav__link">
         
   
   
@@ -926,7 +932,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/cli/" class="md-nav__link">
+      <a href="../../reference/cli/" class="md-nav__link">
         
   
   
@@ -954,7 +960,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/" class="md-nav__link">
+      <a href="../../reference/api/" class="md-nav__link">
         
   
   
@@ -982,7 +988,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/compatibility/" class="md-nav__link">
+      <a href="../../operate/compatibility/" class="md-nav__link">
         
   
   
@@ -1010,7 +1016,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/security/" class="md-nav__link">
+      <a href="../../operate/security/" class="md-nav__link">
         
   
   
@@ -1042,26 +1048,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
             
   
   
@@ -1079,7 +1090,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1097,7 +1108,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../develop/" class="md-nav__link">
+      <a href="../../develop/" class="md-nav__link">
         
   
   
@@ -1125,7 +1136,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../ARCHITECTURE/" class="md-nav__link">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
         
   
   
@@ -1153,7 +1164,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../develop/your-first-module/" class="md-nav__link">
+      <a href="../../develop/your-first-module/" class="md-nav__link">
         
   
   
@@ -1181,7 +1192,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../develop/erp-connectors/" class="md-nav__link">
+      <a href="../../develop/erp-connectors/" class="md-nav__link">
         
   
   
@@ -1209,7 +1220,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../STYLE/" class="md-nav__link">
+      <a href="../../design/STYLE/" class="md-nav__link">
         
   
   
@@ -1234,26 +1245,31 @@
                 
   
   
+    
   
   
+  
     
     
     
     
       
       
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_6" >
         
           
-          <label class="md-nav__link" for="__nav_4_6" id="__nav_4_6_label" tabindex="0">
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_6" id="__nav_4_6_label" tabindex="">
             
   
   
@@ -1271,7 +1287,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1289,7 +1305,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -1317,7 +1333,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0001-apache-2-with-dco/" class="md-nav__link">
+      <a href="../0001-apache-2-with-dco/" class="md-nav__link">
         
   
   
@@ -1345,7 +1361,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0002-kernel-and-modules/" class="md-nav__link">
+      <a href="../0002-kernel-and-modules/" class="md-nav__link">
         
   
   
@@ -1373,7 +1389,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0003-one-mcp-server/" class="md-nav__link">
+      <a href="../0003-one-mcp-server/" class="md-nav__link">
         
   
   
@@ -1401,7 +1417,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0004-never-invent-production/" class="md-nav__link">
+      <a href="../0004-never-invent-production/" class="md-nav__link">
         
   
   
@@ -1429,7 +1445,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0005-plain-html-no-build-step/" class="md-nav__link">
+      <a href="../0005-plain-html-no-build-step/" class="md-nav__link">
         
   
   
@@ -1457,7 +1473,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
+      <a href="../0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
         
   
   
@@ -1485,7 +1501,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0007-fresh-public-history/" class="md-nav__link">
+      <a href="../0007-fresh-public-history/" class="md-nav__link">
         
   
   
@@ -1513,7 +1529,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0008-erp-connectors-are-modules/" class="md-nav__link">
+      <a href="../0008-erp-connectors-are-modules/" class="md-nav__link">
         
   
   
@@ -1541,7 +1557,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0009-organisation-not-personal-account/" class="md-nav__link">
+      <a href="../0009-organisation-not-personal-account/" class="md-nav__link">
         
   
   
@@ -1569,7 +1585,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0010-github-discussions-only/" class="md-nav__link">
+      <a href="../0010-github-discussions-only/" class="md-nav__link">
         
   
   
@@ -1597,7 +1613,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0011-mkdocs-material-generated-reference/" class="md-nav__link">
+      <a href="../0011-mkdocs-material-generated-reference/" class="md-nav__link">
         
   
   
@@ -1625,7 +1641,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0012-contributor-covenant-3/" class="md-nav__link">
+      <a href="../0012-contributor-covenant-3/" class="md-nav__link">
         
   
   
@@ -1653,7 +1669,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0013-governance-is-one-page/" class="md-nav__link">
+      <a href="../0013-governance-is-one-page/" class="md-nav__link">
         
   
   
@@ -1681,7 +1697,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0014-first-public-version-is-0-1-0/" class="md-nav__link">
+      <a href="../0014-first-public-version-is-0-1-0/" class="md-nav__link">
         
   
   
@@ -1709,7 +1725,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0015-mcp-registry-name/" class="md-nav__link">
+      <a href="../0015-mcp-registry-name/" class="md-nav__link">
         
   
   
@@ -1737,7 +1753,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0016-no-trademark-registration/" class="md-nav__link">
+      <a href="../0016-no-trademark-registration/" class="md-nav__link">
         
   
   
@@ -1765,7 +1781,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
+      <a href="../0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
         
   
   
@@ -1793,7 +1809,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
+      <a href="../0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
         
   
   
@@ -1821,7 +1837,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0019-count-everything-the-machine-counted/" class="md-nav__link">
+      <a href="../0019-count-everything-the-machine-counted/" class="md-nav__link">
         
   
   
@@ -1846,10 +1862,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../../decisions/0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0020 — What "supported" means for an ERP connector, and what it is called before that
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1865,6 +1908,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options-considered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options considered
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#house-rules-touched" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        House rules touched
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1877,7 +1995,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/TEMPLATE/" class="md-nav__link">
+      <a href="../TEMPLATE/" class="md-nav__link">
         
   
   
@@ -1972,7 +2090,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../agents/" class="md-nav__link">
+      <a href="../../agents/" class="md-nav__link">
         
   
   
@@ -2000,7 +2118,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../agents/connect-mcp-client/" class="md-nav__link">
+      <a href="../../agents/connect-mcp-client/" class="md-nav__link">
         
   
   
@@ -2028,7 +2146,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/tools/" class="md-nav__link">
+      <a href="../../reference/tools/" class="md-nav__link">
         
   
   
@@ -2056,7 +2174,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../agents/write-discipline/" class="md-nav__link">
+      <a href="../../agents/write-discipline/" class="md-nav__link">
         
   
   
@@ -2084,7 +2202,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../agents/evals/" class="md-nav__link">
+      <a href="../../agents/evals/" class="md-nav__link">
         
   
   
@@ -2171,7 +2289,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../LANDSCAPE/" class="md-nav__link">
+      <a href="../../LANDSCAPE/" class="md-nav__link">
         
   
   
@@ -2199,7 +2317,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../history/private-era/" class="md-nav__link">
+      <a href="../../history/private-era/" class="md-nav__link">
         
   
   
@@ -2254,10 +2372,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-idea" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The idea
+        Context
       
     </span>
   </a>
@@ -2265,10 +2383,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#assessment" class="md-nav__link">
+  <a href="#options-considered" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Assessment
+        Options considered
       
     </span>
   </a>
@@ -2276,10 +2394,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#built" class="md-nav__link">
+  <a href="#decision" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Built
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#house-rules-touched" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        House rules touched
       
     </span>
   </a>
@@ -2303,7 +2443,7 @@
 
 
   
-    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/design/backlog/book-output-explicit-order.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/decisions/0020-what-supported-means-for-an-erp-connector.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -2311,48 +2451,151 @@
   
 
 
-<h1 id="name-report-production-what-it-is-and-say-which-order">Name Report production what it is, and say which order<a class="headerlink" href="#name-report-production-what-it-is-and-say-which-order" title="Permanent link">&para;</a></h1>
-<p><strong>approved</strong> — It is a booking, not a scrap; and the order is inferred from the machine, so it can book to the wrong one.</p>
-<h2 id="the-idea">The idea<a class="headerlink" href="#the-idea" title="Permanent link">&para;</a></h2>
-<blockquote>
-<p>"What is 'Report production'? Is it scrapping or dropping a production order
-or what?"</p>
-</blockquote>
-<h2 id="assessment">Assessment<a class="headerlink" href="#assessment" title="Permanent link">&para;</a></h2>
-<p>It is a production booking — "this machine made N good and M scrap" — and has
-nothing to do with cancelling an order. That the question had to be asked at
-all is the finding: the label names the act rather than the outcome.</p>
-<p>There is a real defect underneath it. The form submits only <code>equipment</code>, <code>good</code>
-and <code>scrap</code> (<code>src/fsmes/web/index.html</code>, <code>src/fsmes/web/app.js</code>).
-<code>POST /execution/report</code> <em>accepts</em> an explicit <code>order</code>, but the form never
-sends one, so <code>execution.report</code> (<code>src/fsmes/services/execution.py</code>) infers it:
-the first not-done operation on that machine belonging to a released or running
-order, ordered by priority, then id, then seq. With two orders queued on one
-machine it books to whichever sorts first and says nothing at all. On a floor
-where machines change orders mid-shift, that is quantity booked against the
-wrong order and discovered at month end.</p>
-<p>Approved rather than built, for one specific reason: the form carries
-<code>data-assist</code> anchors, and <code>tests/test_assistant.py</code> checks every authored
-guide step against the page it names. Renaming this section breaks guides that
-must be re-authored deliberately — not patched until a test goes green.</p>
-<p>Sketch: rename to <strong>Book output</strong>; add an Order select filled from the chosen
-machine's active operations and defaulting to the one the backend would have
-inferred; send <code>order</code> explicitly; re-author the affected guide steps.</p>
-<h2 id="built">Built<a class="headerlink" href="#built" title="Permanent link">&para;</a></h2>
-<p>Renamed to <strong>Book output</strong>; an Order select fills from
-<code>/workorders/dispatch?equipment=…</code> and defaults to exactly the operation the
-backend would have inferred, so the honest path costs no extra clicks; the
-form sends <code>order</code> and <code>seq</code> explicitly. The book-production guide gained a
-"Say which order" step anchored to the new control.</p>
+<h1 id="0020-what-supported-means-for-an-erp-connector-and-what-it-is-called-before-that">0020 — What "supported" means for an ERP connector, and what it is called before that<a class="headerlink" href="#0020-what-supported-means-for-an-erp-connector-and-what-it-is-called-before-that" title="Permanent link">&para;</a></h1>
+<ul>
+<li><strong>Status:</strong> accepted</li>
+<li><strong>Date:</strong> 2026-09-10</li>
+<li><strong>Deciders:</strong> @kalwei</li>
+</ul>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>The ERP port has been three typed methods — <code>fetch_orders</code>, <code>acknowledge</code>,
+<code>send_confirmation</code> — over the models in <code>contract.py</code>, with a connector
+plugging in as a <code>fsmes.modules</code> entry point. A connector published on its
+own works exactly like the one that ships. That much has been true since
+decision <a href="../0008-erp-connectors-are-modules/">0008</a>, and none of it changes here.</p>
+<p>Then the ERPNext connector met a real ERPNext, and three days produced three
+facts.</p>
+<p><strong>2026-09-09, morning.</strong> The connector needed five custom fields on ERPNext's
+Work Order doctype. <code>docs/operate/erpnext.md</code> said nothing was needed on the
+ERPNext side. The only thing that had ever created those fields was a demo
+seeding script in <code>labs/</code>, which is not in the wheel — so nobody who
+installed the package could create them at all. Fixed in PR #16.</p>
+<p><strong>2026-09-09, evening.</strong> PR #17 ran a real ERPNext v15.120.0 in CI and
+measured what Frappe does with a write naming a field the doctype does not
+have. It answers <strong><code>200</code></strong>, returns a normal document, and the value is
+neither stored nor returned. The run log prints it:
+<code>MISSING FIELD PROBE: refused=None value_after=None</code>. PR #16 had reasoned
+exactly that from Frappe's source and had to write it down as unverified,
+because nothing may start ERPNext on the maintainer's machine. It reasoned
+correctly. That is not a method to rely on twice.</p>
+<p><strong>Both days.</strong> <code>fsmes erp check</code> was written, and it knew about ERPNext
+specifically. <code>fsmes erp setup</code> refused every <code>MES_ERP_MODE</code> but <code>erpnext</code>.</p>
+<p>Behind all of it is a question Scott asked on 2026-09-09: can today's
+lessons be turned into public documents, so that SAP and Oracle go smoothly
+and are close to plug and play?</p>
+<p>What the three methods never said is: what has to exist on the far side,
+how a write is proved to have landed, and how a person checks it before
+trusting it. Each of those was fixed once, inside the ERPNext adapter. The
+next connector would have rediscovered all three, at somebody's plant.</p>
+<p>As of 2026-09-10 no ERP connector but ERPNext exists. This decision is made
+before there is a queue of them, on purpose.</p>
+<h2 id="options-considered">Options considered<a class="headerlink" href="#options-considered" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>For</th>
+<th>Against</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Three obligations on the port, a conformance suite in the package, and three words for how far a connector has got</strong></td>
+<td>the bar is checkable rather than claimed; a contributor finds out in their own CI, not in a plant; "not tested" stays sayable out loud</td>
+<td>more surface on the port; three words to keep honest as connectors arrive</td>
+</tr>
+<tr>
+<td>Document it and trust contributors — what we had on the morning of 2026-09-09</td>
+<td>nothing to build; contributors are not treated as suspects</td>
+<td>it is exactly what produced a documented connector that could not work, and the documentation was confidently wrong for three days. Prose cannot fail a build</td>
+</tr>
+<tr>
+<td>One word, <code>supported</code>, granted by the maintainer's judgement</td>
+<td>simple; no tiers to explain</td>
+<td>it makes one person the bottleneck for every connector, and it gives a reader no way to tell a connector nobody has run from one that runs nightly against a pinned version</td>
+</tr>
+<tr>
+<td>Only connectors maintained in this repository are listed at all</td>
+<td>everything listed is genuinely tested</td>
+<td>it is the opposite of the wedge. A person with a real SAP is the only one who can prove an SAP connector, and this would give them nowhere to put it</td>
+</tr>
+<tr>
+<td>Call a connector supported when its unit tests pass</td>
+<td>cheap, automatic</td>
+<td>a fake that lies in the same direction the connector does passes every unit test. That is the <code>200</code>-and-drop failure exactly</td>
+</tr>
+</tbody>
+</table>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p>The ERP port carries three more methods, each with a default so that a
+transport needing nothing on the far side, and a connector written against
+the older three-method port, both keep working:</p>
+<ul>
+<li><strong><code>requirements()</code></strong> — what must exist on the ERP side, as data a person
+  can act on: what it is called, where it lives, what it is, why the MES
+  cannot work without it, and whether the MES can create it.</li>
+<li><strong><code>setup()</code></strong> — create or verify those requirements, idempotently, naming
+  each one and what happened to it.</li>
+<li><strong><code>check()</code></strong> — connectivity, credentials and requirements, in plain
+  language, with <code>unknown</code> as a first-class verdict, exiting non-zero when
+  something is wrong.</li>
+</ul>
+<p><code>fsmes erp requirements</code>, <code>fsmes erp setup</code> and <code>fsmes erp check</code> are those
+three methods and nothing else. They act on whatever connector
+<code>MES_ERP_MODE</code> names and no longer know that ERPNext exists.</p>
+<p><code>fsmes.integrations.erp.conformance</code> ships <strong>inside the package</strong> — not in
+<code>tests/</code> — so a connector published on its own is held to the same eight
+obligations without vendoring this project's test tree.</p>
+<p>And three words, which <code>docs/operate/compatibility.md</code> uses and nothing
+else may:</p>
+<ul>
+<li><strong>supported</strong> — implements the port; passes the conformance suite; is
+  tested against a <strong>stated version</strong> of a real system by a job somebody
+  maintains; has a page saying what it does <em>not</em> cover; has a
+  compatibility row carrying the version tested and the date.</li>
+<li><strong>contributed</strong> — implements the port and passes the conformance suite.
+  Nobody here has run it against a real system. Its row says so.</li>
+<li><strong>experimental</strong> — exists. Its row says what is missing.</li>
+</ul>
+<p>A connector with no live test is a connector nobody has run, and its row
+says that in those words. Today exactly one connector is supported:
+<strong>ERPNext v15.120.0</strong>, as of 2026-09-09. Odoo, SAP, Oracle and NetSuite are
+not written — the contract exists, the connectors do not — and that stays
+true until somebody with one of those systems writes and proves one.</p>
+<p><code>docs/develop/erp-connectors.md</code> is this decision as instructions.</p>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<p>Easier: a connector author finds out in their own CI that their <code>check</code>
+cannot fail, or that their adapter returns dicts, or that their write is
+never read back. All three were found here the expensive way. A reader of
+the compatibility table can tell a connector that runs against a pinned
+version every week from one that has only ever met a fake.</p>
+<p>Harder: the port is six methods, not three, and every connector that ships
+must implement them or inherit the defaults deliberately. <code>check()</code> must
+have no side effects, which means some things it would like to prove it can
+only report as <code>unknown</code> — and a <code>Ready.</code> with an unknown in it has to say
+so rather than reading as a guarantee.</p>
+<p>Not decided here: whether a connector may be listed as supported when the
+live job runs on somebody else's infrastructure rather than this
+repository's CI. Nobody has offered one yet. When they do, the answer goes
+in this file's successor, with what they offered.</p>
+<p>To revisit when the second connector arrives. Three words fitted one
+connector and a guess; the guess is the part to check.</p>
+<h2 id="house-rules-touched">House rules touched<a class="headerlink" href="#house-rules-touched" title="Permanent link">&para;</a></h2>
+<p>Rule 2 — unknown is a valid answer, zero is not — twice over. <code>check()</code>
+reports <code>unknown</code> for what it could not prove rather than counting it as
+working, and <code>contributed</code> exists so that "nobody here has run this" is a
+thing the table can say instead of quietly reading as supported.</p>
+<p>Rule 1, never invent production, is what obligation 4 protects: a
+connector that reports a dropped write as success makes the MES record
+production that reached no ERP.</p>
+<p>Rule 5, tests are prose: the eight obligations are named after the promise
+each one pins, and a failure prints the obligation's name.</p>
 
 
 
 
 
 
-
-  
-  
 
 
 
@@ -2379,6 +2622,44 @@ form sends <code>order</code> and <code>seq</code> explicitly. The book-producti
       
         <footer class="md-footer">
   
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../0019-count-everything-the-machine-counted/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 0019 — Count everything the machine counted: over-runs are booked, surplus is unassigned production">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                0019 — Count everything the machine counted: over-runs are booked, surplus is unassigned production
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../TEMPLATE/" class="md-footer__link md-footer__link--next" aria-label="Next: Template">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Template
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
     
   
   <div class="md-footer-meta md-typeset">
@@ -2437,10 +2718,10 @@ form sends <code>order</code> and <code>seq</code> explicitly. The book-producti
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "content.tabs.link", "content.code.copy", "content.action.edit", "search.suggest", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "content.tabs.link", "content.code.copy", "content.action.edit", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
