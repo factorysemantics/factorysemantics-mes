@@ -28,10 +28,11 @@ what the connector says to ERPNext and what ERPNext does with it, not the
 MES-side booking that decides what to say. It does assert the one thing the
 sync worker needs from the inbound half — that `fetch_orders` returns the
 typed `ProductionRequest` rather than a dict — because that mismatch is
-exactly what broke every inbound order before it was fixed. Over-production — a good quantity
-above the work order's quantity plus ERPNext's over-production allowance —
-is also not covered here; ERPNext has its own opinion about that and nobody
-has measured it yet.
+exactly what broke every inbound order before it was fixed.
+
+Over-production is covered as of 2026-09-10: an over-run inside ERPNext's own
+allowance, one beyond it, and the allowance at zero. What the outbox then does
+with a refusal is `tests/test_erp_contract.py`, which needs no ERPNext.
 """
 
 import uuid
@@ -40,7 +41,12 @@ import pytest
 
 from fsmes.config import get_settings
 from fsmes.integrations.erp.contract import ProductionRequest
-from fsmes.integrations.erp.erpnext_adapter import ErpNextAdapter, ErpNextClient, ErpNextError
+from fsmes.integrations.erp.erpnext_adapter import (
+    ErpNextAdapter,
+    ErpNextClient,
+    ErpNextError,
+    ErpNextRefused,
+)
 
 pytestmark = [pytest.mark.slow, pytest.mark.erpnext_live]
 
@@ -425,7 +431,11 @@ def report(case: str, client: ErpNextClient, order: str, good: float,
 
 
 def test_an_over_run_inside_erpnexts_allowance_is_booked_for_every_unit(client, seeded, allowance):
-    """The line made 420 against an order for 400 and ERPNext allows 10%."""
+    """420 against an order for 400, on a site that allows 10%.
+
+    ERPNext takes it whole: `produced_qty` is the 420 the machines counted,
+    not the 400 somebody asked for, and the order closes as Completed.
+    """
     allowance(10.0)
     order = submit_work_order(client, seeded, ORDERED_QTY)
     adapter = ErpNextAdapter(client)
@@ -435,11 +445,29 @@ def test_an_over_run_inside_erpnexts_allowance_is_booked_for_every_unit(client, 
     refusal = confirm_over_run(adapter, order, good)
     measured = report("within allowance", client, order, good, refusal)
 
+    assert refusal is None, f"ERPNext refused an over-run inside its own allowance: {refusal}"
+    assert measured["produced_qty"] == good
+    assert measured["wo_status"] == "Completed"
+    assert len(measured["entries"]) == 1, (
+        f"expected 1 submitted Manufacture entry, ERPNext holds {len(measured['entries'])}"
+    )
+    assert measured["entries"][0][1] == good
     assert measured["custom_mes_good_qty"] == good
+    assert measured["custom_mes_over_qty"] == good - ORDERED_QTY
+    assert any("over the ordered quantity" in text for text in measured["comments"]), measured["comments"]
 
 
-def test_an_over_run_beyond_erpnexts_allowance_is_measured_not_guessed(client, seeded, allowance):
-    """The line made 500 against an order for 400 and ERPNext allows 10%."""
+def test_an_over_run_beyond_erpnexts_allowance_is_refused_whole_and_booked_nowhere(client, seeded, allowance):
+    """500 against an order for 400, on a site that allows 10%.
+
+    Measured on v15.120.0: ERPNext throws `For quantity 500.0 should not be
+    greater than allowed quantity 440.0` as an HTTP 417, and books **nothing**
+    - not the 440 it would have allowed, not a draft. `produced_qty` stays 0.
+
+    So the confirmation is not delivered, and the connector says why: the
+    error is permanent, the outbox stops rather than retrying, and a comment
+    on the Work Order tells whoever has to decide what happened.
+    """
     allowance(10.0)
     order = submit_work_order(client, seeded, ORDERED_QTY)
     adapter = ErpNextAdapter(client)
@@ -449,11 +477,30 @@ def test_an_over_run_beyond_erpnexts_allowance_is_measured_not_guessed(client, s
     refusal = confirm_over_run(adapter, order, good)
     measured = report("beyond allowance", client, order, good, refusal)
 
+    assert isinstance(refusal, ErpNextRefused), (
+        f"ERPNext's answer to an over-run beyond its allowance was {refusal!r}; the connector's "
+        "behaviour and the docs are written from the measurement, so both need correcting"
+    )
+    assert refusal.permanent is True
+    assert refusal.status_code == 417
+    assert "allowed quantity 440" in str(refusal), str(refusal)
+
+    assert measured["produced_qty"] == 0.0, "ERPNext booked something after refusing the entry"
+    assert measured["entries"] == []
+    # What the machines counted still reaches the fields that carry it. The
+    # MES's record does not change because the ERP said no; what the ERP
+    # accepted - nothing - is what is reported as accepted.
     assert measured["custom_mes_good_qty"] == good
+    assert measured["custom_mes_over_qty"] == good - ORDERED_QTY
+    assert any("refused" in text for text in measured["comments"]), (
+        f"nothing on the Work Order says why: {measured['comments']}"
+    )
 
 
-def test_with_the_allowance_at_zero_one_unit_over_is_measured_not_guessed(client, seeded, allowance):
-    """ERPNext's own default: no over-production at all. One unit over."""
+def test_with_the_allowance_at_zero_one_unit_over_is_refused_the_same_way(client, seeded, allowance):
+    """ERPNext's own default is no over-production at all, and the connector
+    must not be honest only at 10%. One unit past the order is refused, in the
+    same words, with the same nothing booked."""
     allowance(0.0)
     order = submit_work_order(client, seeded, ORDERED_QTY)
     adapter = ErpNextAdapter(client)
@@ -463,4 +510,8 @@ def test_with_the_allowance_at_zero_one_unit_over_is_measured_not_guessed(client
     refusal = confirm_over_run(adapter, order, good)
     measured = report("allowance zero", client, order, good, refusal)
 
+    assert isinstance(refusal, ErpNextRefused), f"one unit over was answered with {refusal!r}"
+    assert "allowed quantity 400" in str(refusal), str(refusal)
+    assert measured["produced_qty"] == 0.0
+    assert measured["entries"] == []
     assert measured["custom_mes_good_qty"] == good

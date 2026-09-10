@@ -122,6 +122,52 @@ def test_a_failing_delivery_backs_off_then_dies_then_can_be_revived(session, sco
     assert isinstance(adapter.sent[0], contract.OperationConfirmation)
 
 
+class Refused(RuntimeError):
+    """What a connector raises when the ERP said no rather than failed.
+
+    The port does not require this class - only the `permanent` attribute -
+    so a connector that has never heard of it keeps the old behaviour.
+    """
+
+    permanent = True
+
+
+class RefusingAdapter(FailingAdapter):
+    def send_confirmation(self, confirmation) -> None:
+        raise Refused("the ERP will not book this quantity")
+
+
+def test_a_refused_confirmation_dies_at_once_instead_of_retrying_for_an_hour(session, scope):
+    """Backoff is for an ERP that could not take the message. An ERP that read
+    it and refused gives the same answer to the ninth attempt as to the first,
+    so the message goes straight to a person, carrying the ERP's own words.
+
+    Measured against ERPNext v15.120.0: a Manufacture stock entry beyond the
+    site's over-production allowance is refused whole, and nothing is booked.
+    """
+    _run_order(session, "WO-CT-4", 2)
+    execution.report(session, equipment_code="MIX01", good=2, source=ProductionSource.OPC)
+    message = session.scalar(select(ErpMessage).where(ErpMessage.direction == MessageDirection.OUT))
+
+    cycle(RefusingAdapter(fail_times=0), scope)
+    session.refresh(message)
+
+    assert message.status is MessageStatus.DEAD
+    assert message.attempts == 1, f"a refusal was attempted {message.attempts} times"
+    assert message.next_attempt_at is None
+    assert "will not book" in message.error
+    assert erp.outbox_summary(session)["counts"]["dead"] == 1
+
+    # Still revivable: once somebody has raised the allowance or agreed what
+    # the ERP should hold, the same message delivers.
+    adapter = FailingAdapter(fail_times=0)
+    erp.retry(session, message.id, actor="sup")
+    session.flush()
+    cycle(adapter, scope)
+    session.refresh(message)
+    assert message.status is MessageStatus.SENT and message.error is None
+
+
 def test_backoff_grows_and_is_capped():
     assert erp.backoff_seconds(1) == 5
     assert erp.backoff_seconds(2) == 10

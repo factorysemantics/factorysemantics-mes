@@ -3,8 +3,11 @@
 Inbound: fetch production requests from the adapter, import them (each
 recorded as an ErpMessage). Outbound: deliver what the outbox holds and is
 due. A failure marks the message and backs off; after enough attempts the
-message is dead and a person decides. The interface never loses a message
-and never stalls on a bad one.
+message is dead and a person decides. A connector that can tell a refusal
+from a failure — the ERP read the message and said no — says so with
+`permanent` on the exception, and that message is dead at once rather than
+after an hour of identical attempts. The interface never loses a message and
+never stalls on a bad one.
 
 Discipline that matters at scale: database transactions are kept short and
 NEVER span an HTTP call, so the ERP being slow can't hold up the plant floor.
@@ -39,11 +42,19 @@ def cycle(adapter: ErpAdapter, scope) -> None:
         try:
             adapter.send_confirmation(parse_confirmation(payload))
         except Exception as exc:
+            # A connector may say a failure is permanent — the ERP refused
+            # this message rather than failed to take it. `permanent` is read
+            # off the exception rather than declared in the port so that a
+            # connector which knows nothing about it keeps the old behaviour
+            # exactly: retry with backoff, then dead.
+            refused = bool(getattr(exc, "permanent", False))
             with scope() as session:
-                message = erp.mark_error(session.get(ErpMessage, message_id), exc)
+                stored = session.get(ErpMessage, message_id)
+                message = erp.mark_refused(stored, exc) if refused else erp.mark_error(stored, exc)
                 status, attempts = message.status.value, message.attempts
-            log.warning("confirmation delivery failed", order=payload.get("order"),
-                        kind=payload.get("kind"), attempts=attempts, status=status, error=str(exc))
+            log.warning("confirmation refused by the ERP" if refused else "confirmation delivery failed",
+                        order=payload.get("order"), kind=payload.get("kind"),
+                        attempts=attempts, status=status, error=str(exc))
         else:
             with scope() as session:
                 erp.mark_sent(session.get(ErpMessage, message_id))
