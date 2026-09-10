@@ -1,6 +1,8 @@
 # Decisions
 
 Why things are the way they are, one page each, with the options that lost.
+A record marked *proposed* is a recommendation nobody has accepted yet; it
+says what would change, not what has.
 A design change starts as an *Ideas* discussion using the
 [template](TEMPLATE.md); the accepted or declined outcome lands here.
 Declined ideas stay, so nobody re-proposes them without new facts.
@@ -27,3 +29,6 @@ Declined ideas stay, so nobody re-proposes them without new facts.
 | [0018](0018-public-on-2026-09-08-and-the-pre-tag-check.md) | Public on 2026-09-08, and a release check that runs the built wheel | 2026-09-08 |
 | [0019](0019-count-everything-the-machine-counted.md) | Count everything the machine counted: over-runs are booked, surplus is unassigned production | 2026-09-09 |
 | [0020](0020-what-supported-means-for-an-erp-connector.md) | What "supported" means for an ERP connector, and what it is called before that | 2026-09-10 |
+| [0021](0021-one-database-per-plant.md) | *Proposed* — a fleet is many databases, and site scoping is identity, not partitioning | 2026-09-10 |
+| [0022](0022-what-a-plant-pack-may-contain.md) | *Proposed* — a plant pack is data, carries no code and no secrets, and cannot change what a number means | 2026-09-10 |
+| [0023](0023-the-fleet-console-observes.md) | *Proposed* — the fleet console observes and never pushes, and silence is unknown | 2026-09-10 |

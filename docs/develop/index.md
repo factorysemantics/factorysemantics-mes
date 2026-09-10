@@ -10,6 +10,10 @@ For the person who changes it.
   conformance suite every connector must pass, and what this project
   requires before it calls one supported.
 - [Style](../design/STYLE.md) — the operator UI's rules.
+- [M8 — plant packs and the fleet console](../design/m8-packs-and-fleet.md) —
+  what a plant is today with file paths, what a pack should be, and what the
+  console should and should not do. Designed before it is built; the three
+  decisions it turns on are proposed, not accepted.
 - [Decisions](../decisions/index.md) — why things are the way they are.
 - [CONTRIBUTING](https://github.com/factorysemantics/factorysemantics-mes/blob/main/CONTRIBUTING.md)
   — DCO, the six house rules, the provenance rule.
