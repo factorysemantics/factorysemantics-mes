@@ -111,10 +111,15 @@ class Report:
         problems = sum(len(d.problems) for d in self.documents)
         notes = sum(len(d.notes) for d in self.documents)
         lines.append(
-            f"{len(self.documents)} documents checked: {good} correct, "
+            f"{_count(len(self.documents), 'document')} checked: {good} correct, "
             f"{len(self.documents) - good} with problems ({problems} in all), "
-            f"{notes} notes. {len(self.skipped)} files skipped.")
+            f"{_count(notes, 'note')}. {_count(len(self.skipped), 'file')} skipped.")
         return lines
+
+
+def _count(how_many: int, thing: str) -> str:
+    """`1 document`, `2 documents`. A totals line is read by people."""
+    return f"{how_many} {thing}" + ("" if how_many == 1 else "s")
 
 
 def _moment(value) -> datetime | None:

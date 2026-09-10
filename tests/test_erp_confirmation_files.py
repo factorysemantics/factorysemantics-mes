@@ -200,7 +200,7 @@ def test_a_folder_says_what_it_skipped_as_well_as_what_it_checked(tmp_path):
     report = validate.validate(tmp_path)
     assert report.ok
     assert len(report.documents) == 1 and len(report.skipped) == 2
-    assert "1 documents checked" in report.render()[-1] and "2 files skipped" in report.render()[-1]
+    assert "1 document checked" in report.render()[-1] and "2 files skipped" in report.render()[-1]
 
 
 # ------------------------------------------------- the outbox, end to end
