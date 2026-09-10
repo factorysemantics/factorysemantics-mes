@@ -51,3 +51,56 @@ class InboundEvent(Base):
     # One sentence: what happened to it. Read back by the second attempt.
     detail: Mapped[str | None] = mapped_column(String(300))
     applied_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class InboundWatermark(Base):
+    """How far a polling driver has read one supplier's table, so it can stop.
+
+    The folder driver needs nothing like this: a file is read once and moved.
+    A poller has no such mark on the world, so it keeps its own — the last
+    value of the supplier's own ordering column that it has read *through*.
+
+    The mark is kept as the text the supplier's column gave, not as a value
+    of this MES's own making. A supplier whose timestamps are local, or whose
+    ids are strings, must get its own value back unchanged in the next query;
+    a number this MES normalised would silently move the boundary and skip or
+    repeat a shift's worth of rows.
+
+    It is a cursor, not the record of what was applied. That record is
+    `inbound_events`, keyed on the supplier's own id, and it is what actually
+    makes a second read of the same row a no-op. So a watermark that is
+    behind costs a re-read and changes nothing, which is the direction a
+    cursor should fail in.
+
+    `held_reason` is set when a row could not be recorded: the cursor stops
+    at that row rather than stepping over it, because a row nothing was done
+    with is not a row that was read.
+    """
+
+    __tablename__ = "inbound_watermarks"
+    __table_args__ = (
+        UniqueConstraint("source", "stream", name="uq_inbound_watermark_source_stream"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # The supplying system, as the configuration names it. Part of the
+    # identity: pointing a stream at a different system starts a new cursor
+    # rather than inheriting a position that means nothing there.
+    source: Mapped[str] = mapped_column(String(80), index=True)
+    # `downtime`, `quality` or `counts` — the contract's stream names.
+    stream: Mapped[str] = mapped_column(String(30))
+    # The supplier's own ordering value, as text, read through and inclusive
+    # of: the query asks for rows strictly after it.
+    position: Mapped[str] = mapped_column(String(120))
+    # `id` or `timestamp`, from the configuration. Kept so the value can be
+    # handed back to the supplier's database as the type its column holds.
+    position_type: Mapped[str] = mapped_column(String(20))
+    # Rows this cursor's passes have taken - recorded, or found already
+    # recorded. A total, stated. It is not the position: a pass whose cursor
+    # is held still takes the rows after the one holding it.
+    rows_seen: Mapped[int] = mapped_column(default=0)
+    # Why the cursor is not moving, and which of the supplier's rows holds it.
+    # Null means nothing is holding it.
+    held_reason: Mapped[str | None] = mapped_column(String(300))
+    held_key: Mapped[str | None] = mapped_column(String(120))
+    updated_at: Mapped[datetime] = mapped_column(default=utcnow)

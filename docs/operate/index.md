@@ -19,7 +19,7 @@ page below is linked from it.
 | [Backup and restore](backup.md) | how-to — what to copy, and how to prove the copy is any good |
 | [TLS in front of the API](tls.md) | how-to — the reverse proxy, in one config each |
 | [Upgrading between versions](upgrade.md) | how-to — the procedure, the rollback, and the gap |
-| [Feeding the MES what people typed elsewhere](inbound.md) | how-to — downtime labels, quality results and counts from another system |
+| [Feeding the MES what people typed elsewhere](inbound.md) | how-to — downtime labels, quality results and counts from another system, by file or by read-only query |
 | [Settings](../reference/settings.md) | reference, generated |
 | [CLI](../reference/cli.md) | reference, generated |
 | [REST API](../reference/api.md) | reference, generated |

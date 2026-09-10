@@ -1,6 +1,6 @@
 # Feeding the MES what people typed elsewhere
 
-*How-to. Downtime labels, quality results and counts that were recorded in another system, dropped into a folder as CSV, and recorded here as what they are: told, not observed.*
+*How-to. Downtime labels, quality results and counts that were recorded in another system — dropped into a folder as CSV, or read straight out of that system's own database — and recorded here as what they are: told, not observed.*
 
 The OPC agent is how this MES sees a plant. It is not how it learns why a
 machine stopped, what an inspector measured, or how many units somebody
@@ -19,6 +19,9 @@ the shadow has a data problem when what it has is a plumbing problem.
 So there is a second front door. Three event shapes, one contract, and two
 drivers: files in a folder, and [a broker](#the-broker-mqtt) the plant
 already has. The contract does not change with the pipe the row came down.
+drivers that fill it: files in a folder, and a read-only query against the
+database that system already keeps. A row means the same thing whichever way
+it arrived.
 
 !!! note "Inbound is not gated by shadow mode"
 
@@ -154,6 +157,192 @@ The same lines, plus the totals, are written to
 `inbound/rejected/counts/counts.csv.rejects.txt`. Fix the rows or the
 mapping and drop the file in again: nothing already recorded is recorded
 twice.
+
+## Reading it out of a database instead
+
+A CSV export needs a person every day. A query needs a person once. Where the
+system holding these facts has a database you can be given read-only
+credentials to — the incumbent MES's, a quality system's, a historian's —
+`fsmes inbound poll-sql` runs your query on a schedule and feeds the same
+contract.
+
+**The query is yours.** This repository does not know, and will never
+contain, what any commercial system's tables are called. What it can tell you
+is the shape the query has to return: **one row per event, one column per
+contract field you are supplying, plus a column that only ever goes up.**
+Everything else — which tables, which joins, which of that system's status
+codes count as a finished record — is the question you take to whoever
+administers it.
+
+### The configuration
+
+`MES_INBOUND_SQL_FILE` points at a JSON file with the same four keys the
+column mapping has, plus the ones that describe the query. One entry per
+event type:
+
+```json
+{
+  "counts": {
+    "source": "replay:incumbent-mes",
+    "source_kind": "replay",
+    "timezone": "America/Chicago",
+    "url": "postgresql+psycopg://mes_readonly:...@10.0.0.9:5432/theirdb",
+    "sql": "SELECT entry_id, entered_at, machine, good_qty, scrap_qty FROM their_table WHERE entry_id > :watermark ORDER BY entry_id",
+    "watermark_column": "entry_id",
+    "watermark_type": "id",
+    "start_from": "0",
+    "poll_seconds": 60,
+    "statement_timeout_ms": 30000,
+    "max_rows": 500,
+    "columns": {
+      "external_key": "entry_id",
+      "recorded_at": "entered_at",
+      "equipment": "machine",
+      "good": "good_qty",
+      "scrap": "scrap_qty"
+    }
+  }
+}
+```
+
+`columns`, `defaults`, `time_format` and `timezone` mean exactly what they
+mean for the folder driver, and are read by the same code. The rest:
+
+- `url` — a [SQLAlchemy URL](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls).
+  The driver for your database is your install: SQLite needs nothing,
+  PostgreSQL is `pip install "factorysemantics-mes[postgres]"`, and anything
+  else is whatever DBAPI that database publishes. **Read-only credentials**,
+  and the paragraph below says why that sentence is doing the work.
+- `sql` — your query. It must carry `:watermark` and an `ORDER BY`, and it is
+  refused at load if it does not: without the parameter every pass would
+  re-read the whole history, and without the order the cursor could step over
+  a row a database chose to return late.
+- `watermark_column` — the column in the result that only goes up. It is
+  usually the same column the `WHERE` compares, and it does not have to be
+  one you map onto the contract.
+- `watermark_type` — `id` or `timestamp`. It is a label for people; the value
+  itself is carried as text either way (see below).
+- `start_from` — where a cursor that has never run starts, **exclusive**.
+  Required, with no default, because the two things this MES could guess are
+  "now", which silently skips everything already in that system, and "the
+  beginning", which pulls ten years through a plant network on a Monday.
+  Which of those you want is a decision, and a decision belongs in a file
+  somebody signed.
+- `poll_seconds`, `statement_timeout_ms`, `max_rows` — how often, how long a
+  query may take, and how many rows one pass will take. A backlog drains over
+  several passes rather than one transaction that holds for an hour.
+
+### Reading, and only reading
+
+Three things stand between this and a system somebody else depends on, and
+`fsmes inbound sql-check` prints which of them it managed:
+
+1. **The query is inspected before it is ever sent.** It has to start with
+   `SELECT` or `WITH`, it has to be one statement, and it may not contain a
+   word that could change anything — including a data-modifying CTE, which is
+   a `SELECT`-shaped statement that deletes rows.
+2. **The connection is opened read-only where the dialect has a way to say
+   so.** SQLite is opened `mode=ro` with `PRAGMA query_only`; PostgreSQL gets
+   `SET TRANSACTION READ ONLY` and your `statement_timeout`; MySQL and Oracle
+   get their equivalents. Where a dialect has no such setting — SQL Server has
+   none — the check says so in those words rather than staying quiet, because
+   silence would read as success.
+3. **Read-only credentials.** This is the one that actually holds. The other
+   two are this MES being careful; only the grants are a guarantee, and they
+   are the plant DBA's to give.
+
+And one more, which is about their uptime rather than their data: **every row
+is fetched and the connection closed before this MES writes anything.** A
+slow write here can never become a lock over there.
+
+!!! warning "Some databases want the cursor cast"
+
+    The cursor is handed back to your database as **the text the column
+    gave**, unchanged — a timestamp re-read into this MES's own convention
+    would move the boundary by your system's UTC offset, and the rows in that
+    gap would be skipped with nothing to say so. SQLite compares text against
+    a typed column by the column's own affinity and needs nothing. PostgreSQL
+    does not, and will say so plainly the first time you run `sql-check`; the
+    cast belongs in your query: `WHERE stamp > CAST(:watermark AS timestamp)`.
+
+### The cursor, and what holds it
+
+The cursor is how far the poller has read. It is **not** what stops a row
+being recorded twice — that is still `inbound_events`, keyed on the
+supplier's own `external_key`. So a cursor that is behind costs a re-read and
+changes nothing, which is the direction a cursor should fail in.
+
+**A row nothing was done with is not a row that was read.** When a row cannot
+be recorded, the cursor stops at it:
+
+```
+counts from replay:incumbent-mes: 4 rows read, 3 recorded, 0 already seen, 1 rejected
+  row 3 (88213): equipment 'NOPE' not found
+  cursor '0' -> '2'
+  HELD at '3' by row 3 (88213): equipment 'NOPE' not found
+  Every later row in the batch was still recorded. The cursor stays here and this
+  row is tried again next pass. Fix it where it is, or step over it deliberately
+  with `fsmes inbound sql-watermark --stream counts --set <value>`, which says in
+  words what it is skipping.
+  the same lines are in inbound/rejected/counts/sql.counts.20260910T121545.rejects.txt
+1 query, 4 rows: 3 recorded, 0 already seen, 1 rejected; 1 cursor held (counts)
+```
+
+Note what happened to the rows *after* the bad one: they were recorded.
+Leaving good data unread would be its own dishonesty. Only the cursor stopped
+— so the next pass asks for the bad row again, and keeps saying so until
+somebody deals with it. That is the loud failure, and it is deliberate: a
+poller that stepped over a row it could not read would leave a hole in the
+comparison with no way to find it later.
+
+Stepping over it is a thing a person does, in words:
+
+```bash
+fsmes inbound sql-watermark                                # where every cursor stands
+fsmes inbound sql-watermark --stream counts --set 3        # says what it would skip, changes nothing
+fsmes inbound sql-watermark --stream counts --set 3 --force   # and means it
+```
+
+The rejected rows are also written to
+`inbound/rejected/<stream>/sql.<stream>.<time>.rejects.txt`, beside the folder
+driver's reports, so there is one place to look.
+
+### Running it
+
+```bash
+fsmes inbound sql-check       # connect, run each query, map the rows, write nothing
+fsmes inbound poll-sql --once # one pass, and say what it did
+fsmes inbound poll-sql        # forever, each query on its own interval
+```
+
+`--once` exits non-zero when a query could not be run at all — a source that
+is down, credentials that expired, a query the database rejected — because
+that is a broken interface and cron should say so. A held cursor does not:
+it is a finding about one row, it is already on the page, and it would
+otherwise cry wolf every pass.
+
+### Trying it without another system
+
+The repository ships `config/inbound_sql.json`, which reads a SQLite file
+named `inbound/example_source.sqlite` that does not exist until you make one.
+Every table and column name in it is this project's own invention. Make the
+file and run a pass:
+
+```bash
+sqlite3 inbound/example_source.sqlite "
+CREATE TABLE manual_counts (entry_id INTEGER PRIMARY KEY, entered_at TEXT,
+  counted_at TEXT, machine TEXT, order_no TEXT, good_qty REAL, scrap_qty REAL);
+INSERT INTO manual_counts VALUES (1,'2026-09-10 17:00:00','2026-09-10 16:30:00','MIX01','',12,1);
+INSERT INTO manual_counts VALUES (2,'2026-09-10 17:05:00','2026-09-10 16:40:00','MIX01','',8,0);
+"
+fsmes inbound sql-check
+fsmes inbound poll-sql --once
+```
+
+`MIX01` is the demo plant's mixer, so those counts land against a machine
+this MES knows. Point the same configuration at a row naming a machine it
+does not know and you will see the cursor hold, which is worth doing once
+before you point it at anything real.
 
 ## The honesty rules
 
@@ -383,4 +572,17 @@ this repository does not start brokers on the machine it is developed on.
 If you run it against a real Mosquitto, HiveMQ or UMH, an issue saying which
 broker and what it did is the most useful thing you can send. Ask in
 [Discussions](https://github.com/factorysemantics/factorysemantics-mes/discussions);
+An **MQTT subscriber**, for tag values and events that never touch OPC UA. It
+is a third transport over a contract that already exists, and it will not
+change what a row means when it lands. There is no inbound REST endpoint
+either, and no driver for a system that only offers a web API.
+
+Nor is there any translation of codes. If the other system calls the mixer
+something else, or files a stop under a reason code this MES has never heard
+of, the query is where you translate it — a `CASE` or a join against a lookup
+table on that side, which is where somebody already knows what those codes
+mean. Building a mapping table in here would be this MES guessing about a
+system it cannot see.
+
+Ask in [Discussions](https://github.com/factorysemantics/factorysemantics-mes/discussions);
 a question asked twice becomes a page.

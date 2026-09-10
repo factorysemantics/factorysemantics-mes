@@ -91,11 +91,25 @@ class Outbound:
 #: `allowed`    — it runs, because nothing about the plant leaves this box
 #:                by it, and nothing outside this MES changes.
 #:
-#: **31 entries.** The count is stated because a register that quietly loses
+#: **32 entries.** The count is stated because a register that quietly loses
 #: a row is worse than no register, and `tests/test_shadow_mode.py` scans the
 #: source for outbound primitives and fails on any call site not covered by
 #: an entry here.
 REGISTER: tuple[Outbound, ...] = (
+    # --------------------------------------------------- being told, not telling
+    Outbound(
+        name="inbound.sql_source",
+        where="fsmes.integrations.inbound.sql:read_batch",
+        reaches="a database another system owns, with the plant's own read-only query",
+        verdict="allowed",
+        note="the one place this package connects to a database that is not its "
+             "own, and it only reads: the connection is opened read-only where "
+             "the dialect has a way to say so, and a query containing a word "
+             "that could change anything is refused before it is sent. Shadow "
+             "mode leaves it open on purpose - being told things is the "
+             "opposite direction, and a shadow that stopped listening would be "
+             "comparing itself with the incumbent on half the evidence",
+    ),
     # ------------------------------------------------------- the plant floor
     Outbound(
         name="opc.node_write",

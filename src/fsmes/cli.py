@@ -585,6 +585,191 @@ def inbound_watch(once: bool = False) -> None:
         time.sleep(settings.inbound_poll_seconds)
 
 
+def _inbound_sql_streams():
+    """The configured queries, or a sentence saying what is wrong with them."""
+    from fsmes.integrations.inbound.sql import SqlConfigError, load_streams
+
+    settings = get_settings()
+    try:
+        return settings, load_streams(settings.inbound_sql_file)
+    except SqlConfigError as exc:
+        typer.echo(f"NOT OK  {exc}")
+        raise typer.Exit(1) from exc
+
+
+def _one_stream(streams: dict, stream: str | None):
+    """Every configured query, or the one named — or a sentence saying it is not there."""
+    if stream is None:
+        return streams
+    if stream not in streams:
+        typer.echo(f"NOT OK  no {stream!r} query is configured; there are "
+                   f"{len(streams)}: {', '.join(sorted(streams)) or 'none'}")
+        raise typer.Exit(1)
+    return {stream: streams[stream]}
+
+
+@inbound_app.command("sql-check")
+def inbound_sql_check(stream: str | None = None) -> None:
+    """Say whether each configured query is usable, and read nothing into the MES.
+
+    It does connect and it does run the query, because a query that only
+    looks right is what puts a plant three weeks behind. Every row it gets is
+    mapped and reported as what *would* be recorded. Nothing is written here
+    and no cursor moves.
+    """
+    from fsmes.db import session_scope
+    from fsmes.integrations.inbound.folder import to_event
+    from fsmes.integrations.inbound.sql import read_batch, watermark_of
+
+    settings, streams = _inbound_sql_streams()
+    streams = _one_stream(streams, stream)
+    typer.echo(f"Configuration {settings.inbound_sql_file}: "
+               f"{len(streams)} quer{'y' if len(streams) == 1 else 'ies'} — "
+               f"{', '.join(sorted(streams))}.")
+    problems = 0
+    for name, one in sorted(streams.items()):
+        typer.echo(f"  {name}")
+        if one.description:
+            typer.echo(f"    {one.description}")
+        typer.echo(f"    supplied by {one.source!r} ({one.mapping.source_kind}), timestamps in "
+                   f"{one.mapping.timezone or 'whatever zone each row states'}")
+        typer.echo(f"    cursor on {one.watermark_column!r} ({one.watermark_type}), "
+                   f"every {one.poll_seconds}s, at most {one.max_rows} rows a pass")
+        with session_scope() as session:
+            watermark = watermark_of(session, one)
+        typer.echo(f"    reading from after {watermark!r}"
+                   + ("" if watermark != one.start_from else " (its configured start; it has not run yet)"))
+        try:
+            rows, connection = read_batch(one, watermark)
+        except Exception as exc:  # a plant wants the sentence, not the traceback
+            problems += 1
+            typer.echo(f"    NOT OK  the query could not be run: {exc}")
+            continue
+        for done in connection.done:
+            typer.echo(f"    read-only: {done}")
+        for could_not in connection.could_not:
+            typer.echo(f"    NOT read-only: {could_not}")
+        would_record, bad = 0, []
+        for number, row in enumerate(rows, start=1):
+            try:
+                to_event({k: (None if v is None else str(v)) for k, v in row.items()}, one.mapping)
+            except ValueError as exc:
+                bad.append(f"      row {number}: {exc}")
+                continue
+            would_record += 1
+        typer.echo(f"    {len(rows)} row(s) waiting; {would_record} map onto the contract, "
+                   f"{len(bad)} do not")
+        for line in bad:
+            typer.echo(line)
+        if bad:
+            problems += 1
+    typer.echo("Nothing was recorded and no cursor moved. Run `fsmes inbound poll-sql --once` to "
+               "read them for real — and remember that a row mapping cleanly is not the same as "
+               "this MES being willing to record it: a label for a stop it never saw is still "
+               "refused, and that refusal is a finding.")
+    if problems:
+        raise typer.Exit(1)
+
+
+@inbound_app.command("poll-sql")
+def inbound_poll_sql(once: bool = False, stream: str | None = None) -> None:
+    """Read the plant's own read-only queries on a schedule, forever.
+
+    `--once` makes a single pass over every configured query and reports it,
+    which is what a cron-shaped deployment wants and what a person testing a
+    new query wants. Each query has its own interval; without `--once` this
+    sleeps until the next one is due.
+
+    Every pass states its totals — rows read, recorded, already seen, and
+    rejected with the reason for each — and where each cursor stood before
+    and after. A cursor that is held by a row nothing could be done with says
+    so, by name, on every pass until the row is fixed or stepped over.
+    """
+    import time
+
+    from fsmes.db import session_scope
+    from fsmes.integrations.inbound.sql import poll_once, poll_stream
+
+    settings, streams = _inbound_sql_streams()
+    streams = _one_stream(streams, stream)
+    setup_logging(settings.log_level, settings.log_dir, "inbound-poll-sql")
+    rejects_root = Path(settings.inbound_dir)
+    if once:
+        report = poll_once(session_scope, streams, rejects_root=rejects_root)
+        for line in report.render():
+            typer.echo(line)
+        if report.failed:
+            # A query that could not be run at all is a broken interface, and a
+            # cron-shaped deployment learns that from the exit code. A held
+            # cursor is not: it is a finding about one row, it is already on
+            # the page above, and it would otherwise cry wolf every pass.
+            raise typer.Exit(1)
+        return
+    intervals = ", ".join(f"{name} every {one.poll_seconds}s" for name, one in sorted(streams.items()))
+    typer.echo(f"Polling {len(streams)} quer{'y' if len(streams) == 1 else 'ies'}: {intervals}. "
+               "Ctrl-C to stop.")
+    due = {name: 0.0 for name in streams}
+    while True:
+        now = time.monotonic()
+        for name in sorted(streams):
+            if now < due[name]:
+                continue
+            report = poll_stream(session_scope, streams[name], rejects_root=rejects_root)
+            due[name] = time.monotonic() + streams[name].poll_seconds
+            if report.rows or report.error:
+                for line in report.render():
+                    typer.echo(line)
+        time.sleep(min(1.0, min(streams[n].poll_seconds for n in streams)))
+
+
+@inbound_app.command("sql-watermark")
+def inbound_sql_watermark(stream: str | None = None, set_to: str = typer.Option(None, "--set"),
+                          force: bool = False) -> None:
+    """Show where each query has read through, and move one by hand if asked.
+
+    Showing is safe. `--set` is not: rows between where the cursor stands and
+    where it is being put will never be read, because the query will not ask
+    for them again. So it names what it is skipping and refuses without
+    `--force`, which is a person saying they meant it.
+    """
+    from fsmes.db import session_scope
+    from fsmes.integrations.inbound.sql import set_watermark, watermark_row
+
+    _, streams = _inbound_sql_streams()
+    streams = _one_stream(streams, stream)
+    if set_to is None:
+        with session_scope() as session:
+            for name, one in sorted(streams.items()):
+                row = watermark_row(session, one)
+                if row is None:
+                    typer.echo(f"{name}: has not run; it will start after {one.start_from!r} "
+                               "(from the configuration)")
+                    continue
+                typer.echo(f"{name}: read through {row.position!r} ({row.position_type}), "
+                           f"{row.rows_seen} row(s) taken in total, last moved {row.updated_at}")
+                if row.held_reason:
+                    typer.echo(f"  HELD by {row.held_key!r}: {row.held_reason}")
+        return
+    if len(streams) != 1:
+        typer.echo("NOT OK  --set moves one cursor; name it with --stream")
+        raise typer.Exit(1)
+    name, one = next(iter(streams.items()))
+    with session_scope() as session:
+        row = watermark_row(session, one)
+        was = row.position if row is not None else one.start_from
+        typer.echo(f"{name} has read through {was!r}; --set would move it to {set_to!r}.")
+        typer.echo(f"Every row of {one.watermark_column!r} between those two values will never be "
+                   "read: the query asks only for rows after the cursor, and nothing here goes back "
+                   "for them. They stay in the supplying system, unread, and this MES will have no "
+                   "record that they existed.")
+        if not force:
+            typer.echo("Nothing was changed. Add --force if that is what you meant.")
+            raise typer.Exit(1)
+        set_watermark(session, one, set_to)
+    typer.echo(f"{name}: cursor moved from {was!r} to {set_to!r} by hand. Whatever was between them "
+               "was not read and is not recorded.")
+
+
 shadow_app = typer.Typer(help="Running beside the MES in charge, and how well the two agreed.")
 app.add_typer(shadow_app, name="shadow")
 

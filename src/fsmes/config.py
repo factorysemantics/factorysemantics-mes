@@ -83,6 +83,13 @@ class Settings(BaseSettings):
     # The packaged example maps the demo plant's own CSV shape.
     inbound_mapping_file: Path = Path("config/inbound_mapping.json")
     inbound_poll_seconds: float = 10.0
+    # The SQL poller (`fsmes inbound poll-sql`): this plant's own read-only
+    # queries against systems it already has, one per event type, with the
+    # connection, the SQL, the column mapping and the cursor column. Config,
+    # not code, and emphatically so: the query belongs to whoever owns the
+    # system being read. The packaged example reads a SQLite file the docs
+    # tell you how to make, and names no product.
+    inbound_sql_file: Path = Path("config/inbound_sql.json")
 
     # --- Inbound over MQTT (fsmes inbound subscribe) -----------------------
     # The other half of the unified namespace: this MES listening to the
@@ -259,7 +266,7 @@ def get_settings() -> Settings:
         raise shadow.ShadowMisconfigured(plain) from None
     if not settings.secret_key:
         settings.secret_key = secrets.token_urlsafe(32)
-    for field in ("tag_map_file", "line_layout_file", "inbound_mapping_file"):
+    for field in ("tag_map_file", "line_layout_file", "inbound_mapping_file", "inbound_sql_file"):
         if field not in settings.model_fields_set:
             setattr(settings, field, packaged_default(getattr(settings, field)))
     return settings
