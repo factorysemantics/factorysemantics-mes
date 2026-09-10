@@ -25,9 +25,10 @@ src/fsmes/
   mcp/ + mcp_server.py   the product's tools, one file per area
   sim/           line generation, scoring, sweeps, agent evals, UI checks
   web/           the operator UI: plain HTML, CSS and JS, no build step
+  migrations/    the Alembic chain — inside the package, so the wheel carries it
   plant.py       registries and the plant supervisor
   cli.py         every command
+  schema.py      creating and upgrading a database, from wherever it was installed
 labs/            simulated plants and the experiments that measured them
-alembic/         migrations
 tests/           named as prose
 ```

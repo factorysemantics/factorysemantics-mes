@@ -305,6 +305,22 @@ def _answers(cfg: dict, timeout: float = 1.0) -> bool:
         return False
 
 
+def _run_init_db(root: Path, env: dict, echo) -> None:
+    """`fsmes init-db` for one plant, with what it said passed through.
+
+    It was discarded until 2026-09-10, which was harmless while init-db only
+    ever printed "Database schema is up to date". It now says what it did to
+    a database that carries no Alembic stamp - which release-era database it
+    was recognised as, and what ran afterwards - and that belongs in the
+    receipt rather than in a pipe to nowhere.
+    """
+    done = subprocess.run([fsmes_bin(), "init-db"], cwd=root, env=env, check=True,
+                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    for line in done.stdout.splitlines():
+        if line.strip():
+            echo(f"      {line.strip()}")
+
+
 def migrate(name: str, cfg: dict, root: Path, echo=print, upgrade=None) -> dict:
     """Bring one plant's database to the current schema, with a backup and a receipt.
 
@@ -331,7 +347,7 @@ def migrate(name: str, cfg: dict, root: Path, echo=print, upgrade=None) -> dict:
         else:
             echo(f"  {name}: still answering on :{cfg['api_port']} - stop it first, then migrate")
             return {"plant": name, "migrated": False, "reason": "running"}
-        subprocess.run([fsmes_bin(), "init-db"], cwd=root, env=env, check=True, stdout=subprocess.DEVNULL)
+        _run_init_db(root, env, echo)
         ensure_accounts(root, env, cfg, echo)
         echo(f"  {name}: migrated {env['MES_DATABASE_URL'].split('@')[-1]} to head")
         return {"plant": name, "migrated": True, "backup": None}
@@ -371,7 +387,7 @@ def migrate(name: str, cfg: dict, root: Path, echo=print, upgrade=None) -> dict:
 
     if upgrade is None:
         def upgrade() -> None:
-            subprocess.run([fsmes_bin(), "init-db"], cwd=root, env=env, check=True, stdout=subprocess.DEVNULL)
+            _run_init_db(root, env, echo)
     upgrade()
 
     after, rev_after = counts(), revision()
@@ -384,7 +400,12 @@ def migrate(name: str, cfg: dict, root: Path, echo=print, upgrade=None) -> dict:
         echo(f"  {name}: already at head ({rev_after}); nothing to do")
     else:
         receipt["backup"] = str(backup)
-        echo(f"  {name}: {rev_before} -> {rev_after}; backup {backup.name}")
+        # A database made by a wheel that shipped no migrations has no stamp
+        # at all, and "None -> a3f6c81d09e2" reads like a bug rather than the
+        # recognition it is. `fsmes init-db` has already printed what it
+        # recognised the database as; this says which case this was.
+        was = "unstamped (made before the migrations shipped)" if rev_before is None else rev_before
+        echo(f"  {name}: {was} -> {rev_after}; backup {backup.name}")
         for table, (b, a) in changed.items():
             echo(f"      {table}: {b} -> {a}")
         if not changed:

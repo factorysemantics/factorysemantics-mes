@@ -115,9 +115,12 @@ Then bring the schema to the version of `fsmes` you are running now:
 fsmes init-db
 ```
 
-— but read the caveat on [Upgrading](upgrade.md) first if you restored an
-older backup into a newer `fsmes` installed from PyPI: outside a checkout
-`init-db` creates missing tables and does not alter existing ones.
+`init-db` runs the migrations the package carries, wherever `fsmes` was
+installed from, so restoring an older backup into a newer `fsmes` brings the
+restored database up to the current schema. A database from 0.1.2 or earlier
+carries no Alembic stamp; `init-db` recognises it, says what it recognised it
+as, and refuses to guess if it cannot — see
+[Upgrading](upgrade.md#if-your-database-was-made-by-012-or-earlier).
 
 Put the `.env` back from wherever you keep secrets. Until you do, the
 MES has no OPC password and will not connect.

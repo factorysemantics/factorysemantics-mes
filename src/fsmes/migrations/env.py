@@ -11,7 +11,14 @@ target_metadata = Base.metadata
 
 
 def _url() -> str:
-    return get_settings().database_url
+    """The database to migrate.
+
+    A URL set on the configuration wins, which is how `fsmes.schema` runs the
+    chain against a scratch database to work out what an unstamped one is.
+    Otherwise it is the deployment's own setting - never `alembic.ini`, which
+    a plant that installed from PyPI does not have.
+    """
+    return context.config.get_main_option("sqlalchemy.url") or get_settings().database_url
 
 
 def run_migrations_offline() -> None:

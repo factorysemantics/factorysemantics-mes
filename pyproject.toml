@@ -115,6 +115,10 @@ fsmes = "fsmes.cli:app"
 [tool.hatch.version]
 path = "src/fsmes/__init__.py"
 
+# The migrations live inside the package (src/fsmes/migrations), so `packages`
+# carries them into the wheel with everything else. That is deliberate and
+# load-bearing: a plant that installed from PyPI has no checkout, and before
+# 2026-09-10 that meant `fsmes init-db` silently skipped every ALTER.
 [tool.hatch.build.targets.wheel]
 packages = ["src/fsmes"]
 
@@ -149,7 +153,7 @@ ignore = ["SIM108"]
 "src/fsmes/api/**" = ["B008"]
 "src/fsmes/cli.py" = ["B008"]
 # Alembic generates migrations at whatever width it likes.
-"alembic/versions/*" = ["E501"]
+"src/fsmes/migrations/versions/*" = ["E501"]
 # Notebook cells, written as strings: a long line there is a long line in a cell.
 "labs/cutlery/analysis/build_notebook.py" = ["E501"]
 "labs/cutlery/analysis/build_report.py" = ["E501"]
