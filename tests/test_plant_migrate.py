@@ -83,3 +83,25 @@ def test_migrate_without_a_database_points_at_init(tmp_path, quiet_accounts):
     receipt = plants_mod.migrate("demo", _cfg(1), tmp_path, echo=said.append, upgrade=lambda: None)
     assert receipt["reason"] == "no database"
     assert "fsmes plant demo init" in said[0]
+
+
+def test_migrate_says_a_database_had_no_stamp_rather_than_printing_none(tmp_path, quiet_accounts):
+    """A database made by a wheel that shipped no migrations has no
+    `alembic_version` row at all. The receipt used to read
+    `None -> a3f6c81d09e2`, which looks like a bug rather than the
+    recognition it is."""
+    db = plants_mod.data_dir(tmp_path) / "demo.db"
+    with sqlite3.connect(db) as conn:  # create_all's work: tables, no stamp
+        conn.execute("CREATE TABLE work_orders (id INTEGER)")
+        conn.execute("INSERT INTO work_orders VALUES (1)")
+
+    def upgrade() -> None:
+        with sqlite3.connect(db) as conn:
+            conn.execute("CREATE TABLE alembic_version (version_num TEXT)")
+            conn.execute("INSERT INTO alembic_version VALUES ('bbb')")
+
+    said: list[str] = []
+    receipt = plants_mod.migrate("demo", _cfg(1), tmp_path, echo=said.append, upgrade=upgrade)
+
+    assert (receipt["revision_before"], receipt["revision_after"]) == (None, "bbb")
+    assert any("unstamped (made before the migrations shipped) -> bbb" in line for line in said)

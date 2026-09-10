@@ -106,40 +106,60 @@ fsmes init-db
 # start them again
 ```
 
-!!! warning "`fsmes init-db` only migrates inside a checkout"
-    `fsmes init-db` runs the Alembic migrations when there is an
-    `alembic.ini` in the working directory — that is, when you are running
-    from a clone of the repository. **Installed from PyPI there is no
-    `alembic.ini` and no migration scripts in the wheel**, so `init-db`
-    creates whatever tables are missing and stops there. It does not alter a
-    table that already exists, and it says "Database schema is up to date"
-    either way.
+`fsmes init-db` runs the migrations the package itself carries, so it does
+the same thing on a PyPI install as it does in a clone. In 0.1.2 and earlier it did
+not: the wheel shipped no migration scripts, `init-db` outside a checkout
+created whatever tables were missing, ran no `ALTER` at all, and said
+"Database schema is up to date" either way. The workaround was to run from a
+checkout at a tag. That is gone — there is nothing to work around.
 
-    For a **new** install that is exactly right: the schema it creates is the
-    current one. For an **upgrade** of a PyPI install across a version where
-    an existing table changed, it is not enough, and nothing warns you.
+### If your database was made by 0.1.2 or earlier
 
-    Until the wheel carries its migrations, a plant that must upgrade in
-    place should run from a checkout at a tag:
+A database created by one of those wheels has tables but no Alembic stamp,
+so nothing in it says which revision its tables correspond to. `init-db`
+works that out rather than assuming: it rebuilds the schema each revision in
+the chain produces, compares table names and column names against yours, and
+stamps only on an exact match. You will see one of these:
 
-    ```bash
-    git clone https://github.com/factorysemantics/factorysemantics-mes
-    cd factorysemantics-mes && git checkout v0.1.2
-    python -m venv .venv && .venv/bin/pip install -e .
-    .venv/bin/fsmes init-db          # alembic.ini is here, so this migrates
-    ```
+```text
+This database was created before the migrations shipped. Its schema matches
+revision 153379d6cf19 exactly, so it is stamped there and the migrations
+since then now run.
+Database schema upgraded: 153379d6cf19 -> a3f6c81d09e2.
+```
 
-    This is a known gap, written down rather than papered over. If it is in
-    your way, say so in
-    [Discussions](https://github.com/factorysemantics/factorysemantics-mes/discussions)
-    — it moves up the list.
+```text
+This database was created before the migrations shipped. Its schema matches
+revision a3f6c81d09e2, which is the current one; it is now stamped and
+nothing else was changed.
+```
+
+If your database matches no revision — someone added a table by hand, or it
+came from something other than a release — it says so, names the nearest
+revision, lists every difference, and **changes nothing**. Restore your
+backup and open a
+[Discussion](https://github.com/factorysemantics/factorysemantics-mes/discussions)
+with what it printed. A stamp that is not true of the database is worse than
+no stamp: every later migration would be skipped or applied twice on the
+strength of it.
 
 ## Checking the upgrade landed
 
 ```bash
 fsmes info          # the version you meant to be on
+fsmes db-status     # the schema revision, and whether it is the current one
 fsmes erp check     # the ERP connector still reaches what it needs
 fsmes opc-verify    # every mapped tag still readable, run against the live server
+```
+
+`fsmes db-status` prints the revision the database is at and the revision the
+installed version expects, and **exits non-zero when they differ** — so a
+deployment script can gate on it rather than on someone reading the output:
+
+```text
+Current: a3f6c81d09e2
+Head:    a3f6c81d09e2
+The database is at the current schema.
 ```
 
 Then open the dashboard and look at a shift from before the upgrade. History

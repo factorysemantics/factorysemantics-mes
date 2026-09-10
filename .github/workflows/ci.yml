@@ -108,6 +108,11 @@ jobs:
           python -m alembic upgrade head
           echo "PG_ALEMBIC_SECONDS=$(( $(date +%s) - started ))" >> "$GITHUB_ENV"
           python -m alembic current
+          # And the path a plant actually uses: the migrations resolved from
+          # the package rather than from this directory. `db-status` exits
+          # non-zero unless the database is at the head the package ships, so
+          # the two ways of asking have to agree, on PostgreSQL as well.
+          fsmes db-status
 
       # The suite drops the migrated schema and builds its own from the
       # model, which is the same thing every other cell does. Running it

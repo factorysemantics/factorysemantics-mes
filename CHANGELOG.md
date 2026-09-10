@@ -227,6 +227,25 @@ goes under Honesty with a migration line, so plant people can find it.
   `*_<order>_op10.xml` or `*_<order>_completion.xml`.
 
 ### Fixed
+- **A PyPI install could not upgrade its own database.** `fsmes init-db`
+  ran the Alembic migrations only when there was an `alembic.ini` in the
+  working directory, and the wheel shipped neither that file nor the
+  migration scripts. Outside a source checkout — which is every plant that
+  installs from PyPI, and the way the engineers' guide says to install —
+  it fell back to `create_all`: missing tables appeared, no `ALTER` ever
+  ran, and it printed "Database schema is up to date" either way. The
+  migrations now live inside the package (`src/fsmes/migrations/`), so the
+  wheel carries them, and `fsmes.schema` resolves them from the package
+  rather than from whatever directory you are standing in. `alembic.ini`
+  remains for `python -m alembic` in a checkout; nothing at runtime reads
+  it. **`fsmes db-status`** prints the revision a database is at and the
+  revision the installed version expects, and exits non-zero when they
+  differ. The `wheel-demo` check — already required — now also installs the
+  release that is on PyPI, makes a database with it, upgrades that database
+  with the wheel under test, and asks the database whether it is at head, so
+  the upgrade path a plant takes is proven on the bytes that ship.
+  [Upgrading between versions](docs/operate/upgrade.md) loses its
+  run-from-a-checkout-at-a-tag workaround.
 - **A list search ignored case on SQLite and not on PostgreSQL.** Every list
   search in the API — equipment, materials, routings, people, work orders,
   lots, maintenance plans and orders, specifications, non-conformances,
@@ -259,6 +278,22 @@ goes under Honesty with a migration line, so plant people can find it.
   `0.1.0` to `0.1.2`, and the release workflow now refuses a tag that
   disagrees with it.
 ### Honesty
+- **A database made before the migrations shipped is recognised, not
+  guessed at.** A database created by a 0.1.x wheel has tables and no
+  Alembic stamp, so nothing in it says which revision its tables correspond
+  to. `fsmes init-db` works it out rather than assuming: it rebuilds the
+  schema each revision in the chain produces, in a throwaway SQLite
+  database, compares table names and column names, and stamps only on an
+  exact match — then runs the migrations since. A database made by the 0.1.2
+  wheel on PyPI is recognised as `153379d6cf19`, stamped there, and moved
+  forward by the migrations that have landed since. If nothing matches — a
+  table added by hand, a file from something other than a release — it names
+  the nearest revision, lists every difference,
+  and **changes nothing**, because a stamp that is not true of a database is
+  worse than no stamp: every later migration is then skipped or applied
+  twice on the strength of it. `fsmes plant <name> migrate` prints what
+  `init-db` recognised instead of discarding it, and reports an unstamped
+  database as unstamped rather than as `None`.
 - **What ERPNext does with an over-run is now measured, and a refusal is
   never recorded as delivered.** The MES books every unit a machine counted,
   so an order for 400 that ran to 420 is confirmed as 420 good with 20 over.
