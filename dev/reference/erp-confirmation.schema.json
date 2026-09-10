@@ -1,0 +1,551 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://docs.factorysemantics.com/reference/erp-confirmation.schema.json",
+  "title": "FactorySemantics MES \u2014 outbound ERP confirmation",
+  "description": "What this MES sends an ERP when work is done: one confirmation per completed operation, one completion per finished order. SAP-shaped on purpose \u2014 a confirmation per operation carrying quantities, cost centre, times and component consumption is what CO11N wants and what ERPNext's Job Cards and Stock Entries are built from \u2014 but shaped for SAP is not the same as tested against SAP, and no SAP has consumed one of these. Times are UTC without an offset marker. There is no money anywhere in this document: the MES reports quantities and time against a cost centre, and the ERP owns what they are worth.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/OperationConfirmation"
+    },
+    {
+      "$ref": "#/$defs/OrderCompletion"
+    }
+  ],
+  "$defs": {
+    "ComponentUse": {
+      "description": "One lot consumed at one operation. Appears inside an operation confirmation.",
+      "properties": {
+        "lot": {
+          "title": "Lot",
+          "type": "string",
+          "description": "The lot number of what was consumed: the number on the pallet, the drum or the label. Where the MES gets it: The MES lot the consumption was booked against. When it is null: Never.",
+          "x-fsmes-floor": "The lot number of what was consumed: the number on the pallet, the drum or the label.",
+          "x-fsmes-source": "The MES lot the consumption was booked against.",
+          "x-fsmes-null": "Never."
+        },
+        "material": {
+          "title": "Material",
+          "type": "string",
+          "description": "What that lot is. Where the MES gets it: The lot's material. When it is null: Never.",
+          "x-fsmes-floor": "What that lot is.",
+          "x-fsmes-source": "The lot's material.",
+          "x-fsmes-null": "Never."
+        },
+        "quantity": {
+          "title": "Quantity",
+          "type": "number",
+          "description": "How much of that lot this step consumed, in the material's own unit \u2014 kilograms, litres, each. Where the MES gets it: The booked consumption. The unit itself is not in this document; it is the material master's, on both sides. When it is null: Never.",
+          "x-fsmes-floor": "How much of that lot this step consumed, in the material's own unit \u2014 kilograms, litres, each.",
+          "x-fsmes-source": "The booked consumption. The unit itself is not in this document; it is the material master's, on both sides.",
+          "x-fsmes-null": "Never."
+        },
+        "equipment": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Equipment",
+          "description": "The machine that consumed it. Where the MES gets it: The operation's machine. When it is null: When the operation has no machine against it.",
+          "x-fsmes-floor": "The machine that consumed it.",
+          "x-fsmes-source": "The operation's machine.",
+          "x-fsmes-null": "When the operation has no machine against it."
+        }
+      },
+      "required": [
+        "lot",
+        "material",
+        "quantity"
+      ],
+      "title": "ComponentUse",
+      "type": "object"
+    },
+    "OperationConfirmation": {
+      "description": "One step of one order, confirmed the moment the step is done: quantities, the machine and its cost centre, the time the step was open, and every lot consumed at it. This is the document an ERP posts labour, machine time and consumption against.",
+      "properties": {
+        "kind": {
+          "const": "operation_confirmation",
+          "default": "operation_confirmation",
+          "title": "Kind",
+          "type": "string",
+          "description": "Which of the two documents this is; the first thing a reader should branch on. Where the MES gets it: Constant, written by the MES. When it is null: Never.",
+          "x-fsmes-floor": "Which of the two documents this is; the first thing a reader should branch on.",
+          "x-fsmes-source": "Constant, written by the MES.",
+          "x-fsmes-null": "Never."
+        },
+        "message_key": {
+          "title": "Message Key",
+          "type": "string",
+          "description": "The idempotency key. A second file carrying a key already seen is the same fact arriving twice, not a second confirmation, and must be posted once. Where the MES gets it: Built from the order and the step: `<order>:op<seq>` for an operation, `<order>:completion` for the close. When it is null: Never.",
+          "x-fsmes-floor": "The idempotency key. A second file carrying a key already seen is the same fact arriving twice, not a second confirmation, and must be posted once.",
+          "x-fsmes-source": "Built from the order and the step: `<order>:op<seq>` for an operation, `<order>:completion` for the close.",
+          "x-fsmes-null": "Never."
+        },
+        "order": {
+          "title": "Order",
+          "type": "string",
+          "description": "The order number the floor ran, as it appears on the dispatch list and the operator's screen. Where the MES gets it: The work order, which took it from the schedule the ERP sent. When it is null: Never.",
+          "x-fsmes-floor": "The order number the floor ran, as it appears on the dispatch list and the operator's screen.",
+          "x-fsmes-source": "The work order, which took it from the schedule the ERP sent.",
+          "x-fsmes-null": "Never."
+        },
+        "erp_reference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Erp Reference",
+          "description": "The ERP's own key for this order, carried back untouched so the ERP can match the confirmation without parsing the order code. Where the MES gets it: The `erp_reference` on the order, set when the ERP's schedule was imported. When it is null: When the order was raised in the MES rather than sent by an ERP. There is no ERP key to carry, and inventing one would match the confirmation to the wrong document.",
+          "x-fsmes-floor": "The ERP's own key for this order, carried back untouched so the ERP can match the confirmation without parsing the order code.",
+          "x-fsmes-source": "The `erp_reference` on the order, set when the ERP's schedule was imported.",
+          "x-fsmes-null": "When the order was raised in the MES rather than sent by an ERP. There is no ERP key to carry, and inventing one would match the confirmation to the wrong document."
+        },
+        "material": {
+          "title": "Material",
+          "type": "string",
+          "description": "What the order makes: the finished-goods code the line is set up to produce. Where the MES gets it: The order's material. When it is null: Never.",
+          "x-fsmes-floor": "What the order makes: the finished-goods code the line is set up to produce.",
+          "x-fsmes-source": "The order's material.",
+          "x-fsmes-null": "Never."
+        },
+        "seq": {
+          "title": "Seq",
+          "type": "integer",
+          "description": "The step number in the routing \u2014 10, 20, 30 \u2014 the same numbering the operator sees on the screen. Where the MES gets it: The routing as it was when the order was created. Later routing edits never rewrite an order that has already run. When it is null: Never.",
+          "x-fsmes-floor": "The step number in the routing \u2014 10, 20, 30 \u2014 the same numbering the operator sees on the screen.",
+          "x-fsmes-source": "The routing as it was when the order was created. Later routing edits never rewrite an order that has already run.",
+          "x-fsmes-null": "Never."
+        },
+        "operation": {
+          "title": "Operation",
+          "type": "string",
+          "description": "What the step is called: Mix, Pack, Deburr. Where the MES gets it: The same routing snapshot as `seq`. When it is null: Never.",
+          "x-fsmes-floor": "What the step is called: Mix, Pack, Deburr.",
+          "x-fsmes-source": "The same routing snapshot as `seq`.",
+          "x-fsmes-null": "Never."
+        },
+        "equipment": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Equipment",
+          "description": "The machine that did the work \u2014 an ISA-95 work unit. Where the MES gets it: The machine the operation is assigned to. When it is null: When the step has no machine against it, such as a hand operation. Null, not the line's code: a bench is not a machine.",
+          "x-fsmes-floor": "The machine that did the work \u2014 an ISA-95 work unit.",
+          "x-fsmes-source": "The machine the operation is assigned to.",
+          "x-fsmes-null": "When the step has no machine against it, such as a hand operation. Null, not the line's code: a bench is not a machine."
+        },
+        "work_center": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Work Center",
+          "description": "The line the machine belongs to. Where the MES gets it: Walked up the equipment tree from the machine to the first work centre above it, however many cells sit in between. When it is null: When the machine hangs outside any line. That is a real state of the equipment tree, not a gap to be filled in.",
+          "x-fsmes-floor": "The line the machine belongs to.",
+          "x-fsmes-source": "Walked up the equipment tree from the machine to the first work centre above it, however many cells sit in between.",
+          "x-fsmes-null": "When the machine hangs outside any line. That is a real state of the equipment tree, not a gap to be filled in."
+        },
+        "cost_center": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost Center",
+          "description": "The cost centre this work is accounted to \u2014 the account the ERP posts the hours and the consumption against. Where the MES gets it: The machine's own cost centre, or the first one found above it: cell, then line. Plants set it once per line and override only where accounting genuinely differs. When it is null: When nothing from the machine upwards carries one. Null is the honest answer: a cost centre guessed here posts a plant's labour to the wrong account, and nobody finds it for a month.",
+          "x-fsmes-floor": "The cost centre this work is accounted to \u2014 the account the ERP posts the hours and the consumption against.",
+          "x-fsmes-source": "The machine's own cost centre, or the first one found above it: cell, then line. Plants set it once per line and override only where accounting genuinely differs.",
+          "x-fsmes-null": "When nothing from the machine upwards carries one. Null is the honest answer: a cost centre guessed here posts a plant's labour to the wrong account, and nobody finds it for a month."
+        },
+        "input_qty": {
+          "title": "Input Qty",
+          "type": "number",
+          "description": "How many units this step had to work with. Where the MES gets it: The order quantity at the first step; the previous step's good quantity at every step after it. When it is null: Never.",
+          "x-fsmes-floor": "How many units this step had to work with.",
+          "x-fsmes-source": "The order quantity at the first step; the previous step's good quantity at every step after it.",
+          "x-fsmes-null": "Never."
+        },
+        "good_qty": {
+          "title": "Good Qty",
+          "type": "number",
+          "description": "Units this step made that passed. Where the MES gets it: What was booked against the step: machine counter deltas from OPC, or a person typing a count. When it is null: Never. Zero means the step made none; it never means nobody was watching.",
+          "x-fsmes-floor": "Units this step made that passed.",
+          "x-fsmes-source": "What was booked against the step: machine counter deltas from OPC, or a person typing a count.",
+          "x-fsmes-null": "Never. Zero means the step made none; it never means nobody was watching."
+        },
+        "scrap_qty": {
+          "title": "Scrap Qty",
+          "type": "number",
+          "description": "Units this step made that did not pass. Where the MES gets it: The same bookings as `good_qty`. When it is null: Never.",
+          "x-fsmes-floor": "Units this step made that did not pass.",
+          "x-fsmes-source": "The same bookings as `good_qty`.",
+          "x-fsmes-null": "Never."
+        },
+        "wip_qty": {
+          "title": "Wip Qty",
+          "type": "number",
+          "description": "What went into the step and has not come out of it either way: `input_qty - good_qty - scrap_qty`. **A negative number is reported, not clamped** \u2014 it means more came out of the step than went in, which really happens when one coalesced counter delta carries the line past the order, and hiding it behind a zero would be inventing production. Where the MES gets it: Arithmetic on the three quantities above, and nothing else. When it is null: Never.",
+          "x-fsmes-floor": "What went into the step and has not come out of it either way: `input_qty - good_qty - scrap_qty`. **A negative number is reported, not clamped** \u2014 it means more came out of the step than went in, which really happens when one coalesced counter delta carries the line past the order, and hiding it behind a zero would be inventing production.",
+          "x-fsmes-source": "Arithmetic on the three quantities above, and nothing else.",
+          "x-fsmes-null": "Never."
+        },
+        "setup_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Setup Seconds",
+          "description": "Planned set-up time for this step. Planned, not measured: the MES does not watch a fitter change a die. Where the MES gets it: The routing snapshot. When it is null: When the routing carries no set-up time. Null, not zero \u2014 'no set-up planned' and 'nobody ever recorded one' are different facts, and only one of them means the ERP should post no set-up.",
+          "x-fsmes-floor": "Planned set-up time for this step. Planned, not measured: the MES does not watch a fitter change a die.",
+          "x-fsmes-source": "The routing snapshot.",
+          "x-fsmes-null": "When the routing carries no set-up time. Null, not zero \u2014 'no set-up planned' and 'nobody ever recorded one' are different facts, and only one of them means the ERP should post no set-up."
+        },
+        "machine_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Machine Seconds",
+          "description": "How long the step was actually open on the machine, in seconds. Where the MES gets it: Measured: `completed_at - started_at`. When it is null: When the step has no start or no finish to subtract. Null rather than zero, because a step of unknown length is not a step that took no time.",
+          "x-fsmes-floor": "How long the step was actually open on the machine, in seconds.",
+          "x-fsmes-source": "Measured: `completed_at - started_at`.",
+          "x-fsmes-null": "When the step has no start or no finish to subtract. Null rather than zero, because a step of unknown length is not a step that took no time."
+        },
+        "labour_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Labour Seconds",
+          "description": "Planned labour for what this step handled. Planned, not clocked \u2014 nobody badges on and off an operation in this MES. Where the MES gets it: The routing's labour seconds per unit multiplied by the units handled (`good_qty + scrap_qty`). When it is null: When the routing carries no labour time per unit.",
+          "x-fsmes-floor": "Planned labour for what this step handled. Planned, not clocked \u2014 nobody badges on and off an operation in this MES.",
+          "x-fsmes-source": "The routing's labour seconds per unit multiplied by the units handled (`good_qty + scrap_qty`).",
+          "x-fsmes-null": "When the routing carries no labour time per unit."
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started At",
+          "description": "When the step started, UTC, with no offset marker \u2014 the MES's single timestamp convention. Where the MES gets it: The moment the operation was started, by an operator or by the first machine count arriving. When it is null: When the step was never started.",
+          "x-fsmes-floor": "When the step started, UTC, with no offset marker \u2014 the MES's single timestamp convention.",
+          "x-fsmes-source": "The moment the operation was started, by an operator or by the first machine count arriving.",
+          "x-fsmes-null": "When the step was never started."
+        },
+        "completed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completed At",
+          "description": "When the step finished, on the same clock as `started_at`. Where the MES gets it: The moment the operation was completed. When it is null: When the step is not finished.",
+          "x-fsmes-floor": "When the step finished, on the same clock as `started_at`.",
+          "x-fsmes-source": "The moment the operation was completed.",
+          "x-fsmes-null": "When the step is not finished."
+        },
+        "components": {
+          "items": {
+            "$ref": "#/$defs/ComponentUse"
+          },
+          "title": "Components",
+          "type": "array",
+          "description": "Every lot consumed at this step, one line each. Where the MES gets it: The consumption booked against the operation, by scanner or by hand. When it is null: Never null; an empty list means nothing was booked against the step. That is not the same as nothing having been used, and an ERP that back-flushes a bill of materials should treat an empty list as 'the MES has no record', not as 'no material was consumed'.",
+          "x-fsmes-floor": "Every lot consumed at this step, one line each.",
+          "x-fsmes-source": "The consumption booked against the operation, by scanner or by hand.",
+          "x-fsmes-null": "Never null; an empty list means nothing was booked against the step. That is not the same as nothing having been used, and an ERP that back-flushes a bill of materials should treat an empty list as 'the MES has no record', not as 'no material was consumed'."
+        }
+      },
+      "required": [
+        "message_key",
+        "order",
+        "material",
+        "seq",
+        "operation",
+        "input_qty",
+        "good_qty",
+        "scrap_qty",
+        "wip_qty"
+      ],
+      "title": "OperationConfirmation",
+      "type": "object"
+    },
+    "OrderCompletion": {
+      "description": "The order-level close, sent once when the last step of the order is done: what was ordered, what came out good, what was scrapped, how far the line ran past the order, and the finished-goods lot if there is one.",
+      "properties": {
+        "kind": {
+          "const": "order_completion",
+          "default": "order_completion",
+          "title": "Kind",
+          "type": "string",
+          "description": "Which of the two documents this is; the first thing a reader should branch on. Where the MES gets it: Constant, written by the MES. When it is null: Never.",
+          "x-fsmes-floor": "Which of the two documents this is; the first thing a reader should branch on.",
+          "x-fsmes-source": "Constant, written by the MES.",
+          "x-fsmes-null": "Never."
+        },
+        "message_key": {
+          "title": "Message Key",
+          "type": "string",
+          "description": "The idempotency key. A second file carrying a key already seen is the same fact arriving twice, not a second confirmation, and must be posted once. Where the MES gets it: Built from the order and the step: `<order>:op<seq>` for an operation, `<order>:completion` for the close. When it is null: Never.",
+          "x-fsmes-floor": "The idempotency key. A second file carrying a key already seen is the same fact arriving twice, not a second confirmation, and must be posted once.",
+          "x-fsmes-source": "Built from the order and the step: `<order>:op<seq>` for an operation, `<order>:completion` for the close.",
+          "x-fsmes-null": "Never."
+        },
+        "order": {
+          "title": "Order",
+          "type": "string",
+          "description": "The order number the floor ran, as it appears on the dispatch list and the operator's screen. Where the MES gets it: The work order, which took it from the schedule the ERP sent. When it is null: Never.",
+          "x-fsmes-floor": "The order number the floor ran, as it appears on the dispatch list and the operator's screen.",
+          "x-fsmes-source": "The work order, which took it from the schedule the ERP sent.",
+          "x-fsmes-null": "Never."
+        },
+        "erp_reference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Erp Reference",
+          "description": "The ERP's own key for this order, carried back untouched so the ERP can match the confirmation without parsing the order code. Where the MES gets it: The `erp_reference` on the order, set when the ERP's schedule was imported. When it is null: When the order was raised in the MES rather than sent by an ERP. There is no ERP key to carry, and inventing one would match the confirmation to the wrong document.",
+          "x-fsmes-floor": "The ERP's own key for this order, carried back untouched so the ERP can match the confirmation without parsing the order code.",
+          "x-fsmes-source": "The `erp_reference` on the order, set when the ERP's schedule was imported.",
+          "x-fsmes-null": "When the order was raised in the MES rather than sent by an ERP. There is no ERP key to carry, and inventing one would match the confirmation to the wrong document."
+        },
+        "material": {
+          "title": "Material",
+          "type": "string",
+          "description": "What the order makes: the finished-goods code the line is set up to produce. Where the MES gets it: The order's material. When it is null: Never.",
+          "x-fsmes-floor": "What the order makes: the finished-goods code the line is set up to produce.",
+          "x-fsmes-source": "The order's material.",
+          "x-fsmes-null": "Never."
+        },
+        "ordered_qty": {
+          "title": "Ordered Qty",
+          "type": "number",
+          "description": "What the ERP asked for. Where the MES gets it: The order's quantity, as imported from the schedule. When it is null: Never.",
+          "x-fsmes-floor": "What the ERP asked for.",
+          "x-fsmes-source": "The order's quantity, as imported from the schedule.",
+          "x-fsmes-null": "Never."
+        },
+        "good_qty": {
+          "title": "Good Qty",
+          "type": "number",
+          "description": "What the order actually yielded \u2014 the good quantity of its last step, not the sum of every step. Where the MES gets it: The last operation's good quantity. When it is null: Never.",
+          "x-fsmes-floor": "What the order actually yielded \u2014 the good quantity of its last step, not the sum of every step.",
+          "x-fsmes-source": "The last operation's good quantity.",
+          "x-fsmes-null": "Never."
+        },
+        "scrap_qty": {
+          "title": "Scrap Qty",
+          "type": "number",
+          "description": "Everything scrapped anywhere on the order, summed across the steps. Where the MES gets it: The sum of the operations' scrap. When it is null: Never.",
+          "x-fsmes-floor": "Everything scrapped anywhere on the order, summed across the steps.",
+          "x-fsmes-source": "The sum of the operations' scrap.",
+          "x-fsmes-null": "Never."
+        },
+        "over_qty": {
+          "default": 0.0,
+          "title": "Over Qty",
+          "type": "number",
+          "description": "How far past the ordered quantity the line actually ran. Zero on an order that stopped where it was asked to \u2014 and sent anyway, because a reader who never sees the field cannot tell an order that did not over-run from one whose over-run was not reported. Where the MES gets it: `max(good_qty - ordered_qty, 0)`. Derivable from the two numbers above, and stated because an ERP that posts a good quantity without noticing it exceeds the order is how a stock discrepancy nobody can explain starts. When it is null: Never.",
+          "x-fsmes-floor": "How far past the ordered quantity the line actually ran. Zero on an order that stopped where it was asked to \u2014 and sent anyway, because a reader who never sees the field cannot tell an order that did not over-run from one whose over-run was not reported.",
+          "x-fsmes-source": "`max(good_qty - ordered_qty, 0)`. Derivable from the two numbers above, and stated because an ERP that posts a good quantity without noticing it exceeds the order is how a stock discrepancy nobody can explain starts.",
+          "x-fsmes-null": "Never."
+        },
+        "lot": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lot",
+          "description": "The finished-goods lot the order produced \u2014 what a goods receipt is posted against. Where the MES gets it: Named after the order: `<order>-FG`, created when the order completed. When it is null: When the order yielded nothing good. There is no lot, and an ERP posting a receipt against a lot the MES never made is worse than a null.",
+          "x-fsmes-floor": "The finished-goods lot the order produced \u2014 what a goods receipt is posted against.",
+          "x-fsmes-source": "Named after the order: `<order>-FG`, created when the order completed.",
+          "x-fsmes-null": "When the order yielded nothing good. There is no lot, and an ERP posting a receipt against a lot the MES never made is worse than a null."
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started At",
+          "description": "When the order started on the floor, UTC, with no offset marker. Where the MES gets it: The moment its first step was started. When it is null: When the order never started.",
+          "x-fsmes-floor": "When the order started on the floor, UTC, with no offset marker.",
+          "x-fsmes-source": "The moment its first step was started.",
+          "x-fsmes-null": "When the order never started."
+        },
+        "completed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completed At",
+          "description": "When the order finished, on the same clock as `started_at`. Where the MES gets it: The moment its last step was completed. When it is null: When the order is not finished.",
+          "x-fsmes-floor": "When the order finished, on the same clock as `started_at`.",
+          "x-fsmes-source": "The moment its last step was completed.",
+          "x-fsmes-null": "When the order is not finished."
+        }
+      },
+      "required": [
+        "message_key",
+        "order",
+        "material",
+        "ordered_qty",
+        "good_qty",
+        "scrap_qty"
+      ],
+      "title": "OrderCompletion",
+      "type": "object"
+    },
+    "ProductionRequest": {
+      "description": "The inbound direction: an order arriving from the ERP. Included here because a plant checking its file exchange usually wants to check both directions with the same tool.",
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string",
+          "description": "The order number the floor will see. Where the MES gets it: The ERP's order or job number, from the schedule file or the API payload. When it is null: Never; a request with no order code is rejected rather than given a number the MES invented.",
+          "x-fsmes-floor": "The order number the floor will see.",
+          "x-fsmes-source": "The ERP's order or job number, from the schedule file or the API payload.",
+          "x-fsmes-null": "Never; a request with no order code is rejected rather than given a number the MES invented."
+        },
+        "material": {
+          "title": "Material",
+          "type": "string",
+          "description": "What to make. Where the MES gets it: The ERP's material code, which must already exist in the MES's material master. When it is null: Never; a request with no material is rejected.",
+          "x-fsmes-floor": "What to make.",
+          "x-fsmes-source": "The ERP's material code, which must already exist in the MES's material master.",
+          "x-fsmes-null": "Never; a request with no material is rejected."
+        },
+        "quantity": {
+          "title": "Quantity",
+          "type": "number",
+          "description": "How many the ERP is asking for. Where the MES gets it: The schedule. When it is null: Never null. A file that omits it is read as 0 \u2014 the one place this contract fills a gap, and it fills it with the smallest number rather than a plausible one, so an order for nothing looks like an order for nothing.",
+          "x-fsmes-floor": "How many the ERP is asking for.",
+          "x-fsmes-source": "The schedule.",
+          "x-fsmes-null": "Never null. A file that omits it is read as 0 \u2014 the one place this contract fills a gap, and it fills it with the smallest number rather than a plausible one, so an order for nothing looks like an order for nothing."
+        },
+        "due_date": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Due Date",
+          "description": "When the plant promised it. Where the MES gets it: The ERP's requested finish date. When it is null: When the schedule carries none. The MES then sequences by priority alone rather than inventing a date the plant never promised.",
+          "x-fsmes-floor": "When the plant promised it.",
+          "x-fsmes-source": "The ERP's requested finish date.",
+          "x-fsmes-null": "When the schedule carries none. The MES then sequences by priority alone rather than inventing a date the plant never promised."
+        },
+        "priority": {
+          "default": 50,
+          "title": "Priority",
+          "type": "integer",
+          "description": "Which order the dispatch list puts first; lower runs earlier. Where the MES gets it: The ERP's priority, or 50 when the schedule does not say. When it is null: Never; the default is stated rather than left empty.",
+          "x-fsmes-floor": "Which order the dispatch list puts first; lower runs earlier.",
+          "x-fsmes-source": "The ERP's priority, or 50 when the schedule does not say.",
+          "x-fsmes-null": "Never; the default is stated rather than left empty."
+        },
+        "erp_reference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Erp Reference",
+          "description": "The ERP's own key for this order, kept so every confirmation can carry it back. Where the MES gets it: The payload's `erp_reference` or `id`, falling back to the order code. When it is null: Never in practice, because of that fallback.",
+          "x-fsmes-floor": "The ERP's own key for this order, kept so every confirmation can carry it back.",
+          "x-fsmes-source": "The payload's `erp_reference` or `id`, falling back to the order code.",
+          "x-fsmes-null": "Never in practice, because of that fallback."
+        }
+      },
+      "required": [
+        "code",
+        "material",
+        "quantity"
+      ],
+      "title": "ProductionRequest",
+      "type": "object"
+    }
+  }
+}
