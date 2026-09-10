@@ -178,9 +178,14 @@ between hundreds of events a second and tens. Keep it under the client's own
 in-flight limit (paho, and so `aiomqtt`, allows 20 by default). Set it to
 `1` for strictly one publish at a time.
 
-Events still go out oldest first, and each one is still recorded on its own:
-a publish the broker refuses inside a group backs off without taking its
-neighbours with it.
+Events still go onto the wire oldest first, and each one is still recorded
+on its own: a publish the broker refuses inside a group backs off without
+taking its neighbours with it. What a group does not promise is the order
+the broker *acknowledges* them in — MQTT never did, in-flight QoS 1 messages
+are acknowledged in whatever order the broker manages, and a refused publish
+comes back after its backoff whatever else has gone by then. A consumer that
+needs a strict sequence should order on `recorded_at` and `event_id`, which
+is what they are in the envelope for.
 
 ## What is published today
 

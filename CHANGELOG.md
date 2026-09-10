@@ -70,7 +70,9 @@ goes under Honesty with a migration line, so plant people can find it.
     for one.
   - QoS 1 waits for the broker to acknowledge every event, so publishes now
     go out in groups the client can hold in flight (`MES_UNS_INFLIGHT`,
-    default 10; set it to 1 for strictly one at a time).
+    default 10; set it to 1 for strictly one at a time). Events go onto the
+    wire oldest first as before; the order the broker acknowledges them in
+    was never promised and is not promised now.
   - Enrolment reads the ids it needs rather than hydrating every JSON
     payload in the backlog to find them, and `erp_messages` has an index on
     (direction, id) — the question both readers of the outbox ask.

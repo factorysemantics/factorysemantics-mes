@@ -645,16 +645,24 @@ def test_the_published_at_a_consumer_sees_is_the_one_the_database_recorded(sessi
 # ------------------------------------------------------------ keeping up with a plant
 
 class SlowBroker(FakeBroker):
-    """A broker that takes a moment to acknowledge, and remembers the most
-    publishes it was holding at once."""
+    """A broker that takes a moment to acknowledge, and remembers both the
+    order it was handed events in and the most it was holding at once.
+
+    `offered` is written before the first await, so it is the order the
+    publisher put the events on the wire. `received` is written after, so it
+    is the order this broker got round to finishing them - which is a
+    different thing, and not one anybody promises.
+    """
 
     def __init__(self, delay: float = 0.005) -> None:
         super().__init__()
         self.delay = delay
+        self.offered: list[int] = []
         self.holding = 0
         self.most_held = 0
 
     async def publish(self, topic, payload, *, qos, retain) -> None:
+        self.offered.append(json.loads(payload)["event_id"])
         self.holding += 1
         self.most_held = max(self.most_held, self.holding)
         try:
@@ -745,16 +753,26 @@ def test_a_plant_can_ask_for_strictly_one_publish_at_a_time(session, scope):
     assert len(broker.received) == 6
 
 
-def test_events_still_reach_the_broker_oldest_first_when_they_go_out_in_groups(session, scope):
+def test_events_are_handed_to_the_broker_oldest_first_even_in_groups(session, scope):
     """A namespace that delivers a shift out of order is worse than one that
-    is an hour behind, and that has to survive the pipelining."""
+    is an hour behind, so pipelining must not change the order events go onto
+    the wire.
+
+    What it deliberately does not claim is the order they are *acknowledged*
+    in. Windows CI proved that one: the same test asserting the fake broker
+    finished them in order passed on 3.13 and failed on 3.12, because the
+    platform's timer granularity decides which of four equal sleeps wakes
+    first. Nothing about MQTT promises otherwise either - in-flight QoS 1
+    messages are acknowledged in whatever order the broker manages, and a
+    refused publish is retried after a backoff in any case.
+    """
     queue_many(session, 10)
     broker = SlowBroker()
 
     run_cycle(broker, scope, settings_for(uns_inflight=4))
 
-    assert [body["event_id"] for _t, body, _q, _r in broker.received] == \
-        sorted(body["event_id"] for _t, body, _q, _r in broker.received)
+    assert len(broker.offered) == 10
+    assert broker.offered == sorted(broker.offered)
 
 
 def test_one_refused_publish_does_not_take_the_group_around_it_with_it(session, scope):
