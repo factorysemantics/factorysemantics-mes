@@ -113,7 +113,7 @@ class MqttTransport:
         if self._client is not None:
             return
         shadow.guard("uns.mqtt_connect", detail=repr(self.address))
-        aiomqtt = _import_aiomqtt()
+        aiomqtt = import_aiomqtt()
         kwargs: dict = {
             "hostname": self.address.host,
             "port": self.address.port,
@@ -161,8 +161,12 @@ NO_CLIENT = (
 )
 
 
-def _import_aiomqtt():
-    """The client, or an error that says how to get one."""
+def import_aiomqtt():
+    """The client, or an error that says how to get one.
+
+    Public because the inbound subscriber needs the same client and the same
+    sentence about the same extra; there is no second way to say it.
+    """
     try:
         import aiomqtt
     except ImportError as exc:
