@@ -3149,6 +3149,22 @@ this MES or the system that told it.</p>
 <p>There is no SQL poller and no inbound REST endpoint yet. If you need one,
 say so in
 <a href="https://github.com/factorysemantics/factorysemantics-mes/discussions">Discussions</a>.
+<strong>There is a second front door for those</strong>, and in a shadow run you want it
+open. Nothing on an OPC-fed line labels a stop, so without it the downtime
+pareto reads almost entirely <em>unlabelled</em> in week one — while the incumbent
+beside it shows reason codes, and the comparison is unfair by construction.
+Two ways in, both configuration rather than code: a CSV or JSON export
+dropped in a folder, or a read-only query against the database the other
+system already keeps. Either way the fact is recorded as <strong>told</strong>, with the
+supplying system named on it, and never as something this MES watched.</p>
+<p>The pareto still names its unlabelled bar <em>unlabelled</em> rather than filing it
+under "other", because a chart that hides its own ignorance convinces a plant
+it has data it does not have — and it now breaks every bucket down by who
+labelled it, so what came from the incumbent can be told from what came from
+here.</p>
+<p><a href="../inbound/">Feeding the MES what people typed elsewhere</a> is the page. Start
+with the folder driver — a person can produce one export by hand on day one —
+and move to the query once somebody will give you read-only credentials.
 A question asked twice becomes a page, and a need stated by a real plant
 moves up the list.</p>
 <h2 id="7-first-day-checks-and-week-one">7. First-day checks, and week one<a class="headerlink" href="#7-first-day-checks-and-week-one" title="Permanent link">&para;</a></h2>

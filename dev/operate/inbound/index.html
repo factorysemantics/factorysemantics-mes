@@ -1265,6 +1265,78 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#reading-it-out-of-a-database-instead" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading it out of a database instead
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reading it out of a database instead">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reading-and-only-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading, and only reading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-cursor-and-what-holds-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The cursor, and what holds it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-it_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trying-it-without-another-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trying it without another system
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#the-honesty-rules" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2802,6 +2874,78 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#reading-it-out-of-a-database-instead" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading it out of a database instead
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reading it out of a database instead">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reading-and-only-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading, and only reading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-cursor-and-what-holds-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The cursor, and what holds it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-it_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trying-it-without-another-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trying it without another system
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#the-honesty-rules" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2921,7 +3065,7 @@
 
 
 <h1 id="feeding-the-mes-what-people-typed-elsewhere">Feeding the MES what people typed elsewhere<a class="headerlink" href="#feeding-the-mes-what-people-typed-elsewhere" title="Permanent link">&para;</a></h1>
-<p><em>How-to. Downtime labels, quality results and counts that were recorded in another system, dropped into a folder as CSV, and recorded here as what they are: told, not observed.</em></p>
+<p><em>How-to. Downtime labels, quality results and counts that were recorded in another system — dropped into a folder as CSV, or read straight out of that system's own database — and recorded here as what they are: told, not observed.</em></p>
 <p>The OPC agent is how this MES sees a plant. It is not how it learns why a
 machine stopped, what an inspector measured, or how many units somebody
 counted by hand — none of that is on a wire. Those facts live in whatever
@@ -2936,7 +3080,10 @@ unlabelled stop where the incumbent shows a reason code, and it looks like
 the shadow has a data problem when what it has is a plumbing problem.</p>
 <p>So there is a second front door. Three event shapes, one contract, and two
 drivers: files in a folder, and <a href="#the-broker-mqtt">a broker</a> the plant
-already has. The contract does not change with the pipe the row came down.</p>
+already has. The contract does not change with the pipe the row came down.
+drivers that fill it: files in a folder, and a read-only query against the
+database that system already keeps. A row means the same thing whichever way
+it arrived.</p>
 <div class="admonition note">
 <p class="admonition-title">Inbound is not gated by shadow mode</p>
 <p>Shadow mode closes the paths by which this MES could change something
@@ -3065,6 +3212,164 @@ fsmes<span class="w"> </span>inbound<span class="w"> </span>watch<span class="w"
 <code>inbound/rejected/counts/counts.csv.rejects.txt</code>. Fix the rows or the
 mapping and drop the file in again: nothing already recorded is recorded
 twice.</p>
+<h2 id="reading-it-out-of-a-database-instead">Reading it out of a database instead<a class="headerlink" href="#reading-it-out-of-a-database-instead" title="Permanent link">&para;</a></h2>
+<p>A CSV export needs a person every day. A query needs a person once. Where the
+system holding these facts has a database you can be given read-only
+credentials to — the incumbent MES's, a quality system's, a historian's —
+<code>fsmes inbound poll-sql</code> runs your query on a schedule and feeds the same
+contract.</p>
+<p><strong>The query is yours.</strong> This repository does not know, and will never
+contain, what any commercial system's tables are called. What it can tell you
+is the shape the query has to return: <strong>one row per event, one column per
+contract field you are supplying, plus a column that only ever goes up.</strong>
+Everything else — which tables, which joins, which of that system's status
+codes count as a finished record — is the question you take to whoever
+administers it.</p>
+<h3 id="the-configuration">The configuration<a class="headerlink" href="#the-configuration" title="Permanent link">&para;</a></h3>
+<p><code>MES_INBOUND_SQL_FILE</code> points at a JSON file with the same four keys the
+column mapping has, plus the ones that describe the query. One entry per
+event type:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"counts"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"replay:incumbent-mes"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"source_kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"replay"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"timezone"</span><span class="p">:</span><span class="w"> </span><span class="s2">"America/Chicago"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"postgresql+psycopg://mes_readonly:...@10.0.0.9:5432/theirdb"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"sql"</span><span class="p">:</span><span class="w"> </span><span class="s2">"SELECT entry_id, entered_at, machine, good_qty, scrap_qty FROM their_table WHERE entry_id &gt; :watermark ORDER BY entry_id"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"watermark_column"</span><span class="p">:</span><span class="w"> </span><span class="s2">"entry_id"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"watermark_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"id"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"start_from"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"poll_seconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"statement_timeout_ms"</span><span class="p">:</span><span class="w"> </span><span class="mi">30000</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"max_rows"</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"columns"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"external_key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"entry_id"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"recorded_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"entered_at"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"equipment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"machine"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"good"</span><span class="p">:</span><span class="w"> </span><span class="s2">"good_qty"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"scrap"</span><span class="p">:</span><span class="w"> </span><span class="s2">"scrap_qty"</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><code>columns</code>, <code>defaults</code>, <code>time_format</code> and <code>timezone</code> mean exactly what they
+mean for the folder driver, and are read by the same code. The rest:</p>
+<ul>
+<li><code>url</code> — a <a href="https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls">SQLAlchemy URL</a>.
+  The driver for your database is your install: SQLite needs nothing,
+  PostgreSQL is <code>pip install "factorysemantics-mes[postgres]"</code>, and anything
+  else is whatever DBAPI that database publishes. <strong>Read-only credentials</strong>,
+  and the paragraph below says why that sentence is doing the work.</li>
+<li><code>sql</code> — your query. It must carry <code>:watermark</code> and an <code>ORDER BY</code>, and it is
+  refused at load if it does not: without the parameter every pass would
+  re-read the whole history, and without the order the cursor could step over
+  a row a database chose to return late.</li>
+<li><code>watermark_column</code> — the column in the result that only goes up. It is
+  usually the same column the <code>WHERE</code> compares, and it does not have to be
+  one you map onto the contract.</li>
+<li><code>watermark_type</code> — <code>id</code> or <code>timestamp</code>. It is a label for people; the value
+  itself is carried as text either way (see below).</li>
+<li><code>start_from</code> — where a cursor that has never run starts, <strong>exclusive</strong>.
+  Required, with no default, because the two things this MES could guess are
+  "now", which silently skips everything already in that system, and "the
+  beginning", which pulls ten years through a plant network on a Monday.
+  Which of those you want is a decision, and a decision belongs in a file
+  somebody signed.</li>
+<li><code>poll_seconds</code>, <code>statement_timeout_ms</code>, <code>max_rows</code> — how often, how long a
+  query may take, and how many rows one pass will take. A backlog drains over
+  several passes rather than one transaction that holds for an hour.</li>
+</ul>
+<h3 id="reading-and-only-reading">Reading, and only reading<a class="headerlink" href="#reading-and-only-reading" title="Permanent link">&para;</a></h3>
+<p>Three things stand between this and a system somebody else depends on, and
+<code>fsmes inbound sql-check</code> prints which of them it managed:</p>
+<ol>
+<li><strong>The query is inspected before it is ever sent.</strong> It has to start with
+   <code>SELECT</code> or <code>WITH</code>, it has to be one statement, and it may not contain a
+   word that could change anything — including a data-modifying CTE, which is
+   a <code>SELECT</code>-shaped statement that deletes rows.</li>
+<li><strong>The connection is opened read-only where the dialect has a way to say
+   so.</strong> SQLite is opened <code>mode=ro</code> with <code>PRAGMA query_only</code>; PostgreSQL gets
+   <code>SET TRANSACTION READ ONLY</code> and your <code>statement_timeout</code>; MySQL and Oracle
+   get their equivalents. Where a dialect has no such setting — SQL Server has
+   none — the check says so in those words rather than staying quiet, because
+   silence would read as success.</li>
+<li><strong>Read-only credentials.</strong> This is the one that actually holds. The other
+   two are this MES being careful; only the grants are a guarantee, and they
+   are the plant DBA's to give.</li>
+</ol>
+<p>And one more, which is about their uptime rather than their data: <strong>every row
+is fetched and the connection closed before this MES writes anything.</strong> A
+slow write here can never become a lock over there.</p>
+<div class="admonition warning">
+<p class="admonition-title">Some databases want the cursor cast</p>
+<p>The cursor is handed back to your database as <strong>the text the column
+gave</strong>, unchanged — a timestamp re-read into this MES's own convention
+would move the boundary by your system's UTC offset, and the rows in that
+gap would be skipped with nothing to say so. SQLite compares text against
+a typed column by the column's own affinity and needs nothing. PostgreSQL
+does not, and will say so plainly the first time you run <code>sql-check</code>; the
+cast belongs in your query: <code>WHERE stamp &gt; CAST(:watermark AS timestamp)</code>.</p>
+</div>
+<h3 id="the-cursor-and-what-holds-it">The cursor, and what holds it<a class="headerlink" href="#the-cursor-and-what-holds-it" title="Permanent link">&para;</a></h3>
+<p>The cursor is how far the poller has read. It is <strong>not</strong> what stops a row
+being recorded twice — that is still <code>inbound_events</code>, keyed on the
+supplier's own <code>external_key</code>. So a cursor that is behind costs a re-read and
+changes nothing, which is the direction a cursor should fail in.</p>
+<p><strong>A row nothing was done with is not a row that was read.</strong> When a row cannot
+be recorded, the cursor stops at it:</p>
+<div class="highlight"><pre><span></span><code>counts from replay:incumbent-mes: 4 rows read, 3 recorded, 0 already seen, 1 rejected
+  row 3 (88213): equipment 'NOPE' not found
+  cursor '0' -&gt; '2'
+  HELD at '3' by row 3 (88213): equipment 'NOPE' not found
+  Every later row in the batch was still recorded. The cursor stays here and this
+  row is tried again next pass. Fix it where it is, or step over it deliberately
+  with `fsmes inbound sql-watermark --stream counts --set &lt;value&gt;`, which says in
+  words what it is skipping.
+  the same lines are in inbound/rejected/counts/sql.counts.20260910T121545.rejects.txt
+1 query, 4 rows: 3 recorded, 0 already seen, 1 rejected; 1 cursor held (counts)
+</code></pre></div>
+<p>Note what happened to the rows <em>after</em> the bad one: they were recorded.
+Leaving good data unread would be its own dishonesty. Only the cursor stopped
+— so the next pass asks for the bad row again, and keeps saying so until
+somebody deals with it. That is the loud failure, and it is deliberate: a
+poller that stepped over a row it could not read would leave a hole in the
+comparison with no way to find it later.</p>
+<p>Stepping over it is a thing a person does, in words:</p>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>inbound<span class="w"> </span>sql-watermark<span class="w">                                </span><span class="c1"># where every cursor stands</span>
+fsmes<span class="w"> </span>inbound<span class="w"> </span>sql-watermark<span class="w"> </span>--stream<span class="w"> </span>counts<span class="w"> </span>--set<span class="w"> </span><span class="m">3</span><span class="w">        </span><span class="c1"># says what it would skip, changes nothing</span>
+fsmes<span class="w"> </span>inbound<span class="w"> </span>sql-watermark<span class="w"> </span>--stream<span class="w"> </span>counts<span class="w"> </span>--set<span class="w"> </span><span class="m">3</span><span class="w"> </span>--force<span class="w">   </span><span class="c1"># and means it</span>
+</code></pre></div>
+<p>The rejected rows are also written to
+<code>inbound/rejected/&lt;stream&gt;/sql.&lt;stream&gt;.&lt;time&gt;.rejects.txt</code>, beside the folder
+driver's reports, so there is one place to look.</p>
+<h3 id="running-it_1">Running it<a class="headerlink" href="#running-it_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>inbound<span class="w"> </span>sql-check<span class="w">       </span><span class="c1"># connect, run each query, map the rows, write nothing</span>
+fsmes<span class="w"> </span>inbound<span class="w"> </span>poll-sql<span class="w"> </span>--once<span class="w"> </span><span class="c1"># one pass, and say what it did</span>
+fsmes<span class="w"> </span>inbound<span class="w"> </span>poll-sql<span class="w">        </span><span class="c1"># forever, each query on its own interval</span>
+</code></pre></div>
+<p><code>--once</code> exits non-zero when a query could not be run at all — a source that
+is down, credentials that expired, a query the database rejected — because
+that is a broken interface and cron should say so. A held cursor does not:
+it is a finding about one row, it is already on the page, and it would
+otherwise cry wolf every pass.</p>
+<h3 id="trying-it-without-another-system">Trying it without another system<a class="headerlink" href="#trying-it-without-another-system" title="Permanent link">&para;</a></h3>
+<p>The repository ships <code>config/inbound_sql.json</code>, which reads a SQLite file
+named <code>inbound/example_source.sqlite</code> that does not exist until you make one.
+Every table and column name in it is this project's own invention. Make the
+file and run a pass:</p>
+<div class="highlight"><pre><span></span><code>sqlite3<span class="w"> </span>inbound/example_source.sqlite<span class="w"> </span><span class="s2">"</span>
+<span class="s2">CREATE TABLE manual_counts (entry_id INTEGER PRIMARY KEY, entered_at TEXT,</span>
+<span class="s2">  counted_at TEXT, machine TEXT, order_no TEXT, good_qty REAL, scrap_qty REAL);</span>
+<span class="s2">INSERT INTO manual_counts VALUES (1,'2026-09-10 17:00:00','2026-09-10 16:30:00','MIX01','',12,1);</span>
+<span class="s2">INSERT INTO manual_counts VALUES (2,'2026-09-10 17:05:00','2026-09-10 16:40:00','MIX01','',8,0);</span>
+<span class="s2">"</span>
+fsmes<span class="w"> </span>inbound<span class="w"> </span>sql-check
+fsmes<span class="w"> </span>inbound<span class="w"> </span>poll-sql<span class="w"> </span>--once
+</code></pre></div>
+<p><code>MIX01</code> is the demo plant's mixer, so those counts land against a machine
+this MES knows. Point the same configuration at a row naming a machine it
+does not know and you will see the cursor hold, which is worth doing once
+before you point it at anything real.</p>
 <h2 id="the-honesty-rules">The honesty rules<a class="headerlink" href="#the-honesty-rules" title="Permanent link">&para;</a></h2>
 <p>These are why the module looks the way it does. Each of them is a way the
 alternative would produce a convincing wrong number.</p>
@@ -3283,6 +3588,17 @@ this repository does not start brokers on the machine it is developed on.
 If you run it against a real Mosquitto, HiveMQ or UMH, an issue saying which
 broker and what it did is the most useful thing you can send. Ask in
 <a href="https://github.com/factorysemantics/factorysemantics-mes/discussions">Discussions</a>;
+An <strong>MQTT subscriber</strong>, for tag values and events that never touch OPC UA. It
+is a third transport over a contract that already exists, and it will not
+change what a row means when it lands. There is no inbound REST endpoint
+either, and no driver for a system that only offers a web API.</p>
+<p>Nor is there any translation of codes. If the other system calls the mixer
+something else, or files a stop under a reason code this MES has never heard
+of, the query is where you translate it — a <code>CASE</code> or a join against a lookup
+table on that side, which is where somebody already knows what those codes
+mean. Building a mapping table in here would be this MES guessing about a
+system it cannot see.</p>
+<p>Ask in <a href="https://github.com/factorysemantics/factorysemantics-mes/discussions">Discussions</a>;
 a question asked twice becomes a page.</p>
 
 
