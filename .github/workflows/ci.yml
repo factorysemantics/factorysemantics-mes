@@ -37,6 +37,98 @@ jobs:
       - name: Test
         run: python -m pytest
 
+  postgres:
+    # The suite against a real PostgreSQL, because a plant runs one.
+    #
+    # Everything else here runs on in-memory SQLite. SQLite is forgiving in
+    # ways PostgreSQL is not — LIKE ignores case, GROUP BY tolerates a bare
+    # column, a failed statement does not poison the transaction — so a bug
+    # that only shows on PostgreSQL is invisible to the rest of this file.
+    # This cell is where it shows: on a runner, not on a plant PC.
+    #
+    # One cell, Ubuntu, one Python. What this catches is a dialect
+    # difference, not a platform or interpreter difference, so multiplying
+    # the matrix would buy nothing and cost four times the minutes.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        # Pinned by digest, not by tag: `postgres:16` is a moving target and
+        # a green run has to mean the same bytes passed. This is 16.15.
+        # Moving the pin is a pull request, which is when it gets re-proven.
+        image: postgres@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94
+        env:
+          POSTGRES_USER: fsmes
+          POSTGRES_PASSWORD: fsmes
+          POSTGRES_DB: fsmes
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fsmes -d fsmes"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      # The suite's database. Not MES_DATABASE_URL — see tests/conftest.py for
+      # why the two are kept apart.
+      MES_TEST_DATABASE_URL: postgresql+psycopg://fsmes:fsmes@127.0.0.1:5432/fsmes
+      # Alembic reads the deployment setting, so the migration step below
+      # points that at the same server.
+      MES_DATABASE_URL: postgresql+psycopg://fsmes:fsmes@127.0.0.1:5432/fsmes
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The same extras as `test`, plus the PostgreSQL driver.
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,mcp,agent,postgres]"
+
+      # First, while the database is still empty: the migrations. A chain
+      # that has only ever run on SQLite is the likeliest thing here to be
+      # quietly wrong, and `alembic upgrade head` from nothing is the only
+      # way a plant ever gets its schema. One head, checked here as well as
+      # in the suite, because a second head fails this step in a way that is
+      # hard to read otherwise.
+      - name: alembic upgrade head, from empty, on PostgreSQL
+        run: |
+          set -euo pipefail
+          heads=$(python -m alembic heads | grep -c . || true)
+          if [ "$heads" != "1" ]; then
+            echo "expected exactly one migration head, found $heads:"
+            python -m alembic heads --verbose
+            exit 1
+          fi
+          started=$(date +%s)
+          python -m alembic upgrade head
+          echo "PG_ALEMBIC_SECONDS=$(( $(date +%s) - started ))" >> "$GITHUB_ENV"
+          python -m alembic current
+
+      # The suite drops the migrated schema and builds its own from the
+      # model, which is the same thing every other cell does. Running it
+      # second means the step above genuinely started from empty.
+      - name: Test
+        run: |
+          set -euo pipefail
+          started=$(date +%s)
+          python -m pytest
+          echo "PG_TEST_SECONDS=$(( $(date +%s) - started ))" >> "$GITHUB_ENV"
+
+      - name: What this run cost
+        if: always()
+        run: |
+          {
+            echo "| Step | Seconds |"
+            echo "|---|---|"
+            echo "| alembic upgrade head | ${PG_ALEMBIC_SECONDS:-—} |"
+            echo "| Suite on PostgreSQL 16.15 | ${PG_TEST_SECONDS:-—} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   wheel-demo:
     # The check that would have caught 0.1.0. `test` above proves the source
     # works; this proves the *artifact* works — installed into a fresh venv in
