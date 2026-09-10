@@ -229,6 +229,10 @@
          <lastmod>2026-09-10</lastmod>
     </url>
     <url>
+         <loc>https://docs.factorysemantics.com/dev/operate/backup/</loc>
+         <lastmod>2026-09-10</lastmod>
+    </url>
+    <url>
          <loc>https://docs.factorysemantics.com/dev/operate/compatibility/</loc>
          <lastmod>2026-09-10</lastmod>
     </url>
@@ -241,6 +245,18 @@
          <lastmod>2026-09-10</lastmod>
     </url>
     <url>
+         <loc>https://docs.factorysemantics.com/dev/operate/first-plant/</loc>
+         <lastmod>2026-09-10</lastmod>
+    </url>
+    <url>
+         <loc>https://docs.factorysemantics.com/dev/operate/first-week/</loc>
+         <lastmod>2026-09-10</lastmod>
+    </url>
+    <url>
+         <loc>https://docs.factorysemantics.com/dev/operate/opc-readonly/</loc>
+         <lastmod>2026-09-10</lastmod>
+    </url>
+    <url>
          <loc>https://docs.factorysemantics.com/dev/operate/registry/</loc>
          <lastmod>2026-09-10</lastmod>
     </url>
@@ -249,7 +265,15 @@
          <lastmod>2026-09-10</lastmod>
     </url>
     <url>
+         <loc>https://docs.factorysemantics.com/dev/operate/tls/</loc>
+         <lastmod>2026-09-10</lastmod>
+    </url>
+    <url>
          <loc>https://docs.factorysemantics.com/dev/operate/uns/</loc>
+         <lastmod>2026-09-10</lastmod>
+    </url>
+    <url>
+         <loc>https://docs.factorysemantics.com/dev/operate/upgrade/</loc>
          <lastmod>2026-09-10</lastmod>
     </url>
     <url>

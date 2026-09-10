@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://docs.factorysemantics.com/dev/design/STYLE/">
+        <link rel="canonical" href="https://docs.factorysemantics.com/dev/operate/first-plant/">
       
       
-        <link rel="prev" href="../../develop/erp-connectors/">
+        <link rel="prev" href="../">
       
       
-        <link rel="next" href="../../decisions/">
+        <link rel="next" href="../deploy/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Style - FactorySemantics MES</title>
+        <title>Tutorial — beside your existing MES - FactorySemantics MES</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#the-style-contract" class="md-skip">
+        <a href="#running-factorysemantics-mes-beside-your-existing-mes" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Style
+              Tutorial — beside your existing MES
             
           </span>
         </div>
@@ -268,11 +268,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../operate/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -288,12 +290,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../../develop/" class="md-tabs__link">
           
   
@@ -709,26 +709,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -746,7 +751,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -764,7 +769,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -789,10 +794,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../operate/first-plant/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — beside your existing MES
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -808,6 +840,158 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-you-will-need-before-you-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What you will need before you start
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-afternoon-in-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The afternoon, in order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-what-this-guarantees-and-what-it-does-not" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. What this guarantees, and what it does not
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-install-it-and-see-it-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Install it and see it run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-get-read-only-access-to-the-opc-ua-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Get read-only access to the OPC UA server
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-browse-map-and-prove-the-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Browse, map, and prove the map
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-orders-in-confirmations-out-by-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Orders in, confirmations out, by file
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-what-people-type-into-other-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. What people type into other systems
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-first-day-checks-and-week-one" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. First-day checks, and week one
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-where-the-numbers-live-and-backing-them-up" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Where the numbers live, and backing them up
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#who-to-ask" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Who to ask
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#every-page-this-guide-leans-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Every page this guide leans on
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -820,7 +1004,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/deploy/" class="md-nav__link">
+      <a href="../deploy/" class="md-nav__link">
         
   
   
@@ -848,7 +1032,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/opc-readonly/" class="md-nav__link">
+      <a href="../opc-readonly/" class="md-nav__link">
         
   
   
@@ -876,7 +1060,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/registry/" class="md-nav__link">
+      <a href="../registry/" class="md-nav__link">
         
   
   
@@ -904,7 +1088,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/erpnext/" class="md-nav__link">
+      <a href="../erpnext/" class="md-nav__link">
         
   
   
@@ -932,7 +1116,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/uns/" class="md-nav__link">
+      <a href="../uns/" class="md-nav__link">
         
   
   
@@ -960,7 +1144,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/backup/" class="md-nav__link">
+      <a href="../backup/" class="md-nav__link">
         
   
   
@@ -988,7 +1172,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/tls/" class="md-nav__link">
+      <a href="../tls/" class="md-nav__link">
         
   
   
@@ -1016,7 +1200,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/upgrade/" class="md-nav__link">
+      <a href="../upgrade/" class="md-nav__link">
         
   
   
@@ -1128,7 +1312,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/first-week/" class="md-nav__link">
+      <a href="../first-week/" class="md-nav__link">
         
   
   
@@ -1156,7 +1340,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/compatibility/" class="md-nav__link">
+      <a href="../compatibility/" class="md-nav__link">
         
   
   
@@ -1184,7 +1368,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/security/" class="md-nav__link">
+      <a href="../security/" class="md-nav__link">
         
   
   
@@ -1216,31 +1400,26 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
             
   
   
@@ -1258,7 +1437,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1385,37 +1564,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Style
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../design/STYLE/" class="md-nav__link">
         
   
   
@@ -1431,48 +1583,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#rules" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rules
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-ui-check-watches" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What ui-check watches
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1491,20 +1601,17 @@
       
       
         
-          
-          
-        
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_6" >
         
           
-          <label class="md-nav__link" for="__nav_4_6" id="__nav_4_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4_6" id="__nav_4_6_label" tabindex="0">
             
   
   
@@ -2505,10 +2612,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#rules" class="md-nav__link">
+  <a href="#what-you-will-need-before-you-start" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Rules
+        What you will need before you start
       
     </span>
   </a>
@@ -2516,10 +2623,120 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#what-ui-check-watches" class="md-nav__link">
+  <a href="#the-afternoon-in-order" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What ui-check watches
+        The afternoon, in order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-what-this-guarantees-and-what-it-does-not" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. What this guarantees, and what it does not
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-install-it-and-see-it-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Install it and see it run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-get-read-only-access-to-the-opc-ua-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Get read-only access to the OPC UA server
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-browse-map-and-prove-the-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Browse, map, and prove the map
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-orders-in-confirmations-out-by-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Orders in, confirmations out, by file
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-what-people-type-into-other-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. What people type into other systems
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-first-day-checks-and-week-one" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. First-day checks, and week one
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-where-the-numbers-live-and-backing-them-up" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Where the numbers live, and backing them up
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#who-to-ask" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Who to ask
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#every-page-this-guide-leans-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Every page this guide leans on
       
     </span>
   </a>
@@ -2543,7 +2760,7 @@
 
 
   
-    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/design/STYLE.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/operate/first-plant.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -2551,65 +2768,303 @@
   
 
 
-<h1 id="the-style-contract">The style contract<a class="headerlink" href="#the-style-contract" title="Permanent link">&para;</a></h1>
-<p>What "coherent" means for these screens, written down so an agent can cite it
-and <code>fsmes ui-check</code> can enforce the checkable parts. This document is the
-flexibility mechanism as much as the coherence one: <strong>evolving the design
-deliberately means editing this contract and re-accepting baselines
-(<code>fsmes ui-check --accept</code>) in the branch that makes the change.</strong> Drift that
-ships without touching this file or the baselines is a bug by definition.</p>
-<p>The enforcement layer is <code>tests/ui/baselines/*.json</code> — computed styles of the
-components named below, per theme, captured from the live screens. A rule
-here that the baselines cannot see is still a rule; reviewers hold the line
-where the crawler cannot.</p>
-<h2 id="rules">Rules<a class="headerlink" href="#rules" title="Permanent link">&para;</a></h2>
-<ol>
-<li><strong>A component owns its own chrome.</strong> <code>.kpi</code> owns the card — background,
-   border, radius, padding, layout. A class added <em>beside</em> it (<code>.kpi-action</code>)
-   may strip browser defaults and add affordance, but may not declare any
-   property the base class already sets. <em>(The rule that came from the
-   2026-09-01 tile regression, where <code>border: 1px solid transparent</code> on the
-   affordance silently deleted every card's outline. Pinned by
-   <code>test_a_clickable_tile_still_looks_like_the_card_it_was</code>.)</em></li>
-<li><strong>Colour comes from the palette, nowhere else.</strong> Every colour on every
-   screen resolves to a variable defined in <code>themes.css</code>. A hex literal in a
-   page stylesheet is a bug — that is what let four colours escape theming
-   before the four-theme pass caught them.</li>
-<li><strong>All four themes are first-class.</strong> control-room, daylight,
-   high-contrast, night-shift. A change is not done until it looks right in
-   all four; <code>ui-check</code> snapshots every theme for exactly this reason.
-   High-contrast keeps its WCAG ratios (a test computes them).</li>
-<li><strong>Every list states its total.</strong> "Showing 50 of 18,347" — a truncated
-   list must never look complete (the same honesty rule the API's envelope
-   carries).</li>
-<li><strong>Numbers describe the plant unless labelled otherwise.</strong> A tile, KPI or
-   count scoped to the current page/filter says so. A plant-wide number and
-   a page-scoped number may not sit side by side unlabelled.</li>
-<li><strong>Affordance is structural, not decorative.</strong> A thing you can click is a
-   <code>&lt;button&gt;</code> or an <code>&lt;a&gt;</code> — never a <code>&lt;div&gt;</code> with a handler — so keyboards
-   and screen readers work without extra code. Hover feedback moves colour
-   only; nothing on the page shifts by a pixel.</li>
-<li><strong>Interactive elements carry <code>data-assist</code> anchors</strong> where a guide points
-   at them, and renaming an anchor is a deliberate act that re-authors the
-   guides (they break loudly by design).</li>
-<li><strong>Unknown renders as "—" or "unknown", never as 0</strong> (principle 4, on
-   screen). A yield with nothing booked is unknown; a machine that reported
-   nothing is unknown; zero is a measurement.</li>
-<li><strong>No build step</strong> (principle 5). Plain HTML/JS/CSS, hand-drawn SVG for
-   charts, no bundler, no framework, no font or script fetched from outside
-   the box.</li>
-<li><strong>New screens join the system.</strong> Same header/nav, same <code>.panel</code> grid,
-    same <code>.kpi</code> strip when there are KPIs, themed via the palette from day
-    one — and they are crawled automatically (ui-check reads the routes from
-    <code>app.py</code>), so a new screen is watched the day it exists.</li>
-</ol>
-<h2 id="what-ui-check-watches">What ui-check watches<a class="headerlink" href="#what-ui-check-watches" title="Permanent link">&para;</a></h2>
-<p>Components: <code>header</code>, <code>.kpi</code>, <code>.panel</code>, <code>table</code>, <code>.pill</code>, <code>button</code>,
-<code>.filters</code> — first instance per page, plus a count.
-Properties: color, background-color, border, border-radius, font-size,
-font-weight, padding, display.</p>
-<p>Add a component here and to <code>WATCHED</code> in <code>src/fsmes/sim/ui_check.py</code> in the
-same change.</p>
+<h1 id="running-factorysemantics-mes-beside-your-existing-mes">Running FactorySemantics MES beside your existing MES<a class="headerlink" href="#running-factorysemantics-mes-beside-your-existing-mes" title="Permanent link">&para;</a></h1>
+<p><em>A guide for plant engineers. One afternoon, in order, with a controls person
+and an IT person. No Python required, and nothing here changes anything on
+your plant.</em></p>
+<p>You have an MES already. This one goes <strong>beside</strong> it: it watches the same
+machines through the same OPC UA server, computes states, downtime, OEE and
+production from what it sees, and writes nothing back. After a week you can
+compare the two and decide whether this one is worth more of your time.</p>
+<p>If it turns out not to be, you stop the process and untrust one certificate,
+and nothing on your plant has changed.</p>
+<h2 id="what-you-will-need-before-you-start">What you will need before you start<a class="headerlink" href="#what-you-will-need-before-you-start" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>From whom</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>IT / whoever administers the OPC UA server</strong></td>
+<td>the endpoint URL, confirmation the OPC UA interface is on, the security policy, a <strong>read-only</strong> account, and one certificate trusted. There is <a href="../../onboarding/GUIDE-IT/">a page to hand them</a>.</td>
+</tr>
+<tr>
+<td><strong>Engineering / whoever knows the machines</strong></td>
+<td>one CSV row per machine: four tag addresses, what the state values mean, and the rated cycle time. There is <a href="../../onboarding/GUIDE-ENGINEERING/">a page to hand them too</a>, with a <a href="../../onboarding/worksheet-template.csv">template</a>.</td>
+</tr>
+<tr>
+<td><strong>You</strong></td>
+<td>a PC that can reach the OPC UA server, with Python 3.12 or 3.13 on it. A plant PC or a small VM is plenty.</td>
+</tr>
+<tr>
+<td><strong>Your ERP team, only if you want orders</strong></td>
+<td>a folder both systems can reach, and a file per schedule. Step 5.</td>
+</tr>
+</tbody>
+</table>
+<p>Send the two guides out first; they are the long pole. Everything else is an
+afternoon.</p>
+<h2 id="the-afternoon-in-order">The afternoon, in order<a class="headerlink" href="#the-afternoon-in-order" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Step</th>
+<th>Budget</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><a href="#1-what-this-guarantees-and-what-it-does-not">What this guarantees</a></td>
+<td>10 min, reading</td>
+</tr>
+<tr>
+<td>2</td>
+<td><a href="#2-install-it-and-see-it-run">Install it and see it run</a></td>
+<td>15 min</td>
+</tr>
+<tr>
+<td>3</td>
+<td><a href="#3-get-read-only-access-to-the-opc-ua-server">Get read-only access to the OPC UA server</a></td>
+<td>20 min, plus their change window</td>
+</tr>
+<tr>
+<td>4</td>
+<td><a href="#4-browse-map-and-prove-the-map">Browse, map, and prove the map</a></td>
+<td>1–2 hours, and it is the part that matters</td>
+</tr>
+<tr>
+<td>5</td>
+<td><a href="#5-orders-in-confirmations-out-by-file">Orders in, confirmations out, by file</a></td>
+<td>30 min, optional</td>
+</tr>
+<tr>
+<td>6</td>
+<td><a href="#6-what-people-type-into-other-systems">What people type into other systems</a></td>
+<td>5 min, reading</td>
+</tr>
+<tr>
+<td>7</td>
+<td><a href="#7-first-day-checks-and-week-one">First-day checks, and week one</a></td>
+<td>20 min, then a week</td>
+</tr>
+<tr>
+<td>8</td>
+<td><a href="#8-where-the-numbers-live-and-backing-them-up">Where the numbers live, and backing them up</a></td>
+<td>20 min</td>
+</tr>
+</tbody>
+</table>
+<p>Those are budgets to plan an afternoon around, not measurements. Step 4 is
+the one that decides whether any number this MES ever reports is worth
+reading; the rest is plumbing.</p>
+<hr />
+<h2 id="1-what-this-guarantees-and-what-it-does-not">1. What this guarantees, and what it does not<a class="headerlink" href="#1-what-this-guarantees-and-what-it-does-not" title="Permanent link">&para;</a></h2>
+<p><strong>It does not write to your PLCs.</strong> A tag map generated from the worksheet
+marks every machine read-only, and with no write target configured there is
+no code path that writes a tag. Ask for a read-only OPC account as well —
+then it is your server enforcing it, not this software's good intentions.</p>
+<p><strong>It does not change your OPC server's project.</strong> No configuration API, no
+tags added, no users of ours. The only thing that persists on their side is
+one trusted certificate, and untrusting it cuts the access cleanly.</p>
+<p><strong>It does not talk to your ERP unless you tell it to.</strong> <code>MES_ERP_MODE=off</code>
+reaches nothing; <code>MES_ERP_MODE=file</code> reads and writes folders you name and
+opens no connection to any live system. Step 5 sets that up deliberately.</p>
+<p><strong>It does not publish to a broker unless you tell it to.</strong> <code>MES_UNS_MODE</code> is
+<code>off</code> by default.</p>
+<p>As of 2026-09-10 those are four separate settings, each checked separately.
+Check all four before you point this at a real line, and check them again
+after anyone edits <code>.env</code>.</p>
+<p><strong>What it does not guarantee:</strong> it still needs to <em>read</em> your OPC server, so
+that server must permit a read-only client and will carry one more session.
+And it is pre-alpha software that has never run a real plant in production —
+which is why it runs beside yours and not instead of it.</p>
+<h2 id="2-install-it-and-see-it-run">2. Install it and see it run<a class="headerlink" href="#2-install-it-and-see-it-run" title="Permanent link">&para;</a></h2>
+<p>Nothing plant-specific yet. Prove the software works on the machine before
+you point it at anything real.</p>
+<div class="highlight"><pre><span></span><code>pipx<span class="w"> </span>install<span class="w"> </span>factorysemantics-mes<span class="w">     </span><span class="c1"># or: uv tool install factorysemantics-mes</span>
+fsmes<span class="w"> </span>info
+fsmes<span class="w"> </span>demo
+</code></pre></div>
+<p><code>fsmes demo</code> runs a whole simulated line in one process for about ninety
+seconds — two stations over a real OPC UA server, one order released, booked
+and completed — and prints a verdict at the end.</p>
+<p><strong>Done looks like:</strong> <code>Demo result: full loop closed - order booked, ERP
+confirmed, OEE reported.</code> If that line does not appear, stop here; nothing
+later will work either.</p>
+<p><strong>Database:</strong> SQLite is the default and needs no setup — one file, and it is
+fine for one line. Use PostgreSQL when you have more than one plant on the
+box, or when your IT department wants the backups in their existing regime:
+set <code>MES_DATABASE_URL=postgresql+psycopg://user:password@host:5432/dbname</code>
+and install with the <code>postgres</code> extra. Both are tested; see
+<a href="../compatibility/">compatibility</a>.</p>
+<p>Everything the MES is configured with is an environment variable starting
+<code>MES_</code>, and it reads a <code>.env</code> file in the directory you run it from. There
+is no other config format to learn.</p>
+<h2 id="3-get-read-only-access-to-the-opc-ua-server">3. Get read-only access to the OPC UA server<a class="headerlink" href="#3-get-read-only-access-to-the-opc-ua-server" title="Permanent link">&para;</a></h2>
+<p>Send <a href="../../onboarding/GUIDE-IT/">the access request page</a> to whoever
+administers the server. It is written to be forwarded as-is and asks for
+five things.</p>
+<p>Put their answers in <code>.env</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">MES_OPC_ENDPOINT</span><span class="o">=</span>opc.tcp://their-server:49320
+<span class="nv">MES_OPC_SECURITY</span><span class="o">=</span>Basic256Sha256,SignAndEncrypt
+<span class="nv">MES_OPC_USER</span><span class="o">=</span>the-read-only-account
+<span class="nv">MES_OPC_PASSWORD</span><span class="o">=</span>...
+<span class="nv">MES_TAG_MAP_FILE</span><span class="o">=</span>config/tag_map_plant.json
+</code></pre></div>
+<p><strong>Expect the first connection to be rejected.</strong> That is the certificate
+handshake working: their server has never seen your client's certificate, so
+it refuses it and files it under rejected certificates — which is how the
+certificate reaches their side. They trust it once; the second attempt
+succeeds.</p>
+<p><strong>Done looks like:</strong> <code>fsmes opc-browse --depth 1</code> prints the server's
+namespace table instead of a certificate error.</p>
+<p>The details, the failure symptoms and what the subscription costs their
+server are on <a href="../opc-readonly/">Connecting read-only to an OPC UA server you do not
+own</a>.</p>
+<h2 id="4-browse-map-and-prove-the-map">4. Browse, map, and prove the map<a class="headerlink" href="#4-browse-map-and-prove-the-map" title="Permanent link">&para;</a></h2>
+<p>Look at what the server actually exposes:</p>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>opc-browse<span class="w"> </span>--contains<span class="w"> </span>Filler
+</code></pre></div>
+<p>Turn Engineering's worksheet into the tag map:</p>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>make-tag-map<span class="w"> </span>worksheet.csv<span class="w"> </span>--out<span class="w"> </span>config/tag_map_plant.json
+</code></pre></div>
+<p>It refuses anything it could not honestly interpret, and prints a note for
+every blank that has a consequence — no scrap counter means quality reads
+<em>unknown</em>, no rated cycle time means performance reads <em>unknown</em>. It never
+fills a blank with a default that looks like a measurement.</p>
+<p>Prove it against the live server, <strong>while the line is running</strong>:</p>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>opc-verify<span class="w"> </span>--seconds<span class="w"> </span><span class="m">15</span>
+</code></pre></div>
+<p><strong>Done looks like:</strong> <code>PASS: every mapped tag is readable and every observed
+State value maps.</code></p>
+<p>Then give the MES its equipment and start it:</p>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>init-db
+fsmes<span class="w"> </span>seed-line<span class="w"> </span>LINE1<span class="w"> </span>--line-name<span class="w"> </span><span class="s2">"Filling Line 1"</span>
+fsmes<span class="w"> </span>run-opc-agent<span class="w">      </span><span class="c1"># subscribes and records</span>
+fsmes<span class="w"> </span>run-api<span class="w">            </span><span class="c1"># dashboards at http://127.0.0.1:8000/dashboard</span>
+</code></pre></div>
+<p><strong>The decision that matters</strong> is in the worksheet, not in any command: which
+state values count as <code>down</code>. A changeover mapped to <code>down</code> wrecks every
+availability figure this system will ever report, and nobody will be able to
+say why afterwards. Sit with the person who runs the line for that column.</p>
+<p>Full detail: <a href="../opc-readonly/">Connecting read-only to an OPC UA server you do not
+own</a>.</p>
+<h2 id="5-orders-in-confirmations-out-by-file">5. Orders in, confirmations out, by file<a class="headerlink" href="#5-orders-in-confirmations-out-by-file" title="Permanent link">&para;</a></h2>
+<p>Optional, and worth doing: without orders the MES reports states, downtime
+and trends but books no production against anything.</p>
+<p>The simplest interface, and the one that needs no access to your ERP, is a
+folder. Set:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">MES_ERP_MODE</span><span class="o">=</span>file
+<span class="nv">MES_ERP_INBOX</span><span class="o">=</span>erp_exchange/inbox
+<span class="nv">MES_ERP_OUTBOX</span><span class="o">=</span>erp_exchange/outbox
+<span class="nv">MES_ERP_ARCHIVE</span><span class="o">=</span>erp_exchange/archive
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>erp<span class="w"> </span>requirements<span class="w">    </span><span class="c1"># what this connector needs — the list to send your ERP team</span>
+fsmes<span class="w"> </span>erp<span class="w"> </span>setup<span class="w">           </span><span class="c1"># makes the folders, idempotent</span>
+fsmes<span class="w"> </span>erp<span class="w"> </span>check<span class="w">           </span><span class="c1"># says whether it would work, in plain language</span>
+fsmes<span class="w"> </span>run-erp-sync<span class="w">        </span><span class="c1"># reads the inbox, writes the outbox, forever</span>
+</code></pre></div>
+<p><strong>Orders in.</strong> Drop a file in the inbox — either B2MML-lite
+<code>ProductionSchedule</code> XML, or plain JSON, one order or a list:</p>
+<div class="highlight"><pre><span></span><code><span class="p">[{</span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"WO-10041"</span><span class="p">,</span><span class="w"> </span><span class="nt">"material"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FG-LINE1"</span><span class="p">,</span><span class="w"> </span><span class="nt">"quantity"</span><span class="p">:</span><span class="w"> </span><span class="mi">1200</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"due_date"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-09-12T06:00:00"</span><span class="p">,</span><span class="w"> </span><span class="nt">"priority"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">}]</span>
+</code></pre></div>
+<p>Read files move to the archive. A file nobody could parse keeps its name with
+<code>.rejected</code> on the end and stays where you can see it, rather than
+disappearing.</p>
+<p><strong>Confirmations out.</strong> One <code>ProductionPerformance</code> XML per confirmation lands
+in the outbox, named for the order:</p>
+<div class="highlight"><pre><span></span><code>erp_exchange/outbox/confirmation_WO-10041_op10_20260910-141233.xml
+erp_exchange/outbox/confirmation_WO-10041_completion_20260910-152551.xml
+</code></pre></div>
+<p>One per operation as it completes, and one for the order. Your ERP team
+collects them; nothing here deletes them.</p>
+<p><strong>Done looks like:</strong> <code>fsmes erp check</code> says <code>Ready.</code>, an order file you drop
+appears on the dashboard, and a confirmation file appears in the outbox when
+the line makes something.</p>
+<p>There is also a <a href="../erpnext/">live ERPNext connector</a> if that is your ERP —
+but for a first shadow run beside a system already in charge, files are the
+right choice: two systems confirming into one ERP is a problem you do not
+need this week.</p>
+<h2 id="6-what-people-type-into-other-systems">6. What people type into other systems<a class="headerlink" href="#6-what-people-type-into-other-systems" title="Permanent link">&para;</a></h2>
+<p>Downtime reasons, scrap tickets, manual counts, changeover notes — the
+things people type into a terminal, a spreadsheet or the incumbent MES.</p>
+<p><strong>There is no inbound path for those yet.</strong> The only thing this MES ingests
+from outside is the order feed in step 5. That is why the downtime pareto
+reads almost entirely <em>unlabelled</em> in week one: nothing on an OPC-fed line
+labels a stop, and there is nowhere yet to tell it. The pareto names that bar
+<em>unlabelled</em> rather than filing it under "other", because a chart that hides
+its own ignorance convinces a plant it has data it does not have.</p>
+<p>If you need that, say so in
+<a href="https://github.com/factorysemantics/factorysemantics-mes/discussions">Discussions</a>.
+A question asked twice becomes a page, and a need stated by a real plant
+moves up the list.</p>
+<h2 id="7-first-day-checks-and-week-one">7. First-day checks, and week one<a class="headerlink" href="#7-first-day-checks-and-week-one" title="Permanent link">&para;</a></h2>
+<p>On the first day, in this order:</p>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>info<span class="w">          </span><span class="c1"># the version you think you are running</span>
+fsmes<span class="w"> </span>opc-verify<span class="w">    </span><span class="c1"># every mapped tag still readable</span>
+fsmes<span class="w"> </span>erp<span class="w"> </span>check<span class="w">     </span><span class="c1"># only if you did step 5</span>
+</code></pre></div>
+<p>Then open <code>/dashboard</code> and look at the line, <code>/dashboard/analysis</code> for the
+shift, and <code>/dashboard/line</code> for one line's machines, its work in progress
+and its state timeline, with the 3D view as a tab.</p>
+<p><strong>Three things will look wrong on day one and are correct:</strong> OEE says
+<em>unknown</em> rather than a number, the downtime pareto is nearly all
+<em>unlabelled</em>, and a machine with no scrap counter shows no quality figure.
+<a href="../first-week/">What to expect in the first week</a> explains each, lists the
+four mistakes that really are yours to fix, and — the useful part — says what
+is worth comparing against the system already in charge and what is not.</p>
+<p>Run the agent under a supervisor from the first day. The window it was not
+watching is reported as <em>unknown</em> and is never reconstructed, by design;
+<a href="../deploy/">deploy</a> has the systemd units and the Compose file.</p>
+<h2 id="8-where-the-numbers-live-and-backing-them-up">8. Where the numbers live, and backing them up<a class="headerlink" href="#8-where-the-numbers-live-and-backing-them-up" title="Permanent link">&para;</a></h2>
+<p>Everything the MES recorded is in one database — <code>fsmes.db</code> beside where you
+run it, unless you pointed <code>MES_DATABASE_URL</code> somewhere else. Everything it
+was told is in <code>.env</code>, the tag map, and the certificate directory.</p>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>backup<span class="w"> </span>--out<span class="w"> </span>/mnt/somewhere-else
+</code></pre></div>
+<p>That copies the database, the tag map and the OPC client certificate, states
+its totals, and names what it did not copy and why. It is safe to run while
+the plant is running. <strong>The certificate is the one worth caring about</strong>:
+losing it means going back to the server's owner for another trust step and
+another change window.</p>
+<p>It deliberately does not copy <code>.env</code>, which holds your OPC password — keep
+that wherever this plant already keeps secrets.</p>
+<p>Read <a href="../backup/">backup and restore</a> for the schedule, and for how to prove
+a backup actually restores, which is the only test that counts.</p>
+<p><strong>If you put this on the plant network</strong> rather than one PC, put TLS in
+front of it: the MES does not terminate TLS itself, and
+<a href="../tls/">TLS in front of the API</a> has a Caddy config and an nginx config,
+one each.</p>
+<p><strong>Upgrading later</strong> is <a href="../upgrade/">its own page</a>, including the one case —
+a PyPI install upgrading across a schema change — that this project cannot
+migrate for you yet, written down rather than papered over.</p>
+<h2 id="who-to-ask">Who to ask<a class="headerlink" href="#who-to-ask" title="Permanent link">&para;</a></h2>
+<p><a href="https://github.com/factorysemantics/factorysemantics-mes/discussions">GitHub Discussions</a>
+for questions and ideas,
+<a href="https://github.com/factorysemantics/factorysemantics-mes/issues">issues</a> for
+bugs. One maintainer, answering in days rather than hours; that is
+<a href="https://github.com/factorysemantics/factorysemantics-mes/blob/main/GOVERNANCE.md">stated up front</a>
+rather than discovered.</p>
+<p><strong>Never put real plant data in either.</strong> No tag names from your site, no
+screenshots of your dashboards, no order numbers, no company or site names.
+Say what happened and what you expected; that is enough to help you, and it
+keeps the project usable by people whose employers would not let them
+otherwise.</p>
+<h2 id="every-page-this-guide-leans-on">Every page this guide leans on<a class="headerlink" href="#every-page-this-guide-leans-on" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../opc-readonly/">Connecting read-only to an OPC UA server you do not own</a></li>
+<li><a href="../../onboarding/GUIDE-IT/">IT access request</a> · <a href="../../onboarding/GUIDE-ENGINEERING/">Engineering worksheet</a></li>
+<li><a href="../first-week/">What to expect in the first week</a></li>
+<li><a href="../backup/">Backup and restore</a> · <a href="../tls/">TLS in front of the API</a> · <a href="../upgrade/">Upgrading</a></li>
+<li><a href="../deploy/">Deploy</a> · <a href="../security/">Security</a> · <a href="../compatibility/">Compatibility</a></li>
+<li><a href="../../plant/reading-oee/">Reading OEE</a> · <a href="../../plant/never-invent-production/">Never invent production</a></li>
+</ul>
 
 
 
@@ -2647,7 +3102,7 @@ same change.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../../develop/erp-connectors/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Reference — writing an ERP connector">
+          <a href="../" class="md-footer__link md-footer__link--prev" aria-label="Previous: Operate">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2657,20 +3112,20 @@ same change.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Reference — writing an ERP connector
+                Operate
               </div>
             </div>
           </a>
         
         
           
-          <a href="../../decisions/" class="md-footer__link md-footer__link--next" aria-label="Next: Decisions">
+          <a href="../deploy/" class="md-footer__link md-footer__link--next" aria-label="Next: Tutorial — deploy">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Decisions
+                Tutorial — deploy
               </div>
             </div>
             <div class="md-footer__button md-icon">
