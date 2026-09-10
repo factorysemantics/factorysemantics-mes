@@ -586,6 +586,7 @@ async def run(source, ingest: Ingest, session_scope, on_report=None,
     """
     import time
 
+    said = -1  # how many messages had been received when the totals were last said
     while True:
         said_at = time.monotonic()
         try:
@@ -593,14 +594,19 @@ async def run(source, ingest: Ingest, session_scope, on_report=None,
                 ingest.handle(session_scope, topic, payload, retained)
                 if on_report and time.monotonic() - said_at >= report_seconds:
                     on_report(ingest.report)
-                    said_at = time.monotonic()
+                    said, said_at = ingest.report.messages, time.monotonic()
         except asyncio.CancelledError:
             raise
         except Exception as exc:
             log.warning("broker connection lost; reconnecting", error=str(exc),
                         wait_s=reconnect_seconds)
-        if on_report:
+        # Only when there is something new to say. A broker that is down for
+        # an hour would otherwise print the same row of zeroes every few
+        # seconds, and the one line that matters — that the connection keeps
+        # failing, and why — is already in the log.
+        if on_report and ingest.report.messages != said:
             on_report(ingest.report)
+            said = ingest.report.messages
         await asyncio.sleep(reconnect_seconds)
 
 

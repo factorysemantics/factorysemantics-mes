@@ -233,14 +233,22 @@ need this week.
 Downtime reasons, scrap tickets, manual counts, changeover notes — the
 things people type into a terminal, a spreadsheet or the incumbent MES.
 
-**There is no inbound path for those yet.** The only thing this MES ingests
-from outside is the order feed in step 5. That is why the downtime pareto
-reads almost entirely *unlabelled* in week one: nothing on an OPC-fed line
-labels a stop, and there is nowhere yet to tell it. The pareto names that bar
-*unlabelled* rather than filing it under "other", because a chart that hides
-its own ignorance convinces a plant it has data it does not have.
+**There is a second front door for those**, and it is
+[its own page](inbound.md): three typed shapes — a downtime label, a quality
+result, a count — each carrying the name of the system that supplied it, its
+key and its own recording time. They arrive as files dropped in a folder, or
+on an MQTT broker where the plant already has one.
 
-If you need that, say so in
+Until something feeds it, the downtime pareto reads almost entirely
+*unlabelled* in week one: nothing on an OPC-fed line labels a stop, and
+there is nowhere else to learn it from. The pareto names that bar
+*unlabelled* rather than filing it under "other", because a chart that hides
+its own ignorance convinces a plant it has data it does not have. Once the
+labels are arriving, the same pareto splits every bucket by who named it —
+this MES or the system that told it.
+
+There is no SQL poller and no inbound REST endpoint yet. If you need one,
+say so in
 [Discussions](https://github.com/factorysemantics/factorysemantics-mes/discussions).
 A question asked twice becomes a page, and a need stated by a real plant
 moves up the list.
