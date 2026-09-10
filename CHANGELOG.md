@@ -11,6 +11,15 @@ goes under Honesty with a migration line, so plant people can find it.
 ## [Unreleased]
 
 ### Added
+- **M8 designed before it is built — docs only, no product code.**
+  [Plant packs and the fleet console](docs/design/m8-packs-and-fleet.md)
+  states what a plant is today with file paths, measures the two lab plants
+  against the milestone's own *done when*, proposes what a pack may and may
+  not contain, scopes an observe-only console, and breaks the work into four
+  pieces. Decisions [0021](docs/decisions/0021-one-database-per-plant.md),
+  [0022](docs/decisions/0022-what-a-plant-pack-may-contain.md) and
+  [0023](docs/decisions/0023-the-fleet-console-observes.md) are **proposed**,
+  not accepted.
 - **`fsmes shadow scorecard` — the instrument a shadow run is judged with.**
   Running this MES beside the one in charge only answers anything if
   somebody puts the two records side by side, and until now the only
