@@ -46,9 +46,15 @@ Five fields, all `allow_on_submit`, because a submitted work order is
 precisely when they change. With the connection configured above:
 
 ```bash
-fsmes erp setup      # creates any of the five that are missing; safe to run twice
-fsmes erp check      # says whether URL, credentials, fields and company are all in order
+fsmes erp requirements   # the five fields, and why each one exists — the list to send whoever runs the site
+fsmes erp setup          # creates any of the five that are missing; safe to run twice
+fsmes erp check          # says whether URL, credentials, fields and company are all in order
 ```
+
+These three commands are the ERP port's own `requirements()`, `setup()` and
+`check()`. They act on whatever `MES_ERP_MODE` names, so they read the same
+for a connector somebody else publishes — see
+[writing an ERP connector](../develop/erp-connectors.md).
 
 `fsmes erp check` exits non-zero if anything would stop the connector
 working, so it can gate a deployment. It names the field that is wrong rather
@@ -147,6 +153,11 @@ back is the only way to know a number landed.
 
 ## See also
 
+- [Writing an ERP connector](../develop/erp-connectors.md) — this connector is
+  the reference implementation of that port, and every obligation on that page
+  is something this connector got wrong first
 - [Settings reference](../reference/settings.md) — every `MES_ERPNEXT_*` value
-- Decision record [0008](../decisions/0008-erp-connectors-are-modules.md)
+- [Compatibility](compatibility.md) — what is tested against what, and when
+- Decision records [0008](../decisions/0008-erp-connectors-are-modules.md) and
+  [0020](../decisions/0020-what-supported-means-for-an-erp-connector.md)
 - The typed contract: `src/fsmes/integrations/erp/contract.py`

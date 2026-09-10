@@ -11,6 +11,32 @@ goes under Honesty with a migration line, so plant people can find it.
 ## [Unreleased]
 
 ### Added
+- **A connector contract, so the next ERP is not the first one all over
+  again.** The ERP port had three methods — fetch, acknowledge, confirm —
+  and they said nothing about the three things that actually bit the
+  ERPNext connector: what has to exist on the far side, how a write is
+  proved to have landed, and how a person checks it before trusting it.
+  Each was fixed in ERPNext-specific code, so Odoo or SAP or Oracle would
+  have rediscovered all three. The port now carries **`requirements()`**
+  (what this connector needs on the ERP side, as data a person can act on),
+  **`setup()`** (create or verify it, idempotently) and **`check()`**
+  (connectivity, credentials and requirements in plain language, non-zero
+  when something is wrong). All three have defaults, so a transport that
+  needs nothing — and a connector written against the older three-method
+  port — keeps working. **`fsmes.integrations.erp.conformance`** ships
+  inside the package: eight obligations any connector can be run against
+  without vendoring this project's tests, each of them something a
+  connector got wrong once. Every adapter that ships passes it.
+  [Writing an ERP connector](docs/develop/erp-connectors.md) is the page
+  for the person who would write the next one, and decision record
+  [0020](docs/decisions/0020-what-supported-means-for-an-erp-connector.md)
+  says what this project requires before it calls one supported. Odoo, SAP
+  and Oracle are still not written; the contract and the suite exist, the
+  connectors do not.
+- **`fsmes erp requirements`.** What the configured connector needs on the
+  ERP side, and which of it the MES can create itself — the list to send
+  whoever administers the ERP, who is usually not the person running the
+  MES.
 - **The outbox is a domain event log.** It carried ERP confirmations and
   nothing else, because the ERP sync read every pending row as one. It now
   selects the kinds its contract can parse, which leaves room for the plant
@@ -103,6 +129,23 @@ goes under Honesty with a migration line, so plant people can find it.
   either.
 
 ### Changed
+- **`fsmes erp setup` and `fsmes erp check` no longer know that ERPNext
+  exists.** They are the port's `setup()` and `check()`, so they act on
+  whatever `MES_ERP_MODE` names — including a connector published on its
+  own. They used to refuse every mode but `erpnext`, which was exactly
+  backwards. `fsmes run-erp-sync` runs the configured connector's `check()`
+  at start-up instead of ERPNext's field check, and still starts, because
+  an ERP that is briefly unreachable is not a reason to refuse to run.
+  `check` reports what it could not verify as **unknown** rather than
+  counting it as working: the REST connector can prove it reached the ERP's
+  order list and cannot prove the confirmation endpoint works without
+  posting a confirmation, so a green check that skipped something says
+  `Ready, as far as anything above was checked.`
+- **[Compatibility](docs/operate/compatibility.md) has a rule for
+  connectors.** Every connector row states the exact version tested and the
+  date it was tested, and a connector with no live test says so in those
+  words. Three words are defined there and nothing uses others: supported,
+  contributed, experimental.
 - `MES_ERPNEXT_COMPANY` now does something. It was defined and documented and
   nothing read it, so a shared Frappe bench handed this MES every company's
   work orders. Inbound orders are filtered by it. Its default changed from

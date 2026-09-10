@@ -6,6 +6,9 @@ For the person who changes it.
   and kept truthful since; it says where intent and code differ.
 - [Your first module](your-first-module.md) — the entry-point mechanism,
   with the ERPNext connector as the worked example.
+- [Writing an ERP connector](erp-connectors.md) — the six-method port, the
+  conformance suite every connector must pass, and what this project
+  requires before it calls one supported.
 - [Style](../design/STYLE.md) — the operator UI's rules.
 - [Decisions](../decisions/index.md) — why things are the way they are.
 - [CONTRIBUTING](https://github.com/factorysemantics/factorysemantics-mes/blob/main/CONTRIBUTING.md)
