@@ -1,9 +1,10 @@
-"""System endpoints: health, Prometheus-style metrics, audit trail queries."""
+"""System endpoints: health, shadow mode, metrics, audit trail queries."""
 
 from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse
 from sqlalchemy import func, select, text
 
+from fsmes import shadow as shadow_mode
 from fsmes.api.deps import DbDep, require
 from fsmes.domain import AuditLog, ErpMessage, MessageStatus, OrderStatus, TagValue, WorkOrder
 
@@ -12,8 +13,33 @@ router = APIRouter()
 
 @router.get("/health")
 def health(db: DbDep) -> dict:
+    """Alive, and whether this MES is allowed to act on its plant.
+
+    `shadow` rides on health because health is the one endpoint everything
+    already asks: an orchestrator, the MCP server's plant list, a person
+    with curl. A monitor that knows a plant is up and does not know it is
+    only watching will read its silence as everything being fine.
+    """
     db.execute(text("SELECT 1"))
-    return {"status": "ok"}
+    return {"status": "ok", "shadow": shadow_mode.enabled()}
+
+
+@router.get("/shadow")
+def shadow() -> dict:
+    """Shadow mode in full: whether it is on, what it guarantees, and every
+    outbound path in this build with what shadow mode does to each.
+
+    Public, like health. It is a statement about how this deployment is
+    configured, and the person who most needs it - somebody deciding whether
+    it is safe to point this MES at a running plant - has no account yet.
+    """
+    return {
+        **shadow_mode.summary(),
+        "paths": [
+            {"name": p.name, "reaches": p.reaches, "verdict": p.verdict, "note": p.note}
+            for p in shadow_mode.REGISTER
+        ],
+    }
 
 
 @router.get("/metrics", response_class=PlainTextResponse)

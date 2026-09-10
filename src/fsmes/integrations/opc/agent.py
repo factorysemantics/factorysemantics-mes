@@ -25,6 +25,7 @@ from pathlib import Path
 import structlog
 from asyncua import Client
 
+from fsmes import shadow
 from fsmes.config import Settings
 from fsmes.db import session_scope
 from fsmes.domain import ProductionSource, TagValue
@@ -575,14 +576,32 @@ def _desired_order_codes(equipment_codes: list[str]) -> dict[str, str]:
         }
 
 
+async def write_node(node, value, *, path: str, what: str) -> None:
+    """Write one value to the plant's OPC UA server.
+
+    The one place this package changes a tag on somebody's real server, so
+    the one place shadow mode has to close. `path` names the entry in
+    `fsmes.shadow.REGISTER` that covers the caller.
+    """
+    shadow.guard(path, detail=what)
+    await node.write_value(value)
+
+
 async def _order_code_loop(order_nodes: dict) -> None:
     """Keep each machine's OrderCode pointing at its next dispatched order."""
+    if shadow.enabled():
+        # Said once, not every two seconds: this is a standing condition, not
+        # an event. The machines keep whatever their own MES told them.
+        log.info("order codes are not written to the machines",
+                 why=shadow.BANNER, machines=sorted(order_nodes))
+        await asyncio.Future()  # hold the connection open, writing nothing
     written: dict[str, str] = {}
     while True:
         desired = await asyncio.to_thread(_desired_order_codes, list(order_nodes))
         for equipment_code, order_code in desired.items():
             if written.get(equipment_code) != order_code:
-                await order_nodes[equipment_code].write_value(order_code)
+                await write_node(order_nodes[equipment_code], order_code,
+                                 path="opc.order_code", what=f"{equipment_code} OrderCode")
                 written[equipment_code] = order_code
                 log.info("order code written to machine", equipment=equipment_code, order=order_code or "(none)")
         await asyncio.sleep(_ORDER_SYNC_SECONDS)
@@ -711,7 +730,9 @@ async def run(settings: Settings) -> None:
                     "agent online",
                     endpoint=settings.opc_endpoint,
                     machines=[m.equipment for m in machines],
-                    commanded=sorted(order_nodes) or "none (read-only source)",
+                    commanded=("none (shadow mode: this MES writes nothing)" if shadow.enabled()
+                               else sorted(order_nodes) or "none (read-only source)"),
+                    shadow=shadow.enabled(),
                 )
                 writer = asyncio.create_task(_adjustment_loop(node_info, machines, manifest))
                 try:
@@ -760,6 +781,15 @@ async def write_approved_adjustments(nodes: dict, bounds: dict, scope) -> list[s
 
     with scope() as session:
         due = adjustments.approved_writes(session)
+    if shadow.enabled():
+        # The recommendations stay approved and unwritten. They did not fail
+        # - nothing was attempted - and marking them failed would fill an
+        # engineer's queue with a wall of failures that never happened.
+        if due:
+            log.info("approved recommendations are not dispatched",
+                     why=shadow.BANNER, waiting=len(due),
+                     codes=[rec["code"] for rec in due])
+        return []
     written = []
     for rec in due:
         limits = bounds.get(rec["equipment"], {}).get(rec["tag"])
@@ -779,7 +809,8 @@ async def write_approved_adjustments(nodes: dict, bounds: dict, scope) -> list[s
             log.warning("adjustment refused by the agent: out of bounds", code=rec["code"])
             continue
         try:
-            await node.write_value(float(rec["value"]))
+            await write_node(node, float(rec["value"]), path="opc.adjustment_write",
+                             what=f"{rec['equipment']}.{rec['tag']} -> {rec['value']:g}")
         except Exception as exc:
             with scope() as session:
                 adjustments.mark_failed(session, rec["code"], f"write failed: {exc}")

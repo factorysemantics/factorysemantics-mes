@@ -30,6 +30,13 @@ against it:
   at one, which is correct: the numbers order the files that exist
   together, and are not an audit sequence. The audit sequence is the
   outbox in the database, which survives both.
+
+In shadow mode nothing moves. The inbox may be a folder the plant's own MES
+is also reading, and renaming a file out of it would take that MES's orders
+away - so each file is read and left exactly where it was, and the adapter
+remembers what it has already read. The outbox is still written: producing
+confirmations somebody can compare against the incumbent's is the point of
+a shadow run. Give it a folder no ERP is watching.
 """
 
 import json
@@ -39,6 +46,7 @@ from pathlib import Path
 
 import structlog
 
+from fsmes import shadow
 from fsmes.db import utcnow
 from fsmes.integrations.erp import b2mml
 from fsmes.integrations.erp.base import CheckResult, ErpConnector, Requirement, SetupOutcome
@@ -59,11 +67,30 @@ class FileErpAdapter(ErpConnector):
             if not folder.exists():
                 self._made_here.add(folder)
             folder.mkdir(parents=True, exist_ok=True)
+        # Shadow mode only: what has been read and left in place, by name,
+        # size and modification time. A file that changes is read again; a
+        # restart reads the inbox once more, and importing an order twice
+        # updates it rather than duplicating it.
+        self._read_in_place: set[tuple[str, int, int]] = set()
+
+    def _consume(self, path: Path, target: Path) -> None:
+        """Move a handled inbox file to the archive, unless shadow mode."""
+        if shadow.enabled():
+            self._read_in_place.add(self._stamp(path))
+            return
+        path.rename(target)
+
+    @staticmethod
+    def _stamp(path: Path) -> tuple[str, int, int]:
+        stat = path.stat()
+        return (path.name, stat.st_size, stat.st_mtime_ns)
 
     def fetch_orders(self) -> list[ProductionRequest]:
         orders: list[ProductionRequest] = []
         for path in sorted(self.inbox.iterdir()):
             rows: list[dict] = []
+            if shadow.enabled() and self._stamp(path) in self._read_in_place:
+                continue
             try:
                 if path.suffix.lower() == ".json":
                     payload = json.loads(path.read_text(encoding="utf-8"))
@@ -77,13 +104,16 @@ class FileErpAdapter(ErpConnector):
                 # Kept beside the good ones, under a name that says so: a
                 # schedule nobody could read used to vanish into the archive.
                 log.error("unreadable ERP file, kept as .rejected", file=path.name, error=str(exc))
-                path.rename(self.archive / f"{path.name}.rejected")
+                self._consume(path, self.archive / f"{path.name}.rejected")
                 continue
-            path.rename(self.archive / path.name)
+            self._consume(path, self.archive / path.name)
         return orders
 
     def acknowledge(self, order_code: str) -> None:
-        pass  # archiving the inbox file is the acknowledgement
+        # Archiving the inbox file is the acknowledgement - and in shadow
+        # mode there is deliberately none: the plant's own MES owns that
+        # folder, and an order this MES merely watched is not received.
+        pass
 
     # ------------------------------------------------------------- outbound
 

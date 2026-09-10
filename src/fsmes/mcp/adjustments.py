@@ -38,7 +38,12 @@ def register(mcp, call, write, identify) -> dict:
         and the value inside its declared bounds, or this refuses. Nothing is
         written: an engineer approves on Engineering > Adjustments, the OPC
         agent writes, and the outcome is verified and recorded. Say what you
-        saw and why this value; attach the evidence you looked at."""
+        saw and why this value; attach the evidence you looked at.
+
+        On a plant in shadow mode (see list_plants) the proposal is
+        recorded and may be approved, but it is never written to the
+        machine. Say so when you report what you did: nothing reached
+        the process."""
         identify(on_behalf_of, client_ref)
         body = {"equipment": machine, "tag": tag, "value": value, "rationale": rationale, "evidence": evidence}
         return write(plant, "/adjustments", body, dry_run, f"propose {machine}.{tag} -> {value:g}")

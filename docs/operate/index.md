@@ -13,6 +13,7 @@ page below is linked from it.
 | [Deploy](deploy.md) | tutorial — Compose on one box, or systemd units for test and promoted environments |
 | [Connecting read-only to an OPC UA server you do not own](opc-readonly.md) | how-to — commissioning against a server that already serves another system |
 | [Plants from a registry](registry.md) | how-to — several independent plants, one file |
+| [Running beside an existing MES](shadow-mode.md) | how-to — shadow mode: one setting, and this MES can change nothing in the plant |
 | [The ERPNext connector](erpnext.md) | how-to |
 | [The unified namespace (MQTT)](uns.md) | how-to — MES events onto a plant's broker |
 | [Backup and restore](backup.md) | how-to — what to copy, and how to prove the copy is any good |

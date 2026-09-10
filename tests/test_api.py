@@ -4,7 +4,9 @@ import pytest
 
 
 def test_health(anon):
-    assert anon.get("/health").json() == {"status": "ok"}
+    # Health also answers "may this MES act on its plant" - see
+    # tests/test_shadow_mode.py for what the flag promises.
+    assert anon.get("/health").json() == {"status": "ok", "shadow": False}
 
 
 def test_seeded_equipment_visible(client):

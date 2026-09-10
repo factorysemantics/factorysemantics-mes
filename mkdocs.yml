@@ -97,6 +97,7 @@ nav:
       - Tutorial — deploy: operate/deploy.md
       - How-to — read-only OPC UA commissioning: operate/opc-readonly.md
       - How-to — plants from a registry: operate/registry.md
+      - How-to — running beside an existing MES: operate/shadow-mode.md
       - How-to — the ERPNext connector: operate/erpnext.md
       - How-to — the unified namespace (MQTT): operate/uns.md
       - How-to — backup and restore: operate/backup.md

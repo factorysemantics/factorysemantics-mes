@@ -6,6 +6,7 @@ MES-TWIN. They keep their names; only the executable changed.
 
 import asyncio
 import os
+import textwrap
 from datetime import datetime
 from importlib.metadata import entry_points
 from pathlib import Path
@@ -556,10 +557,20 @@ def _order_completion(confirmations: list[dict], order_code: str) -> dict | None
 def demo(duration: int = 90) -> None:
     """Run the entire twin in one process and push one order through the full loop:
     ERP -> MES -> machines -> MES -> ERP."""
+    from fsmes import shadow
     from fsmes.db import session_scope
     from fsmes.seed import seed_demo_plant
 
     settings = get_settings()
+    if shadow.enabled(settings):
+        # The demo starts a simulated line, a mock ERP and a REST adapter of
+        # its own, around make_adapter and every other gate. An installation
+        # in shadow mode is pointed at a real plant; it must not also be
+        # running a fake one, and it must not book the fake one's numbers.
+        typer.echo(f"{shadow.BANNER}\n\n`fsmes demo` runs a simulated line and a mock ERP "
+                   f"in this process, which is not what a plant in shadow mode is for. "
+                   f"{shadow.HOW_TO_LEAVE}")
+        raise typer.Exit(2)
     setup_logging("WARNING", settings.log_dir, "demo")  # keep the console for the story
     init_db()
     with session_scope() as session:
@@ -787,6 +798,21 @@ def info() -> None:
     # the first module ships.
     found = sorted(ep.name for ep in entry_points(group="fsmes.modules"))
     typer.echo(f"modules       {', '.join(found) if found else 'none (kernel only)'}")
+
+    # Whether this installation may act on its plant is the first thing a
+    # support call needs to know, so it is on the first screen it asks for.
+    from fsmes import shadow
+
+    state = shadow.summary()
+    if state["shadow"]:
+        typer.echo(f"shadow mode   ON — {state['outbound_paths_closed']} of "
+                   f"{state['outbound_paths_total']} outbound paths closed")
+        for line in textwrap.wrap(shadow.BANNER, 62):
+            typer.echo(f"              {line}")
+        typer.echo(f"              {shadow.HOW_TO_LEAVE}")
+    else:
+        typer.echo(f"shadow mode   off — this MES may act on its plant "
+                   f"({shadow.SETTING}=true to watch only)")
 
 
 @app.command()

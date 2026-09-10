@@ -23,6 +23,7 @@ from urllib.parse import unquote, urlsplit
 
 import structlog
 
+from fsmes import shadow
 from fsmes.config import Settings
 
 log = structlog.get_logger("uns.transport")
@@ -111,6 +112,7 @@ class MqttTransport:
     async def connect(self) -> None:
         if self._client is not None:
             return
+        shadow.guard("uns.mqtt_connect", detail=repr(self.address))
         aiomqtt = _import_aiomqtt()
         kwargs: dict = {
             "hostname": self.address.host,
@@ -130,6 +132,7 @@ class MqttTransport:
         log.info("connected to broker", broker=repr(self.address), client_id=self.client_id)
 
     async def publish(self, topic: str, payload: bytes, *, qos: int, retain: bool) -> None:
+        shadow.guard("uns.mqtt_publish", detail=topic)
         if self._client is None:
             await self.connect()
         try:
@@ -177,6 +180,9 @@ def make_transport(settings: Settings) -> UnsTransport | None:
     if mode == "log":
         return LogTransport()
     if mode == "mqtt":
+        # Settings already refused this pairing at start-up; refused again
+        # here so a caller that builds its own Settings cannot get past it.
+        shadow.guard("uns.transport", detail=f"broker {settings.uns_broker_url}")
         return MqttTransport(
             BrokerAddress(settings.uns_broker_url, settings.uns_username, settings.uns_password),
             client_id=settings.uns_client_id)

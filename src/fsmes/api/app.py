@@ -81,6 +81,45 @@ def _warn_about_well_known_passwords() -> None:
         )
 
 
+def _record_shadow_mode() -> None:
+    """Say in the audit trail when this plant enters or leaves shadow mode.
+
+    Shadow mode is read at start-up and never toggled, so the only way it
+    changes is a restart with the setting changed - which means the audit
+    trail is the only place that can show when it happened. Written once per
+    start-up, and only when it differs from the last thing recorded, so a
+    plant that restarts nightly does not accumulate a row a night.
+
+    The actor is `system`: nobody was signed in. Who changed it is in the
+    change ticket for the setting; when is here.
+    """
+    import structlog
+    from sqlalchemy import select
+
+    from fsmes import shadow
+    from fsmes.db import session_scope
+    from fsmes.domain import AuditLog
+    from fsmes.services import audit
+
+    on = shadow.enabled()
+    log = structlog.get_logger("shadow")
+    log.info("shadow mode" if on else "not in shadow mode",
+             shadow=on, means=shadow.BANNER if on else None)
+    try:
+        with session_scope() as db:
+            last = db.scalars(
+                select(AuditLog).where(AuditLog.action.in_(("shadow.on", "shadow.off")))
+                .order_by(AuditLog.id.desc()).limit(1)).first()
+            was = None if last is None else (last.action == "shadow.on")
+            if was is on:
+                return
+            audit.record(db, actor="system", action="shadow.on" if on else "shadow.off",
+                         entity_type="installation", entity_id=shadow.SETTING,
+                         before={"shadow": was}, after={"shadow": on})
+    except Exception as exc:  # an unmigrated database must not stop the app starting
+        log.warning("could not record shadow mode in the audit trail", error=str(exc))
+
+
 async def _lifespan(app: FastAPI):
     """Built-in roles must exist before the first request gates on them.
 
@@ -98,6 +137,7 @@ async def _lifespan(app: FastAPI):
         pass           # starting and explaining itself
 
     _warn_about_well_known_passwords()
+    _record_shadow_mode()
 
     # Retention runs in the API process because it is the one long-lived
     # process every deployment has. Hourly, in batches, and it says so on Ops.
