@@ -557,10 +557,20 @@ def _order_completion(confirmations: list[dict], order_code: str) -> dict | None
 def demo(duration: int = 90) -> None:
     """Run the entire twin in one process and push one order through the full loop:
     ERP -> MES -> machines -> MES -> ERP."""
+    from fsmes import shadow
     from fsmes.db import session_scope
     from fsmes.seed import seed_demo_plant
 
     settings = get_settings()
+    if shadow.enabled(settings):
+        # The demo starts a simulated line, a mock ERP and a REST adapter of
+        # its own, around make_adapter and every other gate. An installation
+        # in shadow mode is pointed at a real plant; it must not also be
+        # running a fake one, and it must not book the fake one's numbers.
+        typer.echo(f"{shadow.BANNER}\n\n`fsmes demo` runs a simulated line and a mock ERP "
+                   f"in this process, which is not what a plant in shadow mode is for. "
+                   f"{shadow.HOW_TO_LEAVE}")
+        raise typer.Exit(2)
     setup_logging("WARNING", settings.log_dir, "demo")  # keep the console for the story
     init_db()
     with session_scope() as session:

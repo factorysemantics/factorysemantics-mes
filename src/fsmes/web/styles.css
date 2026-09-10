@@ -106,9 +106,38 @@ header {
   background: var(--panel);
   border-bottom: 1px solid var(--line);
   position: sticky;
-  top: 0;
+  /* Zero unless the shadow bar is up, in which case common.js measures it
+     and the header sticks underneath rather than over it. */
+  top: var(--shadow-top, 0px);
   z-index: 10;
 }
+
+/* ---------- shadow mode ----------
+   This MES is watching a real plant and can change nothing in it. The bar
+   is on every screen, sticks above the header, and has no dismiss: it
+   describes the installation, not an event.
+
+   Deliberately not a state colour. Running, idle, down and setup mean
+   machines; hatched chrome means the software. Nobody should have to work
+   out whether an amber bar is about a machine. */
+.shadow-bar {
+  position: sticky;
+  top: 0;
+  z-index: 11;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s3);
+  padding: var(--s2) var(--s4);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  border-bottom: 1px solid var(--line);
+  background:
+    repeating-linear-gradient(135deg,
+      var(--panel-2) 0 10px, var(--panel) 10px 20px);
+}
+.shadow-bar strong { letter-spacing: 0.04em; text-transform: uppercase; font-size: var(--fs-xs); }
+.shadow-bar .shadow-how { margin-left: auto; color: var(--accent); }
 .brand { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
 .brand span { color: var(--accent); }
 .spacer { flex: 1; }

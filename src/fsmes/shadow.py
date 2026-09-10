@@ -91,7 +91,7 @@ class Outbound:
 #: `allowed`    — it runs, because nothing about the plant leaves this box
 #:                by it, and nothing outside this MES changes.
 #:
-#: **28 entries.** The count is stated because a register that quietly loses
+#: **30 entries.** The count is stated because a register that quietly loses
 #: a row is worse than no register, and `tests/test_shadow_mode.py` scans the
 #: source for outbound primitives and fails on any call site not covered by
 #: an entry here.
@@ -315,6 +315,26 @@ REGISTER: tuple[Outbound, ...] = (
         note="the Ops screen asks whether the OPC endpoint is listening. It "
              "sends no bytes",
     ),
+    # ---------------------------------------------------------- the demo
+    Outbound(
+        name="cli.demo",
+        where="fsmes.cli:_demo",
+        reaches="a simulated line, a mock ERP and a REST adapter, all in "
+                "this process",
+        verdict="refused",
+        note="`fsmes demo` builds its own RestErpAdapter, around make_adapter "
+             "and every other gate. An installation pointed at a real plant "
+             "must not also be running a fake one, so the command refuses "
+             "before it starts anything",
+    ),
+    Outbound(
+        name="cli.demo_wait",
+        where="fsmes.cli:_wait_for",
+        reaches="the demo's own API and mock ERP, on this box",
+        verdict="refused",
+        note="reachable only from the demo, which refuses first",
+    ),
+
     # ------------------------------------------- the simulator and the labs
     Outbound(
         name="sim.opc_server",
@@ -392,6 +412,10 @@ def summary(settings=None) -> dict:
     because a list that does not state its total invites the reader to assume
     it is complete.
     """
+    if settings is None:
+        from fsmes.config import get_settings
+
+        settings = get_settings()
     on = enabled(settings)
     closed = [p.name for p in REGISTER if p.verdict in ("refused", "restricted")]
     return {
@@ -401,6 +425,11 @@ def summary(settings=None) -> dict:
         "how_to_leave": HOW_TO_LEAVE if on else None,
         "outbound_paths_closed": len(closed) if on else 0,
         "outbound_paths_total": len(REGISTER),
+        # What is actually in force, not what was asked for: shadow mode
+        # leaves an unchosen ERP or namespace mode off, and a reader should
+        # see the mode rather than infer it.
+        "erp_mode": getattr(settings, "erp_mode", None),
+        "uns_mode": getattr(settings, "uns_mode", None),
     }
 
 
@@ -414,6 +443,31 @@ ERP_MODES_ALLOWED = ("off", "file")
 
 #: Namespace modes that contact no broker.
 UNS_MODES_ALLOWED = ("off", "log")
+
+
+def defaults_shadow_mode_settles(settings) -> list[str]:
+    """Modes nobody chose, closed rather than refused. Returns what changed.
+
+    `MES_ERP_MODE` defaults to 'rest' - it points at the bundled mock ERP so
+    a laptop runs with no setup. A default is not a decision, and refusing to
+    start over one a person never made would read as shadow mode being
+    broken. So an unset mode becomes 'off', and `summary()` reports what is
+    actually in force. A mode somebody did set is a decision, and a decision
+    that contradicts shadow mode is refused out loud.
+    """
+    if not getattr(settings, "shadow", False):
+        return []
+    settled = []
+    chosen = getattr(settings, "model_fields_set", set())
+    if "erp_mode" not in chosen and getattr(settings, "erp_mode", "off") not in ERP_MODES_ALLOWED:
+        settled.append(f"MES_ERP_MODE was not set, so shadow mode leaves it off "
+                       f"(the default, '{settings.erp_mode}', reaches a live ERP)")
+        settings.erp_mode = "off"
+    if "uns_mode" not in chosen and (getattr(settings, "uns_mode", "off") or "off").lower() \
+            not in UNS_MODES_ALLOWED:
+        settled.append("MES_UNS_MODE was not set, so shadow mode leaves it off")
+        settings.uns_mode = "off"
+    return settled
 
 
 def settings_problems(settings) -> list[str]:
@@ -445,6 +499,7 @@ def settings_problems(settings) -> list[str]:
 
 def check_settings(settings):
     """Refuse to start on a configuration shadow mode cannot honour."""
+    settled = defaults_shadow_mode_settles(settings)
     problems = settings_problems(settings)
     if problems:
         raise ValueError(
@@ -452,6 +507,8 @@ def check_settings(settings):
             + " ".join(problems)
             + f" Fix the setting, or unset {SETTING} if this MES is meant to run the plant."
         )
+    for line in settled:
+        log.info("shadow mode settled a default", detail=line)
     return settings
 
 

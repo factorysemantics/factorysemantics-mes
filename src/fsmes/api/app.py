@@ -116,8 +116,8 @@ def _record_shadow_mode() -> None:
             audit.record(db, actor="system", action="shadow.on" if on else "shadow.off",
                          entity_type="installation", entity_id=shadow.SETTING,
                          before={"shadow": was}, after={"shadow": on})
-    except Exception:  # an unmigrated database must not stop the app starting
-        log.warning("could not record shadow mode in the audit trail")
+    except Exception as exc:  # an unmigrated database must not stop the app starting
+        log.warning("could not record shadow mode in the audit trail", error=str(exc))
 
 
 async def _lifespan(app: FastAPI):

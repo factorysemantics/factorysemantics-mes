@@ -383,8 +383,44 @@
     },
   };
 
+  /* ---------- shadow mode ----------
+     The MES is watching a real plant and can change nothing in it. Somebody
+     reading a number on any screen has to be able to see that from where
+     they are standing, so the bar sits above the header on every screen,
+     sticks there, and has no dismiss button - it is a fact about the
+     installation, not a notification.
+
+     It is drawn from /shadow, which is public: the bar has to appear on the
+     sign-in screen too, where nobody is signed in yet. */
+
+  FS.shadowBar = function shadowBar() {
+    return fetch("/shadow")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((state) => {
+        if (!state || !state.shadow) return null;
+        const bar = FS.el("div", "shadow-bar");
+        bar.id = "shadow-bar";
+        bar.setAttribute("role", "status");
+        bar.append(
+          FS.el("strong", null, "Shadow mode"),
+          FS.el("span", null, state.means),
+          FS.el("span", "muted",
+                `${state.outbound_paths_closed} of ${state.outbound_paths_total} outbound paths closed.`),
+        );
+        const how = FS.el("a", "shadow-how", "What this means");
+        how.href = "/shadow";
+        bar.appendChild(how);
+        document.body.insertBefore(bar, document.body.firstChild);
+        // The header sticks below the bar rather than on top of it.
+        document.documentElement.style.setProperty("--shadow-top", `${bar.offsetHeight}px`);
+        return state;
+      })
+      .catch(() => null);  // a bar that could not load must not break a screen
+  };
+
   const header = document.querySelector("header[data-nav]");
   if (header) buildHeader(header);
+  FS.shadowBar();
 
   window.FS = FS;
 })();
