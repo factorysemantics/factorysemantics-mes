@@ -3,10 +3,12 @@
 Every plant can write a file. Most cannot open a port, and none will let a
 new system query the incumbent's database in week one. So the first way the
 MES hears what people typed elsewhere is a CSV — or the same rows as JSON —
-landing in a folder. The same three shapes now also arrive over MQTT
-(`integrations.inbound.mqtt`), and will over SQL, without this module
-changing: the mapping, the parsing and the writers below are shared, and a
-transport only decides where a row comes from.
+landing in a folder. The same three shapes also arrive over MQTT
+(`integrations.inbound.mqtt`) and over SQL (`integrations.inbound.sql`)
+without this module changing: both read their column mapping through
+`stream_mapping` here, so a plant with more than one interface describes
+its columns the same way each time, and a transport only decides where a
+row comes from.
 
 Three rules make it safe to point at a plant's own export:
 
@@ -192,47 +194,57 @@ def load_mapping(path: Path) -> dict[str, StreamMapping]:
 
     mappings: dict[str, StreamMapping] = {}
     for name, spec in raw.items():
-        if name not in EVENT_TYPES:
-            raise MappingError(f"{path} configures a stream {name!r}; the streams are {sorted(EVENT_TYPES)}")
-        if not isinstance(spec, dict):
-            raise MappingError(f"{path}: {name} should be an object")
-        for required in ("source", "source_kind", "columns"):
-            if not spec.get(required):
-                raise MappingError(f"{path}: {name} has no {required!r}, and it is not optional")
-        zone = spec.get("timezone")
-        if zone:
-            try:
-                ZoneInfo(zone)
-            except (ZoneInfoNotFoundError, ModuleNotFoundError, ValueError) as exc:
-                raise MappingError(
-                    f"{path}: {name} names a time zone {zone!r} this machine does not know. "
-                    "On Windows the IANA database comes from the `tzdata` package; if it is "
-                    "missing, `pip install tzdata`."
-                ) from exc
-        for key in ("columns", "fields"):
-            unknown = set(spec.get(key) or {}) - set(EVENT_TYPES[name].model_fields)
-            if unknown:
-                raise MappingError(
-                    f"{path}: {name} maps {sorted(unknown)} under {key!r}, which the "
-                    f"{EVENT_TYPES[name].__name__} contract does not have. Its fields are "
-                    f"{sorted(EVENT_TYPES[name].model_fields)}."
-                )
-        topic = spec.get("topic")
-        if topic is not None and not str(topic).strip():
-            raise MappingError(f"{path}: {name} has an empty 'topic'; leave it out to read this stream "
-                               "from its folder only")
-        mappings[name] = StreamMapping(
-            name=name,
-            source=str(spec["source"]),
-            source_kind=str(spec["source_kind"]),
-            columns={k: str(v) for k, v in spec["columns"].items()},
-            defaults=dict(spec.get("defaults") or {}),
-            time_format=spec.get("time_format"),
-            timezone=zone,
-            topic=str(topic).strip() if topic else None,
-            fields={k: str(v) for k, v in spec["fields"].items()} if spec.get("fields") else None,
-        )
+        mappings[name] = stream_mapping(name, spec, where=str(path))
     return mappings
+
+
+def stream_mapping(name: str, spec: object, *, where: str) -> StreamMapping:
+    """One stream's column mapping, from the object a driver's config holds.
+
+    Shared with the SQL poller, whose configuration file has the same four
+    keys plus the ones that describe the query. `where` names the file, so a
+    complaint tells the operator which one to open.
+    """
+    if name not in EVENT_TYPES:
+        raise MappingError(f"{where} configures a stream {name!r}; the streams are {sorted(EVENT_TYPES)}")
+    if not isinstance(spec, dict):
+        raise MappingError(f"{where}: {name} should be an object")
+    for required in ("source", "source_kind", "columns"):
+        if not spec.get(required):
+            raise MappingError(f"{where}: {name} has no {required!r}, and it is not optional")
+    zone = spec.get("timezone")
+    if zone:
+        try:
+            ZoneInfo(zone)
+        except (ZoneInfoNotFoundError, ModuleNotFoundError, ValueError) as exc:
+            raise MappingError(
+                f"{where}: {name} names a time zone {zone!r} this machine does not know. "
+                "On Windows the IANA database comes from the `tzdata` package; if it is "
+                "missing, `pip install tzdata`."
+            ) from exc
+    for key in ("columns", "fields"):
+        unknown = set(spec.get(key) or {}) - set(EVENT_TYPES[name].model_fields)
+        if unknown:
+            raise MappingError(
+                f"{where}: {name} maps {sorted(unknown)} under {key!r}, which the "
+                f"{EVENT_TYPES[name].__name__} contract does not have. Its fields are "
+                f"{sorted(EVENT_TYPES[name].model_fields)}."
+            )
+    topic = spec.get("topic")
+    if topic is not None and not str(topic).strip():
+        raise MappingError(f"{where}: {name} has an empty 'topic'; leave it out to read this stream "
+                           "from its folder only")
+    return StreamMapping(
+        name=name,
+        source=str(spec["source"]),
+        source_kind=str(spec["source_kind"]),
+        columns={k: str(v) for k, v in spec["columns"].items()},
+        defaults=dict(spec.get("defaults") or {}),
+        time_format=spec.get("time_format"),
+        timezone=zone,
+        topic=str(topic).strip() if topic else None,
+        fields={k: str(v) for k, v in spec["fields"].items()} if spec.get("fields") else None,
+    )
 
 
 # ------------------------------------------------------------------- parsing
