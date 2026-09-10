@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://docs.factorysemantics.com/dev/decisions/">
       
       
-        <link rel="prev" href="../design/STYLE/">
+        <link rel="prev" href="../design/m8-packs-and-fleet/">
       
       
         <link rel="next" href="0001-apache-2-with-dco/">
@@ -1553,6 +1553,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../design/m8-packs-and-fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — M8 packs and fleet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -1574,10 +1602,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_6" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_7" checked>
         
           
-          <label class="md-nav__link" for="__nav_4_6" id="__nav_4_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4_7" id="__nav_4_7_label" tabindex="">
             
   
   
@@ -1595,8 +1623,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_6_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_4_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2211,6 +2239,90 @@
   
   
     <li class="md-nav__item">
+      <a href="0021-one-database-per-plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0021 — A fleet is many databases, and site scoping is identity, not partitioning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="0022-what-a-plant-pack-may-contain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0022 — A plant pack is data, carries no code and no secrets, and cannot change what a number means
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="0023-the-fleet-console-observes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0023 — The fleet console observes and never pushes, and silence is unknown
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="TEMPLATE/" class="md-nav__link">
         
   
@@ -2606,6 +2718,8 @@
 
 <h1 id="decisions">Decisions<a class="headerlink" href="#decisions" title="Permanent link">&para;</a></h1>
 <p>Why things are the way they are, one page each, with the options that lost.
+A record marked <em>proposed</em> is a recommendation nobody has accepted yet; it
+says what would change, not what has.
 A design change starts as an <em>Ideas</em> discussion using the
 <a href="TEMPLATE/">template</a>; the accepted or declined outcome lands here.
 Declined ideas stay, so nobody re-proposes them without new facts.</p>
@@ -2718,6 +2832,21 @@ Declined ideas stay, so nobody re-proposes them without new facts.</p>
 <td>What "supported" means for an ERP connector, and what it is called before that</td>
 <td>2026-09-10</td>
 </tr>
+<tr>
+<td><a href="0021-one-database-per-plant/">0021</a></td>
+<td><em>Proposed</em> — a fleet is many databases, and site scoping is identity, not partitioning</td>
+<td>2026-09-10</td>
+</tr>
+<tr>
+<td><a href="0022-what-a-plant-pack-may-contain/">0022</a></td>
+<td><em>Proposed</em> — a plant pack is data, carries no code and no secrets, and cannot change what a number means</td>
+<td>2026-09-10</td>
+</tr>
+<tr>
+<td><a href="0023-the-fleet-console-observes/">0023</a></td>
+<td><em>Proposed</em> — the fleet console observes and never pushes, and silence is unknown</td>
+<td>2026-09-10</td>
+</tr>
 </tbody>
 </table>
 
@@ -2757,7 +2886,7 @@ Declined ideas stay, so nobody re-proposes them without new facts.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../design/STYLE/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Style">
+          <a href="../design/m8-packs-and-fleet/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Design — M8 packs and fleet">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2767,7 +2896,7 @@ Declined ideas stay, so nobody re-proposes them without new facts.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Style
+                Design — M8 packs and fleet
               </div>
             </div>
           </a>

@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://docs.factorysemantics.com/dev/develop/erp-connectors/">
+        <link rel="canonical" href="https://docs.factorysemantics.com/dev/design/m8-packs-and-fleet/">
       
       
-        <link rel="prev" href="../your-first-module/">
+        <link rel="prev" href="../STYLE/">
       
       
-        <link rel="next" href="../../design/STYLE/">
+        <link rel="next" href="../../decisions/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Reference — writing an ERP connector - FactorySemantics MES</title>
+        <title>Design — M8 packs and fleet - FactorySemantics MES</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#writing-an-erp-connector" class="md-skip">
+        <a href="#m8-plant-packs-and-the-fleet-console" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Reference — writing an ERP connector
+              Design — M8 packs and fleet
             
           </span>
         </div>
@@ -294,7 +294,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../" class="md-tabs__link">
+        <a href="../../develop/" class="md-tabs__link">
           
   
   
@@ -1416,7 +1416,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../develop/" class="md-nav__link">
         
   
   
@@ -1472,7 +1472,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../your-first-module/" class="md-nav__link">
+      <a href="../../develop/your-first-module/" class="md-nav__link">
         
   
   
@@ -1480,6 +1480,62 @@
     
   
     Tutorial — your first module
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/erp-connectors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — writing an ERP connector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../STYLE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Style
   
 
     
@@ -1516,7 +1572,7 @@
   <span class="md-ellipsis">
     
   
-    Reference — writing an ERP connector
+    Design — M8 packs and fleet
   
 
     
@@ -1534,7 +1590,7 @@
   <span class="md-ellipsis">
     
   
-    Reference — writing an ERP connector
+    Design — M8 packs and fleet
   
 
     
@@ -1560,10 +1616,49 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-port" class="md-nav__link">
+  <a href="#1-what-a-plant-is-today" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The port
+        1. What a plant is, today
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. What a plant is, today">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-registry-actually-reads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the registry actually reads
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-cannot-be-configured-per-plant-at-all" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What cannot be configured per plant at all
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-the-two-packs-held-against-the-roadmaps-own-done-when" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. The two packs, held against the roadmap's own done when
       
     </span>
   </a>
@@ -1571,10 +1666,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#what-crosses-the-boundary" class="md-nav__link">
+  <a href="#3-the-two-guard-tests" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What crosses the boundary
+        3. The two guard tests
       
     </span>
   </a>
@@ -1582,10 +1677,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#obligation-1-say-what-you-need" class="md-nav__link">
+  <a href="#4-site-scoping-the-question-is-half-answered-already" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Obligation 1: say what you need
+        4. Site scoping — the question is half-answered already
       
     </span>
   </a>
@@ -1593,10 +1688,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#obligation-2-set-it-up-twice" class="md-nav__link">
+  <a href="#5-what-a-plant-already-emits-that-a-console-could-read" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Obligation 2: set it up, twice
+        5. What a plant already emits that a console could read
       
     </span>
   </a>
@@ -1604,10 +1699,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#obligation-3-check-and-admit-what-you-did-not-check" class="md-nav__link">
+  <a href="#6-proposal-what-a-plant-pack-is" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Obligation 3: check, and admit what you did not check
+        6. Proposal — what a plant pack is
       
     </span>
   </a>
@@ -1615,10 +1710,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#obligation-4-prove-the-write-landed" class="md-nav__link">
+  <a href="#7-proposal-the-deployment-profiles" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Obligation 4: prove the write landed
+        7. Proposal — the deployment profiles
       
     </span>
   </a>
@@ -1626,10 +1721,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#when-the-erp-says-no" class="md-nav__link">
+  <a href="#8-proposal-the-console" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When the ERP says no
+        8. Proposal — the console
       
     </span>
   </a>
@@ -1637,10 +1732,71 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-conformance-suite" class="md-nav__link">
+  <a href="#9-the-order-of-work" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The conformance suite
+        9. The order of work
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. The order of work">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#piece-1-a-plant-knows-its-own-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Piece 1 — a plant knows its own name
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#piece-2-the-guard-tests-and-the-layers-they-need" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Piece 2 — the guard tests, and the layers they need
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#piece-3-the-pack-format-its-validator-and-an-adversarial-second-pack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Piece 3 — the pack format, its validator, and an adversarial second pack
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#piece-4-the-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Piece 4 — the console
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-risks-named" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Risks, named
       
     </span>
   </a>
@@ -1648,43 +1804,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#test-against-the-real-thing" class="md-nav__link">
+  <a href="#11-findings-not-fixed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Test against the real thing
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#register-it" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Register it
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#say-what-you-tested-and-when" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Say what you tested, and when
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        See also
+        11. Findings, not fixed
       
     </span>
   </a>
@@ -1695,62 +1818,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../design/STYLE/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Style
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../design/m8-packs-and-fleet/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Design — M8 packs and fleet
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -2867,10 +2934,49 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-port" class="md-nav__link">
+  <a href="#1-what-a-plant-is-today" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The port
+        1. What a plant is, today
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. What a plant is, today">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-registry-actually-reads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the registry actually reads
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-cannot-be-configured-per-plant-at-all" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What cannot be configured per plant at all
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-the-two-packs-held-against-the-roadmaps-own-done-when" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. The two packs, held against the roadmap's own done when
       
     </span>
   </a>
@@ -2878,10 +2984,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#what-crosses-the-boundary" class="md-nav__link">
+  <a href="#3-the-two-guard-tests" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What crosses the boundary
+        3. The two guard tests
       
     </span>
   </a>
@@ -2889,10 +2995,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#obligation-1-say-what-you-need" class="md-nav__link">
+  <a href="#4-site-scoping-the-question-is-half-answered-already" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Obligation 1: say what you need
+        4. Site scoping — the question is half-answered already
       
     </span>
   </a>
@@ -2900,10 +3006,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#obligation-2-set-it-up-twice" class="md-nav__link">
+  <a href="#5-what-a-plant-already-emits-that-a-console-could-read" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Obligation 2: set it up, twice
+        5. What a plant already emits that a console could read
       
     </span>
   </a>
@@ -2911,10 +3017,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#obligation-3-check-and-admit-what-you-did-not-check" class="md-nav__link">
+  <a href="#6-proposal-what-a-plant-pack-is" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Obligation 3: check, and admit what you did not check
+        6. Proposal — what a plant pack is
       
     </span>
   </a>
@@ -2922,10 +3028,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#obligation-4-prove-the-write-landed" class="md-nav__link">
+  <a href="#7-proposal-the-deployment-profiles" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Obligation 4: prove the write landed
+        7. Proposal — the deployment profiles
       
     </span>
   </a>
@@ -2933,10 +3039,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#when-the-erp-says-no" class="md-nav__link">
+  <a href="#8-proposal-the-console" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When the ERP says no
+        8. Proposal — the console
       
     </span>
   </a>
@@ -2944,10 +3050,71 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-conformance-suite" class="md-nav__link">
+  <a href="#9-the-order-of-work" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The conformance suite
+        9. The order of work
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. The order of work">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#piece-1-a-plant-knows-its-own-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Piece 1 — a plant knows its own name
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#piece-2-the-guard-tests-and-the-layers-they-need" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Piece 2 — the guard tests, and the layers they need
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#piece-3-the-pack-format-its-validator-and-an-adversarial-second-pack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Piece 3 — the pack format, its validator, and an adversarial second pack
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#piece-4-the-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Piece 4 — the console
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-risks-named" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Risks, named
       
     </span>
   </a>
@@ -2955,43 +3122,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#test-against-the-real-thing" class="md-nav__link">
+  <a href="#11-findings-not-fixed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Test against the real thing
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#register-it" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Register it
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#say-what-you-tested-and-when" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Say what you tested, and when
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        See also
+        11. Findings, not fixed
       
     </span>
   </a>
@@ -3015,7 +3149,7 @@
 
 
   
-    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/develop/erp-connectors.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/design/m8-packs-and-fleet.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3023,310 +3157,694 @@
   
 
 
-<h1 id="writing-an-erp-connector">Writing an ERP connector<a class="headerlink" href="#writing-an-erp-connector" title="Permanent link">&para;</a></h1>
-<p><em>Reference. What an ERP connector must do, how to prove it does, and what
-this project requires before it calls one supported. Written 2026-09-10 out
-of what the ERPNext connector got wrong first.</em></p>
-<p>An ERP connector is a small package that plugs into this MES through an
-entry point. It is <strong>transport only</strong>: it moves orders down and
-confirmations up. Every MES-side rule — what counts as production, when an
-operation is finished, what an over-run is — lives in <code>services.erp</code> and is
-not yours to reimplement.</p>
-<p>The architecture makes that easy. What it did not make easy, until this
-page existed, was the part that actually goes wrong. The ERPNext connector
-learned three things the hard way on 2026-09-09, and all three were fixed
-in ERPNext-specific code before they were promoted here:</p>
-<ol>
-<li><strong>What the connector needs installed on the far side.</strong> ERPNext needed
-   five custom fields on Work Order. The documentation said it needed
-   nothing. Every ERP needs <em>something</em> — a service exposed, an extension
-   field, a staging table, a folder, a permission.</li>
-<li><strong>How a write is proved to have landed.</strong> "Raise on failure" is not
-   enough when the ERP answers <code>200</code> and drops the value.</li>
-<li><strong>How a person checks it before trusting it.</strong> A connector nobody can
-   check is a connector somebody finds out about during a shift.</li>
-</ol>
-<h2 id="the-port">The port<a class="headerlink" href="#the-port" title="Permanent link">&para;</a></h2>
-<p><code>fsmes.integrations.erp.base</code>. Six methods: three move the work, three
-describe the far side.</p>
+<h1 id="m8-plant-packs-and-the-fleet-console">M8 — plant packs and the fleet console<a class="headerlink" href="#m8-plant-packs-and-the-fleet-console" title="Permanent link">&para;</a></h1>
+<p><em>Design. Written 2026-09-10 against the code at <code>2474a8b</code>, before anything is
+built. It states what exists, proposes what a pack should be and what the
+console should do, and breaks the work into four pieces. It decides nothing:
+the decisions it turns on are
+<a href="../../decisions/0021-one-database-per-plant/">0021</a>,
+<a href="../../decisions/0022-what-a-plant-pack-may-contain/">0022</a> and
+<a href="../../decisions/0023-the-fleet-console-observes/">0023</a>, and all three are
+</em><em>proposed</em><em> — the person who accepts them has not read them yet.</em></p>
+<p>M8 is the last milestone on the
+<a href="https://github.com/factorysemantics/factorysemantics-mes/blob/main/ROADMAP.md">roadmap</a>
+and the vaguest. Its scope line asks for six things: site scoping on kernel
+tables; plant packs as a <code>plant.toml</code>; an adversarial second demo pack; two
+guard tests named <code>no_tenant_literals</code> and <code>core_purity</code>; deployment profiles;
+and an observe-don't-push console. Its <em>done when</em> is <strong>two packs with
+different modules enabled running from one codebase, and the console showing
+both.</strong></p>
+<p>Two things make it worth designing now rather than later.</p>
+<p>A <strong>first real plant</strong> will need a pack. It is the one plant-specific
+artefact — the thing <a href="../../operate/first-plant/">the engineers' front door</a>
+has a controls engineer draft on site — and the product has no crisp
+definition of what it is, what may live in it, or what may not.</p>
+<p>And an MES someone runs at more than one site needs the console, or they run
+one copy per site and see nothing across them. That is the position today:
+<code>fsmes plant all status</code> is a command on one laptop, not a view of a fleet.</p>
+<hr />
+<h2 id="1-what-a-plant-is-today">1. What a plant is, today<a class="headerlink" href="#1-what-a-plant-is-today" title="Permanent link">&para;</a></h2>
+<p>There is <strong>no <code>plant.toml</code></strong> in this repository and no <code>packs/</code> directory.
+<code>grep -rn "plant.toml"</code> finds two hits, both aspirational: the roadmap's M8
+line, and <code>labs/multiplant/README.md</code> saying that is where the lab is going.
+<code>docs/ARCHITECTURE.md</code> proposes a <code>packs/</code> directory in a layout that was
+written before the first line of code and does not match the tree.</p>
+<p>What exists instead is <strong>five separate places</strong> a plant's identity lives, none
+of which knows about the others.</p>
 <table>
 <thead>
 <tr>
-<th>Method</th>
-<th>Must do</th>
+<th>#</th>
+<th>Artefact</th>
+<th>Where</th>
+<th>Read by</th>
+<th>Validated?</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>fetch_orders() -&gt; list[ProductionRequest]</code></td>
-<td>Return the ERP's open orders as the <strong>typed contract</strong>, not dicts.</td>
+<td>1</td>
+<td>The <strong>registry</strong> — one TOML file describing several plants</td>
+<td><code>labs/multiplant/plants.toml</code>, or <code>$FSMES_PLANT_REGISTRY</code></td>
+<td><code>src/fsmes/plant.py</code>, <code>src/fsmes/mcp_server.py</code>, <code>src/fsmes/sim/*</code></td>
+<td>No. <code>tomllib</code> into a plain dict</td>
 </tr>
 <tr>
-<td><code>acknowledge(order_code) -&gt; None</code></td>
-<td>Tell the ERP the MES has taken this order, so the next poll does not offer it again.</td>
+<td>2</td>
+<td>The <strong>tag map</strong> — which machines exist and what their tags mean</td>
+<td><code>config/tag_map*.json</code>, <code>labs/*/tag_map.json</code></td>
+<td><code>src/fsmes/services/tags.py</code>, <code>src/fsmes/integrations/opc/*</code></td>
+<td>Partly — an unmapped state value raises</td>
 </tr>
 <tr>
-<td><code>send_confirmation(confirmation) -&gt; None</code></td>
-<td>Deliver one confirmation. <strong>Raise</strong> unless the ERP kept what was sent.</td>
+<td>3</td>
+<td>The <strong>seed script</strong> — this plant's equipment, materials and routings</td>
+<td><code>labs/*/init.py</code>, <code>labs/multiplant/machining/seed.py</code></td>
+<td>run as a subprocess by <code>fsmes plant &lt;name&gt; init</code></td>
+<td>No. It is arbitrary Python</td>
 </tr>
 <tr>
-<td><code>requirements() -&gt; list[Requirement]</code></td>
-<td>What must exist on the ERP side. Empty is a valid answer.</td>
+<td>4</td>
+<td>The <strong>settings</strong> — 66 <code>MES_*</code> variables</td>
+<td>environment, or a <code>.env</code> file</td>
+<td><code>src/fsmes/config.py</code></td>
+<td>Types only, by pydantic</td>
 </tr>
 <tr>
-<td><code>setup() -&gt; list[SetupOutcome]</code></td>
-<td>Create or verify those requirements. Idempotent.</td>
-</tr>
-<tr>
-<td><code>check() -&gt; CheckResult</code></td>
-<td>Say in plain words whether this would work right now. No side effects.</td>
+<td>5</td>
+<td>The <strong>boundary mappings</strong> — inbound columns, inbound SQL, line geometry, scorecard columns</td>
+<td><code>config/inbound_mapping.json</code>, <code>config/inbound_sql.json</code>, <code>config/line_layout.json</code>, the scorecard's own mapping file</td>
+<td><code>src/fsmes/integrations/inbound/*</code>, the line view, <code>fsmes shadow scorecard</code></td>
+<td>Per-file, ad hoc</td>
 </tr>
 </tbody>
 </table>
-<p>The last three have defaults — inherit <code>ErpConnector</code> and you get them —
-so a transport that genuinely needs nothing is not forced to invent
-ceremony, and a connector written before these existed keeps working.</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">fsmes.integrations.erp.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">CheckResult</span><span class="p">,</span> <span class="n">ErpConnector</span><span class="p">,</span> <span class="n">Requirement</span><span class="p">,</span> <span class="n">SetupOutcome</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">fsmes.integrations.erp.contract</span><span class="w"> </span><span class="kn">import</span> <span class="n">Confirmation</span><span class="p">,</span> <span class="n">ProductionRequest</span>
-
-
-<span class="k">class</span><span class="w"> </span><span class="nc">SapAdapter</span><span class="p">(</span><span class="n">ErpConnector</span><span class="p">):</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_orders</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ProductionRequest</span><span class="p">]:</span> <span class="o">...</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">acknowledge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">order_code</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">send_confirmation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">confirmation</span><span class="p">:</span> <span class="n">Confirmation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
-</code></pre></div>
-<p><code>fsmes erp requirements</code>, <code>fsmes erp setup</code> and <code>fsmes erp check</code> are these
-three methods and nothing else. They act on whatever <code>MES_ERP_MODE</code> names,
-so your connector gets all three commands the moment it is installed.</p>
-<h2 id="what-crosses-the-boundary">What crosses the boundary<a class="headerlink" href="#what-crosses-the-boundary" title="Permanent link">&para;</a></h2>
-<p><code>fsmes.integrations.erp.contract</code>, and nothing else. <code>ProductionRequest</code>
-comes down; <code>OperationConfirmation</code> (one step: quantities, cost centre,
-times, consumed lots) and <code>OrderCompletion</code> (the order-level close and the
-finished lot) go up. The shape is SAP-shaped on purpose — a confirmation
-per operation is what CO11N wants and what ERPNext's Job Cards and Stock
-Entries are built from.</p>
-<p>No money crosses. The MES reports quantities and time against a cost
-centre; the ERP owns what they are worth.</p>
-<p><code>ProductionRequest.from_payload</code> accepts the loose spellings ERPs actually
-send (<code>code</code> / <code>order</code> / <code>id</code>, <code>material</code> / <code>product</code>), so a thin mapping
-is usually enough.</p>
-<h2 id="obligation-1-say-what-you-need">Obligation 1: say what you need<a class="headerlink" href="#obligation-1-say-what-you-need" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">requirements</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Requirement</span><span class="p">]:</span>
-    <span class="k">return</span> <span class="p">[</span>
-        <span class="n">Requirement</span><span class="p">(</span>
-            <span class="n">name</span><span class="o">=</span><span class="s2">"Z_MES_CONF"</span><span class="p">,</span>
-            <span class="n">where</span><span class="o">=</span><span class="s2">"the SAP system, as an RFC-enabled function module"</span><span class="p">,</span>
-            <span class="n">what</span><span class="o">=</span><span class="s2">"accepts one operation confirmation and posts it against the order"</span><span class="p">,</span>
-            <span class="n">why</span><span class="o">=</span><span class="s2">"without it no production the MES counted ever reaches SAP"</span><span class="p">,</span>
-            <span class="n">created_by_setup</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-        <span class="p">),</span>
-    <span class="p">]</span>
-</code></pre></div>
-<p>Four fields, all required, because a requirement nobody can act on is
-documentation of a problem rather than a fix. <code>name</code> is what the ERP calls
-it. <code>where</code> is where it lives. <code>what</code> is enough for whoever administers
-that ERP to build it. <code>why</code> is what breaks without it — no requirement is
-self-evident to the person being asked to do the work.</p>
-<p><code>created_by_setup=False</code> is not a lesser answer. The MES can create a
-Custom Field on a Frappe site; it cannot create a transport request in
-somebody's SAP. Saying so is the point, and <code>fsmes erp requirements</code> prints
-the list to send them.</p>
-<h2 id="obligation-2-set-it-up-twice">Obligation 2: set it up, twice<a class="headerlink" href="#obligation-2-set-it-up-twice" title="Permanent link">&para;</a></h2>
-<p><code>setup()</code> is run by people who are not sure whether they ran it. The second
-run must change nothing and must not fail. Return one <code>SetupOutcome</code> per
-requirement, naming it — <code>created</code>, <code>already there</code>, <code>must be done by hand</code>.
-Never a count: a person can check <code>created</code> against a named field and cannot
-check <code>5 fields</code>.</p>
-<h2 id="obligation-3-check-and-admit-what-you-did-not-check">Obligation 3: check, and admit what you did not check<a class="headerlink" href="#obligation-3-check-and-admit-what-you-did-not-check" title="Permanent link">&para;</a></h2>
-<p><code>check()</code> returns a <code>CheckResult</code>: lines, each with its own verdict.</p>
+<p>The registry is the nearest thing to a pack, and it is worth being precise
+about what it is: <strong>a way to run several plants on one machine</strong>. Every key it
+holds becomes an <code>MES_*</code> variable at spawn time (<code>plant_env</code>,
+<code>src/fsmes/plant.py</code>), which is exactly why two plants can run side by side
+with no multi-tenant code path — the bottling API cannot reach the machining
+database because it was never told machining exists.</p>
+<h3 id="what-the-registry-actually-reads">What the registry actually reads<a class="headerlink" href="#what-the-registry-actually-reads" title="Permanent link">&para;</a></h3>
+<p>The code reads seventeen keys: <code>label</code>, <code>api_host</code>, <code>api_port</code>, <code>opc_port</code>,
+<code>tag_map</code>, <code>replay_dir</code>, <code>init</code>, <code>post_boot</code>, <code>simulate</code>, <code>speed</code>,
+<code>secret_key</code>, <code>accounts</code>, <code>database_url</code>, <code>database_password_file</code>,
+<code>inspect_every</code>, <code>issue_every</code>, <code>inspect_all</code>, plus <code>[environment] data_dir</code>.</p>
+<p><a href="../../operate/registry/">The registry how-to</a> lists fifteen. The two lists do
+not match, in both directions:</p>
+<ul>
+<li><code>inspect_every</code>, <code>issue_every</code> and <code>inspect_all</code> are read by <code>plant_env</code>;
+  <code>labs/cutlery/registry.toml</code> sets two of the three. The documented list
+  mentions none of them.</li>
+<li><code>agent</code> is in the documented list. Nothing in <code>src/</code> reads it.</li>
+</ul>
+<p>Neither is a bug anyone has hit. Both are the same fact: <strong>the registry has no
+schema, so nothing can tell a key from a typo</strong>, and the file and its
+documentation drifted apart inside two weeks without a build failing. A
+plant-specific artefact a controls engineer drafts on site cannot work that
+way.</p>
+<p>Two more things the registry is not:</p>
+<ul>
+<li><code>plant_env</code> hard-codes <code>MES_ERP_MODE="off"</code> with the comment that every lab
+  plant would otherwise fight over the same mock ERP. That is right for a lab
+  and wrong for a plant: <strong>a registry plant cannot talk to an ERP at all.</strong></li>
+<li>Nothing in the registry says which modules a plant runs, what time zone it
+  is in, or what it calls things.</li>
+</ul>
+<h3 id="what-cannot-be-configured-per-plant-at-all">What cannot be configured per plant at all<a class="headerlink" href="#what-cannot-be-configured-per-plant-at-all" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Modules.</strong> <code>src/fsmes/api/app.py</code> includes all twenty-three routers
+  unconditionally. <code>src/fsmes/mcp_server.py</code> registers all ten tool files at
+  import. <code>fsmes info</code> reports one entry-point module (<code>erpnext</code>), because
+  every other module ships inside the kernel wheel and is always on.
+  <code>src/fsmes/mcp/__init__.py</code> already carries the sentence <em>"a module a plant
+  pack disables takes its tools with it by not being registered"</em> — the
+  mechanism it describes does not exist.</li>
+<li><strong>Time zone.</strong> <code>Settings</code> has no time-zone field. The only time zone in the
+  product is per inbound stream, in <code>config/inbound_mapping.json</code> and
+  <code>config/inbound_sql.json</code>, and it means <em>what zone this external system's
+  naive timestamps are in</em> — not <em>what zone this plant works in</em>. Shifts,
+  OEE windows and every screen use the process's own clock.</li>
+<li><strong>Vocabulary.</strong> Nothing anywhere lets a plant rename a domain term. The
+  word "vocabulary" appears in the code for fixed, product-wide things — the
+  PackML state names, the capability names, the role ladder.</li>
+</ul>
+<hr />
+<h2 id="2-the-two-packs-held-against-the-roadmaps-own-done-when">2. The two packs, held against the roadmap's own <em>done when</em><a class="headerlink" href="#2-the-two-packs-held-against-the-roadmaps-own-done-when" title="Permanent link">&para;</a></h2>
+<p><code>labs/multiplant/</code> runs two plants side by side: <strong>bottling</strong> (six stations,
+<code>:8010</code>) and <strong>machining</strong> (three stations, <code>:8020</code>). They disagree
+deliberately — station count, station names, analog names, rates, buffer
+sizes, product, routing, quality specification — and the lab's README is
+right that this proves something real: <em>no product code was added to run a
+second plant.</em></p>
+<p>It does not prove what the milestone asks for.</p>
 <table>
 <thead>
 <tr>
-<th>Verdict</th>
-<th>Means</th>
+<th>The roadmap's <em>done when</em></th>
+<th>State</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>ok</code></td>
-<td>verified, just now, against the ERP</td>
+<td>Two packs</td>
+<td>Two <strong>plants</strong>, in one shared registry file. Not packs; there is no pack</td>
 </tr>
 <tr>
-<td><code>not ok</code></td>
-<td>this would stop the connector working; <code>fsmes erp check</code> exits non-zero</td>
+<td><strong>with different modules enabled</strong></td>
+<td>Not met. Both plants run every module, because no plant can disable one</td>
 </tr>
 <tr>
-<td><code>unknown</code></td>
-<td>could not be checked without a side effect</td>
+<td>run from one codebase</td>
+<td>Met, and worth keeping. Same wheel, same schema, same migrations</td>
 </tr>
 <tr>
-<td><code>note</code></td>
-<td>a continuation of the line above — what to do about it</td>
+<td>and the console shows both</td>
+<td>Not met. <code>fsmes plant all status</code> is a CLI on one machine</td>
 </tr>
 </tbody>
 </table>
-<p><code>unknown</code> is why this is not a boolean. The REST connector can prove it
-reached the ERP's order list; it cannot prove <code>POST /confirmations</code> accepts
-a confirmation without posting one, and <code>check</code> must be safe to run against
-production. Reporting that as <code>ok</code> would be inventing a fact about somebody
-else's ERP — house rule 2, unknown is a valid answer and zero is not. A
-check with an unknown in it prints <code>Ready, as far as anything above was
-checked.</code></p>
-<p>Name what is wrong, not that something is. <code>custom_mes_good_qty is a Data
-field on Work Order, but the MES writes a Float</code> is actionable;
-<code>configuration invalid</code> is not.</p>
-<h2 id="obligation-4-prove-the-write-landed">Obligation 4: prove the write landed<a class="headerlink" href="#obligation-4-prove-the-write-landed" title="Permanent link">&para;</a></h2>
-<p>This is the one that costs the most to get wrong, and it is the reason this
-page exists.</p>
-<p><strong>Measured on ERPNext v15.120.0 on 2026-09-09</strong>, in CI, against a real
-container: a <code>PUT</code> to a submitted Work Order naming a field the doctype does
-not have <strong>succeeds</strong>. Frappe answers <code>200</code>, returns a normal document, and
-the value is neither stored nor returned. Nothing anywhere says a number was
-dropped.</p>
-<p>So "raise on failure" is not a sufficient instruction, because that is not a
-failure by any definition the transport offers. A connector that reports it
-as success makes the MES mark a confirmation <em>delivered</em> for a number no ERP
-ever stored — and the outbox, which exists precisely to retry, never retries
-it.</p>
-<p><strong>Read your writes back where the ERP will let you</strong>, and compare them
-against what you sent:</p>
-<div class="highlight"><pre><span></span><code><span class="n">returned</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s2">"Work Order"</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">values</span><span class="p">)</span>
-<span class="n">lost</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">values</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">returned</span><span class="p">]</span>
-<span class="k">if</span> <span class="n">lost</span><span class="p">:</span>
-    <span class="k">raise</span> <span class="n">ErpNextError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"the ERP accepted the write to </span><span class="si">{</span><span class="n">order</span><span class="si">}</span><span class="s2"> but kept nothing in </span><span class="si">{</span><span class="n">lost</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</code></pre></div>
-<p>Be forgiving about form and strict about substance: a site's float precision
-can round <code>6.001</code> to <code>6.00</code>, and a Check field comes back as <code>0</code>/<code>1</code>. A
-number that agrees to a hundredth agrees. A number that is gone does not.</p>
-<p>Where the ERP genuinely offers no read-back, say so on your connector's
-page. That is a real limitation of that ERP and a plant is entitled to know
-it before the first over-run.</p>
-<h2 id="when-the-erp-says-no">When the ERP says no<a class="headerlink" href="#when-the-erp-says-no" title="Permanent link">&para;</a></h2>
-<p>Raising is right for both of these, and they are not the same thing:</p>
+<p>The roadmap's own M8 heading, corrected on 2026-09-09, says <em>"two plant packs
+prove the boundary; packs as a product and the console are open"</em>. Being
+exact: <strong>one of the four clauses is met.</strong> The mark stays 🟡, and the reason
+is the modules clause as much as the console.</p>
+<p>The second pack is also not yet <em>adversarial by design</em> in the sense the
+roadmap means. It disagrees about the plant — geometry, physics, products —
+which is what shakes out a hard-coded station name. It agrees about
+everything the pack format would carry: same modules, same clock, same words,
+same ERP setting (<code>off</code>), same everything a <code>plant.toml</code> would hold. A pack
+format is proved by a plant that disagrees with the <em>format</em>, not with the
+line.</p>
+<hr />
+<h2 id="3-the-two-guard-tests">3. The two guard tests<a class="headerlink" href="#3-the-two-guard-tests" title="Permanent link">&para;</a></h2>
+<p><code>no_tenant_literals</code> and <code>core_purity</code> <strong>do not exist.</strong> A repository-wide
+search finds one hit for either name: the roadmap line that names them.</p>
+<p>What does exist is a family of tests that read the source rather than run it,
+and they are the pattern to copy, because they were each written after
+something got past review:</p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>File</th>
+<th>How</th>
+<th>What it forbids</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>the shadow ratchet — two tests</td>
+<td><code>tests/test_shadow_mode.py</code></td>
+<td><code>ast.parse</code> every file under <code>src/fsmes</code>, walk <code>ast.Call</code>, match against a list of outbound primitives</td>
+<td>A call that reaches past the database — OPC write, HTTP, MQTT, mail, socket, model API — that <code>fsmes.shadow.REGISTER</code> does not name</td>
+</tr>
+<tr>
+<td><code>test_a_transaction_is_not_held_open_across_a_network_call</code></td>
+<td><code>tests/test_sqlite_write_locks.py</code></td>
+<td>AST: an <code>await</code> inside a <code>with session_scope()</code> block</td>
+<td>Holding a SQLite write lock across a network call</td>
+</tr>
+<tr>
+<td><code>test_every_write_route_has_a_tool_or_a_reason</code></td>
+<td><code>tests/test_mcp_parity.py</code></td>
+<td>Text: OpenAPI write routes against the MCP tool sources</td>
+<td>A write route with neither a tool nor a stated reason</td>
+</tr>
+<tr>
+<td><code>test_every_route_has_a_screen_or_a_reason</code></td>
+<td><code>tests/test_route_coverage.py</code></td>
+<td>Text: routes against the screen scripts</td>
+<td>An endpoint no screen mentions and nobody excused</td>
+</tr>
+<tr>
+<td><code>test_the_product_never_imports_playwright</code></td>
+<td><code>tests/test_ui_check.py</code></td>
+<td>Substring</td>
+<td>Browser tooling at module scope in the product</td>
+</tr>
+<tr>
+<td><code>test_the_migration_chain_has_exactly_one_head</code></td>
+<td><code>tests/test_migrations_have_one_head.py</code></td>
+<td>Reads the Alembic graph</td>
+<td>Two heads</td>
+</tr>
+</tbody>
+</table>
+<p>So the shape is established and the two named tests are missing. What each
+should forbid, proposed:</p>
 <ul>
-<li><strong>The ERP could not take the message.</strong> It was down, the session had gone,
-  the network dropped. Time may repair it, and the outbox's job is to keep
-  trying — eight attempts with growing backoff, then dead.</li>
-<li><strong>The ERP read the message and refused it.</strong> Nothing about the message
-  will be different next time, so eight more attempts only delay the moment
-  a person hears about it and bury the ERP's own words under seven copies of
-  themselves.</li>
+<li><strong><code>no_tenant_literals</code></strong> — no file under <code>src/fsmes</code> may contain a plant's
+  own name, code or address. Concretely: the plant names in every registry the
+  repository ships (<code>bottling</code>, <code>machining</code>, <code>cutlery</code>, <code>megafactory</code>), the
+  labs' invented company names, the equipment codes and material codes that
+  appear only in a <code>labs/</code> seed, and any URL or host that is not a documented
+  default. It reads the registries and the seeds to build its own forbidden
+  list, so a new lab plant extends the guard instead of escaping it. The rule
+  it pins is house rule 4, and the failure it catches is the one
+  <code>labs/multiplant/README.md</code> already names: <em>"the moment a second plant needs
+  a <code>seed_northgate.py</code> shipped inside the product, the product has a tenant
+  literal in it."</em></li>
+<li><strong><code>core_purity</code></strong> — the layering rule that today lives only as a docstring
+  in <code>src/fsmes/kernel/__init__.py</code>: <code>domain &lt;- services &lt;- {api, connect,
+  modules, cli}</code>, no lower layer importing a higher one. An AST import walk
+  proves it. Decision
+  <a href="../../decisions/0002-kernel-and-modules/">0002</a> says the module boundary is
+  "a discipline, not a wall"; this is the test that makes the wall, and it is
+  a precondition for a pack disabling a module, because a module that the
+  kernel imports cannot be disabled.</li>
 </ul>
-<p>If your connector can tell the second from the first, say so on the
-exception: <strong><code>permanent = True</code></strong>, and the sync worker marks the message dead
-on the spot with the ERP's sentence as its error, rather than backing off.
-Nothing declares this in the port, so a connector that never sets it keeps
-exactly the old behaviour.</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ErpNextRefused</span><span class="p">(</span><span class="n">ErpNextError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""ERPNext read the request, understood it, and said no."""</span>
-
-    <span class="n">permanent</span> <span class="o">=</span> <span class="kc">True</span>
+<p>Note what <code>core_purity</code> will find on the day it is written: <code>src/fsmes/kernel/</code>
+holds <code>common.py</code> and <code>tags.py</code>, <code>src/fsmes/core/</code> holds <code>oplock.py</code>, and the
+kernel the architecture page describes — master data, orders, dispatch, audit,
+auth — actually lives in <code>domain/</code> and <code>services/</code>. There is no <code>modules/</code>
+directory. The test's first job is to say what the layers <em>are</em>.</p>
+<hr />
+<h2 id="4-site-scoping-the-question-is-half-answered-already">4. Site scoping — the question is half-answered already<a class="headerlink" href="#4-site-scoping-the-question-is-half-answered-already" title="Permanent link">&para;</a></h2>
+<p>The roadmap asks for "site scoping on kernel tables". Measured against the
+schema, that is a bigger change than it sounds, and decision
+<a href="../../decisions/0006-sqlite-laptop-postgresql-plant/">0006</a> has already
+answered most of it: <strong>one database per plant.</strong></p>
+<p>The numbers, from the models at <code>2474a8b</code>:</p>
+<ul>
+<li><strong>38 tables.</strong> <strong>Zero</strong> carry a site, plant or tenant column.</li>
+<li><strong>25 tables</strong> carry at least one uniqueness rule. Of those, <strong>five</strong> are
+  already scoped through a foreign key and would survive a shared database
+  (<code>bom_items</code>, <code>quality_specs</code>, <code>routing_operations</code>,
+  <code>work_order_operations</code>, <code>uns_publications</code>). The other <strong>twenty</strong> are
+  plant-scoped natural keys that a second plant in the same database would
+  collide on: every <code>code</code> — equipment, materials, routings, roles,
+  personnel, work orders, lots, gauges, triggers, non-conformances,
+  maintenance plans and orders, shift patterns, adjustments, documents —
+  plus <code>serial_units.serial</code>, <code>erp_messages.message_key</code>, and the three
+  operational keys <code>idempotency_keys(actor, key)</code>,
+  <code>inbound_events(source, kind, external_key)</code> and
+  <code>inbound_watermarks(source, stream)</code>.</li>
+<li><strong>Four tables are global cursors or counters</strong> with no plant dimension:
+  <code>serial_sequences</code> (whose primary key <em>is</em> the serial prefix),
+  <code>inbound_watermarks</code>, <code>erp_messages</code>, <code>uns_publications</code>.</li>
+<li><strong>30 migrations, one head</strong> (<code>c8b1e40d7a92</code>).</li>
+</ul>
+<p>Adding a site column would therefore touch twenty uniqueness rules, four
+cursor tables, every query in <code>src/fsmes/services/</code>, and every migration
+after it. <code>src/fsmes/plant.py</code>'s own docstring is the counter-argument and it
+is a good one: <em>"there is no multi-tenant code path anywhere in the MES, and
+that is the point — isolation here is by construction, not by a <code>WHERE</code>
+clause somebody might forget."</em> A recall that returns another plant's serials
+is not a bug you find in review.</p>
+<p>The proposal, in <a href="../../decisions/0021-one-database-per-plant/">0021</a>: <strong>a
+fleet is many databases, and "site scoping" is re-read as identity rather
+than partitioning.</strong> What kernel tables actually lack is not a foreign key to
+a <code>sites</code> table but an answer to <em>which plant am I</em> that leaves the process —
+a plant identity every emitted record and every endpoint carries, so a
+console, a broker and a shadow scorecard can tell two plants apart without
+being told out of band. Today <code>MES_PLANT_NAME</code> exists, defaults to empty, and
+surfaces in exactly two places: the UNS envelope's <code>plant</code> field, and the
+assistant's greeting. <code>/health</code> does not say it. <code>/shadow</code> does not say it.</p>
+<p>That is a small, cheap change, and it is the whole of the site scoping this
+milestone needs.</p>
+<hr />
+<h2 id="5-what-a-plant-already-emits-that-a-console-could-read">5. What a plant already emits that a console could read<a class="headerlink" href="#5-what-a-plant-already-emits-that-a-console-could-read" title="Permanent link">&para;</a></h2>
+<p>Enough for a first console, and this is the pleasant surprise of writing this
+page. Every row below exists at <code>2474a8b</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Where</th>
+<th>Auth</th>
+<th>What a console gets</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /health</code></td>
+<td><code>src/fsmes/api/routers/system.py</code></td>
+<td>public</td>
+<td>alive, and <code>shadow</code> true/false</td>
+</tr>
+<tr>
+<td><code>GET /shadow</code></td>
+<td>same</td>
+<td>public</td>
+<td>the full outbound register: <strong>32 paths — 16 allowed, 11 refused, 5 restricted</strong> — plus the ERP and UNS modes actually in force</td>
+</tr>
+<tr>
+<td><code>GET /metrics</code></td>
+<td>same</td>
+<td>public</td>
+<td>Prometheus text: work orders per status, pending ERP messages, max tag-value and audit ids</td>
+</tr>
+<tr>
+<td><code>GET /ops/services</code></td>
+<td><code>src/fsmes/api/routers/ops.py</code></td>
+<td><code>audit.read</code></td>
+<td>liveness of the plant's own processes: api, opc-agent, opc-replay, opc-sim, operations</td>
+</tr>
+<tr>
+<td><code>GET /equipment/{code}/oee</code>, <code>GET /analysis/oee</code></td>
+<td><code>equipment.py</code>, <code>analysis.py</code></td>
+<td>signed in</td>
+<td>OEE per machine and the loss breakdown, with <code>null</code> where it cannot be computed honestly</td>
+</tr>
+<tr>
+<td><code>GET /erp/outbox</code></td>
+<td><code>erp.py</code></td>
+<td>signed in</td>
+<td>what the ERP is owed, and what died</td>
+</tr>
+<tr>
+<td><code>fsmes db-status</code></td>
+<td><code>src/fsmes/cli.py</code></td>
+<td>local</td>
+<td>current Alembic revision against head. <strong>Text only, exits non-zero when behind</strong></td>
+</tr>
+<tr>
+<td><code>fsmes info</code></td>
+<td>same</td>
+<td>local</td>
+<td>version, install path, entry-point modules, shadow summary</td>
+</tr>
+<tr>
+<td>the UNS publisher</td>
+<td><code>src/fsmes/integrations/uns/</code></td>
+<td>broker</td>
+<td>every outbox event under <code>&lt;prefix&gt;/&lt;enterprise&gt;/&lt;site&gt;/…</code>, envelope carrying <code>plant</code></td>
+</tr>
+<tr>
+<td><code>list_plants()</code></td>
+<td><code>src/fsmes/mcp_server.py</code></td>
+<td>agent account</td>
+<td><strong>the console in miniature</strong> — reads the registry, calls each plant's <code>/health</code>, and reports <code>shadow: None</code> for a plant that did not answer</td>
+</tr>
+</tbody>
+</table>
+<p><code>list_plants</code> is the shape to grow. It already refuses to guess: a plant that
+does not answer gets <code>None</code>, and the docstring says why — <em>"None means the
+plant did not answer, which is not the same as not shadow."</em> That is house
+rule 2 in a fleet, and it is the hardest part of a console to get right.</p>
+<p>Held against the four words in the roadmap's control-plane phrase:</p>
+<ul>
+<li><strong>Enrol</strong> — does not exist. There is no machine credential of any kind: no
+  API key, no device identity, no shared secret. A console authenticates as a
+  person or as the <code>AGENT</code> account, with a password, per plant.</li>
+<li><strong>Telemetry</strong> — exists, but only as pull. Nothing in the product pushes
+  status anywhere. There is no heartbeat and no webhook.</li>
+<li><strong>Desired state as intent</strong> — does not exist. There is no config checksum,
+  no doctor command, nothing that compares what a plant is running against
+  what it was meant to run. <code>fsmes db-status</code> is the only desired-versus-
+  actual check in the product, and only for the schema.</li>
+<li><strong>Drift display</strong> — does not exist, and cannot until a pack exists, because
+  drift is measured against a pack.</li>
+</ul>
+<hr />
+<h2 id="6-proposal-what-a-plant-pack-is">6. Proposal — what a plant pack is<a class="headerlink" href="#6-proposal-what-a-plant-pack-is" title="Permanent link">&para;</a></h2>
+<p><strong>A plant pack is the complete, versioned, validated answer to "which plant is
+this?", in one directory, owned by the plant and not by this repository.</strong></p>
+<div class="highlight"><pre><span></span><code>packs/&lt;name&gt;/
+  plant.toml          identity, profile, modules, clock, words   (required)
+  tag_map.json        which machines exist and what their tags mean
+  masterdata/         equipment, materials, routings — data, not a script
+  mappings/           inbound columns, inbound SQL, scorecard columns
+  line_layout.json    optional geometry for the line view
+  README.md           what this plant is, for the next engineer
 </code></pre></div>
-<p>Only claim it where you have measured it. ERPNext's is
-<a href="../../operate/erpnext/#when-the-line-made-more-than-the-order-asked-for">an over-run beyond the site's over-production allowance</a>:
-an HTTP 417 naming the quantity it would have allowed, with nothing booked.
-Everything else the connector meets is still retried, because nobody has
-measured it.</p>
-<p>And do not book <em>something else</em> instead. Posting the quantity the ERP would
-have accepted, or a draft for a person to fix, invents a decision nobody
-made. A refusal is a business fact: what the MES counted and what the ERP
-will hold genuinely differ, and somebody has to resolve that. Leave the
-message dead, put the reason where a person will find it, and let them retry
-it when they have.</p>
-<h2 id="the-conformance-suite">The conformance suite<a class="headerlink" href="#the-conformance-suite" title="Permanent link">&para;</a></h2>
-<p><code>fsmes.integrations.erp.conformance</code> ships <strong>inside the package</strong>, so a
-connector published on its own can be held to the same bar without
-vendoring this project's test tree.</p>
-<p>You supply a <code>ConformanceCase</code>: the connector, and the three things only you
-can do — put an order on your ERP, read back what your ERP received, and
-break your ERP so a failure can be proved to fail.</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">fsmes.integrations.erp</span><span class="w"> </span><span class="kn">import</span> <span class="n">conformance</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">fsmes.integrations.erp.conformance</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConformanceCase</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">a_case</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">ConformanceCase</span><span class="p">:</span>
-    <span class="n">fake</span> <span class="o">=</span> <span class="n">ScriptedSap</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">ConformanceCase</span><span class="p">(</span>
-        <span class="n">name</span><span class="o">=</span><span class="s2">"sap (against a scripted SAP)"</span><span class="p">,</span>
-        <span class="n">adapter</span><span class="o">=</span><span class="n">SapAdapter</span><span class="p">(</span><span class="n">fake</span><span class="o">.</span><span class="n">client</span><span class="p">),</span>
-        <span class="n">place_order</span><span class="o">=</span><span class="n">fake</span><span class="o">.</span><span class="n">place</span><span class="p">,</span>
-        <span class="n">delivered</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">fake</span><span class="o">.</span><span class="n">confirmations</span><span class="p">,</span>
-        <span class="n">break_the_far_side</span><span class="o">=</span><span class="n">fake</span><span class="o">.</span><span class="n">remove_the_function_module</span><span class="p">,</span>
-    <span class="p">)</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">test_the_sap_connector_meets_the_erp_contract</span><span class="p">():</span>
-    <span class="n">conformance</span><span class="o">.</span><span class="n">check_conformance</span><span class="p">(</span><span class="n">a_case</span><span class="p">)</span>
-</code></pre></div>
-<p>Eight obligations, each of them something a connector got wrong once:</p>
+<p><code>plant.toml</code> carries, and only carries:</p>
+<table>
+<thead>
+<tr>
+<th>Section</th>
+<th>Holds</th>
+<th>Why here</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[plant]</code></td>
+<td><code>name</code>, <code>label</code>, <code>timezone</code>, <code>enterprise</code>, <code>site</code>, <code>area</code></td>
+<td>Identity. <code>timezone</code> becomes a real setting; <code>enterprise</code>/<code>site</code> already exist as <code>MES_UNS_*</code> and belong to the plant, not to the broker config</td>
+</tr>
+<tr>
+<td><code>[modules]</code></td>
+<td>one boolean per optional module</td>
+<td>The milestone's <em>done when</em>. Requires <code>core_purity</code> first</td>
+</tr>
+<tr>
+<td><code>[words]</code></td>
+<td>domain term → this plant's term</td>
+<td>The roadmap's "vocabulary mappings". <strong>Display only</strong> — see below</td>
+</tr>
+<tr>
+<td><code>[storage]</code></td>
+<td><code>database_url</code>, <code>database_password_file</code></td>
+<td>Already registry keys</td>
+</tr>
+<tr>
+<td><code>[serve]</code></td>
+<td><code>api_host</code>, <code>api_port</code>, <code>opc_endpoint</code></td>
+<td>Already registry keys</td>
+</tr>
+<tr>
+<td><code>[erp]</code>, <code>[uns]</code>, <code>[inbound]</code></td>
+<td>mode plus the file each mapping lives in</td>
+<td>Today these are <code>MES_*</code> variables with no per-plant home, and <code>plant_env</code> hard-codes ERP off</td>
+</tr>
+<tr>
+<td><code>[pack]</code></td>
+<td><code>format</code> version, <code>requires</code> a version range of the MES</td>
+<td>So a pack can be refused rather than half-understood</td>
+</tr>
+</tbody>
+</table>
+<p>What a pack <strong>may not</strong> contain, and this is the load-bearing half:</p>
 <ol>
-<li>an order on the ERP arrives as a typed <code>ProductionRequest</code></li>
-<li>an acknowledged order is not offered again</li>
-<li>a confirmation reaches the ERP with its quantities</li>
-<li>a write the ERP did not keep raises rather than returning quietly</li>
-<li>every requirement says where it lives, what it is and why</li>
-<li><code>setup</code> is idempotent</li>
-<li><code>check</code> passes on a far side that is ready — and says something</li>
-<li><code>check</code> fails when the far side is not ready</li>
+<li><strong>No code.</strong> Not a <code>.py</code>, not a hook, not an expression to evaluate. Today
+   a plant's <code>init</code> key names a Python file that <code>fsmes plant init</code> runs as a
+   subprocess with the plant's environment; <code>labs/multiplant/machining/seed.py</code>
+   is 156 lines of it, and <code>labs/cutlery/init.py</code> is 191. Master data becomes data a validator can read, and
+   <code>fsmes pack apply</code> seeds from it. A pack that can run code is a pack nobody
+   can review before it touches a plant.</li>
+<li><strong>No secrets.</strong> Passwords stay in the environment or in a file the pack
+   <em>names</em> — the pattern <code>database_password_file</code> and <code>password_env</code> already
+   use, applied everywhere. A pack should be safe to attach to a support
+   thread, and today <code>secret_key</code> sits in the registry in plain text.</li>
+<li><strong>Nothing that changes what a number means.</strong> <code>[words]</code> renames a label on
+   a screen and in a report. It may not rename a state, a KPI, a capability,
+   an audit action, an MCP tool, an event <code>kind</code>, or anything a topic or an
+   API field is built from. Two plants' events must remain comparable, or the
+   fleet console is comparing dialects. The guard is a test, not a rule in
+   prose.</li>
+<li><strong>No plant may extend the schema.</strong> A pack cannot add a table or a column.
+   That is a module, and modules are code.</li>
 </ol>
-<p><code>check_conformance</code> takes a <em>factory</em>, not a case: half the obligations
-deliberately break the far side, and the next one must not inherit the
-wreckage.</p>
-<p><code>tests/test_erp_conformance.py</code> runs all eight against every connector that
-ships. Adding a connector there is one line.</p>
-<p><strong>Passing is not the same as being tested.</strong> The suite holds a connector to
-the contract against whatever far side you supply, and a fake that lies in
-the same direction the connector does will pass. That is why the next two
-sections exist.</p>
-<h2 id="test-against-the-real-thing">Test against the real thing<a class="headerlink" href="#test-against-the-real-thing" title="Permanent link">&para;</a></h2>
-<p>A connector with no live test is a connector nobody has run.</p>
-<p>The ERPNext connector's <code>ERPNext (live)</code> CI job brings a real ERPNext up
-from <code>labs/erpnext/docker-compose.yml</code>, with every image pinned by digest,
-seeds it and drives the whole round trip — asserting against ERPNext's own
-documents, never against what the MES believes it sent. It runs on pull
-requests that touch the connector, and deliberately not on a schedule: the
-digests are pinned, so a nightly run would test identical bytes and prove
-nothing. Changing a pin is what makes it worth running again.</p>
-<p>It costs about three minutes a run and it is where the <code>200</code>-and-drop
-finding came from. Reasoning from an ERP's source got the right answer that
-time; it is not a method anyone should rely on twice.</p>
-<h2 id="register-it">Register it<a class="headerlink" href="#register-it" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><span class="k">[project.entry-points.</span><span class="s2">"fsmes.modules"</span><span class="k">]</span>
-<span class="n">sap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"fsmes_sap.adapter:from_settings"</span>
-</code></pre></div>
-<p><code>from_settings(settings)</code> is handed the MES <code>Settings</code> object and returns
-your connector. <code>MES_ERP_MODE=sap</code> then selects it, <code>fsmes info</code> lists it,
-and the three <code>fsmes erp</code> commands act on it. Nothing in this package
-changes. See <a href="../your-first-module/">your first module</a> and decision
-<a href="../../decisions/0008-erp-connectors-are-modules/">0008</a>.</p>
-<h2 id="say-what-you-tested-and-when">Say what you tested, and when<a class="headerlink" href="#say-what-you-tested-and-when" title="Permanent link">&para;</a></h2>
-<p>Add a row to <a href="../../operate/compatibility/">compatibility</a>: the ERP, the
-<strong>exact version</strong> you tested against, and the <strong>date</strong>. A connector with no
-live test says so in its row. This is a rule, not a habit — see decision
-<a href="../../decisions/0020-what-supported-means-for-an-erp-connector/">0020</a>,
-which is also where the three words this project uses about connectors are
-defined.</p>
-<p>Short version: a connector is <strong>supported</strong> when it passes the conformance
-suite, is tested against a stated version of a real system on a schedule
-somebody maintains, and has a page saying what it does not cover. Anything
-else is <strong>contributed</strong> or <strong>experimental</strong>, and the compatibility table
-says which.</p>
-<p>Odoo, SAP, Oracle and NetSuite are none of these today. The contract
-exists; the connectors do not. This page is for the person who would write
-one.</p>
-<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<p><strong>How it is validated.</strong> <code>fsmes pack check &lt;dir&gt;</code> — no database, no network,
+exit non-zero — proves the format version is understood, that the MES version
+satisfies <code>requires</code>, that every key is one the product knows (an unknown key
+is an error, which is what the registry cannot say today), that every file it
+names exists, that the time zone is a real IANA zone, that every module named
+exists and its dependencies are enabled, that no <code>[words]</code> entry renames a
+protected term, and that the tag map's state values all map. It reports
+<code>unknown</code> for what it cannot prove without a plant — that the OPC endpoint
+answers, that the database is reachable — rather than passing them.</p>
+<p><strong>How it is versioned and upgraded.</strong> The pack carries <code>format</code> and
+<code>requires</code>; the product carries a pack-format head the way it carries an
+Alembic head. <code>fsmes pack migrate</code> rewrites a pack forward one format version
+at a time, backing it up first and printing what it changed, in the shape
+<code>fsmes plant migrate</code> already uses for databases — refuse if the plant is
+answering, copy first, migrate, print a receipt. The two must run in one
+order and say so: <strong>pack first, then database</strong>, because a database migration
+may need a value the pack now carries. <code>fsmes db-status</code> grows a sibling,
+<code>fsmes pack status</code>, and both are what the console reads for drift.</p>
+<hr />
+<h2 id="7-proposal-the-deployment-profiles">7. Proposal — the deployment profiles<a class="headerlink" href="#7-proposal-the-deployment-profiles" title="Permanent link">&para;</a></h2>
+<p>Three, named in <code>plant.toml</code> as <code>profile</code>, so a plant states which one it is
+and the product can refuse what does not fit.</p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Shape</th>
+<th>What states it</th>
+<th>What it refuses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>laptop</code></td>
+<td>one process, SQLite, replay driver</td>
+<td><code>fsmes demo</code>, the labs</td>
+<td>nothing; it is the evaluation profile</td>
+</tr>
+<tr>
+<td><code>plant</code></td>
+<td>Compose or systemd: PostgreSQL, api replicas, connect, one-shot migrate</td>
+<td><code>docker/docker-compose.yml</code>, <code>deploy/</code></td>
+<td>SQLite with more than one writer process; well-known passwords; starting behind the schema head</td>
+</tr>
+<tr>
+<td><code>fleet</code></td>
+<td>N <code>plant</code> nodes plus one console</td>
+<td>does not exist</td>
+<td>pushing anything to a node</td>
+</tr>
+</tbody>
+</table>
+<p>The first two exist and are documented in <a href="../../operate/deploy/">deploy</a>; the
+profile name does not. Making it explicit is what lets a plant node say <em>I am
+a plant, not a laptop</em> in one word, to the console and to its own start-up
+checks.</p>
+<hr />
+<h2 id="8-proposal-the-console">8. Proposal — the console<a class="headerlink" href="#8-proposal-the-console" title="Permanent link">&para;</a></h2>
+<p><strong>A read-only web page that polls a list of plants and shows what each one
+says about itself.</strong> One process, no database of its own beyond a cache, no
+credentials to a machine, no path to change anything anywhere.</p>
+<p>For a first version, per plant, one row: name and label; reachable or not, and
+when it last answered; shadow or live; MES version; schema revision against
+head; pack version against head; whether the ERP outbox has anything dead;
+whether the UNS backlog is draining; and the plant's line OEE for the current
+shift. Clicking a row opens that plant's own dashboard — the console does not
+re-implement a screen the product already has.</p>
+<p>What it deliberately does not do, and this is the decision in
+<a href="../../decisions/0023-the-fleet-console-observes/">0023</a>:</p>
 <ul>
-<li><a href="../../operate/erpnext/">The ERPNext connector</a> — the reference
-  implementation, and what it is and is not tested against</li>
-<li><a href="../../operate/compatibility/">Compatibility</a> — what has been tested
-  against what</li>
-<li><a href="../your-first-module/">Your first module</a> — the entry-point mechanism</li>
-<li>Decision records
-  <a href="../../decisions/0008-erp-connectors-are-modules/">0008</a> and
-  <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/">0020</a></li>
-<li>The code: <code>src/fsmes/integrations/erp/base.py</code>, <code>contract.py</code>,
-  <code>conformance.py</code></li>
+<li><strong>It never writes to a plant.</strong> Not a setting, not a pack, not an order, not
+  a restart. Every M8 verb — enrol, telemetry, desired state, drift — is a
+  read or a comparison. A console that can push is a console that can push to
+  the wrong plant, and the blast radius of that is a factory.</li>
+<li><strong>A plant that did not answer is <code>unknown</code>, never healthy and never down.</strong>
+  <code>list_plants</code> already does this and the console inherits it. A console that
+  renders silence as green is worse than no console.</li>
+<li><strong>It states its total.</strong> "12 plants, 11 answered, 1 unknown" — rule 4 of
+  <a href="../STYLE/">the style contract</a> applied to a fleet. The number of plants
+  configured is never the number of plants seen.</li>
+<li><strong>It aggregates nothing across plants that would be a lie.</strong> A fleet OEE is
+  a lie unless every plant is the same shape; the console shows twelve
+  numbers, not one. This is the same rule the
+  <a href="../../operate/shadow-scorecard/">shadow scorecard</a> follows when it refuses
+  to add operations into an order total.</li>
+<li><strong>It holds no plant data.</strong> It caches the last answer for display and
+  nothing else. Orders, serials, people and events stay in the plant that
+  made them.</li>
 </ul>
+<p>"Enrol", then, means: <em>a person adds a plant to the console's list and gives
+it a credential the plant already understands.</em> Not a mutual handshake, not a
+certificate authority, not a bootstrap token — those are a control plane, and
+a control plane implies a plane that controls. What the product genuinely
+needs first is a <strong>read-only machine credential</strong>: an account that can call
+<code>/health</code>, <code>/shadow</code>, <code>/metrics</code>, <code>/ops/services</code> and the OEE endpoints and
+literally nothing else, so a console does not run as a person and does not
+run as <code>AGENT</code>. That is a capability set and a role, both of which
+<code>src/fsmes/services/capabilities.py</code> already knows how to express.</p>
+<hr />
+<h2 id="9-the-order-of-work">9. The order of work<a class="headerlink" href="#9-the-order-of-work" title="Permanent link">&para;</a></h2>
+<p>Four pieces. Each is a handoff, each ends in something a person can see, and
+each is useful alone if the next one never happens.</p>
+<h3 id="piece-1-a-plant-knows-its-own-name">Piece 1 — a plant knows its own name<a class="headerlink" href="#piece-1-a-plant-knows-its-own-name" title="Permanent link">&para;</a></h3>
+<p><code>MES_PLANT_NAME</code> becomes required for a non-laptop profile and reaches
+everything a reader can see: <code>/health</code>, <code>/shadow</code>, <code>/metrics</code> (as a label),
+the dashboard header, <code>fsmes info</code>, the backup manifest. Add
+<code>MES_PLANT_TIMEZONE</code> as a real setting, used by shifts, OEE windows and every
+screen, defaulting to the process zone and saying so.</p>
+<p><strong>Done when:</strong> two plants running side by side answer <code>/health</code> with different
+<code>plant</code> values, and a screenshot of either dashboard says which plant it is.</p>
+<h3 id="piece-2-the-guard-tests-and-the-layers-they-need">Piece 2 — the guard tests, and the layers they need<a class="headerlink" href="#piece-2-the-guard-tests-and-the-layers-they-need" title="Permanent link">&para;</a></h3>
+<p>Write <code>core_purity</code> and <code>no_tenant_literals</code>. Move whatever they find into
+place. This piece is first among the pack work because a module cannot be
+disabled while the kernel imports it, and a pack cannot be trusted while a
+plant's name can hide in <code>src/</code>.</p>
+<p><strong>Done when:</strong> both tests are in the suite and fail on a deliberate
+violation — a <code>from fsmes.services import …</code> added to a <code>domain/</code> module, and
+a lab plant's name pasted into <code>src/fsmes/services/line.py</code>.</p>
+<h3 id="piece-3-the-pack-format-its-validator-and-an-adversarial-second-pack">Piece 3 — the pack format, its validator, and an adversarial second pack<a class="headerlink" href="#piece-3-the-pack-format-its-validator-and-an-adversarial-second-pack" title="Permanent link">&para;</a></h3>
+<p><code>plant.toml</code>, <code>fsmes pack check</code>, <code>fsmes pack apply</code>, <code>fsmes pack status</code>,
+<code>fsmes pack migrate</code>. The registry becomes a list of packs; each of its
+seventeen keys either moves into <code>plant.toml</code> or is deleted with a reason,
+including the three nobody documented. <code>labs/multiplant</code>'s two plants are converted, and a <strong>third pack is
+invented to disagree with the format</strong> — a plant in a different time zone,
+with several modules off, with its own words for two labels, on PostgreSQL,
+with an ERP mode set, whose master data is data rather than a script.</p>
+<p><strong>Done when:</strong> <code>fsmes pack check</code> refuses a pack with an unknown key, a bad
+time zone, a renamed protected term, and a <code>requires</code> this version does not
+satisfy — each with one sentence naming the problem; and the third pack runs
+from the same wheel with two modules off, proven by its own API answering 404
+on those routes and its MCP tool list being shorter.</p>
+<h3 id="piece-4-the-console">Piece 4 — the console<a class="headerlink" href="#piece-4-the-console" title="Permanent link">&para;</a></h3>
+<p>The page from §8, over a read-only role, against a list of packs.</p>
+<p><strong>Done when:</strong> it shows three plants, one of which is switched off, as
+"2 answered, 1 unknown" — and a reviewer can read the code and see there is no
+call in it that writes.</p>
+<p>Pieces 1 and 2 are independent of each other and of the rest. Piece 3 needs
+piece 2. Piece 4 needs pieces 1 and 3, and is the only one that closes the
+milestone's <em>done when</em>.</p>
+<hr />
+<h2 id="10-risks-named">10. Risks, named<a class="headerlink" href="#10-risks-named" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>What it looks like</th>
+<th>What to do about it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>The pack becomes a language.</strong> <code>[words]</code>, then conditions, then an expression, then a hook, then a plugin. Every configuration format ends up here</td>
+<td>A plant asks for "just one small computed field"</td>
+<td>Rule 1 of §6, held by a test, not by prose. The escape hatch is a module, and modules are code and are reviewed</td>
+</tr>
+<tr>
+<td><strong><code>[words]</code> corrupts comparability.</strong> A plant renames a state, and its events no longer mean what another plant's mean</td>
+<td>The console compares two plants that use the same word for different things</td>
+<td>Protected terms are enumerated and tested. <code>[words]</code> reaches screens and reports only, never a topic, a <code>kind</code>, an enum or an API field</td>
+</tr>
+<tr>
+<td><strong>The console grows a button.</strong> "It only restarts the OPC agent."</td>
+<td>One write path, then a second</td>
+<td>Decision <a href="../../decisions/0023-the-fleet-console-observes/">0023</a>, plus the shadow ratchet: the console is code under <code>src/fsmes</code>, so a new outbound call must be registered, and a registered write to a plant is visible in review</td>
+</tr>
+<tr>
+<td><strong>Migrating in two places.</strong> Pack format and database schema both move, and a plant ends up half-upgraded</td>
+<td>A pack written for 0.3 meets a 0.2 database</td>
+<td>One order, stated and enforced: pack first, then database; each refuses a plant that is answering; each prints a receipt</td>
+</tr>
+<tr>
+<td><strong>The third pack is a costume.</strong> It disagrees on paper and is really the demo plant again</td>
+<td>It passes on the first try</td>
+<td>The test is whether writing it <em>forced a code change</em>. If adding the third pack changes nothing under <code>src/</code>, the format is proved; if it changes something, that change is the finding</td>
+</tr>
+<tr>
+<td><strong>Nobody has run two plants for real.</strong> The lab is two processes on one laptop</td>
+<td>Everything above is designed against a lab</td>
+<td>The first real plant is one plant. The console's value starts at the second, and there is no second yet — which is an argument for pieces 1–3 landing well before piece 4</td>
+</tr>
+<tr>
+<td><strong>The dashboard breaks before the fleet does.</strong> A single plant of sixty machines already breaks the screens</td>
+<td>Sixty cards, 240 progress bars, no grouping</td>
+<td>Recorded already in <code>docs/design/backlog/sixty-machine-plant.md</code>; it is a prerequisite for a large plant, not for a fleet</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="11-findings-not-fixed">11. Findings, not fixed<a class="headerlink" href="#11-findings-not-fixed" title="Permanent link">&para;</a></h2>
+<p>Noticed while reading. None was changed — this branch carries no product code.</p>
+<ol>
+<li><code>plant_env</code> (<code>src/fsmes/plant.py</code>) hard-codes <code>MES_ERP_MODE="off"</code>, so no
+   plant started from the registry can reach an ERP. Correct for the lab it
+   was written for; wrong the moment the registry describes a real plant.</li>
+<li><a href="../../operate/registry/">The registry how-to</a> documents an <code>agent</code> key that
+   nothing reads, and omits <code>inspect_every</code>, <code>issue_every</code> and <code>inspect_all</code>,
+   which are read.</li>
+<li><code>MES_PLANT_NAME</code> defaults to <code>""</code>, and an empty plant name reaches the UNS
+   envelope as <code>"plant": null</code> — an event that cannot say which plant made it.</li>
+<li><code>docs/ARCHITECTURE.md</code>'s proposed layout names <code>packs/</code>, <code>kernel/</code> and
+   <code>modules/</code>. <code>packs/</code> does not exist, <code>modules/</code> does not exist, and
+   <code>kernel/</code> holds two files while the kernel it describes lives in <code>domain/</code>
+   and <code>services/</code>. The page says up front that it is intent rather than
+   description, and it is still the first thing a new contributor reads.</li>
+<li><code>README.md</code> principle 7 says <em>"A second, deliberately-different demo pack
+   exists purely to prove that adding a plant never requires a code change."</em>
+   A second <em>plant</em> exists and does prove that. A pack does not exist. The
+   sentence is ahead of the code by one noun.</li>
+</ol>
 
 
 
@@ -3364,7 +3882,7 @@ one.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../your-first-module/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Tutorial — your first module">
+          <a href="../STYLE/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Style">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -3374,20 +3892,20 @@ one.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Tutorial — your first module
+                Style
               </div>
             </div>
           </a>
         
         
           
-          <a href="../../design/STYLE/" class="md-footer__link md-footer__link--next" aria-label="Next: Style">
+          <a href="../../decisions/" class="md-footer__link md-footer__link--next" aria-label="Next: Decisions">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Style
+                Decisions
               </div>
             </div>
             <div class="md-footer__button md-icon">
