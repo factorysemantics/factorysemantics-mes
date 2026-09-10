@@ -23,6 +23,7 @@ from fsmes.domain.gauges import (
     GaugeStatus,
 )
 from fsmes.domain.idempotency import IdempotencyKey
+from fsmes.domain.inbound import InboundEvent, InboundKind
 from fsmes.domain.integration import ErpMessage, MessageDirection, MessageStatus
 from fsmes.domain.maintenance import (
     MaintenanceKind,
@@ -75,6 +76,8 @@ __all__ = [
     "Gauge",
     "GaugeStatus",
     "IdempotencyKey",
+    "InboundEvent",
+    "InboundKind",
     "LotConsumption",
     "LotStatus",
     "MaintenanceKind",

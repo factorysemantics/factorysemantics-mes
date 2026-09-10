@@ -105,6 +105,9 @@ nav:
       - How-to — upgrading between versions: operate/upgrade.md
       - Explanation — the confirmation handoff: operate/confirmation-files.md
       - Reference — the ERP confirmation contract: reference/erp-confirmations.md
+
+
+      - How-to — inbound events from other systems: operate/inbound.md
       - Reference — settings: reference/settings.md
       - Reference — CLI: reference/cli.md
       - Reference — REST API: reference/api.md

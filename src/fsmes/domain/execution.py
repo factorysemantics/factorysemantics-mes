@@ -60,6 +60,13 @@ class LotConsumption(Base):
 class ProductionSource(enum.StrEnum):
     MANUAL = "manual"
     OPC = "opc"
+    # Another system told this MES; this MES did not observe it. A count
+    # typed into an incumbent MES and handed over as a file, a read-only
+    # query or a broker message arrives here. It is kept apart from MANUAL
+    # because "an operator typed this into us" and "an operator typed this
+    # into something else and we were told" are different facts, and a
+    # shadow running beside an incumbent has to be able to say which.
+    EXTERNAL = "external"
 
 
 class ProductionLog(Base):
@@ -82,4 +89,8 @@ class ProductionLog(Base):
     good_qty: Mapped[float] = mapped_column(default=0.0)
     scrap_qty: Mapped[float] = mapped_column(default=0.0)
     source: Mapped[ProductionSource] = mapped_column(str_enum(ProductionSource), default=ProductionSource.MANUAL)
+    # Which system supplied it, when `source` is EXTERNAL - the free name the
+    # inbound contract carries, for example `replay:incumbent-mes`. Null for
+    # anything this MES saw itself, because there is no other system to name.
+    source_system: Mapped[str | None] = mapped_column(String(80))
     ts: Mapped[datetime] = mapped_column(default=utcnow, index=True)

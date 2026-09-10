@@ -46,6 +46,12 @@ class QualityCheck(Base):
     # Which instrument took the reading. A measurement whose gauge is
     # later found out of tolerance has to be findable.
     gauge_id: Mapped[int | None] = mapped_column(ForeignKey("gauges.id"), index=True)
+    # Which system supplied the reading, when it did not come from here.
+    source_system: Mapped[str | None] = mapped_column(String(80))
+    # The verdict that system sent with it, if it sent one. `result` above is
+    # always this MES's own verdict, from this MES's spec. The two disagreeing
+    # is a finding, not an error, and losing theirs would hide it.
+    supplied_result: Mapped[CheckResult | None] = mapped_column(str_enum(CheckResult))
     ts: Mapped[datetime] = mapped_column(default=utcnow)
 
     spec: Mapped[QualitySpec] = relationship()

@@ -274,7 +274,7 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float = 8.0
         # tens of thousands of intervals, and hydrating each one was most of
         # this chart's cost.
         states = db.execute(
-            select(EquipmentState.state, EquipmentState.reason,
+            select(EquipmentState.state, EquipmentState.reason, EquipmentState.reason_source,
                    EquipmentState.started_at, EquipmentState.ended_at)
             .where(
                 EquipmentState.equipment_id == unit.id,
@@ -287,6 +287,9 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float = 8.0
                     {
                         "state": getattr(state, "value", state),
                         "reason": reason,
+                        # Null means this MES named it. The interval is
+                        # always its own observation either way.
+                        "reason_source": reason_source,
                         # Clipped to the window so the client can lay out
                         # directly without re-deriving what is on screen.
                         "start": max(started_at, start),
@@ -295,7 +298,7 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float = 8.0
                                                    - max(started_at, start)).total_seconds()), 1),
                         "open": ended_at is None,
                     }
-                    for state, reason, started_at, ended_at in states
+                    for state, reason, reason_source, started_at, ended_at in states
         ]
         # One pixel of an `hours`-wide chart, so the floor scales with the
         # window the caller asked for rather than being a magic number.
@@ -322,6 +325,11 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float = 8.
     "other" bucket: on a line fed by OPC alone, nothing labels a stop, and a
     pareto that quietly says 100% "other" is how a plant convinces itself it has
     no data problem.
+
+    Every bucket says who named it. A label supplied by another system is
+    real evidence and is counted the same as one typed here, but the two are
+    not the same claim, and a pareto that cannot separate them cannot be
+    audited. `here` is this MES's own; the rest are named by supplier.
     """
     centre, units = _line_and_units(db, line_code)
     start, end = _window(db, units, hours)
@@ -343,9 +351,13 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float = 8.
         if seconds <= 0:
             continue
         key = state.reason or UNLABELLED
-        bucket = buckets.setdefault(key, {"reason": key, "seconds": 0.0, "events": 0, "machines": {}})
+        bucket = buckets.setdefault(key, {"reason": key, "seconds": 0.0, "events": 0,
+                                          "machines": {}, "labelled_by": {}})
         bucket["seconds"] += seconds
         bucket["events"] += 1
+        if state.reason:
+            who = state.reason_source or "here"
+            bucket["labelled_by"][who] = round(bucket["labelled_by"].get(who, 0.0) + seconds, 1)
         code = by_id[state.equipment_id]
         bucket["machines"][code] = round(bucket["machines"].get(code, 0.0) + seconds, 1)
 

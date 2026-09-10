@@ -454,6 +454,81 @@ def erp_validate(
                "question, not this command's.")
 
 
+inbound_app = typer.Typer(
+    help="Inbound events: what other systems tell this MES that it cannot observe.")
+app.add_typer(inbound_app, name="inbound")
+
+
+def _inbound_mapping():
+    """The configured column mapping, or a sentence saying what is wrong."""
+    from fsmes.integrations.inbound.folder import MappingError, load_mapping
+
+    settings = get_settings()
+    try:
+        return settings, load_mapping(settings.inbound_mapping_file)
+    except MappingError as exc:
+        typer.echo(f"NOT OK  {exc}")
+        raise typer.Exit(1) from exc
+
+
+@inbound_app.command("check")
+def inbound_check() -> None:
+    """Say whether the folders and the column mapping are usable, in words.
+
+    What it cannot check is the plant's data, and it says so rather than
+    counting an empty inbox as a working interface.
+    """
+    from fsmes.integrations.inbound.folder import READABLE, folders_for
+
+    settings, mappings = _inbound_mapping()
+    typer.echo(f"Mapping {settings.inbound_mapping_file}: "
+               f"{len(mappings)} stream(s) — {', '.join(sorted(mappings))}.")
+    waiting = 0
+    for stream, mapping in sorted(mappings.items()):
+        folders = folders_for(settings.inbound_dir, stream)
+        exists = folders.inbox.is_dir()
+        files = [p for p in folders.inbox.iterdir()
+                 if p.is_file() and p.suffix.lower() in READABLE] if exists else []
+        waiting += len(files)
+        typer.echo(f"  {stream:<9} {folders.inbox}  "
+                   + ("exists" if exists else "does not exist yet; `watch` will make it"))
+        typer.echo(f"            supplied by {mapping.source!r} ({mapping.source_kind}), "
+                   f"timestamps in {mapping.timezone or 'whatever zone each row states'}")
+        typer.echo(f"            {len(files)} file(s) waiting")
+    typer.echo(f"{waiting} file(s) waiting in total. Nothing has been read; run "
+               "`fsmes inbound watch --once` to read them.")
+
+
+@inbound_app.command("watch")
+def inbound_watch(once: bool = False) -> None:
+    """Read whatever has been dropped in the inbound folders, forever.
+
+    `--once` makes a single pass and reports it — what a cron-shaped
+    deployment wants, and what a person testing a new export wants.
+    Every run states its totals: rows read, recorded, already seen, and
+    rejected with the first reason for each.
+    """
+    import time
+
+    from fsmes.db import session_scope
+    from fsmes.integrations.inbound.folder import run_once
+
+    settings, mappings = _inbound_mapping()
+    setup_logging(settings.log_level, settings.log_dir, "inbound-watch")
+    root = Path(settings.inbound_dir)
+    if once:
+        for line in run_once(session_scope, root, mappings).render():
+            typer.echo(line)
+        return
+    typer.echo(f"Watching {root} every {settings.inbound_poll_seconds}s. Ctrl-C to stop.")
+    while True:
+        report = run_once(session_scope, root, mappings)
+        if report.files:
+            for line in report.render():
+                typer.echo(line)
+        time.sleep(settings.inbound_poll_seconds)
+
+
 uns_app = typer.Typer(help="Unified namespace: relay MES events to an MQTT broker.")
 app.add_typer(uns_app, name="uns")
 

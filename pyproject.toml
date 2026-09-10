@@ -48,6 +48,14 @@ dependencies = [
     "structlog>=24.1",
     "httpx>=0.27",
     "asyncua>=1.1.5",
+    # Windows ships no IANA time-zone database, so `zoneinfo` there cannot
+    # resolve `America/Chicago` - or even `UTC` - without this. Windows is a
+    # first-class target (plant PCs run this), and the inbound folder driver
+    # reads a plant's exports in the plant's own local time. Without the
+    # database the only alternatives are to refuse every timestamped file or
+    # to read local time as UTC, and the second is how every stop in a shift
+    # ends up hours out. Not needed on Linux or macOS, which have one.
+    "tzdata; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
@@ -119,6 +127,7 @@ packages = ["src/fsmes"]
 "config/line_layout.json" = "fsmes/data/config/line_layout.json"
 "config/tag_map_kepsim.json" = "fsmes/data/config/tag_map_kepsim.json"
 "config/tag_map_kepware.json" = "fsmes/data/config/tag_map_kepware.json"
+"config/inbound_mapping.json" = "fsmes/data/config/inbound_mapping.json"
 
 [tool.hatch.build.targets.sdist]
 exclude = [".claude/", "site/", "docs/reference/"]

@@ -53,6 +53,62 @@ def set_state(
     return new
 
 
+def label_stop(
+    session: Session,
+    *,
+    equipment_code: str,
+    start: datetime,
+    end: datetime | None = None,
+    reason: str,
+    source: str,
+    actor: str = "system",
+) -> list[EquipmentState]:
+    """Put somebody else's reason code on stops this MES already observed.
+
+    A technician labels a stop in whatever system the plant runs. That label
+    belongs on the interval the MES watched, not on a new one: the interval
+    is this MES's observation and stays that way, while `reason` and
+    `reason_source` record who named it.
+
+    No interval is created here, ever. If nothing was observed in the window,
+    this returns an empty list and the caller says so. Manufacturing a
+    downtime interval from another system's claim would put seconds into
+    availability that this MES never watched, and there would be no way
+    afterwards to tell those seconds from the real ones.
+
+    Only intervals that are not already labelled are touched, and only ones
+    where the machine was not running: a supplied label never overwrites a
+    label somebody here already gave, and never contradicts an observation.
+    """
+    equipment = masterdata.get_equipment(session, equipment_code)
+    window_end = end or utcnow()
+    candidates = list(session.scalars(
+        select(EquipmentState).where(
+            EquipmentState.equipment_id == equipment.id,
+            EquipmentState.state != EquipmentStateName.RUNNING,
+            EquipmentState.reason.is_(None),
+            EquipmentState.started_at < window_end,
+            or_(EquipmentState.ended_at.is_(None), EquipmentState.ended_at > start),
+        ).order_by(EquipmentState.started_at)
+    ))
+    if not candidates:
+        return []
+    for interval in candidates:
+        interval.reason = reason[:120]
+        interval.reason_source = source[:80]
+    audit.record(
+        session,
+        actor=actor,
+        action="equipment.stop_labelled",
+        entity_type="equipment",
+        entity_id=equipment.code,
+        after={"reason": reason, "source": source, "intervals": len(candidates),
+               "from": start.isoformat(), "to": end.isoformat() if end else None},
+    )
+    session.flush()
+    return candidates
+
+
 def current_states(session: Session) -> list[EquipmentState]:
     return list(
         session.scalars(

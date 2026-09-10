@@ -304,7 +304,11 @@ async function loadUnassigned() {
     const li = el("li");
     const what = el("div", "what");
     what.append(el("div", "mono", `${fmt.qty(row.good)} good · ${fmt.qty(row.scrap)} scrap`));
-    what.append(el("div", "muted small", `${fmt.clock(row.ts)} — no order`));
+    // Where the number came from, on the row with the number. A count this
+    // machine made and a count another system says it made are different
+    // claims, and the list is unreadable if it cannot show which is which.
+    const from = row.source_system ? `told by ${row.source_system}` : `counted here (${row.source})`;
+    what.append(el("div", "muted small", `${fmt.clock(row.ts)} — no order · ${from}`));
     li.append(what);
     list.append(li);
   }

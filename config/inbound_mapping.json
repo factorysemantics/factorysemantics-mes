@@ -1,0 +1,48 @@
+{
+  "downtime": {
+    "source": "replay:incumbent-mes",
+    "source_kind": "replay",
+    "timezone": "UTC",
+    "columns": {
+      "external_key": "stop_id",
+      "recorded_at": "entered_at",
+      "equipment": "machine",
+      "started_at": "stop_start",
+      "ended_at": "stop_end",
+      "reason": "reason_code",
+      "note": "comment"
+    }
+  },
+  "quality": {
+    "source": "replay:incumbent-mes",
+    "source_kind": "replay",
+    "timezone": "UTC",
+    "columns": {
+      "external_key": "check_id",
+      "recorded_at": "entered_at",
+      "order": "order_no",
+      "equipment": "machine",
+      "characteristic": "characteristic",
+      "value": "reading",
+      "unit": "unit",
+      "spec_reference": "spec_ref",
+      "gauge": "gauge_code",
+      "passed": "verdict",
+      "inspector": "inspector_id"
+    }
+  },
+  "counts": {
+    "source": "replay:incumbent-mes",
+    "source_kind": "replay",
+    "timezone": "UTC",
+    "columns": {
+      "external_key": "entry_id",
+      "recorded_at": "entered_at",
+      "order": "order_no",
+      "equipment": "machine",
+      "good": "good_qty",
+      "scrap": "scrap_qty",
+      "when": "counted_at"
+    }
+  }
+}

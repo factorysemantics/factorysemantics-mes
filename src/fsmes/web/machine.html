@@ -129,8 +129,10 @@
       </div>
       <div class="panel">
         <h2>Unassigned production <span id="unassigned-count" class="muted"></span></h2>
-        <p class="muted small">Units this machine counted with no order open to book them against —
-          kept, not discarded. A number here means the counter ran past its order or between orders.</p>
+        <p class="muted small">Units counted with no order open to book them against —
+          kept, not discarded. A number here means the counter ran past its order or between orders,
+          or that another system told this MES about units it has no order for. Every row says
+          which.</p>
         <ul id="unassigned" class="queue"></ul>
       </div>
     </section>

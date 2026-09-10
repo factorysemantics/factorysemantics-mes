@@ -38,6 +38,10 @@ class EquipmentState(Base):
     equipment_id: Mapped[int] = mapped_column(ForeignKey("equipment.id"))
     state: Mapped[EquipmentStateName] = mapped_column(str_enum(EquipmentStateName))
     reason: Mapped[str | None] = mapped_column(String(120))
+    # Who named the stop. The interval is always this MES's own observation;
+    # the label on it may have been supplied by another system, and a pareto
+    # that cannot tell the two apart is a pareto nobody can audit.
+    reason_source: Mapped[str | None] = mapped_column(String(80))
     started_at: Mapped[datetime] = mapped_column(default=utcnow)
     ended_at: Mapped[datetime | None]
 

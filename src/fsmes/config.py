@@ -73,6 +73,17 @@ class Settings(BaseSettings):
     # CSV replay (fsmes run-opc-sim --replay): the KepSim line's generated tables.
     replay_dir: Path = Path("labs/kepsim/out")
 
+    # --- Inbound events (fsmes inbound watch) ------------------------------
+    # The second front door, beside the OPC agent: downtime labels, quality
+    # results and counts that people typed into some other system. One inbox
+    # folder per event type under this root, plus processed/ and rejected/.
+    inbound_dir: Path = Path("inbound")
+    # What this plant's columns are called, mapped onto the inbound contract.
+    # Config, not code: a new supplier is a new mapping, never a new release.
+    # The packaged example maps the demo plant's own CSV shape.
+    inbound_mapping_file: Path = Path("config/inbound_mapping.json")
+    inbound_poll_seconds: float = 10.0
+
     erp_mode: str = "rest"  # rest | file | erpnext | off
     erp_base_url: str = "http://127.0.0.1:8001"
     erp_inbox: Path = Path("erp_exchange/inbox")
@@ -219,7 +230,7 @@ def get_settings() -> Settings:
         raise shadow.ShadowMisconfigured(plain) from None
     if not settings.secret_key:
         settings.secret_key = secrets.token_urlsafe(32)
-    for field in ("tag_map_file", "line_layout_file"):
+    for field in ("tag_map_file", "line_layout_file", "inbound_mapping_file"):
         if field not in settings.model_fields_set:
             setattr(settings, field, packaged_default(getattr(settings, field)))
     return settings

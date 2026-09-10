@@ -88,6 +88,40 @@ goes under Honesty with a migration line, so plant people can find it.
   audit trail as `shadow.on` / `shadow.off` at start-up. There is no runtime
   toggle: leaving shadow mode is a restart.
   See [running beside an existing MES](docs/operate/shadow-mode.md).
+
+
+- **A second front door: events other systems tell this MES.** The OPC agent
+  is how the MES sees a plant; it is not how it learns why a machine stopped,
+  what an inspector measured, or how many units somebody counted by hand.
+  Those are typed into whatever system the plant already has, and until now
+  none of it could reach the MES. `fsmes.integrations.inbound.contract` is
+  three typed shapes — **`DowntimeLabel`**, **`QualityResult`**,
+  **`ManualCount`** — each carrying who supplied it (`source`, a free name
+  such as `replay:incumbent-mes`, plus a `source_kind` category), the
+  supplier's own id (`external_key`), and when the *supplier* recorded it
+  (`recorded_at`). `fsmes.services.inbound` writes them through the services
+  that already own the rules, deduplicating on
+  `(source, kind, external_key)`, so the same file delivered twice changes
+  nothing. It matters most for a shadow run: technicians label stops in the
+  incumbent, and a shadow that never hears those shows an unlabelled stop
+  where the incumbent shows a reason code, which reads as a data problem in
+  the shadow when it is a plumbing problem.
+- **The first inbound driver: files in a folder.** `fsmes inbound watch`
+  reads CSV — or the same rows as JSON — from one inbox per event type,
+  through a column mapping that is *your* configuration and not code. No
+  input file is ever deleted: it moves to `processed/`, or to `rejected/`
+  when nothing could be taken from it, and a rejects report beside it states
+  the file's totals and the first reason for each row refused. `fsmes
+  inbound check` says whether the mapping and the folders are usable before
+  any file exists. [Feeding the MES what people typed
+  elsewhere](docs/operate/inbound.md) is the page. A SQL poller and an MQTT
+  subscriber are the same three shapes over a different transport, and are
+  not written.
+- `tzdata` is now a dependency **on Windows only**. Windows ships no IANA
+  time-zone database, so `zoneinfo` there cannot resolve `America/Chicago`
+  — or even `UTC` — without it, and the inbound driver reads a plant's
+  exports in the plant's own local time. Linux and macOS have a database
+  already and gain nothing.
 - **A connector contract, so the next ERP is not the first one all over
   again.** The ERP port had three methods — fetch, acknowledge, confirm —
   and they said nothing about the three things that actually bit the
@@ -245,6 +279,50 @@ goes under Honesty with a migration line, so plant people can find it.
   `produced_qty` of 0. Nothing partial is posted in place of the refused
   entry. Once somebody raises the allowance or agrees what the ERP should
   hold, `POST /erp/outbox/{id}/retry` sends the same confirmation again.
+- **A new production source, `external`, because "we counted it" and "we were
+  told" are different facts.** `ProductionSource` had `manual` and `opc`; a
+  count that reached the MES from another system had nowhere honest to sit,
+  and calling it `manual` would have claimed somebody typed it *here*.
+  `external` is now the third value, with **`ProductionLog.source_system`**
+  naming the system that supplied it. Null there means this MES counted it
+  itself — there is no other system to name, and naming one would be a guess.
+  **Migration `b5c1d09e73af`** adds `production_logs.source_system`,
+  `equipment_states.reason_source`, `quality_checks.source_system` and
+  `quality_checks.supplied_result`, and the `inbound_events` ledger. Every
+  column is nullable and nothing existing is rewritten: a row from before the
+  migration was observed by this MES, and null is the right answer.
+  **What to check after upgrading:** any report that groups production by
+  source, or that assumes `ProductionSource` has two values, now has a third.
+- **A supplied downtime label goes on a stop this MES observed, and never
+  creates one.** The interval stays this MES's own observation; `reason` and
+  `reason_source` record who named it. A label for a stop the MES never saw
+  is refused and reported, because manufacturing an interval from another
+  system's claim would put seconds into availability that nothing here ever
+  watched, with no way afterwards to tell them from the real ones. A supplied
+  label never overwrites one given here.
+- **A quality result keeps both verdicts when they disagree.** The `result`
+  on a check is always this MES's own, from this MES's spec.
+  `supplied_result` keeps the verdict the other system sent. Two systems
+  disagreeing about the same reading is a finding about the two systems, and
+  storing only one of them would hide it. A reading for a characteristic this
+  MES has no spec for is refused rather than measured against an invented
+  spec, and a gauge code this MES does not know is reported as untraceable
+  rather than created.
+- **The downtime pareto says who named each stop.** Every bucket gains
+  `labelled_by`, seconds by labeller: `here` is this MES's own, the rest are
+  named by supplier. Supplied labels are counted the same as local ones —
+  they are real evidence — but they are not the same claim, and a pareto that
+  cannot separate them cannot be audited.
+- **A count supplied by another system with no order open here is kept, not
+  refused.** It is booked against an open operation when there is one, and
+  otherwise recorded as unassigned production against the machine with the
+  supplying system named — the same rule the OPC path already had, for the
+  same reason: the system that took the count had the order, and a unit the
+  plant made may not disappear because this MES had nowhere tidy to put it. A
+  count typed *into this MES* with no order open is still an error.
+- **A timestamp with no time zone, in a stream whose mapping does not say
+  which zone that system writes, is rejected row by row.** Reading a local
+  timestamp as UTC would move every stop in a shift by hours, silently.
 - **What a missing ERPNext custom field does is now measured, not assumed.**
   Against ERPNext v15.120.0: a `PUT` to a submitted Work Order naming a field
   the doctype does not have returns `200`, and the value is neither stored nor
