@@ -65,6 +65,29 @@ goes under Honesty with a migration line, so plant people can find it.
   [The confirmation handoff](docs/operate/confirmation-files.md) is the page
   for the ERP team, and it says plainly that the contract is SAP-*shaped*
   and that no SAP has consumed one of these.
+- **Shadow mode: `MES_SHADOW=true`.** One setting that lets this MES watch a
+  real plant and change nothing in it. It reads the OPC UA tags and books
+  production exactly as it would in charge; every path by which it could
+  reach past its own database is shut. No setpoint reaches a machine (the
+  order-code write-back included, which was never approval-gated); no live
+  ERP is contacted; nothing is published to a broker; the ERP file adapter
+  reads its inbox and moves nothing, because that folder may be the
+  incumbent's; the optional cloud model is refused, so the plant's numbers
+  stay on the box; `fsmes demo` refuses to run a fake plant beside a real
+  one. `MES_ERP_MODE` may only be `off` or `file` and `MES_UNS_MODE` only
+  `off` or `log` — anything else refuses to start, in one sentence naming
+  the variable. A mode you never set is settled rather than refused.
+
+  Every outbound path in the package is listed in one place,
+  `fsmes/shadow.py`, with what shadow mode does to each and why; a test
+  walks each closed path and holds the refusal, and a second test scans the
+  source for outbound primitives so a new path cannot be added without the
+  register hearing about it. It shows on every screen as a bar that cannot
+  be dismissed, in `fsmes info`, at `GET /health` and `GET /shadow`, in the
+  MCP server's description and per plant in `list_plants()`, and in the
+  audit trail as `shadow.on` / `shadow.off` at start-up. There is no runtime
+  toggle: leaving shadow mode is a restart.
+  See [running beside an existing MES](docs/operate/shadow-mode.md).
 - **A connector contract, so the next ERP is not the first one all over
   again.** The ERP port had three methods — fetch, acknowledge, confirm —
   and they said nothing about the three things that actually bit the
