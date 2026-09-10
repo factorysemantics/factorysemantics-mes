@@ -420,6 +420,39 @@ def erp_check() -> None:
     typer.echo("Ready, as far as anything above was checked." if result.unverified else "Ready.")
 
 
+@erp_app.command("validate")
+def erp_validate(
+    path: Path = typer.Argument(..., help="A confirmation file, or a folder of them."),
+) -> None:
+    """Check outbound confirmation files against the contract and the house rules.
+
+    Reads files and nothing else: no ERP, no connector, no database. It is
+    what a plant's ERP team runs on a shadow-mode outbox to answer the
+    question they always ask first - would what this MES sends be correct
+    if it were connected? Exits non-zero if anything in the folder would
+    be right to reject.
+    """
+    from fsmes.integrations.erp import validate as validator
+
+    if not path.exists():
+        typer.echo(f"NOT OK  {path} does not exist.")
+        raise typer.Exit(1)
+    typer.echo(f"Checking {path} against the ERP confirmation contract.")
+    report = validator.validate(path)
+    for line in report.render():
+        typer.echo(line)
+    if not report.ok:
+        typer.echo("Not correct - an ERP would be right to reject what is marked above.")
+        raise typer.Exit(1)
+    if not report.documents:
+        typer.echo("Nothing was checked, so nothing is confirmed.")
+        return
+    typer.echo("Correct, as far as files can say: every document matches the contract the "
+               "published JSON Schema is generated from and breaks none of the house rules. "
+               "Whether the numbers describe what the line really did is the plant's "
+               "question, not this command's.")
+
+
 uns_app = typer.Typer(help="Unified namespace: relay MES events to an MQTT broker.")
 app.add_typer(uns_app, name="uns")
 
