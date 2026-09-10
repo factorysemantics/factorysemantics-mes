@@ -191,9 +191,18 @@ class Settings(BaseSettings):
     # every new subscriber as though it had just happened, which is a lie
     # about the present the moment anyone reconnects.
     uns_retain: bool = False
+    # How long to wait between cycles when the plant is quiet. A cycle that
+    # fills its batch without a failure does not wait at all, so a backlog
+    # after an outage drains at the broker's speed rather than at
+    # uns_batch / uns_poll_seconds.
     uns_poll_seconds: float = 2.0
     # How many due events one cycle publishes before going back for more.
     uns_batch: int = 200
+    # How many of those are in flight at once. QoS 1 waits for the broker to
+    # acknowledge each publish, so one at a time is one network round trip
+    # per event. Keep this under the client's own in-flight limit (paho, and
+    # so aiomqtt, allows 20 by default); 1 publishes strictly one at a time.
+    uns_inflight: int = 10
 
     sim_speed: float = 1.0
     # How often the agent asks the OPC server what changed. This is the

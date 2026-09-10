@@ -16,6 +16,8 @@ the ERP adapters.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from sqlalchemy import func, select
@@ -46,12 +48,12 @@ def enrol(session: Session, limit: int = 1000) -> list[UnsPublication]:
     past a scan.
     """
     missing = session.scalars(
-        select(ErpMessage)
+        select(ErpMessage.id)
         .outerjoin(UnsPublication, UnsPublication.message_id == ErpMessage.id)
         .where(ErpMessage.direction == MessageDirection.OUT, UnsPublication.id.is_(None))
         .order_by(ErpMessage.id)
         .limit(limit)).all()
-    enrolled = [UnsPublication(message_id=message.id) for message in missing]
+    enrolled = [UnsPublication(message_id=message_id) for message_id in missing]
     session.add_all(enrolled)
     session.flush()
     return enrolled
@@ -81,12 +83,19 @@ def backoff_seconds(attempts: int) -> int:
     return min(BASE_BACKOFF_SECONDS * 2 ** max(0, attempts - 1), MAX_BACKOFF_SECONDS)
 
 
-def mark_published(publication: UnsPublication, topic: str) -> UnsPublication:
+def mark_published(publication: UnsPublication, topic: str,
+                   now: datetime | None = None) -> UnsPublication:
+    """Record a delivery. `now` is the instant that went out on the wire.
+
+    The caller passes it because the envelope carries a `published_at` of
+    its own: read the clock here as well and the database says the event was
+    published at an instant the consumer never saw.
+    """
     publication.status = MessageStatus.SENT
     publication.topic = topic[:400]
     publication.error = None
     publication.next_attempt_at = None
-    publication.published_at = utcnow()
+    publication.published_at = now or utcnow()
     return publication
 
 
@@ -109,6 +118,55 @@ def mark_error(publication: UnsPublication, error: Exception, topic: str | None 
     else:
         publication.next_attempt_at = now + timedelta(seconds=backoff_seconds(publication.attempts))
     return publication
+
+
+@dataclass(frozen=True)
+class Outcome:
+    """What one publish attempt did, held until the write after the loop.
+
+    `message_id` is the outbox row, carried so the caller can name the event
+    in its log without reading the publication back to find out.
+    """
+
+    publication_id: int
+    message_id: int
+    topic: str
+    error: Exception | None = None
+
+
+def record(session: Session, outcomes: Iterable[Outcome],
+           now: datetime | None = None) -> dict[int, UnsPublication]:
+    """Write a whole cycle's results in one transaction, keyed by publication.
+
+    The publisher used to open a session, read one row by primary key and
+    commit for each message it had published: 200 transactions and 400
+    statements for a full batch, every one of them after the broker had
+    already taken the event. One SELECT and one write says the same thing.
+
+    This still honours the rule that a transaction never spans a publish —
+    it is opened after the last one has come back.
+
+    A publication that has gone from under us is skipped rather than
+    recreated: something deleted it deliberately, and the delivery record it
+    was keeping is not ours to restore.
+    """
+    outcomes = list(outcomes)
+    if not outcomes:
+        return {}
+    now = now or utcnow()
+    by_id = {publication.id: publication for publication in session.scalars(
+        select(UnsPublication)
+        .where(UnsPublication.id.in_([outcome.publication_id for outcome in outcomes])))}
+    for outcome in outcomes:
+        publication = by_id.get(outcome.publication_id)
+        if publication is None:
+            continue
+        if outcome.error is None:
+            mark_published(publication, outcome.topic, now=now)
+        else:
+            mark_error(publication, outcome.error, outcome.topic, now=now)
+    session.flush()
+    return by_id
 
 
 def retry(session: Session, publication_id: int, actor: str = "system") -> UnsPublication:
