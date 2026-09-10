@@ -82,7 +82,7 @@ fsmes demo
 ```
 
 `fsmes demo` runs a whole simulated line in one process for about ninety
-seconds — six stations over a real OPC UA server, one order released, booked
+seconds — two stations over a real OPC UA server, one order released, booked
 and completed — and prints a verdict at the end.
 
 **Done looks like:** `Demo result: full loop closed - order booked, ERP
@@ -256,7 +256,8 @@ fsmes erp check     # only if you did step 5
 ```
 
 Then open `/dashboard` and look at the line, `/dashboard/analysis` for the
-shift, and `/dashboard/line` for the 3D view.
+shift, and `/dashboard/line` for one line's machines, its work in progress
+and its state timeline, with the 3D view as a tab.
 
 **Three things will look wrong on day one and are correct:** OEE says
 *unknown* rather than a number, the downtime pareto is nearly all

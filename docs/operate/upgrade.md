@@ -43,12 +43,14 @@ prints all of them:
    `<data_dir>/<name>.db.pre-migrate-<timestamp>`, beside the live file.
 3. **Migrates**, and counts every table's rows before and after.
 4. **Prints a receipt** — the Alembic revision before and after, and every
-   table whose row count moved:
+   table whose row count moved. A table that did not move is not listed, and
+   a new table appears as `None -> 0`; when nothing moved at all it says so
+   in one line:
 
 ```text
   bottling: f2a8d31c6b74 -> a3f6c81d09e2; backup bottling.db.pre-migrate-20260910-094224
-      equipment_states: 118442 -> 118442
-      holds: None -> 0
+      maintenance_plans: None -> 0
+      maintenance_orders: None -> 0
 ```
 
 A database already at the current revision is reported as such and its

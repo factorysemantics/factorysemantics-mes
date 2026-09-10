@@ -56,7 +56,7 @@ fsmes demo
 ```
 
 `fsmes demo` releases one order against a routing, runs it down a simulated
-six-station line over a real OPC UA server, books honest production and
+two-station line over a real OPC UA server, books honest production and
 completes the order — in one process, no setup. The
 [tutorial](plant/first-line.md) walks through what you are looking at.
 
