@@ -165,6 +165,44 @@ Where the ERP genuinely offers no read-back, say so on your connector's
 page. That is a real limitation of that ERP and a plant is entitled to know
 it before the first over-run.
 
+## When the ERP says no
+
+Raising is right for both of these, and they are not the same thing:
+
+- **The ERP could not take the message.** It was down, the session had gone,
+  the network dropped. Time may repair it, and the outbox's job is to keep
+  trying — eight attempts with growing backoff, then dead.
+- **The ERP read the message and refused it.** Nothing about the message
+  will be different next time, so eight more attempts only delay the moment
+  a person hears about it and bury the ERP's own words under seven copies of
+  themselves.
+
+If your connector can tell the second from the first, say so on the
+exception: **`permanent = True`**, and the sync worker marks the message dead
+on the spot with the ERP's sentence as its error, rather than backing off.
+Nothing declares this in the port, so a connector that never sets it keeps
+exactly the old behaviour.
+
+```python
+class ErpNextRefused(ErpNextError):
+    """ERPNext read the request, understood it, and said no."""
+
+    permanent = True
+```
+
+Only claim it where you have measured it. ERPNext's is
+[an over-run beyond the site's over-production allowance](../operate/erpnext.md#when-the-line-made-more-than-the-order-asked-for):
+an HTTP 417 naming the quantity it would have allowed, with nothing booked.
+Everything else the connector meets is still retried, because nobody has
+measured it.
+
+And do not book *something else* instead. Posting the quantity the ERP would
+have accepted, or a draft for a person to fix, invents a decision nobody
+made. A refusal is a business fact: what the MES counted and what the ERP
+will hold genuinely differ, and somebody has to resolve that. Leave the
+message dead, put the reason where a person will find it, and let them retry
+it when they have.
+
 ## The conformance suite
 
 `fsmes.integrations.erp.conformance` ships **inside the package**, so a

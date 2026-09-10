@@ -98,6 +98,9 @@ nowhere native for it.
 
 Confirmations go through an outbox with retry and backoff; an ERPNext that
 is down for an hour gets the hour's confirmations when it returns, in order.
+A confirmation ERPNext *refuses* is a different thing and is not retried —
+see [when the line made more than the order asked
+for](#when-the-line-made-more-than-the-order-asked-for).
 
 Leaving `MES_ERPNEXT_COMPANY` empty imports the work orders of every company
 on the site, which is what a single-company ERPNext wants. A bench that holds
@@ -124,16 +127,65 @@ the MES believes it sent is not evidence. It proves:
 - sending the same confirmation twice still leaves exactly one stock entry —
   the retry that would otherwise book the plant's production twice;
 - `MES_ERPNEXT_POST_STOCK_ENTRY=false` still records every number;
+- an over-run inside ERPNext's over-production allowance is booked for every
+  unit, and one beyond it is refused whole and delivered nowhere
+  ([below](#when-the-line-made-more-than-the-order-asked-for));
 - the site written to is the one the `Host` header named.
 
-**Not covered, as of 2026-09-09.** ERPNext v16 — nothing here claims
+**Not covered, as of 2026-09-10.** ERPNext v16 — nothing here claims
 anything about it. The sync worker and the MES-side booking that decides
 what to confirm: the round trip drives the adapter, not `fsmes run-erp-sync`.
-Over-production, where the MES has counted more than the Work Order's
-quantity and ERPNext has an allowance of its own. A bench serving more than
-one company. See [compatibility](compatibility.md). If you run this against
-a real site, an issue with the versions of both sides is the most useful
-thing you can send.
+A bench serving more than one company. See
+[compatibility](compatibility.md). If you run this against a real site, an
+issue with the versions of both sides is the most useful thing you can send.
+
+## When the line made more than the order asked for
+
+The MES books every unit a machine counted, and an order for 400 that ran to
+420 is confirmed as 420 good with 20 over
+([decision 0019](../decisions/0019-count-everything-the-machine-counted.md)).
+ERPNext has an opinion about that of its own: **Manufacturing Settings →
+Over Production Percentage For Work Order**, zero out of the box.
+
+Measured against v15.120.0 on 2026-09-10, in the live job, three cases:
+
+| ERPNext's allowance | Ordered | MES counted | What ERPNext did |
+|---|---|---|---|
+| 10% | 400 | 420 | took it whole: `produced_qty` 420, one Manufacture entry of 420, the order Completed |
+| 10% | 400 | 500 | **refused**: HTTP 417, `For quantity 500.0 should not be greater than allowed quantity 440.0`. `produced_qty` stayed 0 |
+| 0% | 400 | 401 | **refused**, the same way, at `allowed quantity 400.0` |
+
+The refusal is whole. ERPNext does not book the 440 it would have allowed
+and does not leave a draft: nothing moves, and its own `produced_qty` does
+not change.
+
+**What the connector does about it.** The confirmation is *not* delivered —
+what the ERP accepted was nothing, and nothing is what gets reported as
+accepted. Because retrying sends the identical stock entry and gets the
+identical answer, the message does not spend eight attempts and an hour
+finding that out: it goes straight to `dead` in the outbox, carrying
+ERPNext's own sentence as its error. `dead` is what this outbox has always
+meant by *a person decides*.
+
+Three things are true at once after a refusal, and all three are visible:
+
+1. **The MES's record does not change.** The line made 500; it made 500 in
+   the MES whatever ERPNext thinks.
+2. **`custom_mes_good_qty` and `custom_mes_over_qty` on the Work Order still
+   say 500 and 100.** They are what the machines counted, which is exactly
+   what ERPNext has nowhere else to put, and a person deciding what to do
+   needs the number.
+3. **ERPNext's `produced_qty` says 0**, and a comment on the Work Order says
+   why: what was refused, what the MES counted, and ERPNext's own words.
+
+That gap is a business fact, not an error to retry: somebody raises the
+allowance, or accounts for the surplus another way. When they have,
+`POST /erp/outbox/{id}/retry` sends the same confirmation again — and if the
+allowance now covers it, it lands.
+
+There is no partial booking. Posting the 440 ERPNext would have taken would
+invent a decision nobody made and leave 60 units unaccounted for in both
+systems.
 
 ### What a missing custom field actually does
 
