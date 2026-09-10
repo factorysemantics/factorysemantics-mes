@@ -6,6 +6,7 @@ MES-TWIN. They keep their names; only the executable changed.
 
 import asyncio
 import os
+import textwrap
 from datetime import datetime
 from importlib.metadata import entry_points
 from pathlib import Path
@@ -787,6 +788,21 @@ def info() -> None:
     # the first module ships.
     found = sorted(ep.name for ep in entry_points(group="fsmes.modules"))
     typer.echo(f"modules       {', '.join(found) if found else 'none (kernel only)'}")
+
+    # Whether this installation may act on its plant is the first thing a
+    # support call needs to know, so it is on the first screen it asks for.
+    from fsmes import shadow
+
+    state = shadow.summary()
+    if state["shadow"]:
+        typer.echo(f"shadow mode   ON — {state['outbound_paths_closed']} of "
+                   f"{state['outbound_paths_total']} outbound paths closed")
+        for line in textwrap.wrap(shadow.BANNER, 62):
+            typer.echo(f"              {line}")
+        typer.echo(f"              {shadow.HOW_TO_LEAVE}")
+    else:
+        typer.echo(f"shadow mode   off — this MES may act on its plant "
+                   f"({shadow.SETTING}=true to watch only)")
 
 
 @app.command()

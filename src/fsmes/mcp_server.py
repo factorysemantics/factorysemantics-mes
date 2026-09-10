@@ -44,8 +44,12 @@ mcp = MCPServer(
         "named in on_behalf_of, and a client_ref makes a repeated write return "
         "its first answer instead of running twice. AGENT holds the agent "
         "role: production and recording, never approvals, accounts or master "
-        "data - those come back as refusals naming the capability. Plants are "
-        "named - start with list_plants() to see them."
+        "data - those come back as refusals naming the capability. A plant "
+        "may be in SHADOW MODE: it watches a real plant and can change "
+        "nothing in it - no setpoint reaches the machines, no ERP is told, "
+        "nothing is published. Proposing and recording still work; anything "
+        "that would act outward is refused and says so. list_plants() marks "
+        "which plants those are - start there."
     ),
 )
 
@@ -76,6 +80,16 @@ _lock = threading.Lock()
 # registry file next to the code, and a plant should never need one to
 # operate itself.
 _local: dict[str, str] = {}
+
+# What list_plants says about a plant that is only watching. The same words
+# the product uses, so an agent reading them and a person reading the screen
+# are told the same thing.
+SHADOW_NOTE = (
+    "This plant is in shadow mode: it reads the plant and books production, "
+    "and can change nothing outside its own database. Setpoints are not "
+    "written, no ERP is told, nothing is published. Propose and record as "
+    "normal; anything that would act outward comes back refused."
+)
 
 
 def serve_locally(plant: str, base_url: str) -> None:
@@ -159,12 +173,21 @@ def list_plants() -> dict:
     """The plants this server can operate, with reachability."""
     out = []
     for name, cfg in _registry().items():
+        # Shadow mode is the plant's own answer, not this process's: one
+        # server operates several plants and they need not agree. None means
+        # the plant did not answer, which is not the same as "not shadow".
+        shadow = None
         try:
-            healthy = _client(name).get("/health", timeout=4.0).status_code == 200
-        except httpx.HTTPError:
+            response = _client(name).get("/health", timeout=4.0)
+            healthy = response.status_code == 200
+            if healthy:
+                shadow = bool(response.json().get("shadow", False))
+        except (httpx.HTTPError, ValueError):
             healthy = False
         out.append({"plant": name, "label": cfg.get("label"),
-                    "dashboard": plants.dashboard_url(cfg), "reachable": healthy})
+                    "dashboard": plants.dashboard_url(cfg), "reachable": healthy,
+                    "shadow": shadow,
+                    "shadow_means": (SHADOW_NOTE if shadow else None)})
     return {"plants": out}
 
 
