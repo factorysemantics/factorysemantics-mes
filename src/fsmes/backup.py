@@ -162,7 +162,11 @@ def back_up(settings: Settings, out: Path, *, now: datetime | None = None) -> di
     already there, because two backups sharing a name is how somebody
     restores the wrong one.
     """
-    stamp = (now or utcnow()).strftime("%Y%m%d-%H%M%S")
+    # One clock read for the whole backup. Reading it twice lets the folder
+    # stamp and the manifest's `taken` straddle a second boundary, and then
+    # the backup's own record of when it was taken disagrees with its name.
+    now = now or utcnow()
+    stamp = now.strftime("%Y%m%d-%H%M%S")
     folder = out / stamp
     if folder.exists():
         raise BackupError(f"{folder} already exists; a backup never writes over one that is there")
@@ -237,7 +241,7 @@ def back_up(settings: Settings, out: Path, *, now: datetime | None = None) -> di
     manifest = {
         "format": FORMAT,
         "fsmes_version": __version__,
-        "taken": (now or utcnow()).isoformat(timespec="seconds"),
+        "taken": now.isoformat(timespec="seconds"),
         "database": database,
         "files": files,
         "totals": {
