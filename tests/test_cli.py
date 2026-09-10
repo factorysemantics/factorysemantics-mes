@@ -55,19 +55,40 @@ def test_info_reports_the_version_and_the_modules_that_registered_themselves():
     assert "modules       erpnext" in result.output
 
 
-def test_erp_setup_refuses_plainly_when_erpnext_is_not_the_configured_mode(monkeypatch):
-    """It would otherwise open a connection to whatever ERPNext defaults name,
-    on behalf of somebody who is not using ERPNext at all."""
+def test_erp_setup_prepares_whatever_connector_is_configured_and_never_names_erpnext(monkeypatch, tmp_path):
+    """These commands used to refuse every mode but ERPNext, which is exactly
+    backwards: they are the port's `setup` and `check`, and a connector
+    published on its own is entitled to both."""
     monkeypatch.setenv("MES_ERP_MODE", "file")
+    monkeypatch.setenv("MES_ERP_INBOX", str(tmp_path / "in"))
+    monkeypatch.setenv("MES_ERP_OUTBOX", str(tmp_path / "out"))
+    monkeypatch.setenv("MES_ERP_ARCHIVE", str(tmp_path / "archive"))
     from fsmes.config import get_settings
 
     get_settings.cache_clear()
     try:
-        result = runner.invoke(app, ["erp", "setup"])
+        setup = runner.invoke(app, ["erp", "setup"])
+        check = runner.invoke(app, ["erp", "check"])
+        needs = runner.invoke(app, ["erp", "requirements"])
+    finally:
+        get_settings.cache_clear()
+    assert setup.exit_code == 0 and "3 requirements" in setup.output
+    assert check.exit_code == 0 and "Ready" in check.output
+    assert needs.exit_code == 0 and "3 things on the ERP side" in needs.output
+    assert "erpnext" not in (setup.output + check.output + needs.output).lower()
+
+
+def test_erp_commands_refuse_when_no_connector_is_configured(monkeypatch):
+    monkeypatch.setenv("MES_ERP_MODE", "off")
+    from fsmes.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        result = runner.invoke(app, ["erp", "check"])
     finally:
         get_settings.cache_clear()
     assert result.exit_code == 1
-    assert "not 'erpnext'" in result.output
+    assert "nothing to do" in result.output
 
 
 def test_erp_check_exits_non_zero_when_the_site_cannot_be_reached(monkeypatch):

@@ -379,21 +379,32 @@ def test_the_rounding_a_real_ERPNext_does_is_not_treated_as_a_lost_number():
     assert fake.stock_entries  # it got all the way through
 
 
-def test_setup_creates_the_four_fields_and_saying_it_twice_changes_nothing():
+def test_setup_creates_every_field_and_saying_it_twice_changes_nothing():
     fake = FakeErpNext(custom_fields=[])
     client = _client(fake)
     first = erpnext_setup.ensure_custom_fields(client)
-    assert [what for _, what in first] == ["created"] * len(erpnext_setup.CUSTOM_FIELDS)
+    assert [step.outcome for step in first] == ["created"] * len(erpnext_setup.CUSTOM_FIELDS)
+    assert [step.name for step in first] == erpnext_setup.FIELD_NAMES
     second = erpnext_setup.ensure_custom_fields(client)
-    assert [what for _, what in second] == ["already there"] * len(erpnext_setup.CUSTOM_FIELDS)
+    assert [step.outcome for step in second] == ["already there"] * len(erpnext_setup.CUSTOM_FIELDS)
     assert erpnext_setup.field_problems(client) == []
+
+
+def test_every_requirement_names_the_field_and_says_what_breaks_without_it():
+    """`fsmes erp requirements` is what gets sent to whoever administers the
+    site, and "add five custom fields" is not something a person can act on."""
+    needed = erpnext_setup.requirements()
+    assert [r.name for r in needed] == erpnext_setup.FIELD_NAMES
+    assert all("Work Order" in r.where for r in needed)
+    assert all(r.what and r.why for r in needed)
+    assert all(r.created_by_setup for r in needed)
 
 
 def test_check_names_the_field_that_is_missing_rather_than_saying_misconfigured():
     fake = FakeErpNext(custom_fields=["custom_mes_synced"])
-    ok, lines = erpnext_setup.check(_client(fake))
-    assert not ok
-    report = "\n".join(lines)
+    result = erpnext_setup.check(_client(fake))
+    assert not result.ok
+    report = "\n".join(result.render())
     assert "custom_mes_good_qty is missing" in report
     assert "custom_mes_lot is missing" in report
     assert "fsmes erp setup" in report
@@ -401,9 +412,9 @@ def test_check_names_the_field_that_is_missing_rather_than_saying_misconfigured(
 
 def test_check_fails_a_field_of_the_wrong_type_even_though_it_exists():
     fake = FakeErpNext(field_types={"custom_mes_good_qty": "Data"})
-    ok, lines = erpnext_setup.check(_client(fake))
-    assert not ok
-    assert any("custom_mes_good_qty is a Data field" in line for line in lines)
+    result = erpnext_setup.check(_client(fake))
+    assert not result.ok
+    assert any("custom_mes_good_qty is a Data field" in line.text for line in result.lines)
 
 
 def test_check_says_so_when_the_site_cannot_be_reached_and_does_not_go_on():
@@ -413,13 +424,14 @@ def test_check_says_so_when_the_site_cannot_be_reached_and_does_not_go_on():
     client = ErpNextClient(
         "http://erp.test", client=httpx.Client(base_url="http://erp.test", transport=httpx.MockTransport(handler))
     )
-    ok, lines = erpnext_setup.check(client)
-    assert not ok
-    assert "cannot read Work Order" in lines[0]
-    assert len(lines) == 2  # the failure and what to check, not four more of the same
+    result = erpnext_setup.check(client)
+    assert not result.ok
+    assert "cannot read Work Order" in result.lines[0].text
+    assert len(result.lines) == 2  # the failure and what to check, not four more of the same
 
 
 def test_check_passes_on_a_prepared_site():
-    ok, lines = erpnext_setup.check(_client(FakeErpNext()))
-    assert ok
-    assert all(line.startswith("ok") for line in lines)
+    result = erpnext_setup.check(_client(FakeErpNext()))
+    assert result.ok
+    assert not result.unverified  # every part of an ERPNext connection can be checked
+    assert all(line.status == "ok" for line in result.lines)

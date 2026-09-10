@@ -63,8 +63,8 @@ def ensure_custom_fields(client: ErpNextClient) -> None:
     They used to be defined here, which is why a person who installed the
     wheel had no way to create them at all.
     """
-    for fieldname, what in erpnext_setup.ensure_custom_fields(client):
-        log(f"  custom field {fieldname:<22} {what}")
+    for step in erpnext_setup.ensure_custom_fields(client):
+        log(f"  custom field {step.name:<22} {step.outcome}")
 
 
 def ensure_company(client: ErpNextClient) -> None:
