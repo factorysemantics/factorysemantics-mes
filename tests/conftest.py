@@ -1,11 +1,40 @@
-"""Shared fixtures: a fresh in-memory database per test, seeded with the demo
-plant, and API clients signed in at each role."""
+"""Shared fixtures: a fresh database per test, seeded with the demo plant, and
+API clients signed in at each role.
 
+WHICH DATABASE. In-memory SQLite unless `MES_TEST_DATABASE_URL` says otherwise,
+so `python -m pytest` needs no setup and stays fast. Point that variable at a
+PostgreSQL and the whole suite runs there instead:
+
+    MES_TEST_DATABASE_URL=postgresql+psycopg://user:pass@127.0.0.1:5432/fsmes
+
+CI does exactly that in the `postgres` job, which is what makes "runs on
+PostgreSQL" a gate rather than a claim.
+
+It is deliberately *not* `MES_DATABASE_URL`, the setting a deployment uses. A
+developer with that set is pointing it at a database with rows in it, and this
+file empties whatever it is given between tests.
+
+HOW EACH TEST GETS A CLEAN DATABASE. On in-memory SQLite, one engine per test:
+nothing is shared, so nothing has to be cleaned. On a server database that
+would mean creating and dropping sixty-odd tables a thousand times, so the
+schema is created once for the run and every table is emptied before each test
+with TRUNCATE ... RESTART IDENTITY CASCADE.
+
+Emptying rather than rolling back a wrapping transaction, which is the other
+usual answer, for two reasons. A commit in a test is then a real commit, so a
+constraint or a deadlock behaves the way it would on a plant instead of the way
+it behaves inside a savepoint. And RESTART IDENTITY hands each test the same
+first ids SQLite hands it, because a rolled-back transaction does not roll back
+a sequence and tests that name a row by its id would drift apart run to run.
+"""
+
+import os
 from contextlib import contextmanager
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
@@ -16,11 +45,51 @@ from fsmes.db import Base
 from fsmes.seed import seed_demo_plant
 from fsmes.services import auth
 
+TEST_DATABASE_URL = os.environ.get("MES_TEST_DATABASE_URL", "").strip()
+# The default: a private in-memory database per test.
+IN_MEMORY_SQLITE = not TEST_DATABASE_URL
+
+
+def _empty(engine: Engine) -> None:
+    """Remove every row from every table the domain model declares."""
+    if engine.dialect.name == "postgresql":
+        # One statement, so one set of locks, and CASCADE because the tables
+        # reference each other. RESTART IDENTITY resets the sequences.
+        names = ", ".join(f'"{table.name}"' for table in Base.metadata.sorted_tables)
+        with engine.begin() as conn:
+            conn.execute(text(f"TRUNCATE {names} RESTART IDENTITY CASCADE"))
+        return
+    with engine.begin() as conn:
+        for table in reversed(Base.metadata.sorted_tables):
+            conn.execute(table.delete())
+
+
+@pytest.fixture(scope="session")
+def _server_engine():
+    """One engine and one schema for the whole run, when the suite is pointed
+    at a database that outlives a single test."""
+    engine = create_engine(TEST_DATABASE_URL)
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
+    yield engine
+    engine.dispose()
+
 
 @pytest.fixture()
-def session():
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    Base.metadata.create_all(engine)
+def engine(request):
+    if IN_MEMORY_SQLITE:
+        eng = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+        Base.metadata.create_all(eng)
+        yield eng
+        eng.dispose()
+        return
+    eng = request.getfixturevalue("_server_engine")
+    _empty(eng)
+    yield eng
+
+
+@pytest.fixture()
+def session(engine):
     with Session(engine, expire_on_commit=False) as s:
         seed_demo_plant(s)
         # Gates resolve capabilities from the roles table, so it has to exist
@@ -28,7 +97,6 @@ def session():
         auth.ensure_builtin_roles(s)
         s.commit()
         yield s
-    engine.dispose()
 
 
 @pytest.fixture()
