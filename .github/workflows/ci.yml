@@ -146,6 +146,16 @@ jobs:
       - name: The wheel runs the demo from an empty directory
         run: .github/scripts/demo_from_wheel.sh "$(ls dist/*.whl)"
 
+      # And the other thing a plant does with a wheel: upgrade the database it
+      # already has. Until 2026-09-10 the wheel carried no migration scripts,
+      # so `fsmes init-db` outside a checkout ran no ALTER and said the schema
+      # was up to date - which would have put a plant on new code and an old
+      # schema, quietly. This installs the release that is on PyPI now, makes
+      # a database with it, upgrades that database with the wheel under test,
+      # and asks the database whether it is at head.
+      - name: The wheel upgrades a database made by the previous release
+        run: .github/scripts/upgrade_from_previous_release.sh "$(ls dist/*.whl)"
+
   audit:
     # Known-vulnerable pins. Advisory until the first public release has
     # shaken it out; then it becomes required.

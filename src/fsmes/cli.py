@@ -27,19 +27,49 @@ app = typer.Typer(
 
 @app.command()
 def init_db() -> None:
-    """Create or upgrade the database schema (runs Alembic migrations)."""
-    ini = Path("alembic.ini")
-    if ini.exists():
-        from alembic import command
-        from alembic.config import Config
+    """Create or upgrade the database schema (runs the migrations the package ships).
 
-        command.upgrade(Config(str(ini)), "head")
-    else:  # running outside the repo — create the schema directly
-        import fsmes.domain  # noqa: F401
-        from fsmes.db import Base, get_engine
+    The migrations travel inside the wheel, so this does the same thing on a
+    plant PC that installed from PyPI as it does in a source checkout. Before
+    2026-09-10 it did not: with no `alembic.ini` in the working directory it
+    created any missing tables and ran no `ALTER` at all, then said the schema
+    was up to date. A database made that way is recognised here and stamped.
+    """
+    from fsmes.schema import SchemaError, upgrade_database
 
-        Base.metadata.create_all(get_engine())
-    typer.echo("Database schema is up to date.")
+    try:
+        upgrade_database(echo=typer.echo)
+    except SchemaError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(1) from None
+
+
+@app.command()
+def db_status() -> None:
+    """What revision the database is at, and whether that is the current one.
+
+    Exits non-zero when the database is behind or was never stamped, so a
+    deployment script - and the release gate, which upgrades a database made
+    by the previous release and then asks this - can act on the answer rather
+    than read it.
+    """
+    from fsmes.schema import current_revision, database_shape, head_revision
+
+    head = head_revision()
+    at = current_revision()
+    typer.echo(f"Current: {at or 'not stamped'}")
+    typer.echo(f"Head:    {head}")
+    if at == head:
+        typer.echo("The database is at the current schema.")
+        return
+    if at is None and not database_shape():
+        typer.echo("There is no database yet. Create one with `fsmes init-db`.")
+    elif at is None:
+        typer.echo("This database has tables but no Alembic stamp - it was created before the "
+                   "migrations shipped. `fsmes init-db` will recognise it and stamp it.")
+    else:
+        typer.echo("The database is behind. Bring it up with `fsmes init-db`.")
+    raise typer.Exit(1)
 
 
 @app.command()
