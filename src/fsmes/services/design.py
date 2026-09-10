@@ -242,6 +242,9 @@ def build_prompt(message: str, context: dict, history: list[dict],
 
 def ask_claude(system: str, messages: list[dict]) -> tuple[str, str]:
     """Claude, when a key is configured. Returns (text, model)."""
+    from fsmes import shadow
+
+    shadow.guard("llm.cloud_design")
     import anthropic
 
     client = anthropic.Anthropic()
@@ -274,6 +277,12 @@ def claude_available() -> bool:
     # A key in the plant's environment may be there for the floor agent, not
     # for design chat. MES_DESIGN_CLAUDE=0 keeps design questions on the local
     # model even when a key is present.
+    from fsmes import shadow
+
+    # Shadow mode keeps everything about this plant on this box. Design chat
+    # falls back to the local model, exactly as it does with no key.
+    if shadow.enabled():
+        return False
     if os.environ.get("MES_DESIGN_CLAUDE", "1").strip().lower() in ("0", "false", "no", "off"):
         return False
     if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):

@@ -132,6 +132,14 @@ def sdk_installed() -> bool:
 
 def available() -> tuple[bool, str]:
     """Can the cloud brain be used right now, and if not, why."""
+    from fsmes import shadow
+
+    if shadow.enabled():
+        # It changes nothing in the plant, but it carries the plant's own
+        # numbers off the box, and a plant lending us its data to watch did
+        # not agree to that. The local model on this machine still answers.
+        return False, ("shadow mode: this plant's data does not leave the box, so the cloud "
+                       f"brain is not used. Unset {shadow.SETTING} and restart to allow it.")
     if brain() == "off":
         return False, "the cloud brain is switched off (MES_AGENT_BRAIN=off)"
     if not os.environ.get("ANTHROPIC_API_KEY"):
@@ -357,6 +365,9 @@ def _anthropic_tools(sess: Session) -> list[dict]:
 
 def _call_model(sess: Session) -> Any:
     """One request to the model. Replaced in tests."""
+    from fsmes import shadow
+
+    shadow.guard("llm.cloud_agent", detail=f"plant {sess.plant}")
     import anthropic
     client = anthropic.Anthropic()
     return client.messages.create(
