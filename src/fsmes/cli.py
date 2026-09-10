@@ -559,6 +559,97 @@ def inbound_watch(once: bool = False) -> None:
         time.sleep(settings.inbound_poll_seconds)
 
 
+shadow_app = typer.Typer(help="Running beside the MES in charge, and how well the two agreed.")
+app.add_typer(shadow_app, name="shadow")
+
+
+@shadow_app.command("scorecard")
+def shadow_scorecard(
+    incumbent: Path = typer.Option(..., "--incumbent",
+                                   help="The incumbent MES's bookings, exported as CSV or JSON."),
+    ours: Path | None = typer.Option(None, "--ours",
+                                     help="This MES's confirmations: a file or a folder of them. "
+                                          "Omit to read this MES's own outbox instead."),
+    mapping_file: Path | None = typer.Option(None, "--map",
+                                             help="Mapping file: the export's column headings, "
+                                                  "its order and equipment codes, tolerances."),
+    json_out: Path | None = typer.Option(None, "--json", help="Write the scorecard JSON here."),
+    html_out: Path | None = typer.Option(None, "--html",
+                                         help="Write the self-contained HTML report here."),
+    quantity_tolerance: float | None = typer.Option(
+        None, "--quantity-tolerance", help="Units within which two quantities agree. "
+                                           "Overrides the mapping file."),
+    seconds_tolerance: float | None = typer.Option(
+        None, "--seconds-tolerance", help="Seconds within which two times agree. "
+                                          "Overrides the mapping file."),
+) -> None:
+    """Compare what the incumbent MES booked with what this MES would have sent.
+
+    This is the instrument a shadow run is judged with. It reads two
+    records of the same period - a file a person exported from the MES in
+    charge, and this MES's own confirmations - and reports, per order and
+    per operation, where they agree and where they do not.
+
+    It never says which side is right. It names the differences, states
+    what it could not compare, and leaves the judgement to the plant.
+    """
+    from fsmes.integrations.erp import scorecard as scoring
+    from fsmes.integrations.erp import scorecard_html
+    from fsmes.integrations.erp.incumbent import Mapping, MappingError
+    from fsmes.integrations.erp.incumbent import read as read_export
+
+    if not incumbent.exists():
+        typer.echo(f"NOT OK  {incumbent} does not exist.")
+        raise typer.Exit(1)
+    try:
+        mapping = Mapping.load(mapping_file)
+    except MappingError as exc:
+        typer.echo(f"NOT OK  {exc}")
+        raise typer.Exit(1) from exc
+    try:
+        export = read_export(incumbent, mapping)
+    except Exception as exc:
+        typer.echo(f"NOT OK  {incumbent.name} could not be read: {type(exc).__name__}: {exc}")
+        raise typer.Exit(1) from exc
+
+    if ours is not None:
+        if not ours.exists():
+            typer.echo(f"NOT OK  {ours} does not exist.")
+            raise typer.Exit(1)
+        record = scoring.read_confirmations(ours)
+        our_side = str(ours)
+    else:
+        from fsmes.db import session_scope
+
+        with session_scope() as session:
+            record = scoring.read_outbox(session)
+        our_side = "this MES's outbox"
+
+    tolerances = scoring.Tolerances.from_mapping(mapping, quantity_tolerance, seconds_tolerance)
+    card = scoring.compare(export, record, tolerances)
+
+    typer.echo(f"Comparing {incumbent.name} with {our_side}.")
+    for line in card.render():
+        typer.echo(line)
+
+    if json_out:
+        json_out.parent.mkdir(parents=True, exist_ok=True)
+        json_out.write_text(card.to_json(), encoding="utf-8")
+        typer.echo(f"  wrote {json_out}")
+    if html_out:
+        html_out.parent.mkdir(parents=True, exist_ok=True)
+        html_out.write_text(scorecard_html.render(card), encoding="utf-8")
+        typer.echo(f"  wrote {html_out}")
+
+    if not card.orders_both and export.orders and record.orders:
+        # Two records with orders in them and not one code in common is
+        # almost always the mapping file, not the plant.
+        typer.echo("")
+        typer.echo("Not one order code appears in both records, so nothing was compared. The "
+                   "export's codes and this MES's are different sets of strings; map them in "
+                   "the mapping file's `orders` section.")
+        raise typer.Exit(1)
+
 uns_app = typer.Typer(help="Unified namespace: relay MES events to an MQTT broker.")
 app.add_typer(uns_app, name="uns")
 
