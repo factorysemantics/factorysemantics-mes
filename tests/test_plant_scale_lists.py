@@ -226,6 +226,14 @@ def test_master_data_lists_answer_a_search(client):
     assert client.get("/masterdata/routings?q=no-such-routing").json() == []
 
 
+def test_a_search_finds_a_code_typed_in_the_wrong_case(client):
+    """The same answer on both supported databases. SQLite's LIKE ignores
+    case for ASCII and PostgreSQL's does not, so a search box that matched on
+    a laptop would quietly stop matching on a plant."""
+    assert [e["code"] for e in client.get("/masterdata/equipment?q=mix01").json()] == ["MIX01"]
+    assert [m["code"] for m in client.get("/masterdata/materials?q=fg-cola").json()] == ["FG-COLA"]
+
+
 def test_specifications_search_and_stay_ordered(client, session):
     from fsmes.domain import Material, QualitySpec
 
