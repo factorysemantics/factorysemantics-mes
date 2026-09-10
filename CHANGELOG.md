@@ -117,6 +117,11 @@ goes under Honesty with a migration line, so plant people can find it.
   elsewhere](docs/operate/inbound.md) is the page. A SQL poller and an MQTT
   subscriber are the same three shapes over a different transport, and are
   not written.
+- `tzdata` is now a dependency **on Windows only**. Windows ships no IANA
+  time-zone database, so `zoneinfo` there cannot resolve `America/Chicago`
+  — or even `UTC` — without it, and the inbound driver reads a plant's
+  exports in the plant's own local time. Linux and macOS have a database
+  already and gain nothing.
 - **A connector contract, so the next ERP is not the first one all over
   again.** The ERP port had three methods — fetch, acknowledge, confirm —
   and they said nothing about the three things that actually bit the

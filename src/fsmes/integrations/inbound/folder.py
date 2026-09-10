@@ -185,8 +185,12 @@ def load_mapping(path: Path) -> dict[str, StreamMapping]:
         if zone:
             try:
                 ZoneInfo(zone)
-            except (ZoneInfoNotFoundError, ValueError) as exc:
-                raise MappingError(f"{path}: {name} names a time zone {zone!r} this machine does not know") from exc
+            except (ZoneInfoNotFoundError, ModuleNotFoundError, ValueError) as exc:
+                raise MappingError(
+                    f"{path}: {name} names a time zone {zone!r} this machine does not know. "
+                    "On Windows the IANA database comes from the `tzdata` package; if it is "
+                    "missing, `pip install tzdata`."
+                ) from exc
         unknown = set(spec["columns"]) - set(EVENT_TYPES[name].model_fields)
         if unknown:
             raise MappingError(

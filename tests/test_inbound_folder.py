@@ -75,6 +75,20 @@ def drop(root: Path, stream: str, name: str, text: str) -> Path:
     return path
 
 
+def test_this_machine_can_resolve_a_time_zone_at_all():
+    """Windows ships no IANA database, and `zoneinfo` there needs `tzdata`.
+
+    Without it the driver cannot read a plant's exports in the plant's own
+    local time, and the only alternatives are refusing every timestamped
+    file or reading local time as UTC. On Windows this test is what proves
+    the dependency is declared; everywhere else it costs nothing.
+    """
+    from zoneinfo import ZoneInfo
+
+    assert ZoneInfo("UTC") is not None
+    assert ZoneInfo("America/Chicago") is not None
+
+
 # ------------------------------------------------------------------- mapping
 
 
