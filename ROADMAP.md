@@ -92,6 +92,8 @@ The first pure module, and the highest-demand feature in every "why is there no 
 
 **Done when:** two packs with different modules enabled run from one codebase, and the console shows both.
 
+**Designed before it is built (2026-09-10):** [docs/design/m8-packs-and-fleet.md](docs/design/m8-packs-and-fleet.md) states what a plant is today with file paths, measures the two lab plants against the *done when* above, proposes what a pack may and may not contain, scopes the console, and breaks the work into four pieces. The three decisions it turns on — [0021](docs/decisions/0021-one-database-per-plant.md), [0022](docs/decisions/0022-what-a-plant-pack-may-contain.md) and [0023](docs/decisions/0023-the-fleet-console-observes.md) — are **proposed**, not accepted.
+
 ---
 
 ## The agent track (continuous, not a phase)
