@@ -104,6 +104,64 @@ def _settings() -> str:
     return "\n".join(lines)
 
 
+def _type_of(prop: dict) -> str:
+    """The JSON Schema type of one field, as a person would say it."""
+    if "const" in prop:
+        return f"always `{prop['const']}`"
+    if "anyOf" in prop:
+        named = [_type_of(one) for one in prop["anyOf"] if one.get("type") != "null"]
+        nullable = any(one.get("type") == "null" for one in prop["anyOf"])
+        return " or ".join(named) + (", or null" if nullable else "")
+    if prop.get("type") == "array":
+        item = prop.get("items", {})
+        return f"list of {item['$ref'].rsplit('/', 1)[-1]}" if "$ref" in item else "list"
+    if prop.get("format") == "date-time":
+        return "timestamp"
+    return prop.get("type", "any")
+
+
+def _confirmations() -> str:
+    """The ERP contract, field by field, and the schema file beside it."""
+    from fsmes.integrations.erp import examples
+    from fsmes.integrations.erp.schema import SCHEMA_ID, confirmation_schema
+
+    published = confirmation_schema()
+    (OUT / "erp-confirmation.schema.json").write_text(
+        json.dumps(published, indent=2) + "\n", encoding="utf-8")
+
+    lines = ["# The ERP confirmation contract", "",
+             "Generated from the contract models at build time, so this page and the software "
+             "cannot drift apart. The same models are published as a JSON Schema — "
+             "[`erp-confirmation.schema.json`](erp-confirmation.schema.json) "
+             f"(`{SCHEMA_ID}`) — which your own tooling can validate against with no "
+             "connection to this MES.", "",
+             published["description"], "",
+             "Every field below says three things: what it means on the floor, where the MES "
+             "gets it, and when it is null. Null is never a placeholder for zero. See "
+             "[the confirmation handoff](../operate/confirmation-files.md) for the folder "
+             "these documents are written into and for `fsmes erp validate`.", "",
+             "## Worked examples", "",
+             "Generated from a run of the demo plant, not written by hand.", "",
+             "| Example | JSON | B2MML | What it shows |", "|---|---|---|---|"]
+    for name, title, why in examples.PUBLISHED.values():
+        folder = f"../operate/confirmation-examples/{name}"
+        lines.append(f"| {title} | [`{name}.json`]({folder}.json) | "
+                     f"[`{name}.xml`]({folder}.xml) | {why} |")
+    lines.append("")
+    for name in ("OperationConfirmation", "OrderCompletion", "ComponentUse", "ProductionRequest"):
+        definition = published["$defs"][name]
+        required = set(definition.get("required", []))
+        lines += [f"## `{name}`", "", definition["description"], "",
+                  "| Field | Type | On the floor | Where the MES gets it | When it is null |",
+                  "|---|---|---|---|---|"]
+        for field, prop in definition["properties"].items():
+            mark = "" if field in required else " *(optional)*"
+            lines.append(f"| `{field}`{mark} | {_type_of(prop)} | {prop['x-fsmes-floor']} | "
+                         f"{prop['x-fsmes-source']} | {prop['x-fsmes-null']} |")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def _llms(config) -> str:
     pages = []
     for item in _flatten(config["nav"]):
@@ -138,4 +196,5 @@ def on_pre_build(config, **kwargs):
     (OUT / "api.md").write_text(_api(), encoding="utf-8")
     (OUT / "tools.md").write_text(_tools(), encoding="utf-8")
     (OUT / "settings.md").write_text(_settings(), encoding="utf-8")
+    (OUT / "erp-confirmations.md").write_text(_confirmations(), encoding="utf-8")
     (DOCS / "llms.txt").write_text(_llms(config), encoding="utf-8")

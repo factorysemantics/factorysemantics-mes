@@ -43,6 +43,28 @@ goes under Honesty with a migration line, so plant people can find it.
   manifest. Files land where the settings of the machine being restored to
   say — a restore onto a new PC is a different `.env`, not a different
   backup. [Backup and restore](docs/operate/backup.md).
+- **The confirmation handoff: a published schema, worked example files and
+  a validator.** A plant running this MES in shadow mode has no live ERP
+  link, and its people still have to answer whether what it *would* send
+  is correct. That answer used to live in Pydantic models, an XML renderer
+  and a symmetry test, none of which an ERP analyst can read. Now the
+  contract is published as a **JSON Schema, generated from the same models
+  that write the files**, with every field carrying what it means on the
+  floor, where the MES gets it, and when it is null and why null is the
+  honest value ([the contract](docs/reference/erp-confirmations.md)); six
+  **worked example files** — a clean operation, one with scrap and consumed
+  lots, an over-run, a completion with a lot, one carrying an over-run, one
+  with no lot — generated from a run of the demo plant rather than typed,
+  as JSON and B2MML side by side, and pinned by a test that regenerates
+  them; and **`fsmes erp validate <path>`**, which checks a file or a whole
+  outbox against the contract and the house rules with no ERP, no connector
+  and no database, exiting non-zero so it can gate a deployment. Problems
+  and notes are kept apart: a negative work in progress, a completion with
+  no lot and a missing cost centre are reported and do not fail, because
+  every one of them is a fact the MES states on purpose.
+  [The confirmation handoff](docs/operate/confirmation-files.md) is the page
+  for the ERP team, and it says plainly that the contract is SAP-*shaped*
+  and that no SAP has consumed one of these.
 - **A connector contract, so the next ERP is not the first one all over
   again.** The ERP port had three methods — fetch, acknowledge, confirm —
   and they said nothing about the three things that actually bit the
@@ -136,6 +158,17 @@ goes under Honesty with a migration line, so plant people can find it.
   publish, before it reaches PyPI. This is the clean-machine install that
   0.1.0 needed and did not get.
 
+### Changed
+- **The file connector's outbound folder is deterministic.** Names lead with
+  a six-digit sequence number, so sorting the folder by name replays the
+  order the confirmations happened; the number is read back from the folder
+  at start-up, so a restart continues rather than collides; each document is
+  written to a `.part` file and renamed into place, so a collector never
+  reads half a document; and anything outside `A-Za-z0-9_-` in an order code
+  becomes a dash, so an order code cannot decide where a file lands. A
+  collector that globbed `confirmation_<order>_*.xml` must now glob
+  `*_<order>_op10.xml` or `*_<order>_completion.xml`.
+
 ### Fixed
 - **A list search ignored case on SQLite and not on PostgreSQL.** Every list
   search in the API — equipment, materials, routings, people, work orders,
@@ -148,6 +181,12 @@ goes under Honesty with a migration line, so plant people can find it.
   gauge register filter in Python on `.lower()`, and the SQL-side searches
   only agreed with them by SQLite's accident. Found by the new PostgreSQL
   cell.
+- **The B2MML confirmation carries its idempotency key.** `message_key` — the
+  only thing that stops one confirmation being posted twice — was never
+  written into the XML, so a folder of operation confirmations gave a
+  collector no way to tell a re-sent file from a second confirmation. It is
+  the first element of both documents now, and a reader rebuilds it for
+  files written before today with the same rule that made it.
 - **`fsmes --version` told you the wrong version.** A 0.1.2 install answered
   `0.1.0`, because the number was written down twice — in `pyproject.toml`
   and again in `src/fsmes/__init__.py` — and only one copy was bumped for

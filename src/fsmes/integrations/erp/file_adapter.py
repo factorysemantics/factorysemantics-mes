@@ -4,10 +4,37 @@ Inbox:  ProductionSchedule XML (B2MML-lite) or plain JSON order files.
 Outbox: one ProductionPerformance XML per confirmation.
 Processed inbox files move to the archive folder, which doubles as the
 file-level exchange history.
+
+The outbound layout, because a plant's ERP team has to build a collector
+against it:
+
+* **Name** — `000123_20260910T041500Z_WO-2026-0041_op10.xml`: a six-digit
+  sequence number, the UTC minute-and-second it was written, the order,
+  and either `op<seq>` for one operation or `completion` for the order's
+  close. Anything outside `A-Z a-z 0-9 _ -` in an order code becomes a
+  dash, so an order code can never decide where a file lands.
+* **Order** — the sequence number is the order the MES wrote the files,
+  and sorting the folder by name replays it. Timestamps alone could not:
+  two confirmations written in the same second used to sort by order code
+  and, worse, to overwrite each other when they were the same step.
+* **Delivered** — for a file exchange, written *is* delivered. The MES
+  marks the message sent once the file is closed on disk, and never opens
+  it again. Collecting, moving or deleting the file is the ERP side's, and
+  the MES neither requires it nor notices it.
+* **Half-written files** — never seen. Each confirmation is written to a
+  `.part` file and renamed into place, so a collector polling the folder
+  either sees a whole document or no document.
+* **Restart** — the sequence number is read back from the folder at
+  start-up (highest one there, plus one), so a restart continues the run
+  rather than colliding with it. A folder the ERP has emptied starts again
+  at one, which is correct: the numbers order the files that exist
+  together, and are not an audit sequence. The audit sequence is the
+  outbox in the database, which survives both.
 """
 
 import json
 import os
+import re
 from pathlib import Path
 
 import structlog
@@ -58,11 +85,50 @@ class FileErpAdapter(ErpConnector):
     def acknowledge(self, order_code: str) -> None:
         pass  # archiving the inbox file is the acknowledgement
 
+    # ------------------------------------------------------------- outbound
+
+    _NUMBERED = re.compile(r"^(\d{6})_")
+    # A dot is not safe either: `..` in an order code is how a file
+    # exchange gets talked out of its own folder.
+    _UNSAFE = re.compile(r"[^A-Za-z0-9_-]")
+
+    def _next_number(self) -> int:
+        """One past the highest number already in the outbox.
+
+        Read from the folder rather than remembered, so two workers and a
+        restart all see the same picture, and a folder the ERP has emptied
+        simply starts again.
+        """
+        highest = 0
+        for path in self.outbox.iterdir():
+            found = self._NUMBERED.match(path.name)
+            if found:
+                highest = max(highest, int(found.group(1)))
+        return highest + 1
+
     def send_confirmation(self, confirmation: Confirmation) -> None:
-        stamp = utcnow().strftime("%Y%m%d-%H%M%S")
+        """Write one confirmation into the outbox, whole and in order.
+
+        Written is delivered: there is no acknowledgement in a file
+        exchange, and pretending otherwise would make the outbox report a
+        delivery nobody made.
+        """
+        stamp = utcnow().strftime("%Y%m%dT%H%M%SZ")
         suffix = f"op{confirmation.seq}" if isinstance(confirmation, OperationConfirmation) else "completion"
-        target = self.outbox / f"confirmation_{confirmation.order}_{suffix}_{stamp}.xml"
-        target.write_text(b2mml.render_confirmation(as_payload(confirmation)), encoding="utf-8")
+        order = self._UNSAFE.sub("-", confirmation.order)
+        document = b2mml.render_confirmation(as_payload(confirmation))
+
+        number = self._next_number()
+        while True:
+            target = self.outbox / f"{number:06d}_{stamp}_{order}_{suffix}.xml"
+            if not target.exists():
+                break
+            number += 1
+        # Written beside it and renamed in: a collector polling this folder
+        # must never read half a document.
+        part = self.outbox / f".{target.name}.part"
+        part.write_text(document, encoding="utf-8")
+        os.replace(part, target)
 
     # ------------------------------------------------------------- the far side
     # Three folders, and this connector makes them itself. It is here as the
