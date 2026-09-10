@@ -84,6 +84,35 @@ class Settings(BaseSettings):
     inbound_mapping_file: Path = Path("config/inbound_mapping.json")
     inbound_poll_seconds: float = 10.0
 
+    # --- Inbound over MQTT (fsmes inbound subscribe) -----------------------
+    # The other half of the unified namespace: this MES listening to the
+    # broker it already publishes to. Tag values (a gateway's counter, state
+    # word or process value) are wired in the `mqtt` section of the tag map,
+    # beside the OPC machines; inbound events are the streams in the mapping
+    # file above that name a `topic`.
+    # Off by default: a plant with no broker should not have a worker trying
+    # to reach one. `mqtt` needs the [mqtt] extra, the publisher's.
+    inbound_mqtt_mode: str = "off"  # off | mqtt
+    inbound_mqtt_broker_url: str = "mqtt://127.0.0.1:1883"
+    inbound_mqtt_username: str = ""
+    inbound_mqtt_password: str = ""
+    # A different id from the publisher's on purpose. Brokers disconnect the
+    # older session when two clients share an id, so one id for both workers
+    # would have them evicting each other all shift.
+    inbound_mqtt_client_id: str = "fsmes-inbound"
+    inbound_mqtt_qos: int = 1
+    # What this plant calls the broker, as its operators would say it out
+    # loud: `uns`, `gateway:line1`, `nodered`. It is written onto every unit
+    # booked and every state set from a broker message, so a person reading
+    # the production log a month later can see which pipe it came down.
+    # Empty means `mqtt:<the broker's host>`, which is a description rather
+    # than a name — set it. Inbound *events* carry their own source, from the
+    # stream's mapping; this names the tag values.
+    inbound_mqtt_source: str = ""
+    # How often the subscriber says what it has taken in. It is a worker with
+    # no end, so the report is the only way to see it working.
+    inbound_mqtt_report_seconds: float = 60.0
+
     erp_mode: str = "rest"  # rest | file | erpnext | off
     erp_base_url: str = "http://127.0.0.1:8001"
     erp_inbox: Path = Path("erp_exchange/inbox")

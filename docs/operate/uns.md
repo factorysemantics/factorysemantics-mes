@@ -200,6 +200,35 @@ namespace shows the ERP's half of the plant and nothing else. The MES's own
 state history, audit trail and OEE are unaffected either way; only the
 event log is.
 
+## The other half: listening
+
+The namespace is two directions, and this page has been one of them. Since
+`fsmes inbound subscribe`, the MES also **reads** the broker: tag values
+that never touch an OPC UA server — a gateway's counter, its state word, a
+process value — and inbound events where a broker already carries downtime
+labels, quality results or counts.
+
+```bash
+MES_INBOUND_MQTT_MODE=mqtt
+MES_INBOUND_MQTT_BROKER_URL=mqtt://broker.plant.example:1883
+MES_INBOUND_MQTT_CLIENT_ID=fsmes-inbound     # never the publisher's id
+fsmes inbound subscribe
+```
+
+The wiring, the rules and the honesty that transport needs are on
+[the inbound page](inbound.md#the-broker-mqtt) rather than here, because
+what a broker message *means* is an inbound question and not a namespace
+one. Three things worth knowing from this side:
+
+- **The two workers are separate processes with separate client ids.** A
+  broker disconnects the older session when two clients share an id, so
+  `fsmes inbound subscribe` refuses to start if the ids are equal.
+- **The subscriber publishes nothing**, and does not consume this MES's own
+  namespace. Point it at a plant's tree, not at `MES_UNS_TOPIC_PREFIX`, or
+  the two workers will hand this MES's own events back to it.
+- **A counter must be published as a running total.** MQTT is at-least-once,
+  and a redelivered increment would book units the plant never made.
+
 Sparkplug B is a later envelope over the same work — see the
 [roadmap](https://github.com/factorysemantics/factorysemantics-mes/blob/main/ROADMAP.md).
 MQTT-JSON first, because it is what a Node-RED flow can read in an
@@ -210,9 +239,10 @@ afternoon.
 The test suite, against a fake broker — this repository does not start
 brokers on the machine it is developed on. There is one test against a real
 broker (`test_a_running_broker_receives_what_the_publisher_sent`), marked
-slow and skipped unless `MES_UNS_TEST_BROKER` points at one. **Not yet
-verified against a real Mosquitto, HiveMQ or UMH deployment**, as of
-2026-09-09; see [compatibility](compatibility.md). If you run it against
+slow and skipped unless `MES_UNS_TEST_BROKER` points at one. The subscriber
+is driven by a fake source in the same way. **Not yet verified against a
+real Mosquitto, HiveMQ or UMH deployment**, in either direction, as of
+2026-09-10; see [compatibility](compatibility.md). If you run it against
 one, an issue saying which broker and what the topics looked like is the
 most useful thing you can send.
 

@@ -12,7 +12,8 @@
 | **SQLite** | tested continuously | the default; every test |
 | **Claude Code** as an MCP client | tested | the agent evals drive it headless |
 | Claude Desktop, other MCP clients | untested | the server is streamable HTTP over the standard SDK |
-| Node-RED, United Manufacturing Hub, Grafana | untested; nothing built | planned bridges, in that order |
+| **MQTT brokers** (Mosquitto, HiveMQ, EMQX) | untested | both directions are built — `fsmes uns publish` and `fsmes inbound subscribe` — and both are driven by a fake transport in the suite. No broker has run against either; this repository does not start brokers on the machine it is developed on. The publisher has one opt-in test against a real broker (`MES_UNS_TEST_BROKER`) |
+| Node-RED, United Manufacturing Hub, Grafana | untested; the MQTT halves exist | the namespace is published and subscribed to over plain MQTT-JSON under an ISA-95 tree; no UMH or Node-RED deployment has been on the other end of it |
 | Windows (plant PCs) | tested continuously | CI runs the suite on Windows and Python 3.12/3.13 |
 | Python | 3.12, 3.13 | CI |
 

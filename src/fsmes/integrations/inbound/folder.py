@@ -3,8 +3,10 @@
 Every plant can write a file. Most cannot open a port, and none will let a
 new system query the incumbent's database in week one. So the first way the
 MES hears what people typed elsewhere is a CSV — or the same rows as JSON —
-landing in a folder, and the same three shapes will arrive over SQL and
-MQTT later without this module changing.
+landing in a folder. The same three shapes now also arrive over MQTT
+(`integrations.inbound.mqtt`), and will over SQL, without this module
+changing: the mapping, the parsing and the writers below are shared, and a
+transport only decides where a row comes from.
 
 Three rules make it safe to point at a plant's own export:
 
@@ -35,7 +37,7 @@ from __future__ import annotations
 
 import csv
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -80,10 +82,26 @@ class StreamMapping:
     #: The zone naive timestamps are written in. No default: guessing is the
     #: error this exists to prevent.
     timezone: str | None = None
+    #: The MQTT topic filter this stream also arrives on, when a broker
+    #: carries it. Absent means folder only. See `integrations.inbound.mqtt`.
+    topic: str | None = None
+    #: What the *broker's* payload calls each contract field, when it differs
+    #: from what the plant's files call it. Absent means the same names.
+    fields: dict[str, str] | None = None
 
     @property
     def model(self):
         return EVENT_TYPES[self.name]
+
+    def as_payload_mapping(self) -> StreamMapping:
+        """The same stream, keyed by what the broker's JSON calls each field.
+
+        One stream, two transports, one set of rules: the source, the zone,
+        the time format and the defaults are the plant's decisions and do not
+        change with the pipe the row came down. Only the names do, and only
+        when the plant says they do.
+        """
+        return replace(self, columns=self.fields or self.columns)
 
 
 @dataclass
@@ -191,12 +209,18 @@ def load_mapping(path: Path) -> dict[str, StreamMapping]:
                     "On Windows the IANA database comes from the `tzdata` package; if it is "
                     "missing, `pip install tzdata`."
                 ) from exc
-        unknown = set(spec["columns"]) - set(EVENT_TYPES[name].model_fields)
-        if unknown:
-            raise MappingError(
-                f"{path}: {name} maps {sorted(unknown)}, which the {EVENT_TYPES[name].__name__} contract "
-                f"does not have. Its fields are {sorted(EVENT_TYPES[name].model_fields)}."
-            )
+        for key in ("columns", "fields"):
+            unknown = set(spec.get(key) or {}) - set(EVENT_TYPES[name].model_fields)
+            if unknown:
+                raise MappingError(
+                    f"{path}: {name} maps {sorted(unknown)} under {key!r}, which the "
+                    f"{EVENT_TYPES[name].__name__} contract does not have. Its fields are "
+                    f"{sorted(EVENT_TYPES[name].model_fields)}."
+                )
+        topic = spec.get("topic")
+        if topic is not None and not str(topic).strip():
+            raise MappingError(f"{path}: {name} has an empty 'topic'; leave it out to read this stream "
+                               "from its folder only")
         mappings[name] = StreamMapping(
             name=name,
             source=str(spec["source"]),
@@ -205,6 +229,8 @@ def load_mapping(path: Path) -> dict[str, StreamMapping]:
             defaults=dict(spec.get("defaults") or {}),
             time_format=spec.get("time_format"),
             timezone=zone,
+            topic=str(topic).strip() if topic else None,
+            fields={k: str(v) for k, v in spec["fields"].items()} if spec.get("fields") else None,
         )
     return mappings
 
@@ -249,14 +275,19 @@ def _parse_bool(text: str, field_name: str) -> bool:
     raise ValueError(f"{field_name} {text!r} is neither a yes nor a no; it is left unanswered rather than guessed")
 
 
-def to_event(row: dict, mapping: StreamMapping):
-    """One row of a plant's file as one contract event, or ValueError."""
+def to_event(row: dict, mapping: StreamMapping, source_desc: str = "the file"):
+    """One row of a plant's file as one contract event, or ValueError.
+
+    `source_desc` is what a rejection calls the thing the row came out of,
+    because "the file has no column 'stop_id'" is the wrong sentence to read
+    when the row arrived on a broker.
+    """
     model = mapping.model
     payload: dict[str, object] = {"source": mapping.source, "source_kind": mapping.source_kind}
     payload.update(mapping.defaults)
     for field_name, column in mapping.columns.items():
         if column not in row:
-            raise ValueError(f"the file has no column {column!r}, mapped to {field_name}")
+            raise ValueError(f"{source_desc} has no {column!r}, mapped to {field_name}")
         raw = row[column]
         if raw is None:
             continue

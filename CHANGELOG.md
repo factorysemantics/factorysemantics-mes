@@ -34,6 +34,35 @@ goes under Honesty with a migration line, so plant people can find it.
   ends with *what this cannot tell you*: orders only one record holds,
   comparisons that could not be made, and the periods neither record covers.
   See [the shadow scorecard](docs/operate/shadow-scorecard.md).
+- **`fsmes inbound subscribe`: the MES listens to the plant's MQTT broker.**
+  It has published to a broker since the unified namespace landed and could
+  not hear. Two kinds of thing arrive and are kept apart. **Tag values** — a
+  counter, a state word, a process value from a gateway — are machine data,
+  wired in an `mqtt` section of the tag map beside the OPC machines so one
+  document describes one plant, and held to the OPC agent's own discipline:
+  a delta is the rise of a monotonic total, an unmapped state word is
+  refused rather than guessed at, and a reading for a machine this MES does
+  not hold is refused rather than inventing the machine. **Inbound events**
+  are the contract already there: a stream in the mapping file gains a
+  `topic`, and the mapping, the parsing, the deduplication and the writers
+  are the folder driver's, unchanged. Off by default; needs the same
+  `[mqtt]` extra as the publisher, and its own client id, because a broker
+  disconnects the older session when two clients share one. Nothing here
+  publishes, and shadow mode does not gate it — being told things is the
+  opposite direction from changing something. No broker has been tested
+  against it; the suite drives it with a fake source.
+  See [the inbound page](docs/operate/inbound.md#the-broker-mqtt).
+
+### Honesty
+- **A counter over MQTT must be a running total, never an increment.** MQTT
+  at QoS 1 is at-least-once, and nothing in a redelivered message tells it
+  from the first: a repeated total is not a rise and books nothing, while a
+  repeated increment would book units the plant never made. A mapping that
+  declares an increment is refused at start-up and told the two ways out.
+- **A retained MQTT message sets a counter baseline and nothing else.** The
+  broker replays it to every new subscriber as though it had just happened
+  and nothing in it says how old it is, so it never becomes a state change
+  or a tag-history row. Counted in the run's report, not dropped in silence.
 - **The test suite runs on PostgreSQL in CI.** Every test ran on in-memory
   SQLite; PostgreSQL was documented, configured and shipped in the Compose
   file, and nothing exercised it. A `postgres` cell now runs

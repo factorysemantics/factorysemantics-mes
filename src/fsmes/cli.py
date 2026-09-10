@@ -528,6 +528,32 @@ def inbound_check() -> None:
     typer.echo(f"{waiting} file(s) waiting in total. Nothing has been read; run "
                "`fsmes inbound watch --once` to read them.")
 
+    from fsmes.integrations.inbound.mqtt import (
+        SubscriptionError,
+        load_event_subscriptions,
+        load_tag_subscriptions,
+        streams_and_topics,
+    )
+
+    mode = (settings.inbound_mqtt_mode or "off").lower()
+    if mode == "off":
+        typer.echo("\nMQTT: MES_INBOUND_MQTT_MODE is 'off'; no broker is subscribed to.")
+        return
+    try:
+        tags = load_tag_subscriptions(settings.tag_map_file)
+        events = load_event_subscriptions(mappings)
+    except SubscriptionError as exc:
+        typer.echo(f"NOT OK  {exc}")
+        raise typer.Exit(1) from exc
+    lines = streams_and_topics(tags, events)
+    typer.echo(f"\nMQTT: {settings.inbound_mqtt_broker_url} as {settings.inbound_mqtt_client_id!r}, "
+               f"QoS {settings.inbound_mqtt_qos}.")
+    for line in lines:
+        typer.echo(f"  {line}")
+    typer.echo(f"{len(lines)} topic filter(s) in total: {len(tags)} carrying tag values, "
+               f"{len(events)} carrying events. Nothing has been subscribed to; run "
+               "`fsmes inbound subscribe` to listen.")
+
 
 @inbound_app.command("watch")
 def inbound_watch(once: bool = False) -> None:
@@ -649,6 +675,82 @@ def shadow_scorecard(
                    "export's codes and this MES's are different sets of strings; map them in "
                    "the mapping file's `orders` section.")
         raise typer.Exit(1)
+
+
+
+@inbound_app.command("subscribe")
+def inbound_subscribe() -> None:
+    """Listen to the plant's MQTT broker, forever.
+
+    The other half of the unified namespace: `fsmes uns publish` tells the
+    broker what this MES recorded, and this hears what the plant's gateways
+    publish — counters, state words and process values that never touch an
+    OPC UA server, and downtime labels, quality results and counts where a
+    broker already carries them.
+
+    It publishes nothing. Every totals line it prints is over everything it
+    has received since it started, refusals grouped with a count each.
+    """
+    from fsmes.db import session_scope
+    from fsmes.integrations.inbound.mqtt import (
+        Ingest,
+        MqttSource,
+        SubscriptionError,
+        load_event_subscriptions,
+        load_tag_subscriptions,
+        run,
+    )
+    from fsmes.integrations.uns.transport import BrokerAddress
+
+    settings, mappings = _inbound_mapping()
+    mode = (settings.inbound_mqtt_mode or "off").lower()
+    if mode == "off":
+        typer.echo("MES_INBOUND_MQTT_MODE is 'off' — nothing to run. Set it to 'mqtt' and point "
+                   "MES_INBOUND_MQTT_BROKER_URL at your broker.")
+        raise typer.Exit(1)
+    if mode != "mqtt":
+        typer.echo(f"NOT OK  unknown inbound MQTT mode {settings.inbound_mqtt_mode!r} (known: off, mqtt)")
+        raise typer.Exit(1)
+    if settings.inbound_mqtt_client_id == settings.uns_client_id:
+        # Not a style point: a broker evicts the older session when two
+        # clients connect with one id, so this would have the subscriber and
+        # the publisher disconnecting each other all shift.
+        typer.echo(f"NOT OK  the subscriber and the publisher would both connect as "
+                   f"{settings.uns_client_id!r}. A broker disconnects the older session when two "
+                   "clients share an id. Set MES_INBOUND_MQTT_CLIENT_ID to something else.")
+        raise typer.Exit(1)
+
+    try:
+        tags = load_tag_subscriptions(settings.tag_map_file)
+        events = load_event_subscriptions(mappings)
+    except SubscriptionError as exc:
+        typer.echo(f"NOT OK  {exc}")
+        raise typer.Exit(1) from exc
+    if not tags and not events:
+        typer.echo(f"Nothing is mapped to a topic. Add an 'mqtt' section to {settings.tag_map_file} "
+                   f"for tag values, or a 'topic' to a stream in {settings.inbound_mapping_file} "
+                   "for events. This MES does not guess topics.")
+        raise typer.Exit(1)
+
+    setup_logging(settings.log_level, settings.log_dir, "inbound-subscribe")
+    address = BrokerAddress(settings.inbound_mqtt_broker_url, settings.inbound_mqtt_username,
+                            settings.inbound_mqtt_password)
+    ingest = Ingest(tags, events, source=settings.inbound_mqtt_source or f"mqtt:{address.host}")
+    source = MqttSource(address, client_id=settings.inbound_mqtt_client_id,
+                        qos=settings.inbound_mqtt_qos)
+    typer.echo(f"Listening to {settings.inbound_mqtt_broker_url} on {len(ingest.topics)} topic "
+               f"filter(s). Nothing is published. Ctrl-C to stop.")
+
+    def say(report) -> None:
+        for line in report.render():
+            typer.echo(line)
+
+    try:
+        asyncio.run(run(source, ingest, session_scope,
+                        on_report=say, report_seconds=settings.inbound_mqtt_report_seconds))
+    except KeyboardInterrupt:
+        say(ingest.report)
+
 
 uns_app = typer.Typer(help="Unified namespace: relay MES events to an MQTT broker.")
 app.add_typer(uns_app, name="uns")

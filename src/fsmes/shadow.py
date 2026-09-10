@@ -91,7 +91,7 @@ class Outbound:
 #: `allowed`    — it runs, because nothing about the plant leaves this box
 #:                by it, and nothing outside this MES changes.
 #:
-#: **30 entries.** The count is stated because a register that quietly loses
+#: **31 entries.** The count is stated because a register that quietly loses
 #: a row is worse than no register, and `tests/test_shadow_mode.py` scans the
 #: source for outbound primitives and fails on any call site not covered by
 #: an entry here.
@@ -219,6 +219,18 @@ REGISTER: tuple[Outbound, ...] = (
         verdict="refused",
         note="same gate. A subscriber acting on an event it should not have "
              "seen is a plant change by another name",
+    ),
+    Outbound(
+        name="inbound.mqtt_subscribe",
+        where="fsmes.integrations.inbound.mqtt",
+        reaches="the plant's MQTT broker, to listen",
+        verdict="allowed",
+        note="`fsmes inbound subscribe` connects and subscribes; it holds no "
+             "publish call and the ratchet above would fail on one. Being "
+             "told things is the opposite direction from changing them, and "
+             "a shadow that stopped listening would be comparing itself with "
+             "the incumbent on half the evidence. Its client id is its own, "
+             "so it cannot evict the publisher's session",
     ),
     Outbound(
         name="uns.log_publish",
