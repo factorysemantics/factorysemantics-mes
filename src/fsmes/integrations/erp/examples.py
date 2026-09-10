@@ -218,8 +218,13 @@ def _on_the_fixed_clock(payload: dict) -> dict:
     return payload
 
 
-def generate() -> list[Example]:
-    """Run the demo plant and lift the published confirmations out of it."""
+def confirmations() -> dict[str, dict]:
+    """Every confirmation the scripted run queues, on the fixed clock.
+
+    `generate()` publishes the six worth reading as examples; this is all
+    nine, which is what anything comparing a whole run against another
+    record of it needs. Same run, same clock, same payloads.
+    """
     session = _plant()
     try:
         _run(session)
@@ -231,11 +236,17 @@ def generate() -> list[Example]:
         }
     finally:
         session.close()
+    return {key: _on_the_fixed_clock(payload) for key, payload in queued.items()}
+
+
+def generate() -> list[Example]:
+    """Run the demo plant and lift the published confirmations out of it."""
+    queued = confirmations()
 
     missing = [key for key in PUBLISHED if key not in queued]
     if missing:  # pragma: no cover - a broken generator, caught by its test
         raise RuntimeError(f"the run did not produce {missing}")
-    return [Example(name=name, title=title, why=why, payload=_on_the_fixed_clock(queued[key]))
+    return [Example(name=name, title=title, why=why, payload=queued[key])
             for key, (name, title, why) in PUBLISHED.items()]
 
 
