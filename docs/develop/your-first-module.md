@@ -24,7 +24,7 @@ erpnext = "fsmes.integrations.erp.erpnext_adapter:from_settings"
 ```
 
 `from_settings(settings)` builds an adapter that satisfies the `ErpAdapter`
-protocol — three methods:
+protocol. Three methods move the work:
 
 ```python
 class ErpAdapter(Protocol):
@@ -33,13 +33,22 @@ class ErpAdapter(Protocol):
     def send_confirmation(self, confirmation: Confirmation) -> None: ...
 ```
 
+Three more describe the far side — `requirements()`, `setup()` and
+`check()` — and they have defaults, so a transport that needs nothing on
+the ERP side can ignore them. They are what `fsmes erp requirements`,
+`fsmes erp setup` and `fsmes erp check` run.
+[Writing an ERP connector](erp-connectors.md) is the whole story, including
+the conformance suite a connector has to pass.
+
 The models are typed (`contract.py`); every MES-side rule lives in
 `services.erp`, so an adapter is transport only.
 
 ## Write your own connector, in its own package
 
 1. New package, say `fsmes-sap`, depending on `factorysemantics-mes`.
-2. Implement the three methods against `fsmes.integrations.erp.contract`.
+2. Implement the port against `fsmes.integrations.erp.contract`, and run
+   `fsmes.integrations.erp.conformance` against it — see
+   [writing an ERP connector](erp-connectors.md).
 3. Register:
 
     ```toml
@@ -62,5 +71,6 @@ pin, not the function they call — house rule 5.
 
 ## See also
 
-- Decision records [0002](../decisions/0002-kernel-and-modules.md) and [0008](../decisions/0008-erp-connectors-are-modules.md)
+- [Writing an ERP connector](erp-connectors.md) — the port in full, and the bar
+- Decision records [0002](../decisions/0002-kernel-and-modules.md), [0008](../decisions/0008-erp-connectors-are-modules.md) and [0020](../decisions/0020-what-supported-means-for-an-erp-connector.md)
 - [The ERPNext connector](../operate/erpnext.md)

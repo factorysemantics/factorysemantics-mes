@@ -13,6 +13,7 @@ existed only in a demo seeding script outside the wheel, while the
 documentation said nothing was needed on the ERPNext side.
 """
 
+from fsmes.integrations.erp.base import CheckResult, Requirement, SetupOutcome
 from fsmes.integrations.erp.erpnext_adapter import ErpNextClient, ErpNextError
 
 DOCTYPE = "Work Order"
@@ -116,59 +117,92 @@ def field_problems(client: ErpNextClient) -> list[str]:
     return problems
 
 
-def ensure_custom_fields(client: ErpNextClient) -> list[tuple[str, str]]:
+def requirements() -> list[Requirement]:
+    """The five custom fields, as the port's `Requirement` model.
+
+    Same list, same source, shaped so `fsmes erp requirements` can print it
+    for whoever administers the ERPNext site — which is often not the person
+    running the MES.
+    """
+    return [
+        Requirement(
+            name=field["fieldname"],
+            where=f"the {DOCTYPE} doctype, as a Custom Field",
+            what=f"a {field['fieldtype']} field labelled {field['label']!r}, allowed to change on submit"
+                 + (f". {field['description']}" if field.get("description") else ""),
+            why=_WHY[field["fieldname"]],
+        )
+        for field in CUSTOM_FIELDS
+    ]
+
+
+_WHY = {
+    "custom_mes_synced": "ERPNext has no way to say an order has been taken, so without it every "
+                         "poll re-imports every open work order",
+    "custom_mes_good_qty": "the good quantity the machines counted, which is not always ERPNext's "
+                           "produced_qty and is the number the plant is asked about",
+    "custom_mes_scrap_qty": "ERPNext has no native field for machine-counted scrap, and it is the "
+                            "number the plant argues about",
+    "custom_mes_over_qty": "an over-run reaches the ERP as its own number rather than as a good "
+                           "quantity a reader has to notice is larger than the order",
+    "custom_mes_lot": "the finished lot the MES booked, so a stock movement can be traced back to it",
+}
+
+
+def ensure_custom_fields(client: ErpNextClient) -> list[SetupOutcome]:
     """Create any of the fields that are not there. Idempotent.
 
-    Returns one `(fieldname, what happened)` pair per field, so the caller can
-    print exactly what it did rather than a count nobody can check.
+    Returns one outcome per field, naming it, so the caller can print
+    exactly what it did rather than a count nobody can check.
     """
     present = installed_fields(client)
-    outcome: list[tuple[str, str]] = []
+    outcome: list[SetupOutcome] = []
     for field in CUSTOM_FIELDS:
         name = field["fieldname"]
         if name in present:
-            outcome.append((name, "already there"))
+            outcome.append(SetupOutcome(name=name, outcome="already there"))
             continue
         client.insert("Custom Field", {"dt": DOCTYPE, **field})
-        outcome.append((name, "created"))
+        outcome.append(SetupOutcome(name=name, outcome="created"))
     return outcome
 
 
-def check(client: ErpNextClient, *, company: str = "") -> tuple[bool, list[str]]:
-    """Is this ERPNext usable by the MES? Returns (ok, lines to print).
+def check(client: ErpNextClient, *, company: str = "") -> CheckResult:
+    """Is this ERPNext usable by the MES?
 
-    Every line begins `ok` or `NOT OK` so the answer survives being pasted
+    Every line carries its own verdict so the answer survives being pasted
     into an issue. The first failure that makes the rest meaningless — the
-    site being unreachable — stops the check there rather than reporting four
-    more failures that are all the same failure.
+    site being unreachable — stops the check there rather than reporting
+    four more failures that are all the same failure.
     """
-    lines: list[str] = []
+    lines: list[tuple[str, str]] = []
     try:
         client.list(DOCTYPE, limit=1)
     except ErpNextError as exc:
-        lines.append(f"NOT OK  cannot read {DOCTYPE} at {client.base_url}: {exc}")
-        lines.append("        check MES_ERPNEXT_BASE_URL, MES_ERPNEXT_SITE and the credentials.")
-        return False, lines
+        return CheckResult.of(
+            ("not ok", f"cannot read {DOCTYPE} at {client.base_url}: {exc}"),
+            ("note", "check MES_ERPNEXT_BASE_URL, MES_ERPNEXT_SITE and the credentials."),
+        )
     except Exception as exc:  # a connection refused, a DNS failure, a timeout
-        lines.append(f"NOT OK  cannot reach {client.base_url}: {type(exc).__name__}: {exc}")
-        return False, lines
-    lines.append(f"ok      reached {client.base_url} and read {DOCTYPE} as an authorised user")
+        return CheckResult.of(
+            ("not ok", f"cannot reach {client.base_url}: {type(exc).__name__}: {exc}"),
+        )
+    lines.append(("ok", f"reached {client.base_url} and read {DOCTYPE} as an authorised user"))
 
     problems = field_problems(client)
     if problems:
-        for problem in problems:
-            lines.append(f"NOT OK  {problem}")
-        lines.append(f"        run `fsmes erp setup` to create the {len(CUSTOM_FIELDS)} fields the MES needs.")
+        lines.extend(("not ok", problem) for problem in problems)
+        lines.append(("note", f"run `fsmes erp setup` to create the {len(CUSTOM_FIELDS)} fields the MES needs."))
     else:
-        lines.append(f"ok      all {len(CUSTOM_FIELDS)} custom fields present: {', '.join(FIELD_NAMES)}")
+        lines.append(("ok", f"all {len(CUSTOM_FIELDS)} custom fields present: {', '.join(FIELD_NAMES)}"))
 
     if company:
         if client.exists("Company", company):
-            lines.append(f"ok      company {company!r} exists; only its work orders will be imported")
+            lines.append(("ok", f"company {company!r} exists; only its work orders will be imported"))
         else:
-            problems.append(f"company {company!r} does not exist on this site")
-            lines.append(f"NOT OK  company {company!r} does not exist on this site — no order would ever be imported")
+            lines.append(("not ok", f"company {company!r} does not exist on this site — "
+                                    "no order would ever be imported"))
     else:
-        lines.append("ok      MES_ERPNEXT_COMPANY is empty: work orders of every company on this site are imported")
+        lines.append(("ok", "MES_ERPNEXT_COMPANY is empty: work orders of every company on this site are imported"))
 
-    return not problems, lines
+    return CheckResult.of(*lines)

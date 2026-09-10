@@ -55,10 +55,10 @@ jobs:
     env:
       COMPOSE: labs/erpnext/docker-compose.yml
       # The whole connection, set the way docs/operate/erpnext.md tells an
-      # operator to set it. MES_ERP_MODE is part of that: `fsmes erp setup`
-      # and `fsmes erp check` refuse to touch a site when the MES is not
-      # configured to talk to ERPNext at all, which is the right refusal and
-      # a red job here until the job says which ERP it means.
+      # operator to set it. MES_ERP_MODE is part of that: the `fsmes erp`
+      # commands are the port's own `requirements`, `setup` and `check`, so
+      # the mode is what decides which connector they act on. Leave it unset
+      # and this job would prepare the file exchange instead.
       MES_ERP_MODE: erpnext
       MES_ERPNEXT_BASE_URL: http://127.0.0.1:8080
       MES_ERPNEXT_SITE: mes.localhost
@@ -107,13 +107,16 @@ jobs:
           echo "the site never answered 200 (last status ${code:-none}) after 60 attempts"
           exit 1
 
-      # The two commands the docs tell an operator to run, run against a real
-      # ERPNext. `check` exits non-zero when the connector would not work, so
-      # a wrong field type or a missing permission is a red job here rather
-      # than a lost number on someone's plant.
-      - name: fsmes erp setup, then fsmes erp check
+      # The three commands the docs tell an operator to run, run against a
+      # real ERPNext. They are the ERP port's own methods, so this also
+      # proves the port answers for a connector that has real requirements.
+      # `check` exits non-zero when the connector would not work, so a wrong
+      # field type or a missing permission is a red job here rather than a
+      # lost number on someone's plant.
+      - name: fsmes erp requirements, setup, then check
         run: |
           set -euo pipefail
+          fsmes erp requirements
           fsmes erp setup
           fsmes erp check
 

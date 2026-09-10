@@ -31,6 +31,7 @@ import math
 import httpx
 import structlog
 
+from fsmes.integrations.erp.base import CheckResult, ErpConnector, Requirement, SetupOutcome
 from fsmes.integrations.erp.contract import ProductionRequest, as_payload
 
 log = structlog.get_logger("erp.erpnext")
@@ -206,7 +207,7 @@ def from_settings(settings) -> "ErpNextAdapter":
     )
 
 
-class ErpNextAdapter:
+class ErpNextAdapter(ErpConnector):
     """Transport only — every MES-side rule stays in services.erp."""
 
     def __init__(self, client: ErpNextClient, *, post_stock_entry: bool = True, company: str = ""):
@@ -216,6 +217,25 @@ class ErpNextAdapter:
         # one company needs this set, or one company's MES runs another's
         # orders; a single-company site is right to leave it alone.
         self.company = company
+
+    # ------------------------------------------------------------- the far side
+    # `erpnext_setup` is imported inside these three because it imports this
+    # module for its client.
+
+    def requirements(self) -> list[Requirement]:
+        from fsmes.integrations.erp import erpnext_setup
+
+        return erpnext_setup.requirements()
+
+    def setup(self) -> list[SetupOutcome]:
+        from fsmes.integrations.erp import erpnext_setup
+
+        return erpnext_setup.ensure_custom_fields(self.client)
+
+    def check(self) -> CheckResult:
+        from fsmes.integrations.erp import erpnext_setup
+
+        return erpnext_setup.check(self.client, company=self.company)
 
     # ------------------------------------------------------------- inbound
     def fetch_orders(self) -> list[ProductionRequest]:
