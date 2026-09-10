@@ -344,3 +344,123 @@ def test_the_site_this_ran_against_is_the_one_the_host_header_named(client, seed
     assert client.exists("Company", "ACME Beverages"), (
         f"the bench answered on Host {site!r} but that site has no ACME Beverages company"
     )
+
+
+# ------------------------------------------------- over-production, measured
+
+ALLOWANCE_FIELD = "overproduction_percentage_for_work_order"
+
+
+def allowance_now(client: ErpNextClient) -> float:
+    return float(client.get("Manufacturing Settings", "Manufacturing Settings").get(ALLOWANCE_FIELD) or 0)
+
+
+@pytest.fixture
+def allowance(client: ErpNextClient):
+    """Set ERPNext's own over-production allowance, and put it back after.
+
+    It is a single site-wide setting, so a test that changed it and walked
+    away would silently rewrite the rules for every test that ran later.
+    """
+    original = allowance_now(client)
+
+    def apply(percent: float) -> None:
+        client.call("frappe.client.set_value", doctype="Manufacturing Settings",
+                    name="Manufacturing Settings", fieldname=ALLOWANCE_FIELD, value=percent)
+        stored = allowance_now(client)
+        assert stored == percent, (
+            f"asked ERPNext for an over-production allowance of {percent}% and it holds {stored}%"
+        )
+
+    yield apply
+    client.call("frappe.client.set_value", doctype="Manufacturing Settings",
+                name="Manufacturing Settings", fieldname=ALLOWANCE_FIELD, value=original)
+
+
+def confirm_over_run(adapter: ErpNextAdapter, order: str, good: float) -> ErpNextError | None:
+    """Send a completion for more good units than the order asked for.
+
+    Returns what ERPNext did about it: `None` if it took it, the error if it
+    refused. `over_qty` is what `WorkOrder.over_qty` would carry — the MES
+    books every unit the machine counted and says how far past the order it
+    ran (decision 0019).
+    """
+    try:
+        adapter.send_confirmation(
+            {
+                "order": order,
+                "material": "FG-BOTTLE",
+                "ordered_qty": ORDERED_QTY,
+                "good_qty": good,
+                "scrap_qty": 0.0,
+                "over_qty": good - ORDERED_QTY,
+                "lot": f"{order}-FG",
+            }
+        )
+    except ErpNextError as exc:
+        return exc
+    return None
+
+
+def report(case: str, client: ErpNextClient, order: str, good: float,
+           refusal: ErpNextError | None) -> dict:
+    """One measured case, printed into the run log and returned for assertions."""
+    document = client.get("Work Order", order)
+    entries = manufacture_entries(client, order)
+    measured = {
+        "refused": None if refusal is None else str(refusal),
+        "status_code": getattr(refusal, "status_code", None),
+        "produced_qty": document.get("produced_qty"),
+        "wo_status": document.get("status"),
+        "custom_mes_good_qty": document.get("custom_mes_good_qty"),
+        "custom_mes_over_qty": document.get("custom_mes_over_qty"),
+        "entries": [(e["name"], e["fg_completed_qty"]) for e in entries],
+        "comments": comments_on(client, order),
+    }
+    print(f"\nOVER-PRODUCTION [{case}] ordered={ORDERED_QTY:g} good={good:g} "
+          f"allowance={allowance_now(client):g}%")
+    for key, value in measured.items():
+        print(f"    {key} = {value!r}")
+    return measured
+
+
+def test_an_over_run_inside_erpnexts_allowance_is_booked_for_every_unit(client, seeded, allowance):
+    """The line made 420 against an order for 400 and ERPNext allows 10%."""
+    allowance(10.0)
+    order = submit_work_order(client, seeded, ORDERED_QTY)
+    adapter = ErpNextAdapter(client)
+    adapter.acknowledge(order)
+
+    good = ORDERED_QTY * 1.05
+    refusal = confirm_over_run(adapter, order, good)
+    measured = report("within allowance", client, order, good, refusal)
+
+    assert measured["custom_mes_good_qty"] == good
+
+
+def test_an_over_run_beyond_erpnexts_allowance_is_measured_not_guessed(client, seeded, allowance):
+    """The line made 500 against an order for 400 and ERPNext allows 10%."""
+    allowance(10.0)
+    order = submit_work_order(client, seeded, ORDERED_QTY)
+    adapter = ErpNextAdapter(client)
+    adapter.acknowledge(order)
+
+    good = ORDERED_QTY * 1.25
+    refusal = confirm_over_run(adapter, order, good)
+    measured = report("beyond allowance", client, order, good, refusal)
+
+    assert measured["custom_mes_good_qty"] == good
+
+
+def test_with_the_allowance_at_zero_one_unit_over_is_measured_not_guessed(client, seeded, allowance):
+    """ERPNext's own default: no over-production at all. One unit over."""
+    allowance(0.0)
+    order = submit_work_order(client, seeded, ORDERED_QTY)
+    adapter = ErpNextAdapter(client)
+    adapter.acknowledge(order)
+
+    good = ORDERED_QTY + 1
+    refusal = confirm_over_run(adapter, order, good)
+    measured = report("allowance zero", client, order, good, refusal)
+
+    assert measured["custom_mes_good_qty"] == good
