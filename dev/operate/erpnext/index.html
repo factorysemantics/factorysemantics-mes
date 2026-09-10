@@ -982,6 +982,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Verified against">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-a-missing-custom-field-actually-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a missing custom field actually does
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2408,6 +2425,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Verified against">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-a-missing-custom-field-actually-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a missing custom field actually does
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2523,7 +2557,9 @@ needs no more than read and write on Work Order and Stock Entry.</p>
 <h3 id="if-a-field-is-missing">If a field is missing<a class="headerlink" href="#if-a-field-is-missing" title="Permanent link">&para;</a></h3>
 <p>Frappe accepts a <code>PUT</code> naming a field its doctype does not have. It answers
 <code>200</code> and drops the value. So a missing field does not look like an error at
-the HTTP level — it looks like success with the number gone.</p>
+the HTTP level — it looks like success with the number gone. That is
+<a href="#what-a-missing-custom-field-actually-does">measured against a live ERPNext</a>,
+not inferred from Frappe's source.</p>
 <p>The MES therefore reads back every write and compares it against what it
 sent. A field that did not survive raises, the confirmation stays in the
 outbox and retries, and the log names the field. The MES cannot end up
@@ -2570,17 +2606,45 @@ on the site, which is what a single-company ERPNext wants. A bench that holds
 more than one company's books must set it, or this MES will run another
 business's orders.</p>
 <h2 id="verified-against">Verified against<a class="headerlink" href="#verified-against" title="Permanent link">&para;</a></h2>
-<p>A local Frappe bench during development (2026-08). <strong>Not yet verified
-against a current stable ERPNext release in a clean container</strong> — that test
-is on the list before the connector is called supported. See
-<a href="../compatibility/">compatibility</a>. If you run it against a real site, an
-issue with the versions of both sides is the most useful thing you can send.</p>
-<p>Specifically unverified, as of 2026-09-09: that Frappe silently drops a <code>PUT</code>
-to a field the doctype does not have. That is what Frappe's own document
-layer does when you read it, and it is why the read-back check exists — but
-nobody here has watched a live ERPNext do it. If you have one, <code>fsmes erp
-check</code> on a site without the fields, and then <code>fsmes run-erp-sync</code>, would
-settle it.</p>
+<p><strong>ERPNext v15.120.0</strong> — Frappe v15, MariaDB 10.6 — in a clean container, on
+every pull request that touches this connector. The <code>ERPNext (live)</code> job
+brings the site up from <code>labs/erpnext/docker-compose.yml</code> (images pinned to
+digests, listed in <code>labs/erpnext/VERSIONS.md</code>), runs ERPNext's setup wizard
+and <code>labs/erpnext/seed_erpnext.py</code>, and then runs <code>tests/test_erpnext_live.py</code>.</p>
+<p>Every assertion in that round trip reads ERPNext's own documents back. What
+the MES believes it sent is not evidence. It proves:</p>
+<ul>
+<li>a submitted Work Order reaches the MES with its item, quantity and dates;</li>
+<li>acknowledging it sets <code>custom_mes_synced</code> on ERPNext's document, and the
+  next fetch no longer offers it;</li>
+<li>a confirmation lands as the quantity fields and the lot on the Work Order,
+  as ERPNext's own <code>produced_qty</code>, as one submitted Manufacture stock entry
+  of the right quantity, and as a comment;</li>
+<li>sending the same confirmation twice still leaves exactly one stock entry —
+  the retry that would otherwise book the plant's production twice;</li>
+<li><code>MES_ERPNEXT_POST_STOCK_ENTRY=false</code> still records every number;</li>
+<li>the site written to is the one the <code>Host</code> header named.</li>
+</ul>
+<p><strong>Not covered, as of 2026-09-09.</strong> ERPNext v16 — nothing here claims
+anything about it. The sync worker and the MES-side booking that decides
+what to confirm: the round trip drives the adapter, not <code>fsmes run-erp-sync</code>.
+Over-production, where the MES has counted more than the Work Order's
+quantity and ERPNext has an allowance of its own. A bench serving more than
+one company. See <a href="../compatibility/">compatibility</a>. If you run this against
+a real site, an issue with the versions of both sides is the most useful
+thing you can send.</p>
+<h3 id="what-a-missing-custom-field-actually-does">What a missing custom field actually does<a class="headerlink" href="#what-a-missing-custom-field-actually-does" title="Permanent link">&para;</a></h3>
+<p>Measured on ERPNext v15.120.0, not reasoned about: a <code>PUT</code> to a submitted
+Work Order naming a field the doctype does not have <strong>succeeds</strong>. Frappe
+answers <code>200</code>, the response is a normal document, and the value is neither
+stored nor returned. Nothing anywhere says a number was dropped.</p>
+<p>The experiment is <code>test_erpnext_takes_a_write_to_a_field_that_does_not_exist_and_loses_it</code>:
+it installs a probe custom field, proves a write to it survives, deletes the
+field, writes the same shape again, and reads the document back. It runs on
+every live job, so if ERPNext ever changes its mind, that is where it shows.</p>
+<p>This is why the read-back check above exists. ERPNext gives the connector no
+signal at all, so comparing what was written against the document that comes
+back is the only way to know a number landed.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../reference/settings/">Settings reference</a> — every <code>MES_ERPNEXT_*</code> value</li>

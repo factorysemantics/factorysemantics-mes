@@ -2236,7 +2236,7 @@
 
 
 <h1 id="compatibility">Compatibility<a class="headerlink" href="#compatibility" title="Permanent link">&para;</a></h1>
-<p><em>Explanation. What has actually been tested against what, as of 2026-09-07. "Untested" is a fact, not a warning label.</em></p>
+<p><em>Explanation. What has actually been tested against what, as of 2026-09-09. "Untested" is a fact, not a warning label.</em></p>
 <table>
 <thead>
 <tr>
@@ -2262,9 +2262,14 @@
 <td>the client is <code>asyncua</code>; the tag map is the only server-specific part</td>
 </tr>
 <tr>
-<td><strong>ERPNext</strong></td>
-<td>tested against a development bench (2026-08)</td>
-<td>not yet against a current stable release in a clean container</td>
+<td><strong>ERPNext v15.120.0</strong></td>
+<td>tested continuously</td>
+<td>the <code>ERPNext (live)</code> job: a clean container from <code>labs/erpnext/docker-compose.yml</code>, pinned to image digests, seeded and put through the whole round trip in <code>tests/test_erpnext_live.py</code>, every pull request that touches the connector (2026-09-09)</td>
+</tr>
+<tr>
+<td>ERPNext v16</td>
+<td>untested</td>
+<td>nothing claims anything about it; the live job pins v15</td>
 </tr>
 <tr>
 <td>Odoo, SAP, Oracle</td>
