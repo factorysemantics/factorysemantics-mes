@@ -166,7 +166,7 @@ def activity(db: DbDep, limit: int = 60, actor: str | None = None,
     if actor:
         query = query.where(AuditLog.actor == actor)
     if action:
-        query = query.where(AuditLog.action.like(f"{action}%"))
+        query = query.where(AuditLog.action.ilike(f"{action}%"))
 
     rows = db.scalars(query.limit(min(limit, 500))).all()
     actors = sorted({r.actor for r in db.scalars(

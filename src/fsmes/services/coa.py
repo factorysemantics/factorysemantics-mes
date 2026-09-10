@@ -229,7 +229,7 @@ def listing(session: Session, limit: int = 100, *, material: str | None = None,
     if material:
         query = query.where(Document.anchor_material == material)
     if q:
-        query = query.where(Document.code.like(f"{PREFIX}%{q}%"))
+        query = query.where(Document.code.ilike(f"{PREFIX}%{q}%"))
     total = session.scalar(select(func.count()).select_from(query.subquery())) or 0
     rows = session.scalars(query.order_by(Document.approved_at.desc()).limit(limit).offset(offset))
     return [{"order": d.code[len(PREFIX):], "document": d.code, "revision": d.revision,

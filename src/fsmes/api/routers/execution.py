@@ -59,7 +59,7 @@ def list_lots(
     if status:
         query = query.where(MaterialLot.status == status)
     if q:
-        query = query.where(MaterialLot.code.like(f"%{q}%"))
+        query = query.where(MaterialLot.code.ilike(f"%{q}%"))
 
     rows, total = paging.paginate(db, query, limit, offset)
     return paging.page([_lot_out(db, lot) for lot in rows], total, limit, offset)

@@ -265,8 +265,8 @@ def history(session: Session, equipment_code: str | None = None, limit: int = 50
         query = query.where(MaintenanceOrder.kind == MaintenanceKind(kind))
     if q:
         like = f"%{q}%"
-        query = query.where(MaintenanceOrder.code.like(like) | MaintenanceOrder.summary.like(like)
-                            | MaintenanceOrder.findings.like(like))
+        query = query.where(MaintenanceOrder.code.ilike(like) | MaintenanceOrder.summary.ilike(like)
+                            | MaintenanceOrder.findings.ilike(like))
     total = session.scalar(select(func.count()).select_from(query.order_by(None).subquery())) or 0
     return list(session.scalars(query.limit(limit).offset(offset))), total
 

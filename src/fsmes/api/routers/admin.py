@@ -139,7 +139,7 @@ def list_users(
         query = query.where(Person.role == role)
     if q:
         like = f"%{q}%"
-        query = query.where(Person.code.like(like) | Person.name.like(like))
+        query = query.where(Person.code.ilike(like) | Person.name.ilike(like))
 
     people, total = paging.paginate(db, query, limit, offset)
     grants = {r.code: r.granted() for r in db.scalars(select(Role))}

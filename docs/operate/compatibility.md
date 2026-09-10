@@ -8,7 +8,7 @@
 | **The bundled OPC UA replay server** | tested continuously | every scored run and CI |
 | Other OPC UA servers (Ignition, Siemens, Prosys) | untested | the client is `asyncua`; the tag map is the only server-specific part |
 | **ERP connectors** | see the table below | they have rules of their own |
-| **PostgreSQL 16** | tested | Compose file; the cutlery plant's public demo |
+| **PostgreSQL 16.15** | tested continuously | the `postgres` cell in CI: `alembic upgrade head` from an empty database and then the whole suite, against a PostgreSQL 16.15 service container pinned by digest, on every pull request (2026-09-10). Also the Compose file and the cutlery plant's public demo |
 | **SQLite** | tested continuously | the default; every test |
 | **Claude Code** as an MCP client | tested | the agent evals drive it headless |
 | Claude Desktop, other MCP clients | untested | the server is streamable HTTP over the standard SDK |

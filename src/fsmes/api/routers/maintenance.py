@@ -82,7 +82,7 @@ def plans(
         query = query.where(MaintenancePlan.trigger == trigger)
     if q:
         like = f"%{q}%"
-        query = query.where(MaintenancePlan.code.like(like) | MaintenancePlan.name.like(like))
+        query = query.where(MaintenancePlan.code.ilike(like) | MaintenancePlan.name.ilike(like))
     return [maintenance.status_of(db, p) for p in db.scalars(query)]
 
 

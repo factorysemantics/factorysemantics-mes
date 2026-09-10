@@ -57,7 +57,7 @@ def list_equipment(
         query = query.where(Equipment.level == level)
     if q:
         like = f"%{q}%"
-        query = query.where(Equipment.code.like(like) | Equipment.name.like(like))
+        query = query.where(Equipment.code.ilike(like) | Equipment.name.ilike(like))
     return [_equipment_out(eq) for eq in db.scalars(query)]
 
 
@@ -98,7 +98,7 @@ def list_materials(
         query = query.where(Material.type == type)
     if q:
         like = f"%{q}%"
-        query = query.where(Material.code.like(like) | Material.name.like(like))
+        query = query.where(Material.code.ilike(like) | Material.name.ilike(like))
     return [MaterialOut(code=m.code, name=m.name, unit=m.unit, type=m.type) for m in db.scalars(query)]
 
 
@@ -160,7 +160,7 @@ def list_routings(
         query = query.join(Material, Routing.material_id == Material.id).where(Material.code == material)
     if q:
         like = f"%{q}%"
-        query = query.where(Routing.code.like(like) | Routing.name.like(like))
+        query = query.where(Routing.code.ilike(like) | Routing.name.ilike(like))
     return [
         {
             "code": r.code,
@@ -204,7 +204,7 @@ def list_personnel(
         query = query.where(Person.role == role)
     if q:
         like = f"%{q}%"
-        query = query.where(Person.code.like(like) | Person.name.like(like))
+        query = query.where(Person.code.ilike(like) | Person.name.ilike(like))
     return [PersonIn(code=p.code, name=p.name, role=p.role) for p in db.scalars(query)]
 
 
