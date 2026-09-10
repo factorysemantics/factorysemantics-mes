@@ -46,6 +46,15 @@ python -m ruff check .
 python -m pytest
 ```
 
+That runs on in-memory SQLite. CI also runs the whole suite against a real PostgreSQL 16, which is what a plant uses; to reproduce a failure that only happens there, point the suite at your own server:
+
+```bash
+pip install -e ".[postgres]"
+MES_TEST_DATABASE_URL=postgresql+psycopg://user:pass@127.0.0.1:5432/fsmes python -m pytest
+```
+
+That database is emptied between tests, so give it one of its own — and do not use `MES_DATABASE_URL`, which is the setting a deployment points at real data.
+
 Docs are MkDocs: `pip install -e ".[docs]"` then `mkdocs serve`. `mkdocs build --strict` must pass; a broken link fails the build on purpose.
 
 ## Pull requests
