@@ -1111,6 +1111,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Delivery">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#keeping-up-after-an-outage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keeping up after an outage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2800,6 +2817,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Delivery">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#keeping-up-after-an-outage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keeping up after an outage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2914,7 +2948,9 @@ table without ever being posted to an ERP as a production confirmation.</p>
 <span class="nv">MES_UNS_SCHEMA</span><span class="o">=</span>_mes
 <span class="nv">MES_UNS_QOS</span><span class="o">=</span><span class="m">1</span>
 <span class="nv">MES_UNS_RETAIN</span><span class="o">=</span><span class="nb">false</span>
-<span class="nv">MES_UNS_POLL_SECONDS</span><span class="o">=</span><span class="m">2</span>
+<span class="nv">MES_UNS_POLL_SECONDS</span><span class="o">=</span><span class="m">2</span><span class="w">                </span><span class="c1"># how long to wait when the queue is empty</span>
+<span class="nv">MES_UNS_BATCH</span><span class="o">=</span><span class="m">200</span><span class="w">                     </span><span class="c1"># events one cycle publishes before going back for more</span>
+<span class="nv">MES_UNS_INFLIGHT</span><span class="o">=</span><span class="m">10</span><span class="w">                   </span><span class="c1"># how many of those are in flight at once; 1 is one at a time</span>
 </code></pre></div>
 <p>The MQTT client is an optional extra, because a plant PC that does not
 speak MQTT should not carry an MQTT library:</p>
@@ -3034,6 +3070,30 @@ as a burst of production that happened at reconnect time.</p>
 <p>The worker outlives the broker. If the broker is down when it starts, or
 goes away mid-shift, events queue in the database and go out in order when
 it returns. The MES itself never blocks on the broker.</p>
+<h3 id="keeping-up-after-an-outage">Keeping up after an outage<a class="headerlink" href="#keeping-up-after-an-outage" title="Permanent link">&para;</a></h3>
+<p>Three settings decide how fast a backlog clears, and the defaults are meant
+for a plant, not for a demonstration.</p>
+<p><code>MES_UNS_POLL_SECONDS</code> is how long the worker waits <strong>when the queue has run
+dry</strong>. A cycle that fills <code>MES_UNS_BATCH</code> without a failure does not wait at
+all — it goes straight back for the next batch — so an hour of events queued
+behind a dead broker goes out at whatever rate the broker will take them,
+rather than at <code>MES_UNS_BATCH / MES_UNS_POLL_SECONDS</code> events a second. A
+cycle with a failure in it does wait: that is the backoff doing its job.</p>
+<p><code>MES_UNS_INFLIGHT</code> is how many publishes are outstanding at once. At QoS 1
+every publish waits for the broker to acknowledge it, so one at a time means
+one network round trip per event — the difference between latency and
+bandwidth, and on a plant network across a site that is the difference
+between hundreds of events a second and tens. Keep it under the client's own
+in-flight limit (paho, and so <code>aiomqtt</code>, allows 20 by default). Set it to
+<code>1</code> for strictly one publish at a time.</p>
+<p>Events still go onto the wire oldest first, and each one is still recorded
+on its own: a publish the broker refuses inside a group backs off without
+taking its neighbours with it. What a group does not promise is the order
+the broker <em>acknowledges</em> them in — MQTT never did, in-flight QoS 1 messages
+are acknowledged in whatever order the broker manages, and a refused publish
+comes back after its backoff whatever else has gone by then. A consumer that
+needs a strict sequence should order on <code>recorded_at</code> and <code>event_id</code>, which
+is what they are in the envelope for.</p>
 <h2 id="what-is-published-today">What is published today<a class="headerlink" href="#what-is-published-today" title="Permanent link">&para;</a></h2>
 <p>Four kinds, and this list is the whole of it:</p>
 <table>
