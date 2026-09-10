@@ -11,6 +11,16 @@ goes under Honesty with a migration line, so plant people can find it.
 ## [Unreleased]
 
 ### Added
+- **The test suite runs on PostgreSQL in CI.** Every test ran on in-memory
+  SQLite; PostgreSQL was documented, configured and shipped in the Compose
+  file, and nothing exercised it. A `postgres` cell now runs
+  `alembic upgrade head` against an empty PostgreSQL 16.15 — pinned by
+  digest — and then the whole suite against the same server, on every pull
+  request. `MES_TEST_DATABASE_URL` points the suite at any database;
+  unset, the default is still in-memory SQLite and nothing about running
+  `python -m pytest` changes. A test in the suite fails if it is not on the
+  database that variable names, so a typo cannot leave the cell green.
+  See [compatibility](docs/operate/compatibility.md).
 - **A connector contract, so the next ERP is not the first one all over
   again.** The ERP port had three methods — fetch, acknowledge, confirm —
   and they said nothing about the three things that actually bit the
@@ -96,6 +106,17 @@ goes under Honesty with a migration line, so plant people can find it.
   0.1.0 needed and did not get.
 
 ### Fixed
+- **A list search ignored case on SQLite and not on PostgreSQL.** Every list
+  search in the API — equipment, materials, routings, people, work orders,
+  lots, maintenance plans and orders, specifications, non-conformances,
+  certificates, the audit trail — is built on `LIKE`. SQLite's `LIKE`
+  ignores case for ASCII and PostgreSQL's does not, so a plant on PostgreSQL
+  got nothing back for a code typed in lower case where the same search on a
+  laptop found it. They all say `ILIKE` now. Case-insensitive is what the
+  product already meant: the document catalogue, the trigger list and the
+  gauge register filter in Python on `.lower()`, and the SQL-side searches
+  only agreed with them by SQLite's accident. Found by the new PostgreSQL
+  cell.
 - **`fsmes --version` told you the wrong version.** A 0.1.2 install answered
   `0.1.0`, because the number was written down twice — in `pyproject.toml`
   and again in `src/fsmes/__init__.py` — and only one copy was bumped for
