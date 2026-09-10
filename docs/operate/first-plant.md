@@ -250,6 +250,24 @@ this MES or the system that told it.
 There is no SQL poller and no inbound REST endpoint yet. If you need one,
 say so in
 [Discussions](https://github.com/factorysemantics/factorysemantics-mes/discussions).
+**There is a second front door for those**, and in a shadow run you want it
+open. Nothing on an OPC-fed line labels a stop, so without it the downtime
+pareto reads almost entirely *unlabelled* in week one — while the incumbent
+beside it shows reason codes, and the comparison is unfair by construction.
+Two ways in, both configuration rather than code: a CSV or JSON export
+dropped in a folder, or a read-only query against the database the other
+system already keeps. Either way the fact is recorded as **told**, with the
+supplying system named on it, and never as something this MES watched.
+
+The pareto still names its unlabelled bar *unlabelled* rather than filing it
+under "other", because a chart that hides its own ignorance convinces a plant
+it has data it does not have — and it now breaks every bucket down by who
+labelled it, so what came from the incumbent can be told from what came from
+here.
+
+[Feeding the MES what people typed elsewhere](inbound.md) is the page. Start
+with the folder driver — a person can produce one export by hand on day one —
+and move to the query once somebody will give you read-only credentials.
 A question asked twice becomes a page, and a need stated by a real plant
 moves up the list.
 

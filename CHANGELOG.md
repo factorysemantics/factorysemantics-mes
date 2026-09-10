@@ -169,6 +169,41 @@ goes under Honesty with a migration line, so plant people can find it.
   elsewhere](docs/operate/inbound.md) is the page. A SQL poller and an MQTT
   subscriber are the same three shapes over a different transport, and are
   not written.
+- **The second inbound driver: `fsmes inbound poll-sql`.** A CSV export needs
+  a person every day; a query needs a person once. Where the system holding
+  downtime labels, quality results or counts has a database you can be given
+  read-only credentials to, the poller runs **your** query against it on a
+  schedule and feeds the same contract. The query is configuration, not code,
+  and emphatically so: this repository contains no commercial system's
+  schema, table names or SQL, and cannot — the docs describe the *shape* a
+  query must return and say nothing about where to find it in any product.
+  The shipped example reads a SQLite file the page tells you how to make, and
+  names no product. It only reads: the query is inspected before it is ever
+  sent (one statement, `SELECT` or `WITH`, no word that could change
+  anything — a data-modifying CTE included), the connection is opened
+  read-only and given a statement timeout wherever the dialect has a way to
+  say so, and where a dialect has neither, `fsmes inbound sql-check` says so
+  in those words rather than staying quiet. Every row is fetched and the
+  connection closed **before** this MES writes anything, so a slow write here
+  can never become a lock in a system somebody else depends on. New setting
+  `MES_INBOUND_SQL_FILE`; migration `d9a3f61c48e0` adds `inbound_watermarks`,
+  additive and empty for a plant that never runs it.
+- **A cursor that will not step over a row it could not read.** The poller
+  keeps how far it has read as the supplier's *own* ordering value, handed
+  back as the text that column gave — a timestamp re-read into this MES's
+  convention would move the boundary by the supplier's UTC offset, and the
+  rows in that gap would go missing with nothing to say so. `start_from` is
+  required and has no default, because the two values this MES could guess
+  are "now", which silently skips that system's backlog, and "the
+  beginning", which pulls ten years through a plant network. When a row
+  cannot be recorded the cursor **stops at that row**: the rows after it are
+  still recorded, but the next pass asks for the bad one again and keeps
+  saying which row and why, on every pass, until somebody deals with it.
+  Stepping over it is a person's decision, made in words with `fsmes inbound
+  sql-watermark --set ... --force`, which prints what will never be read
+  before it does it. Correctness does not rest on the cursor: `inbound_events`
+  is still keyed on the supplier's own id, so a cursor that is behind costs a
+  re-read and changes nothing.
 - `tzdata` is now a dependency **on Windows only**. Windows ships no IANA
   time-zone database, so `zoneinfo` there cannot resolve `America/Chicago`
   — or even `UTC` — without it, and the inbound driver reads a plant's
