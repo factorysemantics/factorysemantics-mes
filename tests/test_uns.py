@@ -14,9 +14,11 @@ import asyncio
 import json
 import os
 import sys
+from contextlib import contextmanager
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import event, select
+from sqlalchemy.orm import Session
 
 from fsmes.config import Settings
 from fsmes.domain import (
@@ -478,6 +480,312 @@ def test_log_mode_publishes_the_whole_namespace_without_contacting_a_broker(sess
 
     assert counted["published"] == 1
     assert transport.sent[0][0].endswith("/MIX01/_mes/operation_confirmation")
+
+
+# --------------------------------------------------- what a cycle costs the database
+
+class Cost:
+    """What one cycle cost the database: the statements it ran and the
+    transactions it committed, counted rather than reasoned about."""
+
+    def __init__(self) -> None:
+        self.statements: list[str] = []
+        self.commits = 0
+
+    def reading(self, fragment: str) -> int:
+        return len([s for s in self.statements if fragment in s])
+
+    @property
+    def equipment_lookups(self) -> int:
+        return self.reading("FROM equipment")
+
+
+@contextmanager
+def counting(engine):
+    """Count every statement and every commit on this engine."""
+    cost = Cost()
+
+    def statement(_conn, _cursor, statement, _params, _context, _executemany):
+        cost.statements.append(" ".join(statement.split()))
+
+    def commit(_conn):
+        cost.commits += 1
+
+    event.listen(engine, "before_cursor_execute", statement)
+    event.listen(engine, "commit", commit)
+    try:
+        yield cost
+    finally:
+        event.remove(engine, "before_cursor_execute", statement)
+        event.remove(engine, "commit", commit)
+
+
+def committing_scope(engine):
+    """`session_scope` over the test engine: a real session and a real commit
+    per unit of work. The shared `scope` fixture reuses one session and never
+    commits, which is exactly what a test counting transactions must not do."""
+
+    @contextmanager
+    def _scope():
+        session = Session(engine, expire_on_commit=False)
+        try:
+            yield session
+            session.commit()
+        finally:
+            session.close()
+
+    return _scope
+
+
+def queue_many(session, count: int, start: int = 0,
+               machines: tuple[str, ...] = ("MIX01", "PACK01")) -> None:
+    """A backlog: `count` confirmations spread over a plant's few machines."""
+    for n in range(start, start + count):
+        queue_confirmation(session, f"WO-UNS-BULK-{n}", equipment=machines[n % len(machines)])
+    session.commit()
+
+
+def test_a_cycle_looks_a_machine_up_once_however_many_events_it_carries(session, engine):
+    """A topic depends on the kind and the machine and nothing else, and a
+    plant has a handful of machines. Resolved event by event, a full batch of
+    200 read the same few Equipment rows a thousand times."""
+    queue_many(session, 2)
+    with counting(engine) as small:
+        first = run_cycle(FakeBroker(), committing_scope(engine), settings_for())
+
+    queue_many(session, 40, start=100)
+    with counting(engine) as large:
+        second = run_cycle(FakeBroker(), committing_scope(engine), settings_for())
+
+    assert (first["published"], second["published"]) == (2, 40)
+    assert large.equipment_lookups == small.equipment_lookups
+    assert small.equipment_lookups <= 6, "two machines, and their ancestors, once each"
+
+
+def test_a_cycle_writes_every_result_in_one_transaction(session, engine):
+    """One session, one row read by primary key and one commit per published
+    event meant 200 transactions and 400 statements for a full batch — all of
+    them after the broker had already taken the events."""
+    queue_many(session, 2)
+    with counting(engine) as small:
+        run_cycle(FakeBroker(), committing_scope(engine), settings_for())
+
+    queue_many(session, 40, start=100)
+    with counting(engine) as large:
+        run_cycle(FakeBroker(), committing_scope(engine), settings_for())
+
+    # Enrol, read what is due, write what happened. Three, whatever the batch.
+    assert small.commits == large.commits == 3
+
+
+def test_a_transaction_is_still_never_open_while_the_broker_is_being_published_to(session, engine):
+    """The one rule the batched write must not break. A transaction open
+    across a publish holds a lock the plant floor is waiting on for as long
+    as the broker takes to answer — which, when a broker has gone away, is
+    the timeout."""
+    queue_many(session, 4)
+    live: list[Session] = []
+    open_while_publishing: list[list[Session]] = []
+
+    @contextmanager
+    def watched_scope():
+        unit = Session(engine, expire_on_commit=False)
+        live.append(unit)
+        try:
+            yield unit
+            unit.commit()
+        finally:
+            live.remove(unit)
+            unit.close()
+
+    class Watching(FakeBroker):
+        async def publish(self, topic, payload, *, qos, retain):
+            open_while_publishing.append([unit for unit in live if unit.in_transaction()])
+            await super().publish(topic, payload, qos=qos, retain=retain)
+
+    run_cycle(Watching(), lambda: watched_scope(), settings_for())
+
+    assert len(open_while_publishing) == 4
+    assert not any(open_while_publishing), \
+        "a unit of work was open while the publisher was talking to the broker"
+
+
+def test_enrolment_does_not_read_the_payloads_it_is_only_counting(session, engine):
+    """It needs one id per message. Hydrating the whole row pulled every JSON
+    payload in the backlog through the driver to find it."""
+    queue_many(session, 20)
+
+    with counting(engine) as cost, committing_scope(engine)() as fresh:
+        assert len(uns.enrol(fresh)) == 20
+
+    assert cost.reading("erp_messages.payload") == 0
+
+
+def test_the_outbox_can_be_read_by_direction_without_scanning_every_message_ever_sent(session):
+    """Both readers of the log ask for one direction, oldest first, and the
+    table only grows. An index the migration adds is what keeps that a lookup."""
+    indexes = {index.name for index in ErpMessage.__table__.indexes}
+    assert "ix_erp_messages_direction_id" in indexes
+
+
+def test_the_published_at_a_consumer_sees_is_the_one_the_database_recorded(session, scope):
+    """The envelope stamped one instant and the publication row stamped
+    another a moment later, so the MES's own record disagreed with what it
+    had already told the plant."""
+    queue_confirmation(session)
+    broker = FakeBroker()
+
+    run_cycle(broker, scope, settings_for())
+
+    _topic, body, _qos, _retain = broker.received[0]
+    publication = session.scalars(select(UnsPublication)).one()
+    assert body["published_at"] == f"{publication.published_at.isoformat()}Z"
+
+
+# ------------------------------------------------------------ keeping up with a plant
+
+class SlowBroker(FakeBroker):
+    """A broker that takes a moment to acknowledge, and remembers both the
+    order it was handed events in and the most it was holding at once.
+
+    `offered` is written before the first await, so it is the order the
+    publisher put the events on the wire. `received` is written after, so it
+    is the order this broker got round to finishing them - which is a
+    different thing, and not one anybody promises.
+    """
+
+    def __init__(self, delay: float = 0.005) -> None:
+        super().__init__()
+        self.delay = delay
+        self.offered: list[int] = []
+        self.holding = 0
+        self.most_held = 0
+
+    async def publish(self, topic, payload, *, qos, retain) -> None:
+        self.offered.append(json.loads(payload)["event_id"])
+        self.holding += 1
+        self.most_held = max(self.most_held, self.holding)
+        try:
+            await asyncio.sleep(self.delay)
+            await super().publish(topic, payload, qos=qos, retain=retain)
+        finally:
+            self.holding -= 1
+
+
+class Stop(Exception):
+    """Ends the worker's loop from inside a test's stand-in for sleeping."""
+
+
+class Clock:
+    """`asyncio` with the sleeps written down, and the loop stopped the first
+    time the worker really waits."""
+
+    def __init__(self) -> None:
+        self.slept: list[float] = []
+        self.gather = asyncio.gather
+        self.CancelledError = asyncio.CancelledError
+
+    async def sleep(self, seconds: float) -> None:
+        self.slept.append(seconds)
+        if seconds:
+            raise Stop
+
+
+def test_a_backlog_drains_at_the_brokers_speed_and_not_at_the_poll_interval(session, scope,
+                                                                            monkeypatch):
+    """Sleeping after a full batch drained a backlog at uns_batch divided by
+    uns_poll_seconds events a second however fast the broker was, so an hour
+    of a busy line took most of an hour to catch up after an outage."""
+    queue_many(session, 5)
+    clock = Clock()
+    monkeypatch.setattr(publisher, "session_scope", scope)
+    monkeypatch.setattr(publisher, "asyncio", clock)
+    broker = FakeBroker()
+
+    with pytest.raises(Stop):
+        asyncio.run(publisher.run(broker, settings_for(uns_batch=2, uns_poll_seconds=2.0)))
+
+    # Two full batches straight after one another, then a batch that did not
+    # fill, which means the queue is empty and waiting is the right thing.
+    assert clock.slept == [0, 0, 2.0]
+    assert len(broker.received) == 5
+
+
+def test_a_batch_with_a_failure_in_it_waits_even_when_it_was_full(session):
+    """A full batch means there is more behind it; a failure in it means the
+    broker is unhappy, and going straight back is the opposite of a backoff."""
+    settings = settings_for(uns_batch=200, uns_poll_seconds=2.0)
+
+    assert publisher.draining({"enrolled": 0, "due": 200, "published": 200, "failed": 0}, settings)
+    assert not publisher.draining({"enrolled": 0, "due": 200, "published": 199, "failed": 1},
+                                  settings)
+    assert not publisher.draining({"enrolled": 0, "due": 199, "published": 199, "failed": 0},
+                                  settings)
+    # A cycle that raised counted nothing, so there is nothing to say it is behind.
+    assert not publisher.draining(None, settings)
+    # And a batch size of nothing is a misconfiguration, not a reason to spin.
+    assert not publisher.draining({"enrolled": 0, "due": 0, "published": 0, "failed": 0},
+                                  settings_for(uns_batch=0))
+
+
+def test_qos_one_events_go_out_in_groups_rather_than_one_round_trip_each(session, scope):
+    """QoS 1 waits for the broker to acknowledge every event. Awaited one at a
+    time, a namespace on the far side of a plant network moved at the speed of
+    its latency rather than its bandwidth."""
+    queue_many(session, 12)
+    broker = SlowBroker()
+
+    counted = run_cycle(broker, scope, settings_for(uns_inflight=4))
+
+    assert counted["published"] == 12
+    assert broker.most_held == 4
+
+
+def test_a_plant_can_ask_for_strictly_one_publish_at_a_time(session, scope):
+    """A broker that will hold only one unacknowledged message, or anyone who
+    wants the old behaviour back, sets it to 1 and gets exactly that."""
+    queue_many(session, 6)
+    broker = SlowBroker()
+
+    run_cycle(broker, scope, settings_for(uns_inflight=1))
+
+    assert broker.most_held == 1
+    assert len(broker.received) == 6
+
+
+def test_events_are_handed_to_the_broker_oldest_first_even_in_groups(session, scope):
+    """A namespace that delivers a shift out of order is worse than one that
+    is an hour behind, so pipelining must not change the order events go onto
+    the wire.
+
+    What it deliberately does not claim is the order they are *acknowledged*
+    in. Windows CI proved that one: the same test asserting the fake broker
+    finished them in order passed on 3.13 and failed on 3.12, because the
+    platform's timer granularity decides which of four equal sleeps wakes
+    first. Nothing about MQTT promises otherwise either - in-flight QoS 1
+    messages are acknowledged in whatever order the broker manages, and a
+    refused publish is retried after a backoff in any case.
+    """
+    queue_many(session, 10)
+    broker = SlowBroker()
+
+    run_cycle(broker, scope, settings_for(uns_inflight=4))
+
+    assert len(broker.offered) == 10
+    assert broker.offered == sorted(broker.offered)
+
+
+def test_one_refused_publish_does_not_take_the_group_around_it_with_it(session, scope):
+    """Each event in a group is recorded on its own: the refused one backs
+    off and the rest are published, exactly as when they went one at a time."""
+    queue_many(session, 4)
+    broker = FakeBroker(refuse=1)
+
+    counted = run_cycle(broker, scope, settings_for(uns_inflight=4))
+
+    assert (counted["published"], counted["failed"]) == (3, 1)
+    statuses = sorted(p.status.value for p in session.scalars(select(UnsPublication)))
+    assert statuses == ["pending", "sent", "sent", "sent"]
 
 
 # -------------------------------------------------------- against a real broker

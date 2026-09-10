@@ -11,7 +11,7 @@ from __future__ import annotations
 import enum
 from datetime import datetime
 
-from sqlalchemy import JSON, String
+from sqlalchemy import JSON, Index, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from fsmes.db import Base, utcnow
@@ -36,6 +36,12 @@ class MessageStatus(enum.StrEnum):
 
 class ErpMessage(Base):
     __tablename__ = "erp_messages"
+    __table_args__ = (
+        # Both readers of this log ask the same question — the outbound
+        # messages, oldest first — and until 2026-09-10 that was a scan of
+        # every row the plant had ever exchanged, growing all shift.
+        Index("ix_erp_messages_direction_id", "direction", "id"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     direction: Mapped[MessageDirection] = mapped_column(str_enum(MessageDirection))

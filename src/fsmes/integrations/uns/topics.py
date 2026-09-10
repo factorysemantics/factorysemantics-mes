@@ -72,20 +72,93 @@ def _sole(session: Session, level: EquipmentLevel) -> Equipment | None:
     return found[0] if len(found) == 1 else None
 
 
+class TopicResolver:
+    """Topics for one batch of events, worked out once per machine.
+
+    A topic depends on two things only — the kind and the machine code — and
+    a plant has a handful of machines producing thousands of events. Resolved
+    event by event, a full batch of 200 did 200 lookups of the same few
+    Equipment rows and, with the enterprise and site left to the tree, up to
+    400 more asking which node is the only one at its level. Here each of
+    those answers is fetched once and reused.
+
+    Deliberately short-lived: one resolver per cycle, thrown away with it.
+    Master data edited mid-cycle is picked up by the next one, which is the
+    same freshness the batch of events already has.
+    """
+
+    def __init__(self, session: Session, settings: Settings) -> None:
+        self.session = session
+        self.settings = settings
+        self._equipment: dict[str, Equipment | None] = {}
+        self._levels: dict[EquipmentLevel, Equipment | None] = {}
+        self._topics: dict[tuple[str | None, str | None], str] = {}
+
+    def equipment(self, code: str) -> Equipment | None:
+        """The machine with this code, or None if the MES does not hold it.
+
+        None is cached too: a confirmation naming a machine nobody has
+        modelled yet is a real event, and looking it up again for every one
+        of its events would be the most expensive miss of the batch.
+        """
+        if code not in self._equipment:
+            self._equipment[code] = self.session.scalar(
+                select(Equipment).where(Equipment.code == code))
+        return self._equipment[code]
+
+    def sole(self, level: EquipmentLevel) -> Equipment | None:
+        if level not in self._levels:
+            self._levels[level] = _sole(self.session, level)
+        return self._levels[level]
+
+    def enterprise_and_site(self, equipment: Equipment | None = None) -> tuple[str, str]:
+        """The top two segments: settings first, then the tree, then `unknown`."""
+        chain = _ancestors(equipment) if equipment is not None else []
+        by_level = {node.level: node for node in chain}
+
+        def resolve(configured: str, level: EquipmentLevel) -> str:
+            if configured:
+                return segment(configured)
+            node = by_level.get(level) or self.sole(level)
+            return segment(node.code) if node is not None else UNKNOWN
+
+        return (resolve(self.settings.uns_enterprise, EquipmentLevel.ENTERPRISE),
+                resolve(self.settings.uns_site, EquipmentLevel.SITE))
+
+    def topic(self, *, kind: str | None = None, equipment_code: str | None = None,
+              equipment: Equipment | None = None) -> str:
+        """The full topic for one event. See `topic_for` for the shape.
+
+        `equipment` is the row when the caller already has it — listing the
+        tree walks every work unit, and reading each one back by code would
+        be a query for a row already in hand.
+        """
+        key = (kind, equipment_code)
+        if key in self._topics:
+            return self._topics[key]
+        if equipment is not None and equipment_code:
+            self._equipment.setdefault(equipment_code, equipment)
+        elif equipment_code:
+            equipment = self.equipment(equipment_code)
+        enterprise, site = self.enterprise_and_site(equipment)
+        if equipment is not None:
+            path = equipment_path(equipment)
+        elif equipment_code:
+            path = [segment(equipment_code)]
+        else:
+            path = []
+        parts = [p for p in self.settings.uns_topic_prefix.strip("/").split("/") if p]
+        parts += [enterprise, site, *path, segment(self.settings.uns_schema)]
+        if kind is not None:
+            parts.append(segment(kind))
+        self._topics[key] = "/".join(parts)
+        return self._topics[key]
+
+
 def enterprise_and_site(session: Session, settings: Settings,
                         equipment: Equipment | None = None) -> tuple[str, str]:
-    """The top two segments: settings first, then the tree, then `unknown`."""
-    chain = _ancestors(equipment) if equipment is not None else []
-    by_level = {node.level: node for node in chain}
-
-    def resolve(configured: str, level: EquipmentLevel) -> str:
-        if configured:
-            return segment(configured)
-        node = by_level.get(level) or _sole(session, level)
-        return segment(node.code) if node is not None else UNKNOWN
-
-    return (resolve(settings.uns_enterprise, EquipmentLevel.ENTERPRISE),
-            resolve(settings.uns_site, EquipmentLevel.SITE))
+    """The top two segments, for one event. `TopicResolver` for a batch."""
+    return TopicResolver(session, settings).enterprise_and_site(equipment)
 
 
 def equipment_path(equipment: Equipment) -> list[str]:
@@ -99,7 +172,7 @@ def equipment_path(equipment: Equipment) -> list[str]:
 
 
 def topic_for(session: Session, settings: Settings, *, kind: str | None = None,
-              equipment_code: str | None = None) -> str:
+              equipment_code: str | None = None, equipment: Equipment | None = None) -> str:
     """The full topic for one event.
 
         <prefix>/<enterprise>/<site>[/<area>/<line>/.../<machine>]/<schema>/<kind>
@@ -111,22 +184,13 @@ def topic_for(session: Session, settings: Settings, *, kind: str | None = None,
     `kind=None` stops after the schema segment. That is not a topic anything
     publishes on; it is the prefix `fsmes uns topics` prints, so a plant can
     read its tree without a placeholder pretending to be an event name.
+
+    One event, one resolver. Anything publishing a batch should build a
+    `TopicResolver` and keep it, so the same machine is not looked up once
+    per event.
     """
-    equipment = None
-    if equipment_code:
-        equipment = session.scalar(select(Equipment).where(Equipment.code == equipment_code))
-    enterprise, site = enterprise_and_site(session, settings, equipment)
-    if equipment is not None:
-        path = equipment_path(equipment)
-    elif equipment_code:
-        path = [segment(equipment_code)]
-    else:
-        path = []
-    parts = [p for p in settings.uns_topic_prefix.strip("/").split("/") if p]
-    parts += [enterprise, site, *path, segment(settings.uns_schema)]
-    if kind is not None:
-        parts.append(segment(kind))
-    return "/".join(parts)
+    return TopicResolver(session, settings).topic(
+        kind=kind, equipment_code=equipment_code, equipment=equipment)
 
 
 def equipment_topics(session: Session, settings: Settings, kind: str | None = None) -> list[str]:
@@ -138,7 +202,8 @@ def equipment_topics(session: Session, settings: Settings, kind: str | None = No
     units = session.scalars(
         select(Equipment).where(Equipment.level == EquipmentLevel.WORK_UNIT)
         .order_by(Equipment.code)).all()
-    return [topic_for(session, settings, kind=kind, equipment_code=unit.code) for unit in units]
+    resolver = TopicResolver(session, settings)
+    return [resolver.topic(kind=kind, equipment_code=unit.code, equipment=unit) for unit in units]
 
 
 def equipment_code_in(payload: dict | None) -> str | None:
