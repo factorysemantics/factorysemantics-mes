@@ -1167,6 +1167,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="A single install, not from the registry">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#if-your-database-was-made-by-012-or-earlier" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If your database was made by 0.1.2 or earlier
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2733,6 +2750,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="A single install, not from the registry">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#if-your-database-was-made-by-012-or-earlier" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If your database was made by 0.1.2 or earlier
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2861,34 +2895,47 @@ pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="
 fsmes<span class="w"> </span>init-db
 <span class="c1"># start them again</span>
 </code></pre></div>
-<div class="admonition warning">
-<p class="admonition-title"><code>fsmes init-db</code> only migrates inside a checkout</p>
-<p><code>fsmes init-db</code> runs the Alembic migrations when there is an
-<code>alembic.ini</code> in the working directory — that is, when you are running
-from a clone of the repository. <strong>Installed from PyPI there is no
-<code>alembic.ini</code> and no migration scripts in the wheel</strong>, so <code>init-db</code>
-creates whatever tables are missing and stops there. It does not alter a
-table that already exists, and it says "Database schema is up to date"
-either way.</p>
-<p>For a <strong>new</strong> install that is exactly right: the schema it creates is the
-current one. For an <strong>upgrade</strong> of a PyPI install across a version where
-an existing table changed, it is not enough, and nothing warns you.</p>
-<p>Until the wheel carries its migrations, a plant that must upgrade in
-place should run from a checkout at a tag:</p>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/factorysemantics/factorysemantics-mes
-<span class="nb">cd</span><span class="w"> </span>factorysemantics-mes<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>checkout<span class="w"> </span>v0.1.2
-python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>.venv/bin/pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
-.venv/bin/fsmes<span class="w"> </span>init-db<span class="w">          </span><span class="c1"># alembic.ini is here, so this migrates</span>
+<p><code>fsmes init-db</code> runs the migrations the package itself carries, so it does
+the same thing on a PyPI install as it does in a clone. In 0.1.2 and earlier it did
+not: the wheel shipped no migration scripts, <code>init-db</code> outside a checkout
+created whatever tables were missing, ran no <code>ALTER</code> at all, and said
+"Database schema is up to date" either way. The workaround was to run from a
+checkout at a tag. That is gone — there is nothing to work around.</p>
+<h3 id="if-your-database-was-made-by-012-or-earlier">If your database was made by 0.1.2 or earlier<a class="headerlink" href="#if-your-database-was-made-by-012-or-earlier" title="Permanent link">&para;</a></h3>
+<p>A database created by one of those wheels has tables but no Alembic stamp,
+so nothing in it says which revision its tables correspond to. <code>init-db</code>
+works that out rather than assuming: it rebuilds the schema each revision in
+the chain produces, compares table names and column names against yours, and
+stamps only on an exact match. You will see one of these:</p>
+<div class="highlight"><pre><span></span><code>This database was created before the migrations shipped. Its schema matches
+revision 153379d6cf19 exactly, so it is stamped there and the migrations
+since then now run.
+Database schema upgraded: 153379d6cf19 -&gt; a3f6c81d09e2.
 </code></pre></div>
-<p>This is a known gap, written down rather than papered over. If it is in
-your way, say so in
-<a href="https://github.com/factorysemantics/factorysemantics-mes/discussions">Discussions</a>
-— it moves up the list.</p>
-</div>
+<div class="highlight"><pre><span></span><code>This database was created before the migrations shipped. Its schema matches
+revision a3f6c81d09e2, which is the current one; it is now stamped and
+nothing else was changed.
+</code></pre></div>
+<p>If your database matches no revision — someone added a table by hand, or it
+came from something other than a release — it says so, names the nearest
+revision, lists every difference, and <strong>changes nothing</strong>. Restore your
+backup and open a
+<a href="https://github.com/factorysemantics/factorysemantics-mes/discussions">Discussion</a>
+with what it printed. A stamp that is not true of the database is worse than
+no stamp: every later migration would be skipped or applied twice on the
+strength of it.</p>
 <h2 id="checking-the-upgrade-landed">Checking the upgrade landed<a class="headerlink" href="#checking-the-upgrade-landed" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>info<span class="w">          </span><span class="c1"># the version you meant to be on</span>
+fsmes<span class="w"> </span>db-status<span class="w">     </span><span class="c1"># the schema revision, and whether it is the current one</span>
 fsmes<span class="w"> </span>erp<span class="w"> </span>check<span class="w">     </span><span class="c1"># the ERP connector still reaches what it needs</span>
 fsmes<span class="w"> </span>opc-verify<span class="w">    </span><span class="c1"># every mapped tag still readable, run against the live server</span>
+</code></pre></div>
+<p><code>fsmes db-status</code> prints the revision the database is at and the revision the
+installed version expects, and <strong>exits non-zero when they differ</strong> — so a
+deployment script can gate on it rather than on someone reading the output:</p>
+<div class="highlight"><pre><span></span><code>Current: a3f6c81d09e2
+Head:    a3f6c81d09e2
+The database is at the current schema.
 </code></pre></div>
 <p>Then open the dashboard and look at a shift from before the upgrade. History
 that was there before and is not there now is the thing to catch, and it is

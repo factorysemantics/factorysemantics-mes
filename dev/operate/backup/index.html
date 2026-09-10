@@ -2894,9 +2894,12 @@ not halfway through. Then:</p>
 <p>Then bring the schema to the version of <code>fsmes</code> you are running now:</p>
 <div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>init-db
 </code></pre></div>
-<p>— but read the caveat on <a href="../upgrade/">Upgrading</a> first if you restored an
-older backup into a newer <code>fsmes</code> installed from PyPI: outside a checkout
-<code>init-db</code> creates missing tables and does not alter existing ones.</p>
+<p><code>init-db</code> runs the migrations the package carries, wherever <code>fsmes</code> was
+installed from, so restoring an older backup into a newer <code>fsmes</code> brings the
+restored database up to the current schema. A database from 0.1.2 or earlier
+carries no Alembic stamp; <code>init-db</code> recognises it, says what it recognised it
+as, and refuses to guess if it cannot — see
+<a href="../upgrade/#if-your-database-was-made-by-012-or-earlier">Upgrading</a>.</p>
 <p>Put the <code>.env</code> back from wherever you keep secrets. Until you do, the
 MES has no OPC password and will not connect.</p>
 <h2 id="proving-a-restore-works">Proving a restore works<a class="headerlink" href="#proving-a-restore-works" title="Permanent link">&para;</a></h2>
