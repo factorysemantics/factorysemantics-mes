@@ -982,7 +982,18 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Verified against">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-the-line-made-more-than-the-order-asked-for" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When the line made more than the order asked for
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="When the line made more than the order asked for">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2481,7 +2492,18 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Verified against">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-the-line-made-more-than-the-order-asked-for" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When the line made more than the order asked for
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="When the line made more than the order asked for">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2661,7 +2683,10 @@ a reason to refuse to run.</p>
 comment, because it is the number the plant argues about and ERPNext has
 nowhere native for it.</p>
 <p>Confirmations go through an outbox with retry and backoff; an ERPNext that
-is down for an hour gets the hour's confirmations when it returns, in order.</p>
+is down for an hour gets the hour's confirmations when it returns, in order.
+A confirmation ERPNext <em>refuses</em> is a different thing and is not retried —
+see <a href="#when-the-line-made-more-than-the-order-asked-for">when the line made more than the order asked
+for</a>.</p>
 <p>Leaving <code>MES_ERPNEXT_COMPANY</code> empty imports the work orders of every company
 on the site, which is what a single-company ERPNext wants. A bench that holds
 more than one company's books must set it, or this MES will run another
@@ -2684,16 +2709,82 @@ the MES believes it sent is not evidence. It proves:</p>
 <li>sending the same confirmation twice still leaves exactly one stock entry —
   the retry that would otherwise book the plant's production twice;</li>
 <li><code>MES_ERPNEXT_POST_STOCK_ENTRY=false</code> still records every number;</li>
+<li>an over-run inside ERPNext's over-production allowance is booked for every
+  unit, and one beyond it is refused whole and delivered nowhere
+  (<a href="#when-the-line-made-more-than-the-order-asked-for">below</a>);</li>
 <li>the site written to is the one the <code>Host</code> header named.</li>
 </ul>
-<p><strong>Not covered, as of 2026-09-09.</strong> ERPNext v16 — nothing here claims
+<p><strong>Not covered, as of 2026-09-10.</strong> ERPNext v16 — nothing here claims
 anything about it. The sync worker and the MES-side booking that decides
 what to confirm: the round trip drives the adapter, not <code>fsmes run-erp-sync</code>.
-Over-production, where the MES has counted more than the Work Order's
-quantity and ERPNext has an allowance of its own. A bench serving more than
-one company. See <a href="../compatibility/">compatibility</a>. If you run this against
-a real site, an issue with the versions of both sides is the most useful
-thing you can send.</p>
+A bench serving more than one company. See
+<a href="../compatibility/">compatibility</a>. If you run this against a real site, an
+issue with the versions of both sides is the most useful thing you can send.</p>
+<h2 id="when-the-line-made-more-than-the-order-asked-for">When the line made more than the order asked for<a class="headerlink" href="#when-the-line-made-more-than-the-order-asked-for" title="Permanent link">&para;</a></h2>
+<p>The MES books every unit a machine counted, and an order for 400 that ran to
+420 is confirmed as 420 good with 20 over
+(<a href="../../decisions/0019-count-everything-the-machine-counted/">decision 0019</a>).
+ERPNext has an opinion about that of its own: <strong>Manufacturing Settings →
+Over Production Percentage For Work Order</strong>, zero out of the box.</p>
+<p>Measured against v15.120.0 on 2026-09-10, in the live job, three cases:</p>
+<table>
+<thead>
+<tr>
+<th>ERPNext's allowance</th>
+<th>Ordered</th>
+<th>MES counted</th>
+<th>What ERPNext did</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10%</td>
+<td>400</td>
+<td>420</td>
+<td>took it whole: <code>produced_qty</code> 420, one Manufacture entry of 420, the order Completed</td>
+</tr>
+<tr>
+<td>10%</td>
+<td>400</td>
+<td>500</td>
+<td><strong>refused</strong>: HTTP 417, <code>For quantity 500.0 should not be greater than allowed quantity 440.0</code>. <code>produced_qty</code> stayed 0</td>
+</tr>
+<tr>
+<td>0%</td>
+<td>400</td>
+<td>401</td>
+<td><strong>refused</strong>, the same way, at <code>allowed quantity 400.0</code></td>
+</tr>
+</tbody>
+</table>
+<p>The refusal is whole. ERPNext does not book the 440 it would have allowed
+and does not leave a draft: nothing moves, and its own <code>produced_qty</code> does
+not change.</p>
+<p><strong>What the connector does about it.</strong> The confirmation is <em>not</em> delivered —
+what the ERP accepted was nothing, and nothing is what gets reported as
+accepted. Because retrying sends the identical stock entry and gets the
+identical answer, the message does not spend eight attempts and an hour
+finding that out: it goes straight to <code>dead</code> in the outbox, carrying
+ERPNext's own sentence as its error. <code>dead</code> is what this outbox has always
+meant by <em>a person decides</em>.</p>
+<p>Three things are true at once after a refusal, and all three are visible:</p>
+<ol>
+<li><strong>The MES's record does not change.</strong> The line made 500; it made 500 in
+   the MES whatever ERPNext thinks.</li>
+<li><strong><code>custom_mes_good_qty</code> and <code>custom_mes_over_qty</code> on the Work Order still
+   say 500 and 100.</strong> They are what the machines counted, which is exactly
+   what ERPNext has nowhere else to put, and a person deciding what to do
+   needs the number.</li>
+<li><strong>ERPNext's <code>produced_qty</code> says 0</strong>, and a comment on the Work Order says
+   why: what was refused, what the MES counted, and ERPNext's own words.</li>
+</ol>
+<p>That gap is a business fact, not an error to retry: somebody raises the
+allowance, or accounts for the surplus another way. When they have,
+<code>POST /erp/outbox/{id}/retry</code> sends the same confirmation again — and if the
+allowance now covers it, it lands.</p>
+<p>There is no partial booking. Posting the 440 ERPNext would have taken would
+invent a decision nobody made and leave 60 units unaccounted for in both
+systems.</p>
 <h3 id="what-a-missing-custom-field-actually-does">What a missing custom field actually does<a class="headerlink" href="#what-a-missing-custom-field-actually-does" title="Permanent link">&para;</a></h3>
 <p>Measured on ERPNext v15.120.0, not reasoned about: a <code>PUT</code> to a submitted
 Work Order naming a field the doctype does not have <strong>succeeds</strong>. Frappe

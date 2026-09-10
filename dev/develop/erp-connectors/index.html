@@ -1318,6 +1318,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#when-the-erp-says-no" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When the ERP says no
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#the-conformance-suite" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2502,6 +2513,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#when-the-erp-says-no" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When the ERP says no
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#the-conformance-suite" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2759,6 +2781,38 @@ number that agrees to a hundredth agrees. A number that is gone does not.</p>
 <p>Where the ERP genuinely offers no read-back, say so on your connector's
 page. That is a real limitation of that ERP and a plant is entitled to know
 it before the first over-run.</p>
+<h2 id="when-the-erp-says-no">When the ERP says no<a class="headerlink" href="#when-the-erp-says-no" title="Permanent link">&para;</a></h2>
+<p>Raising is right for both of these, and they are not the same thing:</p>
+<ul>
+<li><strong>The ERP could not take the message.</strong> It was down, the session had gone,
+  the network dropped. Time may repair it, and the outbox's job is to keep
+  trying — eight attempts with growing backoff, then dead.</li>
+<li><strong>The ERP read the message and refused it.</strong> Nothing about the message
+  will be different next time, so eight more attempts only delay the moment
+  a person hears about it and bury the ERP's own words under seven copies of
+  themselves.</li>
+</ul>
+<p>If your connector can tell the second from the first, say so on the
+exception: <strong><code>permanent = True</code></strong>, and the sync worker marks the message dead
+on the spot with the ERP's sentence as its error, rather than backing off.
+Nothing declares this in the port, so a connector that never sets it keeps
+exactly the old behaviour.</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ErpNextRefused</span><span class="p">(</span><span class="n">ErpNextError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""ERPNext read the request, understood it, and said no."""</span>
+
+    <span class="n">permanent</span> <span class="o">=</span> <span class="kc">True</span>
+</code></pre></div>
+<p>Only claim it where you have measured it. ERPNext's is
+<a href="../../operate/erpnext/#when-the-line-made-more-than-the-order-asked-for">an over-run beyond the site's over-production allowance</a>:
+an HTTP 417 naming the quantity it would have allowed, with nothing booked.
+Everything else the connector meets is still retried, because nobody has
+measured it.</p>
+<p>And do not book <em>something else</em> instead. Posting the quantity the ERP would
+have accepted, or a draft for a person to fix, invents a decision nobody
+made. A refusal is a business fact: what the MES counted and what the ERP
+will hold genuinely differ, and somebody has to resolve that. Leave the
+message dead, put the reason where a person will find it, and let them retry
+it when they have.</p>
 <h2 id="the-conformance-suite">The conformance suite<a class="headerlink" href="#the-conformance-suite" title="Permanent link">&para;</a></h2>
 <p><code>fsmes.integrations.erp.conformance</code> ships <strong>inside the package</strong>, so a
 connector published on its own can be held to the same bar without

@@ -2460,7 +2460,7 @@ rather than read is a table that misleads.</p>
 <td>supported</td>
 <td>v15.120.0 (Frappe v15, MariaDB 10.6)</td>
 <td>2026-09-09, and on every pull request that touches it since</td>
-<td>the <code>ERPNext (live)</code> job: a clean container from <code>labs/erpnext/docker-compose.yml</code>, images pinned by digest, seeded and put through the whole round trip in <code>tests/test_erpnext_live.py</code>, asserting against ERPNext's own documents. Also passes the conformance suite</td>
+<td>the <code>ERPNext (live)</code> job: a clean container from <code>labs/erpnext/docker-compose.yml</code>, images pinned by digest, seeded and put through the whole round trip in <code>tests/test_erpnext_live.py</code>, asserting against ERPNext's own documents. Includes what ERPNext does with an over-run, measured 2026-09-10: inside its own over-production allowance it books every unit, beyond it it refuses the stock entry whole and books nothing (<a href="../erpnext/#when-the-line-made-more-than-the-order-asked-for">what the connector does about it</a>). Also passes the conformance suite</td>
 </tr>
 <tr>
 <td>ERPNext v16</td>
