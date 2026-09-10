@@ -270,6 +270,12 @@ Run the agent under a supervisor from the first day. The window it was not
 watching is reported as *unknown* and is never reconstructed, by design;
 [deploy](deploy.md) has the systemd units and the Compose file.
 
+At the end of the week, if you did step 5, put the two records side by side.
+Export the same period's bookings from the MES in charge and run
+[the shadow scorecard](shadow-scorecard.md): it reports, per order and per
+operation, where the two agree and where they do not, and — the part that
+makes it worth trusting — what it could not compare.
+
 ## 8. Where the numbers live, and backing them up
 
 Everything the MES recorded is in one database — `fsmes.db` beside where you
@@ -321,6 +327,7 @@ otherwise.
 - [Connecting read-only to an OPC UA server you do not own](opc-readonly.md)
 - [IT access request](../onboarding/GUIDE-IT.md) · [Engineering worksheet](../onboarding/GUIDE-ENGINEERING.md)
 - [What to expect in the first week](first-week.md)
+- [The shadow scorecard](shadow-scorecard.md)
 - [Backup and restore](backup.md) · [TLS in front of the API](tls.md) · [Upgrading](upgrade.md)
 - [Deploy](deploy.md) · [Security](security.md) · [Compatibility](compatibility.md)
 - [Reading OEE](../plant/reading-oee.md) · [Never invent production](../plant/never-invent-production.md)
