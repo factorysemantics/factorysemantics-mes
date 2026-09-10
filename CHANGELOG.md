@@ -11,6 +11,29 @@ goes under Honesty with a migration line, so plant people can find it.
 ## [Unreleased]
 
 ### Added
+- **`fsmes shadow scorecard` — the instrument a shadow run is judged with.**
+  Running this MES beside the one in charge only answers anything if
+  somebody puts the two records side by side, and until now the only
+  comparison in the package was `fsmes score` against a simulated plant,
+  whose truth is scripted. A real plant's truth is whatever the incumbent
+  booked, and that arrives as a file a person exported, not as an API. The
+  command reads that export — CSV or JSON, a documented generic column set,
+  with the incumbent's own headings and order and equipment codes mapped in
+  a **config file rather than in code** — and this MES's own confirmations,
+  either the shadow outbox folder or the outbox in its database. It reports,
+  per order and per operation, where the two agree and where they do not on
+  good quantity, scrap, start, end and duration, within tolerances the plant
+  sets. Output is the terminal, a JSON, and one self-contained HTML page
+  with no scripts and nothing to fetch, because a plant network often cannot
+  reach the internet and the page gets mailed around.
+  **Three things it deliberately will not do:** say which side is right — it
+  names the difference with both records' numbers and stops; read a blank
+  cell as zero — a field one side never stated is *not compared*, never an
+  agreement; or add operations up into an order total, because good units at
+  two operations of the same order are usually the same units. Every report
+  ends with *what this cannot tell you*: orders only one record holds,
+  comparisons that could not be made, and the periods neither record covers.
+  See [the shadow scorecard](docs/operate/shadow-scorecard.md).
 - **The test suite runs on PostgreSQL in CI.** Every test ran on in-memory
   SQLite; PostgreSQL was documented, configured and shipped in the Compose
   file, and nothing exercised it. A `postgres` cell now runs

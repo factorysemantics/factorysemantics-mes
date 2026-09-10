@@ -268,7 +268,7 @@ def _completion_rules(c: OrderCompletion) -> list[Finding]:
     return findings
 
 
-def _documents_in(path: Path) -> list[dict]:
+def documents_in(path: Path) -> list[dict]:
     """The confirmation payloads in one file. Raises if it cannot be read."""
     if path.suffix.lower() == ".json":
         loaded = json.loads(path.read_text(encoding="utf-8"))
@@ -282,7 +282,7 @@ def _documents_in(path: Path) -> list[dict]:
 
 def check_file(path: Path) -> list[Checked]:
     try:
-        payloads = _documents_in(path)
+        payloads = documents_in(path)
     except Exception as exc:
         return [Checked(path=path, findings=[Finding(
             "problem", f"could not be read as a confirmation: {type(exc).__name__}: {exc}")])]

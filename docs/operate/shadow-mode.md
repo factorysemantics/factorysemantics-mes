@@ -164,6 +164,8 @@ first shift? None of that is a software setting.
 
 ## Related
 
+- [The shadow scorecard](shadow-scorecard.md) — the comparison at the end of
+  the run, which is the reason for doing it.
 - [The unified namespace (MQTT)](uns.md) — `log` mode, which is what a
   shadow plant runs.
 - [The ERPNext connector](erpnext.md) — a live connector, which shadow mode
