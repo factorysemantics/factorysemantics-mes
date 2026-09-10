@@ -65,6 +65,15 @@ goes under Honesty with a migration line, so plant people can find it.
   says what this project requires before it calls one supported. Odoo, SAP
   and Oracle are still not written; the contract and the suite exist, the
   connectors do not.
+- **The session cookie is marked HTTPS-only behind TLS.** Writing the
+  [TLS page](docs/operate/tls.md) turned this up: the dashboard's session
+  cookie was `HttpOnly` and `SameSite=Lax` but never `Secure`, so a plant
+  that had put a reverse proxy in front of the API could still have a live
+  session sent back in clear over one stray `http://` link. The flag now
+  follows the request's own scheme, which behind a proxy is the scheme in
+  `X-Forwarded-Proto`. A laptop on `http://127.0.0.1:8000` gets no `Secure`
+  flag, because there it is a cookie the browser silently drops.
+
 - **`fsmes erp requirements`.** What the configured connector needs on the
   ERP side, and which of it the MES can create itself — the list to send
   whoever administers the ERP, who is usually not the person running the
