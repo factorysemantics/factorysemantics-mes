@@ -119,6 +119,7 @@ packages = ["src/fsmes"]
 "config/line_layout.json" = "fsmes/data/config/line_layout.json"
 "config/tag_map_kepsim.json" = "fsmes/data/config/tag_map_kepsim.json"
 "config/tag_map_kepware.json" = "fsmes/data/config/tag_map_kepware.json"
+"config/inbound_mapping.json" = "fsmes/data/config/inbound_mapping.json"
 
 [tool.hatch.build.targets.sdist]
 exclude = [".claude/", "site/", "docs/reference/"]
