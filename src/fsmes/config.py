@@ -9,6 +9,7 @@ from functools import lru_cache
 from importlib import resources
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +17,20 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="MES_", env_file=".env", extra="ignore")
 
     database_url: str = "sqlite:///fsmes.db"
+
+    # --- Shadow mode ------------------------------------------------------
+    # The MES watches a real plant and can change nothing in it. On: it reads
+    # the OPC UA tags and books production exactly as it would in charge, and
+    # every path that could change anything outside its own database is shut
+    # - no PLC write-back, no live ERP, no MQTT publish, and nothing about
+    # this plant sent off the box. This is how a plant runs it beside the MES
+    # already in charge there without the two of them fighting.
+    #
+    # Read once at start-up and never toggled at runtime: leaving shadow mode
+    # is a restart with this setting changed, and the API records that in the
+    # audit trail. `fsmes.shadow.REGISTER` lists every outbound path and what
+    # this does to each; docs/operate/shadow-mode.md is the page.
+    shadow: bool = False
 
     log_level: str = "INFO"
     log_dir: Path = Path("logs")
@@ -153,6 +168,19 @@ class Settings(BaseSettings):
     # tag map. Empty means the single opc_endpoint above.
     opc_endpoints: str = ""
 
+    @model_validator(mode="after")
+    def _shadow_mode_holds(self) -> "Settings":
+        """Refuse to start on a configuration shadow mode cannot honour.
+
+        Here rather than at each adapter, because a live adapter that is
+        never constructed cannot be reached by accident, by a new caller, or
+        by a module somebody installs later. Every process builds Settings,
+        so every process gets the same refusal.
+        """
+        from fsmes import shadow
+
+        return shadow.check_settings(self)
+
 
 def packaged_default(path: Path) -> Path:
     """The path as given if it exists; otherwise the copy the wheel carries.
@@ -176,7 +204,19 @@ def packaged_default(path: Path) -> Path:
 
 @lru_cache
 def get_settings() -> Settings:
-    settings = Settings()
+    from pydantic import ValidationError
+
+    from fsmes import shadow
+
+    try:
+        settings = Settings()
+    except ValidationError as exc:
+        # One sentence, not a validation report: the person who set one
+        # environment variable wrongly is standing next to a plant.
+        plain = shadow.plain_error(exc)
+        if plain is None:
+            raise
+        raise shadow.ShadowMisconfigured(plain) from None
     if not settings.secret_key:
         settings.secret_key = secrets.token_urlsafe(32)
     for field in ("tag_map_file", "line_layout_file"):
