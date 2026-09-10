@@ -34,6 +34,12 @@ def _created_by_create_all(path) -> None:
     engine.dispose()
 
 
+def _shape_of(path, revision: str) -> dict[str, list[str]]:
+    """The tables and columns a revision produces, in a scratch database."""
+    command.upgrade(schema_mod.alembic_config(_url(path)), revision)
+    return schema_mod.database_shape(_url(path))
+
+
 def _older_revision(steps_back: int) -> str:
     revisions = [script.revision for script in
                  ScriptDirectory.from_config(schema_mod.alembic_config()).walk_revisions()]
@@ -83,9 +89,20 @@ def test_a_database_made_before_the_migrations_shipped_is_recognised_and_stamped
 
 
 def test_an_unstamped_database_from_an_older_release_is_stamped_there_and_then_migrated(tmp_path):
-    """Not every unstamped database matches the current schema. One three
-    revisions back is stamped three revisions back - not at head, which would
-    skip exactly the ALTERs that make the upgrade honest."""
+    """Not every unstamped database matches the current schema. One several
+    revisions back is stamped where it really is - not at head, which would
+    skip exactly the ALTERs that make the upgrade honest.
+
+    The stamp is checked by *shape* and not by name, because more than one
+    revision can be a true answer. `identify_unstamped` compares table and
+    column names and nothing else, deliberately, so that the same chain run
+    on SQLite and on PostgreSQL agrees - and a revision that only widens a
+    column to nullable, or only adds an index, leaves those names untouched.
+    Where two adjacent revisions are the same shape, either is an honest
+    stamp and the upgrade from either runs the same ALTERs. Asserting one
+    name would be asserting an accident of where the chain happens to end,
+    and would break on the next migration anybody adds.
+    """
     older = _older_revision(3)
     db = tmp_path / "older.db"
     command.upgrade(schema_mod.alembic_config(_url(db)), older)
@@ -95,9 +112,11 @@ def test_an_unstamped_database_from_an_older_release_is_stamped_there_and_then_m
 
     receipt = schema_mod.upgrade_database(_url(db), echo=said.append)
 
-    assert receipt["stamped"] == older
+    assert receipt["stamped"] != schema_mod.head_revision(), (
+        "stamping an older database at head is the bug this whole file is about")
+    assert _shape_of(tmp_path / "stamped.db", receipt["stamped"]) == _shape_of(tmp_path / "again.db", older)
     assert schema_mod.current_revision(_url(db)) == schema_mod.head_revision()
-    assert any(older in line for line in said)
+    assert any(receipt["stamped"] in line for line in said)
 
 
 def test_the_rows_an_unstamped_database_already_held_survive_the_stamp(tmp_path):
