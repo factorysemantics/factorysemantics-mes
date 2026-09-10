@@ -715,6 +715,9 @@ def test_a_batch_with_a_failure_in_it_waits_even_when_it_was_full(session):
                                   settings)
     # A cycle that raised counted nothing, so there is nothing to say it is behind.
     assert not publisher.draining(None, settings)
+    # And a batch size of nothing is a misconfiguration, not a reason to spin.
+    assert not publisher.draining({"enrolled": 0, "due": 0, "published": 0, "failed": 0},
+                                  settings_for(uns_batch=0))
 
 
 def test_qos_one_events_go_out_in_groups_rather_than_one_round_trip_each(session, scope):

@@ -31,7 +31,9 @@ MES_UNS_SITE=                         # empty: use the site the equipment model 
 MES_UNS_SCHEMA=_mes
 MES_UNS_QOS=1
 MES_UNS_RETAIN=false
-MES_UNS_POLL_SECONDS=2
+MES_UNS_POLL_SECONDS=2                # how long to wait when the queue is empty
+MES_UNS_BATCH=200                     # events one cycle publishes before going back for more
+MES_UNS_INFLIGHT=10                   # how many of those are in flight at once; 1 is one at a time
 ```
 
 The MQTT client is an optional extra, because a plant PC that does not
@@ -155,6 +157,30 @@ At-least-once, and deliberately not more:
 The worker outlives the broker. If the broker is down when it starts, or
 goes away mid-shift, events queue in the database and go out in order when
 it returns. The MES itself never blocks on the broker.
+
+### Keeping up after an outage
+
+Three settings decide how fast a backlog clears, and the defaults are meant
+for a plant, not for a demonstration.
+
+`MES_UNS_POLL_SECONDS` is how long the worker waits **when the queue has run
+dry**. A cycle that fills `MES_UNS_BATCH` without a failure does not wait at
+all — it goes straight back for the next batch — so an hour of events queued
+behind a dead broker goes out at whatever rate the broker will take them,
+rather than at `MES_UNS_BATCH / MES_UNS_POLL_SECONDS` events a second. A
+cycle with a failure in it does wait: that is the backoff doing its job.
+
+`MES_UNS_INFLIGHT` is how many publishes are outstanding at once. At QoS 1
+every publish waits for the broker to acknowledge it, so one at a time means
+one network round trip per event — the difference between latency and
+bandwidth, and on a plant network across a site that is the difference
+between hundreds of events a second and tens. Keep it under the client's own
+in-flight limit (paho, and so `aiomqtt`, allows 20 by default). Set it to
+`1` for strictly one publish at a time.
+
+Events still go out oldest first, and each one is still recorded on its own:
+a publish the broker refuses inside a group backs off without taking its
+neighbours with it.
 
 ## What is published today
 

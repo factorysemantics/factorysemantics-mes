@@ -11,7 +11,7 @@ the direction, the order is the id, and one index answers both without a
 sort. A filter on direction alone still uses it.
 
 Revision ID: c8b1e40d7a92
-Revises: b5c1d09e73af
+Revises: d9a3f61c48e0
 Create Date: 2026-09-10 09:50:00
 
 """
@@ -20,7 +20,7 @@ from collections.abc import Sequence
 from alembic import op
 
 revision: str = 'c8b1e40d7a92'
-down_revision: str | None = 'b5c1d09e73af'
+down_revision: str | None = 'd9a3f61c48e0'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

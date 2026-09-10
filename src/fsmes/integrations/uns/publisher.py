@@ -135,7 +135,7 @@ def draining(counted: dict | None, settings: Settings) -> bool:
     and a batch with a failure in it means the broker is unhappy, which is
     what the backoff is for.
     """
-    if not counted:
+    if not counted or not counted["due"]:
         return False
     return counted["due"] >= settings.uns_batch and not counted["failed"]
 

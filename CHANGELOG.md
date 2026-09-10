@@ -53,7 +53,39 @@ goes under Honesty with a migration line, so plant people can find it.
   against it; the suite drives it with a fake source.
   See [the inbound page](docs/operate/inbound.md#the-broker-mqtt).
 
+### Changed
+- **The unified-namespace publisher at plant volume.** It shipped off by
+  default and carrying two event kinds; it now carries equipment state
+  changes — one event per transition — and the first real plant will turn it
+  on. Nothing it publishes changed: same topics, same payloads, at-least-once,
+  oldest first. What changed is what a cycle costs. Measured on the fake
+  broker, one full batch of 200 confirmations from two machines:
+  **1602 statements and 202 commits before, 210 statements and 3 commits
+  after**, and 1000 equipment lookups down to 6.
+  - A topic depends on the kind and the machine and nothing else, so it is
+    worked out once per machine per cycle instead of once per event.
+  - The results of a cycle are written in one transaction after the last
+    publish, rather than one session, one row read and one commit each. A
+    transaction still never spans a publish — there is a test that watches
+    for one.
+  - QoS 1 waits for the broker to acknowledge every event, so publishes now
+    go out in groups the client can hold in flight (`MES_UNS_INFLIGHT`,
+    default 10; set it to 1 for strictly one at a time).
+  - Enrolment reads the ids it needs rather than hydrating every JSON
+    payload in the backlog to find them, and `erp_messages` has an index on
+    (direction, id) — the question both readers of the outbox ask.
+  - **A backlog now drains at the broker's speed.** A cycle that filled its
+    batch without a failure goes straight back for the next one instead of
+    sleeping `MES_UNS_POLL_SECONDS`, which had capped catch-up after an
+    outage at `MES_UNS_BATCH / MES_UNS_POLL_SECONDS` events a second however
+    fast the broker was.
+
 ### Honesty
+- **A published event has one `published_at`, not two.** The envelope
+  stamped the clock when the batch was built and the publication row stamped
+  it again when the result was written, so the MES's own record disagreed
+  with what it had already told the plant about the same event. One clock
+  read per cycle now, and a test compares the two.
 - **A counter over MQTT must be a running total, never an increment.** MQTT
   at QoS 1 is at-least-once, and nothing in a redelivered message tells it
   from the first: a repeated total is not a rise and books nothing, while a
