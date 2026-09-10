@@ -1,0 +1,25 @@
+{
+  "counts": {
+    "description": "An example, and only an example: it reads a SQLite file this repository tells you how to make, so that `fsmes inbound poll-sql` can be run end to end on a laptop with no other system involved. Every table and column name below is this project's own invention. Replace all of it with the query for the system your plant actually has - that query is yours to write, because only you have that system.",
+    "source": "replay:example-source",
+    "source_kind": "replay",
+    "timezone": "UTC",
+    "url": "sqlite:///inbound/example_source.sqlite",
+    "sql": "SELECT entry_id, entered_at, counted_at, machine, order_no, good_qty, scrap_qty FROM manual_counts WHERE entry_id > :watermark ORDER BY entry_id",
+    "watermark_column": "entry_id",
+    "watermark_type": "id",
+    "start_from": "0",
+    "poll_seconds": 60,
+    "statement_timeout_ms": 30000,
+    "max_rows": 500,
+    "columns": {
+      "external_key": "entry_id",
+      "recorded_at": "entered_at",
+      "when": "counted_at",
+      "equipment": "machine",
+      "order": "order_no",
+      "good": "good_qty",
+      "scrap": "scrap_qty"
+    }
+  }
+}
