@@ -232,6 +232,7 @@ def test_a_search_finds_a_code_typed_in_the_wrong_case(client):
     a laptop would quietly stop matching on a plant."""
     assert [e["code"] for e in client.get("/masterdata/equipment?q=mix01").json()] == ["MIX01"]
     assert [m["code"] for m in client.get("/masterdata/materials?q=fg-cola").json()] == ["FG-COLA"]
+    assert [p["code"] for p in client.get("/masterdata/personnel?q=scott").json()] == ["SCOTT"]
 
 
 def test_specifications_search_and_stay_ordered(client, session):

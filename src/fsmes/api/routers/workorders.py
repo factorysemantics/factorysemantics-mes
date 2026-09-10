@@ -98,7 +98,7 @@ def list_orders(
     if material:
         query = query.where(WorkOrder.material.has(code=material))
     if q:
-        query = query.where(WorkOrder.code.like(f"%{q}%"))
+        query = query.where(WorkOrder.code.ilike(f"%{q}%"))
     # An order with no due date is not due before anything, so a date filter
     # excludes it rather than guessing a date for it.
     if due_after:

@@ -34,7 +34,7 @@ def list_specs(
         query = query.where(Material.code == material)
     if q:
         like = f"%{q}%"
-        query = query.where(Material.code.like(like) | QualitySpec.characteristic.like(like))
+        query = query.where(Material.code.ilike(like) | QualitySpec.characteristic.ilike(like))
     return [
         SpecIn(
             material=s.material.code,
@@ -142,7 +142,7 @@ def list_ncs(
         query = query.where(NonConformance.status == status)
     if q:
         like = f"%{q}%"
-        query = query.where(NonConformance.code.like(like) | NonConformance.description.like(like))
+        query = query.where(NonConformance.code.ilike(like) | NonConformance.description.ilike(like))
     rows, total = paging.paginate(db, query, limit, offset)
     order_ids = {nc.work_order_id for nc in rows if nc.work_order_id}
     orders = {}
