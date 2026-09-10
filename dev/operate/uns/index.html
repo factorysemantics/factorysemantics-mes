@@ -1142,6 +1142,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-other-half-listening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The other half: listening
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verified-against" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2820,6 +2831,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-other-half-listening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The other half: listening
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verified-against" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3072,6 +3094,31 @@ operation and per order instead of one per state change.</p>
 namespace shows the ERP's half of the plant and nothing else. The MES's own
 state history, audit trail and OEE are unaffected either way; only the
 event log is.</p>
+<h2 id="the-other-half-listening">The other half: listening<a class="headerlink" href="#the-other-half-listening" title="Permanent link">&para;</a></h2>
+<p>The namespace is two directions, and this page has been one of them. Since
+<code>fsmes inbound subscribe</code>, the MES also <strong>reads</strong> the broker: tag values
+that never touch an OPC UA server — a gateway's counter, its state word, a
+process value — and inbound events where a broker already carries downtime
+labels, quality results or counts.</p>
+<div class="highlight"><pre><span></span><code><span class="nv">MES_INBOUND_MQTT_MODE</span><span class="o">=</span>mqtt
+<span class="nv">MES_INBOUND_MQTT_BROKER_URL</span><span class="o">=</span>mqtt://broker.plant.example:1883
+<span class="nv">MES_INBOUND_MQTT_CLIENT_ID</span><span class="o">=</span>fsmes-inbound<span class="w">     </span><span class="c1"># never the publisher's id</span>
+fsmes<span class="w"> </span>inbound<span class="w"> </span>subscribe
+</code></pre></div>
+<p>The wiring, the rules and the honesty that transport needs are on
+<a href="../inbound/#the-broker-mqtt">the inbound page</a> rather than here, because
+what a broker message <em>means</em> is an inbound question and not a namespace
+one. Three things worth knowing from this side:</p>
+<ul>
+<li><strong>The two workers are separate processes with separate client ids.</strong> A
+  broker disconnects the older session when two clients share an id, so
+  <code>fsmes inbound subscribe</code> refuses to start if the ids are equal.</li>
+<li><strong>The subscriber publishes nothing</strong>, and does not consume this MES's own
+  namespace. Point it at a plant's tree, not at <code>MES_UNS_TOPIC_PREFIX</code>, or
+  the two workers will hand this MES's own events back to it.</li>
+<li><strong>A counter must be published as a running total.</strong> MQTT is at-least-once,
+  and a redelivered increment would book units the plant never made.</li>
+</ul>
 <p>Sparkplug B is a later envelope over the same work — see the
 <a href="https://github.com/factorysemantics/factorysemantics-mes/blob/main/ROADMAP.md">roadmap</a>.
 MQTT-JSON first, because it is what a Node-RED flow can read in an
@@ -3080,9 +3127,10 @@ afternoon.</p>
 <p>The test suite, against a fake broker — this repository does not start
 brokers on the machine it is developed on. There is one test against a real
 broker (<code>test_a_running_broker_receives_what_the_publisher_sent</code>), marked
-slow and skipped unless <code>MES_UNS_TEST_BROKER</code> points at one. <strong>Not yet
-verified against a real Mosquitto, HiveMQ or UMH deployment</strong>, as of
-2026-09-09; see <a href="../compatibility/">compatibility</a>. If you run it against
+slow and skipped unless <code>MES_UNS_TEST_BROKER</code> points at one. The subscriber
+is driven by a fake source in the same way. <strong>Not yet verified against a
+real Mosquitto, HiveMQ or UMH deployment</strong>, in either direction, as of
+2026-09-10; see <a href="../compatibility/">compatibility</a>. If you run it against
 one, an issue saying which broker and what the topics looked like is the
 most useful thing you can send.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>

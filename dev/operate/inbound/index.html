@@ -1287,6 +1287,67 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-broker-mqtt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The broker (MQTT)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The broker (MQTT)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tag-values-the-mqtt-section-of-the-tag-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tag values: the mqtt section of the tag map
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#events-a-topic-on-a-stream" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Events: a topic on a stream
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#three-rules-this-transport-needs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three rules this transport needs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-a-run-says" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a run says
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-is-not-written-yet" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2763,6 +2824,67 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-broker-mqtt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The broker (MQTT)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The broker (MQTT)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tag-values-the-mqtt-section-of-the-tag-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tag values: the mqtt section of the tag map
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#events-a-topic-on-a-stream" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Events: a topic on a stream
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#three-rules-this-transport-needs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three rules this transport needs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-a-run-says" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a run says
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-is-not-written-yet" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2812,8 +2934,9 @@ the operator types the count into the incumbent. If none of that reaches the
 shadow, the comparison is unfair by construction: the shadow shows an
 unlabelled stop where the incumbent shows a reason code, and it looks like
 the shadow has a data problem when what it has is a plumbing problem.</p>
-<p>So there is a second front door. Three event shapes, one contract, and — for
-now — one driver: files in a folder.</p>
+<p>So there is a second front door. Three event shapes, one contract, and two
+drivers: files in a folder, and <a href="#the-broker-mqtt">a broker</a> the plant
+already has. The contract does not change with the pipe the row came down.</p>
 <div class="admonition note">
 <p class="admonition-title">Inbound is not gated by shadow mode</p>
 <p>Shadow mode closes the paths by which this MES could change something
@@ -2994,11 +3117,172 @@ recording time. This MES's clock is never used for a fact it was told.</p>
 <p>Nothing existing was rewritten by the migration that added these. A row from
 before it was observed by this MES, and null is exactly the right answer to
 "which other system told us".</p>
+<h2 id="the-broker-mqtt">The broker (MQTT)<a class="headerlink" href="#the-broker-mqtt" title="Permanent link">&para;</a></h2>
+<p><code>fsmes uns publish</code> tells your broker what this MES recorded.
+<code>fsmes inbound subscribe</code> is the other direction: it listens. A plant that
+moves data has a broker — United Manufacturing Hub, Node-RED, an IoT
+gateway of some make — and a first real plant may well have sensors,
+counters and states that never touch an OPC UA server at all.</p>
+<p>Two different things arrive on a broker, and this keeps them apart:</p>
+<ul>
+<li><strong>Tag values</strong> — a counter, a state word, a process value published by a
+  gateway. That is <em>machine data</em>, and it is held to exactly the discipline
+  the <a href="../opc-readonly/">OPC agent</a> holds its own to.</li>
+<li><strong>Inbound events</strong> — the three shapes above, where a broker already
+  carries downtime, quality or counts as JSON.</li>
+</ul>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">'factorysemantics-mes[mqtt]'</span><span class="w">   </span><span class="c1"># the publisher's extra, the same one</span>
+
+<span class="nv">MES_INBOUND_MQTT_MODE</span><span class="o">=</span>mqtt<span class="w">                 </span><span class="c1"># off (default) | mqtt</span>
+<span class="nv">MES_INBOUND_MQTT_BROKER_URL</span><span class="o">=</span>mqtt://broker.plant.example:1883<span class="w">   </span><span class="c1"># mqtts:// for TLS</span>
+<span class="nv">MES_INBOUND_MQTT_USERNAME</span><span class="o">=</span>mes
+<span class="nv">MES_INBOUND_MQTT_PASSWORD</span><span class="o">=</span>...
+<span class="nv">MES_INBOUND_MQTT_CLIENT_ID</span><span class="o">=</span>fsmes-inbound<span class="w">   </span><span class="c1"># NOT the publisher's id; see below</span>
+<span class="nv">MES_INBOUND_MQTT_SOURCE</span><span class="o">=</span>gateway:line1<span class="w">      </span><span class="c1"># what your plant calls this broker</span>
+<span class="nv">MES_INBOUND_MQTT_QOS</span><span class="o">=</span><span class="m">1</span>
+<span class="nv">MES_INBOUND_MQTT_REPORT_SECONDS</span><span class="o">=</span><span class="m">60</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>inbound<span class="w"> </span>check<span class="w">          </span><span class="c1"># also prints every topic filter and what it carries</span>
+fsmes<span class="w"> </span>inbound<span class="w"> </span>subscribe<span class="w">      </span><span class="c1"># forever; this is what systemd or Compose runs</span>
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Give it its own client id</p>
+<p>A broker disconnects the older session when two clients connect with the
+same id. The publisher is <code>fsmes</code> and the subscriber is <code>fsmes-inbound</code>
+for that reason, and <code>fsmes inbound subscribe</code> refuses to start if the
+two settings are equal rather than letting the two workers evict each
+other all shift.</p>
+</div>
+<h3 id="tag-values-the-mqtt-section-of-the-tag-map">Tag values: the <code>mqtt</code> section of the tag map<a class="headerlink" href="#tag-values-the-mqtt-section-of-the-tag-map" title="Permanent link">&para;</a></h3>
+<p>Topic-to-tag wiring lives in the tag map, beside the OPC machines, so that
+one document describes one plant:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"machines"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"equipment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MIX01"</span><span class="p">,</span><span class="w"> </span><span class="nt">"object"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MIX01"</span><span class="p">,</span><span class="w"> </span><span class="nt">"cycle_seconds"</span><span class="p">:</span><span class="w"> </span><span class="mf">4.0</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"mqtt"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">      </span><span class="p">{</span><span class="w"> </span><span class="nt">"topic"</span><span class="p">:</span><span class="w"> </span><span class="s2">"umh/v1/acme/kc1/line1/MIX01/_historian/good_count"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"equipment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MIX01"</span><span class="p">,</span><span class="w"> </span><span class="nt">"tag"</span><span class="p">:</span><span class="w"> </span><span class="s2">"GoodCount"</span><span class="p">,</span><span class="w"> </span><span class="nt">"json_path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"value"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="p">{</span><span class="w"> </span><span class="nt">"topic"</span><span class="p">:</span><span class="w"> </span><span class="s2">"umh/v1/acme/kc1/line1/MIX01/_historian/state"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"equipment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MIX01"</span><span class="p">,</span><span class="w"> </span><span class="nt">"tag"</span><span class="p">:</span><span class="w"> </span><span class="s2">"State"</span><span class="p">,</span><span class="w"> </span><span class="nt">"json_path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"value"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"state_map"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"1"</span><span class="p">:</span><span class="w"> </span><span class="s2">"running"</span><span class="p">,</span><span class="w"> </span><span class="nt">"2"</span><span class="p">:</span><span class="w"> </span><span class="s2">"idle"</span><span class="p">,</span><span class="w"> </span><span class="nt">"3"</span><span class="p">:</span><span class="w"> </span><span class="s2">"down"</span><span class="p">,</span><span class="w"> </span><span class="nt">"4"</span><span class="p">:</span><span class="w"> </span><span class="s2">"setup"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="p">{</span><span class="w"> </span><span class="nt">"topic"</span><span class="p">:</span><span class="w"> </span><span class="s2">"plant/line1/+/motor_temp"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"equipment_from"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="nt">"tag"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MotorTemp"</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>topic</code></td>
+<td>An MQTT topic filter. <code>+</code> and <code>#</code> work. One entry per filter; two entries for one filter are refused, because they would double-count every message.</td>
+</tr>
+<tr>
+<td><code>equipment</code></td>
+<td>The MES equipment code every message on this filter is about.</td>
+</tr>
+<tr>
+<td><code>equipment_from</code></td>
+<td>Instead of <code>equipment</code>: which level of the <em>topic</em> carries the machine code, counting from zero. For a namespace laid out by machine. The code that comes out of the topic still has to be one this MES holds — a topic level is never turned into a machine.</td>
+</tr>
+<tr>
+<td><code>tag</code></td>
+<td>The tag name. <code>State</code>, <code>GoodCount</code> and <code>ScrapCount</code> are <em>acted on</em>; every other name is recorded as tag history and nothing else.</td>
+</tr>
+<tr>
+<td><code>json_path</code></td>
+<td>A dotted path into a JSON payload, e.g. <code>value</code> or <code>payload.count</code>. Leave it out when the payload is the number itself.</td>
+</tr>
+<tr>
+<td><code>state_map</code></td>
+<td>Raw state word → MES state, for the <code>State</code> tag. A value that is not in it is <strong>refused</strong>, not guessed.</td>
+</tr>
+</tbody>
+</table>
+<p>A <code>mqtt</code> section is optional: a tag map without one simply has no broker
+tags, which is what most plants start with.</p>
+<h3 id="events-a-topic-on-a-stream">Events: a <code>topic</code> on a stream<a class="headerlink" href="#events-a-topic-on-a-stream" title="Permanent link">&para;</a></h3>
+<p>A stream in the mapping file that names a <code>topic</code> is also read from the
+broker. Everything else about it — the source, the zone, the time format,
+the defaults — is unchanged, because those are your decisions and they do
+not depend on which pipe the row came down. <code>fields</code> is there for when the
+broker's JSON calls something different from what your files call it:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"downtime"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"gateway:line1"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"source_kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"terminal"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"timezone"</span><span class="p">:</span><span class="w"> </span><span class="s2">"America/Chicago"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"topic"</span><span class="p">:</span><span class="w"> </span><span class="s2">"plant/line1/downtime"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"columns"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"external_key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"stop_id"</span><span class="p">,</span><span class="w"> </span><span class="nt">"recorded_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"entered_at"</span><span class="p">,</span>
+<span class="w">                 </span><span class="nt">"equipment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"machine"</span><span class="p">,</span><span class="w"> </span><span class="nt">"started_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"stop_start"</span><span class="p">,</span>
+<span class="w">                 </span><span class="nt">"ended_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"stop_end"</span><span class="p">,</span><span class="w"> </span><span class="nt">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"reason_code"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">"fields"</span><span class="p">:</span><span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nt">"external_key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"id"</span><span class="p">,</span><span class="w"> </span><span class="nt">"recorded_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ts"</span><span class="p">,</span>
+<span class="w">                 </span><span class="nt">"equipment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"eq"</span><span class="p">,</span><span class="w"> </span><span class="nt">"started_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"from"</span><span class="p">,</span>
+<span class="w">                 </span><span class="nt">"ended_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"to"</span><span class="p">,</span><span class="w"> </span><span class="nt">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"reason"</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>A stream with no <code>topic</code> is read from its folder only. You can take downtime
+labels off the broker and quality results out of a folder; the mapping file
+is where that is said.</p>
+<h3 id="three-rules-this-transport-needs">Three rules this transport needs<a class="headerlink" href="#three-rules-this-transport-needs" title="Permanent link">&para;</a></h3>
+<p><strong>A counter is a total, never an increment.</strong> MQTT at QoS 1 is
+<em>at-least-once</em>: after a reconnect the broker may hand over the same message
+twice, and there is nothing in it to tell the second delivery from the
+first. A redelivered <strong>total</strong> changes nothing, because a delta is the rise
+above the last value this MES saw. A redelivered <strong>increment</strong> would book
+units the plant never made. So a mapping that declares <code>"counter":
+"increment"</code> is refused at start-up, and told the two things it can do
+instead: publish the machine's own running total, or publish the counts as
+<code>counts</code> events, which carry your key and deduplicate on it.</p>
+<p>The rest of the counter rule is the OPC agent's, unchanged. The first
+reading is a baseline and books nothing — the units before it were made at
+an unknown time, and none of them are invented. A counter that has fallen to
+near zero is a gateway or PLC reset and becomes the new baseline, because
+the units around the reset are unknowable.</p>
+<p><strong>A retained message sets a baseline and nothing else.</strong> A broker replays a
+retained message to every new subscriber as though it had just happened, and
+nothing in the message says how old it is. Booking a state change from one
+would put an hour of the wrong state into availability; writing it to tag
+history would put an hour-old reading on this minute's chart. So a retained
+message is used for the one thing it is honestly good for — the counter
+baseline that saves the first delta from being wrong — and counted in the
+report. A retained message on an <em>event</em> topic is refused and said once: a
+publisher retaining events is using the broker as a database.</p>
+<p><strong>Nothing is published.</strong> The subscriber holds no publish call, and a test
+in the suite checks the module rather than trusting the claim. It is not
+gated by shadow mode for the reason at the top of this page, and
+<a href="../shadow-mode/">the register</a> carries the entry.</p>
+<h3 id="what-a-run-says">What a run says<a class="headerlink" href="#what-a-run-says" title="Permanent link">&para;</a></h3>
+<p>The subscriber is a worker with no end, so it says what it has taken in
+every <code>MES_INBOUND_MQTT_REPORT_SECONDS</code>. Every number is a total over
+everything received since it started, and a refusal the broker repeats is
+grouped with a count rather than logged a thousand times:</p>
+<div class="highlight"><pre><span></span><code>1204 message(s) received: 1180 reading(s) recorded, 214 booking(s),
+6 state change(s) (908 repeated the open state), 3 event(s) recorded,
+1 already seen, 12 refused, 8 on topics nothing is mapped to,
+4 retained (baseline only).
+  12 x plant/line1/MIX01/state: State=7 is not in the state_map for ...
+</code></pre></div>
+<p><code>8 on topics nothing is mapped to</code> is in there on purpose: a plant's broker
+carries far more than this MES was pointed at, and a subscriber that said
+nothing about the rest would look like it was working when it had been
+pointed at the wrong tree.</p>
 <h2 id="what-is-not-written-yet">What is not written yet<a class="headerlink" href="#what-is-not-written-yet" title="Permanent link">&para;</a></h2>
-<p>A <strong>SQL poller</strong> and an <strong>MQTT subscriber</strong>, against the same three shapes.
-Both are transports over a contract that already exists, and neither will
-change what a row means when it lands. There is no inbound REST endpoint
-either. Ask in <a href="https://github.com/factorysemantics/factorysemantics-mes/discussions">Discussions</a>;
+<p>A <strong>SQL poller</strong>, against the same three shapes — a transport over a
+contract that already exists, which will not change what a row means when it
+lands. There is no inbound REST endpoint. <strong>No broker has been tested
+against this yet</strong>: the suite drives the subscriber with a fake source, and
+this repository does not start brokers on the machine it is developed on.
+If you run it against a real Mosquitto, HiveMQ or UMH, an issue saying which
+broker and what it did is the most useful thing you can send. Ask in
+<a href="https://github.com/factorysemantics/factorysemantics-mes/discussions">Discussions</a>;
 a question asked twice becomes a page.</p>
 
 

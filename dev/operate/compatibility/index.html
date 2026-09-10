@@ -2718,9 +2718,14 @@
 <td>the server is streamable HTTP over the standard SDK</td>
 </tr>
 <tr>
+<td><strong>MQTT brokers</strong> (Mosquitto, HiveMQ, EMQX)</td>
+<td>untested</td>
+<td>both directions are built — <code>fsmes uns publish</code> and <code>fsmes inbound subscribe</code> — and both are driven by a fake transport in the suite. No broker has run against either; this repository does not start brokers on the machine it is developed on. The publisher has one opt-in test against a real broker (<code>MES_UNS_TEST_BROKER</code>)</td>
+</tr>
+<tr>
 <td>Node-RED, United Manufacturing Hub, Grafana</td>
-<td>untested; nothing built</td>
-<td>planned bridges, in that order</td>
+<td>untested; the MQTT halves exist</td>
+<td>the namespace is published and subscribed to over plain MQTT-JSON under an ISA-95 tree; no UMH or Node-RED deployment has been on the other end of it</td>
 </tr>
 <tr>
 <td>Windows (plant PCs)</td>
