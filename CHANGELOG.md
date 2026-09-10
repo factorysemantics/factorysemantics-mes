@@ -51,6 +51,18 @@ goes under Honesty with a migration line, so plant people can find it.
   `MES_UNS_MODE=log` prints the whole namespace without a broker.
   `fsmes uns topics` and `fsmes uns queue` show the tree and the backlog.
   Off by default. See [the unified namespace](docs/operate/uns.md).
+- **The ERPNext connector is tested against a real ERPNext.** A new
+  `ERPNext (live)` job stands up ERPNext v15.120.0 in containers pinned to
+  image digests (`labs/erpnext/`), seeds the plant, and runs the whole round
+  trip: a Work Order submitted in ERPNext, pulled by the connector,
+  acknowledged, confirmed, and then checked by reading ERPNext's own
+  documents back — the custom fields, `produced_qty`, one submitted
+  Manufacture stock entry, the comment. A retried confirmation is asserted to
+  leave exactly one stock entry. The old live test fetched orders, asserted a
+  list, and was deselected by CI's own settings, so it had never run. The job
+  is not on every pull request: it takes about three and a half minutes and
+  runs only when the connector, its tests or its fixture change. See
+  [the ERPNext connector](docs/operate/erpnext.md).
 - CI builds the wheel and runs `fsmes demo` from it in a fresh virtual
   environment in an empty directory, on every pull request and every push to
   `main`. The same check runs against the exact wheel a tag is about to
@@ -73,6 +85,16 @@ goes under Honesty with a migration line, so plant people can find it.
   `0.1.0` to `0.1.2`, and the release workflow now refuses a tag that
   disagrees with it.
 ### Honesty
+- **What a missing ERPNext custom field does is now measured, not assumed.**
+  Against ERPNext v15.120.0: a `PUT` to a submitted Work Order naming a field
+  the doctype does not have returns `200`, and the value is neither stored nor
+  returned. A site missing one of the MES fields therefore accepts a
+  confirmation and silently loses whichever number that field carried. An
+  HTTP success is not proof a value landed. The experiment runs on every live
+  job, so a change of behaviour in ERPNext shows up there.
+- `docs/operate/compatibility.md` says ERPNext v15.120.0 is tested
+  continuously and v16 is untested, in place of "tested against a development
+  bench, not yet against a current stable release in a clean container".
 - **`fsmes erp outbox` counts the ERP's own queue, not the whole log.** The
   same table now holds plant events waiting for a different reader, and
   counting those as pending ERP work would report a backlog that does not

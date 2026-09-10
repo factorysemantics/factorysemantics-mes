@@ -122,6 +122,11 @@ class ErpNextClient:
     def update(self, doctype: str, name: str, values: dict) -> dict:
         return self._request("PUT", f"/api/resource/{doctype}/{_esc(name)}", json=values).json()["data"]
 
+    def delete(self, doctype: str, name: str) -> None:
+        """Used by the live test to take a custom field away again. The
+        connector itself never deletes anything in the ERP."""
+        self._request("DELETE", f"/api/resource/{doctype}/{_esc(name)}")
+
     def call(self, method: str, **params) -> dict:
         return self._request("POST", f"/api/method/{method}", json=params).json().get("message")
 

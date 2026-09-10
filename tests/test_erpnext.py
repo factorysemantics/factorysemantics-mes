@@ -3,9 +3,11 @@ does twice without doing damage.
 
 These run against a scripted transport rather than a live ERPNext, so they
 answer the questions that survive a version bump — field mapping, the
-acknowledge handshake, retry safety — rather than re-testing Frappe. The live
-round-trip is `test_erpnext_roundtrip`, marked slow and skipped when no ERPNext
-is reachable.
+acknowledge handshake, retry safety — rather than re-testing Frappe.
+
+The other half — whether those field names exist, and what ERPNext does with
+what we send — is `tests/test_erpnext_live.py`, which runs against a real
+ERPNext in its own CI job and fails rather than skips when there is none.
 """
 
 import json
@@ -421,31 +423,3 @@ def test_check_passes_on_a_prepared_site():
     ok, lines = erpnext_setup.check(_client(FakeErpNext()))
     assert ok
     assert all(line.startswith("ok") for line in lines)
-
-
-# ----------------------------------------------------------------- live ERPNext
-
-
-@pytest.mark.slow
-def test_erpnext_roundtrip():
-    """Against a real ERPNext, if one is running. Proves the field names still
-    exist — the half a mock transport can never check."""
-    from fsmes.config import get_settings
-
-    settings = get_settings()
-    try:
-        client = ErpNextClient(
-            settings.erpnext_base_url,
-            site=settings.erpnext_site,
-            user=settings.erpnext_user,
-            password=settings.erpnext_password,
-            timeout=5.0,
-        )
-        orders = ErpNextAdapter(client).fetch_orders()
-    except Exception as exc:  # not running, not seeded, not reachable
-        pytest.skip(f"no ERPNext at {settings.erpnext_base_url} ({type(exc).__name__})")
-
-    assert isinstance(orders, list)
-    for order in orders:
-        assert order["code"] and order["material"]
-        assert order["quantity"] >= 0
