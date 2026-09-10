@@ -18,7 +18,12 @@ import pytest
 
 from fsmes.integrations.erp import erpnext_setup
 from fsmes.integrations.erp.contract import ProductionRequest
-from fsmes.integrations.erp.erpnext_adapter import ErpNextAdapter, ErpNextClient, ErpNextError
+from fsmes.integrations.erp.erpnext_adapter import (
+    ErpNextAdapter,
+    ErpNextClient,
+    ErpNextError,
+    ErpNextRefused,
+)
 
 FIELD_TYPES = {f["fieldname"]: f["fieldtype"] for f in erpnext_setup.CUSTOM_FIELDS}
 
@@ -34,9 +39,15 @@ class FakeErpNext:
 
     ALL_MES_FIELDS = tuple(erpnext_setup.FIELD_NAMES)
 
-    def __init__(self, work_orders=None, produced=0.0, custom_fields=ALL_MES_FIELDS, field_types=None):
+    def __init__(self, work_orders=None, produced=0.0, custom_fields=ALL_MES_FIELDS, field_types=None,
+                 refuses_stock_entry=""):
         self.work_orders = work_orders if work_orders is not None else []
         self.produced = produced
+        # A site that will not take the stock entry, in Frappe's own shape: a
+        # 417 carrying a ValidationError. Measured against ERPNext v15.120.0,
+        # where a Manufacture entry beyond the over-production allowance is
+        # refused whole. The default is a site that accepts.
+        self.refuses_stock_entry = refuses_stock_entry
         self.custom_fields = list(custom_fields)
         # A site where somebody made one of them by hand, with the wrong type.
         self.field_types = dict(FIELD_TYPES, **(field_types or {}))
@@ -92,6 +103,9 @@ class FakeErpNext:
             )
 
         if path == "/api/resource/Stock Entry" and request.method == "POST":
+            if self.refuses_stock_entry:
+                return httpx.Response(417, json={
+                    "exception": f"frappe.exceptions.ValidationError: {self.refuses_stock_entry}"})
             doc = json.loads(request.content)
             self.stock_entries.append(doc)
             return httpx.Response(200, json={"data": {"name": "MAT-STE-TEST-0001", **doc}})
@@ -319,6 +333,74 @@ def test_the_over_run_reaches_the_ERP_as_its_own_number():
     make_adapter(fake).send_confirmation(_confirmation(good_qty=402.0, over_qty=2.0))
     assert fake.updates[0][1]["custom_mes_over_qty"] == 2.0
 
+
+
+# ERPNext refusing an over-run: measured on v15.120.0 in the live job, and
+# pinned here so the connector's answer to it survives without a container.
+REFUSAL = "For quantity 500.0 should not be greater than allowed quantity 440.0"
+
+
+def test_an_over_run_ERPNext_refuses_is_not_reported_as_delivered():
+    """The line made 500 against an order for 400 and ERPNext allows 10%.
+
+    ERPNext books nothing at all — not the 440 it would have allowed, not a
+    draft. The confirmation must therefore not be delivered: what the MES
+    counted and what the ERP accepted differ, and only what the ERP accepted
+    may be reported as accepted."""
+    fake = FakeErpNext(refuses_stock_entry=REFUSAL)
+    with pytest.raises(ErpNextRefused) as raised:
+        make_adapter(fake).send_confirmation(_confirmation(good_qty=500.0, over_qty=100.0))
+
+    assert fake.stock_entries == []
+    # ERPNext's own sentence, not a paraphrase of it: the person who has to
+    # act reads the number the ERP would have allowed.
+    assert REFUSAL in str(raised.value)
+    assert "500 good" in str(raised.value) and "100 over" in str(raised.value)
+
+
+def test_a_refused_over_run_is_permanent_so_the_outbox_stops_rather_than_retries():
+    """Retrying sends the identical stock entry and gets the identical
+    refusal. Eight attempts over an hour would only delay the moment a person
+    hears about it. `permanent` is what the sync worker reads."""
+    fake = FakeErpNext(refuses_stock_entry=REFUSAL)
+    with pytest.raises(ErpNextRefused) as raised:
+        make_adapter(fake).send_confirmation(_confirmation(good_qty=500.0, over_qty=100.0))
+    assert raised.value.permanent is True
+    assert raised.value.status_code == 417
+
+
+def test_an_ERPNext_that_is_merely_down_is_still_retried():
+    """The distinction the state above rests on. A 500 is not a refusal, and
+    an ERP that fell over for ten minutes must not lose the confirmation."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, text="upstream is restarting")
+
+    client = ErpNextClient(
+        "http://erp.test",
+        client=httpx.Client(base_url="http://erp.test", transport=httpx.MockTransport(handler)),
+    )
+    with pytest.raises(ErpNextError) as raised:
+        ErpNextAdapter(client).send_confirmation(_confirmation())
+    assert raised.value.permanent is False
+    assert not isinstance(raised.value, ErpNextRefused)
+
+
+def test_a_refused_over_run_leaves_the_reason_where_a_person_in_ERPNext_reads_it():
+    """Without this, ERPNext shows a Work Order whose MES fields say 500 good
+    and whose produced_qty is zero, and nothing anywhere says why."""
+    fake = FakeErpNext(refuses_stock_entry=REFUSAL)
+    with pytest.raises(ErpNextRefused):
+        make_adapter(fake).send_confirmation(_confirmation(good_qty=500.0, over_qty=100.0))
+
+    assert len(fake.comments) == 1, f"ERPNext holds {len(fake.comments)} comments about the refusal"
+    [note] = fake.comments
+    assert "refused" in note and REFUSAL in note
+    assert "500 good" in note and "100 over the ordered quantity" in note
+
+    # And what the machines counted still reaches the fields that carry it:
+    # the MES's own record does not change because the ERP said no.
+    assert fake.updates[0][1]["custom_mes_good_qty"] == 500.0
+    assert fake.updates[0][1]["custom_mes_over_qty"] == 100.0
 
 
 def test_a_field_ERPNext_silently_dropped_is_not_reported_as_delivered():

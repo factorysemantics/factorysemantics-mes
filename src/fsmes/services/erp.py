@@ -185,6 +185,28 @@ def mark_error(message: ErpMessage, error: Exception, now: datetime | None = Non
     return message
 
 
+def mark_refused(message: ErpMessage, error: Exception) -> ErpMessage:
+    """The ERP refused this on its own rules. Stop, rather than back off.
+
+    A refusal is not a failure that time repairs. The ERP read the message,
+    understood it and said no — measured against ERPNext v15.120.0, where a
+    Manufacture entry beyond the site's over-production allowance is refused
+    whole and nothing is booked. Retrying sends the identical message and
+    gets the identical answer, so eight attempts over an hour only delay the
+    moment a person hears about it, and bury the ERP's own words under seven
+    copies of themselves.
+
+    Dead is what the outbox already means by "a person decides": the message
+    is kept, its error is the ERP's sentence, nothing is delivered, and
+    `retry` puts it back once whoever owns the decision has made it.
+    """
+    message.attempts = (message.attempts or 0) + 1
+    message.error = str(error)[:400]
+    message.status = MessageStatus.DEAD
+    message.next_attempt_at = None
+    return message
+
+
 def retry(session: Session, message_id: int, actor: str = "system") -> ErpMessage:
     """Put a dead or failing message back in the queue, now."""
     message = session.get(ErpMessage, message_id)

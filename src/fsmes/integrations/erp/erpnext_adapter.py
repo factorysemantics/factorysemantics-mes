@@ -16,7 +16,10 @@ Outbound, a finished MES order posts a real Stock Entry of purpose "Manufacture"
 against the ERPNext work order, so produced quantity, stock movement and
 costing all land where ERPNext expects them. That is deliberately not a comment
 or a custom field: production the MES has committed to should be visible to the
-business as stock, not as a note somebody has to read.
+business as stock, not as a note somebody has to read. When ERPNext refuses
+that entry — an over-run past the site's over-production allowance is the
+measured case — nothing is booked, the confirmation is not delivered, and the
+refusal is permanent rather than retried (see `_refusal`).
 
 Five custom fields on Work Order carry what ERPNext has nowhere to put — whether
 the MES has taken the order, and what the MES actually counted. All are
@@ -27,6 +30,7 @@ every write is read back (see `_write`).
 """
 
 import math
+import re
 
 import httpx
 import structlog
@@ -42,8 +46,34 @@ _OPEN_STATUSES = ("Not Started", "In Process")
 MAKE_STOCK_ENTRY = "erpnext.manufacturing.doctype.work_order.work_order.make_stock_entry"
 
 
+# Frappe answers a `frappe.throw()` with 417 and the message in the body. It
+# is the status ERPNext uses to say "I read this and I will not do it".
+VALIDATION_REFUSED = 417
+
+
 class ErpNextError(RuntimeError):
     """An ERPNext call failed. Raised so sync marks the message and retries."""
+
+    #: The outbox reads this. False — the default — means the failure might
+    #: pass: the site was down, the session had gone, someone had not run
+    #: `fsmes erp setup` yet. Retrying with backoff is the right answer.
+    permanent = False
+
+    def __init__(self, message: str, *, status_code: int | None = None):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+class ErpNextRefused(ErpNextError):
+    """ERPNext read the request, understood it, and said no.
+
+    Retrying sends the identical bytes and gets the identical answer, so the
+    outbox must not spend eight attempts and an hour finding that out. The
+    thing that has to change is in ERPNext or on the shop floor, and a person
+    changes it — which is what `MessageStatus.DEAD` has always meant.
+    """
+
+    permanent = True
 
 
 class ErpNextClient:
@@ -94,7 +124,10 @@ class ErpNextClient:
             self.login()
             response = self._client.request(method, path, **kwargs)
         if response.status_code >= 400:
-            raise ErpNextError(f"{method} {path} -> HTTP {response.status_code}: {_detail(response)}")
+            raise ErpNextError(
+                f"{method} {path} -> HTTP {response.status_code}: {_detail(response)}",
+                status_code=response.status_code,
+            )
         return response
 
     def list(self, doctype: str, *, filters=None, fields=None, limit: int = 100, order_by: str = "") -> list[dict]:
@@ -172,6 +205,25 @@ def _same(sent, returned) -> bool:
         except (TypeError, ValueError):
             return False
     return str(sent or "") == str(returned or "")
+
+
+_FRAPPE_EXCEPTION = re.compile(r"^[A-Za-z_.]*(?:Error|Exception):\s*")
+
+
+def _message_of(error: ErpNextError) -> str:
+    """Frappe's own sentence, without the transport wrapped around it.
+
+    `POST /api/resource/Stock Entry -> HTTP 417: frappe.exceptions.Validation
+    Error: For quantity 500.0 should not be greater than allowed quantity
+    440.0` is what the client raises. Only the last clause of that means
+    anything to the person reading a comment in ERPNext, and it is ERPNext's
+    own wording, so it is repeated rather than paraphrased.
+    """
+    text = str(error)
+    _, marker, tail = text.partition("-> HTTP ")
+    if marker:
+        _, _, text = tail.partition(": ")
+    return _FRAPPE_EXCEPTION.sub("", text).strip() or str(error)
 
 
 def _detail(response: httpx.Response) -> str:
@@ -361,11 +413,57 @@ class ErpNextAdapter(ErpConnector):
             log.info("stock entry already posted", order=order, produced=already)
             return
 
-        doc = self.client.call(MAKE_STOCK_ENTRY, work_order_id=order, purpose="Manufacture", qty=remaining)
-        if not isinstance(doc, dict):
-            raise ErpNextError(f"ERPNext would not build a stock entry for {order}: {doc!r}")
-        doc["docstatus"] = 1
-        if payload.get("lot"):
-            doc["remarks"] = f"MES-TWIN lot {payload['lot']}"
-        entry = self.client.insert("Stock Entry", doc)
+        try:
+            doc = self.client.call(MAKE_STOCK_ENTRY, work_order_id=order, purpose="Manufacture", qty=remaining)
+            if not isinstance(doc, dict):
+                raise ErpNextError(f"ERPNext would not build a stock entry for {order}: {doc!r}")
+            doc["docstatus"] = 1
+            if payload.get("lot"):
+                doc["remarks"] = f"MES-TWIN lot {payload['lot']}"
+            entry = self.client.insert("Stock Entry", doc)
+        except ErpNextError as exc:
+            if exc.status_code != VALIDATION_REFUSED:
+                raise
+            raise self._refusal(order, remaining, payload, exc) from exc
         log.info("manufacture posted to ERPNext", order=order, qty=remaining, stock_entry=entry.get("name"))
+
+    def _refusal(self, order: str, quantity: float, payload: dict, exc: ErpNextError) -> ErpNextRefused:
+        """ERPNext refused to book the quantity. Say so where a person will see it.
+
+        Measured on v15.120.0: a Manufacture entry for more than the Work
+        Order's quantity plus the site's over-production allowance is refused
+        whole — `For quantity 500.0 should not be greater than allowed
+        quantity 440.0` — and ERPNext books nothing at all. Its own
+        `produced_qty` stays where it was.
+
+        Nothing partial is posted in its place. What the MES counted and what
+        the ERP will accept genuinely differ, and the gap is a decision
+        somebody at the plant has to make: raise the allowance, or account for
+        the surplus another way. The MES's own record does not change, the
+        confirmation is not delivered, and the comment below is what tells the
+        person in ERPNext that a decision is waiting.
+        """
+        good = float(payload.get("good_qty") or 0)
+        over = float(payload.get("over_qty") or 0)
+        note = (
+            f"MES-TWIN: ERPNext refused a Manufacture entry of {quantity:g}. "
+            f"Nothing was booked here. The MES counted {good:g} good"
+            + (f", {over:g} over the ordered quantity" if over else "")
+            + (f", lot {payload['lot']}" if payload.get("lot") else "")
+            + f". ERPNext said: {_message_of(exc)}"
+        )
+        try:
+            self.client.comment("Work Order", order, note)
+        except ErpNextError:
+            # The refusal is the news; losing the note about it must not
+            # replace ERPNext's own words with a comment API error.
+            log.warning("could not leave the refusal comment", order=order)
+        log.warning("ERPNext refused the confirmation", order=order, qty=quantity,
+                    good=good, over=over, error=str(exc))
+        return ErpNextRefused(
+            f"ERPNext refused to book {quantity:g} on {order} and posted nothing: {_message_of(exc)}. "
+            f"The MES counted {good:g} good"
+            + (f" ({over:g} over the ordered quantity)" if over else "")
+            + ". Somebody has to decide what the ERP should hold; the confirmation is not delivered.",
+            status_code=exc.status_code,
+        )

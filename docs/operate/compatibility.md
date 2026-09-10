@@ -39,7 +39,7 @@ rather than read is a table that misleads.
 
 | Connector | Standing | Version tested | Date | Evidence |
 |---|---|---|---|---|
-| **ERPNext** | supported | v15.120.0 (Frappe v15, MariaDB 10.6) | 2026-09-09, and on every pull request that touches it since | the `ERPNext (live)` job: a clean container from `labs/erpnext/docker-compose.yml`, images pinned by digest, seeded and put through the whole round trip in `tests/test_erpnext_live.py`, asserting against ERPNext's own documents. Also passes the conformance suite |
+| **ERPNext** | supported | v15.120.0 (Frappe v15, MariaDB 10.6) | 2026-09-09, and on every pull request that touches it since | the `ERPNext (live)` job: a clean container from `labs/erpnext/docker-compose.yml`, images pinned by digest, seeded and put through the whole round trip in `tests/test_erpnext_live.py`, asserting against ERPNext's own documents. Includes what ERPNext does with an over-run, measured 2026-09-10: inside its own over-production allowance it books every unit, beyond it it refuses the stock entry whole and books nothing ([what the connector does about it](erpnext.md#when-the-line-made-more-than-the-order-asked-for)). Also passes the conformance suite |
 | ERPNext v16 | experimental | **no live test** | — | nothing here claims anything about it; the live job pins v15 |
 | **file exchange** (B2MML-lite) | supported | not applicable — the far side is a folder | 2026-09-10 | `tests/test_file_erp.py` and the conformance suite |
 | **REST** (against the bundled mock ERP) | supported | not applicable — the far side ships with it | 2026-09-10 | `tests/test_erp_contract.py` and the conformance suite. Against a *real* ERP's REST API it is **untested**, and the three endpoints it needs are in `fsmes erp requirements` |

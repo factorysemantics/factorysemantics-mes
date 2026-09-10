@@ -132,6 +132,26 @@ goes under Honesty with a migration line, so plant people can find it.
   `0.1.0` to `0.1.2`, and the release workflow now refuses a tag that
   disagrees with it.
 ### Honesty
+- **What ERPNext does with an over-run is now measured, and a refusal is
+  never recorded as delivered.** The MES books every unit a machine counted,
+  so an order for 400 that ran to 420 is confirmed as 420 good with 20 over.
+  ERPNext has an over-production allowance of its own (Manufacturing
+  Settings, zero out of the box), and nobody had asked it what it does.
+  Measured against v15.120.0: inside the allowance it takes the whole
+  quantity — `produced_qty` 420, one Manufacture entry of 420. Beyond it, it
+  **refuses the entry whole** with HTTP 417 `For quantity 500.0 should not be
+  greater than allowed quantity 440.0`, books nothing, and leaves
+  `produced_qty` at 0. The connector no longer lets that pass as a transport
+  failure: the confirmation is not delivered, and because a retry sends the
+  identical entry and gets the identical answer, the message goes straight to
+  `dead` in the outbox with ERPNext's own sentence as its error instead of
+  spending eight attempts and an hour on it. A comment on the Work Order says
+  what was refused, what the MES counted and what ERPNext said, so the person
+  who has to decide can see all of it; `custom_mes_good_qty` and
+  `custom_mes_over_qty` still carry what the machines counted, beside a
+  `produced_qty` of 0. Nothing partial is posted in place of the refused
+  entry. Once somebody raises the allowance or agrees what the ERP should
+  hold, `POST /erp/outbox/{id}/retry` sends the same confirmation again.
 - **What a missing ERPNext custom field does is now measured, not assumed.**
   Against ERPNext v15.120.0: a `PUT` to a submitted Work Order naming a field
   the doctype does not have returns `200`, and the value is neither stored nor
