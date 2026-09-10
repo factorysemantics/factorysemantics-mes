@@ -12,6 +12,8 @@ what is being tested is the chain that ships, not a description of it.
 from __future__ import annotations
 
 import sqlite3
+import tempfile
+from pathlib import Path
 
 import pytest
 from alembic import command
@@ -41,9 +43,30 @@ def _shape_of(path, revision: str) -> dict[str, list[str]]:
 
 
 def _older_revision(steps_back: int) -> str:
+    """A revision at least that far back whose schema no newer one shares.
+
+    `identify_unstamped` recognises a database by its tables and its columns,
+    so a migration that changes only a constraint or an index leaves a schema
+    indistinguishable from its parent's, and the walk returns the newest of
+    the two - correctly, because nothing in the database says otherwise. The
+    chain has migrations of both kinds in it, so counting back a fixed number
+    of steps can land on the older twin, and this test would then be
+    demanding an answer no comparison of tables and columns could give. Step
+    back until the revision's shape is its own.
+    """
     revisions = [script.revision for script in
                  ScriptDirectory.from_config(schema_mod.alembic_config()).walk_revisions()]
-    return revisions[steps_back]
+    with tempfile.TemporaryDirectory(prefix="fsmes-older-") as scratch:
+        newer: list[dict] = []
+        for index, revision in enumerate(revisions):
+            db = Path(scratch) / f"{revision}.db"
+            command.upgrade(schema_mod.alembic_config(_url(db)), revision)
+            shape = schema_mod.database_shape(_url(db))
+            db.unlink()
+            if index >= steps_back and shape not in newer:
+                return revision
+            newer.append(shape)
+    raise AssertionError(f"no revision {steps_back} or more back has a schema of its own")
 
 
 def test_an_empty_database_is_created_at_the_current_revision(tmp_path):

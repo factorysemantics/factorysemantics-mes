@@ -157,6 +157,12 @@ def identify_unstamped(url: str | None = None) -> str:
     column for column. Raises `SchemaError`, naming the nearest revision and
     every difference, when none does — because the alternative is stamping a
     plant's database with a number that is not true of it.
+
+    Newest first, and not by accident. A migration that changes only a
+    constraint or adds an index leaves a schema this cannot tell from its
+    parent's, so several revisions can match; the newest is the safe one,
+    because the shape-invisible migrations between them are then skipped
+    rather than re-run against a database that already has their index.
     """
     found = database_shape(url)
     revisions = [script.revision for script in ScriptDirectory.from_config(alembic_config()).walk_revisions()]
