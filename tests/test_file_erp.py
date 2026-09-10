@@ -35,7 +35,7 @@ def test_confirmation_written_as_b2mml(tmp_path):
     adapter.send_confirmation(OrderCompletion(message_key="WO-FILE-1:completion", order="WO-FILE-1",
                                               material="FG-COLA", ordered_qty=5, good_qty=5, scrap_qty=0))
 
-    files = list((tmp_path / "out").glob("confirmation_WO-FILE-1_*.xml"))
+    files = list((tmp_path / "out").glob("*_WO-FILE-1_completion.xml"))
     assert len(files) == 1
     content = files[0].read_text(encoding="utf-8")
     assert "<GoodQuantity>5</GoodQuantity>" in content
@@ -58,7 +58,7 @@ def test_an_operation_confirmation_renders_as_a_segment_response(tmp_path):
         equipment="MIX01", work_center="LINE-A", cost_center="CC-100", input_qty=5, good_qty=5, scrap_qty=0,
         wip_qty=0, machine_seconds=120.0,
         components=[ComponentUse(lot="LOT-1", material="RAW-SYRUP", quantity=2.5, equipment="MIX01")]))
-    [path] = list((tmp_path / "out").glob("confirmation_WO-FILE-2_op10_*.xml"))
+    [path] = list((tmp_path / "out").glob("*_WO-FILE-2_op10.xml"))
     xml = path.read_text(encoding="utf-8")
     assert "<SegmentResponse>" in xml and "<CostCenter>CC-100</CostCenter>" in xml
     assert "<MaterialLotID>LOT-1</MaterialLotID>" in xml and "<MachineSeconds>120</MachineSeconds>" in xml
