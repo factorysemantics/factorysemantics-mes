@@ -21,6 +21,28 @@ goes under Honesty with a migration line, so plant people can find it.
   `python -m pytest` changes. A test in the suite fails if it is not on the
   database that variable names, so a typo cannot leave the cell green.
   See [compatibility](docs/operate/compatibility.md).
+- **`fsmes backup` and `fsmes restore`.** A plant that cannot restore has no
+  backup, and until now the only copy anything made was the one
+  `fsmes plant <name> migrate` takes before a schema change. `fsmes backup`
+  writes one timestamped folder holding the database, the tag map, the line
+  layout and the **OPC UA client certificate** — the last is the one people
+  forget, because minting a new one means asking whoever administers the OPC
+  server to trust it again. On SQLite the copy goes through SQLite's own
+  online backup, so it is safe while the agent is running and cannot lose a
+  transaction still sitting in the write-ahead log, which a plain file copy
+  of the `.db` does. It never copies `.env`: that holds the OPC password, the
+  ERP credentials and the token signing key, and a backup folder gets mailed
+  around. The manifest states its own totals and names everything it did not
+  copy and why. On a server database it copies no database at all and says
+  so in those words, rather than handing somebody a folder that looks like a
+  backup and has no production record in it. `fsmes restore` checks every
+  file against its recorded hash before writing anything, refuses to write
+  over a database that is already there without `--force`, has a `--dry-run`
+  that proves a backup is restorable without touching the plant, and reads
+  the row counts back out of the restored file rather than repeating the
+  manifest. Files land where the settings of the machine being restored to
+  say — a restore onto a new PC is a different `.env`, not a different
+  backup. [Backup and restore](docs/operate/backup.md).
 - **A connector contract, so the next ERP is not the first one all over
   again.** The ERP port had three methods — fetch, acknowledge, confirm —
   and they said nothing about the three things that actually bit the
@@ -43,6 +65,15 @@ goes under Honesty with a migration line, so plant people can find it.
   says what this project requires before it calls one supported. Odoo, SAP
   and Oracle are still not written; the contract and the suite exist, the
   connectors do not.
+- **The session cookie is marked HTTPS-only behind TLS.** Writing the
+  [TLS page](docs/operate/tls.md) turned this up: the dashboard's session
+  cookie was `HttpOnly` and `SameSite=Lax` but never `Secure`, so a plant
+  that had put a reverse proxy in front of the API could still have a live
+  session sent back in clear over one stray `http://` link. The flag now
+  follows the request's own scheme, which behind a proxy is the scheme in
+  `X-Forwarded-Proto`. A laptop on `http://127.0.0.1:8000` gets no `Secure`
+  flag, because there it is a cookie the browser silently drops.
+
 - **`fsmes erp requirements`.** What the configured connector needs on the
   ERP side, and which of it the MES can create itself — the list to send
   whoever administers the ERP, who is usually not the person running the

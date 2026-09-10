@@ -5,6 +5,7 @@ For the person who runs a line and wants to know what it did.
 | Page | Type | Read it when |
 |---|---|---|
 | [Your first line](first-line.md) | tutorial | you have ten minutes and a laptop |
+| [Beside your existing MES](../operate/first-plant.md) | tutorial | you have an afternoon, a real line, and an MES already running on it |
 | [Connect to Kepware — IT](../onboarding/GUIDE-IT.md) | how-to | you need an endpoint, an account and a certificate from whoever owns the server |
 | [Connect to Kepware — Engineering](../onboarding/GUIDE-ENGINEERING.md) | how-to | you need the tag addresses from whoever knows the machines |
 | [Reading OEE](reading-oee.md) | how-to | the OEE screen shows a grey segment and you want to know why |

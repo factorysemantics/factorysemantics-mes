@@ -28,7 +28,8 @@ Apache-2.0. Pre-alpha, running simulated plants only (as of 2026-09-07).
 
     Deploy with Compose or systemd, run several plants from one registry,
     connect ERPNext, and read the settings, CLI and API references generated
-    from the code.
+    from the code. Standing it up **beside the MES a plant already runs** has
+    [its own guide](operate/first-plant.md).
 
     [:octicons-arrow-right-24: Operate](operate/index.md)
 
@@ -55,7 +56,7 @@ fsmes demo
 ```
 
 `fsmes demo` releases one order against a routing, runs it down a simulated
-six-station line over a real OPC UA server, books honest production and
+two-station line over a real OPC UA server, books honest production and
 completes the order — in one process, no setup. The
 [tutorial](plant/first-line.md) walks through what you are looking at.
 

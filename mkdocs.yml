@@ -93,13 +93,19 @@ nav:
       - Explanation — never invent production: plant/never-invent-production.md
   - Operate:
       - operate/index.md
+      - Tutorial — beside your existing MES: operate/first-plant.md
       - Tutorial — deploy: operate/deploy.md
+      - How-to — read-only OPC UA commissioning: operate/opc-readonly.md
       - How-to — plants from a registry: operate/registry.md
       - How-to — the ERPNext connector: operate/erpnext.md
       - How-to — the unified namespace (MQTT): operate/uns.md
+      - How-to — backup and restore: operate/backup.md
+      - How-to — TLS in front of the API: operate/tls.md
+      - How-to — upgrading between versions: operate/upgrade.md
       - Reference — settings: reference/settings.md
       - Reference — CLI: reference/cli.md
       - Reference — REST API: reference/api.md
+      - Explanation — the first week: operate/first-week.md
       - Explanation — compatibility: operate/compatibility.md
       - Explanation — security: operate/security.md
   - Develop:

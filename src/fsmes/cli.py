@@ -757,6 +757,86 @@ def info() -> None:
 
 
 @app.command()
+def backup(
+    out: Path = typer.Option(Path("backups"), "--out", help="Where the timestamped backup folder is written."),
+) -> None:
+    """Copy the database, the tag map and the OPC certificate into one folder.
+
+    Safe to run while the plant is running: on SQLite the copy goes through
+    SQLite's own online backup. It does not copy `.env` — that holds the OPC
+    password and the signing key, and belongs wherever this plant already
+    keeps secrets. The manifest names everything it did not copy.
+    """
+    from fsmes.backup import BackupError, back_up
+
+    settings = get_settings()
+    try:
+        manifest = back_up(settings, out)
+    except BackupError as exc:
+        typer.echo(f"Backup refused: {exc}")
+        raise typer.Exit(1) from exc
+
+    typer.echo(f"Backup written to {manifest['folder']}")
+    database = manifest["database"]
+    if database.get("copied"):
+        rows = database.get("rows", {})
+        typer.echo(f"  database   {database['file']}  revision {database.get('revision') or 'none recorded'}"
+                   f"  ({len(rows)} tables, {sum(rows.values())} rows)")
+    else:
+        typer.echo(f"  database   NOT IN THIS BACKUP — {database['why_not']}")
+    for entry in manifest["files"]:
+        typer.echo(f"  file       {entry['file']}  ({entry['bytes']} bytes)")
+    totals = manifest["totals"]
+    typer.echo(f"  {totals['files']} files, {totals['bytes']} bytes in total.")
+    typer.echo("Not copied, and why:")
+    for entry in manifest["not_copied"]:
+        typer.echo(f"  {entry['what']:<16}{entry['why']}")
+    if not database.get("copied"):
+        typer.echo("This backup does not contain your production record. Back the database up separately.")
+
+
+@app.command()
+def restore(
+    folder: Path = typer.Argument(..., help="A folder written by `fsmes backup`."),
+    force: bool = typer.Option(False, "--force", help="Write over a database that is already there."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Check the backup and say what it would write."),
+) -> None:
+    """Put a backup back, onto the paths this machine's settings name.
+
+    Every file is checked against the hash the manifest recorded before
+    anything is written. Restoring over a database that already exists needs
+    `--force`, and the row counts printed afterwards are read from the
+    restored file, not from the manifest.
+    """
+    from fsmes.backup import BackupError
+    from fsmes.backup import restore as restore_backup
+
+    settings = get_settings()
+    try:
+        receipt = restore_backup(settings, folder, force=force, dry_run=dry_run)
+    except BackupError as exc:
+        typer.echo(f"Restore refused: {exc}")
+        raise typer.Exit(1) from exc
+
+    verb = "would restore" if dry_run else "restored"
+    typer.echo(f"{folder}: verified. {verb} {receipt['totals']['files']} files.")
+    for entry in receipt["restored"]:
+        typer.echo(f"  {entry['file']}  ->  {entry['to']}")
+    database = receipt["database"]
+    if database is None:
+        typer.echo("  no database in this backup — restore it from your server's own dump.")
+    else:
+        rows = database["rows"]
+        typer.echo(f"  database at {database['to']}: revision {database.get('revision') or 'none recorded'},"
+                   f" {len(rows)} tables, {sum(rows.values())} rows")
+    typer.echo("Still to be provided by hand:")
+    for entry in receipt["not_copied"]:
+        typer.echo(f"  {entry['what']:<16}{entry['why']}")
+    if not dry_run:
+        typer.echo("Then bring the schema to this version: `fsmes init-db`.")
+
+
+@app.command()
 def plant(
     names: list[str] = typer.Argument(..., help="Plant name(s), or 'all'."),
     action: str = typer.Argument(..., help="init | start | stop | status | run | migrate"),

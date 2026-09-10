@@ -1,7 +1,7 @@
 """Sign-in endpoints. Login sets both a bearer token (for API clients) and an
 HttpOnly cookie (for the dashboard), so one mechanism serves both."""
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel
 from sqlalchemy import select
 
@@ -26,12 +26,24 @@ class TokenOut(BaseModel):
 
 
 @router.post("/login")
-def login(body: LoginIn, response: Response, db: DbDep) -> TokenOut:
+def login(body: LoginIn, request: Request, response: Response, db: DbDep) -> TokenOut:
     settings = get_settings()
     person = auth.authenticate(db, body.code, body.password)
     token = auth.issue_token(person, settings.secret_key, settings.token_ttl_seconds)
     response.set_cookie(
-        SESSION_COOKIE, token, httponly=True, samesite="lax", max_age=settings.token_ttl_seconds
+        SESSION_COOKIE,
+        token,
+        httponly=True,
+        samesite="lax",
+        max_age=settings.token_ttl_seconds,
+        # Marked HTTPS-only whenever the request arrived over HTTPS, so a
+        # plant that put a reverse proxy in front of the API cannot have a
+        # session cookie sent back in clear over a stray http:// link. The
+        # scheme is the request's own, which behind a proxy means the one in
+        # `X-Forwarded-Proto`: uvicorn rewrites it from a proxy it trusts.
+        # A laptop on http://127.0.0.1:8000 sets no Secure flag, because a
+        # Secure cookie there is a cookie the browser silently drops.
+        secure=request.url.scheme == "https",
     )
     return TokenOut(token=token, code=person.code, name=person.name, role=person.role)
 

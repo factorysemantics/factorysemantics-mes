@@ -65,3 +65,6 @@ labs/cutlery/.data/
 docs/reference/
 docs/llms.txt
 site/
+
+# A backup folder written by `fsmes backup`.
+backups/

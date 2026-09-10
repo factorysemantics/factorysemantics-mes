@@ -67,3 +67,43 @@ def test_audit_records_the_signed_in_user(client, supervisor):
     client.post("/workorders", json={"code": "WO-WHO", "material": "FG-COLA", "quantity": 2})
     entries = supervisor.get("/audit", params={"entity_id": "WO-WHO"}).json()
     assert entries and all(entry["actor"] == "SCOTT" for entry in entries)
+
+
+# ------------------------------------------------- behind a reverse proxy
+# The MES does not terminate TLS. A plant puts a proxy in front of it, and
+# these are the two things that has to get right.
+
+
+def test_the_session_cookie_is_https_only_when_the_request_arrived_over_https(anon):
+    """A session cookie without `Secure` is sent back over plain HTTP too, so
+    one stray http:// link inside the plant hands somebody a live session. The
+    flag follows the request's scheme, which behind a proxy is the scheme the
+    proxy reports."""
+    response = anon.post("https://testserver/auth/login", json={"code": "SCOTT", "password": "operator"})
+
+    assert response.status_code == 200
+    assert "Secure" in response.headers["set-cookie"]
+
+
+def test_the_cookie_is_not_https_only_on_a_laptop(anon):
+    """A Secure cookie on http://127.0.0.1:8000 is a cookie the browser drops,
+    and the dashboard stops signing in. The zero-setup laptop path must keep
+    working."""
+    response = anon.post("http://testserver/auth/login", json={"code": "SCOTT", "password": "operator"})
+
+    assert response.status_code == 200
+    assert "Secure" not in response.headers["set-cookie"]
+    assert "HttpOnly" in response.headers["set-cookie"]
+
+
+def test_the_server_reads_forwarded_headers_from_a_proxy_on_this_machine():
+    """`fsmes run-api` is uvicorn, and the operate page tells a plant that
+    `X-Forwarded-Proto` is honoured from a proxy on localhost and has to be
+    allowed explicitly for a proxy anywhere else. That claim is uvicorn's
+    default, not this project's code, so it is asserted rather than trusted."""
+    import uvicorn
+
+    config = uvicorn.Config("fsmes.api.app:create_app", factory=True)
+
+    assert config.proxy_headers is True
+    assert config.forwarded_allow_ips == ["127.0.0.1"] or config.forwarded_allow_ips == "127.0.0.1"
