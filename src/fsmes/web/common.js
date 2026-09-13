@@ -90,6 +90,30 @@
      fmt.qty exists because a lot label once read "74.20000000000171 l" -
      floating point is an implementation detail no operator should meet. */
 
+  /* Which clock every screen reads. The MES stores naive UTC and the plant
+     works in its own zone, so a browser left to its own devices showed a
+     Chicago line's ten o'clock break at four in the afternoon to anyone
+     opening the screen from Europe. /health states the plant's zone; until
+     it answers, the browser's zone stands, because a dash where a time
+     should be is worse than a time an engineer can re-read a second later.
+     A zone this browser does not know is ignored rather than thrown. */
+  let plantZone = null;
+
+  FS.setZone = function setZone(zone) {
+    if (!zone) return null;
+    try {
+      new Date().toLocaleString(undefined, { timeZone: zone });
+      plantZone = zone;
+    } catch (e) { plantZone = null; }
+    return plantZone;
+  };
+
+  const inPlantZone = (extra) => (plantZone ? { ...extra, timeZone: plantZone } : extra);
+  const asDate = (ts) => {
+    const s = String(ts);
+    return new Date(s + (s.endsWith("Z") ? "" : "Z"));
+  };
+
   FS.fmt = {
     qty: (v) => {
       if (v === null || v === undefined) return "—";
@@ -97,16 +121,11 @@
       return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
     },
     pct: (v) => (v === null || v === undefined ? "—" : Math.round(v * 100) + "%"),
-    clock: (ts) => {
-      if (!ts) return "";
-      const s = String(ts);
-      return new Date(s + (s.endsWith("Z") ? "" : "Z")).toLocaleTimeString();
-    },
-    stamp: (ts) => {
-      if (!ts) return "—";
-      const s = String(ts);
-      return new Date(s + (s.endsWith("Z") ? "" : "Z")).toLocaleString();
-    },
+    clock: (ts) => (ts ? asDate(ts).toLocaleTimeString(undefined, inPlantZone()) : ""),
+    stamp: (ts) => (ts ? asDate(ts).toLocaleString(undefined, inPlantZone()) : "—"),
+    /* A date as the plant would write it - a due date, a shift day. */
+    day: (ts) => (ts ? asDate(ts).toLocaleDateString(undefined, inPlantZone()) : "—"),
+    zone: () => plantZone,
   };
 
   /* ---------- the API, once ---------- */
@@ -230,6 +249,14 @@
     brand.href = "/dashboard";
     brand.append("FactorySemantics", FS.el("span", null, " MES"));
     header.appendChild(brand);
+
+    /* Which plant this is. A person with two plants open in two tabs, or a
+       console operator who followed a link, has to be able to tell them
+       apart without reading the address bar. Filled in from /health, which
+       is public, so it appears on the sign-in screen too. */
+    const where = FS.el("div", "plant");
+    where.id = "plant-name";
+    header.appendChild(where);
 
     const live = FS.el("div", "live");
     const dot = FS.el("span", "dot");
@@ -421,6 +448,39 @@
   const header = document.querySelector("header[data-nav]");
   if (header) buildHeader(header);
   FS.shadowBar();
+
+  /* The plant's identity, fetched once per page and shared. Public, like
+     /shadow, and for the same reason: the sign-in screen needs it too.
+     After buildHeader, which is what puts #plant-name on the page. */
+  FS.plant = fetch("/health")
+    .then((r) => (r.ok ? r.json() : null))
+    .then((who) => {
+      if (!who) return null;
+      FS.setZone(who.timezone);
+      const slot = FS.$("#plant-name");
+      if (slot) {
+        slot.textContent = "";
+        slot.appendChild(FS.el("strong", null, who.plant));
+        if (who.timezone) {
+          const zone = FS.el("span", "muted small", who.timezone);
+          // A zone nobody chose is a guess about the plant, and a reader is
+          // told it was one.
+          if (who.timezone_defaulted) {
+            zone.textContent += " (defaulted)";
+            zone.title = "No MES_PLANT_TIMEZONE is set, so times are shown in "
+              + "this server's own zone.";
+          }
+          slot.appendChild(zone);
+        } else if (who.timezone_defaulted) {
+          const zone = FS.el("span", "muted small", "zone not set");
+          zone.title = "No MES_PLANT_TIMEZONE is set and this server's zone has "
+            + "no name; times are shown in your browser's zone.";
+          slot.appendChild(zone);
+        }
+      }
+      return who;
+    })
+    .catch(() => null);  // an identity that could not load must not break a screen
 
   window.FS = FS;
 })();

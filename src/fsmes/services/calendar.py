@@ -2,15 +2,23 @@
 
 Two questions, and every promise the MES makes rests on them. A due date that
 counts the hours the plant is dark is not a date, it is an arithmetic result.
+
+WHICH CLOCK. A shift that starts at six starts at six *in the plant*. Every
+instant the MES stores is naive UTC, so each one is turned into the plant's
+own wall clock - `MES_PLANT_TIMEZONE`, or this machine's zone when nothing
+set it - before it is compared with a shift's times or with the day of a
+calendar exception. Before this, a plant five hours from Greenwich had its
+day shift start at one in the morning and nobody could see why.
 """
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, tzinfo
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from fsmes import identity
 from fsmes.domain import CalendarException, ExceptionKind, ShiftPattern
 from fsmes.services import Conflict, Invalid, audit
 
@@ -45,7 +53,7 @@ def _exception_for(session: Session, day: date,
 
 
 def _within(moment: datetime, pattern: ShiftPattern) -> bool:
-    """Is this instant inside this shift?"""
+    """Is this plant-local wall clock inside this shift?"""
     at = moment.time()
     if pattern.crosses_midnight:
         # A night shift belongs to the day it *started*, so the small hours of
@@ -62,7 +70,12 @@ def _within(moment: datetime, pattern: ShiftPattern) -> bool:
 
 
 def is_working(session: Session, moment: datetime,
-               equipment_id: int | None = None) -> bool:
+               equipment_id: int | None = None, *, zone: tzinfo | None = None) -> bool:
+    """Is the plant running at this instant?
+
+    `zone` is the plant's clock, resolved by the caller when it is about to
+    ask this several thousand times in a row; left out it is looked up.
+    """
     shifts = patterns(session, equipment_id)
     if not shifts:
         # No calendar defined means the plant is assumed to run continuously.
@@ -70,13 +83,24 @@ def is_working(session: Session, moment: datetime,
         # refusing to schedule anything - is worse for a plant mid-setup.
         return True
 
-    exception = _exception_for(session, moment.date(), equipment_id)
+    local = _local(moment, zone)
+    exception = _exception_for(session, local.date(), equipment_id)
     if exception is not None:
         # An overtime day runs regardless of the pattern; a shutdown day does
         # not run regardless of it either.
         return exception.kind is not ExceptionKind.NON_WORKING
 
-    return any(_within(moment, p) for p in shifts)
+    return any(_within(local, p) for p in shifts)
+
+
+def _local(moment: datetime, zone: tzinfo | None = None) -> datetime:
+    """A stored instant as the plant's wall clock."""
+    if zone is None:
+        return identity.to_plant(moment)
+    from datetime import UTC
+
+    aware = moment.replace(tzinfo=UTC) if moment.tzinfo is None else moment
+    return aware.astimezone(zone)
 
 
 def next_working(session: Session, moment: datetime,
@@ -84,8 +108,11 @@ def next_working(session: Session, moment: datetime,
     """The next instant the plant is running, `moment` included."""
     cursor = moment.replace(second=0, microsecond=0)
     horizon = cursor + timedelta(days=MAX_HORIZON_DAYS)
+    # One zone lookup for the whole walk: this loop steps a minute at a time
+    # and can run to a hundred and twenty days.
+    zone = identity.clock().tz
     while cursor < horizon:
-        if is_working(session, cursor, equipment_id):
+        if is_working(session, cursor, equipment_id, zone=zone):
             return cursor
         cursor += STEP
     raise Conflict(
@@ -106,9 +133,10 @@ def add_working(session: Session, start: datetime, minutes: float,
     cursor = next_working(session, start, equipment_id)
     remaining = float(minutes)
     horizon = cursor + timedelta(days=MAX_HORIZON_DAYS)
+    zone = identity.clock().tz
 
     while remaining > 0 and cursor < horizon:
-        if is_working(session, cursor, equipment_id):
+        if is_working(session, cursor, equipment_id, zone=zone):
             remaining -= 1
             cursor += STEP
         else:
@@ -126,8 +154,9 @@ def working_minutes(session: Session, start: datetime, end: datetime,
         return 0.0
     cursor = start.replace(second=0, microsecond=0)
     total = 0.0
+    zone = identity.clock().tz
     while cursor < end:
-        if is_working(session, cursor, equipment_id):
+        if is_working(session, cursor, equipment_id, zone=zone):
             total += 1
         cursor += STEP
     return total
@@ -184,7 +213,12 @@ def describe(session: Session, equipment_id: int | None = None) -> dict:
     """The calendar in words, for a screen or an agent."""
     shifts = patterns(session, equipment_id)
     names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    the_clock = identity.clock()
     return {
+        # Which clock those shift times are read on. A screen showing
+        # "Day 06:00-14:00" with no zone is a fact about nothing.
+        "timezone": the_clock.name,
+        "timezone_defaulted": the_clock.defaulted,
         "shifts": [
             {"code": p.code, "name": p.name,
              "starts": str(p.starts), "ends": str(p.ends),

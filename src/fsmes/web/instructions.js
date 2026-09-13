@@ -12,7 +12,8 @@ const el = (tag, cls, text) => {
   if (text !== undefined) n.textContent = text;
   return n;
 };
-const stamp = (ts) => (ts ? new Date(ts + (ts.endsWith("Z") ? "" : "Z")).toLocaleString() : "—");
+// The plant's clock, not the browser's. See common.js.
+const stamp = (ts) => FS.fmt.stamp(ts);
 
 let me = null;
 let catalogue = [];

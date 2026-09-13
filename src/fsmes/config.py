@@ -37,9 +37,32 @@ class Settings(BaseSettings):
 
     api_host: str = "127.0.0.1"
     api_port: int = 8000
-    # The registry name of this plant, set by `fsmes plant <name> run`. The
-    # in-process agent addresses its tools to it.
+
+    # --- Which plant is this ----------------------------------------------
+    # What this plant is called, everywhere a reader can see: /health,
+    # /shadow, the metrics labels, the dashboard header, `fsmes info`, the
+    # backup manifest and every namespace event. `fsmes plant <name> run`
+    # sets it from the registry; a plant sets it itself.
+    #
+    # Validated as a code, not free text: it is published as one segment of
+    # the namespace topic, and a name that had to be cleaned up there would
+    # stop matching the one on this plant's own screens. Required for every
+    # profile but `laptop`, where it defaults to the demo plant's own name -
+    # see `fsmes.identity`.
     plant_name: str = ""
+    # The deployment shape, from docs/design/m8-packs-and-fleet.md §7:
+    #   laptop - one process, SQLite, the evaluation profile
+    #   plant  - a real plant: PostgreSQL, several processes
+    #   fleet  - a plant node with a console over it
+    # It is what lets a plant node say "I am a plant, not a laptop" in one
+    # word, to its own start-up checks and to anything reading it.
+    plant_profile: str = "laptop"
+    # What time zone this plant works in, as an IANA name (Europe/Berlin).
+    # Every wall-clock boundary the MES draws is drawn here: the shift
+    # calendar, "today" on a gauge register, the clock on every screen.
+    # Empty means this machine's own zone, and `fsmes info`, /health and the
+    # screens all say it was defaulted rather than chosen.
+    plant_timezone: str = ""
 
     # Signs session tokens. Generated per process if unset — fine for a laptop,
     # but a real deployment must set it (otherwise a restart logs everyone out,
@@ -225,6 +248,29 @@ class Settings(BaseSettings):
     opc_endpoints: str = ""
 
     @model_validator(mode="after")
+    def _the_plant_says_who_it_is(self) -> "Settings":
+        """Refuse to start on an identity a reader could not trust.
+
+        Here rather than at each surface, because a plant that is only
+        half-named is worse than one that did not start: the events are
+        already on the broker by the time anybody notices.
+        """
+        from fsmes import identity
+
+        problem = identity.check(plant_name=self.plant_name,
+                                 plant_profile=self.plant_profile,
+                                 plant_timezone=self.plant_timezone)
+        if problem:
+            raise ValueError(problem)
+        if not self.plant_name and self.plant_profile == "laptop":
+            # The evaluation profile's plant is the demo plant, and it has a
+            # name. Set here rather than as the field default so every path
+            # that builds Settings gets it - an empty name reaching the
+            # namespace as `plant: null` is the bug this closes.
+            self.plant_name = identity.LAPTOP_PLANT_NAME
+        return self
+
+    @model_validator(mode="after")
     def _shadow_mode_holds(self) -> "Settings":
         """Refuse to start on a configuration shadow mode cannot honour.
 
@@ -272,7 +318,13 @@ def get_settings() -> Settings:
         plain = shadow.plain_error(exc)
         if plain is None:
             raise
-        raise shadow.ShadowMisconfigured(plain) from None
+        # The shadow-specific class where the sentence is about shadow mode,
+        # because callers already catch it by name; the general one
+        # otherwise.
+        from fsmes.identity import Misconfigured
+
+        wrong = shadow.ShadowMisconfigured if shadow.SETTING in plain else Misconfigured
+        raise wrong(plain) from None
     if not settings.secret_key:
         settings.secret_key = secrets.token_urlsafe(32)
     for field in ("tag_map_file", "line_layout_file", "inbound_mapping_file", "inbound_sql_file"):

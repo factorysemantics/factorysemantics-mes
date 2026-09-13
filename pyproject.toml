@@ -104,7 +104,7 @@ Roadmap = "https://github.com/factorysemantics/factorysemantics-mes/blob/main/RO
 erpnext = "fsmes.integrations.erp.erpnext_adapter:from_settings"
 
 [project.scripts]
-fsmes = "fsmes.cli:app"
+fsmes = "fsmes.cli:run"
 
 # One number, in one file. `__version__` is what `fsmes --version`, `fsmes info`
 # and the API's OpenAPI document report, and it is what hatchling stamps into

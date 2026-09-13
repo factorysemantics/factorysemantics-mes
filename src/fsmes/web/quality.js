@@ -36,8 +36,10 @@ const svgEl = (tag, attrs = {}) => {
   for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
   return n;
 };
-const clock = (ts) => (ts ? new Date(ts + (ts.endsWith("Z") ? "" : "Z")).toLocaleTimeString() : "");
-const stamp = (ts) => (ts ? new Date(ts + (ts.endsWith("Z") ? "" : "Z")).toLocaleString() : "");
+// The plant's clock, not the browser's: FS.fmt knows which zone this plant
+// works in. See common.js.
+const clock = (ts) => FS.fmt.clock(ts);
+const stamp = (ts) => (ts ? FS.fmt.stamp(ts) : "");
 const key = (o) => `${o.material}/${o.characteristic}`;
 
 async function api(path, options = {}) {

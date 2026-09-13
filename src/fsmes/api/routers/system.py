@@ -4,6 +4,7 @@ from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse
 from sqlalchemy import func, select, text
 
+from fsmes import identity
 from fsmes import shadow as shadow_mode
 from fsmes.api.deps import DbDep, require
 from fsmes.domain import AuditLog, ErpMessage, MessageStatus, OrderStatus, TagValue, WorkOrder
@@ -13,15 +14,21 @@ router = APIRouter()
 
 @router.get("/health")
 def health(db: DbDep) -> dict:
-    """Alive, and whether this MES is allowed to act on its plant.
+    """Alive, which plant this is, and whether it may act on that plant.
 
     `shadow` rides on health because health is the one endpoint everything
     already asks: an orchestrator, the MCP server's plant list, a person
     with curl. A monitor that knows a plant is up and does not know it is
     only watching will read its silence as everything being fine.
+
+    The identity rides on it for the same reason, and for one more: a
+    console polling twelve plants has to be able to tell them apart from
+    what they say about themselves, not from the address it happened to
+    dial. `timezone_defaulted` is there because a defaulted zone is a
+    guess about the plant and a reader is entitled to know it was one.
     """
     db.execute(text("SELECT 1"))
-    return {"status": "ok", "shadow": shadow_mode.enabled()}
+    return {"status": "ok", "shadow": shadow_mode.enabled(), **identity.summary()}
 
 
 @router.get("/shadow")
@@ -34,6 +41,7 @@ def shadow() -> dict:
     it is safe to point this MES at a running plant - has no account yet.
     """
     return {
+        **identity.summary(),
         **shadow_mode.summary(),
         "paths": [
             {"name": p.name, "reaches": p.reaches, "verdict": p.verdict, "note": p.note}
@@ -44,17 +52,21 @@ def shadow() -> dict:
 
 @router.get("/metrics", response_class=PlainTextResponse)
 def metrics(db: DbDep) -> str:
-    lines = []
+    # Every series carries the plant, because a fleet scrapes several into
+    # one Prometheus and a series without it silently becomes the sum of
+    # every plant that has the same metric name.
+    plant = identity.plant_name()
+    lines = [f'mes_plant_info{{plant="{plant}"}} 1']
     for status in OrderStatus:
         count = db.scalar(select(func.count(WorkOrder.id)).where(WorkOrder.status == status)) or 0
-        lines.append(f'mes_work_orders{{status="{status.value}"}} {count}')
+        lines.append(f'mes_work_orders{{plant="{plant}",status="{status.value}"}} {count}')
     pending = db.scalar(select(func.count(ErpMessage.id)).where(ErpMessage.status == MessageStatus.PENDING)) or 0
-    lines.append(f"mes_erp_messages_pending {pending}")
+    lines.append(f'mes_erp_messages_pending{{plant="{plant}"}} {pending}')
     # The highest id, not a count: counting two million rows on every scrape
     # was the most expensive thing this API did. Ids are monotonic; the number
     # says how many were ever written, which is what a rate wants.
-    lines.append(f"mes_tag_values_max_id {db.scalar(select(func.max(TagValue.id))) or 0}")
-    lines.append(f"mes_audit_entries_max_id {db.scalar(select(func.max(AuditLog.id))) or 0}")
+    lines.append(f'mes_tag_values_max_id{{plant="{plant}"}} {db.scalar(select(func.max(TagValue.id))) or 0}')
+    lines.append(f'mes_audit_entries_max_id{{plant="{plant}"}} {db.scalar(select(func.max(AuditLog.id))) or 0}')
     return "\n".join(lines) + "\n"
 
 

@@ -48,8 +48,11 @@ mcp = MCPServer(
         "may be in SHADOW MODE: it watches a real plant and can change "
         "nothing in it - no setpoint reaches the machines, no ERP is told, "
         "nothing is published. Proposing and recording still work; anything "
-        "that would act outward is refused and says so. list_plants() marks "
-        "which plants those are - start there."
+        "that would act outward is refused and says so. Every plant also "
+        "states its own name and the time zone it works in; times in and out "
+        "of these tools are UTC, and that zone is what a person there means "
+        "by a shift, a date or \"today\". list_plants() reports both, and "
+        "marks which plants are in shadow mode - start there."
     ),
 )
 
@@ -170,25 +173,43 @@ def _write(plant: str, path: str, body: dict, dry_run: bool, would: str) -> dict
 
 @mcp.tool()
 def list_plants() -> dict:
-    """The plants this server can operate, with reachability."""
+    """The plants this server can operate, with reachability and identity."""
     out = []
     for name, cfg in _registry().items():
         # Shadow mode is the plant's own answer, not this process's: one
         # server operates several plants and they need not agree. None means
         # the plant did not answer, which is not the same as "not shadow".
         shadow = None
+        # What the plant calls itself, as opposed to the registry key this
+        # server dials it by. They are normally the same and it matters when
+        # they are not: a registry pointing at the wrong port reaches a plant
+        # that answers happily under another name, and only these two fields
+        # side by side make that visible. None, again, means it did not say.
+        calls_itself = None
+        zone = None
+        zone_defaulted = None
         try:
             response = _client(name).get("/health", timeout=4.0)
             healthy = response.status_code == 200
             if healthy:
-                shadow = bool(response.json().get("shadow", False))
+                body = response.json()
+                shadow = bool(body.get("shadow", False))
+                calls_itself = body.get("plant")
+                zone = body.get("timezone")
+                zone_defaulted = body.get("timezone_defaulted")
         except (httpx.HTTPError, ValueError):
             healthy = False
         out.append({"plant": name, "label": cfg.get("label"),
                     "dashboard": plants.dashboard_url(cfg), "reachable": healthy,
+                    "calls_itself": calls_itself,
+                    "timezone": zone, "timezone_defaulted": zone_defaulted,
                     "shadow": shadow,
                     "shadow_means": (SHADOW_NOTE if shadow else None)})
-    return {"plants": out}
+    # Every list states its total, and a fleet's total is two numbers: how
+    # many are configured, and how many answered. They are not the same
+    # number and reading one as the other is how silence becomes green.
+    return {"plants": out, "total": len(out),
+            "answered": sum(1 for p in out if p["reachable"])}
 
 
 # ------------------------------------------------------------------- orders

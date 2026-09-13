@@ -6,8 +6,8 @@ A consumer that already understands the ERP contract understands this.
 
 Delivery is at-least-once, so a consumer will see the same event twice
 after a broker hiccup. `event_id` — the outbox row this came from — is what
-it dedupes on, together with `plant` for anyone merging two MES databases
-into one namespace. There is no exactly-once here and there is not going to
+it dedupes on, together with `plant` - which is always stated, never null
+- for anyone merging two MES databases into one namespace. There is no exactly-once here and there is not going to
 be; that promise cannot be kept across a network and pretending otherwise
 is how a plant ends up double-booking a shift.
 """
@@ -28,7 +28,11 @@ def envelope(message: ErpMessage, settings: Settings, published_at: datetime) ->
     return {
         "schema_version": SCHEMA_VERSION,
         "source": "factorysemantics-mes",
-        "plant": settings.plant_name or None,
+        # Never null. A settings object always carries a name - required
+        # off the laptop profile, defaulted to the demo's own on it - so a
+        # consumer merging two MES databases always has the half of the
+        # dedupe key that says whose event this is.
+        "plant": settings.plant_name,
         # The outbox row id: unique per MES database, and the dedupe key.
         "event_id": message.id,
         # The MES's own idempotency key for the thing that happened

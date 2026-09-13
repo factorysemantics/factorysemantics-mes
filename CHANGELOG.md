@@ -11,6 +11,28 @@ goes under Honesty with a migration line, so plant people can find it.
 ## [Unreleased]
 
 ### Added
+- **A plant knows its own name, and what clock it keeps** — M8 piece 1 of
+  [the design](docs/design/m8-packs-and-fleet.md). `MES_PLANT_NAME` is now a
+  real identity: **required** for any deployment that is not a laptop, and
+  validated as a code (the characters a namespace topic segment keeps
+  unchanged) so `/health` and the broker can never disagree about what this
+  plant is called. It reaches every surface a reader has — `/health`,
+  `/shadow`, a label on every `/metrics` series, the dashboard header,
+  `fsmes info`, the backup manifest, `list_plants()` over MCP — so a console
+  can tell two plants apart from what they say about themselves rather than
+  from the address it dialled.
+  New `MES_PLANT_PROFILE` (`laptop` | `plant` | `fleet`) says what shape the
+  deployment is; it is what lets a plant node say *I am a plant, not a
+  laptop* in one word. A laptop with nothing set is the demo plant and keeps
+  working exactly as before.
+  New `MES_PLANT_TIMEZONE` is a real IANA zone, validated at start-up (on
+  Windows it needs the `tzdata` package, and the refusal says so). Every
+  wall-clock boundary the MES draws is now drawn on it: the shift calendar,
+  and "today" on the gauge register. On the screens, every clock, stamp, due
+  date and chart axis reads in the plant's zone instead of the browser's.
+  Left unset it is the machine's own zone, and **every reader is told it was
+  defaulted** — including, honestly, when the machine's zone has no name to
+  report.
 - **M8 designed before it is built — docs only, no product code.**
   [Plant packs and the fleet console](docs/design/m8-packs-and-fleet.md)
   states what a plant is today with file paths, measures the two lab plants
@@ -63,6 +85,16 @@ goes under Honesty with a migration line, so plant people can find it.
   See [the inbound page](docs/operate/inbound.md#the-broker-mqtt).
 
 ### Changed
+- **`/metrics` series now carry a `plant` label.** A Prometheus scraping a
+  fleet had two plants' `mes_work_orders{status="running"}` under one name,
+  and read their sum as one plant's number. A dashboard or alert written
+  against the old series needs the label adding. New `mes_plant_info` gives
+  the plant's name as a series of its own.
+- **Shift patterns are read on the plant's clock, not the process's.** A
+  plant that set no zone sees no change; a plant whose server runs in
+  another zone will find its shifts move to where the plant floor always
+  said they were. `calendar.describe` now states the zone and whether it was
+  defaulted.
 - **The unified-namespace publisher at plant volume.** It shipped off by
   default and carrying two event kinds; it now carries equipment state
   changes — one event per transition — and the first real plant will turn it

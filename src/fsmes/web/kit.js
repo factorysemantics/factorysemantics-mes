@@ -67,7 +67,11 @@
       const x = left + ((t * 1000 - start) / (end - start)) * width;
       add(g, "line", { x1: x, y1: 0, x2: x, y2: height, class: "grid-line", opacity: 0.5 });
       add(g, "text", { x, y: height + 12, class: "axis", "text-anchor": "middle" },
-          new Date(t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+          // The plant's clock: an axis in the reader's own zone would put a
+          // night shift's trough in the middle of the afternoon.
+          new Date(t * 1000).toLocaleTimeString([],
+            FS.fmt.zone() ? { hour: "2-digit", minute: "2-digit", timeZone: FS.fmt.zone() }
+                          : { hour: "2-digit", minute: "2-digit" }));
     }
   }
 
@@ -100,7 +104,7 @@
           opacity: interval.state === "running" ? 0.85 : 0.95,
         });
         add(rect, "title", {}, `${machine.code} ${interval.state}${interval.reason ? ` (${interval.reason})` : ""}
-${duration(interval.seconds)} from ${utc(interval.start).toLocaleTimeString()}`);
+${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`);
       }
     });
     host.appendChild(chart);

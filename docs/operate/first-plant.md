@@ -100,6 +100,32 @@ Everything the MES is configured with is an environment variable starting
 `MES_`, and it reads a `.env` file in the directory you run it from. There
 is no other config format to learn.
 
+**Two settings every plant sets.** Put them in `.env` before anything else:
+
+```bash
+MES_PLANT_PROFILE=plant
+MES_PLANT_NAME=northgate
+MES_PLANT_TIMEZONE=America/Chicago
+```
+
+`MES_PLANT_NAME` is what this plant is called, and it appears on every screen,
+in `/health`, on every metric, in every backup and on every namespace event —
+so somebody looking at two plants can tell which one they are looking at. It
+may hold letters, digits and `_ . : @ = -`, because it is published as one
+segment of the namespace topic. Off the `laptop` profile the MES refuses to
+start without it.
+
+`MES_PLANT_TIMEZONE` is the zone this plant works in, as an
+[IANA name](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones). It
+decides where a shift starts, when a gauge falls due, and what time every
+screen shows. Leave it out and the MES uses the server's own zone and says
+"defaulted" everywhere it reports it — which is correct if the server sits in
+the plant, and wrong the day somebody moves it to a data centre. On Windows
+the zone database comes from the `tzdata` package (`pip install tzdata`).
+
+`MES_PLANT_PROFILE` is `laptop`, `plant` or `fleet`. `laptop` is the
+evaluation profile — `fsmes demo` and the labs — and needs nothing set.
+
 ## 3. Get read-only access to the OPC UA server
 
 Send [the access request page](../onboarding/GUIDE-IT.md) to whoever

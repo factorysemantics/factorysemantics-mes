@@ -5,8 +5,11 @@ import pytest
 
 def test_health(anon):
     # Health also answers "may this MES act on its plant" - see
-    # tests/test_shadow_mode.py for what the flag promises.
-    assert anon.get("/health").json() == {"status": "ok", "shadow": False}
+    # tests/test_shadow_mode.py for what the flag promises - and "which
+    # plant is this", see tests/test_plant_identity.py.
+    body = anon.get("/health").json()
+    assert body["status"] == "ok" and body["shadow"] is False
+    assert body["plant"] == "demo" and body["profile"] == "laptop"
 
 
 def test_seeded_equipment_visible(client):
@@ -32,7 +35,7 @@ def test_unknown_material_404(client):
 
 def test_metrics_exposes_counts(anon):
     body = anon.get("/metrics").text
-    assert 'mes_work_orders{status="planned"}' in body
+    assert 'mes_work_orders{plant="demo",status="planned"}' in body
     assert "mes_audit_entries_max_id" in body
 
 

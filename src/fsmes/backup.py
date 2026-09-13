@@ -34,7 +34,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from fsmes import __version__
+from fsmes import __version__, identity
 from fsmes.config import Settings
 from fsmes.db import utcnow
 
@@ -241,6 +241,11 @@ def back_up(settings: Settings, out: Path, *, now: datetime | None = None) -> di
     manifest = {
         "format": FORMAT,
         "fsmes_version": __version__,
+        # Which plant this is a backup of. A folder of timestamped backups
+        # from three plants is otherwise three sets of identical-looking
+        # folders, and restoring the wrong one into a running plant is the
+        # kind of mistake nobody gets to undo.
+        **identity.summary(settings),
         "taken": now.isoformat(timespec="seconds"),
         "database": database,
         "files": files,
@@ -338,6 +343,14 @@ def restore(settings: Settings, folder: Path, *, force: bool = False, dry_run: b
     receipt = {
         "folder": str(folder),
         "dry_run": dry_run,
+        # Which plant the backup was taken from, and which one this machine
+        # thinks it is. Stated rather than enforced: restoring one plant's
+        # database onto another is sometimes exactly what a person means to
+        # do - cloning production into a test rig - and sometimes the worst
+        # mistake of their week. Only they can tell which, and they can only
+        # tell if they are shown both names.
+        "from_plant": manifest.get("plant"),
+        "onto_plant": settings.plant_name,
         "restored": [{"file": str(s.relative_to(folder)), "to": str(t)} for s, t in planned],
         "totals": {"files": len(planned)},
         "database": None,

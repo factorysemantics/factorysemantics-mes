@@ -126,7 +126,9 @@ def _ensure_local() -> str:
     """The tools address this plant by name, over its own API."""
     global _local_ready
     settings = get_settings()
-    plant = settings.plant_name or "plant"
+    # Never empty: a laptop defaults to the demo plant's name and anything
+    # else refuses to start without one. See `fsmes.identity`.
+    plant = settings.plant_name
     if not _local_ready:
         host = settings.api_host if settings.api_host not in ("0.0.0.0", "") else "127.0.0.1"
         agent.serve_locally(plant, f"http://{host}:{settings.api_port}")

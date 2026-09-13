@@ -543,6 +543,12 @@ def plain_error(exc) -> str | None:
 
     A person who set one environment variable wrongly should read one
     sentence, not a validation report with a URL at the end of it.
+
+    "Ours" means a sentence one of the settings validators wrote, and those
+    all open by naming the variable to change - `MES_SHADOW`,
+    `MES_PLANT_NAME`. A pydantic type error ("input should be a valid
+    integer") names no setting and is left alone, because rewriting it as
+    one sentence would drop which field it was about.
     """
     try:
         errors = exc.errors()
@@ -551,6 +557,6 @@ def plain_error(exc) -> str | None:
     prefix = "Value error, "
     for error in errors:
         message = str(error.get("msg", ""))
-        if message.startswith(prefix) and SETTING in message:
+        if message.startswith(prefix) and "MES_" in message:
             return message[len(prefix):]
     return None

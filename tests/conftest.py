@@ -45,6 +45,14 @@ from fsmes.db import Base
 from fsmes.seed import seed_demo_plant
 from fsmes.services import auth
 
+# WHICH CLOCK THE SUITE KEEPS. The plant's wall clock decides where a shift
+# starts and when a gauge falls due, so a suite that let each machine use its
+# own zone would pass in CI (UTC) and fail on a laptop in Chicago - which is
+# exactly what happened the first time the zone became real. Pinned to UTC
+# here so a stored timestamp and the plant's reading of it are the same
+# number; the tests that are *about* the zone set their own and say so.
+os.environ.setdefault("MES_PLANT_TIMEZONE", "UTC")
+
 TEST_DATABASE_URL = os.environ.get("MES_TEST_DATABASE_URL", "").strip()
 # The default: a private in-memory database per test.
 IN_MEMORY_SQLITE = not TEST_DATABASE_URL
