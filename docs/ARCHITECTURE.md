@@ -122,6 +122,8 @@ tests/
 docs/
 ```
 
+*What the tree actually is, as of M8 piece 2:* there is no `packs/` directory and no `modules/` directory. `kernel/` holds two files of shared helpers; the kernel this page describes — master data, routings, orders, dispatch, execution, audit, auth — lives in `domain/` and `services/`. The list of modules is **`src/fsmes/modules.py`**, a registry naming each module's routers, screens, agent tools and tables; `api/app.py` and `mcp_server.py` mount and register from it, filtered by `MES_MODULES` ([how-to](operate/modules.md)). The layering this page assumes is held by `tests/test_core_purity.py` rather than by the directory names.
+
 One repo, one installable dist to start; entry-point discovery means external modules are possible from day one, and splitting `fsmes-core`/`fsmes-quality`/... into separate dists is a later, mechanical step taken only when someone external needs it.
 
 ## Stack (proposed, with reasons)
