@@ -1649,7 +1649,7 @@ def runs(
 
     rows = store.recent(plant, limit)
     if not rows:
-        typer.echo("No scored runs recorded yet. Try: fsmes score machining")
+        typer.echo("No scored runs recorded yet. Try: fsmes score <plant>")
         return
     typer.echo(f"  {'id':>4}  {'plant':<11} {'when':<20} {'misc':>5} {'recall':>7} {'lag':>7}  variant")
     for r in rows:
