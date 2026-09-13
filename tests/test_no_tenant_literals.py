@@ -141,7 +141,10 @@ def product() -> dict[str, str]:
     for path in sorted(SRC.rglob("*")):
         if not path.is_file():
             continue
-        where = str(path.relative_to(REPO))
+        # `as_posix`, not `str`: the key is a path a person reads in a failure
+        # message and a test asserts on, and it must say the same thing on
+        # Windows as it does on Linux.
+        where = path.relative_to(REPO).as_posix()
         if path.suffix == ".py":
             scanned[where] = _code_only(path)
         elif path.suffix in {".js", ".html", ".css", ".json"}:
