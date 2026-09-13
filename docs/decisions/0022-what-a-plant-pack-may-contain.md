@@ -1,6 +1,6 @@
 # 0022 — A plant pack is data, carries no code and no secrets, and cannot change what a number means
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2026-09-10
 - **Deciders:** @kalwei
 
