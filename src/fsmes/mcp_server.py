@@ -601,17 +601,19 @@ def audit(plant: str, actor: str | None = None, limit: int = 30) -> dict:
 # Tool files per module register against the one server (ARCHITECTURE,
 # 2026-09-02). Each gets the same `_call`, so every tool speaks to the
 # plants as the same AGENT account.
-
-from fsmes.mcp import adjustments as _adjustments_tools  # noqa: E402
-from fsmes.mcp import coa as _coa_tools  # noqa: E402
-from fsmes.mcp import equipment as _equipment_tools  # noqa: E402
-from fsmes.mcp import erp as _erp_tools  # noqa: E402
-from fsmes.mcp import maintenance as _maintenance_tools  # noqa: E402
-from fsmes.mcp import masterdata as _masterdata_tools  # noqa: E402
-from fsmes.mcp import quality as _quality_tools  # noqa: E402
-from fsmes.mcp import scheduling as _scheduling_tools  # noqa: E402
-from fsmes.mcp import serialization as _serialization_tools  # noqa: E402
-from fsmes.mcp import triggers as _triggers_tools  # noqa: E402
+#
+# Which of them register is the module registry's answer, filtered by
+# MES_MODULES: the sentence in `fsmes/mcp/__init__.py` - "a module a plant
+# pack disables takes its tools with it by not being registered" - is this
+# loop. No tool file is named here, so a new module is a registry entry
+# rather than another line in this file.
+#
+# Be exact about whose setting this is. A plant running the assistant in-
+# process is this process, so MES_MODULES is that plant's own answer and the
+# tool list matches the API. A standalone server operating several plants
+# over HTTP reads its own MES_MODULES, not each plant's; a tool it keeps for
+# a module a plant has switched off will reach that plant and get a 404,
+# which is the truthful answer rather than a silent one.
 
 
 def _identify(on_behalf_of: str | None, client_ref: str | None) -> None:
@@ -620,19 +622,37 @@ def _identify(on_behalf_of: str | None, client_ref: str | None) -> None:
     _identity.set((on_behalf_of.upper() if on_behalf_of else None, client_ref))
 
 
-# Each module hands its tools back; they become attributes here so anything
-# that calls the server's tools in-process (the tests, the CLI) reaches
-# every module's the same way.
-globals().update(_equipment_tools.register(mcp, _call))
-globals().update(_maintenance_tools.register(mcp, _call, _write, _identify))
-globals().update(_scheduling_tools.register(mcp, _call, _write, _identify))
-globals().update(_quality_tools.register(mcp, _call, _write, _identify))
-globals().update(_serialization_tools.register(mcp, _call, _write, _identify))
-globals().update(_masterdata_tools.register(mcp, _call, _write, _identify))
-globals().update(_erp_tools.register(mcp, _call, _write, _identify))
-globals().update(_triggers_tools.register(mcp, _call, _write, _identify))
-globals().update(_adjustments_tools.register(mcp, _call, _write, _identify))
-globals().update(_coa_tools.register(mcp, _call, _write, _identify))
+def _register_modules() -> list[str]:
+    """Register the tool file of every module that is on. Returns the module
+    names whose tools were registered, so `tool_modules()` can state its total.
+
+    Each module hands its tools back; they become attributes of this module so
+    anything calling the server's tools in-process (the tests, the CLI)
+    reaches every module's the same way.
+    """
+    import inspect
+    from importlib import import_module
+
+    from fsmes.config import get_settings
+
+    # A read-only tool file takes `(mcp, call)`; one with writes takes
+    # `(mcp, call, write, identify)`. Asked rather than guessed, so a
+    # TypeError raised inside a register() is not mistaken for the short form.
+    offered = (mcp, _call, _write, _identify)
+
+    registered: list[str] = []
+    for module in get_settings().enabled_modules():
+        for dotted in module.tools:
+            tools = import_module(dotted)
+            wanted = len(inspect.signature(tools.register).parameters)
+            globals().update(tools.register(*offered[:wanted]))
+        if module.tools:
+            registered.append(module.name)
+    return registered
+
+
+TOOL_MODULES: tuple[str, ...] = tuple(_register_modules())
+"""The modules whose tools this server registered, of the ten that ship one."""
 
 
 def _allowed_hosts(host: str, port: int) -> list[str]:

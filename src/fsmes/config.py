@@ -12,6 +12,8 @@ from pathlib import Path
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from fsmes import modules as module_registry
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="MES_", env_file=".env", extra="ignore")
@@ -246,6 +248,45 @@ class Settings(BaseSettings):
     # runs one agent per entry in the one agent process, each with its own
     # tag map. Empty means the single opc_endpoint above.
     opc_endpoints: str = ""
+
+    # --- Modules ----------------------------------------------------------
+    # Which modules this plant serves. Read left to right, comma-separated:
+    # `all` is every module, `-<name>` switches one off, `<name>` switches one
+    # on. The default is `all`, so a plant that never sets this serves exactly
+    # what it served before the setting existed.
+    #
+    #     MES_MODULES=all,-quality          everything except quality
+    #     MES_MODULES=quality,maintenance   those two, and the kernel
+    #
+    # A module that is off mounts no routes, serves no pages and registers no
+    # agent tools. Its tables are still created and its rows are still there:
+    # off means not served, not not-stored. `fsmes.modules` is the list, and
+    # naming something that is not on it is refused rather than ignored.
+    #
+    # This is a plain setting on purpose. M8 piece 3 moves it into the plant
+    # pack's `[modules]` table, which will compile down to this same string.
+    modules: str = module_registry.DEFAULT
+
+    @model_validator(mode="after")
+    def _modules_exist(self) -> "Settings":
+        """Refuse to start on a module list this version cannot honour.
+
+        At start-up rather than at the first request, for the same reason
+        shadow mode is checked here: a plant that believes it switched a
+        module off should find out at the moment it says so, not the first
+        time somebody looks for the screen.
+        """
+        module_registry.resolve(self.modules)
+        return self
+
+    def enabled_modules(self) -> tuple[module_registry.Module, ...]:
+        """The modules this plant serves, in registry order."""
+        return module_registry.enabled(self.modules)
+
+    def disabled_modules(self) -> tuple[module_registry.Module, ...]:
+        """The modules this plant does not serve. The other half of the
+        answer, so a report of the state can state its total."""
+        return module_registry.disabled(self.modules)
 
     @model_validator(mode="after")
     def _the_plant_says_who_it_is(self) -> "Settings":
