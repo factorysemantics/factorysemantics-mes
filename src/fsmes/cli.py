@@ -1271,9 +1271,18 @@ def main(
 
 @app.command()
 def info() -> None:
-    """Report what this installation is and which modules are present."""
+    """Report which plant this is, what the installation is, and which
+    modules are present."""
+    from fsmes import identity
+
+    who = identity.summary(get_settings())
     typer.echo(f"fsmes {__version__}")
     typer.echo(f"installed at  {Path(__file__).parent}")
+    # Which plant, first: it is the question a support call opens with and
+    # the one a fleet of look-alike installations makes impossible to answer
+    # from the prompt.
+    typer.echo(f"plant         {who['plant']}  ({who['profile']} profile)")
+    typer.echo(f"time zone     {who['timezone_says']}")
 
     # Modules register through the `fsmes.modules` entry-point group, so this
     # reads what is actually installed rather than a hardcoded list — the same
@@ -1319,6 +1328,8 @@ def backup(
         raise typer.Exit(1) from exc
 
     typer.echo(f"Backup written to {manifest['folder']}")
+    typer.echo(f"  plant      {manifest['plant']}  ({manifest['profile']} profile, "
+               f"{manifest['timezone_says']})")
     database = manifest["database"]
     if database.get("copied"):
         rows = database.get("rows", {})
@@ -1362,6 +1373,15 @@ def restore(
 
     verb = "would restore" if dry_run else "restored"
     typer.echo(f"{folder}: verified. {verb} {receipt['totals']['files']} files.")
+    taken_from = receipt["from_plant"]
+    if taken_from is None:
+        typer.echo(f"  taken from a backup written before backups named their plant; "
+                   f"this machine is {receipt['onto_plant']}.")
+    elif taken_from != receipt["onto_plant"]:
+        typer.echo(f"  ** this backup is plant {taken_from} and this machine is "
+                   f"{receipt['onto_plant']}. **")
+    else:
+        typer.echo(f"  plant {taken_from}.")
     for entry in receipt["restored"]:
         typer.echo(f"  {entry['file']}  ->  {entry['to']}")
     database = receipt["database"]
