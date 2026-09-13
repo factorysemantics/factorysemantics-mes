@@ -2070,3 +2070,26 @@ def autoloop_cmd(
 
     note = autoloop.run(echo=typer.echo, with_agent=agent)
     typer.echo(f"done - read {note}")
+
+
+def run() -> None:
+    """The console script.
+
+    Around the Typer app for one reason: a setting the product refuses to
+    start on must reach the person who set it as one sentence, not as a
+    traceback with the sentence somewhere in the middle of it. The person
+    reading this is standing next to a plant with a command that did not
+    run, and the only thing they need is which variable to change.
+    """
+    import sys
+
+    from fsmes.identity import Misconfigured
+
+    try:
+        app()
+    except Misconfigured as exc:
+        # sys.exit rather than typer.Exit: nothing is inside Typer's command
+        # runner here to turn that into an exit code, so it would print a
+        # second traceback under the sentence.
+        typer.echo(f"fsmes cannot start: {exc}")
+        sys.exit(2)

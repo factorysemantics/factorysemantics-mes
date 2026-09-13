@@ -232,6 +232,28 @@ def test_fsmes_info_says_the_plant_and_whether_the_zone_was_chosen(monkeypatch):
         get_settings.cache_clear()
 
 
+def test_a_refused_setting_reaches_the_person_as_one_sentence(monkeypatch, capsys):
+    """Not as a traceback with the sentence in the middle of it. The person
+    reading this is standing next to a plant with a command that did not run,
+    and the only thing they need is which variable to change."""
+    from fsmes.cli import run
+    from fsmes.config import get_settings
+
+    monkeypatch.setenv("MES_PLANT_PROFILE", "plant")
+    monkeypatch.delenv("MES_PLANT_NAME", raising=False)
+    monkeypatch.setattr("sys.argv", ["fsmes", "info"])
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(SystemExit) as caught:
+            run()
+    finally:
+        get_settings.cache_clear()
+    assert caught.value.code == 2
+    said = capsys.readouterr().out
+    assert "MES_PLANT_NAME" in said
+    assert "Traceback" not in said
+
+
 # ---------------------------------------------------------------- the backup
 
 def test_a_backup_records_which_plant_it_is_of(tmp_path):

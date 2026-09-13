@@ -14,6 +14,14 @@ x-mes: &mes
     dockerfile: docker/Dockerfile
   environment: &mes-env
     MES_DATABASE_URL: postgresql+psycopg://mes:mes@postgres:5432/mes_twin
+    # What the screens, the metrics and any namespace event call this stack.
+    # `twin` because that is what it is: this compose runs the simulator, not
+    # a line. A real plant sets its own name, and MES_PLANT_PROFILE=plant so
+    # the MES refuses to start without one.
+    MES_PLANT_NAME: ${MES_PLANT_NAME:-twin}
+    # The zone the simulated plant works in. Left unset it would be the
+    # container's, which is UTC, and the screens would say so.
+    MES_PLANT_TIMEZONE: ${MES_PLANT_TIMEZONE:-UTC}
     MES_OPC_ENDPOINT: opc.tcp://opc-sim:4840/mes-twin/sim
     MES_ERP_BASE_URL: http://mock-erp:8001
     MES_LOG_LEVEL: INFO
