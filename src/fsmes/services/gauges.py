@@ -13,6 +13,7 @@ from datetime import date, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from fsmes import identity
 from fsmes.domain import Calibration, CalibrationResult, Gauge, GaugeStatus, QualityCheck
 from fsmes.services import Conflict, Invalid, NotFound, audit
 
@@ -31,7 +32,10 @@ def due_on(gauge: Gauge) -> date | None:
 
 
 def _out(session: Session, gauge: Gauge, today: date | None = None) -> dict:
-    today = today or date.today()
+    # The plant's date, not this process's. A gauge falls due at midnight on
+    # the shop floor; a server in another zone would call it overdue a few
+    # hours early or late, and "overdue" is the word that stops a line.
+    today = today or identity.today()
     due = due_on(gauge)
     overdue = due is not None and due < today
     return {
@@ -81,7 +85,7 @@ def calibrate(session: Session, code: str, *, result: str, performed_by: str,
 
     gauge = get(session, code)
     previous = gauge.last_calibrated
-    when = performed_on or date.today()
+    when = performed_on or identity.today()
 
     session.add(Calibration(gauge_id=gauge.id, performed_on=when, result=outcome,
                             performed_by=performed_by, certificate=certificate,

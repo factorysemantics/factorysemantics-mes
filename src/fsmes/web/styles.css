@@ -140,6 +140,17 @@ header {
 .shadow-bar .shadow-how { margin-left: auto; color: var(--accent); }
 .brand { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
 .brand span { color: var(--accent); }
+/* Which plant this is. Beside the brand rather than off in a corner: two
+   plants open in two tabs look identical until this is the first thing
+   after the product's own name. */
+.plant {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
+}
+.plant strong { font-size: 15px; }
 .spacer { flex: 1; }
 .live { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--unknown); }

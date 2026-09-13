@@ -212,8 +212,11 @@ async function load() {
       `that is how long the MES has been watching this line. Time before that is not downtime.`;
     banner.classList.remove("hidden");
   }
+  // The OEE window read on the plant's clock. The window itself is a
+  // trailing span of hours and has no wall-clock boundary in it; what the
+  // zone decides is only how a reader sees the two ends of it.
   $("#window-note").textContent =
-    `${utc(oee.window.start).toLocaleString()} → ${utc(oee.window.end).toLocaleTimeString()}`;
+    `${FS.fmt.stamp(oee.window.start)} → ${FS.fmt.clock(oee.window.end)}`;
 
   renderOee(oee);
   renderTimeline(timeline);

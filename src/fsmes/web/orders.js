@@ -59,7 +59,9 @@ function dueCell(due, status) {
   if (!due) return el("td", "muted", "—");
   const when = new Date(due + (due.endsWith("Z") ? "" : "Z"));
   const late = OPEN_STATUSES.includes(status) && when < new Date();
-  const cell = el("td", late ? "due late" : "due", when.toLocaleDateString());
+  // The due date as the plant would write it: a date is a wall-clock fact
+  // and the plant's wall is the one that matters.
+  const cell = el("td", late ? "due late" : "due", fmt.day(due));
   if (late) cell.title = "past due";
   return cell;
 }

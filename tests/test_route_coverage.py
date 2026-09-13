@@ -29,7 +29,6 @@ EXCLUDED = {
     "GET /design/conversations": "dev tool; conversations are read by /design-triage",
     "GET /design/conversations/{conversation_id}": "dev tool; conversations are read by /design-triage",
     # system plumbing
-    "GET /health": "for load balancers and fsmes plant status, not a screen",
     "GET /metrics": "for Prometheus, not a screen",
     "GET /audit": "the Ops screen reads the richer /ops/activity instead",
     # kpis router: superseded by /dashboard/summary and /analysis; candidate for removal

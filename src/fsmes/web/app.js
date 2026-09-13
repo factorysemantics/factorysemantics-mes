@@ -29,7 +29,8 @@ const el = (tag, cls, text) => {
 // to use.
 const can = (cap) => FS.can(cap);
 const pct = (v) => (v === null || v === undefined ? "—" : Math.round(v * 100) + "%");
-const clock = (ts) => (ts ? new Date(ts + (ts.endsWith("Z") ? "" : "Z")).toLocaleTimeString() : "");
+// The plant's clock, not the browser's. See common.js.
+const clock = (ts) => FS.fmt.clock(ts);
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
