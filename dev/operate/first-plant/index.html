@@ -3157,6 +3157,26 @@ and install with the <code>postgres</code> extra. Both are tested; see
 <p>Everything the MES is configured with is an environment variable starting
 <code>MES_</code>, and it reads a <code>.env</code> file in the directory you run it from. There
 is no other config format to learn.</p>
+<p><strong>Two settings every plant sets.</strong> Put them in <code>.env</code> before anything else:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">MES_PLANT_PROFILE</span><span class="o">=</span>plant
+<span class="nv">MES_PLANT_NAME</span><span class="o">=</span>northgate
+<span class="nv">MES_PLANT_TIMEZONE</span><span class="o">=</span>America/Chicago
+</code></pre></div>
+<p><code>MES_PLANT_NAME</code> is what this plant is called, and it appears on every screen,
+in <code>/health</code>, on every metric, in every backup and on every namespace event —
+so somebody looking at two plants can tell which one they are looking at. It
+may hold letters, digits and <code>_ . : @ = -</code>, because it is published as one
+segment of the namespace topic. Off the <code>laptop</code> profile the MES refuses to
+start without it.</p>
+<p><code>MES_PLANT_TIMEZONE</code> is the zone this plant works in, as an
+<a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones">IANA name</a>. It
+decides where a shift starts, when a gauge falls due, and what time every
+screen shows. Leave it out and the MES uses the server's own zone and says
+"defaulted" everywhere it reports it — which is correct if the server sits in
+the plant, and wrong the day somebody moves it to a data centre. On Windows
+the zone database comes from the <code>tzdata</code> package (<code>pip install tzdata</code>).</p>
+<p><code>MES_PLANT_PROFILE</code> is <code>laptop</code>, <code>plant</code> or <code>fleet</code>. <code>laptop</code> is the
+evaluation profile — <code>fsmes demo</code> and the labs — and needs nothing set.</p>
 <h2 id="3-get-read-only-access-to-the-opc-ua-server">3. Get read-only access to the OPC UA server<a class="headerlink" href="#3-get-read-only-access-to-the-opc-ua-server" title="Permanent link">&para;</a></h2>
 <p>Send <a href="../../onboarding/GUIDE-IT/">the access request page</a> to whoever
 administers the server. It is written to be forwarded as-is and asks for
