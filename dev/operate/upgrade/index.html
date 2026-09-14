@@ -3286,14 +3286,23 @@ before upgrading a plant that anyone reads numbers off, because a number that
 changes meaning without anyone noticing is worse than one that breaks.</p>
 <h2 id="012-to-020">0.1.2 to 0.2.0<a class="headerlink" href="#012-to-020" title="Permanent link">&para;</a></h2>
 <p>The first upgrade this project has had to describe. In order:</p>
-<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>backup<span class="w"> </span>--out<span class="w"> </span>/mnt/nas/fsmes<span class="w">         </span><span class="c1"># first, always</span>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>backup<span class="w"> </span>--out<span class="w"> </span>/mnt/nas/fsmes<span class="w">                 </span><span class="c1"># first, always</span>
 <span class="c1"># stop the agent and the API</span>
 pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>factorysemantics-mes
-fsmes<span class="w"> </span>db-status<span class="w">                           </span><span class="c1"># what you are at, and what 0.2.0 expects</span>
-fsmes<span class="w"> </span>init-db<span class="w">                             </span><span class="c1"># runs the migrations the wheel carries</span>
-fsmes<span class="w"> </span>db-status<span class="w">                           </span><span class="c1"># should now agree; it exits non-zero if not</span>
+fsmes<span class="w"> </span>db-status<span class="w"> </span>--pack<span class="w"> </span>packs/yourplant<span class="w">            </span><span class="c1"># what you are at, and what 0.2.0 expects</span>
+fsmes<span class="w"> </span>init-db<span class="w">   </span>--pack<span class="w"> </span>packs/yourplant<span class="w">            </span><span class="c1"># runs the migrations the wheel carries</span>
+fsmes<span class="w"> </span>db-status<span class="w"> </span>--pack<span class="w"> </span>packs/yourplant<span class="w">            </span><span class="c1"># should now agree; it exits non-zero if not</span>
 <span class="c1"># start them again</span>
 </code></pre></div>
+<p><strong>Pass the pack</strong> (or <code>--plant &lt;name&gt;</code>, if you run plants from a fleet file).
+Without it these commands are about <em>this process's</em> database — usually a
+SQLite file beside wherever you are standing — and not about your plant's.
+They say so on their first line, every time:</p>
+<div class="highlight"><pre><span></span><code>Looking at postgresql+psycopg://fsmes:***@db:5432/plant (from the pack at packs/yourplant).
+</code></pre></div>
+<p>Read that line. On 2026-09-14 a promote script ran a bare <code>fsmes db-status</code>
+straight after a successful migration, read "There is no database yet" about
+a default nobody had asked about, and rolled a healthy plant back.</p>
 <p>Your database was made by a 0.1.2 wheel, which shipped no migration scripts,
 so it has tables and <strong>no Alembic stamp</strong>. <code>fsmes init-db</code> works out which
 revision those tables correspond to rather than assuming: it rebuilds the
@@ -3498,18 +3507,27 @@ with what it printed. A stamp that is not true of the database is worse than
 no stamp: every later migration would be skipped or applied twice on the
 strength of it.</p>
 <h2 id="checking-the-upgrade-landed">Checking the upgrade landed<a class="headerlink" href="#checking-the-upgrade-landed" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>info<span class="w">          </span><span class="c1"># the version you meant to be on</span>
-fsmes<span class="w"> </span>db-status<span class="w">     </span><span class="c1"># the schema revision, and whether it is the current one</span>
-fsmes<span class="w"> </span>erp<span class="w"> </span>check<span class="w">     </span><span class="c1"># the ERP connector still reaches what it needs</span>
-fsmes<span class="w"> </span>opc-verify<span class="w">    </span><span class="c1"># every mapped tag still readable, run against the live server</span>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>info<span class="w">                              </span><span class="c1"># the version you meant to be on</span>
+fsmes<span class="w"> </span>db-status<span class="w"> </span>--pack<span class="w"> </span>packs/yourplant<span class="w">  </span><span class="c1"># the schema revision, and whether it is the current one</span>
+fsmes<span class="w"> </span>erp<span class="w"> </span>check<span class="w">                         </span><span class="c1"># the ERP connector still reaches what it needs</span>
+fsmes<span class="w"> </span>opc-verify<span class="w">                        </span><span class="c1"># every mapped tag still readable, run against the live server</span>
 </code></pre></div>
-<p><code>fsmes db-status</code> prints the revision the database is at and the revision the
-installed version expects, and <strong>exits non-zero when they differ</strong> — so a
-deployment script can gate on it rather than on someone reading the output:</p>
-<div class="highlight"><pre><span></span><code>Current: a3f6c81d09e2
+<p><code>fsmes db-status</code> names the database on its first line, then prints the
+revision that database is at and the revision the installed version expects,
+and <strong>exits non-zero when they differ</strong> — so a deployment script can gate on
+it rather than on someone reading the output:</p>
+<div class="highlight"><pre><span></span><code>Looking at postgresql+psycopg://fsmes:***@db:5432/plant (from the pack at packs/yourplant).
+Current: a3f6c81d09e2
 Head:    a3f6c81d09e2
 The database is at the current schema.
 </code></pre></div>
+<p>Three things it will not do. It will not report on a default database as
+though you had named one — with neither <code>--pack</code> nor <code>--plant</code> the first line
+says <em>the process default</em>. It will not say a database is empty when it could
+not reach it; a database that did not answer is reported as one that did not
+answer, and the exit code is still non-zero. And the password never appears:
+the pack names the file the password is in, and the URL is printed with the
+password replaced.</p>
 <p>Then open the dashboard and look at a shift from before the upgrade. History
 that was there before and is not there now is the thing to catch, and it is
 caught by looking, not by a command.</p>
