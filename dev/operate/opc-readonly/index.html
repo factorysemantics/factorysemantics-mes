@@ -1019,6 +1019,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Draft the tag map from the worksheet">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#if-the-line-publishes-the-order-it-is-running" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If the line publishes the order it is running
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -3276,6 +3293,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Draft the tag map from the worksheet">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#if-the-line-publishes-the-order-it-is-running" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If the line publishes the order it is running
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -3497,6 +3531,32 @@ loudly.</p>
 <code>down</code>. A changeover mapped to <code>down</code> wrecks every availability figure the
 system will ever report, and nobody will be able to say why. Spend the time
 there.</p>
+<h3 id="if-the-line-publishes-the-order-it-is-running">If the line publishes the order it is running<a class="headerlink" href="#if-the-line-publishes-the-order-it-is-running" title="Permanent link">&para;</a></h3>
+<p>Many line-control PLCs publish the current order somewhere — a register on a
+line object, not on any one machine. Without it this MES <em>infers</em> which order
+a unit belongs to from what it has released, which is a reasonable guess and
+still a guess. If that tag exists, name it and the guess stops:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">"line"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"object"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Line"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"publishes_order"</span><span class="p">:</span><span class="w"> </span><span class="s2">"OrderId"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"order_code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"WO-ACME-{value}"</span>
+<span class="p">}</span>
+</code></pre></div>
+<ul>
+<li><strong><code>publishes_order</code> is read, never written.</strong> It is the opposite of a
+  machine's <code>order_tag</code>, which is the MES pushing an order code <em>down</em> to a
+  machine. Reading it takes one more subscribed item and keeps the promise in
+  <em><a href="#what-this-mes-will-not-do-to-their-server">What this MES will not do to their server</a></em>
+  exactly as it is: a historian or a server you have no write rights on can
+  still answer this.</li>
+<li><strong><code>order_code</code> is the translation</strong>, because the two sides name the same
+  order differently and always will: the PLC publishes <code>4711</code> in an integer
+  register and this MES holds <code>WO-ACME-4711</code>. <code>{value}</code> is whatever the line
+  published. A line that publishes the code outright writes <code>"{value}"</code>.</li>
+</ul>
+<p>Leave the block out if there is no such tag. Nothing degrades — the MES infers
+as it did before, and anything reading the block says <em>unknown</em> rather than
+inventing a join.</p>
 <h2 id="prove-the-map-before-trusting-it">Prove the map before trusting it<a class="headerlink" href="#prove-the-map-before-trusting-it" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>opc-verify<span class="w"> </span>--seconds<span class="w"> </span><span class="m">15</span>
 </code></pre></div>
