@@ -252,6 +252,42 @@ def test_every_page_uses_the_shared_header(page):
         f"{page} still carries a hand-pasted nav")
 
 
+# Pages under web/ that are NOT a plant screen, with the reason each one is
+# not. Anything else that appears in that folder must carry the header, and
+# the test below is what says so - the list of screens above is typed by
+# hand and a new file can miss it.
+NOT_PLANT_SCREENS = {
+    "fleet.html": "the fleet console: a separate server, reading many plants, "
+                  "with no plant session and no plant screens to link to",
+}
+
+
+def test_no_screen_can_quietly_appear_without_the_header():
+    """Scott asked for "the header menu that persists throughtout the site"
+    and then, when asked which pages: "all pages". The list of screens in
+    this file is typed by hand, so a new one added to the folder and
+    forgotten here would be audited by nothing. This reads the folder.
+
+    A page that is genuinely not a plant screen goes in NOT_PLANT_SCREENS
+    with the reason written down, so the exception is a decision somebody
+    made rather than a file nobody noticed."""
+    everything = sorted(path.name for path in WEB.glob("*.html"))
+    screens = [name for name in everything if name not in NOT_PLANT_SCREENS]
+
+    assert len(screens) + len(NOT_PLANT_SCREENS) == len(everything)
+    assert sorted(screens) == sorted(p for p, _ in PAGES), (
+        f"web/ holds {len(everything)} pages; {len(PAGES)} are listed as "
+        f"screens here and {len(NOT_PLANT_SCREENS)} are excused by name. "
+        f"Unaccounted for: {sorted(set(screens) ^ {p for p, _ in PAGES})}")
+
+    for name in screens:
+        html = (WEB / name).read_text(encoding="utf-8")
+        assert re.search(r'<header data-nav="[a-z0-9]+"></header>', html), (
+            f"{name} is a plant screen with no header menu on it - a screen "
+            f"nobody can leave. Add the header, or say in NOT_PLANT_SCREENS "
+            f"why this page is not a plant screen")
+
+
 @pytest.mark.parametrize("page", [p for p, _ in PAGES])
 def test_common_js_loads_before_the_page_script(page):
     """Page scripts bind to elements the shared header renders, so the order
