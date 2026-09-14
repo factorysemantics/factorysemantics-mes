@@ -2580,6 +2580,68 @@ def lab_list(
                    f"{entry['plants_run']}/{entry['plants_total']} plant(s){withheld}")
 
 
+def _run_dir(run_id: str, results: Path | None, root: Path | None) -> Path:
+    """A run directory, named or pointed at."""
+    directory = Path(run_id).expanduser()
+    if not directory.is_dir():
+        directory = _results_root(results, root) / run_id
+    return directory
+
+
+@lab_app.command("note")
+def lab_note(
+    run_id: str = typer.Argument(..., help="A run directory's name, or a path to one."),
+    text: str = typer.Argument(..., help="What you saw. Recorded verbatim."),
+    screen: str = typer.Option("", "--screen", help="Which screen it is about - a route "
+                                                    "like /dashboard/orders, or its name."),
+    plant: str = typer.Option("", "--plant", help="Which plant in the run."),
+    results: Path | None = typer.Option(None, help="Where run directories are."),
+    root: Path | None = typer.Option(None, help="Repository root (default: found from cwd)."),
+) -> None:
+    """Leave a note on a run from the terminal, tagged like one left on screen.
+
+    For a run watched without a browser. It goes into the same design store
+    with the same tags, so the run's report renders it beside the screen it
+    names and `fsmes lab review` reads it with the rest.
+
+        fsmes lab note 2026-09-14-one-line-bad-hour \
+            "the orders list does not say how many there are" --screen /dashboard/orders
+
+    A note made while the run is going is picked up when the run exports its
+    feedback at the end. One made afterwards is picked up by
+    `fsmes lab open`, which re-exports before it re-renders.
+    """
+    import getpass
+    import json
+
+    from fsmes.lab import feedback as lab_feedback
+    from fsmes.services import design
+
+    directory = _run_dir(run_id, results, root)
+    name = directory.name
+    conversation = design.start(
+        route=screen if screen.startswith("/") else "",
+        plant=None, who=getpass.getuser(), title=text,
+        lab_run=name, lab_plant=plant or None, screen=screen or "typed at the terminal")
+    design.add_turn(conversation, "user", text,
+                    context={"source": "fsmes lab note", "run": name,
+                             "plant": plant or None, "screen": screen or None})
+    typer.echo(f"noted against {name}"
+               f"{f' · {plant}' if plant else ''}"
+               f"{f' · {screen}' if screen else ''} (conversation {conversation})")
+    if (directory / "scores.json").is_file():
+        from fsmes.lab import report as lab_report
+        from fsmes.lab import run as lab
+
+        scores = json.loads((directory / "scores.json").read_text(encoding="utf-8"))
+        said = lab.export_feedback(directory, scores, echo=typer.echo)
+        lab_report.write(directory)
+        notes = sum(1 for c in said for t in c["turns"] if t.get("role") == "user")
+        typer.echo(f"  {notes} note(s) now in {directory / lab_feedback.FEEDBACK_DIR}")
+    else:
+        typer.echo("  the run has not finished; it will export this note when it does")
+
+
 @lab_app.command("open")
 def lab_open(
     run_id: str = typer.Argument(..., help="A run directory's name, or a path to one."),
@@ -2592,17 +2654,75 @@ def lab_open(
     run and the report is where those notes belong. Nothing else is recomputed:
     the numbers come from the scores.json the run wrote.
     """
-    from fsmes.lab import report as lab_report
+    import json
 
-    directory = Path(run_id).expanduser()
-    if not directory.is_dir():
-        directory = _results_root(results, root) / run_id
+    from fsmes.lab import report as lab_report
+    from fsmes.lab import run as lab
+
+    directory = _run_dir(run_id, results, root)
     if not (directory / "scores.json").is_file():
         typer.echo(f"No run at {directory}: a run directory has a scores.json in it.")
         raise typer.Exit(2)
+    # Notes are left after the numbers are in, so the export runs again here
+    # for the same reason the report is re-rendered rather than just opened.
+    scores = json.loads((directory / "scores.json").read_text(encoding="utf-8"))
+    lab.export_feedback(directory, scores, echo=typer.echo)
     page = lab_report.write(directory)
     typer.echo(f"{page}")
     typer.echo(f"  notes {directory / 'notes.md'}")
+
+
+@lab_app.command("review")
+def lab_review(
+    runs: list[str] = typer.Argument(None, help="Run directories, or their names. "
+                                               "Default: every run in the results directory."),
+    out: Path = typer.Option(Path("findings.md"), "--out",
+                             help="Where to write the roll-up."),
+    results: Path | None = typer.Option(None, help="Where run directories are."),
+    root: Path | None = typer.Option(None, help="Repository root (default: found from cwd)."),
+    model: bool = typer.Option(True, "--model/--no-model",
+                               help="Let the on-device model title the clusters. "
+                                    "--no-model is the deterministic roll-up."),
+) -> None:
+    """Read several runs together and write what recurs, cited.
+
+    One run is an instrument reading; a finding is a thing that happened
+    twice. This clusters every note left at a screen, every row where the MES
+    and the script differed, and every question a run could not answer, by
+    the screen and the measurement they belong to - each one citing its runs,
+    its stations, its numbers and the notes verbatim.
+
+    It never says which side is right, and it works with no model at all: the
+    clustering is by screen and measurement, which are facts in the files.
+    The local model, when it is running, is asked for one thing - a short
+    heading for a cluster somebody has to skim.
+
+        fsmes lab review --out findings.md
+    """
+    from fsmes.lab import review as lab_review
+
+    where = _results_root(results, root)
+    if runs:
+        directories = [Path(r).expanduser() if Path(r).expanduser().is_dir() else where / r
+                       for r in runs]
+    else:
+        directories = sorted(d for d in where.iterdir()
+                             if (d / "scores.json").is_file()) if where.is_dir() else []
+        if not directories:
+            typer.echo(f"No runs in {where}. Run one with `fsmes lab run`.")
+            raise typer.Exit(2)
+
+    ask = lab_review.local_ask() if model else None
+    if model and ask is None:
+        typer.echo("  the on-device model did not answer; the roll-up is the deterministic one")
+    try:
+        path, collected = lab_review.write(directories, out, ask=ask)
+    except lab_review.ReviewError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(2) from exc
+    typer.echo(f"{path}")
+    typer.echo(f"  {len(collected['runs'])} run(s), {len(collected['differences'])} difference(s), "
+               f"{len(collected['unknowns'])} unknown(s), {len(collected['notes'])} note(s)")
 
 
 def run() -> None:

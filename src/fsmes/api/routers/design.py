@@ -32,15 +32,23 @@ class ChatIn(BaseModel):
     data: str | None = None
     filters: dict | None = None
     conversation: int | None = None
+    # Echoed back from /design/status so the log can show the panel and the
+    # plant agreeing about which run this is. Never trusted on its own.
+    lab_run: str | None = None
 
 
 @router.get("/status")
 def status(user: UserDep) -> dict:
     """Whether this surface is on, and which model would answer."""
+    lab = design.lab()
     return {
         "enabled": design.enabled(),
         "model": design.CLAUDE_MODEL if design.claude_available() else design.LOCAL_MODEL,
         "claude": design.claude_available(),
+        # Present only on a plant an experiment started. The panel shows it so
+        # the person typing knows the note is being filed against a run, and
+        # sends it back with the message so the two agree in the log.
+        "lab": lab,
         "note": (
             "Claude answers design questions." if design.claude_available()
             else "No ANTHROPIC_API_KEY on this machine, so the on-device model "
@@ -69,13 +77,25 @@ def chat(body: ChatIn, user: UserDep, db: DbDep) -> dict:
         "who": f"{user['sub']} ({role})",
     }
 
+    # Which experiment this plant belongs to, if any. The run and the plant
+    # come from the plant's own environment; the screen is the one tag only
+    # the browser knows. A `lab_run` in the body that does not match the one
+    # the plant was started with is ignored rather than honoured - a tag is
+    # only worth having if it cannot be typed in.
+    lab = design.lab()
+    if lab and body.lab_run and body.lab_run != lab["run"]:
+        lab = None
+
     conversation = body.conversation
     if conversation is None:
         conversation = design.start(
             route=body.route,
             plant=str(settings.database_url).rsplit("/", 1)[-1],
             who=user["sub"],
-            title=body.message)
+            title=body.message,
+            lab_run=lab and lab["run"],
+            lab_plant=lab and lab["plant"],
+            screen=body.screen or body.route)
 
     past = design.history(conversation)
     design.add_turn(conversation, "user", body.message, context=context)
@@ -108,6 +128,7 @@ def chat(body: ChatIn, user: UserDep, db: DbDep) -> dict:
         "say": text,
         "model": model,
         "routed": "design" if design_question else "operation",
+        "lab": lab,
         "hint": (
             None if design_question else
             "That reads like an operating question rather than a design one - "

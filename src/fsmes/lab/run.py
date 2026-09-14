@@ -28,7 +28,7 @@ from pathlib import Path
 
 from fsmes import __version__
 from fsmes.lab import build as builder
-from fsmes.lab import measure, report
+from fsmes.lab import feedback, measure, report
 from fsmes.lab import truth as truth_reader
 from fsmes.lab.plan import Plan, PlanError, check_names, read_plan
 from fsmes.pack import format as fmt
@@ -129,6 +129,13 @@ def measure_plant(plan: Plan, built: builder.Built, card: dict, echo=print) -> d
         "plant": built.name,
         "label": built.cfg.get("label"),
         "pack": str(built.pack_dir),
+        # The replay's first tick, and the moment the MES was asked. Kept
+        # because a note left during the run is placed against them, and
+        # because `fsmes lab open` has to be able to place one that arrived
+        # after the run without re-running anything.
+        "started_at": card.get("started_at"),
+        "collected_at": recorded.get("collected_at"),
+        "line_json": f"line/{built.name}.json",
         "overlay": built.overlaid,
         "seed": built.seed,
         "duration_line_seconds": built.duration_s,
@@ -219,7 +226,8 @@ def run(plan_path: Path, results_root: Path | None = None, root: Path | None = N
         card = scored_run(built.name, built.cfg, where, plan.speed,
                           line_json=built.line_json, echo=echo,
                           keep_evidence=keep_evidence,
-                          collect=collector(codes, hours))
+                          collect=collector(codes, hours),
+                          extra_env=design_env(plan, results.name, built.name))
         (results / "recorded" / f"{built.name}.json").write_text(
             json.dumps(card.get("recorded") or {}, indent=2, default=str), encoding="utf-8")
         scored = measure_plant(plan, built, card, echo=echo)
@@ -247,6 +255,9 @@ def run(plan_path: Path, results_root: Path | None = None, root: Path | None = N
         "plants": outcomes,
     }
     (results / "scores.json").write_text(json.dumps(scores, indent=2, default=str), encoding="utf-8")
+    said = export_feedback(results, scores, echo=echo)
+    scores["feedback_conversations"] = len(said)
+    (results / "scores.json").write_text(json.dumps(scores, indent=2, default=str), encoding="utf-8")
     (results / "truth.json").write_text(json.dumps(truths, indent=2, default=str), encoding="utf-8")
     notes = results / "notes.md"
     if not notes.exists():
@@ -257,6 +268,46 @@ def run(plan_path: Path, results_root: Path | None = None, root: Path | None = N
     echo(f"  {results}")
     echo(f"  report {results / 'report.html'}   notes {notes}")
     return results
+
+
+def design_env(plan: Plan, run_name: str, plant: str) -> dict[str, str]:
+    """What tells a lab plant it is part of an experiment.
+
+    The design chat is on for every lab plant, because the whole reason a
+    person watches a run is to notice something, and the cheapest place to
+    say it is the screen it is about. Claude is off unless the plan asks for
+    it: taking a note is work the on-device model does for nothing, and a
+    run left going while somebody makes coffee should not be billing an API.
+    """
+    if not plan.feedback_chat:
+        return {"MES_DESIGN_CHAT": "0"}
+    return {
+        "MES_DESIGN_CHAT": "1",
+        "MES_DESIGN_CLAUDE": "1" if plan.feedback_claude else "0",
+        "MES_LAB_RUN": run_name,
+        "MES_LAB_PLANT": plant,
+    }
+
+
+def export_feedback(results: Path, scores: dict, echo=print) -> list[dict]:
+    """Copy this run's conversations into the run, with a moment on each turn.
+
+    A copy, always: the design store is one person's notes going back weeks
+    and belongs to them, not to a results directory. Reading it is allowed to
+    fail - a machine with no store has no notes, which is not an error - and
+    a run must not be lost because its notes could not be read.
+    """
+    try:
+        said = feedback.gather(results.name, feedback.plants_of(scores, results))
+    except Exception as exc:                         # deliberate - see the docstring
+        echo(f"  feedback: the design store could not be read ({type(exc).__name__}: {exc}); "
+             f"the run's numbers are unaffected")
+        said = []
+    feedback.write(results, said)
+    notes = sum(1 for c in said for t in c["turns"] if t.get("role") == "user")
+    if said:
+        echo(f"  feedback: {notes} note(s) in {len(said)} conversation(s) tagged to this run")
+    return said
 
 
 def _echo_plant(scored: dict, echo) -> None:

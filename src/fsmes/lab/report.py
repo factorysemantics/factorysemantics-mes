@@ -26,6 +26,9 @@ import html
 import json
 from pathlib import Path
 
+from fsmes.lab import feedback as feedback_mod
+from fsmes.lab import measure
+
 STYLE = """
 :root {
   color-scheme: light;
@@ -83,6 +86,13 @@ td.verdict, td.wide { white-space: normal; text-align: left; min-width: 22ch; }
 .notes { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px 20px 16px; }
 .notes h3 { color: var(--accent); }
 .empty { color: var(--muted); font-style: italic; }
+.said { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  border-radius: 6px; padding: 12px 16px; margin: 14px 0; }
+.said .who { font-size: 12.5px; color: var(--muted); font-family: ui-monospace, monospace; }
+.said .turn { margin: 10px 0 0; }
+.said .turn .at { font-size: 12.5px; color: var(--muted); }
+.said .turn .text { white-space: pre-wrap; margin: 2px 0 0; }
+.said .turn.reply .text { color: var(--muted); }
 footer { margin-top: 64px; color: var(--muted); font-size: 13.5px; }
 """
 
@@ -295,57 +305,67 @@ difference smaller than that is not evidence, and is not marked as one.</p>
 """
 
 
+# ----------------------------------------------------------------- feedback
+
+def _turn(turn: dict) -> str:
+    """One thing somebody said, verbatim, with the second it was said at.
+
+    Never summarised and never tidied: a remark that turns out to be wrong is
+    still what the person watching said while they were watching.
+    """
+    reply = turn.get("role") != "user"
+    said = esc(turn.get("moment_says") or "")
+    if reply:
+        model = f" · {esc(turn['model'])}" if turn.get("model") else ""
+        said = f"the assistant answered — {said}{model}"
+    return (f'<div class="turn{" reply" if reply else ""}">'
+            f'<div class="at">{said}</div>'
+            f'<p class="text">{esc(turn.get("text") or "")}</p></div>')
+
+
+def _conversation(row: dict) -> str:
+    head = (f'<div class="who">{esc(row.get("screen") or row.get("route"))}'
+            f' · {esc(row.get("who") or "somebody")}'
+            f' · conversation {esc(row.get("conversation"))}</div>')
+    return '<div class="said">' + head + "".join(_turn(t) for t in row.get("turns") or []) + "</div>"
+
+
+def _said(rows: list[dict] | None, where: str) -> str:
+    """The notes that belong beside one section, or nothing at all.
+
+    Deliberately silent when there are none: an empty "no feedback" box under
+    every heading would train the eye to skip the place the feedback appears.
+    """
+    if not rows:
+        return ""
+    return (f'<h3>What was said while watching {esc(where)}</h3>'
+            '<p>Left by whoever watched this run. The numbers above are for the whole run; '
+            'each note carries the line second of the run it was made at.</p>'
+            + "".join(_conversation(r) for r in rows))
+
+
 def _differences(plant: dict) -> str:
-    """Where the MES and the truth disagree, biggest first."""
-    found: list[tuple[float, str, str, str]] = []
-    booking = plant["measurements"].get("booking")
-    if booking:
-        for row in booking["stations"]:
-            low, high = row["expected_range"]
-            booked = row["mes_good"]
-            if booked is None:
-                continue
-            outside = booked - high if booked > high else (booked - low if booked < low else 0)
-            if outside:
-                found.append((abs(outside), f"{plant['plant']} · {row['station']}",
-                              "units booked", f"{outside:+d} outside the range {low} to {high}"))
-    oee_out = plant["measurements"].get("oee")
-    if oee_out:
-        mismatch = oee_out["window"]["mismatch_share"]
-        for row in oee_out["stations"]:
-            diff = row["difference"] or {}
-            for key in ("availability", "performance", "quality"):
-                value = diff.get(key)
-                if value is None:
-                    continue
-                floor = max(0.02, mismatch or 0.0) if key == "availability" else 0.02
-                if abs(value) <= floor:
-                    continue
-                says = f"{value * 100:+.1f} points"
-                if key == "performance" and row.get("mes_performance_at_cap"):
-                    says += " — the MES caps performance at 100%, so this is a floor"
-                elif key == "performance" and row.get("performance_like_for_like") is False:
-                    says += " — but the two sides rate this machine differently"
-                found.append((abs(value) * 1000, f"{plant['plant']} · {row['station']}", key, says))
-    down = plant["measurements"].get("downtime")
-    if down and down["planned_stops"]["misclassified_as_downtime"]:
-        found.append((1e9, plant["plant"], "planned stop counted as downtime",
-                      f"{down['planned_stops']['misclassified_as_downtime']} of "
-                      f"{down['planned_stops']['scored']} scored"))
+    """Where the MES and the truth disagree, biggest first.
+
+    The rows come from `measure.differences`, which `fsmes lab review` reads
+    too - one definition, so a page and a roll-up of several pages cannot
+    come to disagree about the same run.
+    """
+    found = measure.differences(plant)
     if not found:
         return ('<p class="empty">Nothing outside the bands this run can vouch for. That is not the '
                 'same as "everything matched" — read the unknowns.</p>')
-    found.sort(reverse=True)
-    biggest = found[0][0] or 1
+    biggest = found[0]["size"] or 1
     rows = "".join(
-        f"<tr><td>{esc(where)}</td><td>{esc(what)}</td><td class='wide'>{esc(says)}</td>"
-        f"<td><span class='bar' style='width:{max(4, int(120 * size / biggest))}px'></span></td></tr>"
-        for size, where, what, says in found)
+        f"<tr><td>{esc(row['where'])}</td><td>{esc(row['what'])}</td>"
+        f"<td class='wide'>{esc(row['says'])}</td>"
+        f"<td><span class='bar' style='width:{max(4, int(120 * row['size'] / biggest))}px'></span></td></tr>"
+        for row in found)
     return ('<div class="scroll"><table><thead><tr><th>Where</th><th>What</th><th>Difference</th>'
             f'<th></th></tr></thead><tbody>{rows}</tbody></table></div>')
 
 
-def _plant(plant: dict) -> str:
+def _plant(plant: dict, said: list[dict] | None = None) -> str:
     parts = [f'<h2 id="{esc(plant["plant"])}">{esc(plant["plant"])}'
              f'{" — " + esc(plant["label"]) if plant.get("label") else ""}</h2>']
     pipeline = plant.get("pipeline") or {}
@@ -369,14 +389,23 @@ def _plant(plant: dict) -> str:
     if plant.get("views_refused"):
         parts.append("<p>Views that did not answer: " + ", ".join(
             f"<code>{esc(k)}</code> ({esc(v)})" for k, v in plant["views_refused"].items()) + "</p>")
+    groups = feedback_mod.by_section(said or [], plant["plant"])
     parts.append("<h3>Differences, biggest first</h3>")
     parts.append(_differences(plant))
+    parts.append(_said(groups.get(None), "this plant's other screens"))
     if plant["measurements"].get("booking"):
         parts.append(_booking(plant["measurements"]["booking"]))
+        parts.append(_said(groups.get("booking"), "the work orders screen"))
     if plant["measurements"].get("downtime"):
         parts.append(_downtime(plant["measurements"]["downtime"]))
+        parts.append(_said(groups.get("downtime"), "the operations screen"))
     if plant["measurements"].get("oee"):
         parts.append(_oee(plant["measurements"]["oee"]))
+        parts.append(_said(groups.get("oee"), "the shift analysis screen"))
+    # A note about a measurement this run did not take still has to be read.
+    orphaned = [row for key, rows in groups.items() if key
+                and not plant["measurements"].get(key) for row in rows]
+    parts.append(_said(orphaned, "a screen this run took no measurement for"))
     triage = plant.get("triage") or {}
     findings = triage.get("findings") or []
     if findings:
@@ -385,7 +414,7 @@ def _plant(plant: dict) -> str:
     return "\n".join(parts)
 
 
-def render(scores: dict, directory: Path) -> str:
+def render(scores: dict, directory: Path, said: list[dict] | None = None) -> str:
     """The whole page, from the run's own scores and notes."""
     plants = scores.get("plants", [])
     withheld = [p for p in plants if p.get("verdict_withheld")]
@@ -398,7 +427,10 @@ def render(scores: dict, directory: Path) -> str:
         f"database and its own ports, torn down when the questions had been asked. Every number on "
         f"this page came out of that run: nothing here was typed in."
     )
-    sections = "\n".join(_plant(p) for p in plants)
+    if said is None:
+        said = feedback_mod.read(directory)
+    notes = sum(1 for c in said for t in c.get("turns") or [] if t.get("role") == "user")
+    sections = "\n".join(_plant(p, said) for p in plants)
     toc = "".join(f'<li><a href="#{esc(p["plant"])}">{esc(p["plant"])}</a></li>' for p in plants)
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -415,6 +447,8 @@ def render(scores: dict, directory: Path) -> str:
 {_tile("speed", f"{esc(scores.get('speed'))}x", "line time per second of wall clock")}
 {_tile("measurements", esc(", ".join(scores.get('measurements_asked_for', []))), "asked for by the plan")}
 {_tile("verdicts withheld", num(len(withheld)), "runs whose own harness fell behind")}
+{_tile("notes from the screens", num(notes),
+       f"in {len(said)} conversation(s) tagged to this run")}
 </div>
 <p>Plants in this run: <ul>{toc}</ul></p>
 {sections}
@@ -434,5 +468,5 @@ def write(directory: Path) -> Path:
     directory = Path(directory)
     scores = json.loads((directory / "scores.json").read_text(encoding="utf-8"))
     out = directory / "report.html"
-    out.write_text(render(scores, directory), encoding="utf-8")
+    out.write_text(render(scores, directory, feedback_mod.read(directory)), encoding="utf-8")
     return out

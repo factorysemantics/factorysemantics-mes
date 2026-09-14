@@ -367,3 +367,120 @@ def significant(row: dict, mismatch: float | None) -> bool:
         return False
     floor = max(WINDOW_TOLERANCE, mismatch or 0.0)
     return abs(difference) > floor
+
+
+# ------------------------------------------------- what disagreed, as data
+
+def differences(plant: dict) -> list[dict]:
+    """Every place this plant's numbers and the truth disagreed, biggest first.
+
+    Data rather than prose, because two readers want it: the report, which
+    draws it as a table with a bar, and `fsmes lab review`, which puts the
+    same rows from several runs beside each other. Computing it twice is how
+    a page and a roll-up come to disagree about the same run.
+
+    A difference inside a band the run itself cannot vouch for is not in here
+    at all - the bands are stated in the sections above it, and repeating
+    quantisation as a finding is how a list of findings stops being read.
+    """
+    found: list[dict] = []
+    booking_out = plant.get("measurements", {}).get("booking")
+    if booking_out:
+        for row in booking_out["stations"]:
+            low, high = row["expected_range"]
+            booked = row["mes_good"]
+            if booked is None:
+                continue
+            outside = booked - high if booked > high else (booked - low if booked < low else 0)
+            if outside:
+                found.append({
+                    "size": abs(outside), "measurement": "booking",
+                    "where": f"{plant['plant']} · {row['station']}",
+                    "plant": plant["plant"], "station": row["station"],
+                    "what": "units booked",
+                    "says": f"{outside:+d} outside the range {low} to {high}",
+                    "numbers": {"truth_good": row["truth_good"], "mes_good": booked,
+                                "expected_range": [low, high]},
+                })
+    oee_out = plant.get("measurements", {}).get("oee")
+    if oee_out:
+        mismatch = oee_out["window"]["mismatch_share"]
+        for row in oee_out["stations"]:
+            diff = row["difference"] or {}
+            for key in ("availability", "performance", "quality"):
+                value = diff.get(key)
+                if value is None:
+                    continue
+                floor = max(WINDOW_TOLERANCE, mismatch or 0.0) if key == "availability" \
+                    else WINDOW_TOLERANCE
+                if abs(value) <= floor:
+                    continue
+                says = f"{value * 100:+.1f} points"
+                if key == "performance" and row.get("mes_performance_at_cap"):
+                    says += " — the MES caps performance at 100%, so this is a floor"
+                elif key == "performance" and row.get("performance_like_for_like") is False:
+                    says += " — but the two sides rate this machine differently"
+                found.append({
+                    "size": abs(value) * 1000, "measurement": "oee",
+                    "where": f"{plant['plant']} · {row['station']}",
+                    "plant": plant["plant"], "station": row["station"],
+                    "what": key, "says": says,
+                    "numbers": {"truth": (row["truth"] or {}).get(key),
+                                "mes": (row["mes"] or {}).get(key), "difference": value},
+                })
+    down = plant.get("measurements", {}).get("downtime")
+    if down and down["planned_stops"]["misclassified_as_downtime"]:
+        found.append({
+            "size": 1e9, "measurement": "downtime", "where": plant["plant"],
+            "plant": plant["plant"], "station": None,
+            "what": "planned stop counted as downtime",
+            "says": f"{down['planned_stops']['misclassified_as_downtime']} of "
+                    f"{down['planned_stops']['scored']} scored",
+            "numbers": {"misclassified": down["planned_stops"]["misclassified_as_downtime"],
+                        "scored": down["planned_stops"]["scored"]},
+        })
+    found.sort(key=lambda row: row["size"], reverse=True)
+    return found
+
+
+def unknowns(plant: dict) -> list[dict]:
+    """Every question this run could not answer, and why it could not.
+
+    An unknown is the most valuable row in a results directory and the
+    easiest to lose: it is the one an average would swallow. Collected as
+    data so a roll-up can count the same unknown recurring across runs.
+    """
+    out: list[dict] = []
+    if plant.get("verdict_withheld"):
+        out.append({"measurement": "every measurement", "plant": plant["plant"],
+                    "station": None, "because": plant["verdict_withheld"]})
+    booking_out = plant.get("measurements", {}).get("booking")
+    if booking_out:
+        for row in booking_out["stations"]:
+            if str(row["verdict"]).startswith("unknown"):
+                out.append({"measurement": "booking", "plant": plant["plant"],
+                            "station": row["station"], "because": row["verdict"]})
+        orders = booking_out["orders"]
+        if orders.get("why"):
+            out.append({"measurement": "booking · orders", "plant": plant["plant"],
+                        "station": None, "because": orders["why"]})
+    down = plant.get("measurements", {}).get("downtime")
+    if down:
+        for event in down["breakdowns"]["events"]:
+            if event.get("unknown_because"):
+                out.append({"measurement": "downtime", "plant": plant["plant"],
+                            "station": event.get("equipment"),
+                            "because": event["unknown_because"]})
+        if down["labels"].get("unknown_because"):
+            out.append({"measurement": "downtime · labels", "plant": plant["plant"],
+                        "station": None, "because": down["labels"]["unknown_because"]})
+    oee_out = plant.get("measurements", {}).get("oee")
+    if oee_out:
+        for row in oee_out["stations"]:
+            if row.get("unknown_because"):
+                out.append({"measurement": "oee", "plant": plant["plant"],
+                            "station": row["station"], "because": row["unknown_because"]})
+    for key, why in (plant.get("views_refused") or {}).items():
+        out.append({"measurement": f"the {key} view", "plant": plant["plant"],
+                    "station": None, "because": f"the view did not answer: {why}"})
+    return out

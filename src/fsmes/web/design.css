@@ -58,3 +58,15 @@
 .design-foot {
   padding: 0 12px 10px; font-size: 11px; color: var(--muted);
 }
+
+/* A plant that is part of an experiment says so, because a note taken during
+   a run is evidence and a note taken afterwards is a memory. */
+.design-lab {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  opacity: 0.75;
+}

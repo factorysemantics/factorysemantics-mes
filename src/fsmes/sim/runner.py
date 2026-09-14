@@ -328,6 +328,13 @@ def scored_run(
     # lab, which puts bookings and OEE beside the truth - asks for it here
     # rather than keeping a plant alive to ask later. None changes nothing.
     collect: Callable[[str, str], dict] | None = None,
+    # Settings this run's plant should have that its pack does not carry.
+    # The lab turns the design chat on this way, and tells the plant which
+    # experiment it belongs to, without writing either into a pack - a pack
+    # is what a plant is, and "part of run 2026-09-14-one-line-bad-hour" is
+    # not a fact about a plant. Applied last, so a caller can override the
+    # runner's own settings deliberately rather than by accident of ordering.
+    extra_env: dict[str, str] | None = None,
 ) -> dict:
     """Run one plant through its scripted hour and score what it reported."""
     line = Path(line_json) if line_json else root / Path(cfg["replay_dir"]).parent / "line.json"
@@ -360,6 +367,7 @@ def scored_run(
         MES_OPC_PUBLISH_MS=str(publish_ms),
         MES_REPLAY_HOLD_S=str(REPLAY_HOLD_S),
     )
+    env.update({str(k): str(v) for k, v in (extra_env or {}).items()})
     base = f"http://127.0.0.1:{api_port}"
     mes = plants.fsmes_bin()
     procs: list[subprocess.Popen] = []

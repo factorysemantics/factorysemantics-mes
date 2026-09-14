@@ -176,3 +176,50 @@ def test_design_chat_can_be_kept_local_even_with_a_key(monkeypatch):
         assert design.claude_available() is True
     except ImportError:
         assert design.claude_available() is False
+
+
+# ------------------------------------------------------------- the lab tags
+
+def test_the_status_says_which_experiment_this_plant_belongs_to(client, monkeypatch):
+    """A note taken during a run is evidence; one taken afterwards is a
+    memory. The panel shows the run so the person can see which it is."""
+    monkeypatch.setenv("MES_DESIGN_CHAT", "1")
+    monkeypatch.setenv(design.LAB_RUN, "2026-09-14-one-line-bad-hour")
+    monkeypatch.setenv(design.LAB_PLANT, "bottling")
+    out = client.get("/design/status").json()
+    assert out["lab"] == {"run": "2026-09-14-one-line-bad-hour", "plant": "bottling"}
+
+
+def test_a_plant_that_is_not_part_of_an_experiment_says_so(client, monkeypatch):
+    monkeypatch.setenv("MES_DESIGN_CHAT", "1")
+    monkeypatch.delenv(design.LAB_RUN, raising=False)
+    assert client.get("/design/status").json()["lab"] is None
+
+
+def test_a_conversation_started_on_a_lab_plant_is_tagged_to_its_run(admin, monkeypatch):
+    monkeypatch.setenv("MES_DESIGN_CHAT", "1")
+    monkeypatch.setenv(design.LAB_RUN, "2026-09-14-tiny")
+    monkeypatch.setenv(design.LAB_PLANT, "tiny")
+    monkeypatch.setattr(design, "local_generate", lambda *a, **k: "DESIGN")
+    out = admin.post("/design/chat", json={
+        "message": "the order list does not say how many there are",
+        "route": "/dashboard/orders", "screen": "the work orders screen",
+        "lab_run": "2026-09-14-tiny"}).json()
+    assert out["lab"] == {"run": "2026-09-14-tiny", "plant": "tiny"}
+    tagged = design.for_lab_run("2026-09-14-tiny")
+    assert [row["screen"] for row in tagged] == ["the work orders screen"]
+
+
+def test_a_run_id_typed_into_the_browser_cannot_claim_a_run(admin, monkeypatch):
+    """The tag is only worth having because it cannot be typed in. A body that
+    disagrees with the plant's own environment is filed against no run at all
+    rather than against the one it claims."""
+    monkeypatch.setenv("MES_DESIGN_CHAT", "1")
+    monkeypatch.setenv(design.LAB_RUN, "2026-09-14-tiny")
+    monkeypatch.setattr(design, "local_generate", lambda *a, **k: "DESIGN")
+    out = admin.post("/design/chat", json={
+        "message": "hello", "route": "/dashboard",
+        "lab_run": "somebody-elses-run"}).json()
+    assert out["lab"] is None
+    assert design.for_lab_run("somebody-elses-run") == []
+    assert design.for_lab_run("2026-09-14-tiny") == []
