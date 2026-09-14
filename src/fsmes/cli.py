@@ -1988,7 +1988,8 @@ def sweep(
     import tempfile
 
     from fsmes import plant as plants_mod
-    from fsmes.pack import fleet
+    from fsmes.pack import fleet, repoint
+    from fsmes.pack import format as pack_format
     from fsmes.sim import store
     from fsmes.sim import sweep as sweep_mod
     from fsmes.sim.runner import scored_run
@@ -2040,7 +2041,20 @@ def sweep(
         from fsmes.sim.generate import generate
         generate(line, data, write_docs=False)
 
-        point = dict(cfg, replay_dir=str(data))
+        # The plant is rebuilt from a copy of its pack pointed at this
+        # variant's data, not from the compiled dictionary with one key
+        # swapped. `MES_REPLAY_DIR` is compiled out of plant.toml, so patching
+        # `replay_dir` alone left every variant replaying the pack's original
+        # hour: three runs of one line, printed as a sweep. Recompiling the
+        # copy makes the two agree by construction - the same rule, and now
+        # the same code, as `fsmes lab`.
+        try:
+            copy, _ = repoint.pointed_at(
+                pack_format.read(Path(cfg["pack"])), workdir / f"v{index}-pack", data)
+        except repoint.RepointError as exc:
+            typer.echo(str(exc))
+            raise typer.Exit(2) from exc
+        point = fleet.compile_pack(pack_format.read(copy))
         card = scored_run(name, point, where, speed, line_json=line, echo=typer.echo)
         card["variant"] = text
         store.record(card, variant={k: v for k, v in variant.items()
@@ -2055,6 +2069,13 @@ def sweep(
         mis = "unknown" if row["planned_stop_misclassified"] is None else row["planned_stop_misclassified"]
         lag = "-" if row["mean_lag_sim_s"] is None else f"{row['mean_lag_sim_s']:.0f}s"
         typer.echo(f"  {row['variant']:<28} {mis:>13} {rec:>8} {lag:>8}")
+    # Which data each row is actually about. Named rather than assumed,
+    # because the bug this column exists to make visible - every variant
+    # replaying one hour - looked exactly like a sweep that found nothing.
+    typer.echo("")
+    typer.echo("  data replayed:")
+    for row in result["runs"]:
+        typer.echo(f"    {row['variant']:<28} {row['replay_dir'] or 'unknown'}")
     typer.echo("")
     typer.echo(f"  {result['verdict']}")
 
