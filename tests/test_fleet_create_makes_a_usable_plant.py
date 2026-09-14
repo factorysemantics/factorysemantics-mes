@@ -202,3 +202,59 @@ def _oldest_revision() -> str:
     from fsmes.schema import alembic_config
 
     return [s.revision for s in ScriptDirectory.from_config(alembic_config()).walk_revisions()][-1]
+
+
+# ------------------------------------------------- and never prints a secret
+
+
+def test_the_database_line_never_carries_the_password_it_connects_with(nowhere):
+    """`apply` names its database before it changes anything, and a pack may
+    name a PostgreSQL whose password it deliberately does not carry - it names
+    the file holding it (decision 0022). The printed line is built from what
+    the pack *wrote*, never from the resolved URL with its `@` sliced off:
+    that is a redaction by coincidence, and one edit away from not being one.
+    `fsmes.plant.migrate` learned this on the same day.
+    """
+    pack = a_pack(nowhere, "machining")
+    secret = "a-password-that-must-not-be-printed"
+    (nowhere / "pgpass").write_text(secret + "\n", encoding="utf-8")
+    (pack / "plant.toml").write_text(
+        (pack / "plant.toml").read_text(encoding="utf-8")
+        + '\n[storage]\ndatabase_url = "postgresql+psycopg://fsmes@db.invalid:5432/machining"\n'
+        + f'database_password_file = "{(nowhere / "pgpass").as_posix()}"\n',
+        encoding="utf-8")
+
+    database = applier.database_for(fmt.read(pack))
+    assert secret in database.url, "apply could not connect with this"
+    assert secret not in database.shown
+    assert secret not in database.sentence()
+    # Not "the password with stars over it" - the line the pack wrote, which
+    # never had one in it. That is what makes it safe by construction rather
+    # than by a redaction somebody has to keep correct.
+    assert database.shown == "postgresql+psycopg://fsmes@db.invalid:5432/machining"
+
+
+def test_a_pack_that_wrote_its_own_password_inline_still_has_it_starred_out(nowhere):
+    """Packs are not supposed to carry a password and `fsmes pack check` says
+    so, but a person can write one anyway - and the line this command prints
+    is not where they should find out."""
+    pack = a_pack(nowhere, "machining")
+    secret = "written-straight-into-the-pack"
+    (pack / "plant.toml").write_text(
+        (pack / "plant.toml").read_text(encoding="utf-8")
+        + f'\n[storage]\ndatabase_url = "postgresql+psycopg://fsmes:{secret}@db.invalid:5432/m"\n',
+        encoding="utf-8")
+    database = applier.database_for(fmt.read(pack))
+    assert secret in database.url
+    assert secret not in database.sentence()
+    assert database.shown == "postgresql+psycopg://fsmes:***@db.invalid:5432/m"
+
+
+def test_a_plant_whose_database_needs_no_password_is_printed_whole(nowhere):
+    """The common case. A SQLite path is not a secret and blanking part of it
+    would make the line useless for the thing it is printed for."""
+    pack = a_pack(nowhere, "machining")
+    database = applier.database_for(fmt.read(pack), into=commands.data_dir(nowhere))
+    assert database.shown == database.url
+    assert database.shown.endswith("machining.db")
+    assert "the file this fleet gives machining" in database.source

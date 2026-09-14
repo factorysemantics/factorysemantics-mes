@@ -80,7 +80,29 @@ def stamp_path(name: str, directory: Path | None = None) -> Path:
     return data_dir(directory) / f"{name}{STAMP_SUFFIX}"
 
 
-def database_for(pack: fmt.Pack, into: Path | None = None) -> tuple[str, str]:
+@dataclass(frozen=True)
+class Database:
+    """Which database a pack means: the URL to connect with, where that came
+    from, and the one form of it that may be printed.
+
+    `shown` is built separately rather than by redacting `url`, and that is
+    the point of it being its own field. `fsmes.plant.migrate` learned the
+    same lesson on 2026-09-14 and says it in one line: print the URL the
+    *pack* wrote, which never holds a password (decision 0022) - not the
+    resolved one with its `@` sliced off, which is a redaction by coincidence
+    and one edit away from not being one.
+    """
+
+    url: str
+    source: str
+    shown: str
+
+    def sentence(self) -> str:
+        """The line `fsmes pack apply` prints before it changes anything."""
+        return f"{self.shown} ({self.source})"
+
+
+def database_for(pack: fmt.Pack, into: Path | None = None) -> Database:
     """Which database this pack's plant keeps its data in, and who said so.
 
     One function, because the alternative was a command that guessed. Until
@@ -106,14 +128,24 @@ def database_for(pack: fmt.Pack, into: Path | None = None) -> tuple[str, str]:
     Never the process default. A database nobody named is not this plant's.
     """
 
-    if str(pack.table("storage").get("database_url") or "").strip():
-        return fmt.database_url(pack)
+    from fsmes import storage
+
+    written = str(pack.table("storage").get("database_url") or "").strip()
+    if written:
+        url, source = fmt.database_url(pack)
+        # From `written`, never from `url`. The password is in `url` because
+        # something has to connect with it; nothing here needs it to print a
+        # line, so nothing here derives a printed line from it.
+        return Database(url=url, source=source,
+                        shown=storage.redacted(os.path.expandvars(written)))
     named = os.environ.get("MES_DATABASE_URL")
     if named:
-        return named, "from MES_DATABASE_URL"
+        return Database(url=named, source="from MES_DATABASE_URL",
+                        shown=storage.redacted(named))
     where = data_dir(into)
-    return (f"sqlite:///{(where / f'{pack.name}.db').as_posix()}",
-            f"the file this fleet gives {pack.name}, in {where}")
+    url = f"sqlite:///{(where / f'{pack.name}.db').as_posix()}"
+    return Database(url=url, shown=url,
+                    source=f"the file this fleet gives {pack.name}, in {where}")
 
 
 @dataclass(frozen=True)
@@ -155,7 +187,8 @@ def adopt(pack: fmt.Pack, into: Path | None = None) -> tuple[dict[str, str], str
 
     Returns the settings and the sentence saying which database they point at,
     because `apply` prints that before it changes anything - the same rule
-    `fsmes db-status` already keeps.
+    `fsmes db-status` already keeps. The sentence is `Database.shown`, which
+    is never derived from the URL holding the password.
     """
     from fsmes import storage
     from fsmes.config import get_settings
@@ -169,18 +202,18 @@ def adopt(pack: fmt.Pack, into: Path | None = None) -> tuple[dict[str, str], str
     # database gets the file its fleet gives it rather than this process's
     # default. See `database_for`.
     try:
-        url, source = database_for(pack, into)
+        database = database_for(pack, into)
     except storage.Unknown as exc:
         raise Refused(checker.Report(
             directory=pack.directory,
             problems=(checker.Problem("[storage] database_url", str(exc)),),
             unknowns=(), checked=0)) from None
-    values["MES_DATABASE_URL"] = url
+    values["MES_DATABASE_URL"] = database.url
     os.environ.update(values)
     get_settings.cache_clear()
     get_engine.cache_clear()
     get_sessionmaker.cache_clear()
-    return values, f"{storage.redacted(url)} ({source})"
+    return values, database.sentence()
 
 
 def refuse_unless_at_head(pack: fmt.Pack) -> str:
