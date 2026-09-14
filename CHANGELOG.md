@@ -10,6 +10,38 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+### Honesty
+
+- **Every number a lab run stores about the MES's OEE says which clock it is
+  on.** A run at 20x stored the MES's performance as `19.77` under the plain
+  name `performance` while the difference printed beside it had been computed
+  from the same figure put back on the line's clock. One object, two answers,
+  and nothing in the file to say which of them the difference came from. The
+  MES's block in `scores.json` now has no plain `performance`, `oee`,
+  `runtime_seconds` or `downtime_seconds`: it has `performance_as_reported`
+  beside `performance_line_clock`, `oee_as_reported` beside `oee_line_clock`,
+  and `runtime_wall_seconds` beside `runtime_line_seconds` (and the same for
+  downtime). Availability and quality keep their plain names, because they are
+  the two the replay speed cancels out of. `performance_line_seconds` is gone
+  as a name — it was a ratio, not seconds. **Migration:** anything reading
+  `plants[].measurements.oee.stations[].mes.performance` from a run directory
+  wants `performance_line_clock` if it is comparing and
+  `performance_as_reported` if it is quoting the MES.
+
+### Added
+
+- **A lab run names a station whose own counts and own run time do not agree.**
+  Northgate's Deburr on 2026-09-14 reported 826 units and 1,878 line seconds of
+  run time for a machine the MES itself rates at 2.4 s a unit — 1,982 seconds
+  of work inside 1,878 seconds of run time — while the script, pricing the
+  machine at the same 2.4 s, fitted its units inside its running seconds. That
+  is not the MES against the script; it is two of the MES's own numbers against
+  each other, at a rating both sides agree on, so neither the replay speed nor
+  the master data explains it. It gets its own line in the report above the
+  ordinary differences, and it is the one finding on the page that survives any
+  argument about the truth. What the report still will not do is say which of
+  the two numbers is the wrong one.
+
 ### Fixed
 
 - **Two ephemeral runs on one machine no longer choose the same port.** A
