@@ -41,6 +41,15 @@ goes under Honesty with a migration line, so plant people can find it.
   this change; it runs only on a tag, so its bumps go separately, behind a
   dry run that can be exercised without one.
   ([#44](https://github.com/factorysemantics/factorysemantics-mes/pull/44))
+- **The README's front page tells the truth of 0.2.0.** It was dated
+  2026-09-07: it listed M7 and M8 under *not yet*, sent visitors to a demo
+  hostname that turns them away, and said `fsmes demo` runs a six-station
+  line when the demo plant has two. The status blockquote is now dated
+  2026-09-14 and says what is new since 0.1.2 and what is still not done;
+  the north star table's ERP mark matches the roadmap, with the roadmap's
+  caveats; the public demo points at the page that emails a link; and the
+  install snippet cites the `wheel-demo` job that proves it. Docs only —
+  no behaviour changed.
 
 ### Fixed
 
