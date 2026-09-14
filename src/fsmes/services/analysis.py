@@ -38,6 +38,7 @@ from fsmes.kernel.tags import STRUCTURAL_TAGS
 from fsmes.services import NotFound, masterdata
 from fsmes.services import equipment as equipment_service
 from fsmes.services import line as line_service
+from fsmes.services import oee as oee_rules
 
 # Below this much observed history, rates are not reported at all.
 _MIN_WINDOW_SECONDS = 10.0
@@ -137,7 +138,9 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0)
 
         cycle = unit.ideal_cycle_seconds
         availability = runtime / window_seconds if window_seconds >= _MIN_WINDOW_SECONDS else None
-        performance = min(1.0, cycle * total / runtime) if (runtime > 0 and total > 0 and cycle) else None
+        # Never capped, and the note is the sentence the screen puts beside it
+        # — see `fsmes.services.oee`.
+        performance, performance_note = oee_rules.performance(cycle, total, runtime)
         quality = good / total if total > 0 else None
         overall = (
             availability * performance * quality if None not in (availability, performance, quality) else None
@@ -145,11 +148,12 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0)
 
         # Losses, in the units their fix is measured in.
         #
-        # The performance loss is clamped at zero to stay consistent with
-        # `performance`, which is capped at 1.0. A machine can out-run its rated
-        # cycle time — a mis-set ideal_cycle_seconds, or a replay running faster
-        # than wall-clock — and reporting that as a negative loss would put a
-        # bar below the axis and imply the line invented units.
+        # The performance loss is signed, and negative is a real answer: the
+        # machine made more units than its rating says that run time allows.
+        # It is the same finding `performance_note` states in words, priced in
+        # units, and flooring it at zero would hide it exactly the way the old
+        # 1.0 cap on `performance` did. The waterfall does not draw a negative
+        # segment; it shows the note instead.
         capable = runtime / cycle if (cycle and runtime > 0) else None
         stations.append(
             {
@@ -158,6 +162,7 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0)
                 "ideal_cycle_seconds": cycle,
                 "availability": _round(availability),
                 "performance": _round(performance),
+                "performance_note": performance_note,
                 "quality": _round(quality),
                 "oee": _round(overall),
                 "runtime_seconds": round(runtime, 1),
@@ -170,7 +175,7 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0)
                     "availability_seconds": round(window_seconds - runtime, 1),
                     "availability_units": round((window_seconds - runtime) / cycle, 1) if cycle else None,
                     # What running slower than rated cost.
-                    "performance_units": round(max(capable - total, 0.0), 1) if capable is not None else None,
+                    "performance_units": round(capable - total, 1) if capable is not None else None,
                     "quality_units": scrap,
                 },
             }

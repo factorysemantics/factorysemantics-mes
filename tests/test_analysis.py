@@ -22,6 +22,7 @@ from fsmes.domain import (
     WorkOrder,
 )
 from fsmes.services import analysis, workorders
+from fsmes.services import oee as oee_rules
 
 
 @pytest.fixture()
@@ -129,18 +130,56 @@ def test_losses_are_named_in_the_units_their_fix_is_measured_in(session, line):
     assert station["seconds_by_state"]["down"] == pytest.approx(15 * 60, abs=60)
 
 
-def test_performance_loss_is_never_negative(session, line):
-    """A machine can out-run its rated cycle time — a mis-set ideal, or a replay
-    running faster than wall-clock. `performance` caps at 1.0, so its loss must
-    floor at 0, or the bar goes below the axis and implies invented units."""
-    _state(session, "MIX01", EquipmentStateName.RUNNING, minutes_ago=5, minutes=5)
-    _book(session, "MIX01", good=100_000, minutes_ago=2)  # far beyond rated rate
+def test_a_station_slower_than_its_rating_reports_below_one(session, line):
+    """MIX01 is rated at 4 s a unit. Thirty minutes running makes 450 units at
+    rated; make 300 and performance is 300/450, not a number near 1."""
+    _state(session, "MIX01", EquipmentStateName.RUNNING, minutes_ago=40, minutes=30)
+    _book(session, "MIX01", good=300, minutes_ago=20)
 
     station = next(
         s for s in analysis.oee_breakdown(session, line_code=line, hours=8)["stations"] if s["code"] == "MIX01"
     )
-    assert station["performance"] == 1.0
-    assert station["loss"]["performance_units"] == 0.0
+    assert station["performance"] == pytest.approx(4.0 * 300 / 1800, rel=0.02)
+    assert station["performance"] < 1.0
+    assert station["performance_note"] is None
+    assert station["loss"]["performance_units"] == pytest.approx(150, abs=1)
+
+
+def test_a_station_faster_than_its_rating_says_so_instead_of_reporting_one(session, line):
+    """Until 2026-09-14 this reported exactly 1.0, and the lab measured what
+    that costs: performance read 1.0 on nine stations across two plants while
+    the script said 0.943 to 0.9994. A machine that beats its rated cycle is a
+    master-data finding — the rating is slower than the machine — and the
+    number now says so instead of being capped away."""
+    _state(session, "MIX01", EquipmentStateName.RUNNING, minutes_ago=40, minutes=30)
+    _book(session, "MIX01", good=900, minutes_ago=20)  # twice the rated rate
+
+    station = next(
+        s for s in analysis.oee_breakdown(session, line_code=line, hours=8)["stations"] if s["code"] == "MIX01"
+    )
+    assert station["performance"] == pytest.approx(2.0, rel=0.02)
+    assert "rating is slower than the machine" in station["performance_note"]
+    # The loss is signed: it made 450 units more than its rating allows for.
+    assert station["loss"]["performance_units"] == pytest.approx(-450, abs=1)
+    # And the OEE that follows from it is above 1 rather than quietly trimmed.
+    assert station["oee"] > 1.0
+
+
+def test_a_station_with_no_rated_cycle_reports_unknown_and_says_why(session, line):
+    """A blank cycle time in the worksheet is the commissioning answer for "we
+    do not know". It must read unknown, never 1.0 and never 0."""
+    _equipment(session, "MIX01").ideal_cycle_seconds = None
+    session.flush()
+    _state(session, "MIX01", EquipmentStateName.RUNNING, minutes_ago=40, minutes=30)
+    _book(session, "MIX01", good=300, minutes_ago=20)
+
+    station = next(
+        s for s in analysis.oee_breakdown(session, line_code=line, hours=8)["stations"] if s["code"] == "MIX01"
+    )
+    assert station["performance"] is None
+    assert station["performance_note"] == oee_rules.NO_RATING
+    assert station["oee"] is None
+    assert station["loss"]["performance_units"] is None
 
 
 def test_the_headline_is_the_constraint_not_an_average(session, line):

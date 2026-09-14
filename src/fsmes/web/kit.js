@@ -168,9 +168,12 @@ ${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`);
       const row = FS.el("div", `bar-row${index === 3 ? " total" : ""}`);
       const bar = FS.el("div", "bar");
       const fill = FS.el("i");
+      // The bar cannot draw more than itself, so performance above rated fills
+      // it; the number beside it is the true one, and the note says why.
       fill.style.width = `${Math.min(100, (value || 0) * 100)}%`;
       if (value === null || value === undefined) fill.classList.add("unknown");
       bar.append(fill);
+      if (label === "Performance" && oee.performance_note) row.title = oee.performance_note;
       row.append(FS.el("span", null, label), bar, FS.el("span", "num", FS.fmt.pct(value)));
       host.append(row);
     });

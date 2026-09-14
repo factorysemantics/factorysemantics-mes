@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from fsmes.db import utcnow
 from fsmes.domain import Equipment, EquipmentLevel, EquipmentState, EquipmentStateName, ProductionLog
 from fsmes.services import audit, masterdata, outbox
+from fsmes.services import oee as oee_rules
 
 # Below this much observed runtime history, OEE components are reported as
 # unknown rather than computed from a near-zero denominator.
@@ -251,11 +252,9 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
 
         # Too little observed time to divide by: say "unknown", never "zero".
         availability = runtime / window_seconds if window_seconds >= _MIN_WINDOW_SECONDS else None
-        performance = (
-            min(1.0, m.ideal_cycle_seconds * total / runtime)
-            if runtime > 0 and total > 0 and m.ideal_cycle_seconds
-            else None
-        )
+        # Never capped, and the note is the sentence the screen puts beside it
+        # — see `fsmes.services.oee`.
+        performance, performance_note = oee_rules.performance(m.ideal_cycle_seconds, total, runtime)
         quality = good / total if total > 0 else None
         overall = (
             availability * performance * quality
@@ -267,6 +266,7 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
             "window_hours": round(window_seconds / 3600, 4),  # effective, after clamping
             "availability": round(availability, 4) if availability is not None else None,
             "performance": round(performance, 4) if performance is not None else None,
+            "performance_note": performance_note,
             "quality": round(quality, 4) if quality is not None else None,
             "oee": round(overall, 4) if overall is not None else None,
             "good_qty": good,
