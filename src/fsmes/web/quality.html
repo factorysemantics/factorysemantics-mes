@@ -27,7 +27,7 @@
   <section class="kpis">
     <div class="kpi"><span class="kpi-label">Checks recorded</span><span id="kpi-checks" class="kpi-value">—</span></div>
     <div class="kpi"><span class="kpi-label">Pass rate, all time</span><span id="kpi-pass" class="kpi-value">—</span></div>
-    <div class="kpi"><span class="kpi-label">Open non-conformances</span><span id="kpi-ncs" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Non-conformances not closed</span><span id="kpi-ncs" class="kpi-value">—</span></div>
     <div class="kpi"><span class="kpi-label">Characteristics</span><span id="kpi-specs" class="kpi-value">—</span></div>
   </section>
 
@@ -72,16 +72,43 @@
     <section class="panel">
       <h2>Non-conformances <span id="n-count" class="muted count">—</span></h2>
       <p class="muted small">Raised automatically when a measurement falls outside
-        spec. Closing one is a supervisor action and is recorded against them.</p>
+        spec, and then worked: taken under review, decided about (use as is,
+        rework, scrap, return) and only then closed. Each step is a supervisor
+        action recorded against the person who took it.</p>
       <div class="filter-bar" data-assist="nc-filters">
         <select id="n-status" aria-label="Status">
-          <option value="open">Open</option>
+          <option value="open,under_review,dispositioned">Still open</option>
+          <option value="open,under_review">Awaiting a decision</option>
+          <option value="dispositioned">Decided, not closed</option>
           <option value="closed">Closed</option>
           <option value="">Any status</option>
         </select>
         <input id="n-q" type="search" placeholder="Code, order or text" aria-label="Code, order or text">
       </div>
       <ul id="ncs" class="feed" data-assist="nc-list"></ul>
+      <div id="disposition" class="reason hidden" data-assist="nc-disposition">
+        <p class="small"><strong id="d-code">—</strong> <span id="d-what" class="muted"></span></p>
+        <div class="field">
+          <label for="d-choice">What happens to the material?</label>
+          <select id="d-choice">
+            <option value="">Choose…</option>
+            <option value="use_as_is">Use as is (a concession)</option>
+            <option value="rework">Rework</option>
+            <option value="scrap">Scrap</option>
+            <option value="return">Return to supplier</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="d-reason">Why</label>
+          <input id="d-reason" placeholder="e.g. customer accepted the deviation in writing">
+        </div>
+        <p class="muted small">The reason is required. This is what somebody reads
+          when they ask about this batch a year from now.</p>
+        <div class="row">
+          <button id="d-cancel" class="ghost" type="button">Never mind</button>
+          <button id="d-save" type="button" disabled>Record the decision</button>
+        </div>
+      </div>
       <div id="n-pager" class="pager"></div>
     </section>
 

@@ -8,7 +8,15 @@ from sqlalchemy import select
 
 from fsmes.api import paging
 from fsmes.api.deps import ActorDep, DbDep, require
-from fsmes.domain import Material, NcStatus, NonConformance, QualityCheck, QualitySpec, WorkOrder
+from fsmes.domain import (
+    Material,
+    NcDisposition,
+    NcStatus,
+    NonConformance,
+    QualityCheck,
+    QualitySpec,
+    WorkOrder,
+)
 from fsmes.services import quality
 
 router = APIRouter()
@@ -125,7 +133,8 @@ def list_checks(
 @router.get("/nonconformances")
 def list_ncs(
     db: DbDep,
-    status: NcStatus | None = None,
+    status: list[NcStatus] | None = Query(
+        None, description="Repeatable. A non-conformance in any of these states is returned."),
     q: str | None = Query(None, description="Match a code or a description."),
     limit: int = paging.LimitQuery,
     offset: int = paging.OffsetQuery,
@@ -136,10 +145,14 @@ def list_ncs(
     was two thousand rows and half a megabyte on every refresh of the
     Quality screen, and it only grows. The order it was raised on is here
     so a screen can lead somewhere from it.
+
+    `status` is repeatable because "still open" is now three states, not one:
+    a supervisor who takes a record under review must not watch it vanish out
+    of the list they are working.
     """
     query = select(NonConformance).order_by(NonConformance.id.desc())
     if status:
-        query = query.where(NonConformance.status == status)
+        query = query.where(NonConformance.status.in_(status))
     if q:
         like = f"%{q}%"
         query = query.where(NonConformance.code.ilike(like) | NonConformance.description.ilike(like))
@@ -148,24 +161,88 @@ def list_ncs(
     orders = {}
     if order_ids:
         orders = {wo.id: wo.code for wo in db.scalars(select(WorkOrder).where(WorkOrder.id.in_(order_ids)))}
-    return paging.page([
-        {
-            "code": nc.code,
-            "description": nc.description,
-            "severity": nc.severity,
-            "status": nc.status,
-            "created_at": nc.created_at,
-            "closed_at": nc.closed_at,
-            "order": orders.get(nc.work_order_id),
-        }
-        for nc in rows
-    ], total, limit, offset)
+    return paging.page([_nc_out(nc, orders.get(nc.work_order_id)) for nc in rows],
+                       total, limit, offset)
+
+
+def _nc_out(nc: NonConformance, order: str | None = None) -> dict:
+    """One non-conformance, with every step it has been through.
+
+    The history rides along rather than sitting behind a second request: a
+    screen that shows a status without showing who put it there invites the
+    reader to assume the system decided, and nothing here decides.
+    """
+    return {
+        "code": nc.code,
+        "description": nc.description,
+        "severity": nc.severity,
+        "status": nc.status,
+        "created_at": nc.created_at,
+        "closed_at": nc.closed_at,
+        "order": order,
+        "raised_by": nc.raised_by,
+        "reviewed_by": nc.reviewed_by,
+        "reviewed_at": nc.reviewed_at,
+        "disposition": nc.disposition,
+        "disposition_reason": nc.disposition_reason,
+        "disposition_by": nc.disposition_by,
+        "disposition_at": nc.disposition_at,
+        "closed_by": nc.closed_by,
+        "history": nc.history(),
+        "next_steps": _next_steps(nc),
+    }
+
+
+def _next_steps(nc: NonConformance) -> list[str]:
+    """What may be done to this one next, so a screen need not re-derive the rules."""
+    if nc.status is NcStatus.OPEN:
+        return ["review", "disposition"]
+    if nc.status is NcStatus.UNDER_REVIEW:
+        return ["disposition"]
+    if nc.status is NcStatus.DISPOSITIONED:
+        return ["close"]
+    return []
+
+
+@router.get("/nonconformances/{code}")
+def get_nc(code: str, db: DbDep) -> dict:
+    """One non-conformance and its history."""
+    nc = quality.get_nc(db, code)
+    order = None
+    if nc.work_order_id:
+        wo = db.get(WorkOrder, nc.work_order_id)
+        order = wo.code if wo else None
+    return _nc_out(nc, order)
+
+
+@router.post("/nonconformances/{code}/review", dependencies=[require("quality.close_nc")])
+def review_nc(code: str, db: DbDep, actor: ActorDep) -> dict:
+    """Somebody has picked it up. Recorded against them, with the time."""
+    nc = quality.review_nc(db, code, actor)
+    return _nc_out(nc)
+
+
+class DispositionIn(BaseModel):
+    disposition: NcDisposition
+    reason: str
+
+
+@router.post("/nonconformances/{code}/disposition", dependencies=[require("quality.close_nc")])
+def disposition_nc(code: str, body: DispositionIn, db: DbDep, actor: ActorDep) -> dict:
+    """Decide what happens to the material: use as is, rework, scrap or return.
+
+    The reason is required. A concession nobody wrote a reason for is the one
+    that cannot be defended when somebody asks about it a year later.
+    """
+    nc = quality.disposition_nc(db, code, disposition=body.disposition, reason=body.reason, actor=actor)
+    return _nc_out(nc)
 
 
 @router.post("/nonconformances/{code}/close", dependencies=[require("quality.close_nc")])
 def close_nc(code: str, db: DbDep, actor: ActorDep) -> dict:
+    """Close it — refused until the material has been dispositioned."""
     nc = quality.close_nc(db, code, actor)
-    return {"code": nc.code, "status": nc.status}
+    return _nc_out(nc)
 
 
 # ------------------------------------------------------------ SPC and gauges

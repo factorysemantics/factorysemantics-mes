@@ -32,3 +32,4 @@ Declined ideas stay, so nobody re-proposes them without new facts.
 | [0021](0021-one-database-per-plant.md) | A fleet is many databases, and site scoping is identity, not partitioning | 2026-09-10, accepted 2026-09-13 |
 | [0022](0022-what-a-plant-pack-may-contain.md) | A plant pack is data, carries no code and no secrets, and cannot change what a number means | 2026-09-10, accepted 2026-09-13 |
 | [0023](0023-the-fleet-console-observes.md) | *Proposed* — the console manages only the plants it owns, observes every other plant, and silence is unknown | 2026-09-10, revised 2026-09-13 |
+| [0024](0024-a-nonconformance-has-a-life.md) | A non-conformance is worked through review and a disposition, and cannot be closed without one | 2026-09-14 |

@@ -94,6 +94,32 @@
       </form>
     </section>
 
+    <section class="panel span-2" data-needs-cap="quality.record">
+      <h2>Quality <span id="q-for" class="muted count"></span></h2>
+      <p class="muted small">The characteristics that have a specification for
+        what this machine is running. Record what the gauge actually read — an
+        out-of-spec reading is meant to be recorded, not rounded, and the MES
+        raises the non-conformance itself.</p>
+      <form id="quality" class="stack" data-assist="station-quality">
+        <div class="row big-io">
+          <div class="field">
+            <label for="q-char">Characteristic</label>
+            <select id="q-char" data-assist="station-quality-char"></select>
+          </div>
+          <div class="field">
+            <label for="q-value">Measured</label>
+            <input id="q-value" type="number" inputmode="decimal" step="any"
+                   data-assist="station-quality-value">
+          </div>
+          <button id="q-submit" type="button" data-assist="station-quality-submit">Record</button>
+        </div>
+        <p id="q-spec" class="muted small"></p>
+      </form>
+      <p id="q-raised" class="nc-raised hidden"></p>
+      <h3 class="sub">Recent results <span id="q-count" class="muted count"></span></h3>
+      <ul id="q-recent" class="queue" data-assist="station-quality-recent"></ul>
+    </section>
+
     <section class="panel span-2" data-needs-cap="maintenance.perform">
       <h2>Maintenance on this machine</h2>
       <ul id="maint" class="queue" data-assist="station-maintenance"></ul>
@@ -111,7 +137,8 @@
   </main>
 
   <p class="screen-source">state /equipment/states · queue /workorders/dispatch ·
-    output /execution/report · material /execution/consume · maintenance /maintenance/orders</p>
+    output /execution/report · material /execution/consume · maintenance /maintenance/orders ·
+    quality /quality/specs, /quality/checks</p>
 </div>
 <div id="toast" class="toast hidden"></div>
 <script src="/static/common.js"></script>

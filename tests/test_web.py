@@ -173,6 +173,47 @@ def test_the_orders_screen_can_actually_be_narrowed():
     assert 'query.append("status"' in js, "the screen never sends status"
 
 
+def test_the_station_can_record_and_see_quality_where_the_operator_stands():
+    """Scott at /dashboard/station, 2026-09-02: "you should be able to record
+    and/or see quality results in the floor/station page."
+
+    Both halves, as with the orders filters: the controls exist, something
+    listens to them, and the card asks the API for the characteristics of the
+    material this machine is actually running rather than the whole plant's.
+    """
+    html = (WEB / "station.html").read_text(encoding="utf-8")
+    js = (WEB / "station.js").read_text(encoding="utf-8")
+
+    for control in ("q-char", "q-value", "q-submit", "q-spec", "q-recent", "q-raised"):
+        assert f'id="{control}"' in html, f"the station screen lost its {control}"
+    assert '$("#q-submit").addEventListener' in js, "the Record button is not wired"
+    assert '$("#q-char").addEventListener' in js, "changing the characteristic does nothing"
+
+    # Recording is a capability, and the panel is gated like every other one.
+    assert 'data-needs-cap="quality.record"' in html
+
+    # Scoped to this station's material, not the plant's whole spec list.
+    assert "/quality/specs?material=" in js
+    assert "/quality/checks?material=" in js and "characteristic=" in js
+    assert 'api("/quality/checks", { method: "POST"' in js
+
+
+def test_the_station_says_which_non_conformance_its_reading_raised():
+    """An out-of-spec reading opens a non-conformance by itself. An operator
+    who is not told which one has been left to wonder whether anything
+    happened at all."""
+    js = (WEB / "station.js").read_text(encoding="utf-8")
+    assert "out.non_conformance" in js
+    assert 'id="q-raised"' in (WEB / "station.html").read_text(encoding="utf-8")
+
+
+def test_the_station_quality_list_says_what_it_is_a_slice_of():
+    """House rule: every list states its total. Six readings out of nine
+    hundred and six readings out of six are different facts."""
+    js = (WEB / "station.js").read_text(encoding="utf-8")
+    assert "page.total.toLocaleString()" in js
+
+
 def test_the_orders_list_shows_when_work_is_due():
     """A supervisor asking what is late needs the date on the row, not in a
     detail pane behind a click."""

@@ -15,6 +15,8 @@ let current = null;        // this machine's current state row
 let queue = [];
 let pendingState = null;   // a state change awaiting its reason
 let completing = null;     // a maintenance order awaiting findings
+let qSpecs = [];           // specs for what this machine is running now
+let qMaterial = null;      // the material those specs belong to
 
 function live(ok) {
   $("#live-dot").className = "dot" + (ok ? "" : " bad");
@@ -248,6 +250,167 @@ function wireIssue() {
   });
 }
 
+/* ---------- quality at the station ----------
+
+   Conversation 9, 2026-09-02: "you should be able to record and/or see
+   quality results in the floor/station page." So: the characteristics that
+   have a specification for whatever this machine is running, the last few
+   results with the spec that judged them, and one field to record another.
+
+   The list is the characteristics with a spec and nothing else. A
+   measurement with nothing to judge it against cannot pass or fail, and
+   offering one here would invite a reading the MES then has no verdict for.
+   If the machine is running nothing, the card says so rather than showing
+   the whole plant's specifications. */
+
+const Q_RECENT = 6;
+
+function qKey() {
+  return $("#q-char").value;
+}
+
+function specFor(characteristic) {
+  return qSpecs.find((s) => s.characteristic === characteristic) || null;
+}
+
+function bandText(spec) {
+  if (!spec) return "";
+  const unit = spec.unit ? ` ${spec.unit}` : "";
+  if (spec.min_value !== null && spec.max_value !== null) {
+    return `Spec ${spec.min_value} to ${spec.max_value}${unit}.`;
+  }
+  if (spec.min_value !== null) return `Spec: at least ${spec.min_value}${unit}.`;
+  if (spec.max_value !== null) return `Spec: at most ${spec.max_value}${unit}.`;
+  // A spec row with no limits judges nothing, and saying so is better than
+  // drawing a band that is not there.
+  return "This characteristic has no limits set, so nothing here can fail.";
+}
+
+function showSpec() {
+  const spec = specFor(qKey());
+  $("#q-spec").textContent = bandText(spec);
+}
+
+/* Which material this station is working on: the running operation if there
+   is one, otherwise the first thing queued. The same choice the Issue panel
+   makes, for the same reason - an operator judges what is in front of them. */
+function stationMaterial() {
+  const op = queue.find((entry) => entry.status === "running") || queue[0];
+  return op ? op.material || null : null;
+}
+
+async function renderQuality() {
+  if (!window.FS || !FS.can("quality.record")) return;
+  const material = stationMaterial();
+  const label = $("#q-for");
+  const select = $("#q-char");
+
+  if (material !== qMaterial) {
+    qMaterial = material;
+    qSpecs = [];
+    if (material) {
+      try {
+        qSpecs = await api(`/quality/specs?material=${encodeURIComponent(material)}`);
+      } catch (err) { qSpecs = []; }
+    }
+    const keep = select.value;
+    select.textContent = "";
+    for (const spec of qSpecs) select.appendChild(new Option(spec.characteristic, spec.characteristic));
+    if (keep && [...select.options].some((o) => o.value === keep)) select.value = keep;
+  }
+
+  label.textContent = material ? `on ${material}` : "";
+  const nothingToJudge = !material || !qSpecs.length;
+  $("#q-submit").disabled = nothingToJudge;
+  $("#q-value").disabled = nothingToJudge;
+  if (!material) {
+    $("#q-spec").textContent = "Nothing is queued on this machine, so there is nothing to inspect.";
+  } else if (!qSpecs.length) {
+    $("#q-spec").textContent = `No characteristic has a specification for ${material}.`;
+  } else {
+    showSpec();
+  }
+  await renderRecent();
+}
+
+async function renderRecent() {
+  const list = $("#q-recent");
+  const count = $("#q-count");
+  list.textContent = "";
+  if (!qMaterial || !qSpecs.length) {
+    count.textContent = "";
+    list.appendChild(el("li", "muted", "Nothing to show yet."));
+    return;
+  }
+  let page;
+  try {
+    page = await api(`/quality/checks?material=${encodeURIComponent(qMaterial)}`
+                     + `&characteristic=${encodeURIComponent(qKey())}&limit=${Q_RECENT}`);
+  } catch (err) {
+    count.textContent = "";
+    list.appendChild(el("li", "muted", "Could not read the recent results."));
+    return;
+  }
+  // Rule 4: say what this is a slice of, never just the slice.
+  count.textContent = `— last ${page.items.length} of ${page.total.toLocaleString()} on `
+                    + `${qMaterial} · ${qKey()}`;
+  if (!page.items.length) {
+    list.appendChild(el("li", "muted", "No result recorded for this characteristic yet."));
+    return;
+  }
+  const spec = specFor(qKey());
+  const unit = spec && spec.unit ? ` ${spec.unit}` : "";
+  for (const check of page.items) {
+    const failed = check.result === "fail";
+    const li = el("li", failed ? "out-of-spec" : null);
+    const what = el("div", "what");
+    what.appendChild(el("div", "mono", `${fmt.qty(check.value)}${unit}`));
+    what.appendChild(el("div", "muted small",
+      `${fmt.clock(check.ts)} · ${check.checked_by || "not recorded"}`));
+    li.appendChild(what);
+    li.appendChild(el("span", failed ? "result-fail" : "result-pass",
+                      failed ? "out of spec" : "in spec"));
+    list.appendChild(li);
+  }
+}
+
+function wireQuality() {
+  $("#quality").addEventListener("submit", (event) => event.preventDefault());
+  $("#q-char").addEventListener("change", () => { showSpec(); renderRecent(); });
+  $("#q-submit").addEventListener("click", async () => {
+    const characteristic = qKey();
+    const raw = $("#q-value").value;
+    if (!characteristic || raw === "") {
+      toast("Enter what the gauge read.", "bad");
+      return;
+    }
+    const op = queue.find((entry) => entry.status === "running") || queue[0];
+    try {
+      const out = await api("/quality/checks", { method: "POST", body: {
+        material: qMaterial, characteristic, value: Number(raw),
+        order: op ? op.order : null,
+      }});
+      $("#q-value").value = "";
+      const raised = $("#q-raised");
+      if (out.non_conformance) {
+        // The MES raising one is the system working. Say which one it is, by
+        // code, so the supervisor can find it on the Quality screen.
+        toast(`${fmt.qty(out.value)} is out of spec — ${out.non_conformance} raised.`, "bad");
+        raised.textContent = `${fmt.qty(out.value)} was outside the specification. `
+                           + `Non-conformance ${out.non_conformance} was raised; a supervisor `
+                           + `decides what happens to the material on the Quality screen.`;
+        raised.classList.remove("hidden");
+      } else {
+        toast(`Recorded ${fmt.qty(out.value)} — in spec.`);
+        raised.classList.add("hidden");
+      }
+      await renderRecent();
+    } catch (err) {
+      toast(err.message, "bad");
+    }
+  });
+}
+
 /* ---------- maintenance on this machine ---------- */
 
 async function renderMaintenance() {
@@ -332,6 +495,7 @@ async function refresh() {
     queue = dispatch.filter((entry) => entry.status !== "done");
     renderQueue();
     renderBookTargets();
+    await renderQuality();
     await renderMaintenance();
     window.__fsmesPageData = { machine, state: current, queue };
     live(true);
@@ -346,6 +510,7 @@ async function refresh() {
   wireReason();
   wireBook();
   wireIssue();
+  wireQuality();
   wireMaintenance();
   await loadMachines();
   await loadLots();

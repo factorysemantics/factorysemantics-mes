@@ -135,6 +135,10 @@ def dispatch(db: DbDep, equipment: str | None = None) -> list[dict]:
             "seq": op.seq,
             "operation": op.name,
             "equipment": op.equipment.code,
+            # What is being made here. The station screen needs it to know
+            # which specifications judge this operation - a spec is held
+            # against a material, not against a machine.
+            "material": op.order.material.code,
             "status": op.status,
             "quantity": op.order.quantity,
             "good_qty": op.good_qty,

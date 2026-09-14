@@ -1,10 +1,23 @@
-"""Quality checks against specs; failures open non-conformances automatically."""
+"""Quality checks against specs; failures open non-conformances automatically.
+
+A non-conformance then has a life: somebody picks it up, somebody decides what
+happens to the material, and only then is it closed. `review`, `disposition`
+and `close` are the three steps, each recorded against the person who took it.
+Decision record 0024 says why closing without a disposition is refused.
+"""
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from fsmes.db import utcnow
-from fsmes.domain import CheckResult, NcStatus, NonConformance, QualityCheck, QualitySpec
+from fsmes.domain import (
+    CheckResult,
+    NcDisposition,
+    NcStatus,
+    NonConformance,
+    QualityCheck,
+    QualitySpec,
+)
 from fsmes.services import Conflict, NotFound, audit, masterdata, workorders
 
 
@@ -102,7 +115,7 @@ def open_nc(
 ) -> NonConformance:
     wo = workorders.get(session, work_order_code) if work_order_code else None
     nc = NonConformance(code="NC-PENDING", description=description[:400], severity=severity,
-                        work_order_id=wo.id if wo else None)
+                        work_order_id=wo.id if wo else None, raised_by=actor)
     session.add(nc)
     session.flush()
     nc.code = f"NC-{nc.id:05d}"
@@ -117,13 +130,99 @@ def open_nc(
     return nc
 
 
-def close_nc(session: Session, code: str, actor: str = "system") -> NonConformance:
+def get_nc(session: Session, code: str) -> NonConformance:
+    """One non-conformance by its code, or a NotFound naming it."""
     nc = session.scalar(select(NonConformance).where(NonConformance.code == code))
     if nc is None:
         raise NotFound(f"non-conformance {code!r} not found")
+    return nc
+
+
+def review_nc(session: Session, code: str, actor: str = "system") -> NonConformance:
+    """Somebody has picked this up. open -> under review."""
+    nc = get_nc(session, code)
+    if nc.status is not NcStatus.OPEN:
+        raise Conflict(f"non-conformance {code} is {nc.status.value}, not open")
+    before = nc.status.value
+    nc.status = NcStatus.UNDER_REVIEW
+    nc.reviewed_by = actor
+    nc.reviewed_at = utcnow()
+    audit.record(
+        session,
+        actor=actor,
+        action="nonconformance.under_review",
+        entity_type="nonconformance",
+        entity_id=code,
+        before={"status": before},
+        after={"status": nc.status.value},
+    )
+    return nc
+
+
+def disposition_nc(
+    session: Session,
+    code: str,
+    *,
+    disposition: NcDisposition | str,
+    reason: str,
+    actor: str = "system",
+) -> NonConformance:
+    """Decide what happens to the material. open or under review -> dispositioned.
+
+    The reason is required, not decorated. `use_as_is` on a batch that failed
+    its specification is a concession somebody has to be able to defend a year
+    later, and a blank reason is how that becomes undefendable.
+    """
+    nc = get_nc(session, code)
+    if nc.status in (NcStatus.DISPOSITIONED, NcStatus.CLOSED):
+        raise Conflict(
+            f"non-conformance {code} is already {nc.status.value}"
+            + (f" ({nc.disposition.value})" if nc.disposition else "")
+        )
+    try:
+        chosen = NcDisposition(disposition)
+    except ValueError:
+        allowed = ", ".join(d.value for d in NcDisposition)
+        raise Conflict(f"{disposition!r} is not a disposition; choose one of: {allowed}") from None
+    if not (reason or "").strip():
+        raise Conflict(f"a {chosen.value} disposition needs a reason")
+
+    before = nc.status.value
+    nc.status = NcStatus.DISPOSITIONED
+    nc.disposition = chosen
+    nc.disposition_reason = reason.strip()[:400]
+    nc.disposition_by = actor
+    nc.disposition_at = utcnow()
+    audit.record(
+        session,
+        actor=actor,
+        action="nonconformance.dispositioned",
+        entity_type="nonconformance",
+        entity_id=code,
+        before={"status": before},
+        after={"status": nc.status.value, "disposition": chosen.value, "reason": nc.disposition_reason},
+    )
+    return nc
+
+
+def close_nc(session: Session, code: str, actor: str = "system") -> NonConformance:
+    """Close it. Only after a disposition — see decision record 0024.
+
+    Closing an undispositioned non-conformance says the material question was
+    answered when nobody answered it. The refusal names the step that is
+    missing rather than the rule that was broken.
+    """
+    nc = get_nc(session, code)
     if nc.status is NcStatus.CLOSED:
         raise Conflict(f"non-conformance {code} is already closed")
+    if nc.disposition is None:
+        raise Conflict(
+            f"non-conformance {code} has no disposition yet: decide what happens to the "
+            f"material ({', '.join(d.value for d in NcDisposition)}) before closing it"
+        )
+    before = nc.status.value
     nc.status = NcStatus.CLOSED
+    nc.closed_by = actor
     nc.closed_at = utcnow()
     audit.record(
         session,
@@ -131,7 +230,7 @@ def close_nc(session: Session, code: str, actor: str = "system") -> NonConforman
         action="nonconformance.closed",
         entity_type="nonconformance",
         entity_id=code,
-        before={"status": "open"},
-        after={"status": "closed"},
+        before={"status": before},
+        after={"status": "closed", "disposition": nc.disposition.value},
     )
     return nc

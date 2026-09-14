@@ -22,7 +22,10 @@ let ncPage = { items: [], total: 0, limit: 50, offset: 0, has_more: false };  //
 let active = null;     // "material/characteristic"
 let historyPage = { items: [], total: 0, limit: HISTORY_PAGE, offset: 0, has_more: false };
 const filters = { material: "", hMaterial: "", hChar: "", hResult: "", hOffset: 0,
-                  sQ: "", sMaterial: "", sOffset: 0, nStatus: "open", nQ: "", nOffset: 0 };
+                  sQ: "", sMaterial: "", sOffset: 0,
+                  // "Still open" is three states, not one: a record taken under
+                  // review must not drop out of the list somebody is working.
+                  nStatus: "open,under_review,dispositioned", nQ: "", nOffset: 0 };
 
 const $ = (sel) => document.querySelector(sel);
 const el = (tag, cls, text) => {
@@ -318,6 +321,103 @@ function fillHistoryChars() {
 
 /* ---------- non-conformances: by status, searchable, paged ---------- */
 
+/* ---------- the life of a non-conformance ----------
+   open → under review → a disposition on the material → closed. Each step
+   carries who took it and when, and the screen shows that rather than a
+   status word on its own: "closed" without a name is the row nobody can
+   answer a question about later. The server says which steps are next, so
+   the rules live in one place. */
+
+// What the count line calls each scope. The dropdown's value is the list of
+// states the server is asked for; this is the words a person reads.
+const NC_SCOPES = {
+  "open,under_review,dispositioned": "still open",
+  "open,under_review": "awaiting a decision",
+  dispositioned: "decided but not closed",
+  closed: "closed",
+  "": "in any status",
+};
+
+const DISPOSITIONS = {
+  use_as_is: "use as is",
+  rework: "rework",
+  scrap: "scrap",
+  return: "return to supplier",
+};
+
+const STEP_WORDS = {
+  opened: "raised",
+  under_review: "under review",
+  dispositioned: "decided",
+  closed: "closed",
+};
+
+function ncButton(nc, label, run) {
+  const button = el("button", "ghost", label);
+  button.type = "button";
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    try {
+      await run();
+      toast(`${nc.code}: ${label.toLowerCase().replace("…", "")}`);
+      await refresh();
+    } catch (err) {
+      // These are supervisor actions; an operator being refused is the
+      // system working, so say which it was.
+      toast(err.message, "bad");
+      button.disabled = false;
+    }
+  });
+  return button;
+}
+
+function drawHistory(nc) {
+  const wrap = el("ol", "nc-history");
+  for (const step of nc.history || []) {
+    const item = el("li", "muted small");
+    item.append(STEP_WORDS[step.step] || step.step);
+    // Unknown is not "system": these rows predate the MES asking who.
+    item.append(step.by ? ` by ${step.by}` : " by — (not recorded)");
+    if (step.at) item.append(` · ${stamp(step.at)}`);
+    wrap.appendChild(item);
+  }
+  return wrap;
+}
+
+function openDisposition(nc) {
+  $("#d-code").textContent = nc.code;
+  $("#d-what").textContent = nc.description || "";
+  $("#d-choice").value = "";
+  $("#d-reason").value = "";
+  $("#d-save").disabled = true;
+  $("#disposition").classList.remove("hidden");
+  $("#d-choice").focus();
+}
+
+function wireDisposition() {
+  const ready = () => {
+    $("#d-save").disabled = !$("#d-choice").value || !$("#d-reason").value.trim();
+  };
+  $("#d-choice").addEventListener("change", ready);
+  $("#d-reason").addEventListener("input", ready);
+  $("#d-cancel").addEventListener("click", () => $("#disposition").classList.add("hidden"));
+  $("#d-save").addEventListener("click", async () => {
+    const code = $("#d-code").textContent;
+    $("#d-save").disabled = true;
+    try {
+      await api(`/quality/nonconformances/${code}/disposition`, { method: "POST", body: {
+        disposition: $("#d-choice").value, reason: $("#d-reason").value.trim(),
+      }});
+      toast(`${code}: ${DISPOSITIONS[$("#d-choice").value]}`);
+      $("#disposition").classList.add("hidden");
+      await refresh();
+    } catch (err) {
+      toast(err.message, "bad");
+      $("#d-save").disabled = false;
+    }
+  });
+}
+
 function drawNcs() {
   // The server's page, filtered there: a day of a busy plant is two
   // thousand non-conformances, and a month is a list no screen should fetch.
@@ -326,10 +426,10 @@ function drawNcs() {
   const q = filters.nQ.toLowerCase();
   const page = ncPage;
   filters.nOffset = page.offset;
-  const what = filters.nStatus ? filters.nStatus : "in any status";
+  const what = NC_SCOPES[filters.nStatus] || "in any status";
   $("#n-count").textContent = `— ${page.items.length} of ${page.total.toLocaleString()} ${what}${q ? " matching" : ""}`;
   if (!page.items.length) {
-    list.appendChild(el("li", "muted", filters.nStatus === "open" && !q
+    list.appendChild(el("li", "muted", filters.nStatus.startsWith("open") && !q
       ? "none open — the line is inside spec" : "none match"));
   }
   for (const nc of page.items) {
@@ -348,30 +448,39 @@ function drawNcs() {
     }
     if (nc.closed_at) detail.append(` · closed ${stamp(nc.closed_at)}`);
     body.appendChild(detail);
+
+    if (nc.disposition) {
+      const decided = el("div", "muted small");
+      decided.append(`disposition: ${DISPOSITIONS[nc.disposition] || nc.disposition}`);
+      if (nc.disposition_reason) decided.append(` — ${nc.disposition_reason}`);
+      body.appendChild(decided);
+    }
+    body.appendChild(drawHistory(nc));
     li.appendChild(body);
 
     // Gated: showing a button that will 403 is worse than not showing
     // it. This reverses the earlier let-the-403-do-the-talking decision.
-    if (nc.status !== "open" || !window.FS || !FS.can("quality.close_nc")) {
+    const steps = nc.next_steps || [];
+    if (!steps.length || !window.FS || !FS.can("quality.close_nc")) {
       list.appendChild(li);
       continue;
     }
-    const close = el("button", "ghost", "Close");
-    close.type = "button";
-    close.addEventListener("click", async () => {
-      close.disabled = true;
-      try {
-        await api(`/quality/nonconformances/${nc.code}/close`, { method: "POST" });
-        toast(`${nc.code} closed`);
-        await refresh();
-      } catch (err) {
-        // Closing is a supervisor action; an operator being refused is the
-        // system working, so say which it was.
-        toast(err.message, "bad");
-        close.disabled = false;
-      }
-    });
-    li.appendChild(close);
+    const actions = el("div", "nc-actions");
+    if (steps.includes("review")) {
+      actions.appendChild(ncButton(nc, "Take under review", () =>
+        api(`/quality/nonconformances/${nc.code}/review`, { method: "POST" })));
+    }
+    if (steps.includes("disposition")) {
+      const decide = el("button", "ghost", "Decide…");
+      decide.type = "button";
+      decide.addEventListener("click", () => openDisposition(nc));
+      actions.appendChild(decide);
+    }
+    if (steps.includes("close")) {
+      actions.appendChild(ncButton(nc, "Close", () =>
+        api(`/quality/nonconformances/${nc.code}/close`, { method: "POST" })));
+    }
+    li.appendChild(actions);
     list.appendChild(li);
   }
   FS.pager($("#n-pager"), page, (offset) => { filters.nOffset = offset; refresh(); });
@@ -382,16 +491,19 @@ function drawNcs() {
 async function refresh() {
   try {
     const ncParams = new URLSearchParams({ limit: String(NC_PAGE), offset: String(filters.nOffset) });
-    if (filters.nStatus) ncParams.set("status", filters.nStatus);
+    for (const one of filters.nStatus.split(",").filter(Boolean)) ncParams.append("status", one);
     if (filters.nQ) ncParams.set("q", filters.nQ);
     const ncQuery = `/quality/nonconformances?${ncParams}`;
-    const [s, h, n, all, failed, openCount] = await Promise.all([
+    const [s, h, n, all, failed, stillOpen] = await Promise.all([
       api("/quality/specs"),
       api(historyQuery()),
       api(ncQuery),
       api("/quality/checks?limit=1"),
       api("/quality/checks?limit=1&result=fail"),
-      api("/quality/nonconformances?status=open&limit=1"),
+      // Not closed, which is three states now. A tile counting only the
+      // untouched ones would read lower every time somebody started work.
+      api("/quality/nonconformances?status=open&status=under_review"
+          + "&status=dispositioned&limit=1"),
     ]);
     specs = s || [];
     historyPage = h;
@@ -408,7 +520,7 @@ async function refresh() {
     const total = all.total || 0;
     $("#kpi-checks").textContent = total.toLocaleString();
     $("#kpi-pass").textContent = total ? (((total - (failed.total || 0)) / total) * 100).toFixed(1) + "%" : "—";
-    $("#kpi-ncs").textContent = openCount && openCount.total !== undefined ? openCount.total.toLocaleString() : "—";
+    $("#kpi-ncs").textContent = stillOpen && stillOpen.total !== undefined ? stillOpen.total.toLocaleString() : "—";
     $("#kpi-specs").textContent = specs.length;
 
     await loadSeries().catch(() => { series = []; });
@@ -458,6 +570,7 @@ $("#n-q").addEventListener("input", () => {
   // Know who is asking before the first draw, or capability-gated buttons
   // appear one refresh late.
   await FS.whoami().catch(() => {});
+  wireDisposition();
   readUrl();
   await refresh();
   setInterval(refresh, REFRESH_MS);

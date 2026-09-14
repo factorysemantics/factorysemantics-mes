@@ -44,6 +44,9 @@ EXCLUDED = {
     "GET /triggers/{code}/firings": "the screen shows the plant-wide firing log; "
                                      "this one serves the trigger_firings tool",
     "GET /adjustments/{code}": "the screen lists the queue; the detail route serves the adjustment tool",
+    "GET /quality/nonconformances/{code}": "the Quality screen's list already carries each "
+                                           "non-conformance's history; the detail route serves "
+                                           "the nonconformance tool",
     "GET /coa/pallet/{serial}/data": "the screen renders the pallet's certificate; the data route serves the "
                                      "pallet_certificate tool",
     "GET /workorders/{code}/wip": "shown per line on the Line page; the Order page shows it in phase 4",
