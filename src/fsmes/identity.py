@@ -216,6 +216,45 @@ def plant_name(settings=None) -> str:
     return _settings(settings).plant_name
 
 
+#: Where a plant's own data directory is, when something told it. `fsmes
+#: plant <name> start` sets it from the fleet's data directory; a plant
+#: started by hand has no reason to know, and says so rather than guessing.
+DATA_DIR_SETTING = "FSMES_DATA_DIR"
+
+#: What `fsmes fleet create` leaves in that directory.
+INSTANCE_SUFFIX = ".instance"
+
+
+def instance_id(settings=None) -> str | None:
+    """The id of the fleet installation that created this plant, if any.
+
+    A random identifier `fsmes fleet create` writes into the plant's own data
+    directory. The plant reads it back and returns it on `/health`, which is
+    what lets a fleet tool prove the plant answering on a port is the plant
+    it created and not a different one that took the port
+    (decision 0023, condition 2).
+
+    `None` for every plant nothing created this way - a laptop demo, a plant
+    a person started by hand, a plant whose operator deleted the file to take
+    ownership back. **None means not owned**, and never "probably fine": the
+    absence is the answer, which is why it is reported rather than omitted.
+
+    Deliberately not part of `summary()`. The id belongs between a plant and
+    the installation that built it; it has no business in the namespace
+    envelope or the backup manifest, which is where everything in `summary()`
+    also goes.
+    """
+    where = os.environ.get(DATA_DIR_SETTING)
+    if not where:
+        return None
+    name = plant_name(settings)
+    file = Path(where).expanduser() / f"{name}{INSTANCE_SUFFIX}"
+    try:
+        return file.read_text(encoding="utf-8").strip() or None
+    except OSError:
+        return None
+
+
 def summary(settings=None) -> dict:
     """What every surface reports: `/health`, `/shadow`, `fsmes info`, the
     backup manifest, the namespace envelope, the dashboard header.
