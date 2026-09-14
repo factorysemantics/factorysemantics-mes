@@ -7,11 +7,20 @@
 
    At a hundred machines the grid was a wall: every card, every refresh, no
    way to find one. The card is now a list like any other - filtered, paged,
-   and honest about how much of the plant it is showing (STYLE.md rule 4). */
+   and honest about how much of the plant it is showing (STYLE.md rule 4).
+
+   Both the filter and the page are the SERVER'S. They were the browser's
+   until 2026-09-14, which meant the screen downloaded every machine in the
+   plant - with its OEE and its process value - twice a second in order to
+   draw twenty-four of them. On the 108-station lab plant that was the Floor
+   summary's whole cost; on a thousand machines it is a wall of queries
+   nobody sees. The tiles above still count the whole plant: a grid filtered
+   to six machines must never read as a six-machine plant. */
 
 const REFRESH_MS = 2000;
 const MACHINE_PAGE = 24;
 const ORDER_PAGE = 10;
+const SPEC_CHOICES = 200;
 
 let user = null;
 let summary = null;
@@ -72,6 +81,7 @@ function readFilters() {
   filters.ooffset = Math.max(0, parseInt(params.get("ooffset") || "0", 10) || 0);
   $("#m-q").value = filters.q;
   $("#m-state").value = filters.state;
+  $("#m-line").value = filters.line;
   $("#o-q").value = filters.oq;
   $("#o-status").value = filters.ostatus;
 }
@@ -135,37 +145,24 @@ $("#logout").addEventListener("click", async () => {
   showLogin();
 });
 
-/* ---------- which line a machine is on ----------
-   The summary does not say; the equipment tree does. Read once at sign-in
-   and every minute after - lines are not created between two refreshes. */
+/* ---------- which lines this plant has ----------
+   Just the work centres, which is tens of rows on any plant. This used to
+   pull the whole equipment tree - every node the plant has - once a minute,
+   to fill one dropdown and to label the cards with their line. The machines
+   now carry their own line, and this asks only for the lines. */
 
-let lineOf = {};       // machine code -> {code, name} of its work centre
-let lines = [];        // [{code, name, machines}]
+let lines = [];        // [{code, name}]
 let linesLoadedAt = 0;
-
-function walk(node, centre, into) {
-  if (node.level === "work_center") centre = { code: node.code, name: node.name };
-  if (node.level === "work_unit" && centre) into[node.code] = centre;
-  for (const child of node.children || []) walk(child, centre, into);
-}
 
 async function loadLines() {
   if (Date.now() - linesLoadedAt < 60000) return;
   try {
-    const tree = await api("/equipment/tree");
-    const map = {};
-    for (const root of tree.roots || []) walk(root, null, map);
-    lineOf = map;
-    const seen = {};
-    for (const centre of Object.values(map)) {
-      seen[centre.code] = seen[centre.code] || { ...centre, machines: 0 };
-      seen[centre.code].machines += 1;
-    }
-    lines = Object.values(seen).sort((a, b) => a.code.localeCompare(b.code));
+    const centres = await api("/masterdata/equipment?level=work_center");
+    lines = centres.slice().sort((a, b) => a.code.localeCompare(b.code));
     const select = $("#m-line");
     const keep = filters.line;
     select.replaceChildren(new Option("Any line", ""),
-      ...lines.map((l) => new Option(`${l.code} — ${l.name} (${l.machines})`, l.code)));
+      ...lines.map((l) => new Option(`${l.code} — ${l.name}`, l.code)));
     if (lines.some((l) => l.code === keep)) select.value = keep; else filters.line = "";
     linesLoadedAt = Date.now();
   } catch (err) {
@@ -177,6 +174,18 @@ async function loadLines() {
 
 let alarms = [];
 let orderPage = { items: [], total: 0, limit: ORDER_PAGE, offset: 0, has_more: false };
+
+/* The floor's machine grid, as the server's page. `line` is a scope - it
+   changes which plant the tiles are about - and q/state are a filter on the
+   grid alone. The API draws the same distinction. */
+function summaryQuery() {
+  const params = new URLSearchParams({
+    machine_limit: String(MACHINE_PAGE), machine_offset: String(filters.offset) });
+  if (filters.line) params.set("line", filters.line);
+  if (filters.q) params.set("machine_q", filters.q);
+  if (filters.state) params.set("machine_state", filters.state);
+  return `/dashboard/summary?${params}`;
+}
 
 function orderQuery() {
   const params = new URLSearchParams({ limit: String(ORDER_PAGE), offset: String(filters.ooffset) });
@@ -190,7 +199,7 @@ function orderQuery() {
 async function refresh() {
   try {
     [summary, alarms, orderPage] = await Promise.all([
-      api("/dashboard/summary"), api("/equipment/alarms"), api(orderQuery())]);
+      api(summaryQuery()), api("/equipment/alarms"), api(orderQuery())]);
     $("#live-dot").className = "dot ok";
     $("#live-text").textContent = "live";
     render();
@@ -213,7 +222,7 @@ function render() {
   $("#kpi-oee").textContent = pct(plant.oee);
   $("#kpi-erp").textContent = plant.erp_pending ? "sending" : "clear";
 
-  renderMachines(machines);
+  renderMachines(machines, summary.machines_page);
   renderOrders(orderPage);
   renderFeed($("#audit"), audit, (entry) => [
     clock(entry.ts),
@@ -223,42 +232,38 @@ function render() {
   renderFeed($("#alarms"), alarms.filter((a) => a.active.length),
              (a) => [clock(a.ts), [FS.link("machine", a.equipment), ` ${a.active.join(", ")}`]], "nc");
 
-  fillSelect("machines", machines.map((m) => [m.code, `${m.code} — ${m.name}`]));
+  // A datalist, not a select: a thousand machines is not a dropdown, and the
+  // page in front of the operator is the part worth offering. Any code may
+  // still be typed - the server is what decides whether it exists.
+  fillOptions("machine-options", machines.map((m) => [m.code, m.name]));
   fillSelect("orders", orders.filter((o) => ["released", "running"].includes(o.status)).map((o) => [o.code, o.code]));
 }
 
-/* ---------- machines: filtered, paged, counted ---------- */
+/* ---------- machines: the server's page ---------- */
 
-function matchMachine(m) {
-  if (filters.state && m.state !== filters.state) return false;
-  if (filters.line && (lineOf[m.code] || {}).code !== filters.line) return false;
-  if (filters.q) {
-    const needle = filters.q.toLowerCase();
-    if (!m.code.toLowerCase().includes(needle) && !(m.name || "").toLowerCase().includes(needle)) return false;
-  }
-  return true;
-}
-
-function renderMachines(machines) {
-  const matching = machines.filter(matchMachine);
-  if (filters.offset >= matching.length) filters.offset = Math.max(0, Math.floor((matching.length - 1) / MACHINE_PAGE) * MACHINE_PAGE);
-  const page = {
-    items: matching.slice(filters.offset, filters.offset + MACHINE_PAGE),
-    total: matching.length, limit: MACHINE_PAGE, offset: filters.offset,
-    has_more: filters.offset + MACHINE_PAGE < matching.length,
-  };
-  const filtered = matching.length !== machines.length;
-  $("#m-count").textContent = filtered
-    ? `— ${page.items.length} of ${matching.length} matching, ${machines.length} in the plant`
-    : `— ${page.items.length} of ${machines.length} in the plant`;
+function renderMachines(machines, envelope) {
+  // The server's envelope, in the shape every other list uses. `total` is
+  // what matched the filter; `scope_total` is how many machines the tiles
+  // above are counting.
+  const info = envelope || { total: machines.length, scope_total: machines.length,
+                             limit: MACHINE_PAGE, offset: 0, has_more: false, filtered: false };
+  filters.offset = info.offset;
+  const page = { items: machines, total: info.total, limit: info.limit || MACHINE_PAGE,
+                 offset: info.offset, has_more: info.has_more };
+  const where = filters.line ? `on ${filters.line}` : "in the plant";
+  $("#m-count").textContent = FS.countText(page, info.scope_total, where);
+  $("#m-scope").textContent = filters.line
+    ? `Scoped to ${filters.line}. The tiles above count this line, not the whole plant.`
+    : "";
 
   const grid = $("#machines");
   if (!page.items.length) {
-    grid.replaceChildren(el("p", "empty", machines.length ? "No machine matches these filters." : "No machines yet."));
+    grid.replaceChildren(el("p", "empty", info.scope_total
+      ? "No machine matches these filters." : "No machines yet."));
   } else {
     grid.replaceChildren(...page.items.map(machineCard));
   }
-  FS.pager($("#m-pager"), page, (offset) => { filters.offset = offset; writeFilters(); renderMachines(summary.machines); });
+  FS.pager($("#m-pager"), page, (offset) => { filters.offset = offset; writeFilters(); refresh(); });
 }
 
 function machineCard(m) {
@@ -275,7 +280,7 @@ function machineCard(m) {
   analog.append(m.analog ? `${m.analog.name} ` : "Value ",
                 el("strong", null, m.analog ? m.analog.value.toFixed(1) : "—"));
   meta.append(order, analog);
-  const line = lineOf[m.code];
+  const line = m.line;
   if (line) {
     const where = el("div", "machine-line");
     where.append("on ", FS.link("line", line.code, null, line.code));
@@ -307,10 +312,17 @@ function applyMachineFilters() {
   filters.state = $("#m-state").value;
   filters.offset = 0;
   writeFilters();
-  if (summary) renderMachines(summary.machines);
+  refresh();
 }
 
-$("#m-q").addEventListener("input", applyMachineFilters);
+// Typing is debounced: the filter is a request now, not a slice of something
+// already downloaded, and one request per keystroke is how a search box
+// becomes a load generator.
+let machineTyping = null;
+$("#m-q").addEventListener("input", () => {
+  clearTimeout(machineTyping);
+  machineTyping = setTimeout(applyMachineFilters, 250);
+});
 $("#m-line").addEventListener("change", applyMachineFilters);
 $("#m-state").addEventListener("change", applyMachineFilters);
 $("#m-clear").addEventListener("click", () => {
@@ -414,6 +426,21 @@ function renderFeed(list, items, shape, cls) {
       return li;
     })
   );
+}
+
+/* Refill a datalist. Unlike a select there is nothing to disturb: the
+   operator's typed value lives in the input, not in the options. */
+function fillOptions(id, options) {
+  const list = document.getElementById(id);
+  if (!list) return;
+  const signature = options.map(([value]) => value).join("|");
+  if (list.dataset.signature === signature) return;
+  list.replaceChildren(...options.map(([value, label]) => {
+    const option = el("option", null, label || "");
+    option.value = value;
+    return option;
+  }));
+  list.dataset.signature = signature;
 }
 
 /* Refill a select without disturbing what the operator has chosen. */
@@ -538,13 +565,22 @@ async function loadLots() {
   );
 }
 
+/* The characteristics this form can record against. A plant with more than
+   SPEC_CHOICES of them gets the first page and is told so - a select that
+   silently stops at five hundred is the kind of quiet truncation this
+   product does not do. The Quality screen is where all of them live. */
 async function loadSpecs() {
-  const specs = await api("/quality/specs").catch(() => []);
-  fillSelect(
-    "specs",
-    specs.map((spec) => [`${spec.material}::${spec.characteristic}`,
-                         `${spec.material} ${spec.characteristic} [${spec.min_value}–${spec.max_value}]`])
-  );
+  const page = await api(`/quality/specs?limit=${SPEC_CHOICES}`).catch(() => ({ items: [], total: 0 }));
+  const specs = page.items || [];
+  const options = specs.map((spec) => [`${spec.material}::${spec.characteristic}`,
+                                       `${spec.material} ${spec.characteristic} [${spec.min_value}–${spec.max_value}]`]);
+  fillSelect("specs", options);
+  const note = $("#quality-scope");
+  if (note) {
+    note.textContent = (page.total || 0) > specs.length
+      ? `${specs.length} of ${(page.total || 0).toLocaleString()} characteristics — the rest are on the Quality screen.`
+      : "";
+  }
 }
 
 /* ---------- boot ---------- */

@@ -52,7 +52,9 @@
       <form id="form-report" class="stack" data-assist="report-form" data-needs-cap="production.book">
         <h3>Book output</h3>
         <div class="row">
-          <select name="equipment" data-fill="machines" aria-label="Machine" data-assist="report-equipment"></select>
+          <input name="equipment" list="machine-options" placeholder="Machine" aria-label="Machine"
+                 autocomplete="off" data-assist="report-equipment" required>
+          <datalist id="machine-options"></datalist>
           <select name="order" aria-label="Order" data-assist="report-order"
                   title="Which order this output books against"></select>
           <input name="good" type="number" step="1" min="0" placeholder="Good" value="1" data-assist="report-good">
@@ -76,12 +78,14 @@
           <input name="value" type="number" step="0.1" placeholder="Measured" required data-assist="quality-value">
           <button data-assist="quality-submit">Record</button>
         </div>
+        <p id="quality-scope" class="muted small"></p>
       </form>
       </div>
     </section>
 
     <section class="panel span-2">
       <h2>Machines <span id="m-count" class="muted count">—</span></h2>
+      <p id="m-scope" class="muted small"></p>
       <div class="filter-bar" data-assist="machine-filters">
         <input id="m-q" type="search" placeholder="Machine code or name" aria-label="Machine code or name">
         <select id="m-line" aria-label="Line"><option value="">Any line</option></select>

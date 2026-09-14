@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 
 from fsmes.api import paging
 from fsmes.api.deps import ActorDep, DbDep, require
-from fsmes.domain import OperationStatus, OrderStatus, WorkOrder, WorkOrderOperation
+from fsmes.domain import Material, OperationStatus, OrderStatus, WorkOrder, WorkOrderOperation
 from fsmes.services import masterdata, workorders
 
 router = APIRouter()
@@ -78,7 +78,7 @@ def list_orders(
     status: list[OrderStatus] | None = Query(
         None, description="Repeatable. An order matching any of these is returned."),
     material: str | None = None,
-    q: str | None = Query(None, description="Match an order code."),
+    q: str | None = Query(None, description="Match an order code or the code of the material it makes."),
     due_after: datetime | None = Query(None, description="Due on or after this."),
     due_before: datetime | None = Query(None, description="Due on or before this."),
     line: str | None = Query(None, description="Only orders running on this line."),
@@ -98,7 +98,15 @@ def list_orders(
     if material:
         query = query.where(WorkOrder.material.has(code=material))
     if q:
-        query = query.where(WorkOrder.code.ilike(f"%{q}%"))
+        # Order code or material code. The floor screen's box has said
+        # "Order or material code" since it was written; until now typing a
+        # material into it found nothing and said "no order matches these
+        # filters", which reads as an empty plant rather than a box that
+        # does not do what it says.
+        like = f"%{q}%"
+        query = query.where(
+            WorkOrder.code.ilike(like)
+            | WorkOrder.material_id.in_(select(Material.id).where(Material.code.ilike(like))))
     # An order with no due date is not due before anything, so a date filter
     # excludes it rather than guessing a date for it.
     if due_after:
