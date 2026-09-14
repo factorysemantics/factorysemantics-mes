@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://docs.factorysemantics.com/dev/decisions/0023-the-fleet-console-observes/">
+        <link rel="canonical" href="https://docs.factorysemantics.com/dev/operate/fleet/">
       
       
-        <link rel="prev" href="../0022-what-a-plant-pack-may-contain/">
+        <link rel="prev" href="../registry/">
       
       
-        <link rel="next" href="../TEMPLATE/">
+        <link rel="next" href="../modules/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>0023 — The console manages only the plants it owns, observes every other plant, and silence is unknown - FactorySemantics MES</title>
+        <title>How-to — the fleet this installation owns - FactorySemantics MES</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#0023-the-console-manages-only-the-plants-it-owns-observes-every-other-plant-and-silence-is-unknown" class="md-skip">
+        <a href="#the-fleet-plants-this-installation-owns" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              0023 — The console manages only the plants it owns, observes every other plant, and silence is unknown
+              How-to — the fleet this installation owns
             
           </span>
         </div>
@@ -268,11 +268,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../operate/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -288,12 +290,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../../develop/" class="md-tabs__link">
           
   
@@ -709,26 +709,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -746,7 +751,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -764,7 +769,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -792,7 +797,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/first-plant/" class="md-nav__link">
+      <a href="../first-plant/" class="md-nav__link">
         
   
   
@@ -820,7 +825,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/deploy/" class="md-nav__link">
+      <a href="../deploy/" class="md-nav__link">
         
   
   
@@ -848,7 +853,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/opc-readonly/" class="md-nav__link">
+      <a href="../opc-readonly/" class="md-nav__link">
         
   
   
@@ -876,7 +881,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/packs/" class="md-nav__link">
+      <a href="../packs/" class="md-nav__link">
         
   
   
@@ -904,7 +909,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/registry/" class="md-nav__link">
+      <a href="../registry/" class="md-nav__link">
         
   
   
@@ -929,10 +934,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../operate/fleet/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the fleet this installation owns
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -948,6 +980,159 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-ownership-means" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What ownership means
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What ownership means">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-ownership-does-not-prove" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What ownership does not prove
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#giving-ownership-back" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Giving ownership back
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-this-differs-from-decision-0023-as-written" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where this differs from decision 0023 as written
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fsmes-fleet-create-pack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fsmes fleet create &lt;pack&gt;
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fsmes-fleet-startstop-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fsmes fleet start|stop &lt;name&gt;
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fsmes-fleet-apply-name-pack-dir" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fsmes fleet apply &lt;name&gt; [--pack &lt;dir&gt;]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fsmes-fleet-status-name-and-fsmes-fleet-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fsmes fleet status &lt;name&gt; and fsmes fleet list
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ownershiptoml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ownership.toml
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -960,7 +1145,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/modules/" class="md-nav__link">
+      <a href="../modules/" class="md-nav__link">
         
   
   
@@ -988,7 +1173,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/shadow-mode/" class="md-nav__link">
+      <a href="../shadow-mode/" class="md-nav__link">
         
   
   
@@ -1016,7 +1201,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/shadow-scorecard/" class="md-nav__link">
+      <a href="../shadow-scorecard/" class="md-nav__link">
         
   
   
@@ -1044,7 +1229,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/erpnext/" class="md-nav__link">
+      <a href="../erpnext/" class="md-nav__link">
         
   
   
@@ -1072,7 +1257,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/uns/" class="md-nav__link">
+      <a href="../uns/" class="md-nav__link">
         
   
   
@@ -1100,7 +1285,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/backup/" class="md-nav__link">
+      <a href="../backup/" class="md-nav__link">
         
   
   
@@ -1128,7 +1313,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/tls/" class="md-nav__link">
+      <a href="../tls/" class="md-nav__link">
         
   
   
@@ -1156,7 +1341,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/upgrade/" class="md-nav__link">
+      <a href="../upgrade/" class="md-nav__link">
         
   
   
@@ -1184,7 +1369,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/confirmation-files/" class="md-nav__link">
+      <a href="../confirmation-files/" class="md-nav__link">
         
   
   
@@ -1240,7 +1425,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/inbound/" class="md-nav__link">
+      <a href="../inbound/" class="md-nav__link">
         
   
   
@@ -1352,7 +1537,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/first-week/" class="md-nav__link">
+      <a href="../first-week/" class="md-nav__link">
         
   
   
@@ -1380,7 +1565,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/compatibility/" class="md-nav__link">
+      <a href="../compatibility/" class="md-nav__link">
         
   
   
@@ -1408,7 +1593,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/security/" class="md-nav__link">
+      <a href="../security/" class="md-nav__link">
         
   
   
@@ -1440,31 +1625,26 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
             
   
   
@@ -1482,7 +1662,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1665,31 +1845,26 @@
                 
   
   
-    
   
   
-  
     
     
     
     
       
       
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_7" >
         
           
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_7" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_4_7" id="__nav_4_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4_7" id="__nav_4_7_label" tabindex="0">
             
   
   
@@ -1707,7 +1882,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_7_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_7">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1725,7 +1900,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../decisions/" class="md-nav__link">
         
   
   
@@ -1753,7 +1928,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0001-apache-2-with-dco/" class="md-nav__link">
+      <a href="../../decisions/0001-apache-2-with-dco/" class="md-nav__link">
         
   
   
@@ -1781,7 +1956,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0002-kernel-and-modules/" class="md-nav__link">
+      <a href="../../decisions/0002-kernel-and-modules/" class="md-nav__link">
         
   
   
@@ -1809,7 +1984,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0003-one-mcp-server/" class="md-nav__link">
+      <a href="../../decisions/0003-one-mcp-server/" class="md-nav__link">
         
   
   
@@ -1837,7 +2012,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0004-never-invent-production/" class="md-nav__link">
+      <a href="../../decisions/0004-never-invent-production/" class="md-nav__link">
         
   
   
@@ -1865,7 +2040,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0005-plain-html-no-build-step/" class="md-nav__link">
+      <a href="../../decisions/0005-plain-html-no-build-step/" class="md-nav__link">
         
   
   
@@ -1893,7 +2068,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
+      <a href="../../decisions/0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
         
   
   
@@ -1921,7 +2096,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0007-fresh-public-history/" class="md-nav__link">
+      <a href="../../decisions/0007-fresh-public-history/" class="md-nav__link">
         
   
   
@@ -1949,7 +2124,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0008-erp-connectors-are-modules/" class="md-nav__link">
+      <a href="../../decisions/0008-erp-connectors-are-modules/" class="md-nav__link">
         
   
   
@@ -1977,7 +2152,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0009-organisation-not-personal-account/" class="md-nav__link">
+      <a href="../../decisions/0009-organisation-not-personal-account/" class="md-nav__link">
         
   
   
@@ -2005,7 +2180,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0010-github-discussions-only/" class="md-nav__link">
+      <a href="../../decisions/0010-github-discussions-only/" class="md-nav__link">
         
   
   
@@ -2033,7 +2208,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0011-mkdocs-material-generated-reference/" class="md-nav__link">
+      <a href="../../decisions/0011-mkdocs-material-generated-reference/" class="md-nav__link">
         
   
   
@@ -2061,7 +2236,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0012-contributor-covenant-3/" class="md-nav__link">
+      <a href="../../decisions/0012-contributor-covenant-3/" class="md-nav__link">
         
   
   
@@ -2089,7 +2264,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0013-governance-is-one-page/" class="md-nav__link">
+      <a href="../../decisions/0013-governance-is-one-page/" class="md-nav__link">
         
   
   
@@ -2117,7 +2292,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0014-first-public-version-is-0-1-0/" class="md-nav__link">
+      <a href="../../decisions/0014-first-public-version-is-0-1-0/" class="md-nav__link">
         
   
   
@@ -2145,7 +2320,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0015-mcp-registry-name/" class="md-nav__link">
+      <a href="../../decisions/0015-mcp-registry-name/" class="md-nav__link">
         
   
   
@@ -2173,7 +2348,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0016-no-trademark-registration/" class="md-nav__link">
+      <a href="../../decisions/0016-no-trademark-registration/" class="md-nav__link">
         
   
   
@@ -2201,7 +2376,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
+      <a href="../../decisions/0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
         
   
   
@@ -2229,7 +2404,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
+      <a href="../../decisions/0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
         
   
   
@@ -2257,7 +2432,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0019-count-everything-the-machine-counted/" class="md-nav__link">
+      <a href="../../decisions/0019-count-everything-the-machine-counted/" class="md-nav__link">
         
   
   
@@ -2285,7 +2460,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
+      <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
         
   
   
@@ -2313,7 +2488,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0021-one-database-per-plant/" class="md-nav__link">
+      <a href="../../decisions/0021-one-database-per-plant/" class="md-nav__link">
         
   
   
@@ -2341,7 +2516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0022-what-a-plant-pack-may-contain/" class="md-nav__link">
+      <a href="../../decisions/0022-what-a-plant-pack-may-contain/" class="md-nav__link">
         
   
   
@@ -2366,37 +2541,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    0023 — The console manages only the plants it owns, observes every other plant, and silence is unknown
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../decisions/0023-the-fleet-console-observes/" class="md-nav__link">
         
   
   
@@ -2412,181 +2560,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Context
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Context">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#what-is-also-true-there-are-two-kinds-of-plant-and-the-first-draft-only-served-one" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What is also true: there are two kinds of plant, and the first draft only served one
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#options-considered" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Options considered
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Decision
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Decision">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#what-owns-means" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What "owns" means
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#what-ownership-does-not-prove-said-plainly" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What ownership does not prove, said plainly
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#what-manage-means-for-an-owned-plant" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What "manage" means for an owned plant
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#what-it-never-means-even-for-an-owned-plant" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What it never means, even for an owned plant
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#where-the-power-lives" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Where the power lives
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#nothing-starts-a-plant-on-its-own" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Nothing starts a plant on its own
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#the-four-rules-unchanged" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The four rules, unchanged
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Consequences
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#house-rules-touched" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        House rules touched
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2599,7 +2572,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../TEMPLATE/" class="md-nav__link">
+      <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
   
@@ -2976,22 +2949,44 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
+  <a href="#what-ownership-means" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Context
+        What ownership means
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Context">
+    <nav class="md-nav" aria-label="What ownership means">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#what-is-also-true-there-are-two-kinds-of-plant-and-the-first-draft-only-served-one" class="md-nav__link">
+  <a href="#what-ownership-does-not-prove" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What is also true: there are two kinds of plant, and the first draft only served one
+        What ownership does not prove
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#giving-ownership-back" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Giving ownership back
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-this-differs-from-decision-0023-as-written" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where this differs from decision 0023 as written
       
     </span>
   </a>
@@ -3004,33 +2999,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#options-considered" class="md-nav__link">
+  <a href="#the-commands" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Options considered
+        The commands
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Decision
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Decision">
+    <nav class="md-nav" aria-label="The commands">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#what-owns-means" class="md-nav__link">
+  <a href="#fsmes-fleet-create-pack" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What "owns" means
+        fsmes fleet create &lt;pack&gt;
       
     </span>
   </a>
@@ -3038,10 +3022,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#what-ownership-does-not-prove-said-plainly" class="md-nav__link">
+  <a href="#fsmes-fleet-startstop-name" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What ownership does not prove, said plainly
+        fsmes fleet start|stop &lt;name&gt;
       
     </span>
   </a>
@@ -3049,10 +3033,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#what-manage-means-for-an-owned-plant" class="md-nav__link">
+  <a href="#fsmes-fleet-apply-name-pack-dir" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What "manage" means for an owned plant
+        fsmes fleet apply &lt;name&gt; [--pack &lt;dir&gt;]
       
     </span>
   </a>
@@ -3060,43 +3044,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#what-it-never-means-even-for-an-owned-plant" class="md-nav__link">
+  <a href="#fsmes-fleet-status-name-and-fsmes-fleet-list" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What it never means, even for an owned plant
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#where-the-power-lives" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Where the power lives
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#nothing-starts-a-plant-on-its-own" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Nothing starts a plant on its own
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#the-four-rules-unchanged" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The four rules, unchanged
+        fsmes fleet status &lt;name&gt; and fsmes fleet list
       
     </span>
   </a>
@@ -3109,10 +3060,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
+  <a href="#ownershiptoml" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Consequences
+        ownership.toml
       
     </span>
   </a>
@@ -3120,10 +3071,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#house-rules-touched" class="md-nav__link">
+  <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
-        House rules touched
+        See also
       
     </span>
   </a>
@@ -3147,7 +3098,7 @@
 
 
   
-    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/decisions/0023-the-fleet-console-observes.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/operate/fleet.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3155,310 +3106,99 @@
   
 
 
-<h1 id="0023-the-console-manages-only-the-plants-it-owns-observes-every-other-plant-and-silence-is-unknown">0023 — The console manages only the plants it owns, observes every other plant, and silence is unknown<a class="headerlink" href="#0023-the-console-manages-only-the-plants-it-owns-observes-every-other-plant-and-silence-is-unknown" title="Permanent link">&para;</a></h1>
-<ul>
-<li><strong>Status:</strong> proposed</li>
-<li><strong>Date:</strong> 2026-09-10, revised 2026-09-13</li>
-<li><strong>Deciders:</strong> @kalwei</li>
-</ul>
-<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p><a href="../../design/m8-packs-and-fleet/">M8</a>'s scope line asks to "adopt the
-observe-don't-push control plane pattern (enrol, telemetry,
-desired-state-as-intent, drift display) for multi-plant visibility", and the
-milestone is done when "the console shows both" packs. <code>README.md</code>'s
-provenance table records that the fleet patterns come from
-factorysemantics.com as <strong>patterns only</strong> — re-implemented here from first
-principles, with that code staying where it is. The roadmap also says, under
-what is deliberately out of scope, that there is <strong>no cloud SaaS in v1</strong> and
-that the fleet console is on-prem too.</p>
-<p>What exists at <code>2474a8b</code>, held against those four words:</p>
-<ul>
-<li><strong>Enrol</strong> — nothing. There is no machine credential of any kind: no API
-  key, no device identity, no shared secret. Authentication is a person or
-  the <code>AGENT</code> account, with a password, per plant
-  (<code>src/fsmes/services/auth.py</code>).</li>
-<li><strong>Telemetry</strong> — pull only, and quite a lot of it. <code>/health</code> and <code>/shadow</code>
-  are public; <code>/shadow</code> reports the full outbound register — 32 paths, 16
-  allowed, 11 refused, 5 restricted — and the ERP and UNS modes in force.
-  <code>/metrics</code> is Prometheus text. <code>/ops/services</code> reports process liveness.
-  OEE per machine and the loss breakdown are JSON, with <code>null</code> where a
-  component cannot be computed honestly. <strong>Nothing in the product pushes
-  status anywhere:</strong> no heartbeat, no webhook, no phone-home.</li>
-<li><strong>Desired state as intent</strong> — nothing, except <code>fsmes db-status</code>, which
-  compares the schema against its head and exits non-zero when behind. There
-  is no config checksum and no doctor command.</li>
-<li><strong>Drift display</strong> — nothing, and it cannot exist before a pack does
-  (<a href="../0022-what-a-plant-pack-may-contain/">0022</a>), because drift is measured
-  against a pack.</li>
-</ul>
-<p>One thing already in the product is the console in miniature.
-<code>list_plants()</code> in <code>src/fsmes/mcp_server.py</code> reads the registry, calls each
-plant's <code>/health</code>, and returns <code>shadow: None</code> for a plant that did not
-answer — with a comment saying why: <em>"None means the plant did not answer,
-which is not the same as not shadow."</em></p>
-<p>And one thing is not true yet: a plant cannot say which plant it is to a
-reader outside itself. That is decision
-<a href="../0021-one-database-per-plant/">0021</a>, and this one depends on it.</p>
-<h3 id="what-is-also-true-there-are-two-kinds-of-plant-and-the-first-draft-only-served-one">What is also true: there are two kinds of plant, and the first draft only served one<a class="headerlink" href="#what-is-also-true-there-are-two-kinds-of-plant-and-the-first-draft-only-served-one" title="Permanent link">&para;</a></h3>
-<p>The first version of this record, written 2026-09-10, proposed a <strong>purely
-read-only console</strong>. The maintainer read it on 2026-09-13 and said, in his
-own words, that read-only is not the safety property he needs:</p>
-<blockquote>
-<p>I don't think pure read-only serves that goal. If I have to go manage each
-simulated plant separately, the console isn't helping with the actual job —
-building and running a fleet of test plants.</p>
-<p>I don't want to throw out the safety reasoning — it's right for a real
-customer's plant, where a push is a remote-execution path into someone
-else's machinery. But my plants right now are mine, simulated, and local.
-Can the design split those two cases: the console stays observe-only by
-default for anything it doesn't already control, but for plants I
-explicitly own and manage locally (my own lab fleet), give it — or a
-clearly separate tool — the ability to create, start/stop, and apply a
-pack. Read-only isn't the safety property I actually need here; "can't
-touch a plant it doesn't own" is.</p>
-</blockquote>
-<p>That is a correction with facts behind it. The near-term use of this software
-is a lab fleet of simulated plants on one machine, built and torn down
-repeatedly to prove that two packs with different modules enabled run from
-one codebase. Every one of those plants is created by the same tooling, runs
-under the same user, and belongs to the person running it. Making that person
-visit each plant to start it is not safety; it is friction with no threat
-model behind it.</p>
-<p>The threat model that <em>is</em> real is the other case, unchanged: a console that
-can push to a plant it did not create is a remote-execution path into
-machinery, built by one maintainer, in a pre-alpha MES, for people whose
-worst day involves a machine moving.</p>
-<p>So the line is not read versus write. It is <strong>owned versus not owned</strong>.</p>
-<h2 id="options-considered">Options considered<a class="headerlink" href="#options-considered" title="Permanent link">&para;</a></h2>
+<h1 id="the-fleet-plants-this-installation-owns">The fleet: plants this installation owns<a class="headerlink" href="#the-fleet-plants-this-installation-owns" title="Permanent link">&para;</a></h1>
+<p><em>How-to and explanation. Build, start, stop and re-pack a fleet of plants from one command — and understand exactly which plants that command will refuse to touch.</em></p>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>fleet<span class="w"> </span>create<span class="w"> </span>labs/multiplant/machining<span class="w">   </span><span class="c1"># build a plant from a pack, and own it</span>
+fsmes<span class="w"> </span>fleet<span class="w"> </span>start<span class="w"> </span>machining<span class="w">                    </span><span class="c1"># start it</span>
+fsmes<span class="w"> </span>fleet<span class="w"> </span>status<span class="w"> </span>machining<span class="w">                   </span><span class="c1"># what it says about itself</span>
+fsmes<span class="w"> </span>fleet<span class="w"> </span>stop<span class="w"> </span>machining
+fsmes<span class="w"> </span>fleet<span class="w"> </span>apply<span class="w"> </span>machining<span class="w">                    </span><span class="c1"># a new version of its pack, to a stopped plant</span>
+fsmes<span class="w"> </span>fleet<span class="w"> </span>list<span class="w">                               </span><span class="c1"># everything owned or watched, with the totals</span>
+</code></pre></div>
+<p><code>fsmes fleet</code> manages <strong>plants</strong>, never <strong>production</strong>. It can stop a plant it owns; it cannot make one say it built something. No tag reaches a PLC through it, nothing goes to an ERP, no order is created or closed, no production is booked, and no master data, account or audit row is edited. Those stay each plant's own business, behind that plant's <a href="../shadow-mode/">shadow mode</a>, its capability roles and its approvals.</p>
+<h2 id="what-ownership-means">What ownership means<a class="headerlink" href="#what-ownership-means" title="Permanent link">&para;</a></h2>
+<p>A plant is <strong>owned</strong> by this installation when all three of these hold. Any one missing and the plant is <strong>observed only</strong>, and every verb above refuses it.</p>
+<ol>
+<li><strong>This installation created it, and wrote that down.</strong> <code>fsmes fleet create</code> appends an entry to <code>ownership.toml</code> in the fleet's data directory: the plant's name, its pack, where its data lives, when and on which host and OS user it was created, and a random <strong>instance id</strong>.</li>
+<li><strong>The plant corroborates the id.</strong> <code>fsmes fleet create</code> also writes that id into the plant's own data directory, and the plant returns it on <code>/health</code>. A plant answering with a <em>different</em> id, or with <em>no</em> id, is not owned — whatever the file says.</li>
+<li><strong>A path to act exists.</strong> Either <strong>local</strong> — the same host and the same OS user that created it, so this process can signal that plant's processes — or <strong>remote</strong>, where the entry names an environment variable holding a credential a person put there. A credential is never discovered, never defaulted and never reused from another entry, and only its <em>name</em> is ever written down.</li>
+</ol>
+<p>Being able to reach a plant is not owning it. Knowing its name is not owning it. Having its password is not owning it.</p>
+<h3 id="what-ownership-does-not-prove">What ownership does not prove<a class="headerlink" href="#what-ownership-does-not-prove" title="Permanent link">&para;</a></h3>
+<p><strong>The instance id is a continuity check, not an authentication.</strong> It proves the plant answering on that port is the plant this installation created and has not been swapped for a different one — the mistake case, which is the case that actually happens. It does not stop a person copying an id into the file on purpose. What keeps a stranger out of a plant is unchanged and is the plant's own business: its accounts, its <a href="../security/">capability roles</a>, its shadow mode.</p>
+<p>There is no enrolment handshake here, no certificate authority and no bootstrap token. On the remote branch of condition 3 the whole weight rests on a credential a person typed.</p>
+<h3 id="giving-ownership-back">Giving ownership back<a class="headerlink" href="#giving-ownership-back" title="Permanent link">&para;</a></h3>
+<p>Delete the instance file from the plant's data directory (<code>&lt;data_dir&gt;/&lt;name&gt;.instance</code>). Nothing can prove condition 2 after that, so the plant becomes observed like any other — and it keeps running. Deleting the <code>[[owned]]</code> entry does the same from the other side.</p>
+<p>Two plants claiming one instance id is an <strong>error that refuses</strong>, not a coin toss: a plant directory copied to make a second plant carries the first one's id until something regenerates it, and a tool that picked one of them would act on the wrong plant. <code>fsmes pack check</code> cannot catch this — a pack carries no instance id — so the fleet tool catches it when it reads the file.</p>
+<h3 id="where-this-differs-from-decision-0023-as-written">Where this differs from decision 0023 as written<a class="headerlink" href="#where-this-differs-from-decision-0023-as-written" title="Permanent link">&para;</a></h3>
+<p><a href="../../decisions/0023-the-fleet-console-observes/">Decision 0023</a> says a plant that is silent "is not owned for as long as it is silent, because condition 2 cannot be met". Read literally that makes <strong>start</strong> impossible: a plant that is not running cannot answer anything. So condition 2 is implemented as <em>the plant must not contradict us</em>:</p>
 <table>
 <thead>
 <tr>
-<th>Option</th>
-<th>For</th>
-<th>Against</th>
+<th>The plant is</th>
+<th>What happens</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Pure observe-only console</strong> — the 2026-09-10 proposal: polls a list of plants, shows what each says, links to each plant's own dashboard, writes nothing anywhere</td>
-<td>the blast radius is a stale page; it can be reviewed by reading it for any call that writes, which is the strongest reviewable property available; no credential in it can change anything</td>
-<td>it solves half the job. The lab fleet still has to be created, started, stopped and re-packed plant by plant, by hand, which is the actual work M8 exists to make possible. <strong>This is why it lost:</strong> it was read-only against plants the tool itself had just created, which is a rule protecting nobody from anything</td>
+<td>answering</td>
+<td>it must return this name and this instance id, or the verb is refused</td>
 </tr>
 <tr>
-<td>Console that can push configuration to any plant it can reach</td>
-<td>one place to manage a fleet; the obvious product</td>
-<td>it is a remote-execution path into every plant a company runs. A console that can push to anything can push to the wrong thing, and "the wrong thing" is somebody else's factory. Rejected, and the ownership rule below exists to keep it rejected</td>
+<td>silent, local</td>
+<td>the instance id in its own data directory must still be there and still match; only <code>start</code> and <code>apply</code>, the two verbs a stopped plant can take, may proceed</td>
 </tr>
 <tr>
-<td><strong>A separate management CLI, with no console integration at all</strong> — <code>fsmes fleet</code> does the managing, the console never calls it and never knows it exists</td>
-<td>the cleanest wall there is: the page genuinely has no write path, so the old review property survives untouched; management is a person at a terminal, which is where a lab fleet is managed anyway</td>
-<td>two tools that both hold a list of plants and disagree about it; the console can show drift and cannot say what to do about it; and nothing stops the console growing a button later with no ownership rule written down to stop it</td>
-</tr>
-<tr>
-<td><strong>The ownership split (recommended)</strong> — one rule, <em>the console may act only on plants it owns; for every other plant it observes and cannot push</em> — with the write verbs living in <code>fsmes fleet</code> and the console read-only in its first version</td>
-<td>"cannot touch a plant it does not own" is the property a real customer needs, and it is the property that also gives the lab fleet its other half. One definition of ownership, checked in one place, reviewable. It does not need the rule to be relaxed later, because the lab case is inside it from the start</td>
-<td>it is a weaker reviewable property than "no call writes": a reviewer must now check that every write path checks ownership first, rather than that no write path exists. That is a real cost and it is paid knowingly</td>
-</tr>
-<tr>
-<td>Plants push telemetry to the console</td>
-<td>works through one-way firewalls; no inbound port on the plant</td>
-<td>it inverts the trust: the plant now needs an outbound credential and a queue, and a plant that stops sending is indistinguishable from one that is fine and quiet. It is also the first step of a cloud SaaS the roadmap ruled out</td>
-</tr>
-<tr>
-<td>No console; use Prometheus and Grafana</td>
-<td><code>/metrics</code> already exists; it is what plants already run</td>
-<td>it answers "is it up" and not "is this plant running the pack it should be", which is the actual M8 question. It also puts the fleet view outside the product, where the honesty rules do not reach</td>
-</tr>
-<tr>
-<td>Aggregate the fleet into single numbers — one OEE, one availability</td>
-<td>what an executive asks for</td>
-<td>a fleet OEE is a lie unless every plant is the same shape, and no two plants are. It is <a href="../0004-never-invent-production/">rule 1</a> at company scale</td>
+<td>silent, remote</td>
+<td>refused — there is no data directory to read on another host, so nothing corroborates anything</td>
 </tr>
 </tbody>
 </table>
-<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
-<p><strong>The console may act only on plants it owns. For every other plant it
-observes, and no path in it can push.</strong> Ownership is not a mood and not a
-configuration flag a hurried person sets; it is defined below in a way a test
-can check, and the check is one function that every write path calls first.</p>
-<h3 id="what-owns-means">What "owns" means<a class="headerlink" href="#what-owns-means" title="Permanent link">&para;</a></h3>
-<p>A plant is owned by a fleet tool when <strong>all three</strong> of these hold. Any one
-missing and the plant is observed only.</p>
-<ol>
-<li><strong>This tool created it, and wrote that down.</strong> When <code>fsmes fleet create</code>
-   builds a plant from a pack it appends a line to its own <strong>ownership
-   file</strong> — <code>fleet.toml</code>, beside the registry, under the registry's
-   <code>data_dir</code> (<code>environment()</code> and <code>data_dir()</code>, <code>src/fsmes/plant.py</code>). The
-   line records the plant name, the pack and pack version, the host and OS
-   user it was created under, the time, and an <strong><code>instance_id</code></strong>: a random
-   identifier the tool generates and also writes into the plant's own data
-   directory, where the plant reads it at start-up.</li>
-<li><strong>The plant corroborates it.</strong> The plant's <code>/health</code> returns its <code>plant</code>
-   name (decision <a href="../0021-one-database-per-plant/">0021</a>, piece 1) and that
-   same <code>instance_id</code>. A plant that answers with a different id, or with no
-   id, <strong>is not owned</strong>, whatever the ownership file says. This is the
-   condition that makes ownership checkable from outside the file that claims
-   it, and it is what makes ownership <em>revocable by the plant</em>: delete the id
-   from the plant's data directory and the fleet tool can no longer prove
-   condition 2, so the plant falls back to observed.</li>
-<li><strong>The operator gave it a path to act on.</strong> Either <strong>local</strong> — same host,
-   same OS user, and the plant's process ids are the ones in this registry's
-   own pid file (<code>pid_file</code>/<code>running_pids</code>, <code>src/fsmes/plant.py</code>) — or
-   <strong>remote</strong> — the ownership file names an explicit credential for that
-   host, put there by a person. A credential is never discovered, never
-   defaulted, and never reused from another plant's entry.</li>
-</ol>
-<p>Ownership is <strong>per plant</strong>, and it is never inferred from reachability.
-Being able to reach a plant is not owning it. Knowing its name is not owning
-it. Having its password is not owning it. <code>fsmes fleet disown &lt;name&gt;</code> deletes
-the line; the plant keeps running and becomes an observed plant like any
-other.</p>
-<h3 id="what-ownership-does-not-prove-said-plainly">What ownership does not prove, said plainly<a class="headerlink" href="#what-ownership-does-not-prove-said-plainly" title="Permanent link">&para;</a></h3>
-<p>The <code>instance_id</code> is a <strong>continuity check, not an authentication</strong>. It proves
-the plant answering on that port is the plant this tool created and has not
-been swapped for a different one — the mistake case, which is the common
-case. It does not stop a person copying an id into an ownership file on
-purpose. What stops a stranger is unchanged and is the plant's own business:
-its accounts, its capability roles (<code>src/fsmes/services/capabilities.py</code>),
-its shadow mode.</p>
-<p>On the remote branch of condition 3, the whole weight rests on a credential a
-person typed. The product supplies no enrolment handshake, no certificate
-authority and no bootstrap token, and this decision adds none.</p>
-<h3 id="what-manage-means-for-an-owned-plant">What "manage" means for an owned plant<a class="headerlink" href="#what-manage-means-for-an-owned-plant" title="Permanent link">&para;</a></h3>
-<p>Five verbs, and this list is closed:</p>
+<p>The gap the decision closes stays closed: <strong>no verb reaches into a <em>running</em> plant that has not just said who it is.</strong></p>
+<h2 id="the-commands">The commands<a class="headerlink" href="#the-commands" title="Permanent link">&para;</a></h2>
+<h3 id="fsmes-fleet-create-pack"><code>fsmes fleet create &lt;pack&gt;</code><a class="headerlink" href="#fsmes-fleet-create-pack" title="Permanent link">&para;</a></h3>
+<p>Checks the pack and refuses on failure; makes the fleet's data directory; writes the plant its instance id; applies the pack (schema to head, then the master data the pack carries); and records the ownership last. It <strong>starts nothing</strong> — the plant exists after this, and runs when a person says so.</p>
+<p>The order matters. The instance id is written <em>before</em> the pack is applied, so a plant that half-applies is still a plant this installation can prove it made; and the ownership entry is written <em>last</em>, because an entry for a plant that was never built is a claim about a plant that is not there.</p>
+<p><code>fsmes plant</code> reads the fleet file (the list of packs), not the ownership file, so <code>create</code> prints the line to add to it if you want the plant to show up there too.</p>
+<h3 id="fsmes-fleet-startstop-name"><code>fsmes fleet start|stop &lt;name&gt;</code><a class="headerlink" href="#fsmes-fleet-startstop-name" title="Permanent link">&para;</a></h3>
+<p>The ownership gate, then the machinery that already runs plants (<code>fsmes plant &lt;name&gt; start|stop</code>). Start and stop are local process control: there is no remote start in this product and this decision adds none.</p>
+<p><strong>Nothing starts a plant on its own.</strong> There is no scheduler, no reconciliation loop, and no daemon that notices a stopped plant and brings it back. Desired state stays intent displayed as drift, never intent enforced.</p>
+<h3 id="fsmes-fleet-apply-name-pack-dir"><code>fsmes fleet apply &lt;name&gt; [--pack &lt;dir&gt;]</code><a class="headerlink" href="#fsmes-fleet-apply-name-pack-dir" title="Permanent link">&para;</a></h3>
+<p><code>fsmes pack check</code> first, refusing on failure; then the pack, to an owned plant that is <strong>not answering</strong> — applying a pack upgrades a database, and doing that underneath a live process is how a plant ends up half-upgraded. One plant's pack is never applied to another: a pack is a plant's identity.</p>
+<h3 id="fsmes-fleet-status-name-and-fsmes-fleet-list"><code>fsmes fleet status &lt;name&gt;</code> and <code>fsmes fleet list</code><a class="headerlink" href="#fsmes-fleet-status-name-and-fsmes-fleet-list" title="Permanent link">&para;</a></h3>
+<p>Reads. <code>status</code> says whether the plant is owned and <strong>why</strong> — the same question every verb asks, answered before you hit it. <code>list</code> states its total: <em>"N plants, M answered, K unknown; J owned"</em>. The number recorded is never the number seen.</p>
+<p>A plant that did not answer is <strong>unknown</strong>. Never healthy, never down.</p>
+<h2 id="ownershiptoml"><code>ownership.toml</code><a class="headerlink" href="#ownershiptoml" title="Permanent link">&para;</a></h2>
+<p>In the fleet's data directory (<code>[environment] data_dir</code> in the <a href="../registry/">fleet file</a>, or <code>labs/multiplant/.data</code> in a checkout).</p>
+<div class="highlight"><pre><span></span><code><span class="k">[[owned]]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"machining"</span>
+<span class="n">pack</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"/home/you/fsmes/labs/multiplant/machining"</span>
+<span class="n">instance_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"4f6c…"</span>
+<span class="n">data_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"/home/you/fsmes/labs/multiplant/.data"</span>
+<span class="n">api_host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"127.0.0.1"</span>
+<span class="n">api_port</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8020</span>
+<span class="n">control</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"local"</span>
+<span class="n">created_at</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"2026-09-13T20:41:07+00:00"</span>
+<span class="n">created_on_host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"workshop"</span>
+<span class="n">created_by_user</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"you"</span>
+<span class="n">product_version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"0.1.2"</span>
+<span class="n">pack_fingerprint</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"9a1c…"</span>
+
+<span class="k">[[observe]]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"hall2"</span>
+<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"http://10.20.30.41:8050"</span>
+<span class="n">about</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"someone else's plant; watched, never touched"</span>
+</code></pre></div>
+<p><strong>It is not the fleet file.</strong> <code>fleet.toml</code> lists the packs this machine runs; <code>ownership.toml</code> records the plants this installation created. Decision 0023 called the ownership file <code>fleet.toml</code> before <a href="../packs/">M8 piece 3</a> gave that name to the registry, and two files of one name is a trap for whoever reads the next traceback.</p>
+<p>No password is ever written here — <code>credential_env</code> names the variable one lives in. <code>[[observe]]</code> entries are plants this installation does <strong>not</strong> own: they exist so a reader can see them, and no verb will act on one.</p>
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>create</strong> it from a pack,</li>
-<li><strong>start</strong> it,</li>
-<li><strong>stop</strong> it,</li>
-<li><strong>apply</strong> a pack — <code>fsmes pack check</code> runs first and a failing check refuses
-  the apply, with the one sentence naming the problem that
-  <a href="../0022-what-a-plant-pack-may-contain/">0022</a> requires; applying includes
-  bringing that plant's database to head, in the order the design already
-  fixes (pack first, then database), and both refuse a plant that is still
-  answering on its port,</li>
-<li><strong>show</strong> its status and its drift against its pack.</li>
+<li><a href="../packs/">Plant packs</a> — what a pack may contain, and <code>fsmes pack check</code></li>
+<li><a href="../registry/">Plants from a fleet file</a> — <code>fsmes plant</code>, the machinery underneath</li>
+<li><a href="../first-plant/">Beside your existing MES</a> — the engineers' front door</li>
+<li><a href="../../decisions/0023-the-fleet-console-observes/">Decision 0023 — the console manages only the plants it owns</a></li>
+<li><a href="../../design/m8-packs-and-fleet/">The M8 design</a> §8, which this is built from</li>
 </ul>
-<h3 id="what-it-never-means-even-for-an-owned-plant">What it never means, even for an owned plant<a class="headerlink" href="#what-it-never-means-even-for-an-owned-plant" title="Permanent link">&para;</a></h3>
-<p>Nothing that reaches through a plant into what the plant is <em>doing</em>:</p>
-<ul>
-<li>no writing a tag to a PLC, or any other call into machinery,</li>
-<li>no sending a confirmation, an order or anything else to an ERP,</li>
-<li>no creating, closing or changing an order; no booking production; no
-  scrap, no holds, no dispositions,</li>
-<li>no editing master data, accounts, people or the audit trail.</li>
-</ul>
-<p>Those stay the plant's own business, behind its own shadow mode
-(<a href="../0019-count-everything-the-machine-counted/">0019</a> and the outbound
-register), its own capability roles, and its own approvals. <strong>The console
-manages plants, not production.</strong> A plant it owns can be stopped; a plant it
-owns cannot be made to say it built something.</p>
-<h3 id="where-the-power-lives">Where the power lives<a class="headerlink" href="#where-the-power-lives" title="Permanent link">&para;</a></h3>
-<p>The write verbs live in <strong><code>fsmes fleet</code>, a local command</strong>, not in the web
-page. The console is a page that reads.</p>
-<ul>
-<li>A console is a long-running process on a port. Whatever it can do, whoever
-  can reach that port can do. Ownership answers <em>which plants</em>, not <em>which
-  people</em>; putting the verbs in the page widens the blast radius from one
-  terminal to a network.</li>
-<li>The verbs already exist in command shape. <code>fsmes plant &lt;name&gt;
-  init|start|stop|migrate</code> is what manages the lab fleet today.
-  <code>fsmes fleet</code> is that command with an ownership gate and a pack in front of
-  it — not a new subsystem.</li>
-<li>One write path in one module can be reviewed in one sitting, which is what
-  makes piece 4's <em>done when</em> checkable at all.</li>
-<li><strong>The credentials differ, and this is what keeps the read-only argument
-  rather than deleting it.</strong> The console's credential to every plant, owned
-  or not, stays the <strong>read-only machine role</strong> from the first draft: health,
-  shadow, metrics, service liveness, the OEE reads, nothing else. Observation
-  is all the page ever does, so its role is unchanged by this decision.
-  Managing runs as the person at the terminal, with local process control or
-  that plant's own credential, for as long as the command takes and no
-  longer. <strong>No long-running process holds a credential that can change a
-  plant.</strong></li>
-</ul>
-<p>The console <strong>may</strong> grow buttons later — started with an explicit
-<code>--manage</code>, off by default, bound to loopback, each button calling the same
-gated function the command calls, never a second implementation. That is
-deferred: the console's first version is exactly the read-only page §8
-describes, because the milestone's <em>done when</em> needs the page and does not
-need the buttons.</p>
-<h3 id="nothing-starts-a-plant-on-its-own">Nothing starts a plant on its own<a class="headerlink" href="#nothing-starts-a-plant-on-its-own" title="Permanent link">&para;</a></h3>
-<p><code>fsmes fleet</code> acts when a person runs it. There is no scheduler, no
-reconciliation loop, and no daemon that notices a stopped plant and brings it
-back. "Desired state as intent" stays <strong>intent displayed as drift</strong>, never
-intent enforced — a reconciler is a program that starts machinery because a
-file said so, and this product does not have one. On a development machine
-this is also the standing rule: the lab fleet runs when its owner starts it,
-and no tooling here starts plants by itself.</p>
-<h3 id="the-four-rules-unchanged">The four rules, unchanged<a class="headerlink" href="#the-four-rules-unchanged" title="Permanent link">&para;</a></h3>
-<ol>
-<li><strong>It never acts on a plant it does not own.</strong> For an unowned plant every
-   M8 verb is a read or a comparison, and there is no flag that changes this.</li>
-<li><strong>Silence is <code>unknown</code>.</strong> A plant that did not answer is never rendered as
-   healthy and never as down, exactly as <code>list_plants()</code> already behaves. A
-   console that renders silence as green is worse than no console. A plant
-   that did not answer is also <strong>not owned for as long as it is silent</strong>,
-   because condition 2 cannot be met — so a plant cannot be managed through
-   a gap in which nobody can see it.</li>
-<li><strong>It states its total.</strong> "12 plants, 11 answered, 1 unknown; 3 owned".
-   The number configured is never the number seen.</li>
-<li><strong>It aggregates nothing that would be a lie.</strong> Twelve OEE numbers, not
-   one. This is the discipline the <a href="../../operate/shadow-scorecard/">shadow
-   scorecard</a> already keeps when it refuses
-   to add operations into an order total.</li>
-</ol>
-<p><strong>"Enrol" means a person adds a plant to the console's list and gives it a
-credential the plant already understands</strong> — not a handshake, not a
-certificate authority, not a bootstrap token. Enrolling a plant makes it
-<em>visible</em>. It does not make it owned: ownership comes from creating it, or
-not at all.</p>
-<p>Telemetry stays <strong>pull</strong>. The plant opens no outbound connection for the
-console's sake, and nothing about a plant leaves it because a console exists.</p>
-<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
-<p>Easier: the lab fleet is one tool. Create three plants from three packs,
-start them, apply a new pack version to all three, see which one drifted —
-which is the job M8 exists to make possible, and which the first draft of
-this record left undone.</p>
-<p>Easier, still: an unowned plant is safe by construction rather than by
-politeness. The rule survives the console growing features, because the gate
-is in front of the verbs and not in the page.</p>
-<p>Harder, and this is the price: <strong>the review question changed.</strong> It used to be
-"is there any call in this code that writes to a plant", answerable by
-reading for calls. It is now "does every call that writes check ownership
-first", which needs a reviewer to follow each path to its gate. Piece 4's
-<em>done when</em> is written to force exactly that reading, and a test must hold
-it: a fake plant that answers <code>/health</code> with the wrong <code>instance_id</code> must
-make every one of the five verbs refuse.</p>
-<p>Harder: there is still no "upgrade the fleet" button for plants somebody else
-runs, and there will not be one. Twelve plants behind twelve firewalls need
-twelve reachable addresses and twelve credentials, and that stays real work
-for whoever runs them.</p>
-<p>Harder: ownership is a file, and files get copied. A plant directory cloned
-to make a second plant carries the first plant's <code>instance_id</code> until
-something regenerates it, and two plants claiming one id must be an error
-that refuses, not a coin toss. That belongs in <code>fsmes pack check</code> and in the
-fleet tool's own start-up.</p>
-<p>To revisit when a real fleet exists, and specifically the first time somebody
-other than the maintainer runs a plant this tooling created — that is when
-the remote branch of condition 3 stops being theory. Today there is a lab
-fleet of simulated plants on one machine and no real plant at all.</p>
-<h2 id="house-rules-touched">House rules touched<a class="headerlink" href="#house-rules-touched" title="Permanent link">&para;</a></h2>
-<p>Rule 2, unknown is a valid answer and zero is not, is rules 2 and 3 above. A
-plant that did not answer is unknown — and, because ownership needs the
-plant's own corroboration, an unknown plant is also unmanageable rather than
-managed on faith.</p>
-<p>Rule 1, never invent production: rule 4 is that rule applied across sites. A
-single fleet number invents a comparability that does not exist. The closed
-list of five verbs is the same rule pointed inwards — a fleet tool that could
-book production would be inventing it at the worst possible distance from the
-machine.</p>
-<p>Rule 3, unlabelled data is reported as unlabelled: a plant whose pack version
-the console cannot read shows as unknown pack, not as up to date. A plant
-whose <code>instance_id</code> the console cannot read shows as not owned, not as
-probably fine.</p>
-<p>Config, not code, at plant boundaries: ownership lives in <code>fleet.toml</code> and in
-the plant's own data directory. No plant name, host or credential belongs in
-<code>src/</code>, and the <code>no_tenant_literals</code> guard test of M8 is what keeps it out.</p>
 
 
 
@@ -3496,7 +3236,7 @@ the plant's own data directory. No plant name, host or credential belongs in
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../0022-what-a-plant-pack-may-contain/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 0022 — A plant pack is data, carries no code and no secrets, and cannot change what a number means">
+          <a href="../registry/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How-to — plants from a fleet file">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -3506,20 +3246,20 @@ the plant's own data directory. No plant name, host or credential belongs in
                 Previous
               </span>
               <div class="md-ellipsis">
-                0022 — A plant pack is data, carries no code and no secrets, and cannot change what a number means
+                How-to — plants from a fleet file
               </div>
             </div>
           </a>
         
         
           
-          <a href="../TEMPLATE/" class="md-footer__link md-footer__link--next" aria-label="Next: Template">
+          <a href="../modules/" class="md-footer__link md-footer__link--next" aria-label="Next: How-to — switch a module off">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Template
+                How-to — switch a module off
               </div>
             </div>
             <div class="md-footer__button md-icon">

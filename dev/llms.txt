@@ -17,6 +17,7 @@
 - [Operate — How-to — read-only OPC UA commissioning](https://docs.factorysemantics.com/dev/operate/opc-readonly/)
 - [Operate — Reference — plant packs](https://docs.factorysemantics.com/dev/operate/packs/)
 - [Operate — How-to — plants from a fleet file](https://docs.factorysemantics.com/dev/operate/registry/)
+- [Operate — How-to — the fleet this installation owns](https://docs.factorysemantics.com/dev/operate/fleet/)
 - [Operate — How-to — switch a module off](https://docs.factorysemantics.com/dev/operate/modules/)
 - [Operate — How-to — running beside an existing MES](https://docs.factorysemantics.com/dev/operate/shadow-mode/)
 - [Operate — How-to — the shadow scorecard](https://docs.factorysemantics.com/dev/operate/shadow-scorecard/)
