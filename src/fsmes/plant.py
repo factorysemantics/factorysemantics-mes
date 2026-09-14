@@ -15,9 +15,18 @@ plant" needs no product code:
     MES_REPLAY_DIR     which line data       -> different physics
     MES_SECRET_KEY     per-plant token key   -> neither accepts the other's logins
 
-This is the cross-platform port of labs/multiplant/fsplant.ps1. The registry
-moved out of the script and into plants.toml, because a registry that lives in
-code is one an agent cannot edit safely.
+This started as the cross-platform port of a PowerShell launcher that held
+the registry in its own code. The registry moved out of the script and into a
+file, because a registry that lives in code is one an agent cannot edit
+safely — and then, in M8 piece 3, out of that file and into a **plant pack**
+per plant, because a file with no schema cannot tell a key from a typo.
+
+What is left here is the running of a plant, not the describing of one. A
+plant arrives as the plain dictionary `fsmes.pack.fleet.compile_pack` makes
+out of a pack: a label, a port, whether it simulates, and `env` — every
+`MES_*` value the pack states, already resolved. Nothing in this module reads
+`plant.toml`, which is what keeps it below the pack format on the layering
+ladder rather than beside it.
 """
 
 from __future__ import annotations
@@ -38,12 +47,13 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-REGISTRY = Path("labs/multiplant/plants.toml")
+REGISTRY = Path("labs/multiplant/fleet.toml")
 
-# The registry *is* the environment. Set this to a registry outside the
-# checkout and `fsmes plant` runs that environment: its own plants, ports,
-# data directory, secrets and accounts, from the same code. The lab registry
-# in the repository is what runs when it is unset.
+# The fleet file *is* the environment. Set this to one outside the checkout
+# and `fsmes plant` runs that environment: its own packs, ports, data
+# directory and accounts, from the same code. The lab fleet in the repository
+# is what runs when it is unset. The variable keeps its name — what it points
+# at changed in M8, and every deployment unit that sets it did not.
 REGISTRY_ENV = "FSMES_PLANT_REGISTRY"
 
 # Accounts the seeders do not create. `fsmes seed` (the demo plant) makes these,
@@ -100,17 +110,6 @@ def registry_path(root: Path) -> Path:
     return Path(override).expanduser() if override else root / REGISTRY
 
 
-def load_registry(root: Path) -> dict[str, dict]:
-    path = registry_path(root)
-    if not path.is_file():
-        raise FileNotFoundError(
-            f"No plant registry at {path}.\n"
-            f"Run this from the repository, pass --root, or set {REGISTRY_ENV}."
-        )
-    with path.open("rb") as fh:
-        return tomllib.load(fh)["plants"]
-
-
 def resolve(names: list[str], plants: dict[str, dict]) -> list[str]:
     if "all" in names:
         return list(plants)
@@ -133,11 +132,11 @@ def data_dir(root: Path) -> Path:
 def database_url(name: str, cfg: dict, root: Path) -> str:
     """Where this plant's database is.
 
-    The default is one SQLite file under the registry's data directory - the
-    small plant's whole storage story. A registry entry may instead name a
+    The default is one SQLite file under the fleet's data directory - the
+    small plant's whole storage story. A pack may instead name a
     `database_url` (PostgreSQL, the large plant's), with the password read
-    from `database_password_file` rather than written into the registry, so
-    the file that says which plants exist can be committed and the file that
+    from `database_password_file` rather than written into the pack, so
+    the file that says what a plant is can be committed and the file that
     holds a secret cannot. Nothing in the product changes with the choice:
     the same models, the same migrations, the URL decides.
     """
@@ -155,37 +154,27 @@ def database_url(name: str, cfg: dict, root: Path) -> str:
 
 
 def plant_env(name: str, cfg: dict, root: Path, speed: float | None = None) -> dict[str, str]:
-    """The complete MES_* contract for one plant."""
+    """The complete MES_* contract for one plant.
+
+    Almost all of it is the pack's, compiled once when the fleet was read.
+    Three things are added here because they are facts about *running* this
+    plant on this machine rather than facts about the plant: where its
+    database file goes, where its log goes, and a signing key when nothing
+    supplied one.
+    """
     env = dict(os.environ)
-    env.update(
-        MES_DATABASE_URL=database_url(name, cfg, root),
-        # Where the dashboard listens. Loopback by default - a plant PC serves
-        # its own operators - but a lab plant is worth reaching from a phone,
-        # so the registry can put it on the tailnet instead.
-        MES_PLANT_NAME=name,
-        MES_API_HOST=cfg.get("api_host", "127.0.0.1"),
-        MES_API_PORT=str(cfg["api_port"]),
-        MES_OPC_ENDPOINT=f"opc.tcp://127.0.0.1:{cfg['opc_port']}/fsmes/{name}",
-        MES_TAG_MAP_FILE=cfg["tag_map"],
-        MES_REPLAY_DIR=cfg["replay_dir"],
-        MES_LOG_DIR=f"logs/{name}",
-        # No ERP in the lab: every plant would otherwise poll the same mock ERP
-        # and fight over the same orders, which would look like an MES bug.
-        MES_ERP_MODE="off",
+    env.update(cfg.get("env") or {})
+    env["MES_PLANT_NAME"] = name
+    env["MES_DATABASE_URL"] = database_url(name, cfg, root)
+    env["MES_LOG_DIR"] = f"logs/{name}"
+    if speed is not None:
+        env["MES_SIM_SPEED"] = str(speed)
+    if not env.get("MES_SECRET_KEY"):
         # Stable per-plant key, so a restart does not sign everyone out and so
-        # no plant can ever accept another plant's session tokens.
-        MES_SECRET_KEY=cfg.get("secret_key") or f"lab-{name}-do-not-use-in-production",
-    )
-    resolved = speed if speed is not None else cfg.get("speed")
-    if resolved is not None:
-        env["MES_SIM_SPEED"] = str(resolved)
-    # The shop floor's cadence: how often a person records a check, and
-    # whether a pass records every specification or one. A plant that
-    # inspects five characteristics every fifteen minutes says so here.
-    for key, var in (("inspect_every", "MES_OPS_INSPECT_EVERY"), ("issue_every", "MES_OPS_ISSUE_EVERY"),
-                     ("inspect_all", "MES_OPS_INSPECT_ALL")):
-        if cfg.get(key) is not None:
-            env[var] = str(cfg[key]).lower() if isinstance(cfg[key], bool) else str(cfg[key])
+        # no plant can ever accept another plant's session tokens. Named so a
+        # grep shows intent: a pack holds no secret, and a plant that wants a
+        # real key names the variable it lives in.
+        env["MES_SECRET_KEY"] = f"lab-{name}-do-not-use-in-production"
     return env
 
 
@@ -246,28 +235,33 @@ def health(cfg: dict, timeout: float = 4.0) -> str:
 # --------------------------------------------------------------------------
 
 def init(name: str, cfg: dict, root: Path, echo=print) -> None:
+    """Create this plant's schema and apply its pack.
+
+    The seeding step used to be `cfg["init"]`: a Python file the registry
+    named, run as a subprocess with the plant's environment. A pack carries no
+    code (decision 0022), so what runs now is `fsmes pack apply`, which checks
+    the pack first and seeds the data the pack carries. A plant whose master
+    data is generated - the two scale labs - carries none, says so, and runs
+    its own generator itself.
+    """
     env = plant_env(name, cfg, root)
     mes = fsmes_bin()
 
-    echo(f"  {name}: creating schema...")
-    subprocess.run([mes, "init-db"], cwd=root, env=env, check=True,
-                   stdout=subprocess.DEVNULL)
-
-    echo(f"  {name}: seeding...")
-    seed = subprocess.run([sys.executable, cfg["init"]], cwd=root, env=env,
-                          capture_output=True, text=True)
-    for line in (seed.stdout or "").splitlines():
+    echo(f"  {name}: applying {cfg['pack']}...")
+    applied = subprocess.run([mes, "pack", "apply", str(cfg["pack"])], cwd=root, env=env,
+                             capture_output=True, text=True)
+    for line in (applied.stdout or "").splitlines():
         echo(f"      {line}")
-    if seed.returncode != 0:
-        echo(seed.stderr.strip())
-        raise SystemExit(f"{name} seed failed (exit {seed.returncode})")
+    if applied.returncode != 0:
+        echo((applied.stderr or "").strip())
+        raise SystemExit(f"{name}: `fsmes pack apply` refused (exit {applied.returncode})")
 
     ensure_accounts(root, env, cfg, echo)
 
 
 def ensure_accounts(root: Path, env: dict[str, str], cfg: dict, echo=print) -> None:
-    """The plant's accounts: the registry's `accounts` when it declares them,
-    the lab list otherwise. A registry account takes its password from the
+    """The plant's accounts: the pack's `[[accounts]]` when it declares them,
+    the lab list otherwise. A pack's account takes its password from the
     environment variable it names; an unset one refuses rather than creating
     an account with an empty password. Existing accounts are left alone."""
     declared = cfg.get("accounts")
@@ -417,9 +411,9 @@ def migrate(name: str, cfg: dict, root: Path, echo=print, upgrade=None) -> dict:
 def simulates(cfg: dict) -> bool:
     """Whether this plant runs its simulated line - the OPC replay, the agent
     and the floor - or only serves what its database already holds. A public
-    demo of a plant that was measured says `simulate = false` in its registry
-    entry and costs the machine one API process; nothing it shows changes,
-    and nothing short of the registry can bring the line back."""
+    demo of a plant that was measured says `simulate = false` in its pack's
+    `[serve]` table and costs the machine one API process; nothing it shows
+    changes, and nothing short of the pack can bring the line back."""
     return bool(cfg.get("simulate", True))
 
 
@@ -457,14 +451,17 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
         procs.append(subprocess.Popen([mes, "run-operations"], cwd=root, env=env,
                                       stdout=log, stderr=subprocess.STDOUT,
                                       start_new_session=True))
-        # A scenario's own post-boot script (registry key `post_boot`): what the
-        # init script cannot seed because the API did not exist yet, plus any
-        # floor activity the scenario scripts beyond run-operations. Optional;
-        # the lab plants have none.
-    if cfg.get("post_boot") and simulates(cfg):
-        procs.append(subprocess.Popen([sys.executable, cfg["post_boot"]], cwd=root, env=env,
-                                      stdout=log, stderr=subprocess.STDOUT,
-                                      start_new_session=True))
+        # A scenario's own post-boot script: what the seeding cannot do
+        # because the API did not exist yet, plus any floor activity the
+        # scenario scripts beyond run-operations. **No pack can ask for
+        # this** - decision 0022 says a pack carries no code, and `fsmes pack
+        # check` refuses the key. It is here for a lab tool that composes a
+        # configuration in code, which is code, gets reviewed, and is where
+        # the two scale labs put their breadth seeding.
+        if cfg.get("post_boot"):
+            procs.append(subprocess.Popen([sys.executable, cfg["post_boot"]], cwd=root, env=env,
+                                          stdout=log, stderr=subprocess.STDOUT,
+                                          start_new_session=True))
 
     pid_file(root, name).write_text("\n".join(str(p.pid) for p in procs), encoding="utf-8")
     echo(f"  {name} started -> {dashboard_url(cfg)} "
@@ -525,7 +522,7 @@ def status(name: str, cfg: dict, root: Path, echo=print) -> dict:
     echo(f"  {name:<12} {state:<18} {by:<16} {dashboard_url(cfg)}")
     echo(f"               {cfg['label']}")
     return {"plant": name, "supervisor": by, "health": state,
-            "api_port": cfg["api_port"], "opc_port": cfg["opc_port"]}
+            "api_port": cfg["api_port"], "pack": str(cfg.get("pack", ""))}
 
 
 def run(name: str, cfg: dict, root: Path, speed: float | None = None, echo=print) -> int:

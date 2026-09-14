@@ -1,0 +1,45 @@
+# The cutlery plant, as a pack — the one live plant on this machine.
+#
+# Written by `fsmes pack migrate` from labs/cutlery/registry.toml, then
+# finished by hand: the time zone and the profile, which a registry never
+# held.
+#
+#     FSMES_PLANT_REGISTRY=labs/cutlery/fleet.toml fsmes plant cutlery start
+#
+# This plant's master data is **generated**, not declared: build_config.py,
+# make_tag_map.py and init.py write a 60-million-a-day line nobody would type
+# out. A pack carries no code (decision 0022), so the generator stays a lab
+# tool the person runs, and `fsmes pack apply` says it seeded nothing rather
+# than pretending it had. See README.md.
+
+[pack]
+format   = 1
+requires = ">=0.1.2"
+
+[plant]
+name     = "cutlery"
+label    = "Cutlery Works — 60 million ids a day, every one judged by a vision station"
+timezone = "America/Chicago"
+profile  = "laptop"
+
+[storage]
+# The large plant's storage: PostgreSQL, the password read from a file the
+# pack never contains.
+database_url           = "postgresql+psycopg://fsmes@localhost:5433/fsmes"
+database_password_file = "~/.config/fsmes/pg-password"
+
+[serve]
+api_host     = "127.0.0.1"
+api_port     = 8040
+opc_endpoint = "opc.tcp://127.0.0.1:4844/fsmes/cutlery"
+# Real time: the point is the rate. A scored run passes its own --speed.
+speed        = 1
+
+[files]
+tag_map    = "tag_map.json"
+replay_dir = "out"
+
+[floor]
+# The quality plan: every dimensional specification, every fifteen minutes.
+inspect_every = 900
+inspect_all   = true

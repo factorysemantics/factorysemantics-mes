@@ -1,0 +1,62 @@
+{
+  "_comment": "Fine Wire Drawing Works, Hall 2. Invented. Addressed by flat node id per tag, the way a vendor server names things, rather than by a browsable object tree - the other two lab plants use `object`, and a pack format that had only ever met one addressing style would not have met one at all.",
+  "_cycle_seconds": "Seconds per kilogram at rated speed. Invented with the plant; they are what OEE performance would be measured against if this plant ever ran.",
+  "machines": [
+    {
+      "equipment": "DRW01",
+      "name": "Drawing Bench 01",
+      "cycle_seconds": 1.8,
+      "analog": "DrawForce",
+      "order_tag": null,
+      "nodes": {
+        "State": "ns=3;s=Hall2.Draw01.MachStatus",
+        "GoodCount": "ns=3;s=Hall2.Draw01.KgOK",
+        "ScrapCount": "ns=3;s=Hall2.Draw01.KgScrap",
+        "DrawForce": "ns=3;s=Hall2.Draw01.ForceN"
+      },
+      "state_map": {"0": "idle", "1": "running", "2": "idle", "4": "down", "5": "setup"}
+    },
+    {
+      "equipment": "ANN01",
+      "name": "Annealer 01",
+      "cycle_seconds": 2.4,
+      "analog": "FurnaceTemp",
+      "order_tag": null,
+      "nodes": {
+        "State": "ns=3;s=Hall2.Ann01.MachStatus",
+        "GoodCount": "ns=3;s=Hall2.Ann01.KgOK",
+        "ScrapCount": "ns=3;s=Hall2.Ann01.KgScrap",
+        "FurnaceTemp": "ns=3;s=Hall2.Ann01.TempC"
+      },
+      "state_map": {"0": "idle", "1": "running", "2": "idle", "4": "down", "5": "setup"}
+    },
+    {
+      "equipment": "SPL01",
+      "name": "Spooler 01",
+      "cycle_seconds": 2.0,
+      "analog": "SpoolTension",
+      "order_tag": null,
+      "nodes": {
+        "State": "ns=3;s=Hall2.Spool01.MachStatus",
+        "GoodCount": "ns=3;s=Hall2.Spool01.KgOK",
+        "ScrapCount": "ns=3;s=Hall2.Spool01.KgScrap",
+        "SpoolTension": "ns=3;s=Hall2.Spool01.TensionN"
+      },
+      "state_map": {"0": "idle", "1": "running", "2": "idle", "4": "down", "5": "setup"}
+    },
+    {
+      "equipment": "WRP01",
+      "name": "Wrapper 01",
+      "cycle_seconds": 3.6,
+      "analog": "WrapTorque",
+      "order_tag": null,
+      "nodes": {
+        "State": "ns=3;s=Hall2.Wrap01.MachStatus",
+        "GoodCount": "ns=3;s=Hall2.Wrap01.KgOK",
+        "WrapTorque": "ns=3;s=Hall2.Wrap01.TorqueNm"
+      },
+      "state_map": {"0": "idle", "1": "running", "2": "idle", "4": "down", "5": "setup"}
+    }
+  ],
+  "_no_scrap_counter": "WRP01 has no ScrapCount node, and that is the point: the agent subscribes to what is listed, and a machine with no scrap counter is a machine whose scrap this MES does not know - unknown, not zero."
+}

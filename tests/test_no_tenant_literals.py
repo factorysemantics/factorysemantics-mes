@@ -11,11 +11,19 @@ The forbidden list is **built from the labs, not typed here**, so a new lab
 plant extends the guard instead of escaping it. Four sources, and the test
 below states the total it built:
 
-* every plant's registry name, from every `*.toml` under `labs/`
-* every plant's own name, from the `label` each registry entry carries
+* every plant's own name, from every `*.toml` under `labs/` - a pack's
+  `[plant] name` and a fleet file's entries alike
+* every plant's label, from the `label` the pack or the entry carries
 * every equipment code, from every `labs/**/tag_map.json`
-* every master-data code a lab seed writes - `code="FG-BRACKET"` and the
-  `*_CODE` constants the seeds define
+* every master-data code a lab writes - the `code` fields in a pack's
+  `masterdata/*.json`, and `code="FG-BRACKET"` and the `*_CODE` constants in
+  what lab Python is left
+
+M8 piece 3 turned every lab plant into a pack, which moved two of those four
+sources: a plant's name is in its own `plant.toml` now rather than in a
+shared registry, and its master data is `masterdata/*.json` rather than a
+seed script. The collector reads both shapes, because a fleet somebody has
+not converted yet is still a fleet whose names must not be in the product.
 
 **What counts as "in the product".** Code, not prose. A comment or a
 docstring saying *"found sizing the cutlery plant's day"* is provenance, and
@@ -30,8 +38,10 @@ better stated than softened.
 **What it does not see.** File names. One migration is named after the lab
 whose chain it merged (`..._merge_cutlery_and_walkthrough_chains.py`); nothing
 reads that name, and renaming a landed migration to improve a file name is a
-worse trade than saying so here. M8 piece 3 should decide whether a pack's
-name may appear in a file name at all.
+worse trade than saying so here. Piece 3's answer to the question it was left:
+a pack's name may appear in a file name under `labs/`, and nowhere under
+`src/` - `fsmes.pack` names no pack, and a pack directory is found by being
+listed in a fleet file, never by being called anything in particular.
 """
 
 import ast
@@ -61,6 +71,18 @@ NOT_TENANT: dict[str, str] = {
         "gets; it is collected only because a lab seed passes it as a `code=`.",
 }
 
+#: The demo plant's own six stations. They are in `src/fsmes/seed_kepsim.py`
+#: because the six-station bottling line *is* the product's reference line -
+#: `fsmes demo` is the product demonstrating itself - and they are collected
+#: because the lab's bottling pack runs that same line and therefore carries
+#: that same tag map. Same reason as "ACME Beverages" and "FG-BOTTLE" above,
+#: one entry each so a seventh station cannot arrive unnoticed.
+for _station in ("LD01", "RD01", "WASH01", "QI01", "FILL01", "PAL01"):
+    NOT_TENANT[_station] = (
+        "a station of the demo plant's own reference line (src/fsmes/seed_kepsim.py). "
+        "The lab's bottling pack replays that line, which is why its tag map lands in "
+        "the list; the reference line is product, not a tenant.")
+
 
 # --------------------------------------------------------- the forbidden list
 
@@ -73,15 +95,28 @@ def forbidden() -> dict[str, str]:
         if value and str(value).strip():
             found.setdefault(str(value).strip(), kind)
 
-    for registry in sorted(LABS.rglob("*.toml")):
-        table = tomllib.loads(registry.read_text(encoding="utf-8"))
+    def named(name: str, label) -> None:
+        add("a lab plant's registry name", name)
+        if isinstance(label, str) and label:
+            # "Northgate Machining / Cell A - 3-station machining cell": the
+            # plant's name is the head of the label, before the first
+            # separator. What follows describes the line, not the plant.
+            add("a lab plant's name", re.split(r"[—/(]", label)[0])
+
+    for written in sorted(LABS.rglob("*.toml")):
+        table = tomllib.loads(written.read_text(encoding="utf-8"))
+        # A pack: one plant, which says its own name.
+        if isinstance(table.get("plant"), dict) and table["plant"].get("name"):
+            named(table["plant"]["name"], table["plant"].get("label"))
+        # A registry from before packs: several plants in one file.
         for name, entry in (table.get("plants") or {}).items():
-            add("a lab plant's registry name", name)
-            if isinstance(entry, dict) and entry.get("label"):
-                # "Northgate Machining / Cell A - 3-station machining cell":
-                # the plant's name is the head of the label, before the first
-                # separator. What follows describes the line, not the plant.
-                add("a lab plant's name", re.split(r"[—/(]", entry["label"])[0])
+            named(name, entry.get("label") if isinstance(entry, dict) else None)
+
+    for data in sorted(LABS.rglob("masterdata/*.json")):
+        rows = json.loads(data.read_text(encoding="utf-8"))
+        for row in rows if isinstance(rows, list) else []:
+            if isinstance(row, dict):
+                add("a lab plant's master-data code", row.get("code"))
 
     for tag_map in sorted(LABS.rglob("tag_map.json")):
         machines = json.loads(tag_map.read_text(encoding="utf-8")).get("machines") or []
@@ -203,9 +238,13 @@ def test_the_forbidden_list_is_read_from_the_labs_and_not_typed_here():
 
     # The lab plants this repository ships, by name, so a lab that disappears
     # or is renamed is noticed here rather than by the guard quietly relaxing.
+    # `finewire` is the third pack, invented in M8 piece 3 to disagree with
+    # the pack format: it extended this guard on the day it landed, which is
+    # what building the list from the labs is for.
     names = {literal for literal, kind in literals.items()
              if kind == "a lab plant's registry name"}
-    assert names == {"bottling", "machining", "cutlery", "megafactory"}, names
+    assert names == {"bottling", "machining", "finewire", "cutlery",
+                     "megafactory"}, names
 
 
 def test_the_check_catches_a_plant_name_pasted_into_a_service():

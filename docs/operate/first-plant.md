@@ -96,6 +96,13 @@ set `MES_DATABASE_URL=postgresql+psycopg://user:password@host:5432/dbname`
 and install with the `postgres` extra. Both are tested; see
 [compatibility](compatibility.md).
 
+**Your plant's own configuration is one directory**, a
+[plant pack](packs.md): what this plant is called, what clock it keeps, which
+modules it serves, what it calls things, and the files that describe its
+machines and its master data. `fsmes pack check` reads it offline and refuses
+a typo instead of defaulting past it, and it holds no password, so it is safe
+to send to whoever you are asking for help. Step 4 is where you draft one.
+
 Everything the MES is configured with is an environment variable starting
 `MES_`, and it reads a `.env` file in the directory you run it from. There
 is no other config format to learn.

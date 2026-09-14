@@ -1,0 +1,3 @@
+[
+  {"material": "FG-BRACKET", "characteristic": "spindle_temp", "unit": "C", "min": 50.0, "max": 70.0}
+]

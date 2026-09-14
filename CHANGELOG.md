@@ -11,6 +11,34 @@ goes under Honesty with a migration line, so plant people can find it.
 ## [Unreleased]
 
 ### Added
+- **A plant is a pack** — M8 piece 3 of
+  [the design](docs/design/m8-packs-and-fleet.md), building
+  [decision 0022](docs/decisions/0022-what-a-plant-pack-may-contain.md). One
+  directory, `plant.toml` and the files it names, is the complete, versioned,
+  checked answer to *which plant is this?*: identity, clock, profile, which
+  modules this plant serves, what it calls things, where its data lives, its
+  tag map, its master data and its boundary mappings.
+  **`fsmes pack check`** refuses one offline — no database, no network, no
+  plant — with one sentence per problem and *every* problem rather than the
+  first: an unknown key or table, a bad or missing time zone, a `[words]`
+  entry that renames a state, a capability, a role, an event kind or a KPI, a
+  module this version does not have, a `requires` this release does not
+  satisfy, a file that is missing or that its own reader will not accept, and
+  a secret or a script refused by name. What it cannot prove without a plant
+  it reports as **unknown**, never as passing.
+  **`fsmes pack apply`** checks first, adopts the pack's settings, brings the
+  schema to head (pack before database), seeds the master data the pack
+  carries and records what was applied. **`fsmes pack status`** answers which
+  pack a plant runs, whether its files have drifted from the fingerprint that
+  was applied, and what schema revision it is at — and says *never applied*
+  rather than *no drift*, because those are different facts.
+  **`fsmes pack migrate`** writes a pack from a plant registry entry, saying
+  what it moved, what it dropped and why, and the one value it will not
+  guess: a registry never held a time zone.
+  New `MES_WORDS` is what a checked pack's `[words]` table compiles to, and
+  the words ride on `/health`, `/shadow` and `fsmes info` beside the plant's
+  name and clock.
+  [The page](docs/operate/packs.md).
 - **A plant knows its own name, and what clock it keeps** — M8 piece 1 of
   [the design](docs/design/m8-packs-and-fleet.md). `MES_PLANT_NAME` is now a
   real identity: **required** for any deployment that is not a laptop, and
@@ -136,6 +164,22 @@ goes under Honesty with a migration line, so plant people can find it.
   See [the inbound page](docs/operate/inbound.md#the-broker-mqtt).
 
 ### Changed
+- **The plant registry is a list of packs.** `labs/multiplant/plants.toml`
+  becomes `labs/multiplant/fleet.toml`, holding `packs = [...]` and
+  `[environment] data_dir` and nothing else; every one of the seventeen keys
+  it used to carry per plant moved into that plant's `plant.toml` or went,
+  with the reason recorded in `fsmes.pack.migrate` and in
+  [the fleet how-to](docs/operate/registry.md). `secret_key` went because a
+  pack holds no secret; `init` and `post_boot` went because a pack carries no
+  code; `opc_port` became a whole `opc_endpoint`; `agent` went because
+  nothing in the product ever read it. `FSMES_PLANT_REGISTRY` keeps its name.
+  **If you run plants from a registry**, `fsmes pack migrate <registry>
+  --plant <name> --out <dir>` writes the pack, and the fleet loader names the
+  command when it meets a file that still describes plants directly. A plant
+  whose master data was an `init` script now either carries it as data under
+  `[files] masterdata` or keeps its generator as a tool a person runs — the
+  two scale labs do the second, and `fsmes pack apply` says it seeded nothing
+  rather than implying it seeded something.
 - **`/metrics` series now carry a `plant` label.** A Prometheus scraping a
   fleet had two plants' `mes_work_orders{status="running"}` under one name,
   and read their sum as one plant's number. A dashboard or alert written

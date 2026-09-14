@@ -1,0 +1,9 @@
+[
+  {"code": "NORTHGATE", "name": "Northgate Machining", "level": "enterprise"},
+  {"code": "NG1", "name": "Northgate Works", "level": "site", "parent": "NORTHGATE"},
+  {"code": "MACH", "name": "Machine Shop", "level": "area", "parent": "NG1"},
+  {"code": "NGLINE", "name": "Cell A", "level": "work_center", "parent": "MACH"},
+  {"code": "SAW01", "name": "Bar Saw 01", "level": "work_unit", "parent": "NGLINE"},
+  {"code": "MILL01", "name": "CNC Mill 01", "level": "work_unit", "parent": "NGLINE"},
+  {"code": "DEB01", "name": "Deburr Cell 01", "level": "work_unit", "parent": "NGLINE"}
+]

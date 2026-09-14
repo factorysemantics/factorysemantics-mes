@@ -1,0 +1,13 @@
+# The mega-factory's own fleet file - the scale test's environment.
+#
+#     FSMES_PLANT_REGISTRY=labs/megafactory/fleet.toml fsmes plant megafactory init
+#     FSMES_PLANT_REGISTRY=labs/megafactory/fleet.toml fsmes plant megafactory run
+#
+# and the same variable points the sim and product MCP servers at it (with
+# FSMES_ROOT naming the checkout). The plant itself is full/plant.toml. Line
+# data under labs/megafactory/full/out is generated, never committed - run
+# labs/megafactory/full/run_full.py first.
+packs = ["full"]
+
+[environment]
+data_dir = "labs/megafactory/.data"

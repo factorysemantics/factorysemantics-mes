@@ -1,0 +1,15 @@
+# The fleet: which packs this machine runs.
+#
+# This file used to be plants.toml, and it used to *be* the plant: seventeen
+# keys per entry, read into a plain dict with no schema, so nothing could tell
+# a key from a typo. Those keys are in each plant's own `plant.toml` now
+# (decision 0022), and what is left here is the list and the one thing that
+# belongs to the machine rather than to any plant - where several plants keep
+# their databases.
+#
+# Paths are relative to this file. Adding a plant is a directory and a line
+# here; if it ever needs a change under src/, that change is the bug.
+packs = ["bottling", "machining", "finewire"]
+
+[environment]
+data_dir = "labs/multiplant/.data"

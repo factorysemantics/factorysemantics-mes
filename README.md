@@ -41,7 +41,7 @@ Honesty about scale: Opcenter is thousands of engineer-years. The path here is n
 4. **Never invent production.** Counter deltas book production; resets re-baseline and book nothing. OEE reports *unknown*, never a misleading zero. Unlabelled downtime is reported as unlabelled. Every screen states its data source.
 5. **Runs anywhere.** SQLite on a laptop → Docker Compose in a plant → fleet of nodes with a console. Operator UI is plain HTML/JS with no build step, because a plant PC must render it for years without a node toolchain.
 6. **Simulation-first.** CI runs a full fake plant (deterministic six-station line over a real OPC UA server). Every feature is demoable without hardware. Scripted failures — breakdowns, changeovers, counter resets, micro-stops — are named regression tests.
-7. **Config, not code, at every plant boundary.** Which tags a machine exposes lives in a tag map. What a plant enables lives in a plant pack. A second, deliberately-different demo pack exists purely to prove that adding a plant never requires a code change.
+7. **Config, not code, at every plant boundary.** Which tags a machine exposes lives in a tag map. What a plant enables lives in a plant pack — one directory, validated offline by `fsmes pack check`, carrying no code and no secret. Three lab packs exist to prove it: two that disagree about the line, and a third invented to disagree with the pack format itself and to run the same wheel with two modules switched off.
 
 ## Provenance — where the code comes from
 

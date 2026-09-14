@@ -204,7 +204,9 @@ def no_agent(prompt: str) -> str:
 
 def plant_client(name: str, root: Path | None = None) -> httpx.Client:
     where = plants.find_root(root or Path.home() / "Projects" / "factorysemantics-mes")
-    cfg = plants.load_registry(where)[name]
+    from fsmes.pack import fleet
+
+    cfg = fleet.load(where)[name]
     host = cfg.get("api_host", "127.0.0.1")
     return httpx.Client(base_url=f"http://{host}:{cfg['api_port']}", timeout=20.0)
 

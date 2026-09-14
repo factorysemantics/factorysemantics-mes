@@ -102,8 +102,21 @@ runs as a user service on port 5433; a scored run makes its own database
 - `analysis/build_notebook.py` builds and executes the notebook from the
   kept evidence; `analysis/build_report.py` makes the public page from its
   figures. `analysis/viz.py` is the evidence-and-palette layer.
-- `registry.toml` runs it as the standing plant on port 8040
-  (`FSMES_PLANT_REGISTRY=labs/cutlery/registry.toml fsmes plant cutlery init|start|stop`).
+- `plant.toml` is this plant's **pack**, and `fleet.toml` lists it, so it runs
+  as the standing plant on port 8040
+  (`FSMES_PLANT_REGISTRY=labs/cutlery/fleet.toml fsmes plant cutlery init|start|stop`).
+  The pack carries no master data on purpose: this plant is *generated* -
+  `build_config.py`, `make_tag_map.py` and `init.py` write a line nobody would
+  type out - and a pack carries no code (decision 0022). So the generator
+  stays a lab tool you run, and `fsmes pack apply` says it seeded nothing
+  rather than implying it seeded something:
+
+  ```bash
+  FSMES_PLANT_REGISTRY=labs/cutlery/fleet.toml fsmes plant cutlery init
+  FSMES_PLANT_REGISTRY=labs/cutlery/fleet.toml MES_DATABASE_URL=... python labs/cutlery/init.py
+  ```
+
+  `fsmes pack check labs/cutlery` reads the pack offline, before any of that.
 
 ## Measured
 

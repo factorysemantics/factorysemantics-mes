@@ -1,0 +1,12 @@
+[
+  {
+    "code": "RT-BRACKET",
+    "name": "Cut, Machine and Deburr Bracket",
+    "material": "FG-BRACKET",
+    "operations": [
+      {"seq": 10, "name": "Cut", "equipment": "SAW01"},
+      {"seq": 20, "name": "Machine", "equipment": "MILL01"},
+      {"seq": 30, "name": "Deburr", "equipment": "DEB01"}
+    ]
+  }
+]

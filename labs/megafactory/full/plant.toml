@@ -1,0 +1,43 @@
+# The mega-factory, as a pack — the scale test's environment.
+#
+# Written by `fsmes pack migrate` from labs/megafactory/registry.toml, then
+# finished by hand.
+#
+#     FSMES_PLANT_REGISTRY=labs/megafactory/fleet.toml fsmes plant megafactory init
+#     FSMES_PLANT_REGISTRY=labs/megafactory/fleet.toml fsmes plant megafactory run
+#
+# Deliberately not in labs/multiplant/fleet.toml: the scale test is a
+# measurement, not a fourth lab plant.
+#
+# Two keys the registry entry had are gone, and both for the same reason -
+# decision 0022, a pack carries no code:
+#
+#   init       full/init.py generates 20 lines and 108 stations. It stays a
+#              lab tool; run it yourself, or run full/run_full.py, which
+#              composes its own configuration in code and always did.
+#   post_boot  full/seed_breadth.py, the workforce and quality breadth
+#              through the public API. Same answer: run_full.py passes it.
+
+[pack]
+format   = 1
+requires = ">=0.1.2"
+
+[plant]
+name     = "megafactory"
+label    = "Mega-Factory Works — 20 lines, 108 stations, ~290 people, 50 measurement types (scale test)"
+timezone = "America/Chicago"
+profile  = "laptop"
+
+[serve]
+# On the tailnet so the 100-station screens can be walked from the laptop.
+api_host     = "127.0.0.1"
+api_port     = 8030
+opc_endpoint = "opc.tcp://127.0.0.1:4843/fsmes/megafactory"
+# A standing instance replays at 10x: 108 stations x 10 is a third of what one
+# replay process sustained in the spike, so the screens show live data with the
+# pipeline never behind. A scored run passes its own --speed.
+speed        = 10
+
+[files]
+tag_map    = "tag_map.json"
+replay_dir = "out"

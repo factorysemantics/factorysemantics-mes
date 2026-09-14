@@ -1,0 +1,14 @@
+# The cutlery plant's own fleet file - the one live plant on this machine.
+#
+#     FSMES_PLANT_REGISTRY=labs/cutlery/fleet.toml fsmes plant cutlery init
+#     FSMES_PLANT_REGISTRY=labs/cutlery/fleet.toml fsmes plant cutlery start
+#
+# It used to be registry.toml and it used to describe the plant. The plant is
+# `plant.toml` beside this file now; this says which packs run here and where
+# their data goes. Line data under labs/cutlery/out is generated, never
+# committed - run build_config.py + make_tag_map.py + `fsmes sim-generate
+# labs/cutlery/line.json` (or labs/cutlery/run_cutlery.py) first.
+packs = ["."]
+
+[environment]
+data_dir = "labs/cutlery/.data"
