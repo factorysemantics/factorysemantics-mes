@@ -33,6 +33,39 @@ goes under Honesty with a migration line, so plant people can find it.
   Left unset it is the machine's own zone, and **every reader is told it was
   defaulted** — including, honestly, when the machine's zone has no name to
   report.
+- **A module registry, so a plant can switch a module off.**
+  [Decision 0002](docs/decisions/0002-kernel-and-modules.md) said a small
+  kernel is always present and everything else is a module; until now that
+  was a sentence rather than a mechanism, because `api/app.py` mounted all
+  twenty-three routers unconditionally and `mcp_server.py` registered all ten
+  agent tool files at import. `src/fsmes/modules.py` is now the one place
+  that says which modules exist and, for each, the routers it mounts, the
+  screens it serves, the agent tools it registers, the settings it owns and
+  the tables its rows live in. `MES_MODULES` filters it — `all` (the
+  default), `all,-quality`, or `quality,maintenance` — and a name this
+  version does not have is refused at start-up rather than ignored. Off means
+  **not served**: the routes answer 404, the module is absent from
+  `/openapi.json`, its screens are gone and its tools are not registered. Off
+  does **not** mean not stored: the schema is one chain for every plant, so a
+  disabled module's tables and rows are untouched and come back when it is
+  switched on. Nine of the twenty-three modules are the kernel and cannot be
+  switched off; fourteen can.
+  [How-to — switch a module off](docs/operate/modules.md). This is M8 piece 2
+  of [the design](docs/design/m8-packs-and-fleet.md); piece 3 moves the
+  setting into a plant pack's `[modules]` table.
+- **The two guard tests M8 promised: `core_purity` and `no_tenant_literals`.**
+  Named on the roadmap since M8 was planned and, until now, nowhere else in
+  the repository. `tests/test_core_purity.py` holds the layering rule that
+  lived only as a docstring in `fsmes/kernel/__init__.py`: the kernel imports
+  nothing from a module — which is what makes a module switchable at all —
+  and no layer imports a layer above it. Six upward imports exist, each
+  allowed in one of two tables with a reason that is checked rather than
+  asserted. `tests/test_no_tenant_literals.py` holds house rule 4: no lab
+  plant's name, equipment code or material code may appear in code under
+  `src/`. It builds its forbidden list from `labs/` rather than from a typed
+  list, so a new lab plant extends the guard instead of escaping it, and it
+  scans code rather than prose — a comment naming the plant a finding came
+  from is provenance, and the house rules ask for it.
 - **M8 designed before it is built — docs only, no product code.**
   [Plant packs and the fleet console](docs/design/m8-packs-and-fleet.md)
   states what a plant is today with file paths, measures the two lab plants
@@ -95,6 +128,13 @@ goes under Honesty with a migration line, so plant people can find it.
   another zone will find its shifts move to where the plant floor always
   said they were. `calendar.describe` now states the zone and whether it was
   defaulted.
+- **The night shift reads the plant registry instead of naming two plants.**
+  `fsmes autoloop` hard-coded `bottling` and `machining` with their ports —
+  a tenant literal inside the product, found by the new
+  `no_tenant_literals` guard. It now runs against every plant in the registry
+  this checkout points at, so a third plant joins the night shift by being in
+  the registry. `MES_AUTOLOOP_PLANTS` narrows it to a comma-separated subset;
+  `MES_AUTOLOOP_BOTTLING` and `MES_AUTOLOOP_MACHINING` are gone.
 - **The unified-namespace publisher at plant volume.** It shipped off by
   default and carrying two event kinds; it now carries equipment state
   changes — one event per transition — and the first real plant will turn it

@@ -33,10 +33,11 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
+
+from fsmes import modules
 
 REPO = Path(__file__).resolve().parents[3]
 BASELINES = REPO / "tests" / "ui" / "baselines"
@@ -78,17 +79,22 @@ PROPERTIES = (
     "font-size", "font-weight", "padding", "display",
 )
 
-ROUTE_SOURCE = "src/fsmes/api/app.py"
+ROUTE_SOURCE = "src/fsmes/modules.py"
 
 
 def routes() -> list[str]:
-    """Every dashboard page the app serves, read from the app itself so a
-    new screen is watched the day it exists rather than when somebody
-    remembers this list."""
-    text = (REPO / ROUTE_SOURCE).read_text(encoding="utf-8")
-    found = re.findall(r'@app\.get\("(/dashboard[^"]*)"', text)
-    pages = sorted(set(found))
-    assert pages, f"no dashboard routes found in {ROUTE_SOURCE}"
+    """Every dashboard page the product has, read from the module registry so
+    a new screen is watched the day it exists rather than when somebody
+    remembers this list.
+
+    Every page, not the pages one plant serves: the crawler is a development
+    tool and the plant it crawls is a separate process with its own
+    `MES_MODULES`. A plant with a module switched off does not serve that
+    module's screens, and the crawl reports them as unreachable - which is the
+    finding, not a bug in the crawl.
+    """
+    pages = sorted({page.path for module in modules.REGISTRY for page in module.pages})
+    assert pages, f"no dashboard pages found in {ROUTE_SOURCE}"
     return pages
 
 

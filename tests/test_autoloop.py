@@ -104,7 +104,7 @@ def test_a_triage_finding_is_briefed_once(monkeypatch, tmp_path):
     conn.close()
     monkeypatch.setattr(store, "DEFAULT_STORE", db)
     # Nothing else should be gathered in this test.
-    monkeypatch.setattr(autoloop, "PLANTS", {})
+    monkeypatch.setattr(autoloop, "plants", dict)
     from fsmes.services import design_triage
     monkeypatch.setattr(design_triage, "pending", lambda **k: [])
     monkeypatch.setattr(design_triage, "notes", lambda **k: [])
@@ -121,7 +121,7 @@ def test_a_triage_finding_is_briefed_once(monkeypatch, tmp_path):
 
 def test_a_dead_plant_is_a_finding_not_a_crash(monkeypatch, tmp_path):
     """The crawl failing IS information - the agent should hear about it."""
-    monkeypatch.setattr(autoloop, "PLANTS", {"bottling": "http://127.0.0.1:1"})
+    monkeypatch.setattr(autoloop, "plants", lambda: {"a-plant": "http://127.0.0.1:1"})
     from fsmes.services import design_triage
     from fsmes.sim import store
     monkeypatch.setattr(design_triage, "pending", lambda **k: [])

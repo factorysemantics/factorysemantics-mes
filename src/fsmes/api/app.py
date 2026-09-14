@@ -2,9 +2,16 @@
 
 Two front doors: `/dashboard` for the plant floor, `/docs` for integrators.
 Everything except health, metrics, and login requires a signed-in user.
+
+This file is the skeleton and nothing else. Which routers it mounts and which
+dashboard pages it serves come from `fsmes.modules`, filtered by `MES_MODULES`
+- so a plant that switches a module off gets an app with no routes for it,
+rather than an app that has them and refuses. The skeleton imports no router
+by name; that is what the `core_purity` guard test holds it to.
 """
 
 from contextlib import asynccontextmanager
+from importlib import import_module
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request
@@ -13,31 +20,6 @@ from fastapi.staticfiles import StaticFiles
 
 from fsmes import __version__
 from fsmes.api.deps import current_user
-from fsmes.api.routers import adjustments as adjustments_router
-from fsmes.api.routers import (
-    admin,
-    analysis,
-    assist,
-    auth,
-    dashboard,
-    design,
-    documents,
-    equipment,
-    execution,
-    kpis,
-    line,
-    maintenance,
-    masterdata,
-    ops,
-    quality,
-    scheduling,
-    serialization,
-    system,
-    workorders,
-)
-from fsmes.api.routers import coa as coa_router
-from fsmes.api.routers import erp as erp_router
-from fsmes.api.routers import triggers as triggers_router
 from fsmes.services import Conflict, Invalid, NotFound
 
 _ERROR_STATUS = {NotFound: 404, Conflict: 409, Invalid: 400}
@@ -192,42 +174,22 @@ def create_app() -> FastAPI:
         async def _handle(request: Request, exc: Exception, status=status) -> JSONResponse:
             return JSONResponse(status_code=status, content={"detail": str(exc)})
 
-    # Public: health and metrics (for orchestrators), login (to get a token).
-    app.include_router(system.router, tags=["system"])
-    app.include_router(auth.router, prefix="/auth", tags=["auth"])
+    # Routers come from the module registry, filtered by MES_MODULES. Nothing
+    # is mounted by name here: a module that is off has no routes, which is
+    # what makes "off" answer 404 rather than answer differently.
+    #
+    # Public means before sign-in: health and metrics (for orchestrators) and
+    # the login endpoint itself. Everything else requires a signed-in user;
+    # write endpoints add a role check of their own.
+    from fsmes.config import get_settings
 
-    # Everything else requires a signed-in user; write endpoints add a role check.
     signed_in = [Depends(current_user)]
-    app.include_router(admin.router, prefix="/admin", tags=["administration"],
-                       dependencies=signed_in)
-    app.include_router(assist.router, prefix="/assist", tags=["assistant"],
-                       dependencies=signed_in)
-    app.include_router(documents.router, prefix="/documents",
-                       tags=["work instructions"], dependencies=signed_in)
-    app.include_router(ops.router, prefix="/ops", tags=["operations"],
-                       dependencies=signed_in)
-    app.include_router(design.router, prefix="/design",
-                       tags=["design partner"], dependencies=signed_in)
-    app.include_router(maintenance.router, prefix="/maintenance",
-                       tags=["maintenance"], dependencies=signed_in)
-    app.include_router(scheduling.router, prefix="/scheduling",
-                       tags=["scheduling"], dependencies=signed_in)
-    app.include_router(serialization.router, prefix="/trace",
-                       tags=["traceability"], dependencies=signed_in)
-    app.include_router(masterdata.router, prefix="/masterdata", tags=["master data"], dependencies=signed_in)
-    app.include_router(workorders.router, prefix="/workorders", tags=["work orders"], dependencies=signed_in)
-    app.include_router(execution.router, prefix="/execution", tags=["execution"], dependencies=signed_in)
-    app.include_router(equipment.router, prefix="/equipment", tags=["equipment"], dependencies=signed_in)
-    app.include_router(quality.router, prefix="/quality", tags=["quality"], dependencies=signed_in)
-    app.include_router(kpis.router, prefix="/kpis", tags=["kpis"], dependencies=signed_in)
-    app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"], dependencies=signed_in)
-    app.include_router(line.router, prefix="/line", tags=["line view"], dependencies=signed_in)
-    app.include_router(analysis.router, prefix="/analysis", tags=["analysis"], dependencies=signed_in)
-    app.include_router(erp_router.router, prefix="/erp", tags=["erp"], dependencies=signed_in)
-    app.include_router(triggers_router.router, prefix="/triggers", tags=["triggers"], dependencies=signed_in)
-    app.include_router(adjustments_router.router, prefix="/adjustments", tags=["adjustments"],
-                       dependencies=signed_in)
-    app.include_router(coa_router.router, prefix="/coa", tags=["certificates"], dependencies=signed_in)
+    served = get_settings().enabled_modules()
+    for module in served:
+        for mount in module.routers:
+            router = import_module(mount.module).router
+            app.include_router(router, prefix=mount.prefix, tags=list(mount.tags),
+                               dependencies=[] if mount.public else signed_in)
 
     # The dashboard itself is a static page; it signs in through /auth/login.
     app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
@@ -254,128 +216,19 @@ def create_app() -> FastAPI:
             response.headers["Cache-Control"] = "public, max-age=604800"
         return response
 
-    @app.get("/dashboard", include_in_schema=False)
-    def dashboard_page() -> FileResponse:
-        return FileResponse(WEB_DIR / "index.html")
+    # Dashboard pages come from the same registry, so a module that is off
+    # takes its screens with it rather than serving a page whose every fetch
+    # answers 404. The docstring a reader wants is on the Page entry.
+    for module in served:
+        for page in module.pages:
+            def _serve(page=page) -> FileResponse:
+                return FileResponse(WEB_DIR / page.file)
 
-    @app.get("/dashboard/station", include_in_schema=False)
-    def station_page() -> FileResponse:
-        """One machine, arm's length: the line-side operator's screen."""
-        return FileResponse(WEB_DIR / "station.html")
-
-    @app.get("/dashboard/orders", include_in_schema=False)
-    def orders_page() -> FileResponse:
-        """Where an order is, what each step yielded, and what went into it."""
-        return FileResponse(WEB_DIR / "orders.html")
-
-    @app.get("/dashboard/quality", include_in_schema=False)
-    def quality_page() -> FileResponse:
-        """Inspection history against the specification that judged it."""
-        return FileResponse(WEB_DIR / "quality.html")
-
-    @app.get("/dashboard/ops", include_in_schema=False)
-    def ops_page() -> FileResponse:
-        """What is running, what it has been saying, and who did what."""
-        return FileResponse(WEB_DIR / "ops.html")
-
-    @app.get("/dashboard/instructions", include_in_schema=False)
-    def instructions_page() -> FileResponse:
-        """Controlled work instructions, and the revision in force."""
-        return FileResponse(WEB_DIR / "instructions.html")
-
-    @app.get("/dashboard/admin", include_in_schema=False)
-    def admin_page() -> FileResponse:
-        """People, roles and routings. The screen gates itself on the
-        users.manage capability, as the API does."""
-        return FileResponse(WEB_DIR / "admin.html")
-
-    @app.get("/dashboard/line", include_in_schema=False)
-    def line_page() -> FileResponse:
-        """One line: machine health, work in progress between stations, the
-        state timeline, and the 3D view as a tab."""
-        return FileResponse(WEB_DIR / "line.html")
-
-    @app.get("/dashboard/line/3d", include_in_schema=False)
-    def line_scene_page() -> FileResponse:
-        """The 3D line view. Its own page, so nothing else pays for a WebGL
-        scene it does not draw; the Line page embeds it as a tab."""
-        return FileResponse(WEB_DIR / "line3d.html")
-
-    @app.get("/dashboard/machines", include_in_schema=False)
-    def machines_page() -> FileResponse:
-        """Engineering: the plant as a tree, with cost centers and alarms."""
-        return FileResponse(WEB_DIR / "machines.html")
-
-    @app.get("/dashboard/masterdata", include_in_schema=False)
-    def masterdata_page() -> FileResponse:
-        """Equipment with cost centers, materials and bills of material,
-        specifications, people."""
-        return FileResponse(WEB_DIR / "masterdata.html")
-
-    @app.get("/dashboard/trace", include_in_schema=False)
-    def trace_page() -> FileResponse:
-        """One serial (what is inside it, what went into it) or one lot
-        (where it went, as packages a warehouse can pull)."""
-        return FileResponse(WEB_DIR / "trace.html")
-
-    @app.get("/dashboard/spc", include_in_schema=False)
-    def spc_page() -> FileResponse:
-        """The individuals control chart: is the process stable, is it
-        capable, and which are two different questions."""
-        return FileResponse(WEB_DIR / "spc.html")
-
-    @app.get("/dashboard/gauges", include_in_schema=False)
-    def gauges_page() -> FileResponse:
-        """The gauge register, calibration, and what a failed one invalidated."""
-        return FileResponse(WEB_DIR / "gauges.html")
-
-    @app.get("/dashboard/schedule", include_in_schema=False)
-    def schedule_page() -> FileResponse:
-        """The board, what the plan promises each order, and the calendar
-        every promise rests on."""
-        return FileResponse(WEB_DIR / "schedule.html")
-
-    @app.get("/dashboard/maintenance", include_in_schema=False)
-    def maintenance_page() -> FileResponse:
-        """What has come due on use, what is open and what clearing it costs,
-        the plans, and the work that was done."""
-        return FileResponse(WEB_DIR / "maintenance.html")
-
-    @app.get("/dashboard/coa", include_in_schema=False)
-    def coa_page() -> FileResponse:
-        """Certificates of analysis: readable, printable, immutable."""
-        return FileResponse(WEB_DIR / "coa.html")
-
-    @app.get("/dashboard/adjustments", include_in_schema=False)
-    def adjustments_page() -> FileResponse:
-        """Engineering: the recommendation queue - the only path to a PLC."""
-        return FileResponse(WEB_DIR / "adjustments.html")
-
-    @app.get("/dashboard/triggers", include_in_schema=False)
-    def triggers_page() -> FileResponse:
-        """Engineering: what the plant does when a signal crosses a line -
-        drafted, approved, withdrawn, and every firing."""
-        return FileResponse(WEB_DIR / "triggers.html")
-
-    @app.get("/dashboard/tags", include_in_schema=False)
-    def tags_page() -> FileResponse:
-        """Engineering: every tag on every machine, and whether each machine
-        is still talking."""
-        return FileResponse(WEB_DIR / "tags.html")
-
-    @app.get("/dashboard/machine/{code}", include_in_schema=False)
-    def machine_page(code: str) -> FileResponse:
-        """One machine: every tag it publishes, trends, timeline, OEE,
-        maintenance, and what is queued on it. The script reads the code
-        from the URL; the page is the same file for every machine."""
-        return FileResponse(WEB_DIR / "machine.html")
-
-    @app.get("/dashboard/analysis", include_in_schema=False)
-    def analysis_page() -> FileResponse:
-        """Shift analysis: OEE losses, the state timeline, downtime pareto and
-        tag trends. Its own page because these are questions you sit down with,
-        not things you watch."""
-        return FileResponse(WEB_DIR / "analysis.html")
+            # A distinct name and the page's own sentence, so /docs-style
+            # introspection and a traceback both say which screen this is.
+            _serve.__name__ = "page_" + page.file.removesuffix(".html").replace("-", "_")
+            _serve.__doc__ = page.about
+            app.get(page.path, include_in_schema=False)(_serve)
 
     @app.get("/", include_in_schema=False)
     def root() -> RedirectResponse:

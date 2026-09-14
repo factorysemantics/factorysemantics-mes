@@ -48,10 +48,30 @@ STATE = BASE_DIR / "state.json"
 OFF_SWITCH = HOME / ".local" / "share" / "fsmes" / "autoloop.off"
 REPORTS = HOME / ".local" / "share" / "fsmes" / "reports"
 
-PLANTS = {
-    "bottling": os.environ.get("MES_AUTOLOOP_BOTTLING", "http://127.0.0.1:8010"),
-    "machining": os.environ.get("MES_AUTOLOOP_MACHINING", "http://127.0.0.1:8020"),
-}
+def plants() -> dict[str, str]:
+    """The plants tonight runs against: every plant in the registry this
+    checkout points at, each at its own base URL.
+
+    Read from the registry rather than listed here. A list here was two lab
+    plants' names and ports inside the product - the tenant literal house
+    rule 4 forbids and `tests/test_no_tenant_literals.py` now catches. A third
+    plant joins the night shift by being in the registry; that is the whole
+    change.
+
+    `MES_AUTOLOOP_PLANTS` narrows it to a comma-separated subset, for a night
+    that should exercise only some of them. No registry at all means no
+    plants, which the morning note reports as nothing crawled rather than as
+    a clean night.
+    """
+    from fsmes import plant as registry
+
+    try:
+        found = registry.load_registry(registry.find_root())
+    except (FileNotFoundError, KeyError, ValueError):
+        return {}
+    wanted = [n.strip() for n in os.environ.get("MES_AUTOLOOP_PLANTS", "").split(",") if n.strip()]
+    return {name: registry.dashboard_url(cfg).removesuffix("/dashboard")
+            for name, cfg in found.items() if not wanted or name in wanted}
 
 # The night agent's whole entitlement, mirrored in the skill's contract.
 MAX_BUILDS = 3
@@ -96,7 +116,7 @@ def score_plants(echo=print) -> list[dict]:
     run triages its own logs (qwen) before its evidence is discarded."""
     fsmes = REPO / ".venv" / "bin" / "fsmes"
     outcomes = []
-    for plant in PLANTS:
+    for plant in plants():
         echo(f"scoring {plant} at speed 60…")
         try:
             done = subprocess.run(
@@ -122,7 +142,7 @@ def gather(echo=print) -> dict:
 
     # UI drift and breakage, both plants (same code, so style baselines
     # apply to either; fingerprints keep findings from doubling).
-    for plant, base in PLANTS.items():
+    for plant, base in plants().items():
         echo(f"crawling {plant}…")
         try:
             run = ui_check.crawl(base, echo=lambda *_: None)
