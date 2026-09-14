@@ -31,10 +31,13 @@ goes under Honesty with a migration line, so plant people can find it.
   repository passes removed. The exception is `actions/first-interaction`,
   whose v2 rewrite renamed all three inputs from hyphens to underscores
   (`repo-token` → `repo_token`, and the two messages likewise), and which
-  reads them as required — so the bump on its own would have made the welcome
-  job fail on the first issue or pull request a stranger ever opened, the one
-  event nothing here can rehearse. `welcome.yml` now passes the underscore
-  names and carries the citation. `release.yml` keeps its pinned versions in
+  reads all three as required before it asks whether anyone is a first-time
+  contributor — so the bump on its own would have failed the welcome job on
+  every issue and pull request opened. Dependabot's own bump was green with
+  the hyphens still in it, because `pull_request_target` runs the copy of the
+  workflow on the base branch. `welcome.yml` now passes the underscore names
+  and carries the citation, and the next pull request opened after this merges
+  is what proves it. `release.yml` keeps its pinned versions in
   this change; it runs only on a tag, so its bumps go separately, behind a
   dry run that can be exercised without one.
   ([#44](https://github.com/factorysemantics/factorysemantics-mes/pull/44))

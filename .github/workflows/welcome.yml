@@ -19,13 +19,20 @@ jobs:
       # `pr-message`. v2 rewrote it in TypeScript and renamed all three to
       # `repo_token`, `issue_message` and `pr_message`
       # (https://github.com/actions/first-interaction/releases/tag/v2.0.0,
-      # "Convert from Container to TypeScript Action"; compare
-      # action.yml at v1 and at v3). The action reads them with
-      # `core.getInput(..., { required: true })`, so hyphens on v2+ mean this
-      # job fails on the first issue or pull request a stranger ever opens —
-      # and nothing else in this repository opens one, so no run before that
-      # would have caught it. If a future bump changes the names again, they
-      # are in that release's action.yml.
+      # "Convert from Container to TypeScript Action"; compare action.yml at v1
+      # and at v3). The action reads all three with
+      # `core.getInput(..., { required: true })`, and it reads them *before* it
+      # asks whether this is anyone's first contribution (src/main.ts at v3),
+      # so hyphens on v2+ fail this job on every issue and every pull request
+      # opened, not only a newcomer's.
+      #
+      # Which is not how it was found. This job triggers on
+      # `pull_request_target`, and that event runs the copy of this file on the
+      # base branch — so Dependabot's own bump (#39) went green with the
+      # hyphens still in it, because the run used `main`'s v1. A version bump
+      # here is proven by the *next* pull request opened after it merges, never
+      # by the one that makes it. If a future bump changes the names again,
+      # they are in that release's action.yml.
       - uses: actions/first-interaction@v3
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
