@@ -163,6 +163,41 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Honesty
 
+- **OEE performance is a measurement against the rated cycle, not a floor at
+  100 %.** Both places that computed it wrote `min(1.0, ...)`. On 2026-09-14
+  the lab measured what that cost: across two experiments, **nine stations in
+  two plants, every one reported performance of exactly 1.0** while the script
+  that generated their data said 0.9433 to 0.9994. Availability and quality
+  tracked the truth; performance could not track anything, because every raw
+  value was above 1.0 and every reported value was therefore 1.0. The rule now
+  lives in one place — `fsmes.services.oee.performance`, called by both the
+  per-machine KPI and the plant-wide breakdown — and there is no cap. Below
+  1.0 the machine ran slower than its rating; above 1.0 it ran faster, and
+  that is **reported as above 1.0** with the note that says what it means: the
+  rating is slower than the machine, which is a master-data finding rather
+  than a score above physics. No rated cycle time is *unknown* with its
+  reason, never 1.0 and never 0. The performance loss in units is signed for
+  the same reason — flooring it at zero hid the same fact one column along.
+  *Migration:* `performance` and `oee`, on `GET /analysis/oee`,
+  `GET /equipment/{code}/oee`, `GET /kpis/oee/{code}` and the dashboard
+  summary, may now exceed 1.0; each carries a new `performance_note` that is
+  the sentence to print beside the number, or null when the number speaks for
+  itself. A station whose OEE steps up on upgrade has a rated cycle time that
+  is wrong — the note names it, and fixing the master data brings the figure
+  back. Decision record 0025; the page is `docs/plant/reading-oee.md`.
+- **The lab compares performance on the line's clock, and neither side is
+  capped.** Availability and quality are each a ratio of two wall-clock
+  numbers, so a replay's speed cancels out of both. Performance does not
+  cancel: its numerator is priced in the line's own seconds (the rated cycle)
+  and its denominator is run time measured on the wall clock, so a plant
+  replaying an hour at 20x reports twenty times the line's performance. With
+  the cap gone that would have read as a plant beating its rating twenty-fold.
+  The report's **P MES** column is now the MES's own performance put back on
+  the line's clock — its rating, its counts, its run time multiplied by the
+  replay speed — and each station carries its own band, because both sides
+  divide by run time and the MES drains past the end of the script. A
+  difference inside that band is not called a finding. At speed 1 nothing
+  changes.
 - **A replayed run's booking comparison states a band, and says which
   direction is sharp.** A CSV replay loops: when the file runs out the counters
   wrap to zero and the hour starts again, and a run is always left playing a

@@ -301,11 +301,15 @@ station starves the next one on its own. The table is the scripted windows only.
 
 
 def _cycle_note(row: dict, truth: dict, said: dict | None) -> str:
-    """Whether the two sides priced the machine's ideal cycle the same way."""
-    if row["performance_like_for_like"]:
+    """Whether the two sides priced the machine's ideal cycle the same way, and
+    how far apart they measured the run time performance divides by."""
+    if not row["performance_like_for_like"]:
+        mes = (said or {}).get("ideal_cycle_seconds")
+        return esc(f"rated cycle differs: script {truth['rated_cycle_seconds']} s, MES {mes} s")
+    band = row.get("performance_resolution")
+    if band is None:
         return "like for like"
-    mes = (said or {}).get("ideal_cycle_seconds")
-    return esc(f"rated cycle differs: script {truth['rated_cycle_seconds']} s, MES {mes} s")
+    return esc(f"like for like; run times differ by {band:.1%}, which is the band")
 
 
 def _oee(oee: dict) -> str:
@@ -321,7 +325,8 @@ def _oee(oee: dict) -> str:
             f"<td>{pct(truth['availability'])}</td>"
             f"<td>{pct(said and said['availability'])}</td>"
             f"<td class='{'bad' if loud else ''}'>{pct(diff.get('availability'))}</td>"
-            f"<td>{pct(truth['performance'])}</td><td>{pct(said and said['performance'])}</td>"
+            f"<td>{pct(truth['performance'])}</td>"
+            f"<td>{pct(said and said['performance_line_seconds'])}</td>"
             f"<td>{pct(truth['quality'])}</td><td>{pct(said and said['quality'])}</td>"
             f"<td class='wide'>{_cycle_note(row, truth, said)}</td>"
             f"</tr>")
@@ -332,9 +337,16 @@ obeyed. The two sides do not measure over the same window: the MES watched
 {num(window['mes_line_seconds'], 0, ' s')} of line time, the script is
 {num(window['truth_line_seconds'], 0, ' s')} long, a mismatch of {pct(mismatch)}. An availability
 difference smaller than that is not evidence, and is not marked as one.</p>
+<p>The <strong>P MES</strong> column is the MES's own performance put back on the line's clock — its
+rating, its counts, its run time multiplied by the {esc(str(oee['speed']))}x this run replayed at.
+Availability and quality are ratios of two wall-clock numbers, so the replay speed cancels out of
+them; performance divides line seconds by wall-clock seconds, so it does not. The last column carries
+each station's own band: both sides divide by run time, and they did not measure run time over the
+same stretch.</p>
 <div class="scroll"><table>
 <thead><tr><th>Station</th><th>Machine</th><th>A truth</th><th>A MES</th><th>A diff</th>
-<th>P truth</th><th>P MES</th><th>Q truth</th><th>Q MES</th><th>Performance</th></tr></thead>
+<th>P truth</th><th>P MES</th><th>Q truth</th><th>Q MES</th>
+<th>Performance basis</th></tr></thead>
 <tbody>{"".join(rows)}</tbody></table></div>
 """
 

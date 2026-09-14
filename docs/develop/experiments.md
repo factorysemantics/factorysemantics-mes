@@ -184,18 +184,34 @@ this run could have resolved.
 
 ### `oee` — does the MES's OEE match the hour the line actually had?
 
-Availability, performance and quality per station, against the script. Two
-things stop this being a subtraction, and both are stated rather than corrected
-for:
+Availability, performance and quality per station, against the script. Three
+things stop this being a subtraction, and all three are stated rather than
+quietly corrected for:
 
 * **The windows differ.** The MES measures over the window it was watching; the
   script is exactly `duration` long. An availability difference smaller than
   that mismatch is not evidence, and the page does not mark it as one.
+* **The clocks differ, and only performance notices.** Availability and quality
+  are each a ratio of two things measured the same way, so the replay speed
+  cancels out of both. Performance does not cancel: its numerator is priced in
+  the line's own seconds — the rated cycle somebody wrote down — and its
+  denominator is run time the MES measured on the wall clock. Replay an hour at
+  20x and the MES's run time is a twentieth of the line's, so the figure it
+  reports is twenty times the line's. The report's **P MES** column is
+  therefore the MES's own performance put back on the line's clock: its rating,
+  its counts, its run time multiplied by the replay speed. At speed 1 it is the
+  reported figure unchanged. Each station also carries its own band — both
+  sides divide by run time, and the MES drains past the end of the script — and
+  a difference inside that band is not called a finding.
 * **The rated cycle may differ.** Performance prices units against what the
   machine could have made, and the MES uses its master data's
   `ideal_cycle_seconds` while the script uses the line's `rate_per_min`. Where
   the two disagree the row says *not like for like* instead of reporting the
   difference as a fault.
+
+Neither side caps performance. A figure above 1.0 means the machine beat the
+cycle it was rated at, which is a finding about the rating rather than a score
+above physics — see [reading OEE](../plant/reading-oee.md).
 
 ### Not measured yet
 

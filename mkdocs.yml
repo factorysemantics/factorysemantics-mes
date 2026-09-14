@@ -152,6 +152,7 @@ nav:
           - decisions/0022-what-a-plant-pack-may-contain.md
           - decisions/0023-the-fleet-console-observes.md
           - decisions/0024-a-nonconformance-has-a-life.md
+          - decisions/0025-performance-is-measured-not-capped.md
           - Template: decisions/TEMPLATE.md
   - Agents:
       - agents/index.md

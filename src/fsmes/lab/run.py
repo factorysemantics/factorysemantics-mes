@@ -336,8 +336,10 @@ def _echo_plant(scored: dict, echo) -> None:
     if oee_out:
         mismatch = oee_out["window"]["mismatch_share"]
         loud = [r for r in oee_out["stations"] if measure.significant(r, mismatch)]
+        slow = [r for r in oee_out["stations"] if measure.performance_significant(r)]
         echo(f"    oee       : {oee_out['stations_answered']}/{oee_out['stations_total']} stations "
-             f"answered; {len(loud)} availability difference(s) bigger than the window mismatch")
+             f"answered; {len(loud)} availability difference(s) bigger than the window mismatch, "
+             f"{len(slow)} performance difference(s) bigger than the station's own band")
 
 
 def listing(results_root: Path) -> list[dict]:
