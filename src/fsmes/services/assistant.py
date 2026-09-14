@@ -439,7 +439,11 @@ SURFACES: dict[str, dict] = {
     "record_check": {
         "title": "Record a quality inspection",
         "needs": "quality.record",
-        "pages": ["/dashboard", "/dashboard/quality"],
+        # The station screen records one too, on the machine in front of the
+        # person. The walkthrough still points at the floor page's form:
+        # the steps below are a single authored list, and one wrong selector
+        # is worse than a walk to a screen that definitely has the control.
+        "pages": ["/dashboard", "/dashboard/station", "/dashboard/quality"],
         "example": "Record {characteristic} {mid} on {machine}",
         "steps": [
             {"page": "/dashboard", "anchor": "quality-form",

@@ -22,7 +22,10 @@ let ncPage = { items: [], total: 0, limit: 50, offset: 0, has_more: false };  //
 let active = null;     // "material/characteristic"
 let historyPage = { items: [], total: 0, limit: HISTORY_PAGE, offset: 0, has_more: false };
 const filters = { material: "", hMaterial: "", hChar: "", hResult: "", hOffset: 0,
-                  sQ: "", sMaterial: "", sOffset: 0, nStatus: "open", nQ: "", nOffset: 0 };
+                  sQ: "", sMaterial: "", sOffset: 0,
+                  // "Still open" is three states, not one: a record taken under
+                  // review must not drop out of the list somebody is working.
+                  nStatus: "open,under_review,dispositioned", nQ: "", nOffset: 0 };
 
 const $ = (sel) => document.querySelector(sel);
 const el = (tag, cls, text) => {
@@ -325,6 +328,16 @@ function fillHistoryChars() {
    answer a question about later. The server says which steps are next, so
    the rules live in one place. */
 
+// What the count line calls each scope. The dropdown's value is the list of
+// states the server is asked for; this is the words a person reads.
+const NC_SCOPES = {
+  "open,under_review,dispositioned": "still open",
+  "open,under_review": "awaiting a decision",
+  dispositioned: "decided but not closed",
+  closed: "closed",
+  "": "in any status",
+};
+
 const DISPOSITIONS = {
   use_as_is: "use as is",
   rework: "rework",
@@ -413,10 +426,10 @@ function drawNcs() {
   const q = filters.nQ.toLowerCase();
   const page = ncPage;
   filters.nOffset = page.offset;
-  const what = filters.nStatus ? filters.nStatus : "in any status";
+  const what = NC_SCOPES[filters.nStatus] || "in any status";
   $("#n-count").textContent = `— ${page.items.length} of ${page.total.toLocaleString()} ${what}${q ? " matching" : ""}`;
   if (!page.items.length) {
-    list.appendChild(el("li", "muted", filters.nStatus === "open" && !q
+    list.appendChild(el("li", "muted", filters.nStatus.startsWith("open") && !q
       ? "none open — the line is inside spec" : "none match"));
   }
   for (const nc of page.items) {
@@ -478,16 +491,19 @@ function drawNcs() {
 async function refresh() {
   try {
     const ncParams = new URLSearchParams({ limit: String(NC_PAGE), offset: String(filters.nOffset) });
-    if (filters.nStatus) ncParams.set("status", filters.nStatus);
+    for (const one of filters.nStatus.split(",").filter(Boolean)) ncParams.append("status", one);
     if (filters.nQ) ncParams.set("q", filters.nQ);
     const ncQuery = `/quality/nonconformances?${ncParams}`;
-    const [s, h, n, all, failed, openCount] = await Promise.all([
+    const [s, h, n, all, failed, stillOpen] = await Promise.all([
       api("/quality/specs"),
       api(historyQuery()),
       api(ncQuery),
       api("/quality/checks?limit=1"),
       api("/quality/checks?limit=1&result=fail"),
-      api("/quality/nonconformances?status=open&limit=1"),
+      // Not closed, which is three states now. A tile counting only the
+      // untouched ones would read lower every time somebody started work.
+      api("/quality/nonconformances?status=open&status=under_review"
+          + "&status=dispositioned&limit=1"),
     ]);
     specs = s || [];
     historyPage = h;
@@ -504,7 +520,7 @@ async function refresh() {
     const total = all.total || 0;
     $("#kpi-checks").textContent = total.toLocaleString();
     $("#kpi-pass").textContent = total ? (((total - (failed.total || 0)) / total) * 100).toFixed(1) + "%" : "—";
-    $("#kpi-ncs").textContent = openCount && openCount.total !== undefined ? openCount.total.toLocaleString() : "—";
+    $("#kpi-ncs").textContent = stillOpen && stillOpen.total !== undefined ? stillOpen.total.toLocaleString() : "—";
     $("#kpi-specs").textContent = specs.length;
 
     await loadSeries().catch(() => { series = []; });

@@ -133,7 +133,8 @@ def list_checks(
 @router.get("/nonconformances")
 def list_ncs(
     db: DbDep,
-    status: NcStatus | None = None,
+    status: list[NcStatus] | None = Query(
+        None, description="Repeatable. A non-conformance in any of these states is returned."),
     q: str | None = Query(None, description="Match a code or a description."),
     limit: int = paging.LimitQuery,
     offset: int = paging.OffsetQuery,
@@ -144,10 +145,14 @@ def list_ncs(
     was two thousand rows and half a megabyte on every refresh of the
     Quality screen, and it only grows. The order it was raised on is here
     so a screen can lead somewhere from it.
+
+    `status` is repeatable because "still open" is now three states, not one:
+    a supervisor who takes a record under review must not watch it vanish out
+    of the list they are working.
     """
     query = select(NonConformance).order_by(NonConformance.id.desc())
     if status:
-        query = query.where(NonConformance.status == status)
+        query = query.where(NonConformance.status.in_(status))
     if q:
         like = f"%{q}%"
         query = query.where(NonConformance.code.ilike(like) | NonConformance.description.ilike(like))

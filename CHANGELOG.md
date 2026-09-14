@@ -90,6 +90,23 @@ goes under Honesty with a migration line, so plant people can find it.
   every crumb to prove it lands somewhere that renders. The crawl of the
   demo plant on 2026-09-14: 22 routes × 4 themes, no finding.
 
+- **Quality at the station.** `/dashboard/station` now has a quality card for
+  whatever the machine in front of you is running: the characteristics that
+  have a specification for that material, the last few results with the spec
+  that judged them and how many results there are in all, and one field to
+  record another. An out-of-spec reading raises the non-conformance as it
+  always did, and the card now names it, by code, where the operator is
+  looking. The card offers only characteristics with a specification — a
+  measurement with nothing to judge it against cannot pass or fail, and
+  offering one would invite a reading the MES then has no verdict for.
+  `GET /workorders/dispatch` gained `material` so the screen can find them.
+
+- **Three more tools for a non-conformance**: `review_nonconformance`,
+  `disposition_nonconformance` and a read-only `nonconformance` that returns
+  one record with its whole history. All three are proposals like every other
+  write; nothing an agent does to a quality record happens without a person.
+
+
 - **`fsmes fleet plan`** — what a deployment script needs to know about every
   plant in a fleet: where each pack is, where each database is and what kind
   it is, whether the plant simulates a line worth regenerating, and where to
@@ -118,6 +135,40 @@ goes under Honesty with a migration line, so plant people can find it.
   wrong, not the plant. Both sides now count the same way the MES books: a
   counter that goes backwards has been re-baselined, and the step across the
   reset is dropped rather than counted.
+
+- **A non-conformance is now worked, and cannot be closed without a
+  disposition.** It was `open` or `closed`, with one action: close it.
+  "Closed" never said what happened to the material, which is the one question
+  a non-conformance exists to answer — rework, scrap and return are three
+  different things that happened to three different piles of stock, and *use
+  as is* is a concession somebody put their name to.
+
+  The states are now **open → under review → dispositioned → closed**. Review
+  is a step, not a gate: a supervisor who already knows the answer may
+  disposition an open record directly. The disposition is one of `use_as_is`,
+  `rework`, `scrap` or `return` and **requires a reason**. Who took each step
+  and when is on the record, and `GET /quality/nonconformances` returns that
+  as a `history` beside each row, along with `next_steps`. Its `status` filter
+  is now repeatable, because "still open" is three states rather than one.
+
+  **Breaking:** `POST /quality/nonconformances/{code}/close` now returns 409
+  on a record nobody has dispositioned. Anything that closed one in a single
+  call takes two. The Quality screen's "Open non-conformances" tile is now
+  "Non-conformances not closed" and counts all three unclosed states — a tile
+  counting only the untouched ones would have read lower every time somebody
+  started work.
+
+  **Migration:** `b1f4c73a9e08` adds eight nullable columns to
+  `non_conformances` and changes no data. Existing rows keep their status and
+  carry null in the new columns, which is the truth: this MES did not record
+  who reviewed them, because it did not ask. The screen shows such a step as
+  "not recorded", never as `system`. Decision record
+  [0024](docs/decisions/0024-a-nonconformance-has-a-life.md).
+
+  A disposition records what was **decided**, not what was booked: it scraps
+  no stock and raises no rework order. Deciding and doing are different
+  events, and conflating them would be inventing production.
+
 
 ### Changed
 

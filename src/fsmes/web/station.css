@@ -86,3 +86,34 @@
 
 .big-io { align-items: end; }
 .big-io input { width: 110px; font-variant-numeric: tabular-nums; }
+
+/* ---------- quality at the station ----------
+   The result list reuses the queue's row, because an operator reading two
+   lists on one screen should not have to learn two shapes. */
+
+.station-layout h3.sub {
+  margin: var(--s3) 0 var(--s2);
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+}
+/* `.count` is the shared idiom for a count inside a shouting heading
+   (styles.css). The sub-headings here shout too, so it applies there as
+   well: a plant code in capitals it does not have is a code somebody will
+   go looking for. */
+.station-layout h3.sub .count { font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; }
+
+.queue li.out-of-spec { border-color: var(--down); }
+.result-pass { color: var(--running); font-size: var(--fs-sm); }
+.result-fail { color: var(--down); font-size: var(--fs-sm); font-weight: 600; }
+
+/* The MES raised a non-conformance. That is the system working, and the card
+   says so where the operator is looking rather than only in a toast. */
+.nc-raised {
+  margin-top: var(--s3);
+  border: 1px solid var(--down);
+  border-radius: var(--radius-sm);
+  padding: var(--s2) var(--s3);
+  font-size: var(--fs-sm);
+}

@@ -134,6 +134,77 @@ def test_reads_run_free_and_writes_pause_until_confirmed(scripted):
     assert sess.history[2]["content"][0]["tool_use_id"] == "t1"
 
 
+def test_the_sentence_scott_typed_becomes_a_proposal_and_then_the_quality_call(scripted):
+    """Scott at /dashboard, 2026-09-04: "submit a fill weight inspection for 495
+    on WASH01."
+
+    A machine, not a material — and a specification is held against a material,
+    so the agent has to look the station up before it can propose anything. The
+    reads run free; the write waits for him. Nothing here tests the model's
+    judgement: the script stands in for it, and what is pinned is that his one
+    sentence reaches POST /quality/checks exactly once, on his behalf, and only
+    after he said yes.
+    """
+    script, calls = scripted
+    script += [
+        response(block_tool("t1", "machines"), stop="tool_use"),
+        response(block_tool("t2", "quality"), stop="tool_use"),
+        response(block_text("WASH01 is running COLA-500. I will record fill weight 495."),
+                 block_tool("t3", "record_check", material="COLA-500",
+                            characteristic="fill_weight", value=495.0, order="WO-7"),
+                 stop="tool_use"),
+        response(block_text("Recorded: fill weight 495 on COLA-500 against WO-7, in spec.")),
+    ]
+    sess = agent.open_session("SCOTT", "bottling", {"plant.read", "quality.record"})
+    out = agent.message(sess, "submit a fill weight inspection for 495 on WASH01",
+                        name="Scott", role="operator")
+
+    # Looking things up needed no permission; the write did not run.
+    assert out["kind"] == "proposals"
+    assert [c["name"] for c in calls] == ["machines", "quality", "record_check"]
+    assert [c["dry_run"] for c in calls] == [None, None, True]
+    assert not any(c["dry_run"] is False for c in calls)
+
+    proposal = out["proposals"][0]
+    assert proposal["tool"] == "record_check"
+    assert proposal["args"] == {"material": "COLA-500", "characteristic": "fill_weight",
+                                "value": 495.0, "order": "WO-7"}
+    # What he is shown is the plant's preview of the write, not the model's
+    # summary of it. The real preview is built by the MCP write helper; that
+    # it names this path is held by tests/test_mcp_parity.py.
+    assert proposal["preview"]["request"]["path"] == "/quality/checks"
+
+    done = agent.confirm(sess, proposal["id"])
+    assert done["kind"] == "reply"
+    written = [c for c in calls if c["dry_run"] is False]
+    assert len(written) == 1
+    assert written[0]["name"] == "record_check"
+    assert written[0]["args"]["value"] == 495.0
+    assert written[0]["on_behalf_of"] == "SCOTT"       # audited as him, not as the agent
+    assert written[0]["client_ref"] == proposal["id"]  # a double click cannot double-record
+
+
+def test_the_assistant_will_not_offer_to_record_a_check_to_somebody_who_may_not(scripted):
+    """An operator without quality.record never sees the tool at all. Teaching
+    somebody a task they will be refused at the last step is worse than saying
+    it is not theirs to do."""
+    tools = {t["name"] for t in agent.catalogue({"plant.read"})}
+    assert "record_check" not in tools
+    assert "close_nonconformance" not in tools
+    assert "disposition_nonconformance" not in tools
+
+
+def test_the_supervisor_steps_on_a_nonconformance_are_all_proposals(scripted):
+    """Review, disposition and close change the plant's record of what happened
+    to material. Every one of them is a write, so every one of them waits."""
+    tools = {t["name"]: t for t in agent.catalogue({"plant.read", "quality.close_nc"})}
+    for name in ("review_nonconformance", "disposition_nonconformance", "close_nonconformance"):
+        assert name in tools, f"{name} is not offered to a supervisor"
+        assert tools[name]["write"] is True, f"{name} must not run without a person"
+    # Reading one is free: nobody needs permission to see what was decided.
+    assert tools["nonconformance"]["write"] is False
+
+
 def test_a_second_click_does_not_run_twice(scripted):
     script, calls = scripted
     script += [

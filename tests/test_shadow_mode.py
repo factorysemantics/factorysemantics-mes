@@ -255,6 +255,32 @@ def test_this_plants_numbers_do_not_leave_the_box(shadow_on, monkeypatch):
     assert design.claude_available() is False
 
 
+def test_a_quality_check_is_still_recorded_in_shadow_mode(session, shadow_on):
+    """A shadow plant inspects. The reading, the verdict against this MES's own
+    specification and the non-conformance it raises are this MES's observations
+    of a plant somebody else is running - they change nothing out there, and a
+    shadow that stopped writing them down would be comparing itself with the
+    incumbent on no evidence at all.
+
+    The register agrees: no entry covers /quality/checks, because nothing in
+    that path reaches past this MES's database.
+    """
+    from fsmes.domain import NcStatus
+    from fsmes.services import quality
+
+    check, nc = quality.record_check(session, material_code="FG-COLA",
+                                     characteristic="brix", value=13.0, actor="ines")
+    assert check.result.value == "fail"
+    assert nc is not None and nc.status is NcStatus.OPEN
+
+    # And the disposition too: deciding what happens to material is a record of
+    # a decision, not an instruction to anything outside this database.
+    quality.disposition_nc(session, nc.code, disposition="scrap",
+                           reason="the incumbent MES scrapped it", actor="marek")
+    quality.close_nc(session, nc.code, actor="marek")
+    assert nc.status is NcStatus.CLOSED and nc.disposition.value == "scrap"
+
+
 def test_the_local_model_still_answers_in_shadow_mode(shadow_on):
     """It runs on this machine; nothing about the plant leaves the box."""
     assert [p for p in shadow.REGISTER if p.name.startswith("llm.local_")], "the register lost them"

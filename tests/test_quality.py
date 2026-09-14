@@ -163,3 +163,49 @@ def test_one_nonconformance_can_be_read_with_its_order_and_its_history(superviso
 
 def test_a_nonconformance_that_does_not_exist_is_a_404(supervisor):
     assert supervisor.get("/quality/nonconformances/NC-99999").status_code == 404
+
+
+# ------------------------------------------------ what the station card reads
+
+def test_the_dispatch_list_names_what_each_operation_is_making(supervisor):
+    """The station's quality card needs it. A specification is held against a
+    material, not against a machine, so a screen that only knows the machine
+    cannot tell which characteristics judge the job in front of it."""
+    made = supervisor.post("/workorders", json={
+        "code": "WO-Q1", "material": "FG-COLA", "quantity": 10})
+    assert made.status_code == 201, made.text
+    assert supervisor.post("/workorders/WO-Q1/release").status_code == 200
+
+    rows = supervisor.get("/workorders/dispatch").json()
+    assert rows, "a released order should be dispatched"
+    assert all(row.get("material") for row in rows)
+    assert {row["material"] for row in rows} == {"FG-COLA"}
+
+
+def test_a_station_can_ask_for_only_the_specs_of_what_it_is_running(supervisor):
+    """A measurement with nothing to judge it against cannot pass or fail, so
+    the card offers the characteristics that have a spec for this material and
+    no others."""
+    mine = supervisor.get("/quality/specs?material=FG-COLA").json()
+    assert mine and all(s["material"] == "FG-COLA" for s in mine)
+    assert "brix" in {s["characteristic"] for s in mine}
+
+
+def test_the_recent_results_for_one_characteristic_say_how_many_there_are(supervisor):
+    """House rule: every list states its total. The card shows the last few and
+    the envelope says what they are the last few of."""
+    for value in (10.0, 10.1, 10.3):
+        supervisor.post("/quality/checks",
+                        json={"material": "FG-COLA", "characteristic": "brix", "value": value})
+    page = supervisor.get("/quality/checks?material=FG-COLA&characteristic=brix&limit=2").json()
+    assert len(page["items"]) == 2 and page["total"] >= 3
+    assert page["has_more"] is True
+
+
+def test_recording_a_check_from_the_station_names_the_non_conformance_it_raised(supervisor):
+    """The operator who recorded it is told which one, by code, so a supervisor
+    can be sent to it. Raising it is the MES working, not an error."""
+    out = supervisor.post("/quality/checks", json={
+        "material": "FG-COLA", "characteristic": "brix", "value": 99.0}).json()
+    assert out["result"] == "fail"
+    assert out["non_conformance"], "an out-of-spec reading must name the record it opened"

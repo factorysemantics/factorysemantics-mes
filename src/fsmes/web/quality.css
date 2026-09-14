@@ -54,8 +54,11 @@
   padding: 0 0 0 var(--s3);
   border-left: 2px solid var(--line);
   display: grid;
-  gap: 2px;
+  gap: 1px;
 }
+/* The feed gives its own items a rule and a gap; the steps nested inside one
+   are not feed entries and must not be spaced like them. */
+.nc-history li { padding-bottom: 0; border-bottom: none; display: block; }
 
 .pill.under_review  { background: rgba(163,113,247,.16); color: var(--setup); }
 .pill.dispositioned { background: rgba(74,158,255,.16);  color: var(--accent); }

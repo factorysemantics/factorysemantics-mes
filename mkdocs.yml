@@ -151,6 +151,7 @@ nav:
           - decisions/0021-one-database-per-plant.md
           - decisions/0022-what-a-plant-pack-may-contain.md
           - decisions/0023-the-fleet-console-observes.md
+          - decisions/0024-a-nonconformance-has-a-life.md
           - Template: decisions/TEMPLATE.md
   - Agents:
       - agents/index.md

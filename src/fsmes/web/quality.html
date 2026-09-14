@@ -27,7 +27,7 @@
   <section class="kpis">
     <div class="kpi"><span class="kpi-label">Checks recorded</span><span id="kpi-checks" class="kpi-value">—</span></div>
     <div class="kpi"><span class="kpi-label">Pass rate, all time</span><span id="kpi-pass" class="kpi-value">—</span></div>
-    <div class="kpi"><span class="kpi-label">Open non-conformances</span><span id="kpi-ncs" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Non-conformances not closed</span><span id="kpi-ncs" class="kpi-value">—</span></div>
     <div class="kpi"><span class="kpi-label">Characteristics</span><span id="kpi-specs" class="kpi-value">—</span></div>
   </section>
 
@@ -77,7 +77,9 @@
         action recorded against the person who took it.</p>
       <div class="filter-bar" data-assist="nc-filters">
         <select id="n-status" aria-label="Status">
-          <option value="open">Open</option>
+          <option value="open,under_review,dispositioned">Still open</option>
+          <option value="open,under_review">Awaiting a decision</option>
+          <option value="dispositioned">Decided, not closed</option>
           <option value="closed">Closed</option>
           <option value="">Any status</option>
         </select>
