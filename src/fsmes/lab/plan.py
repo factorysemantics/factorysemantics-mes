@@ -60,13 +60,13 @@ MEASUREMENTS = {
     "downtime": "scripted stops detected and how late, and planned stops kept out of downtime",
     "oee": "availability, performance and quality per station against the script",
     "latency": "how long after the line each screen said it, watched while the hour played",
+    "console": "what `fsmes fleet console` counted at each phase of the run",
 }
 
 #: Named in the design and not built yet. A plan that asks for one of these is
 #: refused by name rather than ignored: silently dropping a measurement is how
 #: a report comes to say less than its plan asked for without anybody noticing.
 PLANNED = {
-    "console": "`fsmes fleet console` counting plants, answers and unknowns",
     "quality": "a scrap burst tripping an SPC rule and holding the lot",
     "agent-eval": "the agent evaluation over the run, with its cost stated",
 }

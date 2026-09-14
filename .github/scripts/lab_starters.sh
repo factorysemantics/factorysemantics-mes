@@ -69,8 +69,14 @@ for run in runs:
         sys.exit(f"{run.name} is missing {', '.join(missing)}.")
     if scores["plants_run"] != scores["plants_total"]:
         sys.exit(f"{run.name}: {scores['plants_run']} of {scores['plants_total']} plants ran.")
-    for plant in scores["plants"]:
-        for name in scores["measurements_asked_for"]:
+    # A measurement is either about one plant or about the run. Both count;
+    # what does not count is a plan asking for one and the directory holding
+    # neither, which is how a report comes to say less than it was asked for.
+    run_wide = scores.get("measurements") or {}
+    for name in scores["measurements_asked_for"]:
+        if name in run_wide:
+            continue
+        for plant in scores["plants"]:
             if name not in plant["measurements"]:
                 sys.exit(f"{run.name}: {plant['plant']} has no {name} measurement, and the plan "
                          f"asked for one.")

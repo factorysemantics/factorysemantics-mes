@@ -113,6 +113,7 @@ One directory per run, under `lab-results/` unless `--results` says otherwise:
 | `notes.md` | what a person saw that no number caught |
 | `feedback/conversations.jsonl` | the run's copy of what was said at its screens |
 | `watched/<plant>.json` | what each screen was showing, look by look, while the hour played |
+| `fleet/phases.json` | what `fsmes fleet console` said at each phase, and the fleet it watched |
 
 **The directory is the unit.** Hand somebody that folder and they have the
 plan, the script, the data, the answers, the scores and the page, with nothing
@@ -319,12 +320,63 @@ re-running against an hour somebody already paid for.
 *What it cannot tell you.* Nothing configures a broker in these runs, so how
 long an event took to reach the unified namespace is *unknown* and says so.
 
+### `console` — did the fleet console count the plants the run actually had?
+
+The console's whole promise is
+[decision 0023](../decisions/0023-the-fleet-console-observes.md)'s: a plant that
+did not answer is **unknown**, never healthy and never down. Nothing tested that
+against plants that really start and really stop, because a console needs
+several plants and a lab run has always had exactly one at a time.
+
+Which turns out to be the fixture. The lab runs its plants **one after
+another** — two replaying at speed on one laptop compete for the same cores, and
+a run whose harness fell behind has its numbers withheld — so at any moment
+during a several-plant experiment exactly one plant is answering and the rest
+are not. The console's hardest case, arriving for free, on real ports and over
+real HTTP.
+
+A run that asks for `console` starts one, tells it each plant's address the
+moment that plant comes up, and asks `/fleet.json` at each phase:
+
+```
+before any plant had started        0 plants
+while bottling was running          1 plant,  1 answered, 0 unknown
+after bottling had been torn down   1 plant,  0 answered, 1 unknown
+while machining was running         2 plants, 1 answered, 1 unknown
+after every plant had stopped       2 plants, 0 answered, 2 unknown
+```
+
+Three things about how it is run:
+
+* **A real console on a real port**, started as `fsmes fleet console` and asked
+  over HTTP — not the same code called in process. What a person opens is a page
+  served by a route, and a measurement that skipped the route would not notice
+  the day the route broke.
+* **Its own fleet, and only this run's plants in it.** The console's root is a
+  directory under the results directory with its own empty fleet file, so an
+  experiment's console can never pick up the plants somebody already has running
+  on this machine — which would make the totals meaningless and, worse,
+  plausible.
+* **It is told, never discovered.** An ephemeral plant claims its ports when it
+  starts, so each is written into the console's own ownership file as *observed*
+  at the moment the run first looks at it. A plant the run has not reached yet
+  is not in the file, and the measurement counts it as such: not yet built and
+  not answering are different facts.
+
+Two numbers come out. **How many phases the console's count of answering plants
+matched the truth**, and **how many stopped plants it read as anything other
+than unknown** — which is a defect at any value above zero, and the same fault
+as calling a changeover downtime, at fleet scale.
+
+*What it cannot tell you.* Whether a console would still be right about a plant
+that is up but wedged, or about twelve plants rather than two. The phases are
+the ones this run happened to live through.
+
 ### Not measured yet
 
-`console`, `quality` and `agent-eval` are named in the design and are not
-built. A plan that asks for one is **refused by name**: silently dropping a
-measurement is how a report comes to say less than its plan asked for without
-anybody noticing.
+`quality` and `agent-eval` are named in the design and are not built. A plan
+that asks for one is **refused by name**: silently dropping a measurement is how
+a report comes to say less than its plan asked for without anybody noticing.
 
 ## When a run's numbers are withheld
 
@@ -451,7 +503,7 @@ To hand a run over, copy the directory. That is the whole procedure.
 | Plan | What it is |
 |---|---|
 | `labs/experiments/one-line-bad-hour.toml` | the six-station bottling line playing the six classic faults in an hour at 20× |
-| `labs/experiments/two-plants-two-zones.toml` | Kansas City and Northgate, different products, clocks, modules and words, one after another at 30× |
+| `labs/experiments/two-plants-two-zones.toml` | Kansas City and Northgate, different products, clocks, modules and words, one after another at 30× — and what a fleet console made of the pair |
 | `labs/experiments/starved-and-blocked.toml` | twenty minutes in which nothing breaks and nothing is made: the empties run out, then the palletiser stops taking cases — and how long each took to reach a screen |
 
 Both run in CI on every pull request, which is what stops the instrument

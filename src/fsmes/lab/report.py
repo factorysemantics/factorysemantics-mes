@@ -486,6 +486,49 @@ contract and what makes each look cheap.</p>
 """
 
 
+def _console(seen: dict) -> str:
+    """What the fleet console counted, phase by phase.
+
+    Its own section above the plants, because it is about the run: a console
+    counts a fleet, and putting the same answer in each plant's block would
+    invite a reader to treat one reading as several.
+    """
+    rows = []
+    for phase in seen["phases"]:
+        if phase.get("unknown_because"):
+            rows.append(f"<tr><td>{esc(phase['phase'])}</td>"
+                        f"<td colspan='5' class='wide unknown'>"
+                        f"{esc(phase['unknown_because'])}</td></tr>")
+            continue
+        matched = phase["answered_matches"]
+        misread = phase["stopped_plants_read_otherwise"]
+        rows.append(
+            f"<tr><td>{esc(phase['phase'])}</td>"
+            f"<td>{num(phase['plants_really_running'])}</td>"
+            f"<td class='{'' if matched else 'bad'}'>{num(phase['console_answered'])}</td>"
+            f"<td>{num(phase['console_unknown'])}</td>"
+            f"<td class='wide'>{esc(phase['console_says'])}</td>"
+            f"<td class='wide {'bad' if misread else ''}'>"
+            f"{esc(', '.join(misread) if misread else 'every stopped plant read unknown')}"
+            f"</td></tr>")
+    return f"""
+<h2 id="console">What the fleet console counted</h2>
+<p>{esc(seen['question'])} {esc(seen['note'])}.</p>
+<div class="tiles">
+{_tile("count matched", f"{num(seen['phases_where_the_count_matched'])} / {num(seen['phases_answered'])}",
+       "phases where the console's answering count was the truth")}
+{_tile("stopped, not unknown", num(seen['stopped_plants_not_read_as_unknown']),
+       "a defect at any value above zero")}
+{_tile("ever said down", "no" if seen['never_said_down'] else "yes",
+       "a plant nobody could reach is unknown, not down")}
+</div>
+<div class="scroll"><table>
+<thead><tr><th>Phase</th><th>Really up</th><th>Console: answered</th><th>Console: unknown</th>
+<th>What it said</th><th>Stopped plants</th></tr></thead>
+<tbody>{"".join(rows) or _empty(6, "The console was never asked.")}</tbody></table></div>
+"""
+
+
 def _cycle_note(row: dict, truth: dict, said: dict | None) -> str:
     """Whether the two sides priced the machine's ideal cycle the same way, and
     how far apart they measured the run time performance divides by."""
@@ -699,7 +742,9 @@ def render(scores: dict, directory: Path, said: list[dict] | None = None) -> str
     if said is None:
         said = feedback_mod.read(directory)
     notes = sum(1 for c in said for t in c.get("turns") or [] if t.get("role") == "user")
-    sections = "\n".join(_plant(p, said) for p in plants)
+    run_wide = (scores.get("measurements") or {}).get("console")
+    sections = (_console(run_wide) if run_wide else "") + "\n".join(
+        _plant(p, said) for p in plants)
     toc = "".join(f'<li><a href="#{esc(p["plant"])}">{esc(p["plant"])}</a></li>' for p in plants)
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">

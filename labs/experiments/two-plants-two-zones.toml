@@ -16,11 +16,18 @@
 # About five minutes: two plants, fifty minutes of line time each at 30x, run
 # one after another so neither competes with the other for the machine.
 #
+# It also asks what `fsmes fleet console` made of the pair. The plants run one
+# after another - two replaying at speed on one laptop compete for the same
+# cores - so at every moment of this run exactly one of them is answering and
+# the other is not, which is the console's hardest case arriving for free. A
+# console is started for the run, told each plant's address when that plant
+# comes up, and asked at each phase: before either plant, while each is
+# running, after each is torn down, and at the end when neither is there. A
+# plant nobody can reach must read *unknown* - never healthy, and never down.
+#
 # Not yet here, and why: the third lab plant (`finewire`) is the one with a
 # genuinely different zone *and* a PostgreSQL, and it wants that server and an
-# operator password before it will start - which a CI runner has not got. And
-# stopping one plant mid-run so `fsmes fleet console` has to say *unknown* is
-# the console measurement, which this version does not take yet.
+# operator password before it will start - which a CI runner has not got.
 
 name = "two-plants-two-zones"
 note = """Two plants that agree about nothing except the MES running them.
@@ -37,7 +44,7 @@ duration = 3000
 seed     = 11
 speed    = 30
 
-measure = ["booking", "downtime", "oee"]
+measure = ["booking", "downtime", "oee", "console"]
 
 # Northgate machines steel; nothing here carries a serial and no certificate of
 # analysis is issued. Proven legal on the finewire pack already - `[words]`

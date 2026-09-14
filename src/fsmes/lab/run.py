@@ -29,6 +29,7 @@ from pathlib import Path
 from fsmes import __version__
 from fsmes.integrations.opc.tag_map import load_line_map
 from fsmes.lab import build as builder
+from fsmes.lab import console as lab_console
 from fsmes.lab import feedback, measure, observe, report
 from fsmes.lab import truth as truth_reader
 from fsmes.lab.plan import Plan, PlanError, check_names, read_plan
@@ -235,37 +236,69 @@ def run(plan_path: Path, results_root: Path | None = None, root: Path | None = N
     outcomes: list[dict] = []
     truths: dict[str, dict] = {}
     (results / "recorded").mkdir()
-    for directory in plan.packs:
-        built = builder.build(plan, directory, results, echo=echo)
-        hours = max(0.05, (built.duration_s / plan.speed + 8.0) / 3600.0)
-        codes = [code for code in station_to_equipment(Path(built.cfg["tag_map"])).values() if code]
-        # Only when something needs it. A watcher is HTTP requests against the
-        # same API the run is scored through, and a run that does not measure
-        # latency should not pay for looks nobody reads.
-        watcher = observe.Watch() if "latency" in plan.measure else None
-        card = scored_run(built.name, built.cfg, where, plan.speed,
-                          line_json=built.line_json, echo=echo,
-                          keep_evidence=keep_evidence,
-                          collect=collector(codes, hours),
-                          extra_env=design_env(plan, results.name, built.name),
-                          observe=watcher, observe_every_s=plan.watch_every_s)
-        (results / "recorded" / f"{built.name}.json").write_text(
-            json.dumps(card.get("recorded") or {}, indent=2, default=str), encoding="utf-8")
-        watched = None
-        if watcher is not None:
-            # Kept beside the run whatever the measurement made of them: a
-            # version of the measurement that asked the wrong question is worth
-            # re-running against an hour somebody already paid for.
-            (results / "watched").mkdir(exist_ok=True)
-            watcher.write(results / "watched" / f"{built.name}.json")
-            watched = watcher.as_json()
-        scored = measure_plant(plan, built, card, echo=echo, watched=watched)
-        truths[built.name] = scored.pop("truth")
-        outcomes.append(scored)
-        card.pop("recorded", None)
-        (results / "recorded" / f"{built.name}-scorecard.json").write_text(
-            json.dumps(card, indent=2, default=str), encoding="utf-8")
-        _echo_plant(scored, echo)
+    # A console is started before the first plant and asked at each phase, so
+    # the phase where a plant this run built is no longer there is one it
+    # actually lived through rather than one somebody arranged.
+    console = lab_console.LabConsole(results / "fleet", echo=echo) \
+        if "console" in plan.measure else None
+    if console is not None:
+        console.start()
+        console.look("before any plant had started")
+    try:
+        for directory in plan.packs:
+            built = builder.build(plan, directory, results, echo=echo)
+            hours = max(0.05, (built.duration_s / plan.speed + 8.0) / 3600.0)
+            codes = [code for code in
+                     station_to_equipment(Path(built.cfg["tag_map"])).values() if code]
+            # Only when something needs it. A watcher is HTTP requests against
+            # the same API the run is scored through, and a run that measures
+            # neither latency nor the console should not pay for looks nobody
+            # reads. The console needs one because a plant's address is not
+            # known until it is up, and a look is the first thing that has it.
+            watcher = (observe.Watch(on_look=_telling(console, built.name))
+                       if {"latency", "console"} & set(plan.measure) else None)
+            card = scored_run(built.name, built.cfg, where, plan.speed,
+                              line_json=built.line_json, echo=echo,
+                              keep_evidence=keep_evidence,
+                              collect=collector(codes, hours),
+                              extra_env=design_env(plan, results.name, built.name),
+                              observe=watcher, observe_every_s=plan.watch_every_s)
+            (results / "recorded" / f"{built.name}.json").write_text(
+                json.dumps(card.get("recorded") or {}, indent=2, default=str), encoding="utf-8")
+            if console is not None:
+                console.stopped(built.name)
+                console.look(f"after {built.name} had been torn down")
+            watched = None
+            if watcher is not None:
+                # Kept beside the run whatever the measurement made of them: a
+                # version of the measurement that asked the wrong question is
+                # worth re-running against an hour somebody already paid for.
+                (results / "watched").mkdir(exist_ok=True)
+                watcher.write(results / "watched" / f"{built.name}.json")
+                watched = watcher.as_json()
+            scored = measure_plant(plan, built, card, echo=echo, watched=watched)
+            truths[built.name] = scored.pop("truth")
+            outcomes.append(scored)
+            card.pop("recorded", None)
+            (results / "recorded" / f"{built.name}-scorecard.json").write_text(
+                json.dumps(card, indent=2, default=str), encoding="utf-8")
+            _echo_plant(scored, echo)
+        if console is not None:
+            console.look("after every plant had stopped")
+    finally:
+        # Stop what we start, whatever happened. A console left listening on a
+        # claimed port outlives the run that wanted it.
+        if console is not None:
+            console.stop()
+    run_wide: dict = {}
+    if console is not None:
+        console.write(results / "fleet" / "phases.json")
+        # Run-wide, not per-plant, and kept where it belongs. A console counts
+        # the whole fleet; copying one answer into each plant's block would put
+        # the same object in the file twice and invite a reader to treat it as
+        # two readings.
+        run_wide["console"] = measure.console(console.as_json()["phases"], len(plan.packs))
+        _echo_console(run_wide["console"], echo)
 
     finished = datetime.now(UTC).replace(tzinfo=None)
     scores = {
@@ -280,6 +313,8 @@ def run(plan_path: Path, results_root: Path | None = None, root: Path | None = N
         "measurements_asked_for": list(plan.measure),
         "plants_total": len(plan.packs),
         "plants_run": len(outcomes),
+        # Measurements about the run rather than about any one plant.
+        "measurements": run_wide,
         "note": plan.note,
         "plants": outcomes,
     }
@@ -337,6 +372,35 @@ def export_feedback(results: Path, scores: dict, echo=print) -> list[dict]:
     if said:
         echo(f"  feedback: {notes} note(s) in {len(said)} conversation(s) tagged to this run")
     return said
+
+
+def _telling(console, plant: str):
+    """Tell the console where this plant is, and ask it while the plant is up.
+
+    Called after each look. The first one is what puts the plant in the
+    console's fleet at all - an ephemeral plant claims its ports when it
+    starts, so nobody knows its address before then - and one look in thirty
+    keeps the phases from being a page of near-identical rows.
+    """
+    if console is None:
+        return None
+
+    def told(base: str, token: str, line_second: float, looks: int) -> None:
+        if looks == 1:
+            console.watching(plant, base)
+            console.look(f"while {plant} was running")
+        elif looks % 30 == 0:
+            console.look(f"while {plant} was running")
+
+    return told
+
+
+def _echo_console(seen: dict, echo) -> None:
+    matched = seen["phases_where_the_count_matched"]
+    echo("")
+    echo(f"  console   : the count matched at {matched}/{seen['phases_answered']} phase(s); "
+         f"{seen['stopped_plants_not_read_as_unknown']} stopped plant(s) read as anything "
+         f"other than unknown")
 
 
 def _echo_plant(scored: dict, echo) -> None:
