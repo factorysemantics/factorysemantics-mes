@@ -215,6 +215,25 @@ Neither side caps performance. A figure above 1.0 means the machine beat the
 cycle it was rated at, which is a finding about the rating rather than a score
 above physics — see [reading OEE](../plant/reading-oee.md).
 
+*Every number says which clock it is on.* In `scores.json` the MES's block has
+no plain `performance`, `oee`, `runtime_seconds` or `downtime_seconds` at all.
+It has `performance_as_reported` and `performance_line_clock`,
+`runtime_wall_seconds` and `runtime_line_seconds`, and so on, and the one the
+difference was computed from is the line-clock one. Availability and quality
+keep their plain names, because they are the two the replay speed cancels out
+of. A file that kept the wall-clock figure under the plain name while the
+comparison beside it used the line-clock one was one object answering two ways,
+and nobody reading it later could tell which number the difference came from.
+
+*When the MES's own two numbers do not agree.* Separately from any comparison
+with the script, a station can report more units than its own recorded run time
+holds at the cycle it rates the machine at. Where the script prices the machine
+the same way and fitted its units inside its running seconds, neither the
+replay speed nor the master data explains that, and the report names the
+station under **Counts and run time that do not agree**. It is the one row on
+the page that survives any argument about the truth — and it still does not say
+which of the two numbers is the wrong one.
+
 ### Not measured yet
 
 `latency`, `console`, `quality` and `agent-eval` are named in the design and

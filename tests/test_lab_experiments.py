@@ -380,7 +380,7 @@ def test_the_mes_performance_is_put_on_the_lines_clock_before_it_is_compared(tmp
         station = truth.stations[row["station"]]
         # The same numbers the line had, restated: rating x units / run time.
         assert row["mes"]["runtime_line_seconds"] == pytest.approx(station.running_seconds, rel=0.01)
-        assert row["mes"]["performance_line_seconds"] == pytest.approx(row["truth"]["performance"],
+        assert row["mes"]["performance_line_clock"] == pytest.approx(row["truth"]["performance"],
                                                                       rel=0.01)
         assert row["difference"]["performance"] == pytest.approx(0.0, abs=0.01)
         assert measure.performance_significant(row) is False
@@ -401,9 +401,125 @@ def test_a_station_that_beat_its_rating_is_reported_above_one_not_capped(tmp_pat
 
     assert row["mes_performance_above_rated"] is True
     assert row["mes"]["performance_note"] == "rating is slower than the machine"
-    assert row["mes"]["performance_line_seconds"] > 1.0
+    assert row["mes"]["performance_line_clock"] > 1.0
     # And the difference is real rather than a floor: it is outside the band.
     assert measure.performance_significant(row) is True
+
+
+def test_no_number_in_the_mes_block_is_stored_without_saying_which_clock_it_is_on(tmp_path):
+    """A stored performance of 19.77 beside a difference of -0.05 is one
+    object answering two ways, and the reader has no way to tell which number
+    the difference came from. F12, found on 2026-09-14: the file kept the
+    wall-clock figure under the plain name while the comparison used the
+    line-clock one. So there is no plain name left to pick up by mistake."""
+    truth = _truth_for(tmp_path)
+    out = measure.oee(truth, _oee_saying(truth, speed=20.0), MAPPING, speed=20.0)
+    said = out["stations"][0]["mes"]
+
+    for ambiguous in ("performance", "oee", "runtime_seconds", "downtime_seconds"):
+        assert ambiguous not in said, f"{ambiguous} does not say which clock it is on"
+    assert said["performance_as_reported"] == 0.5
+    assert said["performance_line_clock"] is not None
+    assert said["runtime_wall_seconds"] is not None
+    assert said["runtime_line_seconds"] == pytest.approx(said["runtime_wall_seconds"] * 20, rel=0.01)
+    assert said["downtime_line_seconds"] == pytest.approx(said["downtime_wall_seconds"] * 20,
+                                                          rel=0.01)
+    # The two the replay speed cancels out of keep their plain names, and
+    # there is one of each.
+    assert said["availability"] == 0.5
+    assert said["quality"] == 1.0
+
+
+def test_the_mes_own_oee_is_restated_on_the_lines_clock_from_its_own_three_numbers(tmp_path):
+    """The MES's OEE carries its wall-clock performance, so it is out by the
+    replay speed the same way. Restated here from the MES's own availability,
+    its own quality and its own performance on the line's clock - nothing of
+    the script's is in it."""
+    truth = _truth_for(tmp_path)
+    out = measure.oee(truth, _oee_saying(truth, speed=20.0), MAPPING, speed=20.0)
+    said = out["stations"][0]["mes"]
+    assert said["oee_as_reported"] == 0.25
+    assert said["oee_line_clock"] == pytest.approx(
+        said["availability"] * said["performance_line_clock"] * said["quality"], rel=0.001)
+
+
+# ------------------- when the MES's own two numbers do not agree
+
+def test_more_units_than_its_own_run_time_holds_is_named_as_the_mes_against_itself(tmp_path):
+    """Northgate's Deburr, 2026-09-14: the MES recorded 826 units and 1,878 s
+    of run time for a machine it rates at 2.4 s a unit - which is 1,982 s of
+    work inside 1,878 s of run time - while the line, priced at the same 2.4 s,
+    fitted its units inside its running seconds. The rating is not the
+    explanation and the script is not the other party."""
+    truth = _truth_for(tmp_path)
+    cut = truth.stations["Cut"]
+    # Same run time as the line had; a fifth more units than fit in it.
+    said = _oee_saying(truth, speed=10.0, Cut={"good_qty": int(cut.total * 1.2) - cut.scrap})
+    row = next(r for r in measure.oee(truth, said, MAPPING, speed=10.0)["stations"]
+               if r["station"] == "Cut")
+
+    assert row["performance_like_for_like"] is True
+    assert row["truth"]["performance"] <= 1.0
+    assert row["mes"]["performance_line_clock"] > 1.0
+    assert row["mes_units_outrun_its_own_runtime"] is True
+
+
+def test_a_machine_that_really_beat_its_rating_on_both_sides_is_not_that_finding(tmp_path):
+    """If the line itself made more units than its rating allows, the MES
+    agreeing is agreement. The finding is about the MES's two numbers, not
+    about the number being above one."""
+    truth = _truth_for(tmp_path)
+    out = measure.oee(truth, _oee_saying(truth, speed=10.0), MAPPING, speed=10.0)
+    for row in out["stations"]:
+        assert row["mes_units_outrun_its_own_runtime"] is False
+
+
+def test_two_sides_that_rate_the_machine_differently_cannot_make_that_finding(tmp_path):
+    """The rating is the shared price. Without it the arithmetic is about
+    master data, which the row already says in its own column."""
+    truth = _truth_for(tmp_path)
+    cut = truth.stations["Cut"]
+    said = _oee_saying(truth, speed=10.0,
+                       Cut={"good_qty": int(cut.total * 1.2) - cut.scrap,
+                            "ideal_cycle_seconds": cut.ideal_cycle_seconds * 2})
+    row = next(r for r in measure.oee(truth, said, MAPPING, speed=10.0)["stations"]
+               if r["station"] == "Cut")
+    assert row["performance_like_for_like"] is False
+    assert row["mes_units_outrun_its_own_runtime"] is None
+
+
+def test_the_mes_against_itself_reaches_the_differences_above_the_ordinary_rows(tmp_path):
+    truth = _truth_for(tmp_path)
+    cut = truth.stations["Cut"]
+    said = _oee_saying(truth, speed=10.0, Cut={"good_qty": int(cut.total * 1.2) - cut.scrap})
+    plant = {"plant": "tiny",
+             "measurements": {"oee": measure.oee(truth, said, MAPPING, speed=10.0)}}
+    found = measure.differences(plant)
+    outrun = [row for row in found if row["what"] == "more units than its own run time holds"]
+    assert len(outrun) == 1
+    assert "s of work, recorded inside" in outrun[0]["says"]
+    assert outrun[0]["numbers"]["truth_performance"] <= 1.0
+    # Ranked above the ordinary OEE differences: this one survives any
+    # argument about the truth.
+    assert found[0]["what"] == "more units than its own run time holds"
+
+
+def test_the_report_names_the_station_whose_counts_and_run_time_disagree(tmp_path):
+    truth = _truth_for(tmp_path)
+    cut = truth.stations["Cut"]
+    said = _oee_saying(truth, speed=10.0, Cut={"good_qty": int(cut.total * 1.2) - cut.scrap})
+    page = lab_report._oee(measure.oee(truth, said, MAPPING, speed=10.0))
+    assert "Counts and run time that do not agree" in page
+    assert "s of run time" in page
+    assert "which of the two is the wrong one" in page
+
+
+def test_a_run_where_everything_agrees_prints_no_such_section(tmp_path):
+    """Silent when there is nothing to say: a heading that appears every time
+    and is usually empty is a heading the eye learns to skip."""
+    truth = _truth_for(tmp_path)
+    page = lab_report._oee(measure.oee(truth, _oee_saying(truth, speed=10.0), MAPPING, speed=10.0))
+    assert "Counts and run time that do not agree" not in page
 
 
 def test_a_performance_difference_inside_the_stations_own_band_is_not_a_finding(tmp_path):

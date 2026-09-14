@@ -374,6 +374,18 @@ def oee(truth: LineTruth, reported: dict, tag_map: dict[str, str], speed: float,
         mes_performance_line = (
             round(mes_cycle * mes_units / mes_runtime_line_s, 4)
             if mes_cycle and mes_units and mes_runtime_line_s else None)
+        mes_downtime_line_s = (
+            None if said is None or said.get("downtime_seconds") is None
+            else round(float(said["downtime_seconds"]) * speed, 1))
+        # The MES's own OEE carries its wall-clock performance, so it is out
+        # by the replay speed the same way. Restated from the MES's own three
+        # numbers with performance on the line's clock - nothing of the truth's
+        # is in it.
+        mes_oee_line = (
+            round(float(said["availability"]) * mes_performance_line * float(said["quality"]), 4)
+            if said is not None and mes_performance_line is not None
+            and said.get("availability") is not None and said.get("quality") is not None
+            else None)
         # Performance divides units by run time, so the two sides can only be
         # told apart down to how differently they measured that run time. The
         # MES drains past the end of the script, which is the same reason the
@@ -394,20 +406,34 @@ def oee(truth: LineTruth, reported: dict, tag_map: dict[str, str], speed: float,
                 "scrap": station.scrap,
                 "rated_cycle_seconds": cycle,
             },
+            # Every field here says which clock it is on, and the two that do
+            # not are the two where the clock cancels. A stored `performance`
+            # of 19.77 beside a difference of -0.05 is one object answering
+            # two ways, and whoever reads it next has no way to tell which
+            # number the difference came from. So there is no plain
+            # `performance`, `oee`, `runtime_seconds` or `downtime_seconds` in
+            # here at all: a reader has to choose a clock, which is the point.
             "mes": None if said is None else {
+                # Ratios of two things measured the same way: the replay speed
+                # cancels out, and there is one of each.
                 "availability": said.get("availability"),
-                "performance": said.get("performance"),
                 "quality": said.get("quality"),
-                "oee": said.get("oee"),
-                "runtime_seconds": said.get("runtime_seconds"),
-                "downtime_seconds": said.get("downtime_seconds"),
                 "good": said.get("good_qty"),
                 "scrap": said.get("scrap_qty"),
                 "ideal_cycle_seconds": mes_cycle,
-                # As reported, the MES is on the wall clock; these two put it
-                # on the line's, which is the only way the figures compare.
+                # As the MES reported them - on the wall clock, which at this
+                # replay speed is not the line's.
+                "performance_as_reported": said.get("performance"),
+                "oee_as_reported": said.get("oee"),
+                "runtime_wall_seconds": said.get("runtime_seconds"),
+                "downtime_wall_seconds": said.get("downtime_seconds"),
+                # The MES's own rating, its own counts and its own run time,
+                # with the run time on the line's clock. This is what the
+                # difference below was computed from.
                 "runtime_line_seconds": mes_runtime_line_s,
-                "performance_line_seconds": mes_performance_line,
+                "downtime_line_seconds": mes_downtime_line_s,
+                "performance_line_clock": mes_performance_line,
+                "oee_line_clock": mes_oee_line,
                 "performance_note": said.get("performance_note"),
             },
             "difference": None if said is None else {
@@ -422,10 +448,20 @@ def oee(truth: LineTruth, reported: dict, tag_map: dict[str, str], speed: float,
             "performance_resolution": performance_resolution,
             # The MES said this machine beat the cycle its master data rates it
             # at. On a replay that is usually the clocks rather than the plant,
-            # which is what `performance_line_seconds` is for.
+            # which is what `performance_line_clock` is for.
             "mes_performance_above_rated": (
                 None if said is None or said.get("performance") is None
                 else said["performance"] > 1.0),
+            # Stronger, and about the MES alone: on the line's own clock, and
+            # at a rating both sides agree on, the MES counted more units than
+            # its own recorded run time can hold - while the line, priced the
+            # same way, fitted its units inside its running seconds. So the
+            # rating is not the explanation and the script is not the other
+            # party: two of the MES's own numbers do not agree with each other.
+            "mes_units_outrun_its_own_runtime": (
+                None if said is None or mes_performance_line is None
+                or truth_performance is None or not like_for_like
+                else mes_performance_line > 1.0 >= truth_performance),
             "unknown_because": _oee_reason(said, code, reason),
         })
 
@@ -563,10 +599,39 @@ def differences(plant: dict) -> list[dict]:
                     "numbers": {
                         "truth": (row["truth"] or {}).get(key),
                         "mes": (row["mes"] or {}).get(
-                            "performance_line_seconds" if key == "performance" else key),
+                            "performance_line_clock" if key == "performance" else key),
                         "difference": value,
                     },
                 })
+        for row in oee_out["stations"]:
+            if not row.get("mes_units_outrun_its_own_runtime"):
+                continue
+            said, truth_side = row["mes"], row["truth"]
+            units = (said.get("good") or 0) + (said.get("scrap") or 0)
+            cycle = float(said.get("ideal_cycle_seconds") or 0)
+            found.append({
+                # Above the ordinary OEE differences. This one is not a
+                # disagreement with the script: it is two of the MES's own
+                # numbers disagreeing with each other, and no argument about
+                # the truth makes it go away.
+                "size": 1e8, "measurement": "oee",
+                "where": f"{plant['plant']} · {row['station']}",
+                "plant": plant["plant"], "station": row["station"],
+                "what": "more units than its own run time holds",
+                "says": (f"{units:,.0f} units at the {cycle} s per unit the MES itself rates "
+                         f"this machine at is {units * cycle:,.0f} s of work, recorded inside "
+                         f"{said.get('runtime_line_seconds'):,.0f} s of run time on the line's "
+                         f"clock — the script, priced the same way, fitted its units inside "
+                         f"its running seconds"),
+                "numbers": {
+                    "mes_units": units,
+                    "mes_ideal_cycle_seconds": cycle,
+                    "mes_runtime_line_seconds": said.get("runtime_line_seconds"),
+                    "mes_performance_line_clock": said.get("performance_line_clock"),
+                    "truth_performance": truth_side.get("performance"),
+                    "truth_running_line_seconds": truth_side.get("running_line_seconds"),
+                },
+            })
     down = plant.get("measurements", {}).get("downtime")
     idle = (down or {}).get("idle_stops") or {}
     if idle.get("misclassified_as_downtime"):

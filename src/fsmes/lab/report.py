@@ -312,6 +312,37 @@ def _cycle_note(row: dict, truth: dict, said: dict | None) -> str:
     return esc(f"like for like; run times differ by {band:.1%}, which is the band")
 
 
+def _outrun(oee: dict) -> str:
+    """Stations whose own counts and own run time do not agree with each other.
+
+    Called out under the table rather than left as one red cell, because it is
+    a different kind of statement from everything else on this page: not the
+    MES against the script, but the MES against itself, at a rating the script
+    agrees with. Nothing anybody decides about the truth changes it.
+    """
+    loud = [row for row in oee["stations"] if row.get("mes_units_outrun_its_own_runtime")]
+    if not loud:
+        return ""
+    items = []
+    for row in loud:
+        said = row["mes"]
+        units = (said.get("good") or 0) + (said.get("scrap") or 0)
+        cycle = float(said.get("ideal_cycle_seconds") or 0)
+        items.append(
+            f"<li><strong>{esc(row['station'])}</strong> — {num(units)} units at the "
+            f"{esc(cycle)} s per unit the MES itself rates this machine at is "
+            f"{num(units * cycle)} s of work, recorded inside "
+            f"{num(said.get('runtime_line_seconds'))} s of run time "
+            f"({pct(said.get('performance_line_clock'))} of rated). The script, priced the same "
+            f"way, ran at {pct((row['truth'] or {}).get('performance'))}.</li>")
+    return ('<h3>Counts and run time that do not agree</h3>'
+            "<p>These are the MES's own two numbers, on one clock, at a rating the script rates "
+            'the machine at too — so neither the replay speed nor the master data explains them, '
+            'and nothing anybody decides about the truth changes them. What this page will not '
+            'do is say which of the two is the wrong one.</p>'
+            f'<ul>{"".join(items)}</ul>')
+
+
 def _oee(oee: dict) -> str:
     window = oee["window"]
     mismatch = window["mismatch_share"]
@@ -320,13 +351,15 @@ def _oee(oee: dict) -> str:
         said, truth, diff = row["mes"], row["truth"], row["difference"] or {}
         loud = (diff.get("availability") is not None
                 and abs(diff["availability"]) > max(0.02, mismatch or 0.0))
+        impossible = bool(row.get("mes_units_outrun_its_own_runtime"))
         rows.append(
             f"<tr><td>{esc(row['station'])}</td><td class='mono'>{esc(row['equipment'] or '—')}</td>"
             f"<td>{pct(truth['availability'])}</td>"
             f"<td>{pct(said and said['availability'])}</td>"
             f"<td class='{'bad' if loud else ''}'>{pct(diff.get('availability'))}</td>"
             f"<td>{pct(truth['performance'])}</td>"
-            f"<td>{pct(said and said['performance_line_seconds'])}</td>"
+            f"<td class='{'bad' if impossible else ''}'>"
+            f"{pct(said and said['performance_line_clock'])}</td>"
             f"<td>{pct(truth['quality'])}</td><td>{pct(said and said['quality'])}</td>"
             f"<td class='wide'>{_cycle_note(row, truth, said)}</td>"
             f"</tr>")
@@ -348,6 +381,7 @@ same stretch.</p>
 <th>P truth</th><th>P MES</th><th>Q truth</th><th>Q MES</th>
 <th>Performance basis</th></tr></thead>
 <tbody>{"".join(rows)}</tbody></table></div>
+{_outrun(oee)}
 """
 
 
