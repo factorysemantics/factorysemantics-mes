@@ -4,8 +4,8 @@ Two things are proved here.
 
 **The milestone.** Three plants in one fleet, two of them answering from two
 packs with **different modules enabled**, the third stopped - and the page
-saying *"3 plants, 2 answered, 1 unknown"*, with the stopped one shown as
-unknown rather than as down, and with the two answering ones showing the
+saying *"3 plants, 2 answered, 0 answered but empty, 1 unknown"*, with the
+stopped one shown as unknown rather than as down, and with the two answering ones showing the
 modules each actually serves. The two answering plants are the real
 application, built from the real packs, answering the real `/health` and
 `/pack`; only the transport is replaced, because starting a plant on a
@@ -154,8 +154,8 @@ def watching(three_plants, session):
 
 def test_three_plants_with_one_stopped_read_as_two_answered_and_one_unknown(watching):
     fleet = watching.look()
-    assert fleet["says"] == "3 plants, 2 answered, 1 unknown"
-    assert fleet["totals"] == {"plants": 3, "answered": 2, "unknown": 1,
+    assert fleet["says"] == "3 plants, 2 answered, 0 answered but empty, 1 unknown"
+    assert fleet["totals"] == {"plants": 3, "answered": 2, "empty": 0, "unknown": 1,
                                "owned": 2, "claimed_but_silent": 1, "observed": 0}
 
     silent = next(p for p in fleet["plants"] if p["name"] == "machining")
@@ -214,7 +214,7 @@ def test_the_page_and_its_json_are_the_two_routes_the_console_has(watching, tmp_
     with TestClient(app) as client:
         assert client.get("/").status_code == 200
         body = client.get("/fleet.json").json()
-        assert body["says"] == "3 plants, 2 answered, 1 unknown"
+        assert body["says"] == "3 plants, 2 answered, 0 answered but empty, 1 unknown"
         assert client.post("/fleet.json").status_code == 405
 
 

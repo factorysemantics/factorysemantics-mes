@@ -333,8 +333,9 @@ def test_a_list_states_its_total_and_calls_silence_unknown(created):
     _entry, fleet = created
     said: list[str] = []
     result = commands.listing(root=fleet, echo=said.append)
-    assert result["totals"] == {"plants": 1, "answered": 0, "unknown": 1, "owned": 1}
-    assert said[0] == "1 plants, 0 answered, 1 unknown; 1 owned."
+    assert result["totals"] == {"plants": 1, "answered": 0, "empty": 0,
+                                "unknown": 1, "owned": 1}
+    assert said[0] == "1 plants, 0 answered, 0 answered but empty, 1 unknown; 1 owned."
     assert "unknown" in said[1] and "down" not in " ".join(said)
 
 

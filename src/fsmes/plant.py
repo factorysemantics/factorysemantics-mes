@@ -211,12 +211,25 @@ def _alive(pid: int) -> bool:
     return True
 
 
-def running_pids(root: Path, name: str) -> list[int]:
-    f = pid_file(root, name)
+def pids_in(where: Path, name: str) -> list[int]:
+    """The live processes this plant's pid file names, read from the data
+    directory itself.
+
+    `running_pids` below asks the same question of a *root*, and works out
+    the data directory from the fleet file. Something holding an ownership
+    entry already knows the directory and must not re-derive it: the entry
+    records where that plant's data actually is, and a second guess is how a
+    fleet command ends up reading another plant's pid file.
+    """
+    f = Path(where) / f"{name}.pids"
     if not f.is_file():
         return []
     pids = [int(x) for x in f.read_text(encoding="utf-8").split() if x.strip().isdigit()]
     return [p for p in pids if _alive(p)]
+
+
+def running_pids(root: Path, name: str) -> list[int]:
+    return pids_in(pid_file(root, name).parent, name)
 
 
 def dashboard_url(cfg: dict) -> str:

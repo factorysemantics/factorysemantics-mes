@@ -65,6 +65,17 @@ function modulesCell(plant) {
   return wrap;
 }
 
+/* How many machines this plant has. A plant that could not count them says
+   unknown; a plant that counted none says none, and says it in the same
+   words the row's state pill does. */
+function lineCell(plant) {
+  if (!plant.answered || plant.line_answered === null
+      || plant.line_answered === undefined) return "unknown";
+  if (!plant.line_answered) return "unknown";
+  if (plant.line_equipment === 0) return "no machines";
+  return plant.line_equipment + " machines";
+}
+
 function draw(fleet) {
   document.getElementById("totals").textContent = fleet.says;
   document.getElementById("ownership").textContent = fleet.ownership_says;
@@ -94,13 +105,17 @@ function draw(fleet) {
     why.textContent = plant.ownership;
     owned.appendChild(why);
 
-    const state = cell(row, pill(plant.state, plant.state));
-    if (!plant.answered && plant.why) {
-      const reason = document.createElement("span");
-      reason.className = "why";
-      reason.textContent = plant.why;
-      state.appendChild(reason);
-    }
+    /* Three states. "empty" is a plant that answered and said it has no
+       schema or no machines: not down, not unknown, and not something a
+       person should have to work out from a dashboard with nothing on it.
+       The reason under the pill is the plant's own words, never inferred. */
+    const state = cell(row, pill(plant.state === "empty" ? "answered, empty" : plant.state,
+                                 plant.state));
+    const reason = document.createElement("span");
+    reason.className = "why";
+    if (!plant.answered && plant.why) reason.textContent = plant.why;
+    else if (plant.state === "empty") reason.textContent = plant.empty_because;
+    if (reason.textContent) state.appendChild(reason);
 
     cell(row, known(plant.profile));
     cell(row, known(plant.timezone));
@@ -110,6 +125,7 @@ function draw(fleet) {
     cell(row, plant.answered
       ? known(plant.schema_revision) + (plant.schema_at_head === false ? " (behind head)" : "")
       : "unknown");
+    cell(row, lineCell(plant));
     cell(row, modulesCell(plant));
     cell(row, known(plant.last_answered));
 

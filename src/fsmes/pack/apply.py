@@ -8,11 +8,17 @@ Apply is check, then the database, then the data, then the receipt:
    the plant it is acting on: it puts the pack's `MES_*` values into its own
    environment and clears the settings cache, so the schema it upgrades and
    the rows it writes are that plant's and not whatever the shell happened to
-   be pointed at.
+   be pointed at. **Which database that is, is named on a line of its own
+   before anything changes** - and a pack that states no database gets the
+   file its fleet gives it rather than this process's default, which is the
+   whole of `database_for` and the bug it was written for.
 3. **Pack before database**, per decision 0022. A schema migration may need a
    value the pack now carries, and a pack applied after the migration has
    already run is a value that arrived too late.
-4. **Seed the master data the pack carries**, or say it carries none.
+4. **Seed the master data the pack carries**, or say it carries none -
+   and refuse rather than seed when the database did not reach head, because
+   rows written through the ORM into a half-migrated file make a database no
+   release of this software can recognise afterwards.
 5. **Record what was applied** in the plant's data directory: the pack's
    name, its format, the product version, the fingerprint of every file a
    person wrote in it, and the schema revision the database reached.
@@ -74,6 +80,42 @@ def stamp_path(name: str, directory: Path | None = None) -> Path:
     return data_dir(directory) / f"{name}{STAMP_SUFFIX}"
 
 
+def database_for(pack: fmt.Pack, into: Path | None = None) -> tuple[str, str]:
+    """Which database this pack's plant keeps its data in, and who said so.
+
+    One function, because the alternative was a command that guessed. Until
+    2026-09-14 `apply` set `MES_DATABASE_URL` only when the pack named one,
+    so a pack that named none was applied to **whatever database this process
+    already had** - the product default `./fsmes.db` when nothing had said
+    otherwise. `fsmes fleet create` calls `apply` in-process, so it migrated
+    and seeded a stray file beside the working directory while the plant it
+    had just recorded ownership of was never created at all: `/health` said
+    ok, `/pack` said `revision: null`, and every sign-in returned 500.
+
+    Three answers, in this order, and never a fourth:
+
+    1. **The pack's own `[storage] database_url`.** A plant that states where
+       its data lives is the authority on it.
+    2. **`MES_DATABASE_URL`, when the invoker set it.** That is the variable
+       a deployment points at real data, and `fsmes plant <name> init` sets
+       it to the file the fleet gives the plant before it spawns this.
+    3. **The file its fleet gives it** - `<data dir>/<plant>.db`, the same
+       path `fsmes.plant.database_url` builds, so a plant applied here and
+       the plant started later are the same file.
+
+    Never the process default. A database nobody named is not this plant's.
+    """
+
+    if str(pack.table("storage").get("database_url") or "").strip():
+        return fmt.database_url(pack)
+    named = os.environ.get("MES_DATABASE_URL")
+    if named:
+        return named, "from MES_DATABASE_URL"
+    where = data_dir(into)
+    return (f"sqlite:///{(where / f'{pack.name}.db').as_posix()}",
+            f"the file this fleet gives {pack.name}, in {where}")
+
+
 @dataclass(frozen=True)
 class Applied:
     """What was recorded the last time a pack was applied to this plant."""
@@ -103,14 +145,19 @@ class Applied:
                         encoding="utf-8")
 
 
-def adopt(pack: fmt.Pack) -> dict[str, str]:
+def adopt(pack: fmt.Pack, into: Path | None = None) -> tuple[dict[str, str], str]:
     """Put this pack's settings into this process's environment.
 
     Deliberate and narrow: only `apply` does it, and it does it because it is
     acting *as* the plant. Everything else that needs a pack's settings hands
     them to a child process (`fsmes plant <name> start`) or reads them without
     adopting them (`fsmes pack check`).
+
+    Returns the settings and the sentence saying which database they point at,
+    because `apply` prints that before it changes anything - the same rule
+    `fsmes db-status` already keeps.
     """
+    from fsmes import storage
     from fsmes.config import get_settings
     from fsmes.db import get_engine, get_sessionmaker
 
@@ -118,23 +165,68 @@ def adopt(pack: fmt.Pack) -> dict[str, str]:
     # The pack names its database and names the file holding the password,
     # and never the password (decision 0022). Everything downstream of here
     # gets one URL it can actually connect with - the same one `fsmes pack
-    # status` and `fsmes db-status --pack` read.
-    if values.get("MES_DATABASE_URL"):
-        from fsmes import storage
-
-        try:
-            url, _ = fmt.database_url(pack)
-        except storage.Unknown as exc:
-            raise Refused(checker.Report(
-                directory=pack.directory,
-                problems=(checker.Problem("[storage] database_url", str(exc)),),
-                unknowns=(), checked=0)) from None
-        values["MES_DATABASE_URL"] = url
+    # status` and `fsmes db-status --pack` read - and a pack that names no
+    # database gets the file its fleet gives it rather than this process's
+    # default. See `database_for`.
+    try:
+        url, source = database_for(pack, into)
+    except storage.Unknown as exc:
+        raise Refused(checker.Report(
+            directory=pack.directory,
+            problems=(checker.Problem("[storage] database_url", str(exc)),),
+            unknowns=(), checked=0)) from None
+    values["MES_DATABASE_URL"] = url
     os.environ.update(values)
     get_settings.cache_clear()
     get_engine.cache_clear()
     get_sessionmaker.cache_clear()
-    return values
+    return values, f"{storage.redacted(url)} ({source})"
+
+
+def refuse_unless_at_head(pack: fmt.Pack) -> str:
+    """Refuse to seed master data into a database that is not at head.
+
+    The ORM will happily write a row into a database the migrations have
+    never touched: SQLAlchemy creates nothing, but the tables the mappers
+    reach exist as soon as an earlier revision made them, and the ones a
+    later revision would have added do not. The result is a file with some
+    of the product's tables and no Alembic stamp - which the migrator then
+    disowns outright, because a schema it cannot identify is one it will not
+    guess at. That happened on 2026-09-14: a pack was seeded into an
+    unstamped database, and `fsmes plant machining init` afterwards refused
+    with *"the database is missing the table routing_operations"*, leaving a
+    half-made plant no command could take forward.
+
+    So the seed asks first. `upgrade_database` runs immediately above this
+    and normally leaves nothing to say; this is the assertion that it did,
+    and it is here rather than in a comment because the cost of being wrong
+    is a database a person has to delete.
+    """
+    from fsmes import storage
+    from fsmes.schema import head_revision
+
+    url, source = storage.of_process()
+    reading = storage.look(url, source)
+    head = head_revision()
+    if reading.revision == head:
+        return head
+    if not reading.answered:
+        why = (f"its database did not answer ({reading.why or 'no reason given'}), so "
+               "nothing here can say what schema it is at")
+    elif reading.revision is None:
+        why = ("its database carries no schema revision, so the migrations have never "
+               "run against it")
+    else:
+        why = (f"its database is at {reading.revision} and the migrations end at "
+               f"{head}")
+    raise Refused(checker.Report(
+        directory=pack.directory,
+        problems=(checker.Problem(
+            f"{pack.name} master data",
+            f"{why}. Seeding master data through the ORM would leave tables no "
+            f"release of this software made. Nothing was seeded. The database is "
+            f"{storage.redacted(url)} ({source}); `fsmes db-status` on it says more."),),
+        unknowns=(), checked=0))
 
 
 def apply(directory: Path, *, into: Path | None = None, echo=print) -> dict:
@@ -144,8 +236,13 @@ def apply(directory: Path, *, into: Path | None = None, echo=print) -> dict:
         raise Refused(report)
     pack = fmt.read(directory)
 
-    values = adopt(pack)
+    values, database = adopt(pack, into)
     echo(f"  {pack.name}: {len(values)} settings from the pack")
+    # Which database, before anything is changed. `fsmes db-status` has said
+    # this on its first line since 2026-09-14 for the same reason: a command
+    # that migrates and seeds without naming its target is one that can do
+    # both to the wrong file and report success.
+    echo(f"  {pack.name}: database {database}")
 
     from fsmes.db import session_scope
     from fsmes.schema import current_revision, upgrade_database
@@ -156,6 +253,7 @@ def apply(directory: Path, *, into: Path | None = None, echo=print) -> dict:
     seeded: dict[str, dict] = {}
     masterdata = pack.table("files").get("masterdata")
     if isinstance(masterdata, str) and masterdata and pack.path(masterdata).is_dir():
+        refuse_unless_at_head(pack)
         from fsmes.integrations.opc.tag_map import load_tag_map
         from fsmes.pack import masterdata as data
 
@@ -291,6 +389,44 @@ def told_data_dir() -> Path | None:
     return Path(named).expanduser() if named else None
 
 
+def line_here() -> dict:
+    """How many machines this plant has, asked of the plant itself.
+
+    A plant with a schema at head, an account that signs in and **no
+    equipment at all** answers `/health` with `ok` and looks healthy from
+    every angle a fleet console had until 2026-09-14. It is not broken - a
+    pack that carries no master data is allowed, and the bottling lab plant
+    was one on purpose - but *empty* and *running* are different facts and a
+    console that shows only the second is no help to the person who just
+    built the fleet.
+
+    Work units, not rows in `equipment`: the table is one tree and counting
+    all of it would count the enterprise, the site and the area as machines.
+    `services.equipment.work_units` is the same predicate every screen that
+    says "machines" already uses.
+
+    `answered` is False and `equipment` None when the database could not be
+    asked - a plant whose schema never ran has no equipment table to count,
+    and reporting that as zero would be inventing an empty line where there
+    is no line at all.
+    """
+    from sqlalchemy import func, select
+
+    from fsmes.db import session_scope
+    from fsmes.domain import Equipment, EquipmentLevel
+
+    try:
+        with session_scope() as session:
+            count = session.scalar(select(func.count(Equipment.id)).where(
+                Equipment.level == EquipmentLevel.WORK_UNIT))
+        return {"equipment": int(count or 0), "answered": True}
+    except Exception as exc:
+        # Same rule as the schema reading above: the driver's words name the
+        # host and the account, and a public endpoint is owed neither.
+        log.warning("line could not be counted", error=str(exc))
+        return {"equipment": None, "answered": False}
+
+
 def what_this_plant_runs() -> dict:
     """What a plant can say about its own pack, from inside the plant.
 
@@ -303,7 +439,9 @@ def what_this_plant_runs() -> dict:
     was applied and by which product version, whether the files have drifted
     since, and what schema revision the database is at. Plus the modules
     this plant serves, because "the same codebase with two modules off" is
-    only visible from outside if a plant will say which.
+    only visible from outside if a plant will say which - and how many
+    machines it has, because a plant at head with an empty line answers every
+    other question here like a healthy one.
     """
     from fsmes import identity
     from fsmes.config import get_settings
@@ -344,6 +482,11 @@ def what_this_plant_runs() -> dict:
 
     url, source = storage.of_process()
     reading = storage.look(url, source)
+    line = line_here()
+    if not line["answered"]:
+        unknown["line"] = ("this plant's equipment could not be counted, so nothing here "
+                           "can say how big its line is; `fsmes db-status` on that machine "
+                           "says whether the schema is there at all")
     if not reading.answered:
         # Same rule as the drift reason above: the driver's words name the
         # host and the account it tried, and a public endpoint is owed
@@ -366,6 +509,9 @@ def what_this_plant_runs() -> dict:
         # `fsmes db-status` take theirs from, so the CLI and this endpoint
         # cannot disagree about a database they were both pointed at.
         "schema": reading.payload(),
+        # How much plant there is. Separate from `schema` because a plant can
+        # be at head and empty, and those are two different things to fix.
+        "line": line,
         "modules": {
             "on": [m.name for m in settings.enabled_modules()],
             "off": [m.name for m in settings.disabled_modules()],
@@ -387,6 +533,15 @@ def status(directory: Path, *, into: Path | None = None, ask_database: bool = Tr
 
     It reads. Unlike `apply`, it does not adopt the pack's environment: a
     command that says what a plant is should not become it.
+
+    Deliberately **not** `database_for`, which is what `apply` resolves with.
+    That function's third answer is *the file this fleet gives the plant*,
+    and finding it means resolving a data directory - which, with no
+    `--data-dir`, walks up from the working directory and creates one. A
+    command that reads must not make a directory in order to have something
+    to report, and a path no plant was ever started against is not an answer
+    worth printing. So a pack that names no database still says unknown here
+    and still names `--plant` as the way to ask.
     """
     pack = fmt.read(directory)
     reading = None

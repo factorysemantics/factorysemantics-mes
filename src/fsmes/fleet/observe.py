@@ -53,6 +53,48 @@ class Answer:
         return self.body.get(key, default)
 
 
+def is_empty(pack_said: dict | None) -> bool:
+    """Did this plant say it has nothing in it?
+
+    One definition, read by `fsmes fleet list`, by `fsmes fleet status` and
+    by the console, so the page and the command can never disagree about
+    which plants are empty. It lives here, with the rest of *what a plant
+    said*, rather than in `commands`, because the console may not import a
+    verb.
+
+    True only when the plant actually said so:
+
+    * its schema answered and carries no revision - the migrations have never
+      run against it, so there is not even a table to be empty; or
+    * its line answered and holds no machines.
+
+    False for everything else, **silence included**. A plant that does not
+    answer `/pack` at all is not empty, it is unasked, and that is the whole
+    reason this is three states and not a boolean.
+    """
+    if not pack_said:
+        return False
+    schema = pack_said.get("schema") or {}
+    if schema.get("answered") and schema.get("revision") is None:
+        return True
+    line = pack_said.get("line") or {}
+    return bool(line.get("answered")) and line.get("equipment") == 0
+
+
+def empty_because(pack_said: dict | None) -> str:
+    """Which kind of empty this is, as the half-sentence a person reads.
+
+    Empty string when the plant is not empty, or did not say enough to tell.
+    """
+    schema = (pack_said or {}).get("schema") or {}
+    if schema.get("answered") and schema.get("revision") is None:
+        return "no schema: this plant's database has never been migrated"
+    line = (pack_said or {}).get("line") or {}
+    if line.get("answered") and line.get("equipment") == 0:
+        return "no line: this plant has no machines on it"
+    return ""
+
+
 def base(host: str, port: int | str) -> str:
     """Where a plant answers, from what a pack said about serving it."""
     return f"http://{host or '127.0.0.1'}:{port}"
