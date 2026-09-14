@@ -20,6 +20,25 @@ goes under Honesty with a migration line, so plant people can find it.
   deployment tooling could back up before migrating. Reads only, touches no
   plant, and prints no password unless `--with-password` asks for one.
 
+### Changed
+
+- **The GitHub Actions this repository runs are on their current majors, and
+  the welcome message survived the move.** `actions/checkout` v4→v7,
+  `actions/setup-python` v5→v7, `github/codeql-action/upload-sarif` v3→v4 and
+  `actions/first-interaction` v1→v3, in `ci.yml`, `dco.yml`, `docs.yml`,
+  `scorecard.yml`, `erpnext-live.yml` and `welcome.yml`. For every action but
+  one the majors are a Node 20 → Node 24 runtime change with no input this
+  repository passes removed. The exception is `actions/first-interaction`,
+  whose v2 rewrite renamed all three inputs from hyphens to underscores
+  (`repo-token` → `repo_token`, and the two messages likewise), and which
+  reads them as required — so the bump on its own would have made the welcome
+  job fail on the first issue or pull request a stranger ever opened, the one
+  event nothing here can rehearse. `welcome.yml` now passes the underscore
+  names and carries the citation. `release.yml` keeps its pinned versions in
+  this change; it runs only on a tag, so its bumps go separately, behind a
+  dry run that can be exercised without one.
+  ([#43](https://github.com/factorysemantics/factorysemantics-mes/pull/43))
+
 ### Fixed
 
 - **`deploy/promote.sh` can promote a fleet, and can undo one.** It defaulted
