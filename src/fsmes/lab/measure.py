@@ -163,6 +163,25 @@ def _orders(truth: LineTruth, listed: list[dict], order_tags: int) -> dict:
 
 # ----------------------------------------------------------------- downtime
 
+def lag_says(lag: float | None, resolution: float | None) -> str:
+    """How late the MES was, or that the question is finer than the sampling.
+
+    A bare signed number here has already misled a reader once: a sweep
+    reported a breakdown detected one second *before* it was scripted, at a
+    speed whose sampling interval was thirty line seconds. That is
+    quantisation, not prescience. So a lag smaller than the resolution is
+    printed as what it is, with the resolution beside it, and never as a
+    number somebody could put in a trend.
+    """
+    if lag is None:
+        return "unknown"
+    if resolution is None:
+        return f"{float(lag):+.1f} s (resolution unknown)"
+    if abs(float(lag)) <= float(resolution):
+        return f"within resolution ({float(resolution):.0f} s)"
+    return f"{float(lag):+.1f} s"
+
+
 def downtime(truth: LineTruth, card: dict, reported: dict, speed: float,
              reason: str | None = None) -> dict:
     """Were the scripted stops seen, how late, and were the planned ones kept
@@ -187,6 +206,12 @@ def downtime(truth: LineTruth, card: dict, reported: dict, speed: float,
         kind of quiet mislabel this lab exists to catch."""
         return None if wall is None else round(float(wall) * speed, 1)
 
+    # The shortest line-time event this run could have noticed at all. A lag
+    # smaller than it is quantisation, not measurement - the steward's buffer
+    # sweep printed a breakdown "detected one second before it was scripted",
+    # which is not prescience, it is a 30-second sampling interval.
+    resolution = (card.get("observation") or {}).get("resolution_sim_s")
+
     faults = [{
         "equipment": f.get("equipment"),
         "window_line_s": f.get("window_sim_s"),
@@ -197,6 +222,8 @@ def downtime(truth: LineTruth, card: dict, reported: dict, speed: float,
         "detected_wall_seconds": f.get("detected_seconds"),
         "recall": f.get("recall"),
         "lag_line_seconds": f.get("lag_sim_seconds"),
+        "resolution_line_seconds": resolution,
+        "lag_says": lag_says(f.get("lag_sim_seconds"), resolution),
         "unknown_because": f.get("unknown_because") or (
             None if f.get("observed") else "the MES never watched this window"),
     } for f in card.get("faults", [])]
@@ -230,6 +257,7 @@ def downtime(truth: LineTruth, card: dict, reported: dict, speed: float,
         "question": "were the scripted stops seen, and were the planned ones kept out of downtime?",
         "unknown_because": reason,
         "speed": speed,
+        "resolution_line_seconds": resolution,
         "breakdowns": {
             "scripted": metrics.get("faults_scripted"),
             "scored": metrics.get("faults_scored"),

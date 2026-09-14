@@ -42,6 +42,13 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Honesty
 
+- **A detection lag smaller than the sampling interval is printed as *within
+  resolution*, not as a signed number.** A buffer sweep reported a breakdown
+  detected one second *before* it was scripted, at a speed whose sampling
+  interval was thirty line seconds. That is quantisation, not prescience, and a
+  bare `-1 s` invites somebody to trend it. Every lag in a lab report now
+  carries the run's resolution beside it, and a lag inside it says so.
+
 - **A scripted stop is printed in the line's own seconds.** The scorer measures
   in wall seconds and the script is written in line seconds; the lab's downtime
   section was printing the first under a heading that said the second, so a

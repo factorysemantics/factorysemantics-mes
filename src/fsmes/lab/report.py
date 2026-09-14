@@ -220,7 +220,8 @@ def _downtime(down: dict) -> str:
         f"<td>{num(f['scripted_line_seconds'])} s</td>"
         f"<td>{UNKNOWN if f['detected'] is None else ('yes' if f['detected'] else 'no')}</td>"
         f"<td>{num(f['detected_line_seconds'])}</td><td>{pct(f['recall'])}</td>"
-        f"<td>{num(f['lag_line_seconds'], 1, ' s')}</td>"
+        f"<td class='{'band' if 'within resolution' in f.get('lag_says', '') else ''}'>"
+        f"{esc(f.get('lag_says') or num(f['lag_line_seconds'], 1, ' s'))}</td>"
         f"<td class='wide unknown'>{esc(f['unknown_because'] or '')}</td></tr>"
         for f in breaks["events"])
     def _offenders(stop: dict) -> str:
@@ -269,6 +270,10 @@ plant reports, silently — which is why it is the first row here and not the la
        "the MES's own share; the truth for it is unknown")}
 </div>
 <h3>Scripted breakdowns</h3>
+<p>The shortest event this run could have noticed at all is
+{num(down.get('resolution_line_seconds'), 0, ' s')} of line time — one sampling interval at this
+speed. A lag smaller than that is quantisation and is printed as <em>within resolution</em> rather
+than as a signed number somebody could trend.</p>
 <div class="scroll"><table>
 <thead><tr><th>Machine</th><th>Scripted</th><th>Detected</th><th>Seconds seen</th><th>Recall</th>
 <th>Lag</th><th>Unknown because</th></tr></thead>

@@ -161,6 +161,12 @@ many the line actually spent down. The MES records **wall** seconds and the
 script is written in **line** seconds, so the MES's figure is multiplied by the
 replay speed to compare. Both are labelled.
 
+*Lags.* The shortest event a run could notice at all is one sampling interval
+of line time — thirty line seconds at 60×. A detection lag smaller than that is
+quantisation, so it is printed as *within resolution*, with the resolution
+beside it, rather than as a signed number somebody could put in a trend. A
+sweep once reported a breakdown detected one second *before* it was scripted.
+
 *Starved and blocked.* Every scripted `starve` and `block` window is checked
 against what the MES recorded **for that machine**: unlike a changeover, which
 is the whole line stopping together, having nothing to work on is a fact about

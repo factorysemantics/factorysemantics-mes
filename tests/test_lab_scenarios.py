@@ -141,6 +141,7 @@ def _timeline(state: str, start_s: int, end_s: int, equipment: str = "CUT01",
                    "end": (T0 + timedelta(seconds=watched_s)).isoformat()},
         "machines": [{"code": equipment, "intervals": [
             {"state": state, "equipment": equipment, "reason": None,
+             "seconds": end_s - start_s,
              "start": (T0 + timedelta(seconds=start_s)).isoformat(),
              "end": (T0 + timedelta(seconds=end_s)).isoformat()}]}],
     }
@@ -237,3 +238,34 @@ def test_a_scripted_window_is_printed_in_the_lines_own_seconds_not_the_watchs():
     assert event["window_line_s"] == [100, 160]
     assert event["scripted_line_seconds"] == 60.0
     assert event["scripted_wall_seconds"] == 3.0
+
+
+# ------------------------------------------------- a lag smaller than a sample
+
+def test_a_lag_smaller_than_the_sampling_interval_is_not_printed_as_a_number():
+    """The sweep that reported a breakdown detected one second *before* it was
+    scripted, at a speed whose sampling interval was thirty line seconds. That
+    is quantisation, not prescience, and a signed number invites a trend."""
+    assert measure.lag_says(-1.0, 30.0) == "within resolution (30 s)"
+    assert measure.lag_says(2.5, 30.0) == "within resolution (30 s)"
+
+
+def test_a_lag_bigger_than_the_sampling_interval_is_a_number():
+    assert measure.lag_says(45.0, 30.0) == "+45.0 s"
+
+
+def test_a_lag_nobody_measured_is_unknown_and_never_a_zero():
+    assert measure.lag_says(None, 30.0) == "unknown"
+
+
+def test_a_lag_with_no_resolution_beside_it_says_so():
+    assert measure.lag_says(-1.0, None) == "-1.0 s (resolution unknown)"
+
+
+def test_the_measurement_carries_the_resolution_beside_every_lag():
+    card = score_run(_truth("down"), _timeline("down", 100, 160), T0, speed=20.0)
+    out = measure.downtime(_Truth(), card, {"total_seconds": 60}, speed=20.0)
+    assert out["resolution_line_seconds"] == card["observation"]["resolution_sim_s"]
+    for event in out["breakdowns"]["events"]:
+        assert event["lag_says"]
+        assert event["resolution_line_seconds"] == out["resolution_line_seconds"]
