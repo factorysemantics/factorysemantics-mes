@@ -3477,17 +3477,66 @@ fsmes<span class="w"> </span>fleet<span class="w"> </span>plan<span class="w">  
 <p>The thing the strict reading protects stays protected: <strong>no verb reaches into a <em>running</em> plant that has not just said who it is.</strong> On the console, a silent plant's ownership reads <code>unknown</code> rather than <code>yes</code>.</p>
 <h2 id="the-commands">The commands<a class="headerlink" href="#the-commands" title="Permanent link">&para;</a></h2>
 <h3 id="fsmes-fleet-create-pack"><code>fsmes fleet create &lt;pack&gt;</code><a class="headerlink" href="#fsmes-fleet-create-pack" title="Permanent link">&para;</a></h3>
-<p>Checks the pack and refuses on failure; makes the fleet's data directory; writes the plant its instance id; applies the pack (schema to head, then the master data the pack carries); and records the ownership last. It <strong>starts nothing</strong> — the plant exists after this, and runs when a person says so.</p>
-<p>The order matters. The instance id is written <em>before</em> the pack is applied, so a plant that half-applies is still a plant this installation can prove it made; and the ownership entry is written <em>last</em>, because an entry for a plant that was never built is a claim about a plant that is not there.</p>
+<p>Checks the pack and refuses on failure; makes the fleet's data directory; writes the plant its instance id; applies the pack — <strong>the pack's settings, the schema to head, the master data the pack carries, and the accounts it declares</strong> — adds the accounts a pack that declares none still needs, and records the ownership last. It <strong>starts nothing</strong> — the plant exists after this, and runs when a person says so.</p>
+<p>That is the whole of <code>fsmes plant &lt;name&gt; init</code> and not a part of it. Until 2026-09-14 it was a part: <code>create</code> applied the pack and stopped, and it applied it to <em>this process's</em> database rather than to the plant's, because <code>fsmes pack apply</code> only named a database when the pack named one of its own. What it built was a stray file beside the working directory and an ownership entry for a plant that did not exist — which then started, answered <code>/health</code> with <code>ok</code>, was counted <em>answered</em> by the console, and returned <strong>500 to every sign-in</strong>. If that shape sounds familiar in your own fleet, <code>fsmes db-status --plant &lt;name&gt;</code> is the question that settles it.</p>
+<p>It says which database it is about, on a line of its own, before it changes anything:</p>
+<div class="highlight"><pre><span></span><code>  machining: 13 settings from the pack
+  machining: database sqlite:///.data/machining.db (the file this fleet gives machining, in .data)
+      Database schema created at b1f4c73a9e08.
+      equipment: 7 made, 0 already there
+      ...
+      account ADMIN (admin): created
+  machining: schema at head, pack applied, accounts in place
+</code></pre></div>
+<p>Where that database comes from, in this order and never a fourth: the pack's own <code>[storage] database_url</code>; <code>MES_DATABASE_URL</code>, if you set it; otherwise <code>&lt;data dir&gt;/&lt;plant&gt;.db</code>, the file the fleet gives it — which is the same path the plant is started against. Never this process's default, because a database nobody named is not this plant's.</p>
+<p>The order matters. The instance id is written <em>before</em> the pack is applied, so a plant that half-applies is still a plant this installation can prove it made; and the ownership entry is written <em>last</em>, because an entry for a plant that was never built is a claim about a plant that is not there. So a pack whose database cannot be reached, or whose schema the migrator will not identify, <strong>refuses before anything is recorded as owned</strong>.</p>
+<p>A pack that carries no master data builds a plant with no machines on it. That is allowed, it is not a failure, and <code>fsmes fleet list</code> and the console now say so — see <em>answered, but empty</em> below.</p>
 <p><code>fsmes plant</code> reads the fleet file (the list of packs), not the ownership file, so <code>create</code> prints the line to add to it if you want the plant to show up there too.</p>
 <h3 id="fsmes-fleet-startstop-name"><code>fsmes fleet start|stop &lt;name&gt;</code><a class="headerlink" href="#fsmes-fleet-startstop-name" title="Permanent link">&para;</a></h3>
 <p>The ownership gate, then the machinery that already runs plants (<code>fsmes plant &lt;name&gt; start|stop</code>). Start and stop are local process control: there is no remote start in this product and this decision adds none.</p>
+<p><strong><code>fsmes fleet stop &lt;name&gt; --force</code>.</strong> <code>stop</code> acts on a running plant, so a plant that has stopped answering <code>/health</code> is refused: a plant is never managed through a gap in which nobody can see it. There is one state where that leaves a person stuck, and it is real — on 2026-09-14 a plant stopped answering <code>/health</code> while still answering <code>/pack</code>, still running, and the only way out was <code>kill</code>. The refusal now says whether the pid file still names live processes, and names them:</p>
+<div class="highlight"><pre><span></span><code>machining did not answer (did not answer (timed out)). `stop` acts on a running
+plant and this one is not saying anything; a plant is never managed through a
+gap in which nobody can see it. Its pid file names 2 process(es) that are still
+alive (81422, 81423), so this is a plant that is running and cannot be talked
+to. `--force` stops it: what this installation owns it may stop, and ownership
+is the safety property here, not liveness.
+</code></pre></div>
+<p><code>--force</code> gives up <strong>liveness and nothing else</strong>. Conditions 1 and 3 still hold in full, and condition 2 is still corroborated — by the instance id in the plant's own data directory, the half of it that is readable while the plant is silent, exactly as <code>start</code> and <code>apply</code> corroborate it. A plant this installation did not create is refused with the flag exactly as it is without it, and so is a plant that has taken its ownership back by deleting that id. It is the only verb in this product that takes the flag.</p>
 <p><strong>Nothing starts a plant on its own.</strong> There is no scheduler, no reconciliation loop, and no daemon that notices a stopped plant and brings it back. Desired state stays intent displayed as drift, never intent enforced.</p>
 <h3 id="fsmes-fleet-apply-name-pack-dir"><code>fsmes fleet apply &lt;name&gt; [--pack &lt;dir&gt;]</code><a class="headerlink" href="#fsmes-fleet-apply-name-pack-dir" title="Permanent link">&para;</a></h3>
 <p><code>fsmes pack check</code> first, refusing on failure; then the pack, to an owned plant that is <strong>not answering</strong> — applying a pack upgrades a database, and doing that underneath a live process is how a plant ends up half-upgraded. One plant's pack is never applied to another: a pack is a plant's identity.</p>
 <h3 id="fsmes-fleet-status-name-and-fsmes-fleet-list"><code>fsmes fleet status &lt;name&gt;</code> and <code>fsmes fleet list</code><a class="headerlink" href="#fsmes-fleet-status-name-and-fsmes-fleet-list" title="Permanent link">&para;</a></h3>
-<p>Reads. <code>status</code> says whether the plant is owned and <strong>why</strong> — the same question every verb asks, answered before you hit it. <code>list</code> states its total: <em>"N plants, M answered, K unknown; J owned"</em>. The number recorded is never the number seen.</p>
-<p>A plant that did not answer is <strong>unknown</strong>. Never healthy, never down.</p>
+<p>Reads. <code>status</code> says whether the plant is owned and <strong>why</strong> — the same question every verb asks, answered before you hit it. <code>list</code> states its total: <em>"N plants, M answered, K answered but empty, L unknown; J owned"</em>. The number recorded is never the number seen.</p>
+<p>Three states, and the distinctions are the point:</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>answered</code></td>
+<td>the plant answered, and has a schema and machines</td>
+</tr>
+<tr>
+<td><code>empty</code></td>
+<td>the plant answered, and <strong>said</strong> it has no schema or no machines</td>
+</tr>
+<tr>
+<td><code>unknown</code></td>
+<td>nobody heard from it. Never healthy, never down</td>
+</tr>
+</tbody>
+</table>
+<p><em>Answered, but empty</em> arrived on 2026-09-14, because the state it names had been invisible: a plant with a schema at head, an account that signs in and no equipment at all looks healthy from every other angle, and the person it matters to is the one who has just built the fleet. It comes from what the plant said and from nothing else — a plant that does not answer <code>/pack</code>, or whose database did not answer, stays <code>answered</code>, because <em>unasked</em> is not <em>nothing there</em>.</p>
+<div class="highlight"><pre><span></span><code>2 plants, 1 answered, 1 answered but empty, 0 unknown; 2 owned.
+  bottling       owned     answered  http://127.0.0.1:8010
+  machining      owned     empty     http://127.0.0.1:8020   no line: this plant has no machines on it
+</code></pre></div>
+<p>The usual cause of <code>no line</code> is a pack that carries no master data — <code>fsmes pack apply</code> says <em>"master data: this pack carries none, so nothing was seeded"</em> when that is so. The usual cause of <code>no schema</code> is a plant whose database was never migrated; <code>fsmes db-status --plant &lt;name&gt;</code> says more.</p>
 <h3 id="fsmes-fleet-plan"><code>fsmes fleet plan</code><a class="headerlink" href="#fsmes-fleet-plan" title="Permanent link">&para;</a></h3>
 <p>Reads. What a deployment script needs to know about every plant the <strong>fleet file</strong> lists — owned or not, since a promote moves a whole machine: where each pack is, where each database is and what kind it is, whether the plant simulates a line worth regenerating, and where to ask it whether it came back.</p>
 <p>It states its total the same way <code>list</code> does: how many packs the fleet lists, and how many of those this product's deployment tooling could back up before migrating. Those two differing is the fact that matters — it means a plant nobody could roll back.</p>
@@ -3497,7 +3546,7 @@ fsmes<span class="w"> </span>fleet<span class="w"> </span>plan<span class="w">  
 </code></pre></div>
 <p><code>--json</code> is the form <a href="https://github.com/factorysemantics/factorysemantics-mes/blob/main/deploy/promote.sh"><code>deploy/promote.sh</code></a> reads, so the promote does not parse <code>fleet.toml</code> a second time in bash. No password is printed unless <code>--with-password</code> asks for one, which is for a script piping it straight into <code>pg_dump</code>; the plain output is safe to paste into an issue.</p>
 <h2 id="the-console">The console<a class="headerlink" href="#the-console" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>fleet<span class="w"> </span>console<span class="w"> </span>--port<span class="w"> </span><span class="m">8100</span><span class="w">        </span><span class="c1"># loopback; one page, at http://127.0.0.1:8100</span>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>fleet<span class="w"> </span>console<span class="w">                    </span><span class="c1"># loopback; one page, at http://127.0.0.1:8090</span>
 </code></pre></div>
 <p>One page. Every plant in the list — the packs this machine runs, the plants this installation created, and the <code>[[observe]]</code> entries a person added — each polled on <code>/health</code> and <code>/pack</code>, one row each:</p>
 <table>
@@ -3518,7 +3567,7 @@ fsmes<span class="w"> </span>fleet<span class="w"> </span>plan<span class="w">  
 </tr>
 <tr>
 <td>answering</td>
-<td><code>answered</code> or <code>unknown</code></td>
+<td><code>answered</code>, <code>answered, empty</code>, or <code>unknown</code></td>
 </tr>
 <tr>
 <td>profile, clock</td>
@@ -3537,6 +3586,10 @@ fsmes<span class="w"> </span>fleet<span class="w"> </span>plan<span class="w">  
 <td><code>/pack</code>, against this build's head</td>
 </tr>
 <tr>
+<td>line</td>
+<td><code>/pack</code> — how many machines this plant has, or <em>unknown</em> if it could not count them</td>
+</tr>
+<tr>
 <td>modules</td>
 <td><code>/pack</code> — how many this plant serves, and which it does not</td>
 </tr>
@@ -3546,7 +3599,8 @@ fsmes<span class="w"> </span>fleet<span class="w"> </span>plan<span class="w">  
 </tr>
 </tbody>
 </table>
-<p>At the top: <strong>"3 plants, 2 answered, 1 unknown"</strong>, and below it how many are owned, how many are recorded here but not answering, and how many are only watched. The number in the list is never the number seen.</p>
+<p>At the top: <strong>"3 plants, 2 answered, 0 answered but empty, 1 unknown"</strong>, and below it how many are owned, how many are recorded here but not answering, and how many are only watched. The number in the list is never the number seen.</p>
+<p><strong>The port is 8090, and that is not arbitrary.</strong> It was 8100 until 2026-09-14, which is the first port <code>fsmes score</code> and <code>fsmes sweep</code> hand an ephemeral plant — so a scored run started in the same minute as a console took the console's port, and what answered on it afterwards was a plant's sign-in page wearing the console's address. The console's port and the simulator's range are named constants now, and <code>tests/test_fleet_console.py</code> fails if they ever overlap again.</p>
 <h3 id="what-the-page-cannot-do-and-how-to-check-that-yourself">What the page cannot do, and how to check that yourself<a class="headerlink" href="#what-the-page-cannot-do-and-how-to-check-that-yourself" title="Permanent link">&para;</a></h3>
 <p><strong>There is no control on it, and no path from it to <code>fsmes fleet</code>.</strong> Four things make that checkable by reading rather than by trusting this page:</p>
 <ol>

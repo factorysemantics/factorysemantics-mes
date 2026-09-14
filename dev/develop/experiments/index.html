@@ -3486,10 +3486,12 @@ travel together.</p>
 <span class="k">[scenario.machining]</span>
 <span class="n">events</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"down"</span><span class="p">,</span><span class="w"> </span><span class="n">station</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"Mill"</span><span class="p">,</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">600</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">720</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">]</span>
 
-<span class="c1"># A pack whose plant is seeded by a script rather than by master data. A pack</span>
-<span class="c1"># may never name a script (decision 0022); a plan is not a pack.</span>
-<span class="k">[init.bottling]</span>
-<span class="n">script</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"../multiplant/bottling/init.py"</span>
+<span class="c1"># A pack whose plant is seeded by a script rather than by master data — the</span>
+<span class="c1"># scale labs, whose master data is generated rather than written. A pack may</span>
+<span class="c1"># never name a script (decision 0022); a plan is not a pack. A plant with</span>
+<span class="c1"># neither is refused before anything is started.</span>
+<span class="k">[init.megafactory]</span>
+<span class="n">script</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"../megafactory/init.py"</span>
 
 <span class="c1"># The on-screen design panel, on for every lab plant so a note can be left</span>
 <span class="c1"># while you are looking at the thing you want to complain about. Claude is off</span>
