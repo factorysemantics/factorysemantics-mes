@@ -10,12 +10,23 @@ This is the replacement. One directory, one JSON file per kind, read and
 written by `fsmes pack apply`:
 
     masterdata/
-      equipment.json      the ISA-95 tree, parents first
-      materials.json      what this plant makes and consumes
-      routings.json       the operations, in order, on named equipment
-      quality_specs.json  what a characteristic must measure
-      lots.json           material on hand at the start
-      work_orders.json    orders to release, so counters have somewhere to book
+      equipment.json           the ISA-95 tree, parents first
+      materials.json           what this plant makes and consumes
+      bom.json                 which components a material takes, and where
+      routings.json            the operations, in order, on named equipment
+      quality_specs.json       what a characteristic must measure
+      lots.json                material on hand at the start
+      work_orders.json         orders to release, so counters have somewhere to book
+      maintenance_plans.json   the recurring jobs, and what makes each due
+      shifts.json              the patterns this plant works
+
+The last three arrived on 2026-09-14, when the bottling lab plant's line
+moved into a pack. It had been seeded by `fsmes seed-kepsim`, which builds a
+bill of materials, five maintenance plans and two shift patterns as well as
+the equipment and the routing - and a format that could not carry them would
+have made "the same line, seeded the same way" a quieter plant than the one
+it replaced. Extending the format was the honest half of that trade; the
+alternative was a plant that silently lost its BOM and its calendar.
 
 **Rated cycle times are not repeated here.** An equipment entry may leave
 `ideal_cycle_seconds` out, and it is read from the pack's own tag map - which
@@ -34,6 +45,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from datetime import time
 from pathlib import Path
 
 #: The files this reads, and what each holds. A file in the directory that is
@@ -42,28 +54,46 @@ from pathlib import Path
 KINDS: dict[str, str] = {
     "equipment": "the ISA-95 tree: enterprise, site, area, work centre, work unit",
     "materials": "what this plant makes and consumes",
+    "bom": "which components a material takes, and at which operation",
     "routings": "the operations, in order, each on a named machine",
     "quality_specs": "what a characteristic must measure for a material",
     "lots": "material on hand when the plant starts",
     "work_orders": "orders to create, and whether to release them",
+    "maintenance_plans": "the recurring jobs on a machine, and what makes each due",
+    "shifts": "the shift patterns this plant works",
 }
 
 REQUIRED: dict[str, tuple[str, ...]] = {
     "equipment": ("code", "name", "level"),
     "materials": ("code", "name"),
+    "bom": ("parent", "component", "quantity"),
     "routings": ("code", "name", "material", "operations"),
     "quality_specs": ("material", "characteristic"),
     "lots": ("code", "material", "quantity"),
     "work_orders": ("code", "material", "quantity"),
+    "maintenance_plans": ("code", "name", "equipment", "trigger", "interval"),
+    "shifts": ("code", "name", "starts", "ends"),
 }
 
 OPTIONAL: dict[str, tuple[str, ...]] = {
     "equipment": ("parent", "ideal_cycle_seconds"),
     "materials": ("unit", "type"),
+    "bom": ("operation_seq",),
     "routings": (),
     "quality_specs": ("unit", "min", "max"),
     "lots": (),
     "work_orders": ("priority", "release"),
+    "maintenance_plans": ("instructions", "document_code", "expected_minutes"),
+    "shifts": ("days", "equipment"),
+}
+
+#: What `[[maintenance_plans]] trigger` may say, and what each counts. Spelt
+#: out here rather than deferred to the enum's own error, because a pack is
+#: checked offline and the person fixing it is reading this file's sentences.
+TRIGGERS: dict[str, str] = {
+    "runtime_hours": "hours the machine actually ran",
+    "calendar_days": "elapsed days, use or no use",
+    "produced_qty": "units it has made",
 }
 
 
@@ -131,7 +161,8 @@ def problems(directory: Path) -> list[str]:
     known_materials = {row.get("code") for row in data.rows("materials")}
     known_equipment = {row.get("code") for row in data.rows("equipment")}
     for kind, fields in (("routings", ("material",)), ("quality_specs", ("material",)),
-                         ("lots", ("material",)), ("work_orders", ("material",))):
+                         ("lots", ("material",)), ("work_orders", ("material",)),
+                         ("bom", ("parent", "component"))):
         for index, row in enumerate(data.rows(kind), start=1):
             for name in fields:
                 value = row.get(name)
@@ -150,7 +181,49 @@ def problems(directory: Path) -> list[str]:
         if parent and parent not in known_equipment:
             out.append(f"equipment.json #{index} hangs under {parent!r}, which "
                        "equipment.json does not declare.")
+    for index, row in enumerate(data.rows("maintenance_plans"), start=1):
+        machine = row.get("equipment")
+        if machine and machine not in known_equipment:
+            out.append(f"maintenance_plans.json #{index} is a job on {machine!r}, which "
+                       "equipment.json does not declare.")
+        trigger = row.get("trigger")
+        if trigger and trigger not in TRIGGERS:
+            out.append(f"maintenance_plans.json #{index} comes due on {trigger!r}, which "
+                       f"is not something this product counts. It counts "
+                       f"{', '.join(sorted(TRIGGERS))}.")
+    for index, row in enumerate(data.rows("shifts"), start=1):
+        machine = row.get("equipment")
+        if machine and machine not in known_equipment:
+            out.append(f"shifts.json #{index} belongs to {machine!r}, which "
+                       "equipment.json does not declare.")
+        for field_name in ("starts", "ends"):
+            if not _is_clock(row.get(field_name)):
+                out.append(f"shifts.json #{index} has a {field_name} of "
+                           f"{row.get(field_name)!r}; a shift starts and ends at a time "
+                           "of day written HH:MM.")
+        days = row.get("days")
+        if days is not None and (not isinstance(days, str) or len(days) != 7
+                                 or set(days) - {"0", "1"}):
+            out.append(f"shifts.json #{index} has days {days!r}; that is a seven "
+                       'character mask of 0 and 1, Monday first - "1111100" is weekdays.')
+    # A component that is its own parent is a bill of materials that never
+    # terminates, and the explosion would recurse until something gave way.
+    for index, row in enumerate(data.rows("bom"), start=1):
+        if row.get("parent") and row.get("parent") == row.get("component"):
+            out.append(f"bom.json #{index} makes {row['parent']!r} a component of itself.")
     return out
+
+
+def _is_clock(value) -> bool:
+    """`HH:MM` or `HH:MM:SS`, and nothing else. A shift that starts at "6am"
+    parses in no library this product uses."""
+    if not isinstance(value, str):
+        return False
+    try:
+        time.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
 
 
 # ----------------------------------------------------------------- applying
@@ -165,14 +238,18 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
     from sqlalchemy import select
 
     from fsmes.domain import (
+        BomItem,
         Equipment,
         EquipmentLevel,
+        MaintenancePlan,
         Material,
         MaterialLot,
         MaterialType,
         QualitySpec,
         Routing,
         RoutingOperation,
+        ShiftPattern,
+        TriggerKind,
         WorkOrder,
     )
     from fsmes.services import workorders
@@ -216,6 +293,23 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
         session.add(made)
         materials[code] = made
         count("materials", made=True)
+
+    for row in data.rows("bom"):
+        parent, component = materials[row["parent"]], materials[row["component"]]
+        seq = row.get("operation_seq")
+        # The unique key is (parent, component, operation) - the same
+        # component may legitimately be consumed at two stations - so the
+        # "already there" question has to be asked with all three.
+        session.flush()
+        existing = session.scalar(select(BomItem.id).where(
+            BomItem.parent_id == parent.id, BomItem.component_id == component.id,
+            BomItem.operation_seq == seq))
+        if existing:
+            count("bom", made=False)
+            continue
+        session.add(BomItem(parent=parent, component=component,
+                            quantity=row["quantity"], operation_seq=seq))
+        count("bom", made=True)
 
     for row in data.rows("routings"):
         code = row["code"]
@@ -268,4 +362,29 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
         if row.get("release", True):
             workorders.release(session, code, actor="pack-apply")
         count("work_orders", made=True)
+
+    for row in data.rows("maintenance_plans"):
+        code = row["code"]
+        if session.scalar(select(MaintenancePlan.id).where(MaintenancePlan.code == code)):
+            count("maintenance_plans", made=False)
+            continue
+        session.add(MaintenancePlan(
+            code=code, name=row["name"], equipment=equipment[row["equipment"]],
+            trigger=TriggerKind(row["trigger"]), interval=float(row["interval"]),
+            instructions=row.get("instructions"), document_code=row.get("document_code"),
+            expected_minutes=float(row.get("expected_minutes", 30.0))))
+        count("maintenance_plans", made=True)
+
+    for row in data.rows("shifts"):
+        code = row["code"]
+        if session.scalar(select(ShiftPattern.id).where(ShiftPattern.code == code)):
+            count("shifts", made=False)
+            continue
+        session.add(ShiftPattern(
+            code=code, name=row["name"], starts=time.fromisoformat(row["starts"]),
+            ends=time.fromisoformat(row["ends"]), days=row.get("days", "1111100"),
+            # A shift with no equipment belongs to the whole site, which is
+            # the column's own meaning for null - not a missing value.
+            equipment=equipment.get(row["equipment"]) if row.get("equipment") else None))
+        count("shifts", made=True)
     return receipt

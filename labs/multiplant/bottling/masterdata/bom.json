@@ -1,0 +1,32 @@
+[
+  {
+    "parent": "FG-BOTTLE",
+    "component": "RAW-PREFORM",
+    "quantity": 1.0,
+    "operation_seq": 10
+  },
+  {
+    "parent": "FG-BOTTLE",
+    "component": "RAW-LABEL",
+    "quantity": 1.0,
+    "operation_seq": 40
+  },
+  {
+    "parent": "FG-BOTTLE",
+    "component": "RAW-WATER",
+    "quantity": 0.5,
+    "operation_seq": 50
+  },
+  {
+    "parent": "FG-BOTTLE",
+    "component": "RAW-CAP",
+    "quantity": 1.0,
+    "operation_seq": 50
+  },
+  {
+    "parent": "FG-BOTTLE",
+    "component": "RAW-CARTON",
+    "quantity": 0.041666666666666664,
+    "operation_seq": 60
+  }
+]

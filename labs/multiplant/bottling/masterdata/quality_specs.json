@@ -1,0 +1,9 @@
+[
+  {
+    "material": "FG-BOTTLE",
+    "characteristic": "fill_weight",
+    "unit": "g",
+    "min": 494.0,
+    "max": 506.0
+  }
+]

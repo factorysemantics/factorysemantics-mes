@@ -375,7 +375,11 @@ def test_a_plant_started_by_the_fleet_is_told_where_its_data_directory_is(fleet)
 #: Reading a pack is not acting, which is why `create` may learn a plant's
 #: name before the gate can be asked about it.
 ACTS = ("plants.start", "plants.stop", "plants.run", "applier.apply", "owned.remember",
-        "owned.save", "write_text", "mkdir", "unlink", "subprocess")
+        "owned.save", "write_text", "mkdir", "unlink", "subprocess",
+        # Creating accounts is acting on a plant, and it is reached through a
+        # private helper - which `_functions` does not walk into - so the name
+        # of the call is listed here instead.
+        "_lab_accounts", "auth.create_user")
 
 #: Functions here that neither write to a plant nor read one: pure helpers.
 #: Named so that a new function has to be classified by whoever adds it.
@@ -426,3 +430,125 @@ def test_every_write_verb_asks_the_gate_before_it_does_anything():
             assert line > min(gates), (
                 f"{name} calls {call} on line {line}, before the ownership gate on line "
                 f"{min(gates)}. The gate is called first, always.")
+
+
+# ------------------------------------------- a plant that is running and mute
+
+
+def a_live_pid_file(fleet, name: str) -> int:
+    """This test process's own pid, written where the plant's would be. It is
+    alive by definition and nothing signals it: `plants.stop` is a recorder in
+    every test that gets this far."""
+    where = commands.data_dir(fleet)
+    (where / f"{name}.pids").write_text(f"{os.getpid()}\n", encoding="utf-8")
+    return os.getpid()
+
+
+def test_a_silent_plant_whose_processes_are_alive_is_refused_with_the_reason_and_the_way_out(
+        created):
+    """The state the lab could only escape with `kill`: `/health` stopped
+    answering while the plant was still running, so `stop` refused - and said
+    nothing about the pid file it could see."""
+    entry, fleet = created
+    pid = a_live_pid_file(fleet, entry.name)
+    with pytest.raises(ownership.NotOwned) as refusal:
+        ownership.gate("stop", entry.name, data_dir=commands.data_dir(fleet))
+    why = str(refusal.value)
+    assert "did not answer" in why
+    assert str(pid) in why and "still alive" in why
+    assert "--force" in why
+
+
+def test_forcing_a_stop_reaches_the_process_control_and_says_why_it_did(created, monkeypatch):
+    """`--force` gives up liveness, and only liveness."""
+    entry, fleet = created
+    a_live_pid_file(fleet, entry.name)
+    done = recorded(monkeypatch)
+    lines: list[str] = []
+    commands.stop(entry.name, root=fleet, force=True, echo=lines.append)
+    assert done == ["stop machining"]
+    assert any("stopping it anyway" in line for line in lines)
+    assert any("instance id" in line for line in lines)
+
+
+def test_forcing_a_stop_never_reaches_a_plant_this_installation_does_not_own(fleet, monkeypatch):
+    """The flag is not a way past ownership, and there is no flag that is."""
+    done = recorded(monkeypatch)
+    with pytest.raises(ownership.NotOwned) as refusal:
+        commands.stop("somebody-elses-plant", root=fleet, force=True, echo=lambda _: None)
+    assert "no record of creating" in str(refusal.value)
+    assert done == []
+
+
+def test_forcing_a_stop_is_still_refused_when_the_plant_took_its_ownership_back(created):
+    """Condition 2 is corroborated by the id in the plant's data directory
+    while it is silent. Delete it and `--force` refuses like everything else."""
+    entry, fleet = created
+    where = commands.data_dir(fleet)
+    a_live_pid_file(fleet, entry.name)
+    ownership.instance_path(where, entry.name).unlink()
+    with pytest.raises(ownership.NotOwned) as refusal:
+        ownership.gate("stop", entry.name, data_dir=where, force=True)
+    assert "revokes ownership" in str(refusal.value)
+
+
+def test_only_stop_can_be_forced(fleet):
+    """`--force` exists for one state. Nothing else in this product takes it,
+    and a verb added to the forced list has to be argued for here."""
+    assert ownership.WHILE_SILENT_IF_FORCED == ("stop",)
+    assert not set(ownership.WHILE_SILENT) & set(ownership.WHILE_SILENT_IF_FORCED)
+
+
+# -------------------------------------------------- answered, but empty
+
+
+def test_a_plant_that_says_it_has_no_line_is_listed_as_empty_and_not_as_answered(created):
+    """The third state, from what the plant said and from nothing else."""
+    entry, fleet = created
+    ask = answering(plant=entry.name, instance_id=entry.instance_id)
+    empty = lambda where, **k: observe.Answer(  # noqa: E731
+        f"{where}/pack", True, status=200,
+        body={"schema": {"revision": "abc123", "head": "abc123", "at_head": True,
+                         "answered": True},
+              "line": {"equipment": 0, "answered": True}})
+    said: list[str] = []
+    result = commands.listing(root=fleet, echo=said.append, ask=ask, ask_pack=empty)
+    assert result["totals"] == {"plants": 1, "answered": 0, "empty": 1,
+                                "unknown": 0, "owned": 1}
+    assert said[0] == "1 plants, 0 answered, 1 answered but empty, 0 unknown; 1 owned."
+    assert "no line" in said[1]
+
+
+def test_a_plant_that_did_not_answer_its_pack_is_not_called_empty(created):
+    """Unasked is not empty. A plant too old to answer `/pack`, or one whose
+    database did not answer, stays `answered`."""
+    entry, fleet = created
+    ask = answering(plant=entry.name, instance_id=entry.instance_id)
+    quiet = lambda where, **k: observe.Answer(where, False, why="did not answer")  # noqa: E731
+    result = commands.listing(root=fleet, echo=lambda _: None, ask=ask, ask_pack=quiet)
+    assert result["totals"]["answered"] == 1 and result["totals"]["empty"] == 0
+
+
+def test_a_plant_whose_database_did_not_answer_is_not_called_empty(created):
+    entry, fleet = created
+    ask = answering(plant=entry.name, instance_id=entry.instance_id)
+    unreachable = lambda where, **k: observe.Answer(  # noqa: E731
+        f"{where}/pack", True, status=200,
+        body={"schema": {"revision": None, "head": None, "at_head": None,
+                         "answered": False},
+              "line": {"equipment": None, "answered": False}})
+    result = commands.listing(root=fleet, echo=lambda _: None, ask=ask, ask_pack=unreachable)
+    assert result["totals"]["answered"] == 1 and result["totals"]["empty"] == 0
+
+
+def test_a_plant_that_has_never_been_migrated_is_empty_and_says_which_kind(created):
+    entry, fleet = created
+    ask = answering(plant=entry.name, instance_id=entry.instance_id)
+    unmigrated = lambda where, **k: observe.Answer(  # noqa: E731
+        f"{where}/pack", True, status=200,
+        body={"schema": {"revision": None, "head": "abc123", "at_head": False,
+                         "answered": True},
+              "line": {"equipment": None, "answered": False}})
+    said: list[str] = []
+    commands.listing(root=fleet, echo=said.append, ask=ask, ask_pack=unmigrated)
+    assert "no schema" in said[1]

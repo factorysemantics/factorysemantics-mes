@@ -13,8 +13,7 @@ Sign in as `SCOTT` / `operator`, or `ADMIN` / `admin`.
 
 ```bash
 fsmes pack check bottling        # refuse a pack before it touches anything
-fsmes plant all init             # apply every pack, create every schema  (once)
-python bottling/init.py          # bottling's line: the product's own, see below
+fsmes plant all init             # schema to head, pack, master data, accounts (once)
 fsmes plant all start            # bring them up
 fsmes plant all status           # who is alive and answering
 fsmes plant all stop
@@ -106,7 +105,7 @@ Both lines replay a scripted hour, so there is something real to find in each:
 fleet.toml                  the list of packs, and where the data goes
 bottling/plant.toml         the pack
 bottling/tag_map.json       which tags exist, and what its State integers mean
-bottling/init.py            a LAB TOOL: releases an order on the product's own line
+bottling/masterdata/        this plant's whole definition, as data
 machining/plant.toml        the pack
 machining/tag_map.json
 machining/masterdata/       this plant's whole definition, as data
@@ -116,15 +115,32 @@ finewire/                   the invented third pack; see its README
 .data/                      databases and PID files (gitignored)
 ```
 
-**Why bottling's `init.py` is still a script.** A pack carries no code
-([decision 0022](../../docs/decisions/0022-what-a-plant-pack-may-contain.md)),
-and master data belongs in `masterdata/` as data — which is exactly what
-machining's did with the 156-line `seed.py` it used to have. Bottling's line
-is not this plant's, though: it is the product's own reference line, seeded by
-`fsmes seed-kepsim`, and duplicating it here as data would be one copy that
-could drift from another. So bottling's pack carries no master data, its pack
-says so, `fsmes pack apply` says it seeded nothing, and `init.py` stays a
-script a person runs to release an order.
+**Why bottling's `init.py` is gone.** It carried the argument that a line
+shipping *inside* the product — bottling's six stations are the product's own
+reference line, seeded by `fsmes seed-kepsim` — should not be copied into a
+pack, because a copy can drift from what it copied. The argument was sound and
+the cost was worse. Measured on 2026-09-14: `fsmes fleet create` and `fsmes
+plant bottling init` both left this plant with **zero equipment**, and nothing
+on the dashboard, in `fsmes fleet list` or on the console said so; `fsmes score
+bottling` and `fsmes sweep bottling` died on their first read, because the
+ephemeral plant a scored run builds applies the pack and nothing else; and the
+one step that did seed the line was a script the registry had stopped naming
+on 2026-09-13, so a person had to know to run it. A plant that needs a step
+nobody can see is house rule 4's own example of a bug.
+
+So bottling's line is `bottling/masterdata/` now — generated once from
+`seed_kepsim` itself, and pinned against it by
+`tests/test_bottling_pack.py`, which seeds one database each way and compares
+them. The drift the old argument feared is a test failure rather than a
+surprise. `fleet create`, `plant init`, `score` and `sweep` all build the same
+plant the same way.
+
+Carrying the whole of that line needed three more kinds in the master-data
+format — `bom`, `maintenance_plans` and `shifts` — because `seed_kepsim`
+builds a bill of materials, five maintenance plans and two shift patterns as
+well as the equipment and the routing. Extending the format was the honest
+half of the trade; the alternative was a bottling plant that quietly lost its
+BOM and its calendar the day it moved into a pack.
 
 Regenerate the machining line after editing its config:
 

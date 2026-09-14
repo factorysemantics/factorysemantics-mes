@@ -1,0 +1,61 @@
+[
+  {
+    "code": "ACME",
+    "name": "ACME Beverages",
+    "level": "enterprise"
+  },
+  {
+    "code": "KC1",
+    "name": "Kansas City Plant",
+    "level": "site",
+    "parent": "ACME"
+  },
+  {
+    "code": "PKG",
+    "name": "Packaging",
+    "level": "area",
+    "parent": "KC1"
+  },
+  {
+    "code": "SIMLINE",
+    "name": "KepSim Simulated Line",
+    "level": "work_center",
+    "parent": "PKG"
+  },
+  {
+    "code": "FILL01",
+    "name": "Refill Station 01",
+    "level": "work_unit",
+    "parent": "SIMLINE"
+  },
+  {
+    "code": "LD01",
+    "name": "Loader / Depalletiser 01",
+    "level": "work_unit",
+    "parent": "SIMLINE"
+  },
+  {
+    "code": "PAL01",
+    "name": "Palletiser 01",
+    "level": "work_unit",
+    "parent": "SIMLINE"
+  },
+  {
+    "code": "QI01",
+    "name": "Quality Inspection 01",
+    "level": "work_unit",
+    "parent": "SIMLINE"
+  },
+  {
+    "code": "RD01",
+    "name": "Rotary Denester 01",
+    "level": "work_unit",
+    "parent": "SIMLINE"
+  },
+  {
+    "code": "WASH01",
+    "name": "Washer 01",
+    "level": "work_unit",
+    "parent": "SIMLINE"
+  }
+]

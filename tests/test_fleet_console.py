@@ -283,3 +283,82 @@ def test_the_page_offers_no_control():
         assert control not in html, (
             f"the console page has a {control}. The first version of the console has no "
             "write path at all; the verbs it would need are the command's.")
+
+
+# ------------------------------------------------------- answered, but empty
+
+
+def test_the_console_shows_a_plant_with_no_line_as_empty_rather_than_as_answered(
+        three_plants, session):
+    """The third state. A plant that is up, at head, and has nothing on it
+    reads as *answered, but empty* - which is what a person who has just
+    built a fleet needs to see, and what the page said nothing about until
+    2026-09-14."""
+    root, _packs, data_dir = three_plants
+    at_head_and_empty = {
+        "schema": {"revision": "abc123", "head": "abc123", "at_head": True,
+                   "answered": True},
+        "line": {"equipment": 0, "answered": True},
+        "modules": {"on": [], "off": [], "total": 0},
+    }
+    watching = console.Console(
+        root,
+        health=lambda where, **k: observe.Answer(
+            f"{where}/health", True, status=200,
+            body={"plant": "bottling", "instance_id": ownership.load(data_dir)
+                  .entry("bottling").instance_id}),
+        pack=lambda where, **k: observe.Answer(f"{where}/pack", True, status=200,
+                                               body=at_head_and_empty))
+    fleet = watching.look()
+    rows = {row["name"]: row for row in fleet["plants"]}
+    assert rows["bottling"]["state"] == "empty"
+    assert rows["bottling"]["line_equipment"] == 0
+    assert "no line" in rows["bottling"]["empty_because"]
+    assert "answered but empty" in fleet["says"]
+
+
+def test_a_plant_that_could_not_count_its_line_is_not_shown_as_empty(three_plants, session):
+    """Unknown is not zero. A plant whose database did not answer says so, and
+    an empty pill would be inventing a line that nothing looked at."""
+    root, _packs, data_dir = three_plants
+    could_not_look = {
+        "schema": {"revision": "abc123", "head": "abc123", "at_head": True,
+                   "answered": True},
+        "line": {"equipment": None, "answered": False},
+        "unknown": {"line": "this plant's equipment could not be counted"},
+    }
+    watching = console.Console(
+        root,
+        health=lambda where, **k: observe.Answer(
+            f"{where}/health", True, status=200,
+            body={"plant": "bottling", "instance_id": ownership.load(data_dir)
+                  .entry("bottling").instance_id}),
+        pack=lambda where, **k: observe.Answer(f"{where}/pack", True, status=200,
+                                               body=could_not_look))
+    rows = {row["name"]: row for row in watching.look()["plants"]}
+    assert rows["bottling"]["state"] == "answered"
+    assert rows["bottling"]["line_equipment"] is None
+
+
+# ------------------------------------------------------------------ the port
+
+
+def test_the_console_does_not_sit_in_the_range_a_scored_run_takes_its_port_from():
+    """8100 was both the console's default and the first port
+    `sim.runner.scored_run` hands an ephemeral plant, so a `fsmes score` in
+    the same minute took the console's port and served a plant's sign-in page
+    on it. Two named constants and this, rather than two numbers that happened
+    to differ."""
+    from fsmes.sim import runner
+
+    low, high = runner.API_RANGE
+    assert not low <= console.PORT <= high, (
+        f"the console's default port {console.PORT} is inside the simulator's "
+        f"range {low}-{high}; an ephemeral run will take it from under a person")
+
+
+def test_the_console_has_one_default_port_and_the_cli_uses_it():
+    """One spelling. Two is how it drifted into the range in the first place."""
+    from fsmes import cli
+
+    assert cli.CONSOLE_PORT == console.PORT

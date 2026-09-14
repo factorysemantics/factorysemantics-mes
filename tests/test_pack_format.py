@@ -464,8 +464,13 @@ def test_master_data_that_names_something_it_does_not_declare_is_refused(tmp_pat
 
 
 def test_a_master_data_file_nobody_reads_is_refused(tmp_path):
-    """Master data nobody reads is master data somebody thinks is loaded."""
-    (tmp_path / "shifts.json").write_text("[]", encoding="utf-8")
+    """Master data nobody reads is master data somebody thinks is loaded.
+
+    `shifts.json` was the example here until 2026-09-14, when shifts became a
+    kind this product does read. `suppliers.json` is the replacement: a file
+    a person could plausibly write, naming something the MES does not hold.
+    """
+    (tmp_path / "suppliers.json").write_text("[]", encoding="utf-8")
     assert any("not a kind of master data" in line for line in masterdata.problems(tmp_path))
 
 

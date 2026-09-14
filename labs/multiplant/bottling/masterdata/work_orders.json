@@ -1,0 +1,9 @@
+[
+  {
+    "code": "WO-ACME-4711",
+    "material": "FG-BOTTLE",
+    "quantity": 4000,
+    "priority": 10,
+    "release": true
+  }
+]

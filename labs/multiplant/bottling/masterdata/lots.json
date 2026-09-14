@@ -1,0 +1,27 @@
+[
+  {
+    "code": "LOT-CAP-001",
+    "material": "RAW-CAP",
+    "quantity": 100000.0
+  },
+  {
+    "code": "LOT-CARTON-001",
+    "material": "RAW-CARTON",
+    "quantity": 900.0
+  },
+  {
+    "code": "LOT-LABEL-001",
+    "material": "RAW-LABEL",
+    "quantity": 100000.0
+  },
+  {
+    "code": "LOT-PREFORM-001",
+    "material": "RAW-PREFORM",
+    "quantity": 100000.0
+  },
+  {
+    "code": "LOT-WATER-001",
+    "material": "RAW-WATER",
+    "quantity": 50000.0
+  }
+]

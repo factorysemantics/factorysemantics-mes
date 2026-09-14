@@ -1,0 +1,38 @@
+[
+  {
+    "code": "FG-BOTTLE",
+    "name": "Filled Bottle 500ml",
+    "unit": "ea",
+    "type": "finished"
+  },
+  {
+    "code": "RAW-CAP",
+    "name": "28mm Closure",
+    "unit": "ea",
+    "type": "raw"
+  },
+  {
+    "code": "RAW-CARTON",
+    "name": "Shipper Carton (24)",
+    "unit": "ea",
+    "type": "raw"
+  },
+  {
+    "code": "RAW-LABEL",
+    "name": "Wrap Label",
+    "unit": "ea",
+    "type": "raw"
+  },
+  {
+    "code": "RAW-PREFORM",
+    "name": "Bottle Preform",
+    "unit": "ea",
+    "type": "raw"
+  },
+  {
+    "code": "RAW-WATER",
+    "name": "Treated Water",
+    "unit": "l",
+    "type": "raw"
+  }
+]

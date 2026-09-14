@@ -55,6 +55,46 @@ goes under Honesty with a migration line, so plant people can find it.
   180-second stop replayed at 20× read as "9 s scripted". Both are now given,
   each named for the clock it belongs to. No change to any recall or
   misclassification figure — those are ratios and were never affected.
+- **`fsmes fleet create` builds a plant a person can sign in to.** It applied
+  the pack and stopped, and it applied it to *this process's* database rather
+  than to the plant's: `fsmes pack apply` named a database only when the pack
+  named one of its own, so a pack that named none was applied to the product
+  default `./fsmes.db`. What `fleet create` produced was a stray file beside
+  the working directory and an ownership entry for a plant that had never
+  been created — which then started, answered `/health` with `ok`, was
+  counted *answered* by the console, and returned **500 to every sign-in**.
+  `pack.apply.database_for` is now the one place that answers which database
+  a pack means: the pack's `[storage] database_url`, else `MES_DATABASE_URL`
+  when the invoker set it, else `<data dir>/<plant>.db` — the file its fleet
+  gives it, which is the file the plant is started against. Never the process
+  default. `apply` names that database on a line of its own before it changes
+  anything, as `fsmes db-status` already does, and `create` goes on to make
+  the accounts `fsmes plant <name> init` makes.
+- **`fsmes pack apply` refuses to seed master data into a database that is
+  not at head**, rather than writing rows through the ORM into a
+  half-migrated file. A database in that state has some of this product's
+  tables and no Alembic stamp, and the migrator disowns it outright — which
+  on 2026-09-14 left a plant no command could take forward.
+- **`fsmes fleet stop --force`** stops a plant this installation created that
+  has stopped answering. Without the flag the refusal now says whether the
+  pid file still names live processes, and names them. Forcing gives up
+  liveness and nothing else: ownership is still corroborated by the instance
+  id in the plant's own data directory, and a plant this installation did not
+  create is refused either way. Before this, a plant that was running and
+  could no longer be talked to could only be escaped with `kill`.
+- **The fleet console's default port is 8090.** It was 8100, which is the
+  first port `fsmes score` and `fsmes sweep` hand an ephemeral plant, so a
+  scored run started in the same minute took the console's port and served a
+  plant's sign-in page on its address. The console's port and the simulator's
+  range are named constants now, and a test fails if they ever overlap.
+- **`fsmes score bottling` and `fsmes sweep bottling` have a line to read.**
+  The bottling pack carried no master data — its six stations are the
+  product's own reference line — and the lab script that seeded them stopped
+  being named by the registry on 2026-09-13, so the ephemeral plant a scored
+  run builds had no machines and its first read answered 404. The line is in
+  `labs/multiplant/bottling/masterdata/` now, generated from `seed_kepsim`
+  itself and pinned against it by a test that seeds one database each way and
+  compares them.
 
 ### Added
 
@@ -194,6 +234,23 @@ goes under Honesty with a migration line, so plant people can find it.
   measurements card gains a characteristic search that narrows the tab strip
   on the server, and the history gains a date range.
 
+- **A third state on `fsmes fleet list`, `fsmes fleet status` and the
+  console: *answered, but empty*.** A plant with a schema at head, an account
+  that signs in and no equipment at all looks healthy from every other angle,
+  and the person it matters to is the one who has just built the fleet.
+  `GET /pack` carries `line` — how many machines this plant has, or that it
+  could not count them — and the third state is read from that and from
+  nothing else: a plant that does not answer `/pack`, or whose database did
+  not answer, stays `answered`, because unasked is not empty.
+- **Three more kinds of pack master data: `bom`, `maintenance_plans` and
+  `shifts`.** Moving the bottling line into its pack needed them —
+  `fsmes seed-kepsim` builds a bill of materials, five maintenance plans and
+  two shift patterns as well as the equipment and the routing — and a format
+  that could not carry them would have made "the same line, seeded the same
+  way" a quieter plant than the one it replaced. `fsmes pack check` validates
+  all three offline: an unknown maintenance trigger, a shift that does not
+  start at a time of day, a seven-day mask that is not seven days, a BOM line
+  that makes a material a component of itself.
 - **`fsmes fleet plan`** — what a deployment script needs to know about every
   plant in a fleet: where each pack is, where each database is and what kind
   it is, whether the plant simulates a line worth regenerating, and where to

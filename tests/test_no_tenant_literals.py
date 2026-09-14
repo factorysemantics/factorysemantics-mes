@@ -84,6 +84,54 @@ for _station in ("LD01", "RD01", "WASH01", "QI01", "FILL01", "PAL01"):
         "the list; the reference line is product, not a tenant.")
 
 
+#: The rest of that same reference line, collected for the same reason and
+#: from 2026-09-14 onwards. Until then the bottling pack carried no master
+#: data: its line was seeded by `fsmes seed-kepsim` and by a lab script the
+#: registry had stopped naming, so `fsmes fleet create`, `fsmes plant bottling
+#: init` and `fsmes score bottling` all built a plant with no machines on it.
+#: Putting the line in the pack is what fixed that, and it is what brings
+#: these codes into the collector's reach - they are in `src/fsmes/
+#: seed_kepsim.py` because the six-station bottling line *is* the product's
+#: reference line, not because a tenant's identity leaked into the product.
+#:
+#: One entry each, and grouped by what they are, so that a genuinely new
+#: tenant code cannot arrive inside a group unnoticed.
+for _rung, _what in (("ACME", "the enterprise"), ("KC1", "the site"),
+                     ("PKG", "the area"), ("SIMLINE", "the line")):
+    NOT_TENANT[_rung] = (
+        f"{_what} of the demo plant's own reference line (src/fsmes/seed_kepsim.py, "
+        "src/fsmes/seed.py). The lab's bottling pack runs that line and therefore "
+        "carries the same tree; the reference line is product, not a tenant.")
+
+for _material in ("RAW-PREFORM", "RAW-WATER", "RAW-CAP", "RAW-LABEL", "RAW-CARTON"):
+    NOT_TENANT[_material] = (
+        "a component of the demo plant's own reference line (src/fsmes/seed_kepsim.py), "
+        "same reason as FG-BOTTLE above.")
+
+for _lot in ("LOT-PREFORM-001", "LOT-WATER-001", "LOT-CAP-001", "LOT-LABEL-001",
+             "LOT-CARTON-001"):
+    NOT_TENANT[_lot] = (
+        "the opening stock the demo plant's own reference line starts with "
+        "(src/fsmes/seed_kepsim.py); it is seeded by the product, not by a plant.")
+
+for _plan in ("PM-FILL-SEALS", "PM-LD-BELT", "PM-WASH-NOZZLE", "PM-PAL-GREASE",
+              "PM-RD-BEARING"):
+    NOT_TENANT[_plan] = (
+        "a maintenance plan on the demo plant's own reference line "
+        "(src/fsmes/seed_kepsim.py); deliberately short intervals so a "
+        "demonstration line comes due within a shift.")
+
+NOT_TENANT["RT-BOTTLE"] = (
+    "the routing of the demo plant's own reference line (src/fsmes/seed_kepsim.py), "
+    "same reason as FG-BOTTLE, the material it makes.")
+
+for _shift in ("DAY", "NIGHT"):
+    NOT_TENANT[_shift] = (
+        "a shift code. Product vocabulary that every plant gets - the two patterns "
+        "src/fsmes/seed_kepsim.py seeds and src/fsmes/web/schedule.html renders - "
+        "collected only because the lab's bottling pack now carries the same two.")
+
+
 # --------------------------------------------------------- the forbidden list
 
 

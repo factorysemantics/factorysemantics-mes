@@ -5,8 +5,17 @@
 # list or a word, and `fsmes pack migrate` will not invent one.
 #
 # This plant's line is the product's own reference line - the same six
-# stations `fsmes seed-kepsim` builds - so the pack carries no master data
-# and `fsmes pack apply` says so. See README.md.
+# stations `fsmes seed-kepsim` builds - and until 2026-09-14 the pack carried
+# no master data at all, on the argument that a line shipping with the product
+# should not be copied into a pack. What that actually produced was a plant
+# that came up empty from every command that builds one: `fsmes fleet create`
+# and `fsmes plant bottling init` left it with no machines, `fsmes score
+# bottling` and `fsmes sweep bottling` died on their first read with *no line
+# has any machines on it yet*, and the one thing that did seed it was a
+# `init.py` the registry had stopped naming.
+#
+# So the line is in masterdata/ now, generated once from `seed_kepsim` itself.
+# One plant, one way to build it. See masterdata/README.md.
 
 [pack]
 format = 1
@@ -30,6 +39,7 @@ simulate     = true
 [files]
 tag_map    = "tag_map.json"
 replay_dir = "../../kepsim/out"
+masterdata = "masterdata"
 
 [erp]
 # No ERP in the lab: every plant would otherwise poll the same mock ERP and
