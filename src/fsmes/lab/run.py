@@ -29,7 +29,7 @@ from pathlib import Path
 from fsmes import __version__
 from fsmes.integrations.opc.tag_map import load_line_map
 from fsmes.lab import build as builder
-from fsmes.lab import feedback, measure, report
+from fsmes.lab import feedback, measure, observe, report
 from fsmes.lab import truth as truth_reader
 from fsmes.lab.plan import Plan, PlanError, check_names, read_plan
 from fsmes.pack import format as fmt
@@ -120,7 +120,8 @@ def collector(codes: list[str], hours: float):
     return collect
 
 
-def measure_plant(plan: Plan, built: builder.Built, card: dict, echo=print) -> dict:
+def measure_plant(plan: Plan, built: builder.Built, card: dict, echo=print,
+                  watched: dict | None = None) -> dict:
     """Every measurement the plan asked for, with the truth beside it."""
     recorded = card.get("recorded") or {}
     reason = measure.withheld(card)
@@ -169,6 +170,10 @@ def measure_plant(plan: Plan, built: builder.Built, card: dict, echo=print) -> d
     if "downtime" in plan.measure:
         out["measurements"]["downtime"] = measure.downtime(
             truth, card, recorded.get("downtime") or {}, plan.speed, reason)
+    if "latency" in plan.measure:
+        out["measurements"]["latency"] = measure.latency(
+            card, {**(card.get("observed_during_run") or {}), **(watched or {})},
+            truth, mapping, plan.speed, reason)
     if "oee" in plan.measure:
         out["measurements"]["oee"] = measure.oee(
             truth, recorded.get("oee") or {}, mapping, plan.speed, reason)
@@ -234,14 +239,27 @@ def run(plan_path: Path, results_root: Path | None = None, root: Path | None = N
         built = builder.build(plan, directory, results, echo=echo)
         hours = max(0.05, (built.duration_s / plan.speed + 8.0) / 3600.0)
         codes = [code for code in station_to_equipment(Path(built.cfg["tag_map"])).values() if code]
+        # Only when something needs it. A watcher is HTTP requests against the
+        # same API the run is scored through, and a run that does not measure
+        # latency should not pay for looks nobody reads.
+        watcher = observe.Watch() if "latency" in plan.measure else None
         card = scored_run(built.name, built.cfg, where, plan.speed,
                           line_json=built.line_json, echo=echo,
                           keep_evidence=keep_evidence,
                           collect=collector(codes, hours),
-                          extra_env=design_env(plan, results.name, built.name))
+                          extra_env=design_env(plan, results.name, built.name),
+                          observe=watcher, observe_every_s=plan.watch_every_s)
         (results / "recorded" / f"{built.name}.json").write_text(
             json.dumps(card.get("recorded") or {}, indent=2, default=str), encoding="utf-8")
-        scored = measure_plant(plan, built, card, echo=echo)
+        watched = None
+        if watcher is not None:
+            # Kept beside the run whatever the measurement made of them: a
+            # version of the measurement that asked the wrong question is worth
+            # re-running against an hour somebody already paid for.
+            (results / "watched").mkdir(exist_ok=True)
+            watcher.write(results / "watched" / f"{built.name}.json")
+            watched = watcher.as_json()
+        scored = measure_plant(plan, built, card, echo=echo, watched=watched)
         truths[built.name] = scored.pop("truth")
         outcomes.append(scored)
         card.pop("recorded", None)
@@ -343,6 +361,15 @@ def _echo_plant(scored: dict, echo) -> None:
              f"{'unknown' if recall is None else f'{recall:.0%}'} "
              f"({down['breakdowns']['scored']}/{down['breakdowns']['scripted']} scored), "
              f"planned stops misclassified {'unknown' if mis is None else mis}")
+    late = scored["measurements"].get("latency")
+    if late:
+        answered, total = late["events_answered"], late["events_total"]
+        behind = (late.get("production") or {}).get("worst_behind_units")
+        echo(f"    latency   : {answered}/{total} scripted event(s) caught by a screen while "
+             f"the hour played, resolution "
+             f"{late['watched']['resolution_line_seconds']}s of line time"
+             + (f"; the line view was {behind:,.0f} unit(s) behind at worst"
+                if behind is not None else ""))
     oee_out = scored["measurements"].get("oee")
     if oee_out:
         mismatch = oee_out["window"]["mismatch_share"]

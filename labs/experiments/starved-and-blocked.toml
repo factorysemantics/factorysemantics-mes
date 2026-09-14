@@ -13,6 +13,12 @@
 #
 #     fsmes lab run labs/experiments/starved-and-blocked.toml
 #
+# It also asks the second question a stop raises after "did anybody notice":
+# how long did it take. The run watches the operations feed and the line view
+# twice a second while the twenty minutes play, so each scripted window has an
+# answer that was taken while it was happening rather than reconstructed
+# afterwards.
+#
 # About a minute: one plant, twenty minutes of line time at 20x, plus the
 # seeding and the drain. The plant is ephemeral, on loopback, with its own
 # database and its own ports.
@@ -20,7 +26,8 @@
 name = "starved-and-blocked"
 note = """Nothing is broken and nothing is being made. What to look at first:
 the starved and blocked windows in the downtime section - a machine waiting
-for work is not a machine that failed."""
+for work is not a machine that failed - and then how long each of the three
+took to reach a screen."""
 
 packs = ["../multiplant/bottling"]
 
@@ -31,7 +38,15 @@ duration = 1200
 seed     = 42
 speed    = 20
 
-measure = ["booking", "downtime", "oee"]
+measure = ["booking", "downtime", "oee", "latency"]
+
+# How often the run looks at the plant while the hour plays, in WALL seconds.
+# At 20x half a second is ten seconds of line time, and that is the resolution
+# of every lag the run reports: a screen is only ever known to have shown
+# something by the look that saw it. Each of the three scripted windows here is
+# well over a hundred line seconds long, so there is room to be late in.
+[watch]
+every = 0.5
 
 # LD is the first station on the line, so starving it is the empties running
 # out - and every station after it starves in turn as the buffers drain, which

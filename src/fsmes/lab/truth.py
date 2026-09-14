@@ -87,6 +87,34 @@ class LineTruth:
     good_by_order: dict[str, int] = field(default_factory=dict)
     overlap_good_by_order: dict[str, int] = field(default_factory=dict)
     last_station: str | None = None
+    #: What the line had made, second by second, from the first row of the
+    #: replay. Index is the line second; the value is the cumulative good count
+    #: off the end of the line, summed as positive deltas the way the MES books
+    #: them (a counter reset is a re-baseline, not production going backwards).
+    #: Kept because a during-run measurement asks what the line had made at the
+    #: moment it looked, and the totals cannot answer that.
+    line_good_at: list[int] = field(default_factory=list)
+
+    def good_at(self, second: float) -> int | None:
+        """What the line had made by this line second, the replay's loop included.
+
+        The file loops: past its last row the replay starts the hour again, so
+        a run left playing into a second pass really has made a full pass plus
+        whatever of the next one it got to. That is production, not an error,
+        and a watcher that looked at that moment saw it.
+        """
+        if not self.line_good_at or second < 0:
+            return None
+        span = len(self.line_good_at)
+        laps, rest = divmod(int(second), span)
+        return laps * self.line_good_at[-1] + self.line_good_at[rest]
+
+    def good_between(self, start: float, end: float) -> int | None:
+        """What the line made between two line seconds, or None if unknowable."""
+        first, last = self.good_at(start), self.good_at(end)
+        if first is None or last is None:
+            return None
+        return last - first
 
     @property
     def line_good(self) -> int:
@@ -105,6 +133,10 @@ class LineTruth:
             "last_station": self.last_station,
             "line_good": self.line_good,
             "line_scrap": self.line_scrap,
+            # `line_good_at` is deliberately absent: it is one integer per line
+            # second and truth.json is a file a person opens. The during-run
+            # measurement that needs it has it in memory, and what it made of
+            # it is in scores.json.
             "orders_total": len(self.good_by_order),
             "good_by_order": self.good_by_order,
             "overlap_good_by_order": self.overlap_good_by_order,
@@ -208,10 +240,13 @@ def read(replay_dir: Path, line: dict, duration_s: int, overlap_s: int = 0) -> L
     if line_csv.is_file():
         rows = _rows(line_csv)
         previous = 0
+        running = 0
         for index, row in enumerate(rows):
             order = str(row["OrderId"])
             made = int(row["LineGoodCount"])
             step = max(0, made - previous)
+            running += step
+            truth.line_good_at.append(running)
             truth.good_by_order[order] = truth.good_by_order.get(order, 0) + step
             if index < overlap_s:
                 truth.overlap_good_by_order[order] = (

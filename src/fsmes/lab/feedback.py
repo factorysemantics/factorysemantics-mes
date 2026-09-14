@@ -48,6 +48,11 @@ SECTION_FOR_ROUTE = {
     "/dashboard/orders": "booking",
     "/dashboard/analysis": "oee",
     "/dashboard/ops": "downtime",
+    # The two the latency measurement is about: the line view is the screen it
+    # polls, and a note left on it while the line was stopped belongs beside
+    # the figures for how long that stop took to appear there.
+    "/dashboard/line": "latency",
+    "/dashboard/line/3d": "latency",
 }
 
 
