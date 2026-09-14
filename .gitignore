@@ -68,3 +68,9 @@ site/
 
 # A backup folder written by `fsmes backup`.
 backups/
+
+# Where `fsmes lab run` writes its runs. One directory per run, holding the
+# plan, the generated line data, what each plant recorded and the report. Never
+# committed: a run is evidence from one machine on one day, and the plans that
+# produce them (labs/experiments/) are what belongs in the repository.
+lab-results/

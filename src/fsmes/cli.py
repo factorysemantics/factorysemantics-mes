@@ -2496,6 +2496,94 @@ def autoloop_cmd(
     typer.echo(f"done - read {note}")
 
 
+lab_app = typer.Typer(
+    help="Experiments: a plan, a run, and a directory somebody else can read.",
+)
+app.add_typer(lab_app, name="lab")
+
+
+def _results_root(results: Path | None, root: Path | None) -> Path:
+    from fsmes import plant as plants_mod
+    from fsmes.lab.run import DEFAULT_RESULTS
+
+    if results:
+        return Path(results).expanduser().resolve()
+    return (plants_mod.find_root(root) / DEFAULT_RESULTS).resolve()
+
+
+@lab_app.command("run")
+def lab_run(
+    plan: Path = typer.Argument(..., help="The experiment plan (TOML)."),
+    results: Path | None = typer.Option(None, help="Where run directories go."),
+    speed: float | None = typer.Option(None, help="Override the plan's replay speed."),
+    root: Path | None = typer.Option(None, help="Repository root (default: found from cwd)."),
+    keep_evidence: bool = typer.Option(
+        False, "--keep-evidence",
+        help="Keep each ephemeral plant's working directory and logs. Says where they are."),
+) -> None:
+    """Run a plan: build each plant from its pack, play the scenario, measure.
+
+    Every plant is ephemeral - its own database, its own ports on loopback,
+    torn down when the questions have been asked - so a run never disturbs a
+    plant you already have going. What it leaves behind is one directory: the
+    plan, the line each plant played, the data generated from it, what each
+    plant recorded, the scores with the truth beside every number, an HTML
+    report, and an empty notes.md for what a person saw that no number caught.
+
+        fsmes lab run labs/experiments/one-line-bad-hour.toml
+    """
+    from fsmes.lab import run as lab
+
+    try:
+        lab.run(Path(plan), _results_root(results, root), root=root,
+                speed=speed, keep_evidence=keep_evidence, echo=typer.echo)
+    except (lab.PlanError, FileNotFoundError) as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(2) from exc
+
+
+@lab_app.command("list")
+def lab_list(
+    results: Path | None = typer.Option(None, help="Where run directories are."),
+    root: Path | None = typer.Option(None, help="Repository root (default: found from cwd)."),
+) -> None:
+    """Every run in the results directory, newest first."""
+    from fsmes.lab import run as lab
+
+    where = _results_root(results, root)
+    runs = lab.listing(where)
+    typer.echo(f"{len(runs)} run(s) in {where}")
+    for entry in runs:
+        withheld = (f", {entry['withheld']} verdict(s) withheld" if entry["withheld"] else "")
+        typer.echo(f"  {entry['run']:<40} {entry['started_at']}  "
+                   f"{entry['plants_run']}/{entry['plants_total']} plant(s){withheld}")
+
+
+@lab_app.command("open")
+def lab_open(
+    run_id: str = typer.Argument(..., help="A run directory's name, or a path to one."),
+    results: Path | None = typer.Option(None, help="Where run directories are."),
+    root: Path | None = typer.Option(None, help="Repository root (default: found from cwd)."),
+) -> None:
+    """Re-render a run's report and say where it is.
+
+    Re-rendered rather than just opened, because notes.md is written after the
+    run and the report is where those notes belong. Nothing else is recomputed:
+    the numbers come from the scores.json the run wrote.
+    """
+    from fsmes.lab import report as lab_report
+
+    directory = Path(run_id).expanduser()
+    if not directory.is_dir():
+        directory = _results_root(results, root) / run_id
+    if not (directory / "scores.json").is_file():
+        typer.echo(f"No run at {directory}: a run directory has a scores.json in it.")
+        raise typer.Exit(2)
+    page = lab_report.write(directory)
+    typer.echo(f"{page}")
+    typer.echo(f"  notes {directory / 'notes.md'}")
+
+
 def run() -> None:
     """The console script.
 
