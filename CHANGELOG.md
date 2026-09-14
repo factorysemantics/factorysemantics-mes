@@ -50,6 +50,32 @@ goes under Honesty with a migration line, so plant people can find it.
   caveats; the public demo points at the page that emails a link; and the
   install snippet cites the `wheel-demo` job that proves it. Docs only —
   no behaviour changed.
+- **`release.yml` can be rehearsed without cutting a release.**
+  `workflow_dispatch` runs the same jobs a tag runs — the full CI matrix, the
+  build, the tag/citation/config-file checks, the demo from the exact wheel
+  that would be published, and a two-platform image build through the real
+  `docker/Dockerfile` — and skips every step that makes something public: the
+  `pypi` job, the image push, the cosign signature, the SBOM and the GitHub
+  Release. A dispatch cannot publish; there is no input that lets it. Until
+  now this file was provable only by tagging, which meant a bumped action, a
+  changed Dockerfile or a broken artifact hand-off was found on release night.
+  The version the run is about now comes from the wheel that was just built:
+  on a tag the tag is asserted against it, exactly as before, and the
+  `CITATION.cff` check — the one version a human still types — becomes
+  runnable before the tag exists.
+
+- **`release.yml`'s actions are on their current majors**, the other half of
+  the split in [#44](https://github.com/factorysemantics/factorysemantics-mes/pull/44):
+  `actions/checkout` 4→7, `actions/setup-python` 5→7,
+  `actions/upload-artifact` 4→7, `actions/download-artifact` 4→8,
+  `docker/setup-qemu-action` 3→4, `docker/setup-buildx-action` 3→4,
+  `docker/login-action` 3→4, `docker/metadata-action` 5→6,
+  `docker/build-push-action` 6→7 and `softprops/action-gh-release` 2→3. The
+  artifact pair moves together and stays on the same generation: the format
+  boundary is v3 against v4, and v4 through v8 share one backend, so upload 7
+  with download 8 is a supported pair and either one left behind would not be.
+  `download-artifact` v8 now *fails* on a digest mismatch where v4 warned.
+  ([#45](https://github.com/factorysemantics/factorysemantics-mes/pull/45))
 
 ### Fixed
 

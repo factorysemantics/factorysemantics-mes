@@ -1,8 +1,25 @@
 name: Release
 
+# TWO WAYS IN, AND ONLY ONE OF THEM PUBLISHES.
+#
+# A tag is the real thing: it builds, checks, runs the demo from the wheel,
+# publishes to PyPI, pushes and signs the image, and cuts the GitHub Release.
+#
+# `workflow_dispatch` is a rehearsal. Every job that produces evidence runs;
+# every job that makes something public is skipped by `if:`. It exists because
+# this file used to be provable only by tagging: a bumped action, a changed
+# Dockerfile or a broken artifact hand-off would be found on release night,
+# which is the night decision 0018 exists because of. Now it can be found on a
+# Tuesday. Nothing about the tag path depends on the dispatch path being run.
+#
+# The four steps that are skipped on a dispatch, and only those: the `pypi`
+# job, the image push (`push:` is false, so buildx still builds both
+# platforms and throws the result away), the cosign signature and SBOM for an
+# image that was never pushed, and the whole `github-release` job.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,27 +32,44 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
       - run: python -m pip install --upgrade pip build
       - run: python -m build
+      # The version this run is about, taken from the wheel that was just
+      # built. On a tag the next step asserts the tag says the same thing, so
+      # the pair is exactly the check that was here before: tag, wheel,
+      # citation, all one number. On a dispatch there is no tag, and the wheel
+      # is the subject instead — which is what makes the citation check below
+      # runnable before anyone tags anything.
+      - name: The version in the wheel
+        id: v
+        run: |
+          set -euo pipefail
+          w=$(ls dist/*.whl)
+          v=$(basename "$w" | sed -n 's/^factorysemantics_mes-\([^-]*\)-.*/\1/p')
+          [ -n "$v" ] || { echo "::error::cannot read a version out of $w"; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "this run is about $v"
       - name: The tag and the package agree
+        if: github.event_name == 'push'
         run: |
           v="${GITHUB_REF_NAME#v}"
-          ls dist/ | grep -q "factorysemantics_mes-${v}-" || { echo "::error::tag $GITHUB_REF_NAME but wheel is $(ls dist/)"; exit 1; }
+          [ "${{ steps.v.outputs.version }}" = "$v" ] || { echo "::error::tag $GITHUB_REF_NAME but wheel is $(ls dist/)"; exit 1; }
       # The wheel's filename comes from src/fsmes/__init__.py now, so the step
       # above already ties the tag to the number the CLI reports. CITATION.cff
       # is the one version left that a human types: the citation file format
       # has no way to read it from the package. It was a release behind when
       # this check was written, and 0.1.2 is what a wrong number costs. A tag
-      # whose citation disagrees stops here, before anything is published.
-      - name: The tag and the citation file agree
+      # whose citation disagrees stops here, before anything is published --
+      # and a dispatch whose citation disagrees says so before the tag exists.
+      - name: The package and the citation file agree
         run: |
-          v="${GITHUB_REF_NAME#v}"
+          v="${{ steps.v.outputs.version }}"
           cited="$(sed -n 's/^version: *//p' CITATION.cff)"
-          [ "$cited" = "$v" ] || { echo "::error::tag $GITHUB_REF_NAME but CITATION.cff says ${cited:-nothing}"; exit 1; }
+          [ "$cited" = "$v" ] || { echo "::error::wheel is $v but CITATION.cff says ${cited:-nothing}"; exit 1; }
       - name: The wheel carries the demo's config files
         run: |
           python - <<'PY'
@@ -45,7 +79,7 @@ jobs:
           missing = [n for n in need if n not in names]
           sys.exit(f"::error::wheel lacks {missing}" if missing else 0)
           PY
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
@@ -58,11 +92,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
@@ -70,13 +104,15 @@ jobs:
         run: .github/scripts/demo_from_wheel.sh "$(ls dist/*.whl)"
 
   pypi:
+    # Publishes. Tag only.
+    if: github.event_name == 'push'
     needs: [build, wheel-demo]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
@@ -90,45 +126,57 @@ jobs:
       packages: write
       id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: actions/checkout@v7
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      # Nothing to log in to when nothing is being pushed.
+      - uses: docker/login-action@v4
+        if: github.event_name == 'push'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/factorysemantics/fsmes
           tags: |
             type=semver,pattern={{version}}
             type=raw,value=latest
-      - uses: docker/build-push-action@v6
+      # On a dispatch `push` is false: both platforms are still built, through
+      # the same Dockerfile and the same buildx, and the result is discarded.
+      # A broken Dockerfile or a platform that no longer compiles is a red job
+      # here rather than a half-published release.
+      - uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/Dockerfile
           platforms: linux/amd64,linux/arm64
-          push: true
+          push: ${{ github.event_name == 'push' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+      # You cannot sign, or bill of materials, an image that was not pushed.
       - uses: sigstore/cosign-installer@v3
+        if: github.event_name == 'push'
       - name: Sign the image (keyless)
+        if: github.event_name == 'push'
         run: cosign sign --yes ghcr.io/factorysemantics/fsmes:${GITHUB_REF_NAME#v}
       - uses: anchore/sbom-action@v0
+        if: github.event_name == 'push'
         with:
           image: ghcr.io/factorysemantics/fsmes:${{ steps.meta.outputs.version }}
           artifact-name: sbom.spdx.json
 
   github-release:
+    # Publishes. Tag only.
+    if: github.event_name == 'push'
     needs: [pypi, image]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
@@ -137,7 +185,7 @@ jobs:
           v="${GITHUB_REF_NAME#v}"
           awk -v v="$v" '$0 ~ "^## \\["v"\\]" {p=1; next} /^## \[/ {if(p) exit} p' CHANGELOG.md > notes.md
           test -s notes.md || echo "See CHANGELOG.md." > notes.md
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           body_path: notes.md
           files: dist/*
