@@ -3085,7 +3085,11 @@ replicas; migrations run once in their own container so replicas never race.</p>
 <code>MES_TAG_MAP_FILE</code> at the tag map the worksheet produced, and set
 <code>MES_ERP_MODE</code> to <code>erpnext</code>, <code>file</code>, or <code>off</code>.</p>
 <p>The image is <code>ghcr.io/factorysemantics/fsmes</code> (amd64 and arm64), signed with
-cosign and shipped with an SBOM from each release.</p>
+cosign and shipped with an SBOM from each release. It is pushed only after
+the same approval that publishes the package to PyPI, in the same run — so a
+tag in the registry means that version was released, not that a build of it
+happened to succeed. Pin the version tag rather than <code>latest</code> on anything you
+care about; <code>latest</code> moves with each release.</p>
 <h2 id="systemd-test-and-promoted-environments-on-one-host">systemd: test and promoted environments on one host<a class="headerlink" href="#systemd-test-and-promoted-environments-on-one-host" title="Permanent link">&para;</a></h2>
 <p>Two environments run from the same code on the same host; the only
 difference is a registry file outside the checkout. The unit files and a
