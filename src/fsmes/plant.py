@@ -47,7 +47,7 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-from fsmes import identity
+from fsmes import identity, storage
 
 REGISTRY = Path("labs/multiplant/fleet.toml")
 
@@ -142,8 +142,6 @@ def database_url(name: str, cfg: dict, root: Path) -> str:
     holds a secret cannot. Nothing in the product changes with the choice:
     the same models, the same migrations, the URL decides.
     """
-    from fsmes import storage
-
     url = cfg.get("database_url")
     if not url:
         return f"sqlite:///{(data_dir(root) / f'{name}.db').as_posix()}"
@@ -350,7 +348,10 @@ def migrate(name: str, cfg: dict, root: Path, echo=print, upgrade=None) -> dict:
             return {"plant": name, "migrated": False, "reason": "running"}
         _run_init_db(root, env, echo)
         ensure_accounts(root, env, cfg, echo)
-        echo(f"  {name}: migrated {env['MES_DATABASE_URL'].split('@')[-1]} to head")
+        # Printed from the URL the *pack* wrote, which never holds a
+        # password - not from the resolved one with `@` sliced off it, which
+        # was a redaction by coincidence and one edit away from not being one.
+        echo(f"  {name}: migrated {storage.redacted(str(cfg['database_url']))} to head")
         return {"plant": name, "migrated": True, "backup": None}
     db = Path(env["MES_DATABASE_URL"].removeprefix("sqlite:///"))
     if not db.exists():
