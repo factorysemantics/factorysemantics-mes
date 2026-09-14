@@ -1786,6 +1786,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#what-you-said-while-watching-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What you said while watching it
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What you said while watching it">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#from-the-terminal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From the terminal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where it lands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-several-runs-together" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading several runs together
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#notes-and-handing-a-run-to-somebody-else" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3192,6 +3242,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#what-you-said-while-watching-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What you said while watching it
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What you said while watching it">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#from-the-terminal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From the terminal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-it-lands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where it lands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-several-runs-together" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading several runs together
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#notes-and-handing-a-run-to-somebody-else" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3279,6 +3379,14 @@ travel together.</p>
 <span class="c1"># may never name a script (decision 0022); a plan is not a pack.</span>
 <span class="k">[init.bottling]</span>
 <span class="n">script</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"../multiplant/bottling/init.py"</span>
+
+<span class="c1"># The on-screen design panel, on for every lab plant so a note can be left</span>
+<span class="c1"># while you are looking at the thing you want to complain about. Claude is off</span>
+<span class="c1"># unless a plan asks for it: taking a note is work the on-device model does for</span>
+<span class="c1"># nothing, and a run left going while you make coffee should not bill an API.</span>
+<span class="k">[feedback]</span>
+<span class="n">chat</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">claude</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 </code></pre></div>
 <p><code>duration</code>, <code>seed</code> and <code>speed</code> are the whole of the determinism story: <strong>the
 same seed twice is the same run</strong>, and the report states the seed it used. A
@@ -3333,6 +3441,10 @@ with half a script.</p>
 <tr>
 <td><code>notes.md</code></td>
 <td>what a person saw that no number caught</td>
+</tr>
+<tr>
+<td><code>feedback/conversations.jsonl</code></td>
+<td>the run's copy of what was said at its screens</td>
 </tr>
 </tbody>
 </table>
@@ -3410,6 +3522,99 @@ it at the top of the plant's section. The per-event detail is still worth
 reading. The numbers are not worth trending.</p>
 <p>The fix is a slower replay. The report prints the speed the replay actually
 sustained, so the next run can ask for one it can keep.</p>
+<h2 id="what-you-said-while-watching-it">What you said while watching it<a class="headerlink" href="#what-you-said-while-watching-it" title="Permanent link">&para;</a></h2>
+<p>Reviewing a product means noticing something on a screen. A note typed into a
+terminal an hour later is a memory; a note typed into the screen while the line
+is stopped is evidence. So the design panel is <strong>on for every lab plant</strong>, and
+the run ties what you say to itself.</p>
+<p>Four tags make a remark into evidence:</p>
+<table>
+<thead>
+<tr>
+<th>Tag</th>
+<th>Where it comes from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lab_run</code></td>
+<td>the plant's own environment, set by <code>fsmes lab run</code></td>
+</tr>
+<tr>
+<td><code>lab_plant</code></td>
+<td>the same</td>
+</tr>
+<tr>
+<td><code>screen</code></td>
+<td>the panel, which knows which screen you are on</td>
+</tr>
+<tr>
+<td>the moment</td>
+<td>the run, which knows its own <code>t0</code> and the script it played</td>
+</tr>
+</tbody>
+</table>
+<p>The run id is deliberately <strong>not</strong> taken from the browser. A run id that
+arrived in a request body would let any page claim any run, and the whole value
+of a tagged note is that the tag is not a guess. A body that disagrees with the
+plant's environment is filed against no run rather than against the one it
+claims.</p>
+<p>The moment is resolved by the run, for the same reason: a plant does not know
+when the replay's first tick was — that instant is decided by the runner, which
+waits for the log line rather than guessing it. So every note carries the
+<strong>line second</strong> it was made at and the scripted events live at that second:</p>
+<blockquote>
+<p>— SCOTT · <code>2026-09-14-one-line-bad-hour</code> · bottling · line second 3,100,
+during down at LD (3,000 to 3,180 s)</p>
+</blockquote>
+<p>A note made before the first tick says so rather than being rounded to second
+zero, and one made after the script ran out says that: a remark about a plant
+that had stopped is a different remark.</p>
+<h3 id="from-the-terminal">From the terminal<a class="headerlink" href="#from-the-terminal" title="Permanent link">&para;</a></h3>
+<p>For a run watched without a browser:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>fsmes<span class="w"> </span>lab<span class="w"> </span>note<span class="w"> </span><span class="m">2026</span>-09-14-one-line-bad-hour<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span><span class="s2">"the orders list does not say how many there are"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--screen<span class="w"> </span>/dashboard/orders<span class="w"> </span>--plant<span class="w"> </span>bottling
+</code></pre></div>
+<p>It goes into the same store with the same tags. A note made while the run is
+going is picked up when the run exports its feedback at the end; one made
+afterwards is picked up by <code>fsmes lab open</code>, which re-exports before it
+re-renders.</p>
+<h3 id="where-it-lands">Where it lands<a class="headerlink" href="#where-it-lands" title="Permanent link">&para;</a></h3>
+<p>At the end of the run the conversations tagged to it are <strong>copied</strong> into
+<code>feedback/conversations.jsonl</code> and rendered in <code>report.html</code> beside the section
+for the screen they name — a note about the work orders screen sits under the
+booking table, not in an appendix. Notes about a screen with no measurement
+behind it yet are still printed, in the plant's own block.</p>
+<p>The store itself (<code>~/.local/share/fsmes/design.db</code>, or wherever
+<code>MES_DESIGN_STORE</code> points) is never moved, emptied or written into a plant's
+database. It is one person's notes going back weeks; a run takes a copy of the
+part that belongs to it.</p>
+<p>Everything is printed <strong>verbatim</strong>, with who said it and when. Nothing here
+summarises or scores: a remark that turns out to be wrong is still what
+somebody said while they were looking at the screen.</p>
+<h2 id="reading-several-runs-together">Reading several runs together<a class="headerlink" href="#reading-several-runs-together" title="Permanent link">&para;</a></h2>
+<p>One run is an instrument reading. A finding is a thing that happened twice.</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>fsmes<span class="w"> </span>lab<span class="w"> </span>review<span class="w"> </span>--out<span class="w"> </span>findings.md
+<span class="gp">$ </span>fsmes<span class="w"> </span>lab<span class="w"> </span>review<span class="w"> </span><span class="m">2026</span>-09-13-one-line-bad-hour<span class="w"> </span><span class="m">2026</span>-09-14-one-line-bad-hour<span class="w"> </span>--out<span class="w"> </span>findings.md
+</code></pre></div>
+<p>It clusters three things across the runs you name — every note left at a
+screen, every row where the MES and the script differed, and every question a
+run could not answer — by the screen and the measurement they belong to. Each
+cluster names its runs, its plants, its stations and its numbers, and quotes
+the notes verbatim.</p>
+<p>Three rules:</p>
+<ul>
+<li><strong>It never says which side is right.</strong> A run states the truth the generator
+  obeyed and the answer the MES gave; putting several of those beside each
+  other adds no authority to either. A test forbids the words.</li>
+<li><strong>Every line is cited.</strong> A roll-up nobody can trace back is a rumour.</li>
+<li><strong>It works with no model at all.</strong> Clustering is by screen and measurement,
+  which are facts in the files, so CI runs it and so can a machine with no
+  Ollama. When the local model is there it is asked for one thing: a short
+  heading for a cluster somebody has to skim. <code>--no-model</code> is the plain
+  version; a heading that comes back as a verdict is dropped for the plain one.</li>
+</ul>
 <h2 id="notes-and-handing-a-run-to-somebody-else">Notes, and handing a run to somebody else<a class="headerlink" href="#notes-and-handing-a-run-to-somebody-else" title="Permanent link">&para;</a></h2>
 <p><code>notes.md</code> is written from a template with three headings — <em>what I saw on the
 screens</em>, <em>what was wrong</em>, <em>what I want next</em> — and rendered at the end of the
@@ -3439,7 +3644,11 @@ recomputed; the numbers are the ones the run measured.</p>
 </tbody>
 </table>
 <p>Both run in CI on every pull request, which is what stops the instrument
-rotting between the times anybody uses it.</p>
+rotting between the times anybody uses it. CI also proves the feedback loop
+with no model anywhere: it leaves a note against the first run, checks that the
+note appears in that run's report beside the booking table it is about, and
+rolls both runs up into a <code>findings.md</code> that cites each of them and quotes the
+note.</p>
 
 
 
