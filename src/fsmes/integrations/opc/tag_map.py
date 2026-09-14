@@ -41,6 +41,28 @@ servers disagree about all of it:
 
 Only `equipment` and one of `object`/`node_id`/`nodes` are required; the rest
 default to the twin's own simulator conventions, so existing maps keep working.
+
+Beside `machines` a map may carry one `line` block, which is about the line
+rather than any machine on it:
+
+    "line": {
+      "object": "Line",                  the object the line's own tags sit on
+      "publishes_order": "OrderId",      the tag carrying the order it is running
+      "order_code": "WO-ACME-{value}"    how that value names an order here
+    }
+
+`publishes_order` is **read**, and that is the whole difference between it and
+a machine's `order_tag`, which is written. A machine's `order_tag` is the MES
+telling the line which order to stamp its counts with; `publishes_order` is the
+line telling the MES which order it is already running - a historian, a
+line-control PLC or a CSV replay that nobody may write to can still answer that
+question, and until this block existed nothing in the MES could ask it.
+
+`order_code` exists because the two sides name the same order differently and
+always will: a PLC publishes `4711` in an integer register and the MES holds
+`WO-ACME-4711`. Which is a plant-boundary translation, so it is config and not
+code - `{value}` is what the line published, and a plant whose line publishes
+the code outright writes `"{value}"`.
 """
 
 import json
@@ -137,6 +159,83 @@ def load_manifest(directory: Path | None) -> dict:
     if not path.is_file():
         return {"tables": {}}
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+@dataclass(frozen=True)
+class LineMap:
+    """Where the line itself publishes what it is doing, and what it means.
+
+    A line is not a machine and the MES holds no equipment row for one, so this
+    is deliberately not another `MachineMap`: nothing subscribes to it as a
+    machine, nothing books against it, and it carries no state map. It answers
+    one question - *which order does the line say it is running?* - and it is
+    the only place that question has an answer that was not inferred.
+    """
+
+    object: str
+    publishes_order: str | None = None
+    #: A format with one field, `{value}`: what the line published becomes the
+    #: MES's own code for the same order. Empty means the map does not say, and
+    #: a caller must treat the two numbering schemes as unmatched rather than
+    #: guessing that they are the same.
+    order_code: str = ""
+
+    def code_for(self, value) -> str | None:
+        """The MES's code for the order the line published, or None.
+
+        None rather than a guess: a map that does not say how the line's value
+        names an order here has not told us, and an order code invented from a
+        raw register value would be a join nobody could check.
+        """
+        if value is None or not self.order_code:
+            return None
+        text = str(value).strip()
+        if not text:
+            return None
+        return self.order_code.format(value=text)
+
+
+def load_line_map(path: Path) -> LineMap | None:
+    """The map's `line` block, checked, or None when it has none.
+
+    Refused rather than half-read: a block naming a tag but no `order_code`
+    would silently produce a run in which nothing is tied and nothing says why,
+    which is exactly the failure this block exists to end.
+    """
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    return read_line_map(data)
+
+
+def read_line_map(data: dict) -> LineMap | None:
+    """`load_line_map`, for a map already in memory."""
+    block = data.get("line")
+    if block is None:
+        return None
+    if not isinstance(block, dict):
+        raise ValueError("tag map: `line` is a table - the object the line's own tags sit on, "
+                         "the tag carrying the order it is running, and how that value names "
+                         "an order in this MES.")
+    obj = block.get("object")
+    if not obj or not isinstance(obj, str):
+        raise ValueError("tag map: `line` names no `object`, so there is nothing to read "
+                         "the line's own tags from.")
+    publishes = block.get("publishes_order")
+    if publishes is not None and (not isinstance(publishes, str) or not publishes.strip()):
+        raise ValueError("tag map: `line.publishes_order` is the name of the tag the line "
+                         "publishes its current order on, as text.")
+    order_code = block.get("order_code") or ""
+    if publishes and not order_code:
+        raise ValueError(
+            f"tag map: `line.publishes_order` is {publishes!r} and `line.order_code` is missing. "
+            f"The line publishes a value and this MES holds a code; without the rule that turns "
+            f"one into the other the tag is read and nothing can be done with it. Write "
+            f"`\"order_code\": \"{{value}}\"` if the line publishes the code outright.")
+    if order_code and "{value}" not in str(order_code):
+        raise ValueError(
+            f"tag map: `line.order_code` is {order_code!r}, which has no `{{value}}` in it. It is "
+            f"a format for what the line published, not a constant - a plant whose every order "
+            f"has one code has one order.")
+    return LineMap(object=str(obj), publishes_order=publishes, order_code=str(order_code))
 
 
 def load_tag_map(path: Path, manifest: dict | None = None) -> list[MachineMap]:

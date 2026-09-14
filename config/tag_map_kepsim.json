@@ -1,6 +1,12 @@
 {
   "_comment": "The KepSim six-station line (labs/kepsim) served in the twin's OWN address space by `mes run-opc-sim --replay`. Objects and tag names match the CSV tables exactly, so the same data reads identically here and through Kepware \u2014 only the addressing differs (see tag_map_kepware.json). Every machine is read-only: `order_tag` is null because a CSV replay cannot be written to. Orders still flow, because OPC counter deltas auto-start a released operation.",
   "_state_map": "The line's State column is a PLC-style integer. Mapping it is a site decision with real consequences: starved and blocked are IDLE (the machine is healthy, it just has nothing to do), changeover is SETUP (a planned stop, which must not count against availability), and only a genuine fault is DOWN.",
+  "_line": "The line publishes the order it is running on its own Line object, and until this block existed nothing read it: every lab run reported that which order a unit belonged to was the MES's own inference and could not be matched to the script's order numbers. `publishes_order` is READ - the opposite of a machine's `order_tag`, which is written - so a CSV replay nobody may write to can still answer it. `order_code` is the plant-boundary translation between the number the line publishes and the code this MES holds, which makes it config rather than code.",
+  "line": {
+    "object": "Line",
+    "publishes_order": "OrderId",
+    "order_code": "WO-ACME-{value}"
+  },
   "machines": [
     {
       "equipment": "LD01",
