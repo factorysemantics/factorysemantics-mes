@@ -22,6 +22,7 @@ Three rules hold throughout, and they are principle 4 in this file's terms:
 
 from __future__ import annotations
 
+from fsmes.lab import observe as observe_mod
 from fsmes.lab.truth import IDLE_STATES, LineTruth
 
 #: Availability differences smaller than this share of the window cannot be
@@ -447,6 +448,269 @@ def downtime(truth: LineTruth, card: dict, reported: dict, speed: float,
     }
 
 
+# ----------------------------------------------------------------- latency
+
+#: What state the MES has to be showing for a machine before a scripted event
+#: counts as having reached a screen. The mapping is the tag map's own - a
+#: starved machine is idle, a changeover is setup - restated here because a
+#: latency measurement that waited for the wrong word would report every event
+#: as never seen.
+STATE_FOR_EVENT = {"down": "down", "starve": "idle", "block": "idle", "changeover": "setup"}
+
+#: The screens a look asks that can answer *when did the MES notice*. Kept as
+#: a pair of (key in the look, the route it came from) so a surface that is
+#: added later cannot be added to the polling and forgotten in the reading.
+STATE_SURFACES = (("states", "/equipment/states"), ("line_states", "/line/events"))
+
+
+def _scripted(card: dict) -> list[dict]:
+    """Every scripted event with a window and a machine, off the scorecard.
+
+    Read from the card rather than from the line description a second time:
+    the card has already turned the script into windows with the MES's own
+    equipment codes on them, and a second reading is a second place for the
+    two to drift apart.
+    """
+    out = []
+    for kind, rows in (("down", card.get("faults") or []),
+                       ("idle", card.get("idle_stops") or []),
+                       ("changeover", card.get("planned_stops") or [])):
+        for row in rows:
+            window = row.get("window_sim_s") or [None, None]
+            out.append({
+                "event": row.get("event") or ("down" if kind == "down" else kind),
+                "equipment": row.get("equipment"),
+                "station": row.get("station"),
+                "window_line_s": window,
+                # A changeover is the whole line stopping together and names no
+                # machine; every machine has to show it, so the first one to is
+                # what the question is about.
+                "line_wide": kind == "changeover",
+            })
+    return out
+
+
+def _first_showing(looks: list[dict], key: str, equipment: str | None,
+                   want: str, after: float, until: float) -> float | None:
+    """The line second of the first look in which the MES showed `want`.
+
+    Bounded at both ends on purpose. `after` is when the line did it: a machine
+    that was already down before the script stopped it is a different fact, and
+    counting it would report a negative lag as though the MES had been early.
+    `until` is the end of the window plus nothing: a screen that caught up after
+    the event was over did not show the event, it showed history.
+    """
+    for look in looks:
+        second = float(look.get("line_second") or 0)
+        if second < after or second > until:
+            continue
+        showing = look.get(key) or {}
+        if equipment is None:
+            if want in showing.values():
+                return second
+        elif str(showing.get(equipment) or "") == want:
+            return second
+    return None
+
+
+def latency(card: dict, watched: dict, truth: LineTruth, tag_map: dict[str, str],
+            speed: float, reason: str | None = None) -> dict:
+    """How long after the line did each screen say it?
+
+    The other measurements ask the plant one question at the end. This one is
+    built out of what the run saw while the hour played, because the interval
+    between the line doing something and a screen showing it has closed by the
+    time the run is over: a stop that took four minutes to appear and one that
+    appeared at once leave the same trace in a scorecard.
+
+    Two rules hold and are stated in the result rather than assumed:
+
+    * **The resolution is the polling interval.** A screen is only ever known
+      to have shown something *by* the look that saw it, so a lag smaller than
+      one interval of line time is quantisation and is printed as *within
+      resolution*, never as a number somebody could trend. Same rule as a
+      detection lag, same reason (#59, and the sweep that reported a breakdown
+      noticed one second before it was scripted).
+    * **Not seen is not the same as late.** An event the watch never caught -
+      because nobody was looking yet, because the route stopped answering,
+      because the run ended - is *unknown* with which of those it was. A zero
+      or a maximum standing in for silence is exactly the number this whole lab
+      exists to stop being reported.
+    """
+    looks = watched.get("looks") or []
+    seconds = [float(look.get("line_second") or 0) for look in looks]
+    first, last = (min(seconds), max(seconds)) if seconds else (None, None)
+    resolution = (watched.get("resolution_line_seconds")
+                  or (round(watched.get("every_wall_seconds", 0) * speed, 1)
+                      if watched.get("every_wall_seconds") else None))
+    failures = watched.get("failures") or {}
+
+    events = []
+    for event in _scripted(card):
+        start, end = event["window_line_s"]
+        want = STATE_FOR_EVENT.get(event["event"])
+        row = {**event, "expected_state": want, "surfaces": {}}
+        for key, route in STATE_SURFACES:
+            row["surfaces"][route] = _one_surface(
+                looks, key, route, event, want, start, end, first, last,
+                resolution, failures, reason)
+        events.append(row)
+
+    return {
+        "measurement": "latency",
+        "question": "how long after the line did each screen say it?",
+        "unknown_because": reason,
+        "speed": speed,
+        "watched": {
+            "looks": watched.get("looks_total", len(looks)),
+            "every_wall_seconds": watched.get("every_wall_seconds"),
+            "resolution_line_seconds": resolution,
+            "first_look_line_second": first,
+            "last_look_line_second": last,
+            "failures": failures,
+            "note": ("a screen is only ever known to have shown something by the look that saw "
+                     "it, so the polling interval is the resolution of every figure here"),
+        },
+        "surfaces": [
+            {"route": route, "what": what,
+             "answers_when_the_mes_noticed": route not in observe_mod.CARRIES_NO_LINE_STATE,
+             "unknown_because": observe_mod.CARRIES_NO_LINE_STATE.get(route),
+             "looks_it_refused": failures.get(route, 0)}
+            for route, what in observe_mod.SURFACES.items()
+        ],
+        "events_total": len(events),
+        "events_answered": sum(1 for e in events
+                               if any(s.get("lag_line_seconds") is not None
+                                      for s in e["surfaces"].values())),
+        "events": events,
+        "production": _production_lag(looks, truth, tag_map, watched, resolution, reason),
+        "namespace": {
+            "lag_line_seconds": None,
+            "unknown_because": ("no broker was configured for this run, so how long an event "
+                                "took to reach the unified namespace is not something this run "
+                                "establishes"),
+        },
+    }
+
+
+def _one_surface(looks, key, route, event, want, start, end, first, last,
+                 resolution, failures, reason) -> dict:
+    """One screen's answer about one scripted event."""
+    out = {"saw_at_line_second": None, "lag_line_seconds": None,
+           "lag_says": "unknown", "unknown_because": None}
+    if reason:
+        out["unknown_because"] = reason
+        return out
+    if want is None:
+        out["unknown_because"] = (f"a {event['event']!r} has no state a screen would show for "
+                                  f"it, so there is nothing to wait to appear")
+        return out
+    if start is None or end is None:
+        out["unknown_because"] = "this event has no window, so there is nothing to be late to"
+        return out
+    if first is None:
+        out["unknown_because"] = "nothing watched this run while it played"
+        return out
+    if start < first or end > last:
+        out["unknown_because"] = (f"the watch ran from line second {first:.0f} to {last:.0f} and "
+                                  f"this event was {start:.0f} to {end:.0f} - part of it "
+                                  f"happened while nobody was looking")
+        return out
+
+    seen = _first_showing(looks, key, None if event["line_wide"] else event["equipment"],
+                          want, start, end)
+    if seen is None:
+        refused = failures.get(route, 0)
+        out["unknown_because"] = (
+            f"no look between line second {start:.0f} and {end:.0f} showed {want!r}"
+            + (f", and this screen did not answer {refused} time(s) during the run"
+               if refused else "")
+            + " - the screen never showed it, or showed it after the event was over, and "
+              "this run does not tell those two apart")
+        return out
+    lag = round(seen - start, 1)
+    out.update(saw_at_line_second=seen, lag_line_seconds=lag,
+               lag_says=lag_says(lag, resolution))
+    return out
+
+
+def _production_lag(looks: list[dict], truth: LineTruth, tag_map: dict[str, str],
+                    watched: dict, resolution, reason: str | None) -> dict:
+    """How far behind the line's own output the line view ran, look by look.
+
+    **The last station and only the last station.** The feed reports every
+    machine on the line, and a serial line counts most units once per station -
+    adding them up and comparing the total against what came off the end would
+    be six times the answer at six stations. So this is the machine the line
+    ends at, against the line's own good count, which is the same pair the
+    booking measurement compares at the end of the run.
+
+    **Counted in units and stated in units.** Turning a backlog into seconds
+    needs a rate, and the rate is exactly what a line that is starved, blocked
+    or down has not got - so the seconds would be invented at precisely the
+    moments worth measuring.
+
+    Everything is *since the watch began*: the feed hands a new watcher the
+    live tail rather than the hour so far, which is its own contract and the
+    reason each look is cheap.
+    """
+    if reason:
+        return {"unknown_because": reason}
+    if not truth.last_station:
+        return {"unknown_because": "this line has no last station, so there is no line output "
+                                   "to be behind"}
+    code = tag_map.get(truth.last_station)
+    if not code:
+        return {"unknown_because": f"the line ends at {truth.last_station}, which is not in the "
+                                   f"tag map, so no machine in the MES is it"}
+    counted = [look for look in looks if isinstance(look.get("booked_good"), dict)]
+    if not counted:
+        return {"unknown_because": "the line view's feed answered no look, so how far behind "
+                                   "the MES's own screen was is not something this run "
+                                   "establishes"}
+    if not watched.get("the_feed_answered_with_a_cursor", True):
+        return {"unknown_because": "the line view's feed never handed back a cursor, so every "
+                                   "look read as a watcher that had just arrived and no look "
+                                   "could carry a count"}
+
+    first_second = float(counted[0].get("line_second") or 0)
+    rows = []
+    for look in counted:
+        second = float(look.get("line_second") or 0)
+        made = truth.good_between(first_second, second)
+        if made is None:
+            continue
+        booked = float((look.get("booked_good") or {}).get(code, 0.0))
+        rows.append({"line_second": round(second, 1),
+                     "truth_good_since_watch_began": made,
+                     "mes_booked_since_watch_began": booked,
+                     "behind_units": round(made - booked, 1)})
+    if not rows:
+        return {"unknown_because": "the replay wrote no line table, so what the line had made "
+                                   "at each look is not something this run establishes"}
+    behind = [row["behind_units"] for row in rows]
+    return {
+        "question": "how far behind the line's own count was the line view, while it played?",
+        "unknown_because": None,
+        "machine": code,
+        "station": truth.last_station,
+        "counted_from_line_second": round(first_second, 1),
+        "looks": len(rows),
+        "looks_catching_up": sum(1 for look in counted if look.get("truncated")),
+        "resolution_line_seconds": resolution,
+        "worst_behind_units": max(behind),
+        "median_behind_units": sorted(behind)[len(behind) // 2],
+        "ahead_at_worst_units": min(behind),
+        "note": ("the machine the line ends at, against the line's own good count - a serial "
+                 "line counts most units once per station, so summing every machine's would be "
+                 "six times the answer. Units, not seconds: turning a backlog into seconds needs "
+                 "a rate, and a line that is starved, blocked or down has not got one. A "
+                 "negative figure is the screen ahead of the line, which on a looping replay "
+                 "means the second pass has begun"),
+        "samples": rows,
+    }
+
+
 # --------------------------------------------------------------------- OEE
 
 def oee(truth: LineTruth, reported: dict, tag_map: dict[str, str], speed: float,
@@ -798,6 +1062,26 @@ def differences(plant: dict) -> list[dict]:
                     "truth_running_line_seconds": truth_side.get("running_line_seconds"),
                 },
             })
+    late = plant.get("measurements", {}).get("latency")
+    if late:
+        resolution = (late.get("watched") or {}).get("resolution_line_seconds")
+        for event in late.get("events") or []:
+            for route, said in (event.get("surfaces") or {}).items():
+                lag = said.get("lag_line_seconds")
+                if lag is None or resolution is None or abs(lag) <= float(resolution):
+                    continue
+                found.append({
+                    "size": abs(lag), "measurement": "latency",
+                    "where": f"{plant['plant']} · {event.get('station') or event.get('equipment') or 'the line'}",
+                    "plant": plant["plant"], "station": event.get("station"),
+                    "what": f"{event.get('event')} reaching {route}",
+                    "says": f"{lag:+,.0f} s of line time after the line did it, at a resolution "
+                            f"of {float(resolution):.0f} s",
+                    "numbers": {"lag_line_seconds": lag,
+                                "resolution_line_seconds": resolution,
+                                "window_line_s": event.get("window_line_s"),
+                                "saw_at_line_second": said.get("saw_at_line_second")},
+                })
     down = plant.get("measurements", {}).get("downtime")
     idle = (down or {}).get("idle_stops") or {}
     if idle.get("misclassified_as_downtime"):
@@ -878,6 +1162,24 @@ def unknowns(plant: dict) -> list[dict]:
             if row.get("unknown_because"):
                 out.append({"measurement": "oee", "plant": plant["plant"],
                             "station": row["station"], "because": row["unknown_because"]})
+    late = plant.get("measurements", {}).get("latency")
+    if late:
+        for event in late.get("events") or []:
+            for route, said in (event.get("surfaces") or {}).items():
+                if said.get("unknown_because"):
+                    out.append({"measurement": f"latency · {route}", "plant": plant["plant"],
+                                "station": event.get("station"),
+                                "because": said["unknown_because"]})
+        for surface in late.get("surfaces") or []:
+            if surface.get("unknown_because"):
+                out.append({"measurement": f"latency · {surface['route']}",
+                            "plant": plant["plant"], "station": None,
+                            "because": surface["unknown_because"]})
+        for block in ("production", "namespace"):
+            why = (late.get(block) or {}).get("unknown_because")
+            if why:
+                out.append({"measurement": f"latency · {block}", "plant": plant["plant"],
+                            "station": None, "because": why})
     for key, why in (plant.get("views_refused") or {}).items():
         out.append({"measurement": f"the {key} view", "plant": plant["plant"],
                     "station": None, "because": f"the view did not answer: {why}"})

@@ -103,13 +103,13 @@ def _plan_file(directory: Path, body: str) -> Path:
 
 def test_a_plan_that_asks_for_a_measurement_this_version_does_not_take_is_refused_by_name(tmp_path):
     _pack(tmp_path / "tiny")
-    path = _plan_file(tmp_path, 'packs = ["tiny"]\nmeasure = ["booking", "latency"]\n')
+    path = _plan_file(tmp_path, 'packs = ["tiny"]\nmeasure = ["booking", "console"]\n')
     with pytest.raises(PlanError) as exc:
         read_plan(path)
     # Refused, and told what it is rather than told it does not exist: the
     # measurement is designed and unbuilt, and a plan silently losing one is
     # how a report comes to say less than it was asked for.
-    assert "latency" in str(exc.value)
+    assert "console" in str(exc.value)
     assert "not measured yet" in str(exc.value)
 
 

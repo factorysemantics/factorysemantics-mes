@@ -381,6 +381,111 @@ station starves the next one on its own. The table is the scripted windows only.
 """
 
 
+def _latency(late: dict) -> str:
+    watched = late["watched"]
+    resolution = watched["resolution_line_seconds"]
+    rows = []
+    for event in late["events"]:
+        where = event.get("station") or event.get("equipment") or "the whole line"
+        start, end = event["window_line_s"]
+        cells = []
+        for route in ("/equipment/states", "/line/events"):
+            said = (event["surfaces"] or {}).get(route) or {}
+            if said.get("lag_line_seconds") is None:
+                cells.append(f"<td class='wide unknown'>{esc(said.get('unknown_because') or 'unknown')}</td>")
+            else:
+                within = "within resolution" in said["lag_says"]
+                cells.append(f"<td class='{'band' if within else ''}'>{esc(said['lag_says'])}</td>")
+        rows.append(
+            f"<tr><td>{esc(event['event'])}</td><td>{esc(where)}</td>"
+            f"<td class='mono'>{esc(event['equipment'] or '—')}</td>"
+            f"<td>{num(start)} to {num(end)} s</td>"
+            f"<td>{esc(event['expected_state'] or '—')}</td>" + "".join(cells) + "</tr>")
+
+    refused = watched.get("failures") or {}
+    return f"""
+<h2 id="latency">How long after the line did the screen say it?</h2>
+<p>{esc(late['question'])} Every other measurement on this page asks the plant one question at the
+end. This one is built out of what the run saw <em>while the hour played</em> — because by the time
+a run is over, a stop that took four minutes to appear and one that appeared at once have left the
+same trace.</p>
+<div class="tiles">
+{_tile("looks", num(watched['looks']), f"every {watched['every_wall_seconds']}s of wall clock")}
+{_tile("resolution", num(resolution, 0, " s"), "of line time — a lag smaller than this is quantisation")}
+{_tile("events caught", f"{num(late['events_answered'])} / {num(late['events_total'])}",
+       "scripted events a screen showed while they were happening")}
+{_tile("watched from", num(watched['first_look_line_second'], 0, " s"),
+       f"to {num(watched['last_look_line_second'], 0, ' s')} of line time")}
+</div>
+<p>A screen is only ever known to have shown something <em>by</em> the look that saw it, so the
+polling interval is the resolution of every figure here and a lag smaller than it is printed as
+<em>within resolution</em> rather than as a number somebody could trend. An event no look caught is
+<em>unknown</em> with which of the reasons it was — never a zero and never a maximum standing in for
+silence.</p>
+<div class="scroll"><table>
+<thead><tr><th>Event</th><th>Where</th><th>Machine</th><th>Scripted</th><th>Waiting for</th>
+<th>Operations feed</th><th>Line view</th></tr></thead>
+<tbody>{"".join(rows) or _empty(7, "The script wrote no events with a window.")}</tbody>
+</table></div>
+{_surfaces(late)}
+{_production(late.get('production') or {})}
+<h3>The namespace</h3>
+<p class="unknown">{esc((late.get('namespace') or {}).get('unknown_because') or '')}</p>
+{_refused(refused)}
+"""
+
+
+def _empty(columns: int, says: str) -> str:
+    return f'<tr><td colspan="{columns}" class="empty">{esc(says)}</td></tr>'
+
+
+def _refused(refused: dict) -> str:
+    """Screens that did not answer every look, and how many they missed.
+
+    A measurement built on nine hundred looks and eleven failures has to say
+    so: without it a reader cannot tell a screen that never showed an event
+    from one nobody managed to ask.
+    """
+    if not refused:
+        return ""
+    named = ", ".join(f"<code>{esc(route)}</code> ({count} look(s))"
+                      for route, count in refused.items())
+    return (f"<p>Screens that did not answer every time they were asked: {named}. "
+            f"Every figure above is built on the looks that did.</p>")
+
+
+def _surfaces(late: dict) -> str:
+    """Which screens were asked, and which of them the question does not belong to."""
+    silent = [s for s in late.get("surfaces") or [] if s.get("unknown_because")]
+    if not silent:
+        return ""
+    return ("<h3>Screens with no answer to give</h3><ul>" + "".join(
+        f"<li><code>{esc(s['route'])}</code> — {esc(s['unknown_because'])}</li>"
+        for s in silent) + "</ul>")
+
+
+def _production(production: dict) -> str:
+    """How far behind the line's own count the line view ran."""
+    if production.get("unknown_because"):
+        return (f'<h3>The line view\'s count</h3>'
+                f'<p class="unknown">{esc(production["unknown_because"])}</p>')
+    if not production:
+        return ""
+    return f"""
+<h3>The line view's count, while it played</h3>
+<p>{esc(production['question'])} <code>{esc(production['machine'])}</code>, the machine the line
+ends at, counted from line second {num(production['counted_from_line_second'])} when the watch
+began — the feed hands a new watcher the live tail rather than the hour so far, which is its own
+contract and what makes each look cheap.</p>
+<div class="tiles">
+{_tile("behind at worst", num(production['worst_behind_units']), "units the line had made and the screen had not")}
+{_tile("behind typically", num(production['median_behind_units']), "the middle look")}
+{_tile("ahead at worst", num(production['ahead_at_worst_units']), "below zero is the replay's second pass")}
+</div>
+<p>{esc(production['note'])}.</p>
+"""
+
+
 def _cycle_note(row: dict, truth: dict, said: dict | None) -> str:
     """Whether the two sides priced the machine's ideal cycle the same way, and
     how far apart they measured the run time performance divides by."""
@@ -560,6 +665,9 @@ def _plant(plant: dict, said: list[dict] | None = None) -> str:
     if plant["measurements"].get("downtime"):
         parts.append(_downtime(plant["measurements"]["downtime"]))
         parts.append(_said(groups.get("downtime"), "the operations screen"))
+    if plant["measurements"].get("latency"):
+        parts.append(_latency(plant["measurements"]["latency"]))
+        parts.append(_said(groups.get("latency"), "the line view"))
     if plant["measurements"].get("oee"):
         parts.append(_oee(plant["measurements"]["oee"]))
         parts.append(_said(groups.get("oee"), "the shift analysis screen"))

@@ -42,6 +42,34 @@ goes under Honesty with a migration line, so plant people can find it.
   argument about the truth. What the report still will not do is say which of
   the two numbers is the wrong one.
 
+- **A scored run can be watched while it plays, and the lab measures how long
+  the screens took.** `fsmes.sim.runner.scored_run` grew an `observe` hook,
+  called with the base URL, a token and **the line second the run is at** every
+  interval of wall clock while the scripted hour plays. The line second is
+  passed in because only the runner knows when the replay's first tick was. The
+  post-run `collect` hook is unchanged, and a run with no observer is the same
+  sleep it always was. An observer that raises does not end the run: losing the
+  hour because one HTTP call came back badly would be the harness throwing away
+  the evidence it exists to collect.
+
+  On top of it, a new measurement: **`latency`** — for every scripted event,
+  how long after the line did each screen say it. The operations feed and the
+  line view are asked separately, because two screens showing one machine two
+  different states at one instant is a finding nothing else would catch.
+  `/health` is asked too and answers nothing about any machine, which the
+  report says rather than leaving the route out. A lag smaller than the polling
+  interval prints as *within resolution*; an event no look caught is *unknown*
+  with which of the reasons it was, never a zero or a maximum standing in for
+  silence. A plan whose interval is too coarse for the speed it asks for is
+  refused with the arithmetic. Beside the events, how far behind the line's own
+  count the line view ran — the machine the line ends at, in units, because
+  turning a backlog into seconds needs a rate and a line that is starved,
+  blocked or down has not got one. The raw looks are kept in
+  `watched/<plant>.json` whatever the measurement made of them.
+  `labs/experiments/starved-and-blocked.toml` now asks for it.
+
+### Added
+
 - **A tag map can say where the line publishes the order it is running.** Many
   line-control PLCs publish the current order on a line-level register rather
   than on any one machine. Nothing in this MES read it, so which order a unit

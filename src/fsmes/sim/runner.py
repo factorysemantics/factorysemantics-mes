@@ -394,6 +394,56 @@ def _await_replay(log_path: Path, timeout: float = 45.0, marker: str = "replay o
 REPLAY_HOLD_S = 6.0
 
 
+# How often a during-run observer is asked to look, in wall seconds, when the
+# caller does not choose. Deliberately NOT the agent's publishing interval,
+# which can be 50 ms at high speed: an observer is HTTP requests against the
+# same API the run is being scored through, and one that polls fast enough to
+# see everything changes the thing it is watching. A run whose harness was
+# perturbed into falling behind already has its verdict withheld, so the
+# safety net exists - this is the number that keeps it from being needed.
+DEFAULT_OBSERVE_EVERY_S = 1.0
+
+
+def play(seconds: float, observe: Callable[[str, str, float], None] | None = None,
+         base: str = "", token: str = "", t0: datetime | None = None,
+         speed: float = 1.0, every_s: float = DEFAULT_OBSERVE_EVERY_S,
+         echo=print) -> int:
+    """Let the scripted hour play, looking at the plant while it does.
+
+    Without an observer this is a sleep, which is what it has always been. With
+    one, it is the same sleep in slices, and between the slices the observer is
+    handed the base URL, a token and **the line second the run is at** - which
+    is the one thing an observer cannot work out for itself, because only the
+    runner knows when the replay's first tick was.
+
+    An observer that raises does not end the run. A measurement that could not
+    be taken is a fact about the run, and losing the hour because one HTTP call
+    came back badly would be the harness throwing away the evidence.
+    Returns how many times the observer was called.
+    """
+    if observe is None or t0 is None:
+        time.sleep(seconds)
+        return 0
+    every_s = max(0.05, float(every_s))
+    deadline = time.monotonic() + seconds
+    calls, failed = 0, 0
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        time.sleep(min(every_s, remaining))
+        t_line = (_now_mes() - t0).total_seconds() * speed
+        try:
+            observe(base, token, t_line)
+            calls += 1
+        except Exception as exc:                 # deliberate - see the docstring
+            failed += 1
+            if failed == 1:
+                echo(f"  the during-run observer raised ({type(exc).__name__}: {exc}); "
+                     f"the run continues and the measurement says how many looks it lost")
+    return calls
+
+
 def scored_run(
     name: str,
     cfg: dict,
@@ -431,6 +481,14 @@ def scored_run(
     # not a fact about a plant. Applied last, so a caller can override the
     # runner's own settings deliberately rather than by accident of ordering.
     extra_env: dict[str, str] | None = None,
+    # Called with (base_url, token, line_second) every `observe_every_s` of
+    # wall clock WHILE the scripted hour plays, which is the one thing
+    # `collect` cannot do: it runs once, at the end, and a question like "how
+    # long after the line stopped did the screen say so" has no answer left to
+    # find by then. The line second is passed in because only this function
+    # knows when the replay's first tick was. None changes nothing.
+    observe: Callable[[str, str, float], None] | None = None,
+    observe_every_s: float = DEFAULT_OBSERVE_EVERY_S,
 ) -> dict:
     """Run one plant through its scripted hour and score what it reported."""
     line = Path(line_json) if line_json else root / Path(cfg["replay_dir"]).parent / "line.json"
@@ -538,7 +596,12 @@ def scored_run(
             # whole hour - and its output lands in the run log.
             procs.append(subprocess.Popen([os.sys.executable, cfg["post_boot"]], cwd=root,
                                           env=env, stdout=log, stderr=subprocess.STDOUT))
-        time.sleep(duration / speed + settle)
+        looks = play(duration / speed + settle, observe, base, token, t0, speed,
+                     observe_every_s, echo=echo)
+        if looks:
+            echo(f"  watched the plant {looks} time(s) while the hour played, every "
+                 f"{observe_every_s:g}s of wall clock ({observe_every_s * speed:.0f}s of "
+                 f"line time)")
 
         hours = max(0.05, (duration / speed + settle) / 3600.0)
         timeline = _timeline_for(base, token, hours, truth.get("equipment") or [])
@@ -548,6 +611,14 @@ def scored_run(
         card = score_run(truth, timeline, t0, speed,
                          observe_interval_s=publish_ms / 1000.0)
         card["plant"] = name
+        # How the run watched while it played, so a latency figure can state
+        # the resolution it was measured at instead of implying it is exact.
+        card["observed_during_run"] = {
+            "looks": looks,
+            "every_wall_seconds": observe_every_s if observe is not None else None,
+            "resolution_line_seconds": (round(observe_every_s * speed, 1)
+                                        if observe is not None else None),
+        }
         # The data actually replayed, read off the environment the replay
         # process was given rather than off the caller's intention.
         card["replay_dir"] = env.get("MES_REPLAY_DIR")
