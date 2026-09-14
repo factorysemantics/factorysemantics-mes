@@ -106,4 +106,10 @@ def test_the_server_reads_forwarded_headers_from_a_proxy_on_this_machine():
     config = uvicorn.Config("fsmes.api.app:create_app", factory=True)
 
     assert config.proxy_headers is True
-    assert config.forwarded_allow_ips == ["127.0.0.1"] or config.forwarded_allow_ips == "127.0.0.1"
+    # uvicorn's default has grown from "127.0.0.1" to "127.0.0.1,::1" across
+    # versions; the promise this pins is that loopback is trusted and nothing
+    # else is, not the exact spelling of loopback.
+    allowed = config.forwarded_allow_ips
+    allowed = set(allowed) if isinstance(allowed, list) else {ip.strip() for ip in str(allowed).split(",")}
+    assert "127.0.0.1" in allowed
+    assert allowed <= {"127.0.0.1", "::1"}, allowed
