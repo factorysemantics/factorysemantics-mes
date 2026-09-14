@@ -7,6 +7,7 @@ into a test. This module is that idea generalised - the screens are crawled
 by a real browser, and what it finds are facts, not opinions:
 
 - a link that answers with an error, on any screen, in any theme
+- a screen with no header menu on it, or a header nobody can leave from
 - a console error or a failed request during load
 - a computed-style drift on a component the style contract names, against a
   baseline that was deliberately accepted
@@ -81,6 +82,31 @@ PROPERTIES = (
 
 ROUTE_SOURCE = "src/fsmes/modules.py"
 
+# THE HEADER, ON EVERY SCREEN. Scott, on /dashboard/line, 2026-09-02: "I'd
+# like the menu to persist on the dashboard/line page. I can't get back to
+# the main site from here ... all pages". Four screens had grown their own
+# bespoke head and no test had an opinion about it, which is how a page can
+# be a dead end for twelve days without anybody noticing.
+#
+# Three facts per route, because a header can fail in three ways: it can be
+# absent, it can be there but painted out of existence, and it can be there
+# and empty - which is the same dead end with a nicer background. The nav
+# fills in after /auth/me answers, and the crawl has already waited for the
+# page to settle by the time this runs.
+HEADER_PROBE = """() => {
+    const header = document.querySelector('header[data-nav]');
+    if (!header) return {present: false, visible: false, brand: false, links: 0};
+    const box = header.getBoundingClientRect();
+    return {
+        present: true,
+        visible: box.height > 0 && box.width > 0
+                 && getComputedStyle(header).visibility !== 'hidden',
+        brand: !!header.querySelector('a.brand[href]'),
+        links: header.querySelectorAll('nav a[href]').length,
+    };
+}"""
+
+
 
 def routes() -> list[str]:
     """Every dashboard page the product has, read from the module registry so
@@ -138,7 +164,7 @@ def crawl(base: str, user: str = "AGENT", password: str = "agent-lab-only",
         "base": base, "at": datetime.now(UTC).isoformat(),
         "routes": routes(), "themes": list(themes),
         "console_errors": [], "failed_requests": [],
-        "broken_links": [], "styles": {},
+        "broken_links": [], "styles": {}, "headers": {},
     }
     shots_dir = WORKDIR / "shots" / datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     shots_dir.mkdir(parents=True, exist_ok=True)
@@ -159,6 +185,7 @@ def crawl(base: str, user: str = "AGENT", password: str = "agent-lab-only",
             context.add_init_script(
                 f"window.localStorage.setItem('fsmes-theme', {json.dumps(theme)});")
             run["styles"][theme] = {}
+            run["headers"][theme] = {}
             for route in run["routes"]:
                 page = context.new_page()
                 page.on("console", lambda m, r=route, t=theme: (
@@ -178,6 +205,8 @@ def crawl(base: str, user: str = "AGENT", password: str = "agent-lab-only",
                         "a[href]", "els => els.map(e => e.getAttribute('href'))"):
                     if a and not a.startswith(("#", "mailto:", "javascript:")):
                         hrefs.add(urljoin(f"{base}{route}", a))
+
+                run["headers"][theme][route] = page.evaluate(HEADER_PROBE)
 
                 snap: dict = {}
                 for name, selector in WATCHED.items():
@@ -216,6 +245,20 @@ def crawl(base: str, user: str = "AGENT", password: str = "agent-lab-only",
 
 # ------------------------------------------------------------------ judging
 
+def _header_fault(header: dict | None) -> str | None:
+    """What is wrong with one screen's header, in the words the finding uses,
+    or None when there is nothing wrong with it."""
+    if not header or not header.get("present"):
+        return "no header menu on the page"
+    if not header.get("visible"):
+        return "the header is on the page but not visible"
+    if not header.get("brand"):
+        return "the header has no link home"
+    if not header.get("links"):
+        return "the header menu is empty - no screen is reachable from here"
+    return None
+
+
 def compare(run: dict) -> list[dict]:
     """Facts against the accepted baseline. Returns findings."""
     findings = []
@@ -235,6 +278,16 @@ def compare(run: dict) -> list[dict]:
             "kind": "failed-request",
             "what": f"{entry['route']} ({entry['theme']}): {entry['url']} {entry['why']}",
             "where": entry["url"]})
+
+    for theme, pages in run.get("headers", {}).items():
+        for route, header in sorted(pages.items()):
+            why = _header_fault(header)
+            if why:
+                findings.append({
+                    "kind": "no-header",
+                    "what": f"{route} ({theme}): {why} - every screen carries the "
+                            f"same header menu, so a person can always get back",
+                    "where": f"{route}#{theme}"})
 
     for theme, pages in run["styles"].items():
         base_path = BASELINES / f"{theme}.json"

@@ -33,6 +33,35 @@ goes under Honesty with a migration line, so plant people can find it.
   `labs/experiments/`, both run in CI on every pull request. The page is
   `docs/develop/experiments.md`.
 
+- **Every crumb on the machine page goes somewhere, and one renderer draws
+  them all.** Scott, on `/dashboard/machine/ASSEM1_Kit`: *"why can't i click
+  along the tree Mega-Factory › Mega-Factory Works › Assembly › ASSEM1LINE ›
+  ASSEM1_Kit? ... I can only click the ASSEM1LINE, not any of the others."*
+  The machine page had already been fixed; the Machines tree drew the same
+  trail by its own rule and sent a line to the tree rather than to the Line
+  view, so which level was clickable, and where it went, depended on which
+  screen you were standing on. `FS.crumbs()` in `common.js` is now the one
+  place that knows: a work center opens the Line view, every level above it
+  opens the Machines tree scoped to that node, and the node you are on is
+  text carrying `aria-current="page"` rather than a link to the page you are
+  already looking at.
+
+- **The header menu is audited rather than assumed.** Scott, on
+  `/dashboard/line`: *"I can't get back to the main site from here" ... "all
+  pages"*. Every screen already carried the shared header and nothing
+  watched that it kept doing so. Three checks now do.
+  `test_no_screen_can_quietly_appear_without_the_header` reads
+  `src/fsmes/web/*.html` instead of a hand-typed list, so a new screen is
+  audited the day the file exists; a page that is not a plant screen is
+  excused by name with its reason, and `fleet.html` — the fleet console, a
+  separate server with no plant session — is the only one.
+  `fsmes ui-check` records, for every route in every theme, whether the
+  header is present, visible, has a link home and lists any screens at all,
+  and files a `no-header` finding when it does not. And a browser test opens
+  six screens and a machine page, checks the header on each, and clicks
+  every crumb to prove it lands somewhere that renders. The crawl of the
+  demo plant on 2026-09-14: 22 routes × 4 themes, no finding.
+
 - **`fsmes fleet plan`** — what a deployment script needs to know about every
   plant in a fleet: where each pack is, where each database is and what kind
   it is, whether the plant simulates a line worth regenerating, and where to

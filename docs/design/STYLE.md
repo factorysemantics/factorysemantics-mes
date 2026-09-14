@@ -62,3 +62,11 @@ font-weight, padding, display.
 
 Add a component here and to `WATCHED` in `src/fsmes/sim/ui_check.py` in the
 same change.
+
+The header is watched twice over, because rule 10 is the one a person meets
+first: a computed-style snapshot like every other component, **and** a
+per-route fact — is it on the page, is it visible, has it a link home, does
+it list any screens at all. A route that fails any of those is a `no-header`
+finding, on that route in that theme, needing no baseline. A screen nobody
+can leave is a bug however good it looks, and a theme that paints the header
+out of existence is the same bug wearing a palette.

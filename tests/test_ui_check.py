@@ -23,9 +23,12 @@ def isolated(tmp_path, monkeypatch):
 
 def a_run(styles=None, **over):
     run = {"broken_links": [], "console_errors": [], "failed_requests": [],
-           "styles": styles or {}}
+           "styles": styles or {}, "headers": {}}
     run.update(over)
     return run
+
+
+GOOD_HEADER = {"present": True, "visible": True, "brand": True, "links": 6}
 
 
 CARD = {"color": "rgb(230, 237, 243)", "border": "1px solid rgb(48, 54, 61)",
@@ -72,6 +75,76 @@ def test_broken_links_and_console_errors_need_no_baseline():
                               "text": "ReferenceError: x is not defined"}]
     kinds = sorted(f["kind"] for f in ui_check.compare(run))
     assert kinds == ["broken-link", "console-error"]
+
+
+# ------------------------------------------------------------------- header
+
+def test_a_screen_with_the_header_on_it_is_clean():
+    run = a_run(headers={"daylight": {"/dashboard/line": dict(GOOD_HEADER)}})
+    assert ui_check.compare(run) == []
+
+
+def test_a_screen_with_no_header_is_a_finding_naming_the_screen():
+    """Scott, on /dashboard/line, 2026-09-02: "I can't get back to the main
+    site from here." The crawl had no opinion about that for twelve days;
+    now a screen without the menu on it is a finding with the route in it."""
+    run = a_run(headers={"daylight": {
+        "/dashboard/line": {"present": False, "visible": False,
+                            "brand": False, "links": 0}}})
+    [found] = ui_check.compare(run)
+    assert found["kind"] == "no-header"
+    assert "/dashboard/line" in found["what"]
+    assert found["where"] == "/dashboard/line#daylight"
+
+
+def test_a_header_that_is_there_but_empty_is_the_same_dead_end():
+    """A menu with nothing in it is a screen you still cannot leave, and it
+    looks fine in a screenshot - which is why it is checked rather than
+    looked at."""
+    run = a_run(headers={"night-shift": {
+        "/dashboard/station": {**GOOD_HEADER, "links": 0}}})
+    [found] = ui_check.compare(run)
+    assert found["kind"] == "no-header"
+    assert "empty" in found["what"]
+
+
+def test_a_header_painted_out_of_existence_is_caught_too():
+    """One theme's CSS hiding the header is exactly the shape of the tile
+    regression this whole loop exists for."""
+    run = a_run(headers={"high-contrast": {
+        "/dashboard": {**GOOD_HEADER, "visible": False}}})
+    [found] = ui_check.compare(run)
+    assert found["kind"] == "no-header"
+    assert "not visible" in found["what"]
+
+
+def test_a_header_with_no_way_home_is_a_finding():
+    """The brand is the link back to the plant's front page - the thing
+    Scott was actually asking for."""
+    run = a_run(headers={"daylight": {"/dashboard/line": {**GOOD_HEADER, "brand": False}}})
+    [found] = ui_check.compare(run)
+    assert found["kind"] == "no-header"
+    assert "no link home" in found["what"]
+
+
+def test_one_finding_per_screen_per_theme_so_a_fix_can_be_measured():
+    run = a_run(headers={
+        "daylight": {"/dashboard/line": {**GOOD_HEADER, "links": 0},
+                     "/dashboard": dict(GOOD_HEADER)},
+        "night-shift": {"/dashboard/line": {**GOOD_HEADER, "links": 0},
+                        "/dashboard": dict(GOOD_HEADER)}})
+    found = ui_check.compare(run)
+    assert sorted(f["where"] for f in found) == [
+        "/dashboard/line#daylight", "/dashboard/line#night-shift"]
+
+
+def test_an_old_run_without_header_facts_is_judged_on_what_it_has():
+    """A run recorded before the header check existed says nothing about
+    headers. Nothing is not a failure - it is silence, and silence must not
+    turn into twenty-two false findings."""
+    run = {"broken_links": [], "console_errors": [], "failed_requests": [],
+           "styles": {}}
+    assert ui_check.compare(run) == []
 
 
 def test_a_vanished_component_is_drift():

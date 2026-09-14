@@ -50,18 +50,9 @@ function renderHead(h) {
   $("#m-cc").textContent = h.cost_center || "—";
   $("#m-cycle").textContent = h.ideal_cycle_seconds ? `${h.ideal_cycle_seconds} s` : "—";
 
-  const crumbs = $("#crumbs");
-  crumbs.replaceChildren();
-  for (const node of h.path) {
-    // A line opens its Line page; everything above it opens the Machines
-    // tree scoped to that node - every level of the path is somewhere.
-    const link = node.level === "work_center"
-      ? FS.link("line", node.code, null, node.name || node.code)
-      : FS.link("equipment", node.code, null, node.name || node.code);
-    link.title = `${node.level.replace("_", " ")} ${node.code}`;
-    crumbs.append(link, el("span", "sep", "›"));
-  }
-  crumbs.append(el("span", "mono", h.code));
+  // Every level of the path is somewhere, and FS.crumbs is the one place
+  // that knows which screen shows which level.
+  FS.crumbs($("#crumbs"), h.path, h.code);
   $("#operate-link").href = `/dashboard/station?m=${encodeURIComponent(h.code)}`;
 }
 
