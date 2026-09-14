@@ -367,30 +367,71 @@ checks.
 
 ## 8. Proposal — the console
 
-**A read-only web page that polls a list of plants and shows what each one
-says about itself.** One process, no database of its own beyond a cache, no
-credentials to a machine, no path to change anything anywhere.
+**A page that polls a list of plants and shows what each one says about
+itself — and a separate command, `fsmes fleet`, that manages the plants this
+installation owns.** The split, and the rule that draws the line, is decision
+[0023](../decisions/0023-the-fleet-console-observes.md): *the console may act
+only on plants it owns; for every other plant it observes and cannot push.*
 
-For a first version, per plant, one row: name and label; reachable or not, and
-when it last answered; shadow or live; MES version; schema revision against
-head; pack version against head; whether the ERP outbox has anything dead;
-whether the UNS backlog is draining; and the plant's line OEE for the current
-shift. Clicking a row opens that plant's own dashboard — the console does not
-re-implement a screen the product already has.
+For a first version, per plant, one row: name and label; owned or observed;
+reachable or not, and when it last answered; shadow or live; MES version;
+schema revision against head; pack version against head; whether the ERP
+outbox has anything dead; whether the UNS backlog is draining; and the
+plant's line OEE for the current shift. Clicking a row opens that plant's own
+dashboard — the console does not re-implement a screen the product already
+has.
 
-What it deliberately does not do, and this is the decision in
-[0023](../decisions/0023-the-fleet-console-observes.md):
+### Owned, and how a tool can tell
 
-- **It never writes to a plant.** Not a setting, not a pack, not an order, not
-  a restart. Every M8 verb — enrol, telemetry, desired state, drift — is a
-  read or a comparison. A console that can push is a console that can push to
-  the wrong plant, and the blast radius of that is a factory.
+A plant is **owned** when all three hold, and any one missing means observed
+only:
+
+1. **This installation created it from a pack**, and recorded that in its own
+   ownership file — `fleet.toml`, beside the registry under the registry's
+   `data_dir` — with the plant name, the pack and version, the host and OS
+   user, the time, and a random `instance_id` it also wrote into the plant's
+   data directory.
+2. **The plant corroborates it**: `/health` returns that `plant` name (piece
+   1) and that same `instance_id`. A different id, or no id, means not owned,
+   whatever the file says — which is also how a plant *revokes* ownership,
+   by dropping the id.
+3. **A path exists that a person gave it**: same host and same OS user, with
+   the plant's pids in this registry's pid file (`running_pids`,
+   `src/fsmes/plant.py`); or an explicit credential for another host, typed
+   into the ownership file by a person and never defaulted.
+
+Being able to reach a plant is not owning it. The `instance_id` is a
+continuity check, not an authentication: it catches the wrong-plant mistake,
+which is the case that actually happens, and 0023 says plainly what it does
+not catch.
+
+### What managing an owned plant is, and what it is not
+
+Five verbs, and the list is closed: **create** from a pack, **start**,
+**stop**, **apply** a pack (`fsmes pack check` first, refusing on failure,
+pack before database, both refusing a plant still answering), and **show**
+status and drift.
+
+Never, even for an owned plant: writing a tag to a PLC, sending anything to
+an ERP, creating or closing or changing an order, booking production,
+editing master data, people or the audit trail. **The tool manages plants,
+not production.** A plant it owns can be stopped; a plant it owns cannot be
+made to say it built something.
+
+### What the page deliberately does not do
+
+- **It never acts on a plant it does not own.** For an unowned plant every M8
+  verb — enrol, telemetry, desired state, drift — is a read or a comparison.
+  A console that can push to anything can push to the wrong thing, and the
+  blast radius of that is a factory.
 - **A plant that did not answer is `unknown`, never healthy and never down.**
   `list_plants` already does this and the console inherits it. A console that
-  renders silence as green is worse than no console.
-- **It states its total.** "12 plants, 11 answered, 1 unknown" — rule 4 of
-  [the style contract](STYLE.md) applied to a fleet. The number of plants
-  configured is never the number of plants seen.
+  renders silence as green is worse than no console. A silent plant is also
+  *not owned while it is silent*, because nothing can corroborate condition 2
+  — so no plant is ever managed through a gap in which nobody can see it.
+- **It states its total.** "12 plants, 11 answered, 1 unknown; 3 owned" —
+  rule 4 of [the style contract](STYLE.md) applied to a fleet. The number of
+  plants configured is never the number of plants seen.
 - **It aggregates nothing across plants that would be a lie.** A fleet OEE is
   a lie unless every plant is the same shape; the console shows twelve
   numbers, not one. This is the same rule the
@@ -399,15 +440,51 @@ What it deliberately does not do, and this is the decision in
 - **It holds no plant data.** It caches the last answer for display and
   nothing else. Orders, serials, people and events stay in the plant that
   made them.
+- **It starts nothing by itself.** No scheduler, no reconciliation loop, no
+  daemon that notices a stopped plant and brings it back. Desired state stays
+  intent *displayed as drift*, never intent enforced. On a development
+  machine the lab fleet runs when its owner starts it, and nothing in this
+  design starts a plant on anyone's behalf.
+
+### Where the write verbs live, and why the read-only role survives
+
+In **`fsmes fleet`**, a local command, not in the web page. The first version
+of the console has no write path at all; the verbs it would need are the
+command's.
+
+The earlier draft of §8 argued for a read-only console on the grounds that
+*the code can be reviewed for safety by reading it for calls that write*.
+That argument is not deleted by the ownership split — it moves, and it gets
+weaker in one specific place, which is worth saying out loud:
+
+- **For the console it survives intact.** The page reads. Its credential to
+  every plant, owned or observed, is the **read-only machine role** below.
+  Nothing about the page's review property changes.
+- **For `fsmes fleet` it becomes a different question**: not "is there a call
+  that writes" but "does every call that writes check ownership first". That
+  is a weaker property, because it depends on a check being present rather
+  than on a capability being absent. It is the price of the lab fleet, it is
+  paid knowingly, and piece 4's *done when* is written to make a reviewer
+  actually check it.
+- **The credential split is what carries the safety.** A long-running process
+  on a port never holds a credential that can change a plant. Managing runs
+  as the person at the terminal, for as long as the command takes.
+
+A console `--manage` flag — off by default, loopback only, each button
+calling the same gated function the command calls — is possible later. It is
+deliberately not in piece 4: the milestone's *done when* needs the page and
+does not need the buttons.
 
 "Enrol", then, means: *a person adds a plant to the console's list and gives
 it a credential the plant already understands.* Not a mutual handshake, not a
 certificate authority, not a bootstrap token — those are a control plane, and
-a control plane implies a plane that controls. What the product genuinely
-needs first is a **read-only machine credential**: an account that can call
-`/health`, `/shadow`, `/metrics`, `/ops/services` and the OEE endpoints and
-literally nothing else, so a console does not run as a person and does not
-run as `AGENT`. That is a capability set and a role, both of which
+a control plane implies a plane that controls. Enrolling makes a plant
+*visible*; it does not make it owned, because ownership comes from having
+created it. What the product genuinely needs first is a **read-only machine
+credential**: an account that can call `/health`, `/shadow`, `/metrics`,
+`/ops/services` and the OEE endpoints and literally nothing else, so a
+console does not run as a person and does not run as `AGENT`. That is a
+capability set and a role, both of which
 `src/fsmes/services/capabilities.py` already knows how to express.
 
 ---
@@ -455,13 +532,30 @@ satisfy — each with one sentence naming the problem; and the third pack runs
 from the same wheel with two modules off, proven by its own API answering 404
 on those routes and its MCP tool list being shorter.
 
-### Piece 4 — the console
+### Piece 4 — the console, and the fleet tool behind it
 
-The page from §8, over a read-only role, against a list of packs.
+The page from §8, over a read-only role, against a list of packs — plus
+`fsmes fleet` with the five verbs, the ownership file, and the ownership gate
+every one of them calls first.
 
-**Done when:** it shows three plants, one of which is switched off, as
-"2 answered, 1 unknown" — and a reviewer can read the code and see there is no
-call in it that writes.
+**Done when:**
+
+- the page shows three plants, one of which is switched off, as
+  "2 answered, 1 unknown", and says which of them are owned;
+- a reviewer can read the console's code and see there is no call in it that
+  writes to a plant — unchanged, because the page stays read-only;
+- **a reviewer can read the fleet tool's code and see that every write path
+  checks ownership first, and that an unowned plant cannot be touched by any
+  of them** — the ownership analogue of the old "no call that writes", and
+  the property [0023](../decisions/0023-the-fleet-console-observes.md) is
+  written to make checkable;
+- a test proves it rather than the reviewer alone: against a fake plant that
+  answers `/health` with the wrong `instance_id`, and against one that
+  answers with none, all five verbs refuse and say why.
+
+Nothing in this piece starts a plant on a development machine of its own
+accord. The fleet tool acts when a person runs it; the lab fleet is started
+by whoever owns it, and the tests run against fakes and in CI.
 
 Pieces 1 and 2 are independent of each other and of the rest. Piece 3 needs
 piece 2. Piece 4 needs pieces 1 and 3, and is the only one that closes the
@@ -475,7 +569,7 @@ milestone's *done when*.
 |---|---|---|
 | **The pack becomes a language.** `[words]`, then conditions, then an expression, then a hook, then a plugin. Every configuration format ends up here | A plant asks for "just one small computed field" | Rule 1 of §6, held by a test, not by prose. The escape hatch is a module, and modules are code and are reviewed |
 | **`[words]` corrupts comparability.** A plant renames a state, and its events no longer mean what another plant's mean | The console compares two plants that use the same word for different things | Protected terms are enumerated and tested. `[words]` reaches screens and reports only, never a topic, a `kind`, an enum or an API field |
-| **The console grows a button.** "It only restarts the OPC agent." | One write path, then a second | Decision [0023](../decisions/0023-the-fleet-console-observes.md), plus the shadow ratchet: the console is code under `src/fsmes`, so a new outbound call must be registered, and a registered write to a plant is visible in review |
+| **Ownership creeps.** A verb is added and the gate is not called; or "owned" is quietly widened to mean reachable, or configured, or trusted | A sixth verb; a flag that skips the check "just for the lab"; a plant managed while it is unknown | The gate is one function and the closed list of five verbs is in [0023](../decisions/0023-the-fleet-console-observes.md). Piece 4's *done when* makes a reviewer check every write path, and the wrong-`instance_id` test fails if one forgets. The shadow ratchet still applies: the fleet tool is code under `src/fsmes`, so a new outbound call must be registered |
 | **Migrating in two places.** Pack format and database schema both move, and a plant ends up half-upgraded | A pack written for 0.3 meets a 0.2 database | One order, stated and enforced: pack first, then database; each refuses a plant that is answering; each prints a receipt |
 | **The third pack is a costume.** It disagrees on paper and is really the demo plant again | It passes on the first try | The test is whether writing it *forced a code change*. If adding the third pack changes nothing under `src/`, the format is proved; if it changes something, that change is the finding |
 | **Nobody has run two plants for real.** The lab is two processes on one laptop | Everything above is designed against a lab | The first real plant is one plant. The console's value starts at the second, and there is no second yet — which is an argument for pieces 1–3 landing well before piece 4 |

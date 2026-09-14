@@ -1,6 +1,6 @@
 # 0021 — A fleet is many databases, and site scoping is identity, not partitioning
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2026-09-10
 - **Deciders:** @kalwei
 

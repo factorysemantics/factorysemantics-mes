@@ -66,11 +66,29 @@ goes under Honesty with a migration line, so plant people can find it.
   list, so a new lab plant extends the guard instead of escaping it, and it
   scans code rather than prose — a comment naming the plant a finding came
   from is provenance, and the house rules ask for it.
+- **Decision 0023 revised: the console manages only the plants it owns.**
+  The first draft made the fleet console purely read-only. The maintainer
+  read it and said read-only is not the safety property he needs — managing
+  a lab fleet of simulated plants one plant at a time is friction with no
+  threat model behind it, while pushing to somebody else's plant is a
+  remote-execution path into their machinery. The rule is now *the console
+  may act only on plants it owns; for every other plant it observes and
+  cannot push*. Ownership is defined so a test can check it: this
+  installation created the plant from a pack and recorded it with an
+  `instance_id`, the plant's own `/health` returns that same id, and the
+  operator gave it a path — same host and user, or a credential a person
+  typed. Managing means five verbs and no more — create, start, stop, apply
+  a pack, show drift — and never writing to a PLC, an ERP or production
+  data. The write verbs live in `fsmes fleet`, a local command; the page
+  stays read-only and its credential stays the read-only machine role.
+  [Design §8 and piece 4](docs/design/m8-packs-and-fleet.md) match, and
+  [0023](docs/decisions/0023-the-fleet-console-observes.md) is still
+  **proposed**. Docs only, no product code.
 - **M8 designed before it is built — docs only, no product code.**
   [Plant packs and the fleet console](docs/design/m8-packs-and-fleet.md)
   states what a plant is today with file paths, measures the two lab plants
   against the milestone's own *done when*, proposes what a pack may and may
-  not contain, scopes an observe-only console, and breaks the work into four
+  not contain, scopes the console, and breaks the work into four
   pieces. Decisions [0021](docs/decisions/0021-one-database-per-plant.md),
   [0022](docs/decisions/0022-what-a-plant-pack-may-contain.md) and
   [0023](docs/decisions/0023-the-fleet-console-observes.md) are **proposed**,
