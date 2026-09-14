@@ -2712,6 +2712,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0025-performance-is-measured-not-capped/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0025 — OEE performance is measured against the rating, and never capped at 1.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -3647,19 +3675,34 @@ interval at the speed you chose is scored <em>unknown</em>, not <em>missed</em>:
 blame the MES for a limit of the harness. The report says the shortest event
 this run could have resolved.</p>
 <h3 id="oee-does-the-mess-oee-match-the-hour-the-line-actually-had"><code>oee</code> — does the MES's OEE match the hour the line actually had?<a class="headerlink" href="#oee-does-the-mess-oee-match-the-hour-the-line-actually-had" title="Permanent link">&para;</a></h3>
-<p>Availability, performance and quality per station, against the script. Two
-things stop this being a subtraction, and both are stated rather than corrected
-for:</p>
+<p>Availability, performance and quality per station, against the script. Three
+things stop this being a subtraction, and all three are stated rather than
+quietly corrected for:</p>
 <ul>
 <li><strong>The windows differ.</strong> The MES measures over the window it was watching; the
   script is exactly <code>duration</code> long. An availability difference smaller than
   that mismatch is not evidence, and the page does not mark it as one.</li>
+<li><strong>The clocks differ, and only performance notices.</strong> Availability and quality
+  are each a ratio of two things measured the same way, so the replay speed
+  cancels out of both. Performance does not cancel: its numerator is priced in
+  the line's own seconds — the rated cycle somebody wrote down — and its
+  denominator is run time the MES measured on the wall clock. Replay an hour at
+  20x and the MES's run time is a twentieth of the line's, so the figure it
+  reports is twenty times the line's. The report's <strong>P MES</strong> column is
+  therefore the MES's own performance put back on the line's clock: its rating,
+  its counts, its run time multiplied by the replay speed. At speed 1 it is the
+  reported figure unchanged. Each station also carries its own band — both
+  sides divide by run time, and the MES drains past the end of the script — and
+  a difference inside that band is not called a finding.</li>
 <li><strong>The rated cycle may differ.</strong> Performance prices units against what the
   machine could have made, and the MES uses its master data's
   <code>ideal_cycle_seconds</code> while the script uses the line's <code>rate_per_min</code>. Where
   the two disagree the row says <em>not like for like</em> instead of reporting the
   difference as a fault.</li>
 </ul>
+<p>Neither side caps performance. A figure above 1.0 means the machine beat the
+cycle it was rated at, which is a finding about the rating rather than a score
+above physics — see <a href="../../plant/reading-oee/">reading OEE</a>.</p>
 <h3 id="not-measured-yet">Not measured yet<a class="headerlink" href="#not-measured-yet" title="Permanent link">&para;</a></h3>
 <p><code>latency</code>, <code>console</code>, <code>quality</code> and <code>agent-eval</code> are named in the design and
 are not built. A plan that asks for one is <strong>refused by name</strong>: silently

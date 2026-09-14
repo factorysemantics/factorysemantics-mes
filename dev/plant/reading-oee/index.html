@@ -748,6 +748,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#performance-can-read-over-100-and-that-is-the-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance can read over 100 %, and that is the point
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#stale-is-not-stopped" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2573,6 +2584,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0025-performance-is-measured-not-capped/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0025 — OEE performance is measured against the rating, and never capped at 1.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -3076,6 +3115,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#performance-can-read-over-100-and-that-is-the-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance can read over 100 %, and that is the point
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#stale-is-not-stopped" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3166,8 +3216,8 @@ That is the grey segment.</p>
 </tr>
 <tr>
 <td>Performance</td>
-<td>counter deltas against the rated cycle time in the tag map</td>
-<td>the rated cycle time is blank, or a counter reset happened inside the window</td>
+<td>counter deltas against the rated cycle time in master data</td>
+<td>the rated cycle time is blank, the machine was not seen running, or nothing was counted</td>
 </tr>
 <tr>
 <td>Quality</td>
@@ -3178,6 +3228,32 @@ That is the grey segment.</p>
 </table>
 <p>The screen states its data source in a line under the number; a screenshot
 without that line is not a screenshot of this product.</p>
+<h2 id="performance-can-read-over-100-and-that-is-the-point">Performance can read over 100 %, and that is the point<a class="headerlink" href="#performance-can-read-over-100-and-that-is-the-point" title="Permanent link">&para;</a></h2>
+<p>Availability and quality are each a share of something the MES watched
+itself, so neither can pass 100 %. <strong>Performance is not a share.</strong> It is</p>
+<div class="highlight"><pre><span></span><code>rated cycle time × units counted ÷ time the machine was seen running
+</code></pre></div>
+<p>and only the second half of that is measured. The first half is a number
+somebody typed into master data. So performance is a measurement <em>against a
+rating</em>, and when it comes out over 100 % the rating is what is wrong:
+somebody entered a cycle time slower than the machine, or the counter is
+counting something other than what the rating rates.</p>
+<p>That figure is printed, above 100 % and all, with the sentence that says so
+underneath. It is <strong>not</strong> capped at 100 %. It used to be, in both places that
+computed it, and on 2026-09-14 a lab run showed what that cost: nine stations
+across two simulated plants all reported performance of exactly 100 % while
+the script that generated their data said between 94.3 % and 99.9 %. A factor
+that reads 100 % whatever the line does is not a measurement, and the OEE
+built on it overstates the plant.</p>
+<p>The OEE that follows can also pass 100 % for the same reason. Read it as <em>the
+rating on this machine is wrong</em>, and fix the rating; the number will come
+back down on its own. Decision record
+<a href="../../decisions/0025-performance-is-measured-not-capped/">0025</a> has the
+arithmetic and the options that lost.</p>
+<p><strong>What it is not.</strong> A machine cannot make more than it made. Over 100 %
+performance never means extra units were invented — that rule is house rule 1
+and lives in <a href="../never-invent-production/">never invent production</a>. It means
+the yardstick is short.</p>
 <h2 id="stale-is-not-stopped">Stale is not stopped<a class="headerlink" href="#stale-is-not-stopped" title="Permanent link">&para;</a></h2>
 <p>A machine whose tags stopped changing is <strong>stale</strong>, not down. Stale means
 the MES stopped hearing, which is a different fact from the machine
@@ -3196,11 +3272,15 @@ it moves up the list.</p>
 <li>Keep the agent running: the window it was not watching cannot be
    reconstructed later, by design.</li>
 </ol>
+<p>A rated cycle time that is wrong does not make grey; it makes a performance
+figure over 100 % with a note beside it. Both are worth a walk to the
+machine, and only one of them looks like a problem at first glance.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../never-invent-production/">Never invent production</a></li>
 <li><a href="../../onboarding/GUIDE-ENGINEERING/">Engineering guide — the worksheet</a></li>
 <li>Decision record <a href="../../decisions/0004-never-invent-production/">0004</a></li>
+<li>Decision record <a href="../../decisions/0025-performance-is-measured-not-capped/">0025</a></li>
 </ul>
 
 
