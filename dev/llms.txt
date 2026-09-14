@@ -66,6 +66,7 @@
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0021-one-database-per-plant/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0022-what-a-plant-pack-may-contain/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0023-the-fleet-console-observes/)
+- [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0024-a-nonconformance-has-a-life/)
 - [Develop — Decisions — Template](https://docs.factorysemantics.com/dev/decisions/TEMPLATE/)
 - [Agents](https://docs.factorysemantics.com/dev/agents/)
 - [Agents — How-to — connect an MCP client](https://docs.factorysemantics.com/dev/agents/connect-mcp-client/)
