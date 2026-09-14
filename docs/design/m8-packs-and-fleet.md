@@ -387,14 +387,22 @@ A plant is **owned** when all three hold, and any one missing means observed
 only:
 
 1. **This installation created it from a pack**, and recorded that in its own
-   ownership file — `fleet.toml`, beside the registry under the registry's
-   `data_dir` — with the plant name, the pack and version, the host and OS
-   user, the time, and a random `instance_id` it also wrote into the plant's
-   data directory.
-2. **The plant corroborates it**: `/health` returns that `plant` name (piece
-   1) and that same `instance_id`. A different id, or no id, means not owned,
-   whatever the file says — which is also how a plant *revokes* ownership,
-   by dropping the id.
+   ownership file — `ownership.toml`, in the fleet's `data_dir` — with the
+   plant name, the pack and its fingerprint, the host and OS user, the time,
+   and a random `instance_id` it also wrote into the plant's data directory.
+   Not `fleet.toml`: §6 gave that name to the registry, and the two files
+   answer different questions.
+2. **The plant does not contradict it**: `/health` returns that `plant` name
+   (piece 1) and that same `instance_id`. A different id, or no id, means not
+   owned, whatever the file says — which is also how a plant *revokes*
+   ownership, by dropping the id. A plant that is *silent* is not
+   contradicting anything, and a rule that treated silence as a
+   contradiction would forbid `create` and `start`, which are two of the
+   five verbs: so a silent local plant is corroborated by the id still
+   sitting in its own data directory, and only the two verbs a stopped plant
+   can take may proceed on it. A silent remote plant is refused — there is
+   no data directory to read on another host.
+   [0023](../decisions/0023-the-fleet-console-observes.md) has the table.
 3. **A path exists that a person gave it**: same host and same OS user, with
    the plant's pids in this registry's pid file (`running_pids`,
    `src/fsmes/plant.py`); or an explicit credential for another host, typed
@@ -426,9 +434,11 @@ made to say it built something.
   blast radius of that is a factory.
 - **A plant that did not answer is `unknown`, never healthy and never down.**
   `list_plants` already does this and the console inherits it. A console that
-  renders silence as green is worse than no console. A silent plant is also
-  *not owned while it is silent*, because nothing can corroborate condition 2
-  — so no plant is ever managed through a gap in which nobody can see it.
+  renders silence as green is worse than no console. On the page a silent
+  plant's *ownership* is unknown too — recorded here and not answering, never
+  owned — because nothing a plant did not say can corroborate anything. No
+  verb reaches into a running plant through a gap in which nobody can see
+  it.
 - **It states its total.** "12 plants, 11 answered, 1 unknown; 3 owned" —
   rule 4 of [the style contract](STYLE.md) applied to a fleet. The number of
   plants configured is never the number of plants seen.
@@ -457,9 +467,13 @@ The earlier draft of §8 argued for a read-only console on the grounds that
 That argument is not deleted by the ownership split — it moves, and it gets
 weaker in one specific place, which is worth saying out loud:
 
-- **For the console it survives intact.** The page reads. Its credential to
-  every plant, owned or observed, is the **read-only machine role** below.
-  Nothing about the page's review property changes.
+- **For the console it survives intact, and it turns out to be stronger than
+  this draft expected.** The page reads, and everything it reads is public —
+  `/health`, `/shadow`, and `/pack`, which says which pack a plant runs,
+  whether it has drifted, its schema revision and the modules it serves. So
+  the page holds **no credential at all**, rather than a read-only one.
+  Nothing about the page's review property changes; there is simply less to
+  review.
 - **For `fsmes fleet` it becomes a different question**: not "is there a call
   that writes" but "does every call that writes check ownership first". That
   is a weaker property, because it depends on a check being present rather
@@ -480,12 +494,22 @@ it a credential the plant already understands.* Not a mutual handshake, not a
 certificate authority, not a bootstrap token — those are a control plane, and
 a control plane implies a plane that controls. Enrolling makes a plant
 *visible*; it does not make it owned, because ownership comes from having
-created it. What the product genuinely needs first is a **read-only machine
-credential**: an account that can call `/health`, `/shadow`, `/metrics`,
+created it. What the product needs first is smaller than this draft thought:
+a way for a plant to say *what it was given* — the pack, the drift, the
+schema revision, the modules — on the same public terms as `/health` and
+`/shadow`, because all of it is a statement about how a deployment is
+configured rather than a number a plant produced. That is `/pack`, and with
+it the first console needs no account anywhere.
+
+A **read-only machine credential** — an account that can call
 `/ops/services` and the OEE endpoints and literally nothing else, so a
-console does not run as a person and does not run as `AGENT`. That is a
+console does not run as a person and does not run as `AGENT` — is still the
+right answer, and it is what the *second* console needs: the first column
+that a plant will not tell a stranger is the day to build it. It is a
 capability set and a role, both of which
-`src/fsmes/services/capabilities.py` already knows how to express.
+`src/fsmes/services/capabilities.py` already knows how to express, and
+deferring it costs nothing because nothing has been built that assumes its
+absence.
 
 ---
 
@@ -534,9 +558,10 @@ on those routes and its MCP tool list being shorter.
 
 ### Piece 4 — the console, and the fleet tool behind it
 
-The page from §8, over a read-only role, against a list of packs — plus
-`fsmes fleet` with the five verbs, the ownership file, and the ownership gate
-every one of them calls first.
+The page from §8, against a list of packs — plus `fsmes fleet` with the five
+verbs, the ownership file, and the ownership gate every one of them calls
+first. The page needs no credential: everything it reads, a plant answers to
+anyone who can reach it.
 
 **Done when:**
 

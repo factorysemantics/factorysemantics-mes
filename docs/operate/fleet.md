@@ -35,9 +35,9 @@ Delete the instance file from the plant's data directory (`<data_dir>/<name>.ins
 
 Two plants claiming one instance id is an **error that refuses**, not a coin toss: a plant directory copied to make a second plant carries the first one's id until something regenerates it, and a tool that picked one of them would act on the wrong plant. `fsmes pack check` cannot catch this — a pack carries no instance id — so the fleet tool catches it when it reads the file.
 
-### Where this differs from decision 0023 as written
+### A plant that is silent
 
-[Decision 0023](../decisions/0023-the-fleet-console-observes.md) says a plant that is silent "is not owned for as long as it is silent, because condition 2 cannot be met". Read literally that makes **start** impossible: a plant that is not running cannot answer anything. So condition 2 is implemented as *the plant must not contradict us*:
+A plant that is not running is not contradicting anything, and a rule that treated silence as a contradiction would forbid the tool's own first two steps. So condition 2 is *the plant must not contradict us*, and it resolves three ways ([decision 0023](../decisions/0023-the-fleet-console-observes.md) has the same table):
 
 | The plant is | What happens |
 |---|---|
@@ -45,7 +45,7 @@ Two plants claiming one instance id is an **error that refuses**, not a coin tos
 | silent, local | the instance id in its own data directory must still be there and still match; only `start` and `apply`, the two verbs a stopped plant can take, may proceed |
 | silent, remote | refused — there is no data directory to read on another host, so nothing corroborates anything |
 
-The gap the decision closes stays closed: **no verb reaches into a *running* plant that has not just said who it is.**
+The thing the strict reading protects stays protected: **no verb reaches into a *running* plant that has not just said who it is.** On the console, a silent plant's ownership reads `unknown` rather than `yes`.
 
 ## The commands
 
@@ -106,7 +106,7 @@ At the top: **"3 plants, 2 answered, 1 unknown"**, and below it how many are own
 
 `tests/test_fleet_console.py` holds all four by parsing the source, so they stay true.
 
-The M8 design asks for a *read-only machine role* for the console to run as. It is not needed by this console and is deliberately not in it: every column above comes from an endpoint that needs no credential, and holding none is a stronger property than holding a read-only one. The role becomes the right thing to add the day a console shows OEE or service liveness — this one shows neither.
+The M8 design reached first for a *read-only machine role* for the console to run as. This console needs no account at all — every column above comes from an endpoint a plant answers to anyone who can reach it, and holding no credential is a stronger property than holding a read-only one. The role is not rejected, it is **not yet needed**: the day a console shows OEE, the loss breakdown or `/ops/services` is the day this product grows one, and nothing here assumes its absence.
 
 ### What it refuses to show
 

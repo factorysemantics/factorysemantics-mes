@@ -30,13 +30,11 @@ It does not stop somebody copying an id into this file on purpose, and
 nothing here pretends otherwise; what keeps a stranger out of a plant is that
 plant's own accounts, capability roles and shadow mode.
 
-### Where this differs from 0023 as written, and why
+### A plant that is silent is not contradicting anything
 
-0023 says a plant that is silent "is not owned for as long as it is silent,
-because condition 2 cannot be met". Taken literally that makes **start**
-impossible: a plant that is not running cannot answer anything, and starting
-it is one of the five verbs. So condition 2 is implemented as *the plant must
-not contradict us*:
+A stopped plant answers nothing, and starting one is a verb on the list, so
+condition 2 is *the plant must not contradict us* rather than *silence means
+unowned*. It resolves three ways, and 0023 carries the same table:
 
 - **answering** - it must say this name and this id, or the verb is refused;
 - **silent** - the id this tool wrote into the plant's own data directory
@@ -46,8 +44,9 @@ not contradict us*:
 - **silent and remote** - refused. There is no data directory to read on
   another host, so nothing corroborates anything.
 
-The gap the decision was closing stays closed: no verb reaches into a
-*running* plant that has not just said who it is.
+The thing the strict reading protects stays protected: no verb reaches into a
+*running* plant that has not just said who it is. The console renders a
+silent plant's ownership as unknown for the same reason.
 """
 
 from __future__ import annotations
@@ -63,10 +62,10 @@ from pathlib import Path
 from fsmes.fleet import observe
 
 #: The file, in the fleet's data directory. Not `fleet.toml`: that name is
-#: taken, by the list of packs this machine runs
-#: (`fsmes.pack.fleet`). Decision 0023 called this one `fleet.toml` before
-#: M8 piece 3 renamed the registry; two files of one name, one listing packs
-#: and one recording ownership, is a trap for whoever reads the next
+#: the **registry**, the list of packs this machine runs
+#: (`fsmes.pack.fleet`). The two files answer different questions - what
+#: this machine runs, and what this installation may manage - and two files
+#: of one name, in two directories, is a trap for whoever reads the next
 #: traceback.
 FILE = "ownership.toml"
 
