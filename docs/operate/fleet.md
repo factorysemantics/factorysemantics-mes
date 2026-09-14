@@ -61,7 +61,7 @@ It says which database it is about, on a line of its own, before it changes anyt
 ```
   machining: 13 settings from the pack
   machining: database sqlite:///.data/machining.db (the file this fleet gives machining, in .data)
-      Database schema created at c8b1e40d7a92.
+      Database schema created at b1f4c73a9e08.
       equipment: 7 made, 0 already there
       ...
       account ADMIN (admin): created
