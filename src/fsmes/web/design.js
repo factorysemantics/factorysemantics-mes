@@ -88,6 +88,15 @@
     const head = el("div", "design-head");
     head.appendChild(el("strong", null, "Design"));
     head.appendChild(el("span", "design-model", status.model));
+    if (status.lab) {
+      // A note taken while an experiment is running is worth far more than one
+      // taken afterwards, so the panel says out loud that it is filing against
+      // that run - and which plant inside it.
+      const tag = el("span", "design-lab",
+        `${status.lab.run}${status.lab.plant ? " · " + status.lab.plant : ""}`);
+      tag.title = "This plant is part of a lab run. Notes are tagged to it.";
+      head.appendChild(tag);
+    }
     head.appendChild(el("span", "spacer"));
     const fresh = el("button", null, "New");
     fresh.title = "Start a separate conversation";
@@ -158,6 +167,7 @@
           data: pageData(),
           filters: currentFilters(),
           conversation,
+          lab_run: status.lab ? status.lab.run : null,
         },
       });
       pending.remove();
@@ -179,6 +189,11 @@
     panel.style.display = "flex";
     $(".design-launch").style.display = "none";
     if (!$("#design-log").childElementCount) {
+      if (status.lab) {
+        note(`Lab run ${status.lab.run}`
+          + (status.lab.plant ? `, plant ${status.lab.plant}` : "")
+          + ". What you say here is tagged to the run and shows up in its report.");
+      }
       note(status.claude
         ? `Looking at ${SCREENS[location.pathname] || location.pathname}. `
           + "Ask me anything about it — I can see what you see."

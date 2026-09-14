@@ -35,7 +35,11 @@ from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
-STORE = Path.home() / ".local" / "share" / "fsmes" / "design.db"
+#: One store per machine, beside the person's other data - not in any plant's
+#: database. `MES_DESIGN_STORE` moves it, which is how a scripted run proves
+#: the feedback loop without writing into somebody's real notes.
+STORE = Path(os.environ.get("MES_DESIGN_STORE")
+             or Path.home() / ".local" / "share" / "fsmes" / "design.db")
 OLLAMA = "http://127.0.0.1:11434"
 LOCAL_MODEL = "qwen3:8b"
 CLAUDE_MODEL = "claude-opus-5"
@@ -61,7 +65,17 @@ CREATE TABLE IF NOT EXISTS conversations (
     plant      TEXT,
     route      TEXT NOT NULL,
     title      TEXT,
-    who        TEXT
+    who        TEXT,
+    -- Which experiment was running when this was said. Four tags, and they
+    -- are what turns a remark into evidence: the run it belongs to, the
+    -- plant inside that run, the screen it is about, and the scripted
+    -- moment it lands on. `lab_run` and `lab_plant` come from the run's own
+    -- environment; `screen` from the panel; `moment` is left empty here and
+    -- resolved by the run, which is the only thing that knows its own t0.
+    lab_run    TEXT,
+    lab_plant  TEXT,
+    screen     TEXT,
+    moment     TEXT
 );
 CREATE TABLE IF NOT EXISTS turns (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -82,6 +96,40 @@ def enabled() -> bool:
     return os.environ.get("MES_DESIGN_CHAT", "").strip().lower() in ("1", "true", "yes", "on")
 
 
+#: What `fsmes lab run` sets on a plant it started, so a note taken while
+#: watching that plant knows which experiment it belongs to without anybody
+#: typing a run id into a browser.
+LAB_RUN = "MES_LAB_RUN"
+LAB_PLANT = "MES_LAB_PLANT"
+
+
+def lab() -> dict | None:
+    """The experiment this plant is part of, or None if it is not part of one.
+
+    Read from the plant's own environment rather than taken from the browser.
+    A run id that arrived in a request body would let any page claim any run,
+    and the whole value of a tagged note is that the tag is not a guess.
+    """
+    run = os.environ.get(LAB_RUN, "").strip()
+    if not run:
+        return None
+    return {"run": run, "plant": os.environ.get(LAB_PLANT, "").strip() or None}
+
+
+#: Columns added to `conversations` after the first stores were written.
+#: A design database is a person's own notes going back weeks, so it is
+#: migrated in place rather than recreated - losing Scott's conversations to
+#: get a column added would be a poor trade.
+LATE_COLUMNS = {"lab_run": "TEXT", "lab_plant": "TEXT", "screen": "TEXT", "moment": "TEXT"}
+
+
+def _migrate(conn) -> None:
+    have = {row["name"] for row in conn.execute("PRAGMA table_info(conversations)")}
+    for column, kind in LATE_COLUMNS.items():
+        if column not in have:
+            conn.execute(f"ALTER TABLE conversations ADD COLUMN {column} {kind}")
+
+
 @contextmanager
 def connect():
     STORE.parent.mkdir(parents=True, exist_ok=True)
@@ -89,6 +137,7 @@ def connect():
     conn.row_factory = sqlite3.Row
     try:
         conn.executescript(SCHEMA)
+        _migrate(conn)
         yield conn
         conn.commit()
     finally:
@@ -296,13 +345,57 @@ def claude_available() -> bool:
 
 # ------------------------------------------------------------------- storage
 
-def start(route: str, plant: str | None, who: str | None, title: str) -> int:
+def start(route: str, plant: str | None, who: str | None, title: str,
+          lab_run: str | None = None, lab_plant: str | None = None,
+          screen: str | None = None) -> int:
     now = datetime.now(UTC).isoformat()
     with connect() as conn:
         cur = conn.execute(
-            "INSERT INTO conversations (started_at, updated_at, plant, route, title, who)"
-            " VALUES (?,?,?,?,?,?)", (now, now, plant, route, title[:200], who))
+            "INSERT INTO conversations (started_at, updated_at, plant, route, title, who,"
+            " lab_run, lab_plant, screen) VALUES (?,?,?,?,?,?,?,?,?)",
+            (now, now, plant, route, title[:200], who, lab_run, lab_plant, screen))
         return int(cur.lastrowid)
+
+
+def tag(conversation_id: int, **tags) -> None:
+    """Say which experiment a conversation belongs to.
+
+    Only the tags named are written, and a tag is never cleared by omission:
+    the panel knows the screen, the run knows the moment, and neither should
+    be able to erase what the other recorded.
+    """
+    unknown = set(tags) - set(LATE_COLUMNS)
+    if unknown:
+        raise ValueError(
+            f"unknown tag(s) {', '.join(sorted(unknown))}; a conversation carries "
+            f"{', '.join(sorted(LATE_COLUMNS))}")
+    given = {k: v for k, v in tags.items() if v is not None}
+    if not given:
+        return
+    sets = ", ".join(f"{k} = ?" for k in given)
+    with connect() as conn:
+        conn.execute(f"UPDATE conversations SET {sets} WHERE id = ?",
+                     [*given.values(), int(conversation_id)])
+
+
+def for_lab_run(lab_run: str) -> list[dict]:
+    """Every conversation tagged to one experiment, with all of its turns.
+
+    This is what the run exports. It reads the design store and writes a copy
+    into the results directory; the store itself is never moved, emptied or
+    pointed at a plant's database.
+    """
+    with connect() as conn:
+        heads = conn.execute(
+            "SELECT * FROM conversations WHERE lab_run = ? ORDER BY id",
+            (str(lab_run),)).fetchall()
+        out = []
+        for head in heads:
+            turns = conn.execute(
+                "SELECT id, ts, role, text, model FROM turns WHERE conversation_id = ?"
+                " ORDER BY id", (head["id"],)).fetchall()
+            out.append({**dict(head), "turns": [dict(t) for t in turns]})
+    return out
 
 
 def add_turn(conversation_id: int, role: str, text: str,
