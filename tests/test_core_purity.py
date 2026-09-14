@@ -38,6 +38,12 @@ LADDER: tuple[tuple[str, tuple[str, ...]], ...] = (
         # except `db` and `schema`, which know only how to reach one.
         "core", "kernel", "config", "shadow", "db", "schema", "logging",
         "identity",  # the plant's own name and clock: settings-level, imports nothing above
+        # Which database a command is looking at, and what that database says
+        # about its schema. Beside `schema` and for the same reason: it knows
+        # how to reach a database and nothing about what is in one. A pack's
+        # database and a plant's are looked up where packs and fleets are
+        # read, and land back here.
+        "storage",
         "modules", "plant", "__init__",
     )),
     ("domain", (

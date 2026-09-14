@@ -37,6 +37,7 @@ from pathlib import Path
 from fsmes import __version__, identity
 from fsmes.config import Settings
 from fsmes.db import utcnow
+from fsmes.storage import redacted  # one definition; the status commands print it too
 
 FORMAT = 1
 MANIFEST = "manifest.json"
@@ -71,16 +72,6 @@ def sqlite_path(url: str) -> Path | None:
     if not url.startswith("sqlite:///"):
         return None
     return Path(url[len("sqlite:///"):])
-
-
-def redacted(url: str) -> str:
-    """A database URL with the password taken out, safe to write into a file."""
-    if "@" not in url or "://" not in url:
-        return url
-    scheme, rest = url.split("://", 1)
-    creds, host = rest.rsplit("@", 1)
-    user = creds.split(":", 1)[0]
-    return f"{scheme}://{user}:***@{host}" if ":" in creds else url
 
 
 def sha256(path: Path) -> str:

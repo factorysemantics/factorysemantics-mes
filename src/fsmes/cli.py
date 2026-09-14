@@ -25,9 +25,47 @@ app = typer.Typer(
 )
 
 
+#: The two options every command that touches a database now takes. A status
+#: command that cannot be told which database is a status command that will
+#: eventually report on the wrong one - which it did, on 2026-09-14, and a
+#: script rolled a healthy plant back on the strength of it.
+PACK_OPTION = typer.Option(None, "--pack", help="A pack directory; use the database its "
+                                                "`[storage]` names.")
+PLANT_OPTION = typer.Option(None, "--plant", help="A plant in the fleet file; use the "
+                                                  "database the fleet gives it.")
+
+
+def _which_database(pack: Path | None, plant: str | None) -> tuple[str, str]:
+    """Which database this invocation is about, or the sentence saying nothing
+    here can tell - printed, and then a non-zero exit. Never a silent default."""
+    from fsmes import storage
+    from fsmes.pack import fleet as fleet_file
+    from fsmes.pack import format as pack_format
+
+    try:
+        if pack is not None and plant is not None:
+            raise storage.Unknown("--pack and --plant name two different databases; pass one.")
+        if pack is not None:
+            return pack_format.database_url(pack_format.read(pack))
+        if plant is not None:
+            return fleet_file.database_url(plant)
+        return storage.of_process()
+    except (storage.Unknown, pack_format.PackError) as exc:
+        typer.echo(f"Which database: unknown. {exc}")
+        raise typer.Exit(2) from None
+
+
 @app.command()
-def init_db() -> None:
+def init_db(
+    pack: Path | None = PACK_OPTION,
+    plant: str | None = PLANT_OPTION,
+) -> None:
     """Create or upgrade the database schema (runs the migrations the package ships).
+
+    Says which database it is about on the first line, before it changes
+    anything - without `--pack` or `--plant` that is this process's own
+    default, which is almost never a plant's, and creating a stray SQLite
+    file beside a real database is the mistake this line exists to stop.
 
     The migrations travel inside the wheel, so this does the same thing on a
     plant PC that installed from PyPI as it does in a source checkout. Before
@@ -37,39 +75,49 @@ def init_db() -> None:
     """
     from fsmes.schema import SchemaError, upgrade_database
 
+    url, source = _which_database(pack, plant)
+    from fsmes import storage
+
+    typer.echo(f"Looking at {storage.redacted(url)} ({source}).")
     try:
-        upgrade_database(echo=typer.echo)
+        upgrade_database(url, echo=typer.echo)
     except SchemaError as exc:
         typer.echo(str(exc))
         raise typer.Exit(1) from None
 
 
 @app.command()
-def db_status() -> None:
-    """What revision the database is at, and whether that is the current one.
+def db_status(
+    pack: Path | None = PACK_OPTION,
+    plant: str | None = PLANT_OPTION,
+) -> None:
+    """What revision a database is at, and whether that is the current one.
 
-    Exits non-zero when the database is behind or was never stamped, so a
-    deployment script - and the release gate, which upgrades a database made
-    by the previous release and then asks this - can act on the answer rather
-    than read it.
+    **Which database is the first line, every time.** With `--pack` it is the
+    one that pack's `[storage]` names, password read from the file the pack
+    names; with `--plant` it is the one the fleet file gives that plant; with
+    neither it is this process's own setting, and the line says that it is
+    only the default. On 2026-09-14 this command answered "there is no
+    database yet" about a process default while the plant's own PostgreSQL
+    sat at head one line above, and the script reading it rolled a healthy
+    plant back.
+
+    Exits non-zero when the database is behind, was never stamped, or did not
+    answer at all, so a deployment script - and the release gate, which
+    upgrades a database made by the previous release and then asks this - can
+    act on the answer rather than read it. A database nobody reached is never
+    reported as one that is empty.
     """
-    from fsmes.schema import current_revision, database_shape, head_revision
+    from fsmes import storage
 
-    head = head_revision()
-    at = current_revision()
-    typer.echo(f"Current: {at or 'not stamped'}")
-    typer.echo(f"Head:    {head}")
-    if at == head:
-        typer.echo("The database is at the current schema.")
-        return
-    if at is None and not database_shape():
-        typer.echo("There is no database yet. Create one with `fsmes init-db`.")
-    elif at is None:
-        typer.echo("This database has tables but no Alembic stamp - it was created before the "
-                   "migrations shipped. `fsmes init-db` will recognise it and stamp it.")
-    else:
-        typer.echo("The database is behind. Bring it up with `fsmes init-db`.")
-    raise typer.Exit(1)
+    url, source = _which_database(pack, plant)
+    reading = storage.look(url, source)
+    typer.echo(reading.looking_at())
+    typer.echo(f"Current: {reading.revision or ('unknown' if not reading.answered else 'not stamped')}")
+    typer.echo(f"Head:    {reading.head or 'unknown'}")
+    typer.echo(reading.sentence())
+    if not reading.at_head:
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -1055,7 +1103,7 @@ def demo(duration: int = 90) -> None:
                    f"{shadow.HOW_TO_LEAVE}")
         raise typer.Exit(2)
     setup_logging("WARNING", settings.log_dir, "demo")  # keep the console for the story
-    init_db()
+    init_db(pack=None, plant=None)
     with session_scope() as session:
         seed_demo_plant(session)
     problem = asyncio.run(_demo(settings, duration))
@@ -1497,11 +1545,18 @@ def pack_status(
 ) -> None:
     """Which pack this plant runs, whether it has drifted, and its schema.
 
+    The schema line is about **this pack's** database - the one its
+    `[storage] database_url` names, with the password read from the file the
+    pack names - and the line above it says which database that was. Before
+    2026-09-14 it was about whatever database this process happened to be
+    configured for, which is how it reported "never migrated" about a plant
+    that `fsmes pack apply` had migrated a minute earlier.
+
     Exits non-zero when the files on disk no longer make the fingerprint that
-    was applied, or when the database is behind the schema head, so a
-    deployment script can act on the answer rather than read it. A plant that
-    has never been applied says so - never applied is not the same as no
-    drift.
+    was applied, or when the database is behind the schema head or did not
+    answer, so a deployment script can act on the answer rather than read it.
+    A plant that has never been applied says so - never applied is not the
+    same as no drift, and a database nobody reached is not one that is empty.
     """
     from fsmes.pack import apply as applier
 
@@ -1509,7 +1564,7 @@ def pack_status(
     state = applier.status(directory, into=data_dir)
     for line in state.render():
         typer.echo(line)
-    if state.drifted or (state.head and state.revision != state.head):
+    if state.drifted or not state.at_head:
         raise typer.Exit(1)
 
 

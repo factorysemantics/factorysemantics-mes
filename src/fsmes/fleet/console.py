@@ -174,7 +174,11 @@ class Console:
             "product_version": pack_said.get("product_version"),
             "drifted": pack_said.get("drifted"),
             "schema_revision": schema.get("revision"),
+            # Tri-state, and the third state is its own field rather than a
+            # falsy at_head: a database nobody reached is not one that is
+            # behind.
             "schema_at_head": schema.get("at_head"),
+            "schema_answered": schema.get("answered"),
             "modules_on": modules.get("on"),
             "modules_off": modules.get("off"),
             "modules_total": modules.get("total"),
