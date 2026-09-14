@@ -181,7 +181,15 @@
          <lastmod>2026-09-14</lastmod>
     </url>
     <url>
+         <loc>https://docs.factorysemantics.com/dev/design/backlog/floor-machines-paginate-and-filter/</loc>
+         <lastmod>2026-09-14</lastmod>
+    </url>
+    <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/measurements-card-filtering/</loc>
+         <lastmod>2026-09-14</lastmod>
+    </url>
+    <url>
+         <loc>https://docs.factorysemantics.com/dev/design/backlog/measurements-characteristic-filter/</loc>
          <lastmod>2026-09-14</lastmod>
     </url>
     <url>
@@ -190,6 +198,10 @@
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/opc-integration-suite/</loc>
+         <lastmod>2026-09-14</lastmod>
+    </url>
+    <url>
+         <loc>https://docs.factorysemantics.com/dev/design/backlog/order-card-search-finds-a-material/</loc>
          <lastmod>2026-09-14</lastmod>
     </url>
     <url>
@@ -221,6 +233,10 @@
          <lastmod>2026-09-14</lastmod>
     </url>
     <url>
+         <loc>https://docs.factorysemantics.com/dev/design/backlog/shop-floor-actions-strip/</loc>
+         <lastmod>2026-09-14</lastmod>
+    </url>
+    <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/sixty-machine-plant/</loc>
          <lastmod>2026-09-14</lastmod>
     </url>
@@ -230,6 +246,10 @@
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/specifications-card-filtering/</loc>
+         <lastmod>2026-09-14</lastmod>
+    </url>
+    <url>
+         <loc>https://docs.factorysemantics.com/dev/design/backlog/specifications-server-paged/</loc>
          <lastmod>2026-09-14</lastmod>
     </url>
     <url>
