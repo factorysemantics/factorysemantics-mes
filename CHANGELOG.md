@@ -10,6 +10,22 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Two ephemeral runs on one machine no longer choose the same port.** A
+  scored run probed for a free port by binding one and closing the socket
+  again, which says a port *was* free a moment ago - a different claim from
+  "this port is mine". Two runs started seconds apart both chose 8100, and one
+  of them then read *connection refused* in the middle of its own hour (seen on
+  2026-09-14 when a two-plant experiment ran beside other ephemeral plants;
+  alone, the same plan was clean). A port is now claimed for the length of the
+  run in a lock file the other runs can see, using the same `O_EXCL` primitive
+  and staleness rule as `fsmes.core.oplock` - so a killed run's port comes back
+  rather than leaving the range quietly smaller. The bind probe stays, for
+  everything on the machine that is not one of these runs, and an exhausted
+  range now says how many ports are held by runs and how many are in use by
+  something else.
+
 ### Added
 
 - **A note left at a screen during an experiment lands in that run's report,
