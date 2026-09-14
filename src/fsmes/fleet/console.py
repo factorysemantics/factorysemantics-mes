@@ -44,6 +44,17 @@ from pathlib import Path
 
 from fsmes.fleet import observe, owned
 
+#: The port `fsmes fleet console` serves on when nobody says otherwise.
+#:
+#: 8090 and not 8100. It was 8100 until 2026-09-14, which is the **first**
+#: port `fsmes.sim.runner.API_RANGE` hands an ephemeral scored run, so a
+#: `fsmes score` started in the same minute as a console took the console's
+#: port - and what answered on it afterwards was a plant's sign-in page
+#: wearing the console's address. `tests/test_fleet_console.py` holds the
+#: two apart: a console port inside the runner's range fails there rather
+#: than surprising somebody at a terminal.
+PORT = 8090
+
 #: Where the page and its script live.
 WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -118,17 +129,19 @@ class Console:
     def look(self) -> dict:
         """Ask every plant, and say what came back. Reads only."""
         rows = [self._one(entry) for entry in listed(self.root)]
-        answered = sum(1 for r in rows if r["answered"])
+        answered = sum(1 for r in rows if r["state"] == "answered")
+        empty = sum(1 for r in rows if r["state"] == "empty")
         owned_now = sum(1 for r in rows if r["owned"] == "yes")
         claimed = sum(1 for r in rows if r["owned"] == "unknown")
-        totals = {"plants": len(rows), "answered": answered,
-                  "unknown": len(rows) - answered, "owned": owned_now,
+        totals = {"plants": len(rows), "answered": answered, "empty": empty,
+                  "unknown": len(rows) - answered - empty, "owned": owned_now,
                   "claimed_but_silent": claimed,
                   "observed": len(rows) - owned_now - claimed}
         return {
             "asked_at": datetime.now(UTC).isoformat(timespec="seconds"),
             "totals": totals,
             "says": (f"{totals['plants']} plants, {totals['answered']} answered, "
+                     f"{totals['empty']} answered but empty, "
                      f"{totals['unknown']} unknown"),
             "ownership_says": (
                 f"{totals['owned']} owned, {totals['claimed_but_silent']} recorded here "
@@ -152,6 +165,7 @@ class Console:
         pack_said = self._pack(plant.base).body if answer.answered else None
         pack_said = pack_said or {}
         schema = pack_said.get("schema") or {}
+        line = pack_said.get("line") or {}
         modules = pack_said.get("modules") or {}
         return {
             "name": plant.name,
@@ -159,11 +173,20 @@ class Console:
             "base": plant.base,
             "about": plant.about,
             "answered": answer.answered,
-            # Never "down". A plant nobody heard from is a plant nobody
-            # heard from, and that is a different fact from a plant that
-            # said it was stopping.
-            "state": "answered" if answer.answered else "unknown",
+            # Three states. Never "down": a plant nobody heard from is a
+            # plant nobody heard from, and that is a different fact from a
+            # plant that said it was stopping. And never "answered" for a
+            # plant that has just told us it has no schema or no machines -
+            # that one is `empty`, which is the state a person who has just
+            # built a fleet most needs to see. The predicate lives in
+            # `observe.is_empty`, so this page and `fsmes fleet list`
+            # cannot disagree about which plants are empty - and it is in
+            # `observe` and not in `commands` because this file may not
+            # import a verb.
+            "state": ("empty" if observe.is_empty(pack_said) else "answered"
+                      ) if answer.answered else "unknown",
             "why": answer.why,
+            "empty_because": observe.empty_because(pack_said) if answer.answered else "",
             "owned": owned_state,
             "ownership": why,
             "profile": (said or {}).get("profile"),
@@ -179,6 +202,11 @@ class Console:
             # behind.
             "schema_at_head": schema.get("at_head"),
             "schema_answered": schema.get("answered"),
+            # How many machines, and whether the plant could count them at
+            # all. `None` with `line_answered` False is a plant that could
+            # not look, which is not a plant with nothing on it.
+            "line_equipment": line.get("equipment"),
+            "line_answered": line.get("answered"),
             "modules_on": modules.get("on"),
             "modules_off": modules.get("off"),
             "modules_total": modules.get("total"),

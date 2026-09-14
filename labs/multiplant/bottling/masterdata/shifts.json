@@ -1,0 +1,16 @@
+[
+  {
+    "code": "DAY",
+    "name": "Day shift",
+    "starts": "06:00",
+    "ends": "18:00",
+    "days": "1111111"
+  },
+  {
+    "code": "NIGHT",
+    "name": "Night shift",
+    "starts": "18:00",
+    "ends": "06:00",
+    "days": "1111111"
+  }
+]

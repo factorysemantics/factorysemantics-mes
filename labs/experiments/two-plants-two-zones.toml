@@ -43,12 +43,9 @@ measure = ["booking", "downtime", "oee"]
 # analysis is issued. Proven legal on the finewire pack already - `[words]`
 # renames a label on a screen and `fsmes pack check` refuses it the moment it
 # tries to rename a state, a KPI, a role or an event kind.
-# Kansas City's line is the product's own reference line, so its pack carries
-# no master data and a plant built from the pack alone would have no machines.
-# A pack may never name a script (decision 0022); a plan is not a pack. See the
-# note on the same table in one-line-bad-hour.toml.
-[init.bottling]
-script = "../multiplant/bottling/init.py"
+# Both packs carry their own master data, so neither needs an `[init]` table.
+# Kansas City's did not until 2026-09-14 - its line is the product's own
+# reference line - and the note in one-line-bad-hour.toml says what that cost.
 
 [overlay.machining.modules]
 serialization = false

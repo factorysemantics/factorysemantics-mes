@@ -1,0 +1,39 @@
+[
+  {
+    "code": "RT-BOTTLE",
+    "name": "Fill and Palletise Bottles",
+    "material": "FG-BOTTLE",
+    "operations": [
+      {
+        "seq": 10,
+        "name": "Load",
+        "equipment": "LD01"
+      },
+      {
+        "seq": 20,
+        "name": "Denest",
+        "equipment": "RD01"
+      },
+      {
+        "seq": 30,
+        "name": "Wash",
+        "equipment": "WASH01"
+      },
+      {
+        "seq": 40,
+        "name": "Inspect",
+        "equipment": "QI01"
+      },
+      {
+        "seq": 50,
+        "name": "Fill",
+        "equipment": "FILL01"
+      },
+      {
+        "seq": 60,
+        "name": "Palletise",
+        "equipment": "PAL01"
+      }
+    ]
+  }
+]

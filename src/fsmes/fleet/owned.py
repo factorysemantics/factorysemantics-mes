@@ -319,6 +319,22 @@ WRITE_VERBS = ("create", "start", "stop", "apply")
 #: live, at the moment it is asked.
 WHILE_SILENT = ("start", "apply")
 
+#: Verbs a plant that is not answering may take **when a person asks for
+#: them twice**, with `--force`. Only `stop`, and only because the state it
+#: is for is real: on 2026-09-14 a plant stopped answering `/health` while
+#: still answering `/pack`, so `stop` refused - and the only way out of a
+#: plant this installation had created, was still running, and could no
+#: longer be talked to was `kill`.
+#:
+#: Forcing weakens nothing that matters. Conditions 1 and 3 still hold in
+#: full, and condition 2 is still corroborated - by the instance id in the
+#: plant's own data directory, the half of it that is readable while the
+#: plant is silent, exactly as `start` and `apply` corroborate it. What is
+#: given up is liveness, and liveness was never the safety property:
+#: ownership is. A plant this installation did not create is refused with
+#: `--force` exactly as it is without it.
+WHILE_SILENT_IF_FORCED = ("stop",)
+
 #: Verbs that need this process to be able to signal the plant's own
 #: processes. There is no remote start in this product and this decision
 #: adds none.
@@ -361,13 +377,18 @@ def agrees(entry: Entry, said: dict | None) -> tuple[bool, str]:
                   "installation gave it")
 
 
-def gate(verb: str, name: str, *, data_dir: Path, ask=None) -> Ownership:
+def gate(verb: str, name: str, *, data_dir: Path, ask=None, force: bool = False) -> Ownership:
     """Refuse unless this installation owns this plant. Called first, always.
 
     Every write path in `fsmes.fleet.commands` begins with this call, and a
     test reads the source to hold it there. It raises `NotOwned` with one
     sentence naming the condition that failed, and returns an `Ownership`
     saying what the plant said about itself when it did.
+
+    `force` lets exactly one verb through exactly one refusal: `stop`, on a
+    plant that is silent. See `WHILE_SILENT_IF_FORCED`. It is never a way
+    past ownership, and a plant this installation did not create refuses the
+    same either way.
     """
     if verb not in WRITE_VERBS:
         raise ValueError(f"{verb!r} is not a write verb; the gate knows {WRITE_VERBS}.")
@@ -429,11 +450,25 @@ def gate(verb: str, name: str, *, data_dir: Path, ask=None) -> Ownership:
             f"{name} did not answer ({answer.why}), and it is on another host, so nothing "
             "here can corroborate that it is the plant this installation created. Unknown "
             "is not owned.")
-    if verb not in WHILE_SILENT:
+    if verb not in WHILE_SILENT and not (force and verb in WHILE_SILENT_IF_FORCED):
+        offer = ""
+        if verb in WHILE_SILENT_IF_FORCED and entry.control == LOCAL:
+            from fsmes import plant as plants
+
+            running = plants.pids_in(Path(entry.data_dir), name)
+            if running:
+                offer = (f" Its pid file names {len(running)} process(es) that are still "
+                         f"alive ({', '.join(str(p) for p in running)}), so this is a plant "
+                         f"that is running and cannot be talked to. `--force` stops it: "
+                         f"what this installation owns it may stop, and ownership is the "
+                         f"safety property here, not liveness.")
+            else:
+                offer = (" Nothing in its pid file is alive, so there may be nothing left "
+                         "to stop; `--force` clears the record either way.")
         raise NotOwned(
             f"{name} did not answer ({answer.why}). `{verb}` acts on a running plant and "
             "this one is not saying anything; a plant is never managed through a gap in "
-            "which nobody can see it.")
+            f"which nobody can see it.{offer}")
     on_disk = read_instance(Path(entry.data_dir), name)
     if on_disk is None:
         raise NotOwned(

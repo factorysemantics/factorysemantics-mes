@@ -1,0 +1,42 @@
+[
+  {
+    "code": "PM-FILL-SEALS",
+    "name": "Replace filler valve seals",
+    "equipment": "FILL01",
+    "trigger": "runtime_hours",
+    "interval": 4.0,
+    "expected_minutes": 45.0
+  },
+  {
+    "code": "PM-LD-BELT",
+    "name": "Inspect and tension loader belt",
+    "equipment": "LD01",
+    "trigger": "runtime_hours",
+    "interval": 6.0,
+    "expected_minutes": 20.0
+  },
+  {
+    "code": "PM-PAL-GREASE",
+    "name": "Grease palletiser arm",
+    "equipment": "PAL01",
+    "trigger": "calendar_days",
+    "interval": 7.0,
+    "expected_minutes": 30.0
+  },
+  {
+    "code": "PM-RD-BEARING",
+    "name": "Check denester bearing play",
+    "equipment": "RD01",
+    "trigger": "runtime_hours",
+    "interval": 8.0,
+    "expected_minutes": 90.0
+  },
+  {
+    "code": "PM-WASH-NOZZLE",
+    "name": "Descale washer nozzles",
+    "equipment": "WASH01",
+    "trigger": "produced_qty",
+    "interval": 20000.0,
+    "expected_minutes": 60.0
+  }
+]

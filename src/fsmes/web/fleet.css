@@ -55,6 +55,10 @@ td .why { color: var(--muted); display: block; font-size: 12px; max-width: 46ch;
 .pill.no { color: var(--muted); }
 .pill.unknown { color: var(--unknown); border-color: var(--unknown); }
 .pill.answered { color: var(--running); border-color: var(--running); }
+/* Answered, and empty. Its own colour because it is its own state: the
+   plant is up and there is nothing in it. Idle rather than alarming -
+   a pack that carries no master data is allowed to make one. */
+.pill.empty { color: var(--idle); border-color: var(--idle); }
 .pill.drift { color: var(--idle); border-color: var(--idle); }
 .pill.shadow { color: var(--accent); border-color: var(--accent); }
 

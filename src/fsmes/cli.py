@@ -15,6 +15,11 @@ import typer
 
 from fsmes import __version__
 from fsmes.config import Settings, get_settings
+
+# The console's default port, from the module that serves it rather than
+# typed again here: a Typer default is read at import time, and two spellings
+# of one port is how the console ended up inside the simulator's range.
+from fsmes.fleet.console import PORT as CONSOLE_PORT
 from fsmes.logging import setup_logging
 
 app = typer.Typer(
@@ -1671,13 +1676,25 @@ def fleet_start(
 def fleet_stop(
     name: str = typer.Argument(..., help="A plant this installation owns."),
     root: Path | None = typer.Option(None, help="Repository root (default: found from cwd)."),
+    force: bool = typer.Option(False, "--force", help=(
+        "Stop a plant this installation created even though it has stopped "
+        "answering. Ownership still has to hold.")),
 ) -> None:
-    """Stop an owned plant. Refuses any plant this installation did not create."""
+    """Stop an owned plant. Refuses any plant this installation did not create.
+
+    A plant that has stopped answering `/health` is refused without
+    `--force`, and the refusal says whether its pid file still names live
+    processes. That is the state a plant gets into when it is running and
+    can no longer be talked to, and before 2026-09-14 the only way out of it
+    was `kill`. `--force` is the way out. It gives up **liveness**, never
+    ownership: a plant this installation did not create is refused with the
+    flag exactly as it is without it.
+    """
     from fsmes.fleet import commands
     from fsmes.fleet import owned as ownership
 
     try:
-        commands.stop(name, root=_fleet_root(root), echo=typer.echo)
+        commands.stop(name, root=_fleet_root(root), force=force, echo=typer.echo)
     except (ownership.NotOwned, commands.Refused, ownership.OwnershipError) as exc:
         _refused(exc)
 
@@ -1730,7 +1747,7 @@ def fleet_status(
 @fleet_app.command("console")
 def fleet_console(
     host: str = typer.Option("127.0.0.1", help="Interface to serve the page on."),
-    port: int = typer.Option(8100, help="Port to serve the page on."),
+    port: int = typer.Option(CONSOLE_PORT, help="Port to serve the page on."),
     root: Path | None = typer.Option(None, help="Repository root (default: found from cwd)."),
 ) -> None:
     """Serve the fleet console: one page that observes every plant in the list.

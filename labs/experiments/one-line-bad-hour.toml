@@ -34,11 +34,12 @@ speed = 20
 
 measure = ["booking", "downtime", "oee"]
 
-# This pack carries no master data. Its line is the product's own reference
-# line - the six stations `fsmes seed-kepsim` builds - so `plant.toml` names no
-# `masterdata` directory and a plant built from the pack alone would have no
-# machines at all. A pack may never name a script (decision 0022); a lab plan
-# is not a pack, and the runner already takes one from a lab tool. So the plan
-# names the script this lab has always had, and the pack stays as it is.
-[init.bottling]
-script = "../multiplant/bottling/init.py"
+# No `[init.bottling]` any more, and the reason is worth keeping. This pack
+# carried no master data until 2026-09-14 - its line is the product's own
+# reference line, the six stations `fsmes seed-kepsim` builds - so a plant
+# built from the pack alone had no machines, and this plan named the lab
+# script that seeded them. What that same gap did everywhere a plan was not
+# involved: `fsmes fleet create` and `fsmes plant bottling init` built empty
+# plants, and `fsmes score bottling` died on its first read. The line is in
+# `../multiplant/bottling/masterdata/` now, so the pack alone is enough and a
+# plan naming a script would be naming one that no longer exists.

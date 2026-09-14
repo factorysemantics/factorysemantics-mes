@@ -201,7 +201,68 @@ def pid_file(root: Path, name: str) -> Path:
     return data_dir(root) / f"{name}.pids"
 
 
+def _alive_on_windows(pid: int) -> bool:
+    """Ask Windows whether this process is running, without touching it.
+
+    `OpenProcess` with `PROCESS_QUERY_LIMITED_INFORMATION` is the least
+    authority that can answer, and it fails for a pid that is gone *and* for
+    one this account may not look at - which is the same answer POSIX gives
+    below, where a process another user owns raises `PermissionError` and is
+    reported as not ours to manage.
+
+    One honest limitation: a process that exited with code 259 is
+    indistinguishable from a running one, because 259 is `STILL_ACTIVE`. That
+    is a Windows API wart, it is a value nothing here ever exits with, and
+    reporting a stopped plant as running is the safe direction of the two.
+    """
+    import ctypes
+    from ctypes import wintypes
+
+    PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+    STILL_ACTIVE = 259
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+    handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+    if not handle:
+        return False
+    try:
+        code = wintypes.DWORD()
+        if not kernel32.GetExitCodeProcess(handle, ctypes.byref(code)):
+            return False
+        return code.value == STILL_ACTIVE
+    finally:
+        kernel32.CloseHandle(handle)
+
+
 def _alive(pid: int) -> bool:
+    """Is this process running? **Asked without touching it.**
+
+    `os.kill(pid, 0)` is the POSIX idiom for exactly this question, and it is
+    not portable in the way it looks. On Windows `signal.CTRL_C_EVENT` is
+    `0`, so `os.kill(pid, 0)` does not probe anything: CPython takes it as a
+    console-control signal and calls `GenerateConsoleCtrlEvent`, which sends
+    **Ctrl-C to that process's console group**. Every command that only wanted
+    to know whether a plant was running - `fsmes plant status`, `fsmes fleet
+    list` and `fsmes fleet status` through `supervisor`, and the refusal
+    `fsmes fleet stop` prints - would have interrupted the plant it was
+    reporting on, and anything else sharing that console with it.
+
+    Windows is a first-class target here: this MES is expected to run on plant
+    PCs. Found on 2026-09-14, by a test that wrote its own pid into a pid file
+    and watched both Windows CI cells Ctrl-C pytest half way through the run.
+    """
+    if pid <= 0:
+        return False
+    if sys.platform == "win32":
+        try:
+            return _alive_on_windows(pid)
+        except OSError:
+            # Same answer the POSIX branch gives when it cannot ask. A status
+            # command that raises because a probe failed is worse than one
+            # that reports a plant it could not see as not running.
+            return False
     try:
         os.kill(pid, 0)
     except (ProcessLookupError, PermissionError):
@@ -211,12 +272,25 @@ def _alive(pid: int) -> bool:
     return True
 
 
-def running_pids(root: Path, name: str) -> list[int]:
-    f = pid_file(root, name)
+def pids_in(where: Path, name: str) -> list[int]:
+    """The live processes this plant's pid file names, read from the data
+    directory itself.
+
+    `running_pids` below asks the same question of a *root*, and works out
+    the data directory from the fleet file. Something holding an ownership
+    entry already knows the directory and must not re-derive it: the entry
+    records where that plant's data actually is, and a second guess is how a
+    fleet command ends up reading another plant's pid file.
+    """
+    f = Path(where) / f"{name}.pids"
     if not f.is_file():
         return []
     pids = [int(x) for x in f.read_text(encoding="utf-8").split() if x.strip().isdigit()]
     return [p for p in pids if _alive(p)]
+
+
+def running_pids(root: Path, name: str) -> list[int]:
+    return pids_in(pid_file(root, name).parent, name)
 
 
 def dashboard_url(cfg: dict) -> str:

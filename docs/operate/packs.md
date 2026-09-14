@@ -17,7 +17,8 @@ fsmes pack migrate plants.toml --plant finewire --out packs/finewire
 packs/<name>/
   plant.toml        identity, clock, profile, modules, words   (required)
   tag_map.json      which machines exist and what their tags mean
-  masterdata/       equipment, materials, routings — data, not a script
+  masterdata/       equipment, materials, BOM, routings, specs, lots, orders,
+                    maintenance plans, shifts — data, not a script
   mappings/         inbound columns, inbound SQL
   line_layout.json  optional geometry for the line view
   README.md         what this plant is, for the next engineer
@@ -77,11 +78,21 @@ Usable, as far as a file can say: 9 file(s) read, nothing refused, 4 thing(s) on
 
 ## `fsmes pack apply`
 
-Check, then the database, then the data, then the receipt. It is the one command that **becomes** the plant it acts on: it puts the pack's settings into its own environment, so the schema it upgrades and the rows it writes are that plant's. The database it adopts is the pack's `[storage] database_url` with the password put back from the file the pack names — the same URL `fsmes pack status` and `fsmes db-status --pack` read, so applying a pack and asking about it cannot land on two different databases.
+Check, then the database, then the data, then the receipt. It is the one command that **becomes** the plant it acts on: it puts the pack's settings into its own environment, so the schema it upgrades and the rows it writes are that plant's.
+
+**Which database, on a line of its own, before anything changes.** Three answers, in this order and never a fourth:
+
+1. the pack's own `[storage] database_url`, with the password put back from the file `database_password_file` names — a plant that states where its data lives is the authority on it;
+2. `MES_DATABASE_URL`, when whoever invoked the command set it — that is the variable a deployment points at real data, and `fsmes plant <name> init` sets it before it calls this;
+3. otherwise `<data dir>/<plant>.db`, **the file its fleet gives it** — the same path the plant is started against.
+
+Never this process's own default. Until 2026-09-14 that is exactly what a pack naming no database got, which is how `fsmes fleet create` came to migrate and seed a stray `./fsmes.db` and then record ownership of a plant that had never been created. A database nobody named is not this plant's.
 
 **Pack before database.** A schema migration may need a value the pack now carries, so the pack is applied first — and `fsmes pack apply` runs the migrations itself, in that order.
 
-Master data is seeded from `masterdata/`: `equipment.json`, `materials.json`, `routings.json`, `quality_specs.json`, `lots.json`, `work_orders.json`. An entry whose code already exists is counted as present and **left alone, never updated** — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing.
+Master data is seeded from `masterdata/`, one file per kind: `equipment.json`, `materials.json`, `bom.json`, `routings.json`, `quality_specs.json`, `lots.json`, `work_orders.json`, `maintenance_plans.json`, `shifts.json`. An entry whose code already exists is counted as present and **left alone, never updated** — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which `fsmes fleet list` and the console now show as *answered, but empty*.
+
+**It refuses to seed into a database that is not at head.** The migration above normally leaves nothing to say, and this is the assertion that it did. Rows written through the ORM into a half-migrated file leave a database with some of this product's tables and no Alembic stamp — which the migrator then disowns outright, because a schema it cannot identify is one it will not guess at. That happened once, on 2026-09-14, and left a plant no command could take forward.
 
 Rated cycle times are not repeated in the master data: leave `ideal_cycle_seconds` out and it is read from the pack's own tag map. OEE performance is ideal cycle × count ÷ runtime, so a rate that drifted from the line it describes produces a number that means nothing.
 
@@ -103,7 +114,7 @@ Drift is measured against the fingerprint `apply` recorded: a hash of every file
 
 **The `database` line says which database the `schema` line is about**, and it is this pack's — `[storage] database_url`, with the password read from the file `database_password_file` names. Until 2026-09-14 the schema line was about whatever database the *process* was configured for, which is how this command once reported "never migrated" about a plant `fsmes pack apply` had migrated a minute earlier. The same answer is what the running plant returns on `GET /pack` and what `fsmes fleet status` prints, from one function, so the three cannot disagree.
 
-A pack that names no `[storage] database_url` leaves the choice of file to its fleet, so both lines say **unknown** and name `--plant` — this command will not answer about a default nobody asked for. A database that did not answer is reported as one that did not answer, never as one that is empty.
+A pack that names no `[storage] database_url` leaves the choice of file to its fleet, so both lines say **unknown** and name `--plant` — this command will not answer about a default nobody asked for. Deliberately narrower than `fsmes pack apply`, whose third answer is the file the fleet gives the plant: finding that file means resolving a data directory, and with no `--data-dir` that walks up from the working directory and *creates* one. A command that reads must not make a directory in order to have something to report. A database that did not answer is reported as one that did not answer, never as one that is empty.
 
 A plant that has never been applied says **never** rather than answering "no drift" — those are different facts, and the second one is a lie about the first. Exits non-zero on drift, on a database behind head, and on a database it could not reach or could not identify, so a deployment script can act on the answer.
 

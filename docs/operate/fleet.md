@@ -52,15 +52,46 @@ The thing the strict reading protects stays protected: **no verb reaches into a 
 
 ### `fsmes fleet create <pack>`
 
-Checks the pack and refuses on failure; makes the fleet's data directory; writes the plant its instance id; applies the pack (schema to head, then the master data the pack carries); and records the ownership last. It **starts nothing** — the plant exists after this, and runs when a person says so.
+Checks the pack and refuses on failure; makes the fleet's data directory; writes the plant its instance id; applies the pack — **the pack's settings, the schema to head, the master data the pack carries, and the accounts it declares** — adds the accounts a pack that declares none still needs, and records the ownership last. It **starts nothing** — the plant exists after this, and runs when a person says so.
 
-The order matters. The instance id is written *before* the pack is applied, so a plant that half-applies is still a plant this installation can prove it made; and the ownership entry is written *last*, because an entry for a plant that was never built is a claim about a plant that is not there.
+That is the whole of `fsmes plant <name> init` and not a part of it. Until 2026-09-14 it was a part: `create` applied the pack and stopped, and it applied it to *this process's* database rather than to the plant's, because `fsmes pack apply` only named a database when the pack named one of its own. What it built was a stray file beside the working directory and an ownership entry for a plant that did not exist — which then started, answered `/health` with `ok`, was counted *answered* by the console, and returned **500 to every sign-in**. If that shape sounds familiar in your own fleet, `fsmes db-status --plant <name>` is the question that settles it.
+
+It says which database it is about, on a line of its own, before it changes anything:
+
+```
+  machining: 13 settings from the pack
+  machining: database sqlite:///.data/machining.db (the file this fleet gives machining, in .data)
+      Database schema created at b1f4c73a9e08.
+      equipment: 7 made, 0 already there
+      ...
+      account ADMIN (admin): created
+  machining: schema at head, pack applied, accounts in place
+```
+
+Where that database comes from, in this order and never a fourth: the pack's own `[storage] database_url`; `MES_DATABASE_URL`, if you set it; otherwise `<data dir>/<plant>.db`, the file the fleet gives it — which is the same path the plant is started against. Never this process's default, because a database nobody named is not this plant's.
+
+The order matters. The instance id is written *before* the pack is applied, so a plant that half-applies is still a plant this installation can prove it made; and the ownership entry is written *last*, because an entry for a plant that was never built is a claim about a plant that is not there. So a pack whose database cannot be reached, or whose schema the migrator will not identify, **refuses before anything is recorded as owned**.
+
+A pack that carries no master data builds a plant with no machines on it. That is allowed, it is not a failure, and `fsmes fleet list` and the console now say so — see *answered, but empty* below.
 
 `fsmes plant` reads the fleet file (the list of packs), not the ownership file, so `create` prints the line to add to it if you want the plant to show up there too.
 
 ### `fsmes fleet start|stop <name>`
 
 The ownership gate, then the machinery that already runs plants (`fsmes plant <name> start|stop`). Start and stop are local process control: there is no remote start in this product and this decision adds none.
+
+**`fsmes fleet stop <name> --force`.** `stop` acts on a running plant, so a plant that has stopped answering `/health` is refused: a plant is never managed through a gap in which nobody can see it. There is one state where that leaves a person stuck, and it is real — on 2026-09-14 a plant stopped answering `/health` while still answering `/pack`, still running, and the only way out was `kill`. The refusal now says whether the pid file still names live processes, and names them:
+
+```
+machining did not answer (did not answer (timed out)). `stop` acts on a running
+plant and this one is not saying anything; a plant is never managed through a
+gap in which nobody can see it. Its pid file names 2 process(es) that are still
+alive (81422, 81423), so this is a plant that is running and cannot be talked
+to. `--force` stops it: what this installation owns it may stop, and ownership
+is the safety property here, not liveness.
+```
+
+`--force` gives up **liveness and nothing else**. Conditions 1 and 3 still hold in full, and condition 2 is still corroborated — by the instance id in the plant's own data directory, the half of it that is readable while the plant is silent, exactly as `start` and `apply` corroborate it. A plant this installation did not create is refused with the flag exactly as it is without it, and so is a plant that has taken its ownership back by deleting that id. It is the only verb in this product that takes the flag.
 
 **Nothing starts a plant on its own.** There is no scheduler, no reconciliation loop, and no daemon that notices a stopped plant and brings it back. Desired state stays intent displayed as drift, never intent enforced.
 
@@ -70,9 +101,25 @@ The ownership gate, then the machinery that already runs plants (`fsmes plant <n
 
 ### `fsmes fleet status <name>` and `fsmes fleet list`
 
-Reads. `status` says whether the plant is owned and **why** — the same question every verb asks, answered before you hit it. `list` states its total: *"N plants, M answered, K unknown; J owned"*. The number recorded is never the number seen.
+Reads. `status` says whether the plant is owned and **why** — the same question every verb asks, answered before you hit it. `list` states its total: *"N plants, M answered, K answered but empty, L unknown; J owned"*. The number recorded is never the number seen.
 
-A plant that did not answer is **unknown**. Never healthy, never down.
+Three states, and the distinctions are the point:
+
+| State | What it means |
+|---|---|
+| `answered` | the plant answered, and has a schema and machines |
+| `empty` | the plant answered, and **said** it has no schema or no machines |
+| `unknown` | nobody heard from it. Never healthy, never down |
+
+*Answered, but empty* arrived on 2026-09-14, because the state it names had been invisible: a plant with a schema at head, an account that signs in and no equipment at all looks healthy from every other angle, and the person it matters to is the one who has just built the fleet. It comes from what the plant said and from nothing else — a plant that does not answer `/pack`, or whose database did not answer, stays `answered`, because *unasked* is not *nothing there*.
+
+```
+2 plants, 1 answered, 1 answered but empty, 0 unknown; 2 owned.
+  bottling       owned     answered  http://127.0.0.1:8010
+  machining      owned     empty     http://127.0.0.1:8020   no line: this plant has no machines on it
+```
+
+The usual cause of `no line` is a pack that carries no master data — `fsmes pack apply` says *"master data: this pack carries none, so nothing was seeded"* when that is so. The usual cause of `no schema` is a plant whose database was never migrated; `fsmes db-status --plant <name>` says more.
 
 ### `fsmes fleet plan`
 
@@ -91,7 +138,7 @@ It states its total the same way `list` does: how many packs the fleet lists, an
 ## The console
 
 ```bash
-fsmes fleet console --port 8100        # loopback; one page, at http://127.0.0.1:8100
+fsmes fleet console                    # loopback; one page, at http://127.0.0.1:8090
 ```
 
 One page. Every plant in the list — the packs this machine runs, the plants this installation created, and the `[[observe]]` entries a person added — each polled on `/health` and `/pack`, one row each:
@@ -100,15 +147,18 @@ One page. Every plant in the list — the packs this machine runs, the plants th
 |---|---|
 | plant, label | the plant's own `/health`, not the address it was dialled at |
 | owned | `yes`, `no`, or `unknown` while the plant is silent |
-| answering | `answered` or `unknown` |
+| answering | `answered`, `answered, empty`, or `unknown` |
 | profile, clock | `/health` — and a defaulted zone says it was defaulted |
 | shadow | `/health` |
 | pack, drift | `/pack` — and *never applied* is not *no drift* |
 | schema | `/pack`, against this build's head |
+| line | `/pack` — how many machines this plant has, or *unknown* if it could not count them |
 | modules | `/pack` — how many this plant serves, and which it does not |
 | last answered | when this console last heard from it |
 
-At the top: **"3 plants, 2 answered, 1 unknown"**, and below it how many are owned, how many are recorded here but not answering, and how many are only watched. The number in the list is never the number seen.
+At the top: **"3 plants, 2 answered, 0 answered but empty, 1 unknown"**, and below it how many are owned, how many are recorded here but not answering, and how many are only watched. The number in the list is never the number seen.
+
+**The port is 8090, and that is not arbitrary.** It was 8100 until 2026-09-14, which is the first port `fsmes score` and `fsmes sweep` hand an ephemeral plant — so a scored run started in the same minute as a console took the console's port, and what answered on it afterwards was a plant's sign-in page wearing the console's address. The console's port and the simulator's range are named constants now, and `tests/test_fleet_console.py` fails if they ever overlap again.
 
 ### What the page cannot do, and how to check that yourself
 

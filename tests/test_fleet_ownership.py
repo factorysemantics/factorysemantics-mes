@@ -23,6 +23,7 @@ by a recorder - so what is tested is that an unowned plant never reaches it.
 """
 
 import ast
+import contextlib
 import os
 import shutil
 from pathlib import Path
@@ -72,11 +73,23 @@ def fleet(tmp_path, monkeypatch):
     plants.environment.cache_clear()
     monkeypatch.setenv("MES_DATABASE_URL", f"sqlite:///{(tmp_path / 'plant.db').as_posix()}")
     monkeypatch.setenv("MES_PLANT_TIMEZONE", "UTC")
+    # Two settings that are about this database being a **file**, which the
+    # rest of the suite's is not. `MES_TAG_RETENTION_DAYS=0` switches off the
+    # hourly pruner the API's lifespan starts: it opens its own session in a
+    # worker thread through `asyncio.to_thread`, `task.cancel()` does not stop
+    # a thread already inside a SQLite `BEGIN IMMEDIATE`, and against a file
+    # it contends with whatever the test is actually doing. Nothing here tests
+    # retention. And the engine is disposed rather than dropped, because on
+    # Windows an open handle is a file `tmp_path` cannot delete.
+    monkeypatch.setenv("MES_TAG_RETENTION_DAYS", "0")
     monkeypatch.setattr(observe, "health", silent)
     yield tmp_path
     os.environ.clear()
     os.environ.update(before)
     plants.environment.cache_clear()
+    if get_engine.cache_info().currsize:
+        with contextlib.suppress(Exception):
+            get_engine().dispose()
     for cache in (get_settings, get_engine, get_sessionmaker):
         cache.cache_clear()
 
@@ -333,8 +346,9 @@ def test_a_list_states_its_total_and_calls_silence_unknown(created):
     _entry, fleet = created
     said: list[str] = []
     result = commands.listing(root=fleet, echo=said.append)
-    assert result["totals"] == {"plants": 1, "answered": 0, "unknown": 1, "owned": 1}
-    assert said[0] == "1 plants, 0 answered, 1 unknown; 1 owned."
+    assert result["totals"] == {"plants": 1, "answered": 0, "empty": 0,
+                                "unknown": 1, "owned": 1}
+    assert said[0] == "1 plants, 0 answered, 0 answered but empty, 1 unknown; 1 owned."
     assert "unknown" in said[1] and "down" not in " ".join(said)
 
 
@@ -374,7 +388,11 @@ def test_a_plant_started_by_the_fleet_is_told_where_its_data_directory_is(fleet)
 #: Reading a pack is not acting, which is why `create` may learn a plant's
 #: name before the gate can be asked about it.
 ACTS = ("plants.start", "plants.stop", "plants.run", "applier.apply", "owned.remember",
-        "owned.save", "write_text", "mkdir", "unlink", "subprocess")
+        "owned.save", "write_text", "mkdir", "unlink", "subprocess",
+        # Creating accounts is acting on a plant, and it is reached through a
+        # private helper - which `_functions` does not walk into - so the name
+        # of the call is listed here instead.
+        "_lab_accounts", "auth.create_user")
 
 #: Functions here that neither write to a plant nor read one: pure helpers.
 #: Named so that a new function has to be classified by whoever adds it.
@@ -425,3 +443,185 @@ def test_every_write_verb_asks_the_gate_before_it_does_anything():
             assert line > min(gates), (
                 f"{name} calls {call} on line {line}, before the ownership gate on line "
                 f"{min(gates)}. The gate is called first, always.")
+
+
+# ------------------------------------------- a plant that is running and mute
+
+
+def a_live_pid_file(fleet, name: str) -> int:
+    """This test process's own pid, written where the plant's would be.
+
+    Alive by definition, and nothing signals it: `plants.stop` is a recorder
+    in every test that gets this far, and `plants._alive` only *asks*.
+
+    That second half was not true on Windows until 2026-09-14, and this is the
+    line that found it. `_alive` used `os.kill(pid, 0)`; on Windows signal 0
+    is `CTRL_C_EVENT`, so asking whether this pid was alive sent Ctrl-C to
+    pytest's own console group and killed the run half way through. The fix is
+    in `plants._alive`; the tests that hold it are at the bottom of this file.
+    """
+    where = commands.data_dir(fleet)
+    (where / f"{name}.pids").write_text(f"{os.getpid()}\n", encoding="utf-8")
+    return os.getpid()
+
+
+def test_a_silent_plant_whose_processes_are_alive_is_refused_with_the_reason_and_the_way_out(
+        created):
+    """The state the lab could only escape with `kill`: `/health` stopped
+    answering while the plant was still running, so `stop` refused - and said
+    nothing about the pid file it could see."""
+    entry, fleet = created
+    pid = a_live_pid_file(fleet, entry.name)
+    with pytest.raises(ownership.NotOwned) as refusal:
+        ownership.gate("stop", entry.name, data_dir=commands.data_dir(fleet))
+    why = str(refusal.value)
+    assert "did not answer" in why
+    assert str(pid) in why and "still alive" in why
+    assert "--force" in why
+
+
+def test_forcing_a_stop_reaches_the_process_control_and_says_why_it_did(created, monkeypatch):
+    """`--force` gives up liveness, and only liveness."""
+    entry, fleet = created
+    a_live_pid_file(fleet, entry.name)
+    done = recorded(monkeypatch)
+    lines: list[str] = []
+    commands.stop(entry.name, root=fleet, force=True, echo=lines.append)
+    assert done == ["stop machining"]
+    assert any("stopping it anyway" in line for line in lines)
+    assert any("instance id" in line for line in lines)
+
+
+def test_forcing_a_stop_never_reaches_a_plant_this_installation_does_not_own(fleet, monkeypatch):
+    """The flag is not a way past ownership, and there is no flag that is."""
+    done = recorded(monkeypatch)
+    with pytest.raises(ownership.NotOwned) as refusal:
+        commands.stop("somebody-elses-plant", root=fleet, force=True, echo=lambda _: None)
+    assert "no record of creating" in str(refusal.value)
+    assert done == []
+
+
+def test_forcing_a_stop_is_still_refused_when_the_plant_took_its_ownership_back(created):
+    """Condition 2 is corroborated by the id in the plant's data directory
+    while it is silent. Delete it and `--force` refuses like everything else."""
+    entry, fleet = created
+    where = commands.data_dir(fleet)
+    a_live_pid_file(fleet, entry.name)
+    ownership.instance_path(where, entry.name).unlink()
+    with pytest.raises(ownership.NotOwned) as refusal:
+        ownership.gate("stop", entry.name, data_dir=where, force=True)
+    assert "revokes ownership" in str(refusal.value)
+
+
+def test_only_stop_can_be_forced(fleet):
+    """`--force` exists for one state. Nothing else in this product takes it,
+    and a verb added to the forced list has to be argued for here."""
+    assert ownership.WHILE_SILENT_IF_FORCED == ("stop",)
+    assert not set(ownership.WHILE_SILENT) & set(ownership.WHILE_SILENT_IF_FORCED)
+
+
+# -------------------------------------------------- answered, but empty
+
+
+def test_a_plant_that_says_it_has_no_line_is_listed_as_empty_and_not_as_answered(created):
+    """The third state, from what the plant said and from nothing else."""
+    entry, fleet = created
+    ask = answering(plant=entry.name, instance_id=entry.instance_id)
+    empty = lambda where, **k: observe.Answer(  # noqa: E731
+        f"{where}/pack", True, status=200,
+        body={"schema": {"revision": "abc123", "head": "abc123", "at_head": True,
+                         "answered": True},
+              "line": {"equipment": 0, "answered": True}})
+    said: list[str] = []
+    result = commands.listing(root=fleet, echo=said.append, ask=ask, ask_pack=empty)
+    assert result["totals"] == {"plants": 1, "answered": 0, "empty": 1,
+                                "unknown": 0, "owned": 1}
+    assert said[0] == "1 plants, 0 answered, 1 answered but empty, 0 unknown; 1 owned."
+    assert "no line" in said[1]
+
+
+def test_a_plant_that_did_not_answer_its_pack_is_not_called_empty(created):
+    """Unasked is not empty. A plant too old to answer `/pack`, or one whose
+    database did not answer, stays `answered`."""
+    entry, fleet = created
+    ask = answering(plant=entry.name, instance_id=entry.instance_id)
+    quiet = lambda where, **k: observe.Answer(where, False, why="did not answer")  # noqa: E731
+    result = commands.listing(root=fleet, echo=lambda _: None, ask=ask, ask_pack=quiet)
+    assert result["totals"]["answered"] == 1 and result["totals"]["empty"] == 0
+
+
+def test_a_plant_whose_database_did_not_answer_is_not_called_empty(created):
+    entry, fleet = created
+    ask = answering(plant=entry.name, instance_id=entry.instance_id)
+    unreachable = lambda where, **k: observe.Answer(  # noqa: E731
+        f"{where}/pack", True, status=200,
+        body={"schema": {"revision": None, "head": None, "at_head": None,
+                         "answered": False},
+              "line": {"equipment": None, "answered": False}})
+    result = commands.listing(root=fleet, echo=lambda _: None, ask=ask, ask_pack=unreachable)
+    assert result["totals"]["answered"] == 1 and result["totals"]["empty"] == 0
+
+
+def test_a_plant_that_has_never_been_migrated_is_empty_and_says_which_kind(created):
+    entry, fleet = created
+    ask = answering(plant=entry.name, instance_id=entry.instance_id)
+    unmigrated = lambda where, **k: observe.Answer(  # noqa: E731
+        f"{where}/pack", True, status=200,
+        body={"schema": {"revision": None, "head": "abc123", "at_head": False,
+                         "answered": True},
+              "line": {"equipment": None, "answered": False}})
+    said: list[str] = []
+    commands.listing(root=fleet, echo=said.append, ask=ask, ask_pack=unmigrated)
+    assert "no schema" in said[1]
+
+
+# ------------------------------------- asking is not touching, on any platform
+
+
+def test_a_process_that_is_running_reads_as_alive():
+    assert plants._alive(os.getpid()) is True
+
+
+def test_a_process_that_has_gone_reads_as_dead():
+    """A pid that was real and is not any more. Reaped first, so nothing is
+    racing the answer."""
+    import subprocess
+    import sys
+
+    gone = subprocess.Popen([sys.executable, "-c", ""])
+    gone.wait()
+    assert plants._alive(gone.pid) is False
+
+
+def test_a_pid_that_is_not_a_pid_reads_as_dead():
+    """0 and the negatives are process *groups* to `os.kill`, not processes.
+    Signalling a whole group to find out whether one plant is running is the
+    mistake this guard exists to make impossible."""
+    assert plants._alive(0) is False
+    assert plants._alive(-1) is False
+
+
+def test_asking_whether_a_plant_is_running_never_signals_it_on_windows(monkeypatch):
+    """The bug this file found on 2026-09-14, held so it cannot come back.
+
+    `os.kill(pid, 0)` is the POSIX idiom for "does this process exist". On
+    Windows `signal.CTRL_C_EVENT` is `0`, so the same call is not a probe at
+    all: CPython reads it as a console-control signal and sends **Ctrl-C to
+    that process's console group**. `fsmes plant status`, `fsmes fleet list`
+    and the refusal `fsmes fleet stop` prints all ask this question about a
+    plant they have no business interrupting.
+
+    Runs on every platform, because the point is the branch rather than the
+    ctypes call behind it: on Windows nothing here may reach `os.kill`.
+    """
+    signalled: list[tuple] = []
+    probed: list[int] = []
+    monkeypatch.setattr(plants.os, "kill", lambda *args: signalled.append(args))
+    monkeypatch.setattr(plants.sys, "platform", "win32")
+    monkeypatch.setattr(plants, "_alive_on_windows", lambda pid: probed.append(pid) or True)
+
+    assert plants._alive(os.getpid()) is True
+    assert signalled == [], (
+        "checking whether a plant is running signalled it; on Windows signal 0 is "
+        "CTRL_C_EVENT and that is a Ctrl-C to its console group")
+    assert probed == [os.getpid()]

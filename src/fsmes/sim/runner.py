@@ -32,9 +32,15 @@ from fsmes.sim.score import score_run
 from fsmes.sim.truth import load_truth
 
 # Reserved so an ephemeral run can never collide with the persistent plants on
-# 8010/8020 and 4841/4842.
+# 8010/8020 and 4841/4842 - nor with the fleet console, which is a
+# long-running process a person leaves open and whose port was inside this
+# range until 2026-09-14. `fsmes.fleet.console.PORT` must stay outside it,
+# and `tests/test_fleet_console.py` is what makes that a rule rather than a
+# coincidence: a run that takes a console's port replaces the page somebody
+# is watching with a plant's sign-in screen, and nothing says it happened.
 API_RANGE = (8100, 8199)
 OPC_RANGE = (4900, 4999)
+
 
 def _whoami() -> str:
     try:
