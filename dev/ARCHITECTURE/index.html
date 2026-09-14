@@ -904,6 +904,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../operate/modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — switch a module off
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../operate/shadow-mode/" class="md-nav__link">
         
   
@@ -3201,6 +3229,7 @@ sim/               # LineSim configs + fixtures for CI
 tests/
 docs/
 </code></pre></div>
+<p><em>What the tree actually is, as of M8 piece 2:</em> there is no <code>packs/</code> directory and no <code>modules/</code> directory. <code>kernel/</code> holds two files of shared helpers; the kernel this page describes — master data, routings, orders, dispatch, execution, audit, auth — lives in <code>domain/</code> and <code>services/</code>. The list of modules is <strong><code>src/fsmes/modules.py</code></strong>, a registry naming each module's routers, screens, agent tools and tables; <code>api/app.py</code> and <code>mcp_server.py</code> mount and register from it, filtered by <code>MES_MODULES</code> (<a href="../operate/modules/">how-to</a>). The layering this page assumes is held by <code>tests/test_core_purity.py</code> rather than by the directory names.</p>
 <p>One repo, one installable dist to start; entry-point discovery means external modules are possible from day one, and splitting <code>fsmes-core</code>/<code>fsmes-quality</code>/... into separate dists is a later, mechanical step taken only when someone external needs it.</p>
 <h2 id="stack-proposed-with-reasons">Stack (proposed, with reasons)<a class="headerlink" href="#stack-proposed-with-reasons" title="Permanent link">&para;</a></h2>
 <table>
