@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ProductionPerformance>
+  <SegmentResponse>
+    <MessageKey>WO-2026-0041:op10</MessageKey>
+    <ID>WO-2026-0041</ID>
+    <ERPReference>4400041</ERPReference>
+    <Product>FG-COLA</Product>
+    <SegmentID>10</SegmentID>
+    <Description>Mix</Description>
+    <EquipmentID>MIX01</EquipmentID>
+    <WorkCenter>LINE1</WorkCenter>
+    <CostCenter>CC-PKG-1</CostCenter>
+    <InputQuantity>120</InputQuantity>
+    <GoodQuantity>118</GoodQuantity>
+    <ScrapQuantity>2</ScrapQuantity>
+    <WIPQuantity>0</WIPQuantity>
+    <SetupSeconds>900</SetupSeconds>
+    <MachineSeconds>2460</MachineSeconds>
+    <LabourSeconds>180</LabourSeconds>
+    <StartTime>2026-03-04T06:00:00</StartTime>
+    <EndTime>2026-03-04T06:41:00</EndTime>
+    <MaterialConsumedActual>
+      <MaterialLotID>LOT-SUGAR-001</MaterialLotID>
+      <MaterialDefinitionID>RAW-SUGAR</MaterialDefinitionID>
+      <Quantity>42</Quantity>
+      <EquipmentID>MIX01</EquipmentID>
+    </MaterialConsumedActual>
+    <MaterialConsumedActual>
+      <MaterialLotID>LOT-FLAVOR-001</MaterialLotID>
+      <MaterialDefinitionID>RAW-FLAVOR</MaterialDefinitionID>
+      <Quantity>6</Quantity>
+      <EquipmentID>MIX01</EquipmentID>
+    </MaterialConsumedActual>
+  </SegmentResponse>
+</ProductionPerformance>

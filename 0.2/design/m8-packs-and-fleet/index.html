@@ -1,0 +1,4412 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="An open-source, modular, agent-native Manufacturing Execution System.">
+      
+      
+      
+        <link rel="canonical" href="https://docs.factorysemantics.com/0.2/design/m8-packs-and-fleet/">
+      
+      
+        <link rel="prev" href="../STYLE/">
+      
+      
+        <link rel="next" href="../../decisions/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Design — M8 packs and fleet - FactorySemantics MES</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="deep-orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#m8-plant-packs-and-the-fleet-console" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="FactorySemantics MES" class="md-header__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            FactorySemantics MES
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Design — M8 packs and fleet
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="deep-orange"  aria-label="Dark"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="deep-orange"  aria-label="Light"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/factorysemantics/factorysemantics-mes" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    factorysemantics/factorysemantics-mes
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../plant/" class="md-tabs__link">
+          
+  
+  
+  Plant
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../operate/" class="md-tabs__link">
+          
+  
+  
+  Operate
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../develop/" class="md-tabs__link">
+          
+  
+  
+  Develop
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../agents/" class="md-tabs__link">
+          
+  
+  
+  Agents
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../releases/" class="md-tabs__link">
+          
+  
+  
+  Releases
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../LANDSCAPE/" class="md-tabs__link">
+          
+  
+  
+  History
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="FactorySemantics MES" class="md-nav__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    FactorySemantics MES
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/factorysemantics/factorysemantics-mes" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    factorysemantics/factorysemantics-mes
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plant
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plant
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/first-line/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — your first line
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_3" id="__nav_2_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — connect to Kepware
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-to — connect to Kepware
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../onboarding/GUIDE-IT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    For IT
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../onboarding/GUIDE-ENGINEERING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    For Engineering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/reading-oee/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — read OEE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/never-invent-production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — never invent production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operate
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Operate
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/first-plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — beside your existing MES
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/deploy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — deploy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/opc-readonly/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — read-only OPC UA commissioning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/packs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — plant packs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/registry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — plants from a fleet file
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the fleet this installation owns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — switch a module off
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/shadow-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — running beside an existing MES
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/shadow-scorecard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the shadow scorecard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/erpnext/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the ERPNext connector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/uns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the unified namespace (MQTT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/backup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — backup and restore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/tls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — TLS in front of the API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — upgrading between versions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/confirmation-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — the confirmation handoff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/erp-confirmations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — the ERP confirmation contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/inbound/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — inbound events from other systems
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — REST API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/first-week/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — the first week
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Develop
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Develop
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Develop
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/your-first-module/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — your first module
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/erp-connectors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — writing an ERP connector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../STYLE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Style
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — M8 packs and fleet
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — M8 packs and fleet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-what-a-plant-is-today" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. What a plant is, today
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. What a plant is, today">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-registry-actually-reads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the registry actually reads
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-cannot-be-configured-per-plant-at-all" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What cannot be configured per plant at all
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-the-two-packs-held-against-the-roadmaps-own-done-when" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. The two packs, held against the roadmap's own done when
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-the-two-guard-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. The two guard tests
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-site-scoping-the-question-is-half-answered-already" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Site scoping — the question is half-answered already
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-what-a-plant-already-emits-that-a-console-could-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. What a plant already emits that a console could read
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-proposal-what-a-plant-pack-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Proposal — what a plant pack is
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-proposal-the-deployment-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Proposal — the deployment profiles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-proposal-the-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Proposal — the console
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Proposal — the console">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#owned-and-how-a-tool-can-tell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Owned, and how a tool can tell
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-managing-an-owned-plant-is-and-what-it-is-not" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What managing an owned plant is, and what it is not
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-the-page-deliberately-does-not-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the page deliberately does not do
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-the-write-verbs-live-and-why-the-read-only-role-survives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the write verbs live, and why the read-only role survives
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-the-order-of-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. The order of work
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. The order of work">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#piece-1-a-plant-knows-its-own-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Piece 1 — a plant knows its own name
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#piece-2-the-guard-tests-and-the-layers-they-need" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Piece 2 — the guard tests, and the layers they need
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#piece-3-the-pack-format-its-validator-and-an-adversarial-second-pack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Piece 3 — the pack format, its validator, and an adversarial second pack
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#piece-4-the-console-and-the-fleet-tool-behind-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Piece 4 — the console, and the fleet tool behind it
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-risks-named" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Risks, named
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-findings-not-fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Findings, not fixed
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_7" id="__nav_4_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0001-apache-2-with-dco/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0001 — Apache-2.0 with the DCO, not copyleft, not a CLA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0002-kernel-and-modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0002 — A kernel plus modules that register through entry points
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0003-one-mcp-server/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0003 — One product MCP server with per-area tool files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0004-never-invent-production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0004 — Never invent production: the counter discipline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0005-plain-html-no-build-step/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0005 — Plain HTML, CSS and JS for the operator UI, no build step
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0006 — SQLite on a laptop, PostgreSQL in a plant, no historian product
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0007-fresh-public-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0007 — The public repository starts from a clean first commit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0008-erp-connectors-are-modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0008 — ERP connectors are modules inside the package
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0009-organisation-not-personal-account/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0009 — The project lives in a GitHub organisation named factorysemantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0010-github-discussions-only/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0010 — GitHub Discussions is the only community venue
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0011-mkdocs-material-generated-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0011 — MkDocs Material, with the developer reference generated from the code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0012-contributor-covenant-3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0012 — Contributor Covenant 3.0 as the code of conduct
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0013-governance-is-one-page/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0013 — Governance is one page: one maintainer, proposals in public, and what happens if he stops
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0014-first-public-version-is-0-1-0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0014 — The first public version is 0.1.0, cut only when a readiness checklist is green
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0015-mcp-registry-name/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0015 — The MCP server is registered as com.factorysemantics/mes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0016-no-trademark-registration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0016 — No trademark registration for the name
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0017 — One public demo, hosted by the maintainer, gated by an emailed link and bounded by limits
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0018 — Public on 2026-09-08, and a release check that runs the built wheel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0019-count-everything-the-machine-counted/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0019 — Count everything the machine counted: over-runs are booked, surplus is unassigned production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0020 — What "supported" means for an ERP connector, and what it is called before that
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0021-one-database-per-plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0021 — A fleet is many databases, and site scoping is identity, not partitioning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0022-what-a-plant-pack-may-contain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0022 — A plant pack is data, carries no code and no secrets, and cannot change what a number means
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0023-the-fleet-console-observes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0023 — The console manages only the plants it owns, observes every other plant, and silence is unknown
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/TEMPLATE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Template
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Agents
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/connect-mcp-client/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — connect an MCP client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/write-discipline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — the write discipline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/evals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — evals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Releases
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/0.2.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.2.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    History
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    History
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../LANDSCAPE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Landscape
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../history/private-era/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The private era
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-what-a-plant-is-today" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. What a plant is, today
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. What a plant is, today">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-registry-actually-reads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the registry actually reads
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-cannot-be-configured-per-plant-at-all" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What cannot be configured per plant at all
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-the-two-packs-held-against-the-roadmaps-own-done-when" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. The two packs, held against the roadmap's own done when
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-the-two-guard-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. The two guard tests
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-site-scoping-the-question-is-half-answered-already" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Site scoping — the question is half-answered already
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-what-a-plant-already-emits-that-a-console-could-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. What a plant already emits that a console could read
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-proposal-what-a-plant-pack-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Proposal — what a plant pack is
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-proposal-the-deployment-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Proposal — the deployment profiles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-proposal-the-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Proposal — the console
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Proposal — the console">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#owned-and-how-a-tool-can-tell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Owned, and how a tool can tell
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-managing-an-owned-plant-is-and-what-it-is-not" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What managing an owned plant is, and what it is not
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-the-page-deliberately-does-not-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the page deliberately does not do
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-the-write-verbs-live-and-why-the-read-only-role-survives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the write verbs live, and why the read-only role survives
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-the-order-of-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. The order of work
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. The order of work">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#piece-1-a-plant-knows-its-own-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Piece 1 — a plant knows its own name
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#piece-2-the-guard-tests-and-the-layers-they-need" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Piece 2 — the guard tests, and the layers they need
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#piece-3-the-pack-format-its-validator-and-an-adversarial-second-pack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Piece 3 — the pack format, its validator, and an adversarial second pack
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#piece-4-the-console-and-the-fleet-tool-behind-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Piece 4 — the console, and the fleet tool behind it
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-risks-named" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Risks, named
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-findings-not-fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Findings, not fixed
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/design/m8-packs-and-fleet.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="m8-plant-packs-and-the-fleet-console">M8 — plant packs and the fleet console<a class="headerlink" href="#m8-plant-packs-and-the-fleet-console" title="Permanent link">&para;</a></h1>
+<p><em>Design. Written 2026-09-10 against the code at <code>2474a8b</code>, before anything is
+built. It states what exists, proposes what a pack should be and what the
+console should do, and breaks the work into four pieces. It decides nothing:
+the decisions it turns on are
+<a href="../../decisions/0021-one-database-per-plant/">0021</a>,
+<a href="../../decisions/0022-what-a-plant-pack-may-contain/">0022</a> and
+<a href="../../decisions/0023-the-fleet-console-observes/">0023</a>, and all three are
+</em><em>proposed</em><em> — the person who accepts them has not read them yet.</em></p>
+<p>M8 is the last milestone on the
+<a href="https://github.com/factorysemantics/factorysemantics-mes/blob/main/ROADMAP.md">roadmap</a>
+and the vaguest. Its scope line asks for six things: site scoping on kernel
+tables; plant packs as a <code>plant.toml</code>; an adversarial second demo pack; two
+guard tests named <code>no_tenant_literals</code> and <code>core_purity</code>; deployment profiles;
+and an observe-don't-push console. Its <em>done when</em> is <strong>two packs with
+different modules enabled running from one codebase, and the console showing
+both.</strong></p>
+<p>Two things make it worth designing now rather than later.</p>
+<p>A <strong>first real plant</strong> will need a pack. It is the one plant-specific
+artefact — the thing <a href="../../operate/first-plant/">the engineers' front door</a>
+has a controls engineer draft on site — and the product has no crisp
+definition of what it is, what may live in it, or what may not.</p>
+<p>And an MES someone runs at more than one site needs the console, or they run
+one copy per site and see nothing across them. That is the position today:
+<code>fsmes plant all status</code> is a command on one laptop, not a view of a fleet.</p>
+<hr />
+<h2 id="1-what-a-plant-is-today">1. What a plant is, today<a class="headerlink" href="#1-what-a-plant-is-today" title="Permanent link">&para;</a></h2>
+<p>There is <strong>no <code>plant.toml</code></strong> in this repository and no <code>packs/</code> directory.
+<code>grep -rn "plant.toml"</code> finds two hits, both aspirational: the roadmap's M8
+line, and <code>labs/multiplant/README.md</code> saying that is where the lab is going.
+<code>docs/ARCHITECTURE.md</code> proposes a <code>packs/</code> directory in a layout that was
+written before the first line of code and does not match the tree.</p>
+<p>What exists instead is <strong>five separate places</strong> a plant's identity lives, none
+of which knows about the others.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Artefact</th>
+<th>Where</th>
+<th>Read by</th>
+<th>Validated?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>The <strong>registry</strong> — one TOML file describing several plants</td>
+<td><code>labs/multiplant/plants.toml</code>, or <code>$FSMES_PLANT_REGISTRY</code></td>
+<td><code>src/fsmes/plant.py</code>, <code>src/fsmes/mcp_server.py</code>, <code>src/fsmes/sim/*</code></td>
+<td>No. <code>tomllib</code> into a plain dict</td>
+</tr>
+<tr>
+<td>2</td>
+<td>The <strong>tag map</strong> — which machines exist and what their tags mean</td>
+<td><code>config/tag_map*.json</code>, <code>labs/*/tag_map.json</code></td>
+<td><code>src/fsmes/services/tags.py</code>, <code>src/fsmes/integrations/opc/*</code></td>
+<td>Partly — an unmapped state value raises</td>
+</tr>
+<tr>
+<td>3</td>
+<td>The <strong>seed script</strong> — this plant's equipment, materials and routings</td>
+<td><code>labs/*/init.py</code>, <code>labs/multiplant/machining/seed.py</code></td>
+<td>run as a subprocess by <code>fsmes plant &lt;name&gt; init</code></td>
+<td>No. It is arbitrary Python</td>
+</tr>
+<tr>
+<td>4</td>
+<td>The <strong>settings</strong> — 66 <code>MES_*</code> variables</td>
+<td>environment, or a <code>.env</code> file</td>
+<td><code>src/fsmes/config.py</code></td>
+<td>Types only, by pydantic</td>
+</tr>
+<tr>
+<td>5</td>
+<td>The <strong>boundary mappings</strong> — inbound columns, inbound SQL, line geometry, scorecard columns</td>
+<td><code>config/inbound_mapping.json</code>, <code>config/inbound_sql.json</code>, <code>config/line_layout.json</code>, the scorecard's own mapping file</td>
+<td><code>src/fsmes/integrations/inbound/*</code>, the line view, <code>fsmes shadow scorecard</code></td>
+<td>Per-file, ad hoc</td>
+</tr>
+</tbody>
+</table>
+<p>The registry is the nearest thing to a pack, and it is worth being precise
+about what it is: <strong>a way to run several plants on one machine</strong>. Every key it
+holds becomes an <code>MES_*</code> variable at spawn time (<code>plant_env</code>,
+<code>src/fsmes/plant.py</code>), which is exactly why two plants can run side by side
+with no multi-tenant code path — the bottling API cannot reach the machining
+database because it was never told machining exists.</p>
+<h3 id="what-the-registry-actually-reads">What the registry actually reads<a class="headerlink" href="#what-the-registry-actually-reads" title="Permanent link">&para;</a></h3>
+<p>The code reads seventeen keys: <code>label</code>, <code>api_host</code>, <code>api_port</code>, <code>opc_port</code>,
+<code>tag_map</code>, <code>replay_dir</code>, <code>init</code>, <code>post_boot</code>, <code>simulate</code>, <code>speed</code>,
+<code>secret_key</code>, <code>accounts</code>, <code>database_url</code>, <code>database_password_file</code>,
+<code>inspect_every</code>, <code>issue_every</code>, <code>inspect_all</code>, plus <code>[environment] data_dir</code>.</p>
+<p><a href="../../operate/registry/">The registry how-to</a> lists fifteen. The two lists do
+not match, in both directions:</p>
+<ul>
+<li><code>inspect_every</code>, <code>issue_every</code> and <code>inspect_all</code> are read by <code>plant_env</code>;
+  <code>labs/cutlery/registry.toml</code> sets two of the three. The documented list
+  mentions none of them.</li>
+<li><code>agent</code> is in the documented list. Nothing in <code>src/</code> reads it.</li>
+</ul>
+<p>Neither is a bug anyone has hit. Both are the same fact: <strong>the registry has no
+schema, so nothing can tell a key from a typo</strong>, and the file and its
+documentation drifted apart inside two weeks without a build failing. A
+plant-specific artefact a controls engineer drafts on site cannot work that
+way.</p>
+<p>Two more things the registry is not:</p>
+<ul>
+<li><code>plant_env</code> hard-codes <code>MES_ERP_MODE="off"</code> with the comment that every lab
+  plant would otherwise fight over the same mock ERP. That is right for a lab
+  and wrong for a plant: <strong>a registry plant cannot talk to an ERP at all.</strong></li>
+<li>Nothing in the registry says which modules a plant runs, what time zone it
+  is in, or what it calls things.</li>
+</ul>
+<h3 id="what-cannot-be-configured-per-plant-at-all">What cannot be configured per plant at all<a class="headerlink" href="#what-cannot-be-configured-per-plant-at-all" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Modules.</strong> <code>src/fsmes/api/app.py</code> includes all twenty-three routers
+  unconditionally. <code>src/fsmes/mcp_server.py</code> registers all ten tool files at
+  import. <code>fsmes info</code> reports one entry-point module (<code>erpnext</code>), because
+  every other module ships inside the kernel wheel and is always on.
+  <code>src/fsmes/mcp/__init__.py</code> already carries the sentence <em>"a module a plant
+  pack disables takes its tools with it by not being registered"</em> — the
+  mechanism it describes does not exist.</li>
+<li><strong>Time zone.</strong> <code>Settings</code> has no time-zone field. The only time zone in the
+  product is per inbound stream, in <code>config/inbound_mapping.json</code> and
+  <code>config/inbound_sql.json</code>, and it means <em>what zone this external system's
+  naive timestamps are in</em> — not <em>what zone this plant works in</em>. Shifts,
+  OEE windows and every screen use the process's own clock.</li>
+<li><strong>Vocabulary.</strong> Nothing anywhere lets a plant rename a domain term. The
+  word "vocabulary" appears in the code for fixed, product-wide things — the
+  PackML state names, the capability names, the role ladder.</li>
+</ul>
+<hr />
+<h2 id="2-the-two-packs-held-against-the-roadmaps-own-done-when">2. The two packs, held against the roadmap's own <em>done when</em><a class="headerlink" href="#2-the-two-packs-held-against-the-roadmaps-own-done-when" title="Permanent link">&para;</a></h2>
+<p><code>labs/multiplant/</code> runs two plants side by side: <strong>bottling</strong> (six stations,
+<code>:8010</code>) and <strong>machining</strong> (three stations, <code>:8020</code>). They disagree
+deliberately — station count, station names, analog names, rates, buffer
+sizes, product, routing, quality specification — and the lab's README is
+right that this proves something real: <em>no product code was added to run a
+second plant.</em></p>
+<p>It does not prove what the milestone asks for.</p>
+<table>
+<thead>
+<tr>
+<th>The roadmap's <em>done when</em></th>
+<th>State</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Two packs</td>
+<td>Two <strong>plants</strong>, in one shared registry file. Not packs; there is no pack</td>
+</tr>
+<tr>
+<td><strong>with different modules enabled</strong></td>
+<td>Not met. Both plants run every module, because no plant can disable one</td>
+</tr>
+<tr>
+<td>run from one codebase</td>
+<td>Met, and worth keeping. Same wheel, same schema, same migrations</td>
+</tr>
+<tr>
+<td>and the console shows both</td>
+<td>Not met. <code>fsmes plant all status</code> is a CLI on one machine</td>
+</tr>
+</tbody>
+</table>
+<p>The roadmap's own M8 heading, corrected on 2026-09-09, says <em>"two plant packs
+prove the boundary; packs as a product and the console are open"</em>. Being
+exact: <strong>one of the four clauses is met.</strong> The mark stays 🟡, and the reason
+is the modules clause as much as the console.</p>
+<p>The second pack is also not yet <em>adversarial by design</em> in the sense the
+roadmap means. It disagrees about the plant — geometry, physics, products —
+which is what shakes out a hard-coded station name. It agrees about
+everything the pack format would carry: same modules, same clock, same words,
+same ERP setting (<code>off</code>), same everything a <code>plant.toml</code> would hold. A pack
+format is proved by a plant that disagrees with the <em>format</em>, not with the
+line.</p>
+<hr />
+<h2 id="3-the-two-guard-tests">3. The two guard tests<a class="headerlink" href="#3-the-two-guard-tests" title="Permanent link">&para;</a></h2>
+<p><code>no_tenant_literals</code> and <code>core_purity</code> <strong>do not exist.</strong> A repository-wide
+search finds one hit for either name: the roadmap line that names them.</p>
+<p>What does exist is a family of tests that read the source rather than run it,
+and they are the pattern to copy, because they were each written after
+something got past review:</p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>File</th>
+<th>How</th>
+<th>What it forbids</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>the shadow ratchet — two tests</td>
+<td><code>tests/test_shadow_mode.py</code></td>
+<td><code>ast.parse</code> every file under <code>src/fsmes</code>, walk <code>ast.Call</code>, match against a list of outbound primitives</td>
+<td>A call that reaches past the database — OPC write, HTTP, MQTT, mail, socket, model API — that <code>fsmes.shadow.REGISTER</code> does not name</td>
+</tr>
+<tr>
+<td><code>test_a_transaction_is_not_held_open_across_a_network_call</code></td>
+<td><code>tests/test_sqlite_write_locks.py</code></td>
+<td>AST: an <code>await</code> inside a <code>with session_scope()</code> block</td>
+<td>Holding a SQLite write lock across a network call</td>
+</tr>
+<tr>
+<td><code>test_every_write_route_has_a_tool_or_a_reason</code></td>
+<td><code>tests/test_mcp_parity.py</code></td>
+<td>Text: OpenAPI write routes against the MCP tool sources</td>
+<td>A write route with neither a tool nor a stated reason</td>
+</tr>
+<tr>
+<td><code>test_every_route_has_a_screen_or_a_reason</code></td>
+<td><code>tests/test_route_coverage.py</code></td>
+<td>Text: routes against the screen scripts</td>
+<td>An endpoint no screen mentions and nobody excused</td>
+</tr>
+<tr>
+<td><code>test_the_product_never_imports_playwright</code></td>
+<td><code>tests/test_ui_check.py</code></td>
+<td>Substring</td>
+<td>Browser tooling at module scope in the product</td>
+</tr>
+<tr>
+<td><code>test_the_migration_chain_has_exactly_one_head</code></td>
+<td><code>tests/test_migrations_have_one_head.py</code></td>
+<td>Reads the Alembic graph</td>
+<td>Two heads</td>
+</tr>
+</tbody>
+</table>
+<p>So the shape is established and the two named tests are missing. What each
+should forbid, proposed:</p>
+<ul>
+<li><strong><code>no_tenant_literals</code></strong> — no file under <code>src/fsmes</code> may contain a plant's
+  own name, code or address. Concretely: the plant names in every registry the
+  repository ships (<code>bottling</code>, <code>machining</code>, <code>cutlery</code>, <code>megafactory</code>), the
+  labs' invented company names, the equipment codes and material codes that
+  appear only in a <code>labs/</code> seed, and any URL or host that is not a documented
+  default. It reads the registries and the seeds to build its own forbidden
+  list, so a new lab plant extends the guard instead of escaping it. The rule
+  it pins is house rule 4, and the failure it catches is the one
+  <code>labs/multiplant/README.md</code> already names: <em>"the moment a second plant needs
+  a <code>seed_northgate.py</code> shipped inside the product, the product has a tenant
+  literal in it."</em></li>
+<li><strong><code>core_purity</code></strong> — the layering rule that today lives only as a docstring
+  in <code>src/fsmes/kernel/__init__.py</code>: <code>domain &lt;- services &lt;- {api, connect,
+  modules, cli}</code>, no lower layer importing a higher one. An AST import walk
+  proves it. Decision
+  <a href="../../decisions/0002-kernel-and-modules/">0002</a> says the module boundary is
+  "a discipline, not a wall"; this is the test that makes the wall, and it is
+  a precondition for a pack disabling a module, because a module that the
+  kernel imports cannot be disabled.</li>
+</ul>
+<p>Note what <code>core_purity</code> will find on the day it is written: <code>src/fsmes/kernel/</code>
+holds <code>common.py</code> and <code>tags.py</code>, <code>src/fsmes/core/</code> holds <code>oplock.py</code>, and the
+kernel the architecture page describes — master data, orders, dispatch, audit,
+auth — actually lives in <code>domain/</code> and <code>services/</code>. There is no <code>modules/</code>
+directory. The test's first job is to say what the layers <em>are</em>.</p>
+<hr />
+<h2 id="4-site-scoping-the-question-is-half-answered-already">4. Site scoping — the question is half-answered already<a class="headerlink" href="#4-site-scoping-the-question-is-half-answered-already" title="Permanent link">&para;</a></h2>
+<p>The roadmap asks for "site scoping on kernel tables". Measured against the
+schema, that is a bigger change than it sounds, and decision
+<a href="../../decisions/0006-sqlite-laptop-postgresql-plant/">0006</a> has already
+answered most of it: <strong>one database per plant.</strong></p>
+<p>The numbers, from the models at <code>2474a8b</code>:</p>
+<ul>
+<li><strong>38 tables.</strong> <strong>Zero</strong> carry a site, plant or tenant column.</li>
+<li><strong>25 tables</strong> carry at least one uniqueness rule. Of those, <strong>five</strong> are
+  already scoped through a foreign key and would survive a shared database
+  (<code>bom_items</code>, <code>quality_specs</code>, <code>routing_operations</code>,
+  <code>work_order_operations</code>, <code>uns_publications</code>). The other <strong>twenty</strong> are
+  plant-scoped natural keys that a second plant in the same database would
+  collide on: every <code>code</code> — equipment, materials, routings, roles,
+  personnel, work orders, lots, gauges, triggers, non-conformances,
+  maintenance plans and orders, shift patterns, adjustments, documents —
+  plus <code>serial_units.serial</code>, <code>erp_messages.message_key</code>, and the three
+  operational keys <code>idempotency_keys(actor, key)</code>,
+  <code>inbound_events(source, kind, external_key)</code> and
+  <code>inbound_watermarks(source, stream)</code>.</li>
+<li><strong>Four tables are global cursors or counters</strong> with no plant dimension:
+  <code>serial_sequences</code> (whose primary key <em>is</em> the serial prefix),
+  <code>inbound_watermarks</code>, <code>erp_messages</code>, <code>uns_publications</code>.</li>
+<li><strong>30 migrations, one head</strong> (<code>c8b1e40d7a92</code>).</li>
+</ul>
+<p>Adding a site column would therefore touch twenty uniqueness rules, four
+cursor tables, every query in <code>src/fsmes/services/</code>, and every migration
+after it. <code>src/fsmes/plant.py</code>'s own docstring is the counter-argument and it
+is a good one: <em>"there is no multi-tenant code path anywhere in the MES, and
+that is the point — isolation here is by construction, not by a <code>WHERE</code>
+clause somebody might forget."</em> A recall that returns another plant's serials
+is not a bug you find in review.</p>
+<p>The proposal, in <a href="../../decisions/0021-one-database-per-plant/">0021</a>: <strong>a
+fleet is many databases, and "site scoping" is re-read as identity rather
+than partitioning.</strong> What kernel tables actually lack is not a foreign key to
+a <code>sites</code> table but an answer to <em>which plant am I</em> that leaves the process —
+a plant identity every emitted record and every endpoint carries, so a
+console, a broker and a shadow scorecard can tell two plants apart without
+being told out of band. Today <code>MES_PLANT_NAME</code> exists, defaults to empty, and
+surfaces in exactly two places: the UNS envelope's <code>plant</code> field, and the
+assistant's greeting. <code>/health</code> does not say it. <code>/shadow</code> does not say it.</p>
+<p>That is a small, cheap change, and it is the whole of the site scoping this
+milestone needs.</p>
+<hr />
+<h2 id="5-what-a-plant-already-emits-that-a-console-could-read">5. What a plant already emits that a console could read<a class="headerlink" href="#5-what-a-plant-already-emits-that-a-console-could-read" title="Permanent link">&para;</a></h2>
+<p>Enough for a first console, and this is the pleasant surprise of writing this
+page. Every row below exists at <code>2474a8b</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Where</th>
+<th>Auth</th>
+<th>What a console gets</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /health</code></td>
+<td><code>src/fsmes/api/routers/system.py</code></td>
+<td>public</td>
+<td>alive, and <code>shadow</code> true/false</td>
+</tr>
+<tr>
+<td><code>GET /shadow</code></td>
+<td>same</td>
+<td>public</td>
+<td>the full outbound register: <strong>32 paths — 16 allowed, 11 refused, 5 restricted</strong> — plus the ERP and UNS modes actually in force</td>
+</tr>
+<tr>
+<td><code>GET /metrics</code></td>
+<td>same</td>
+<td>public</td>
+<td>Prometheus text: work orders per status, pending ERP messages, max tag-value and audit ids</td>
+</tr>
+<tr>
+<td><code>GET /ops/services</code></td>
+<td><code>src/fsmes/api/routers/ops.py</code></td>
+<td><code>audit.read</code></td>
+<td>liveness of the plant's own processes: api, opc-agent, opc-replay, opc-sim, operations</td>
+</tr>
+<tr>
+<td><code>GET /equipment/{code}/oee</code>, <code>GET /analysis/oee</code></td>
+<td><code>equipment.py</code>, <code>analysis.py</code></td>
+<td>signed in</td>
+<td>OEE per machine and the loss breakdown, with <code>null</code> where it cannot be computed honestly</td>
+</tr>
+<tr>
+<td><code>GET /erp/outbox</code></td>
+<td><code>erp.py</code></td>
+<td>signed in</td>
+<td>what the ERP is owed, and what died</td>
+</tr>
+<tr>
+<td><code>fsmes db-status</code></td>
+<td><code>src/fsmes/cli.py</code></td>
+<td>local</td>
+<td>current Alembic revision against head. <strong>Text only, exits non-zero when behind</strong></td>
+</tr>
+<tr>
+<td><code>fsmes info</code></td>
+<td>same</td>
+<td>local</td>
+<td>version, install path, entry-point modules, shadow summary</td>
+</tr>
+<tr>
+<td>the UNS publisher</td>
+<td><code>src/fsmes/integrations/uns/</code></td>
+<td>broker</td>
+<td>every outbox event under <code>&lt;prefix&gt;/&lt;enterprise&gt;/&lt;site&gt;/…</code>, envelope carrying <code>plant</code></td>
+</tr>
+<tr>
+<td><code>list_plants()</code></td>
+<td><code>src/fsmes/mcp_server.py</code></td>
+<td>agent account</td>
+<td><strong>the console in miniature</strong> — reads the registry, calls each plant's <code>/health</code>, and reports <code>shadow: None</code> for a plant that did not answer</td>
+</tr>
+</tbody>
+</table>
+<p><code>list_plants</code> is the shape to grow. It already refuses to guess: a plant that
+does not answer gets <code>None</code>, and the docstring says why — <em>"None means the
+plant did not answer, which is not the same as not shadow."</em> That is house
+rule 2 in a fleet, and it is the hardest part of a console to get right.</p>
+<p>Held against the four words in the roadmap's control-plane phrase:</p>
+<ul>
+<li><strong>Enrol</strong> — does not exist. There is no machine credential of any kind: no
+  API key, no device identity, no shared secret. A console authenticates as a
+  person or as the <code>AGENT</code> account, with a password, per plant.</li>
+<li><strong>Telemetry</strong> — exists, but only as pull. Nothing in the product pushes
+  status anywhere. There is no heartbeat and no webhook.</li>
+<li><strong>Desired state as intent</strong> — does not exist. There is no config checksum,
+  no doctor command, nothing that compares what a plant is running against
+  what it was meant to run. <code>fsmes db-status</code> is the only desired-versus-
+  actual check in the product, and only for the schema.</li>
+<li><strong>Drift display</strong> — does not exist, and cannot until a pack exists, because
+  drift is measured against a pack.</li>
+</ul>
+<hr />
+<h2 id="6-proposal-what-a-plant-pack-is">6. Proposal — what a plant pack is<a class="headerlink" href="#6-proposal-what-a-plant-pack-is" title="Permanent link">&para;</a></h2>
+<p><strong>A plant pack is the complete, versioned, validated answer to "which plant is
+this?", in one directory, owned by the plant and not by this repository.</strong></p>
+<div class="highlight"><pre><span></span><code>packs/&lt;name&gt;/
+  plant.toml          identity, profile, modules, clock, words   (required)
+  tag_map.json        which machines exist and what their tags mean
+  masterdata/         equipment, materials, routings — data, not a script
+  mappings/           inbound columns, inbound SQL, scorecard columns
+  line_layout.json    optional geometry for the line view
+  README.md           what this plant is, for the next engineer
+</code></pre></div>
+<p><code>plant.toml</code> carries, and only carries:</p>
+<table>
+<thead>
+<tr>
+<th>Section</th>
+<th>Holds</th>
+<th>Why here</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[plant]</code></td>
+<td><code>name</code>, <code>label</code>, <code>timezone</code>, <code>enterprise</code>, <code>site</code>, <code>area</code></td>
+<td>Identity. <code>timezone</code> becomes a real setting; <code>enterprise</code>/<code>site</code> already exist as <code>MES_UNS_*</code> and belong to the plant, not to the broker config</td>
+</tr>
+<tr>
+<td><code>[modules]</code></td>
+<td>one boolean per optional module</td>
+<td>The milestone's <em>done when</em>. Requires <code>core_purity</code> first</td>
+</tr>
+<tr>
+<td><code>[words]</code></td>
+<td>domain term → this plant's term</td>
+<td>The roadmap's "vocabulary mappings". <strong>Display only</strong> — see below</td>
+</tr>
+<tr>
+<td><code>[storage]</code></td>
+<td><code>database_url</code>, <code>database_password_file</code></td>
+<td>Already registry keys</td>
+</tr>
+<tr>
+<td><code>[serve]</code></td>
+<td><code>api_host</code>, <code>api_port</code>, <code>opc_endpoint</code></td>
+<td>Already registry keys</td>
+</tr>
+<tr>
+<td><code>[erp]</code>, <code>[uns]</code>, <code>[inbound]</code></td>
+<td>mode plus the file each mapping lives in</td>
+<td>Today these are <code>MES_*</code> variables with no per-plant home, and <code>plant_env</code> hard-codes ERP off</td>
+</tr>
+<tr>
+<td><code>[pack]</code></td>
+<td><code>format</code> version, <code>requires</code> a version range of the MES</td>
+<td>So a pack can be refused rather than half-understood</td>
+</tr>
+</tbody>
+</table>
+<p>What a pack <strong>may not</strong> contain, and this is the load-bearing half:</p>
+<ol>
+<li><strong>No code.</strong> Not a <code>.py</code>, not a hook, not an expression to evaluate. Today
+   a plant's <code>init</code> key names a Python file that <code>fsmes plant init</code> runs as a
+   subprocess with the plant's environment; <code>labs/multiplant/machining/seed.py</code>
+   is 156 lines of it, and <code>labs/cutlery/init.py</code> is 191. Master data becomes data a validator can read, and
+   <code>fsmes pack apply</code> seeds from it. A pack that can run code is a pack nobody
+   can review before it touches a plant.</li>
+<li><strong>No secrets.</strong> Passwords stay in the environment or in a file the pack
+   <em>names</em> — the pattern <code>database_password_file</code> and <code>password_env</code> already
+   use, applied everywhere. A pack should be safe to attach to a support
+   thread, and today <code>secret_key</code> sits in the registry in plain text.</li>
+<li><strong>Nothing that changes what a number means.</strong> <code>[words]</code> renames a label on
+   a screen and in a report. It may not rename a state, a KPI, a capability,
+   an audit action, an MCP tool, an event <code>kind</code>, or anything a topic or an
+   API field is built from. Two plants' events must remain comparable, or the
+   fleet console is comparing dialects. The guard is a test, not a rule in
+   prose.</li>
+<li><strong>No plant may extend the schema.</strong> A pack cannot add a table or a column.
+   That is a module, and modules are code.</li>
+</ol>
+<p><strong>How it is validated.</strong> <code>fsmes pack check &lt;dir&gt;</code> — no database, no network,
+exit non-zero — proves the format version is understood, that the MES version
+satisfies <code>requires</code>, that every key is one the product knows (an unknown key
+is an error, which is what the registry cannot say today), that every file it
+names exists, that the time zone is a real IANA zone, that every module named
+exists and its dependencies are enabled, that no <code>[words]</code> entry renames a
+protected term, and that the tag map's state values all map. It reports
+<code>unknown</code> for what it cannot prove without a plant — that the OPC endpoint
+answers, that the database is reachable — rather than passing them.</p>
+<p><strong>How it is versioned and upgraded.</strong> The pack carries <code>format</code> and
+<code>requires</code>; the product carries a pack-format head the way it carries an
+Alembic head. <code>fsmes pack migrate</code> rewrites a pack forward one format version
+at a time, backing it up first and printing what it changed, in the shape
+<code>fsmes plant migrate</code> already uses for databases — refuse if the plant is
+answering, copy first, migrate, print a receipt. The two must run in one
+order and say so: <strong>pack first, then database</strong>, because a database migration
+may need a value the pack now carries. <code>fsmes db-status</code> grows a sibling,
+<code>fsmes pack status</code>, and both are what the console reads for drift.</p>
+<hr />
+<h2 id="7-proposal-the-deployment-profiles">7. Proposal — the deployment profiles<a class="headerlink" href="#7-proposal-the-deployment-profiles" title="Permanent link">&para;</a></h2>
+<p>Three, named in <code>plant.toml</code> as <code>profile</code>, so a plant states which one it is
+and the product can refuse what does not fit.</p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Shape</th>
+<th>What states it</th>
+<th>What it refuses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>laptop</code></td>
+<td>one process, SQLite, replay driver</td>
+<td><code>fsmes demo</code>, the labs</td>
+<td>nothing; it is the evaluation profile</td>
+</tr>
+<tr>
+<td><code>plant</code></td>
+<td>Compose or systemd: PostgreSQL, api replicas, connect, one-shot migrate</td>
+<td><code>docker/docker-compose.yml</code>, <code>deploy/</code></td>
+<td>SQLite with more than one writer process; well-known passwords; starting behind the schema head</td>
+</tr>
+<tr>
+<td><code>fleet</code></td>
+<td>N <code>plant</code> nodes plus one console</td>
+<td>does not exist</td>
+<td>pushing anything to a node</td>
+</tr>
+</tbody>
+</table>
+<p>The first two exist and are documented in <a href="../../operate/deploy/">deploy</a>; the
+profile name does not. Making it explicit is what lets a plant node say <em>I am
+a plant, not a laptop</em> in one word, to the console and to its own start-up
+checks.</p>
+<hr />
+<h2 id="8-proposal-the-console">8. Proposal — the console<a class="headerlink" href="#8-proposal-the-console" title="Permanent link">&para;</a></h2>
+<p><strong>A page that polls a list of plants and shows what each one says about
+itself — and a separate command, <code>fsmes fleet</code>, that manages the plants this
+installation owns.</strong> The split, and the rule that draws the line, is decision
+<a href="../../decisions/0023-the-fleet-console-observes/">0023</a>: <em>the console may act
+only on plants it owns; for every other plant it observes and cannot push.</em></p>
+<p>For a first version, per plant, one row: name and label; owned or observed;
+reachable or not, and when it last answered; shadow or live; MES version;
+schema revision against head; pack version against head; whether the ERP
+outbox has anything dead; whether the UNS backlog is draining; and the
+plant's line OEE for the current shift. Clicking a row opens that plant's own
+dashboard — the console does not re-implement a screen the product already
+has.</p>
+<h3 id="owned-and-how-a-tool-can-tell">Owned, and how a tool can tell<a class="headerlink" href="#owned-and-how-a-tool-can-tell" title="Permanent link">&para;</a></h3>
+<p>A plant is <strong>owned</strong> when all three hold, and any one missing means observed
+only:</p>
+<ol>
+<li><strong>This installation created it from a pack</strong>, and recorded that in its own
+   ownership file — <code>ownership.toml</code>, in the fleet's <code>data_dir</code> — with the
+   plant name, the pack and its fingerprint, the host and OS user, the time,
+   and a random <code>instance_id</code> it also wrote into the plant's data directory.
+   Not <code>fleet.toml</code>: §6 gave that name to the registry, and the two files
+   answer different questions.</li>
+<li><strong>The plant does not contradict it</strong>: <code>/health</code> returns that <code>plant</code> name
+   (piece 1) and that same <code>instance_id</code>. A different id, or no id, means not
+   owned, whatever the file says — which is also how a plant <em>revokes</em>
+   ownership, by dropping the id. A plant that is <em>silent</em> is not
+   contradicting anything, and a rule that treated silence as a
+   contradiction would forbid <code>create</code> and <code>start</code>, which are two of the
+   five verbs: so a silent local plant is corroborated by the id still
+   sitting in its own data directory, and only the two verbs a stopped plant
+   can take may proceed on it. A silent remote plant is refused — there is
+   no data directory to read on another host.
+   <a href="../../decisions/0023-the-fleet-console-observes/">0023</a> has the table.</li>
+<li><strong>A path exists that a person gave it</strong>: same host and same OS user, with
+   the plant's pids in this registry's pid file (<code>running_pids</code>,
+   <code>src/fsmes/plant.py</code>); or an explicit credential for another host, typed
+   into the ownership file by a person and never defaulted.</li>
+</ol>
+<p>Being able to reach a plant is not owning it. The <code>instance_id</code> is a
+continuity check, not an authentication: it catches the wrong-plant mistake,
+which is the case that actually happens, and 0023 says plainly what it does
+not catch.</p>
+<h3 id="what-managing-an-owned-plant-is-and-what-it-is-not">What managing an owned plant is, and what it is not<a class="headerlink" href="#what-managing-an-owned-plant-is-and-what-it-is-not" title="Permanent link">&para;</a></h3>
+<p>Five verbs, and the list is closed: <strong>create</strong> from a pack, <strong>start</strong>,
+<strong>stop</strong>, <strong>apply</strong> a pack (<code>fsmes pack check</code> first, refusing on failure,
+pack before database, both refusing a plant still answering), and <strong>show</strong>
+status and drift.</p>
+<p>Never, even for an owned plant: writing a tag to a PLC, sending anything to
+an ERP, creating or closing or changing an order, booking production,
+editing master data, people or the audit trail. <strong>The tool manages plants,
+not production.</strong> A plant it owns can be stopped; a plant it owns cannot be
+made to say it built something.</p>
+<h3 id="what-the-page-deliberately-does-not-do">What the page deliberately does not do<a class="headerlink" href="#what-the-page-deliberately-does-not-do" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>It never acts on a plant it does not own.</strong> For an unowned plant every M8
+  verb — enrol, telemetry, desired state, drift — is a read or a comparison.
+  A console that can push to anything can push to the wrong thing, and the
+  blast radius of that is a factory.</li>
+<li><strong>A plant that did not answer is <code>unknown</code>, never healthy and never down.</strong>
+  <code>list_plants</code> already does this and the console inherits it. A console that
+  renders silence as green is worse than no console. On the page a silent
+  plant's <em>ownership</em> is unknown too — recorded here and not answering, never
+  owned — because nothing a plant did not say can corroborate anything. No
+  verb reaches into a running plant through a gap in which nobody can see
+  it.</li>
+<li><strong>It states its total.</strong> "12 plants, 11 answered, 1 unknown; 3 owned" —
+  rule 4 of <a href="../STYLE/">the style contract</a> applied to a fleet. The number of
+  plants configured is never the number of plants seen.</li>
+<li><strong>It aggregates nothing across plants that would be a lie.</strong> A fleet OEE is
+  a lie unless every plant is the same shape; the console shows twelve
+  numbers, not one. This is the same rule the
+  <a href="../../operate/shadow-scorecard/">shadow scorecard</a> follows when it refuses
+  to add operations into an order total.</li>
+<li><strong>It holds no plant data.</strong> It caches the last answer for display and
+  nothing else. Orders, serials, people and events stay in the plant that
+  made them.</li>
+<li><strong>It starts nothing by itself.</strong> No scheduler, no reconciliation loop, no
+  daemon that notices a stopped plant and brings it back. Desired state stays
+  intent <em>displayed as drift</em>, never intent enforced. On a development
+  machine the lab fleet runs when its owner starts it, and nothing in this
+  design starts a plant on anyone's behalf.</li>
+</ul>
+<h3 id="where-the-write-verbs-live-and-why-the-read-only-role-survives">Where the write verbs live, and why the read-only role survives<a class="headerlink" href="#where-the-write-verbs-live-and-why-the-read-only-role-survives" title="Permanent link">&para;</a></h3>
+<p>In <strong><code>fsmes fleet</code></strong>, a local command, not in the web page. The first version
+of the console has no write path at all; the verbs it would need are the
+command's.</p>
+<p>The earlier draft of §8 argued for a read-only console on the grounds that
+<em>the code can be reviewed for safety by reading it for calls that write</em>.
+That argument is not deleted by the ownership split — it moves, and it gets
+weaker in one specific place, which is worth saying out loud:</p>
+<ul>
+<li><strong>For the console it survives intact, and it turns out to be stronger than
+  this draft expected.</strong> The page reads, and everything it reads is public —
+  <code>/health</code>, <code>/shadow</code>, and <code>/pack</code>, which says which pack a plant runs,
+  whether it has drifted, its schema revision and the modules it serves. So
+  the page holds <strong>no credential at all</strong>, rather than a read-only one.
+  Nothing about the page's review property changes; there is simply less to
+  review.</li>
+<li><strong>For <code>fsmes fleet</code> it becomes a different question</strong>: not "is there a call
+  that writes" but "does every call that writes check ownership first". That
+  is a weaker property, because it depends on a check being present rather
+  than on a capability being absent. It is the price of the lab fleet, it is
+  paid knowingly, and piece 4's <em>done when</em> is written to make a reviewer
+  actually check it.</li>
+<li><strong>The credential split is what carries the safety.</strong> A long-running process
+  on a port never holds a credential that can change a plant. Managing runs
+  as the person at the terminal, for as long as the command takes.</li>
+</ul>
+<p>A console <code>--manage</code> flag — off by default, loopback only, each button
+calling the same gated function the command calls — is possible later. It is
+deliberately not in piece 4: the milestone's <em>done when</em> needs the page and
+does not need the buttons.</p>
+<p>"Enrol", then, means: <em>a person adds a plant to the console's list and gives
+it a credential the plant already understands.</em> Not a mutual handshake, not a
+certificate authority, not a bootstrap token — those are a control plane, and
+a control plane implies a plane that controls. Enrolling makes a plant
+<em>visible</em>; it does not make it owned, because ownership comes from having
+created it. What the product needs first is smaller than this draft thought:
+a way for a plant to say <em>what it was given</em> — the pack, the drift, the
+schema revision, the modules — on the same public terms as <code>/health</code> and
+<code>/shadow</code>, because all of it is a statement about how a deployment is
+configured rather than a number a plant produced. That is <code>/pack</code>, and with
+it the first console needs no account anywhere.</p>
+<p>A <strong>read-only machine credential</strong> — an account that can call
+<code>/ops/services</code> and the OEE endpoints and literally nothing else, so a
+console does not run as a person and does not run as <code>AGENT</code> — is still the
+right answer, and it is what the <em>second</em> console needs: the first column
+that a plant will not tell a stranger is the day to build it. It is a
+capability set and a role, both of which
+<code>src/fsmes/services/capabilities.py</code> already knows how to express, and
+deferring it costs nothing because nothing has been built that assumes its
+absence.</p>
+<hr />
+<h2 id="9-the-order-of-work">9. The order of work<a class="headerlink" href="#9-the-order-of-work" title="Permanent link">&para;</a></h2>
+<p>Four pieces. Each is a handoff, each ends in something a person can see, and
+each is useful alone if the next one never happens.</p>
+<h3 id="piece-1-a-plant-knows-its-own-name">Piece 1 — a plant knows its own name<a class="headerlink" href="#piece-1-a-plant-knows-its-own-name" title="Permanent link">&para;</a></h3>
+<p><code>MES_PLANT_NAME</code> becomes required for a non-laptop profile and reaches
+everything a reader can see: <code>/health</code>, <code>/shadow</code>, <code>/metrics</code> (as a label),
+the dashboard header, <code>fsmes info</code>, the backup manifest. Add
+<code>MES_PLANT_TIMEZONE</code> as a real setting, used by shifts, OEE windows and every
+screen, defaulting to the process zone and saying so.</p>
+<p><strong>Done when:</strong> two plants running side by side answer <code>/health</code> with different
+<code>plant</code> values, and a screenshot of either dashboard says which plant it is.</p>
+<h3 id="piece-2-the-guard-tests-and-the-layers-they-need">Piece 2 — the guard tests, and the layers they need<a class="headerlink" href="#piece-2-the-guard-tests-and-the-layers-they-need" title="Permanent link">&para;</a></h3>
+<p>Write <code>core_purity</code> and <code>no_tenant_literals</code>. Move whatever they find into
+place. This piece is first among the pack work because a module cannot be
+disabled while the kernel imports it, and a pack cannot be trusted while a
+plant's name can hide in <code>src/</code>.</p>
+<p><strong>Done when:</strong> both tests are in the suite and fail on a deliberate
+violation — a <code>from fsmes.services import …</code> added to a <code>domain/</code> module, and
+a lab plant's name pasted into <code>src/fsmes/services/line.py</code>.</p>
+<h3 id="piece-3-the-pack-format-its-validator-and-an-adversarial-second-pack">Piece 3 — the pack format, its validator, and an adversarial second pack<a class="headerlink" href="#piece-3-the-pack-format-its-validator-and-an-adversarial-second-pack" title="Permanent link">&para;</a></h3>
+<p><code>plant.toml</code>, <code>fsmes pack check</code>, <code>fsmes pack apply</code>, <code>fsmes pack status</code>,
+<code>fsmes pack migrate</code>. The registry becomes a list of packs; each of its
+seventeen keys either moves into <code>plant.toml</code> or is deleted with a reason,
+including the three nobody documented. <code>labs/multiplant</code>'s two plants are converted, and a <strong>third pack is
+invented to disagree with the format</strong> — a plant in a different time zone,
+with several modules off, with its own words for two labels, on PostgreSQL,
+with an ERP mode set, whose master data is data rather than a script.</p>
+<p><strong>Done when:</strong> <code>fsmes pack check</code> refuses a pack with an unknown key, a bad
+time zone, a renamed protected term, and a <code>requires</code> this version does not
+satisfy — each with one sentence naming the problem; and the third pack runs
+from the same wheel with two modules off, proven by its own API answering 404
+on those routes and its MCP tool list being shorter.</p>
+<h3 id="piece-4-the-console-and-the-fleet-tool-behind-it">Piece 4 — the console, and the fleet tool behind it<a class="headerlink" href="#piece-4-the-console-and-the-fleet-tool-behind-it" title="Permanent link">&para;</a></h3>
+<p>The page from §8, against a list of packs — plus <code>fsmes fleet</code> with the five
+verbs, the ownership file, and the ownership gate every one of them calls
+first. The page needs no credential: everything it reads, a plant answers to
+anyone who can reach it.</p>
+<p><strong>Done when:</strong></p>
+<ul>
+<li>the page shows three plants, one of which is switched off, as
+  "2 answered, 1 unknown", and says which of them are owned;</li>
+<li>a reviewer can read the console's code and see there is no call in it that
+  writes to a plant — unchanged, because the page stays read-only;</li>
+<li><strong>a reviewer can read the fleet tool's code and see that every write path
+  checks ownership first, and that an unowned plant cannot be touched by any
+  of them</strong> — the ownership analogue of the old "no call that writes", and
+  the property <a href="../../decisions/0023-the-fleet-console-observes/">0023</a> is
+  written to make checkable;</li>
+<li>a test proves it rather than the reviewer alone: against a fake plant that
+  answers <code>/health</code> with the wrong <code>instance_id</code>, and against one that
+  answers with none, all five verbs refuse and say why.</li>
+</ul>
+<p>Nothing in this piece starts a plant on a development machine of its own
+accord. The fleet tool acts when a person runs it; the lab fleet is started
+by whoever owns it, and the tests run against fakes and in CI.</p>
+<p>Pieces 1 and 2 are independent of each other and of the rest. Piece 3 needs
+piece 2. Piece 4 needs pieces 1 and 3, and is the only one that closes the
+milestone's <em>done when</em>.</p>
+<hr />
+<h2 id="10-risks-named">10. Risks, named<a class="headerlink" href="#10-risks-named" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>What it looks like</th>
+<th>What to do about it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>The pack becomes a language.</strong> <code>[words]</code>, then conditions, then an expression, then a hook, then a plugin. Every configuration format ends up here</td>
+<td>A plant asks for "just one small computed field"</td>
+<td>Rule 1 of §6, held by a test, not by prose. The escape hatch is a module, and modules are code and are reviewed</td>
+</tr>
+<tr>
+<td><strong><code>[words]</code> corrupts comparability.</strong> A plant renames a state, and its events no longer mean what another plant's mean</td>
+<td>The console compares two plants that use the same word for different things</td>
+<td>Protected terms are enumerated and tested. <code>[words]</code> reaches screens and reports only, never a topic, a <code>kind</code>, an enum or an API field</td>
+</tr>
+<tr>
+<td><strong>Ownership creeps.</strong> A verb is added and the gate is not called; or "owned" is quietly widened to mean reachable, or configured, or trusted</td>
+<td>A sixth verb; a flag that skips the check "just for the lab"; a plant managed while it is unknown</td>
+<td>The gate is one function and the closed list of five verbs is in <a href="../../decisions/0023-the-fleet-console-observes/">0023</a>. Piece 4's <em>done when</em> makes a reviewer check every write path, and the wrong-<code>instance_id</code> test fails if one forgets. The shadow ratchet still applies: the fleet tool is code under <code>src/fsmes</code>, so a new outbound call must be registered</td>
+</tr>
+<tr>
+<td><strong>Migrating in two places.</strong> Pack format and database schema both move, and a plant ends up half-upgraded</td>
+<td>A pack written for 0.3 meets a 0.2 database</td>
+<td>One order, stated and enforced: pack first, then database; each refuses a plant that is answering; each prints a receipt</td>
+</tr>
+<tr>
+<td><strong>The third pack is a costume.</strong> It disagrees on paper and is really the demo plant again</td>
+<td>It passes on the first try</td>
+<td>The test is whether writing it <em>forced a code change</em>. If adding the third pack changes nothing under <code>src/</code>, the format is proved; if it changes something, that change is the finding</td>
+</tr>
+<tr>
+<td><strong>Nobody has run two plants for real.</strong> The lab is two processes on one laptop</td>
+<td>Everything above is designed against a lab</td>
+<td>The first real plant is one plant. The console's value starts at the second, and there is no second yet — which is an argument for pieces 1–3 landing well before piece 4</td>
+</tr>
+<tr>
+<td><strong>The dashboard breaks before the fleet does.</strong> A single plant of sixty machines already breaks the screens</td>
+<td>Sixty cards, 240 progress bars, no grouping</td>
+<td>Recorded already in <code>docs/design/backlog/sixty-machine-plant.md</code>; it is a prerequisite for a large plant, not for a fleet</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="11-findings-not-fixed">11. Findings, not fixed<a class="headerlink" href="#11-findings-not-fixed" title="Permanent link">&para;</a></h2>
+<p>Noticed while reading. None was changed — this branch carries no product code.</p>
+<ol>
+<li><code>plant_env</code> (<code>src/fsmes/plant.py</code>) hard-codes <code>MES_ERP_MODE="off"</code>, so no
+   plant started from the registry can reach an ERP. Correct for the lab it
+   was written for; wrong the moment the registry describes a real plant.</li>
+<li><a href="../../operate/registry/">The registry how-to</a> documents an <code>agent</code> key that
+   nothing reads, and omits <code>inspect_every</code>, <code>issue_every</code> and <code>inspect_all</code>,
+   which are read.</li>
+<li><code>MES_PLANT_NAME</code> defaults to <code>""</code>, and an empty plant name reaches the UNS
+   envelope as <code>"plant": null</code> — an event that cannot say which plant made it.</li>
+<li><code>docs/ARCHITECTURE.md</code>'s proposed layout names <code>packs/</code>, <code>kernel/</code> and
+   <code>modules/</code>. <code>packs/</code> does not exist, <code>modules/</code> does not exist, and
+   <code>kernel/</code> holds two files while the kernel it describes lives in <code>domain/</code>
+   and <code>services/</code>. The page says up front that it is intent rather than
+   description, and it is still the first thing a new contributor reads.</li>
+<li><code>README.md</code> principle 7 says <em>"A second, deliberately-different demo pack
+   exists purely to prove that adding a plant never requires a code change."</em>
+   A second <em>plant</em> exists and does prove that. A pack does not exist. The
+   sentence is ahead of the code by one noun.</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../STYLE/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Style">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Style
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../../decisions/" class="md-footer__link md-footer__link--next" aria-label="Next: Decisions">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Decisions
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Apache-2.0. Every number on this site comes from a simulated plant unless it says otherwise.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/factorysemantics/factorysemantics-mes" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://factorysemantics.com" target="_blank" rel="noopener" title="factorysemantics.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M351.9 280H161c2.9 64.5 17.2 123.9 37.5 167.4 11.4 24.5 23.7 41.8 35.1 52.4 11.2 10.5 18.9 12.2 22.9 12.2s11.7-1.7 22.9-12.2c11.4-10.6 23.7-28 35.1-52.4 20.3-43.5 34.6-102.9 37.5-167.4zm-191-48h190.9c-2.8-64.5-17.1-123.9-37.4-167.4-11.4-24.4-23.7-41.8-35.1-52.4C268.1 1.7 260.4 0 256.4 0s-11.7 1.7-22.9 12.2c-11.4 10.6-23.7 28-35.1 52.4-20.3 43.5-34.6 102.9-37.5 167.4m-48 0c3.5-85.6 25.6-165.1 57.9-217.3C78.7 47.3 10.9 131.2 1.5 232zM1.5 280c9.4 100.8 77.2 184.7 169.3 217.3-32.3-52.2-54.4-131.7-57.9-217.3zm398.4 0c-3.5 85.6-25.6 165.1-57.9 217.3 92.1-32.7 159.9-116.5 169.3-217.3zm111.4-48C501.9 131.2 434.1 47.3 342 14.7c32.3 52.2 54.4 131.7 57.9 217.3z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "content.tabs.link", "content.code.copy", "content.action.edit", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
