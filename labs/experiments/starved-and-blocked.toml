@@ -44,8 +44,6 @@ events = [
   { type = "down",   station = "Washer", start = 950, end = 1040 },
 ]
 
-# See the note on this table in one-line-bad-hour.toml: this pack's line is the
-# product's own reference line and carries no master data, so the plan names
-# the script that seeds it. A pack may never name one (decision 0022).
-[init.bottling]
-script = "../multiplant/bottling/init.py"
+# No `[init.bottling]`: this pack carries its own master data, so the plant it
+# builds needs nothing from the plan. See the note on the same absence in
+# one-line-bad-hour.toml for what it cost when it did.
