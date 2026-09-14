@@ -39,8 +39,7 @@ measure  = ["booking", "downtime", "oee"]
 serialization = false
 
 # A plant named here plays this script instead of its pack's own. The
-# vocabulary is the generator's: down, drift, scrap_burst, changeover,
-# counter_reset, micro_stops.
+# vocabulary is closed — see below.
 [scenario.machining]
 events = [ { type = "down", station = "Mill", start = 600, end = 720 } ]
 
@@ -62,6 +61,37 @@ claude = false
 same seed twice is the same run**, and the report states the seed it used. A
 plan that shortens `duration` past a scripted event is refused rather than run
 with half a script.
+
+## What a scenario can script
+
+The vocabulary is closed, and a plan that names anything else is refused
+before a directory is made, with the list printed:
+
+| Event | What the line does |
+|---|---|
+| `down` | the machine has broken: it makes nothing and reports DOWN |
+| `changeover` | the whole line is changing over: planned, and never downtime |
+| `micro_stops` | short random stops, pre-rolled from the seed so a run repeats |
+| `drift` | an analog ramps from its base to `to` across the window |
+| `scrap_burst` | the station's scrap rate is `scrap_pct` for the window |
+| `counter_reset` | the station's counters go back to zero at `at` |
+| `starve` | nothing arrives: the machine is willing and has nothing to work on |
+| `block` | nowhere to put it: the machine is willing and downstream is full |
+
+`starve` and `block` script the **cause**, not the symptom, and the rest of
+the line follows on its own: starve the first station and every station after
+it starves in turn as its buffer drains, the way it would on the floor. So the
+run's total starved seconds are mostly knock-on, and the table in the report
+shows the scripted windows separately from the line's own total.
+
+### Why these two are worth a measurement of their own
+
+A machine with nothing to work on, or nowhere to put what it has made, is
+making nothing and **there is nothing wrong with it**. Booking those minutes as
+downtime invents a breakdown that never happened and reports an availability
+figure that is wrong in the direction nobody checks — it looks *worse*, so it
+is believed. It is the changeover fault from the other side, and
+`labs/experiments/starved-and-blocked.toml` is the starter that looks for it.
 
 ## What a run writes
 
@@ -130,6 +160,20 @@ Added beside them: how many seconds of downtime the MES reports against how
 many the line actually spent down. The MES records **wall** seconds and the
 script is written in **line** seconds, so the MES's figure is multiplied by the
 replay speed to compare. Both are labelled.
+
+*Lags.* The shortest event a run could notice at all is one sampling interval
+of line time — thirty line seconds at 60×. A detection lag smaller than that is
+quantisation, so it is printed as *within resolution*, with the resolution
+beside it, rather than as a signed number somebody could put in a trend. A
+sweep once reported a breakdown detected one second *before* it was scripted.
+
+*Starved and blocked.* Every scripted `starve` and `block` window is checked
+against what the MES recorded **for that machine**: unlike a changeover, which
+is the whole line stopping together, having nothing to work on is a fact about
+one station, so a neighbour that really did break in the same minutes is not
+counted against it. A window the MES was not watching scores *unknown*, never a
+pass. Beside the table, the line's own total seconds starved and blocked —
+most of which is the knock-on nobody scripted.
 
 *What it cannot tell you.* Nothing in a run labels a stop — no downtime labels
 arrive by file, no operator names one — so the unlabelled share the MES reports
@@ -280,12 +324,13 @@ recomputed; the numbers are the ones the run measured.
 
 To hand a run over, copy the directory. That is the whole procedure.
 
-## The two starters
+## The starters
 
 | Plan | What it is |
 |---|---|
 | `labs/experiments/one-line-bad-hour.toml` | the six-station bottling line playing the six classic faults in an hour at 20× |
 | `labs/experiments/two-plants-two-zones.toml` | Kansas City and Northgate, different products, clocks, modules and words, one after another at 30× |
+| `labs/experiments/starved-and-blocked.toml` | twenty minutes in which nothing breaks and nothing is made: the empties run out, then the palletiser stops taking cases |
 
 Both run in CI on every pull request, which is what stops the instrument
 rotting between the times anybody uses it. CI also proves the feedback loop

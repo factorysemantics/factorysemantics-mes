@@ -352,7 +352,8 @@ def withhold_verdict(card: dict, why: str) -> dict:
             stop["unknown_because"] = why
     metrics = card.get("metrics", {})
     metrics.update(breakdown_recall=None, planned_stop_misclassified=None,
-                   faults_scored=0, planned_stops_scored=0)
+                   idle_stop_misclassified=None,
+                   faults_scored=0, planned_stops_scored=0, idle_stops_scored=0)
     card["verdict_withheld"] = why
     return card
 

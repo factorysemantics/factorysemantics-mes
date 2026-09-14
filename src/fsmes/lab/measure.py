@@ -22,7 +22,7 @@ Three rules hold throughout, and they are principle 4 in this file's terms:
 
 from __future__ import annotations
 
-from fsmes.lab.truth import LineTruth
+from fsmes.lab.truth import IDLE_STATES, LineTruth
 
 #: Availability differences smaller than this share of the window cannot be
 #: told apart from the window the MES happened to measure over.
@@ -163,6 +163,25 @@ def _orders(truth: LineTruth, listed: list[dict], order_tags: int) -> dict:
 
 # ----------------------------------------------------------------- downtime
 
+def lag_says(lag: float | None, resolution: float | None) -> str:
+    """How late the MES was, or that the question is finer than the sampling.
+
+    A bare signed number here has already misled a reader once: a sweep
+    reported a breakdown detected one second *before* it was scripted, at a
+    speed whose sampling interval was thirty line seconds. That is
+    quantisation, not prescience. So a lag smaller than the resolution is
+    printed as what it is, with the resolution beside it, and never as a
+    number somebody could put in a trend.
+    """
+    if lag is None:
+        return "unknown"
+    if resolution is None:
+        return f"{float(lag):+.1f} s (resolution unknown)"
+    if abs(float(lag)) <= float(resolution):
+        return f"within resolution ({float(resolution):.0f} s)"
+    return f"{float(lag):+.1f} s"
+
+
 def downtime(truth: LineTruth, card: dict, reported: dict, speed: float,
              reason: str | None = None) -> dict:
     """Were the scripted stops seen, how late, and were the planned ones kept
@@ -180,32 +199,65 @@ def downtime(truth: LineTruth, card: dict, reported: dict, speed: float,
     mes_wall = reported.get("total_seconds")
     mes_line = None if mes_wall is None else round(float(mes_wall) * speed, 1)
 
+    def line_seconds(wall) -> float | None:
+        """The scorer counts in wall seconds; the script is written in line
+        seconds. At 20x a 180-second stop is nine seconds of anybody's watch,
+        and printing that nine under a heading that says *line seconds* is the
+        kind of quiet mislabel this lab exists to catch."""
+        return None if wall is None else round(float(wall) * speed, 1)
+
+    # The shortest line-time event this run could have noticed at all. A lag
+    # smaller than it is quantisation, not measurement - the steward's buffer
+    # sweep printed a breakdown "detected one second before it was scripted",
+    # which is not prescience, it is a 30-second sampling interval.
+    resolution = (card.get("observation") or {}).get("resolution_sim_s")
+
     faults = [{
         "equipment": f.get("equipment"),
         "window_line_s": f.get("window_sim_s"),
-        "scripted_line_seconds": f.get("scripted_seconds"),
+        "scripted_line_seconds": line_seconds(f.get("scripted_seconds")),
+        "scripted_wall_seconds": f.get("scripted_seconds"),
         "detected": f.get("detected"),
-        "detected_line_seconds": f.get("detected_seconds"),
+        "detected_line_seconds": line_seconds(f.get("detected_seconds")),
+        "detected_wall_seconds": f.get("detected_seconds"),
         "recall": f.get("recall"),
         "lag_line_seconds": f.get("lag_sim_seconds"),
+        "resolution_line_seconds": resolution,
+        "lag_says": lag_says(f.get("lag_sim_seconds"), resolution),
         "unknown_because": f.get("unknown_because") or (
             None if f.get("observed") else "the MES never watched this window"),
     } for f in card.get("faults", [])]
 
     stops = [{
         "window_line_s": p.get("window_sim_s"),
-        "scripted_line_seconds": p.get("scripted_seconds"),
+        "scripted_line_seconds": line_seconds(p.get("scripted_seconds")),
+        "scripted_wall_seconds": p.get("scripted_seconds"),
         "observed": p.get("observed"),
         "misclassified_as_downtime": p.get("misclassified_as_downtime"),
         "offenders": p.get("offenders"),
         "unknown_because": p.get("unknown_because"),
     } for p in card.get("planned_stops", [])]
 
+    idle = [{
+        "event": c.get("event"),
+        "station": c.get("station"),
+        "equipment": c.get("equipment"),
+        "window_line_s": c.get("window_sim_s"),
+        "scripted_line_seconds": line_seconds(c.get("scripted_seconds")),
+        "scripted_wall_seconds": c.get("scripted_seconds"),
+        "observed": c.get("observed"),
+        "misclassified_as_downtime": c.get("misclassified_as_downtime"),
+        "offenders": c.get("offenders"),
+    } for c in card.get("idle_stops", [])]
+    truth_idle = {state: sum(s.seconds_by_state.get(state, 0) for s in truth.stations.values())
+                  for state in IDLE_STATES}
+
     return {
         "measurement": "downtime",
         "question": "were the scripted stops seen, and were the planned ones kept out of downtime?",
         "unknown_because": reason,
         "speed": speed,
+        "resolution_line_seconds": resolution,
         "breakdowns": {
             "scripted": metrics.get("faults_scripted"),
             "scored": metrics.get("faults_scored"),
@@ -229,6 +281,18 @@ def downtime(truth: LineTruth, card: dict, reported: dict, speed: float,
             "difference_line_seconds": None if mes_line is None else round(mes_line - truth_down, 1),
             "note": ("the MES records wall seconds; multiplied by the replay speed to compare "
                      "with the line's own clock"),
+        },
+        "idle_stops": {
+            "question": "a machine with nothing to work on, or nowhere to put what it made, "
+                        "is not a machine that broke",
+            "scripted": metrics.get("idle_stops_scripted"),
+            "scored": metrics.get("idle_stops_scored"),
+            "misclassified_as_downtime": metrics.get("idle_stop_misclassified"),
+            # Every second the line spent starved or blocked, scripted or not:
+            # a scripted starve at one station makes the next one starve on
+            # its own, and that knock-on is most of the total.
+            "truth_line_seconds": truth_idle,
+            "events": idle,
         },
         "labels": {
             "mes_unlabelled_share": reported.get("unlabelled_share"),
@@ -429,6 +493,22 @@ def differences(plant: dict) -> list[dict]:
                                 "mes": (row["mes"] or {}).get(key), "difference": value},
                 })
     down = plant.get("measurements", {}).get("downtime")
+    idle = (down or {}).get("idle_stops") or {}
+    if idle.get("misclassified_as_downtime"):
+        for event in idle.get("events") or []:
+            if not event.get("misclassified_as_downtime"):
+                continue
+            seconds = sum(o.get("seconds") or 0 for o in event.get("offenders") or [])
+            found.append({
+                "size": 1e9, "measurement": "downtime", "where": plant["plant"],
+                "plant": plant["plant"], "station": event.get("station"),
+                "what": f"{event.get('event')} counted as downtime",
+                "says": f"{seconds:.0f} s of downtime recorded for "
+                        f"{event.get('equipment') or 'this machine'} while the script had it "
+                        f"{'starved' if event.get('event') == 'starve' else 'blocked'}",
+                "numbers": {"scripted_line_seconds": event.get("scripted_line_seconds"),
+                            "downtime_seconds_recorded": round(seconds, 1)},
+            })
     if down and down["planned_stops"]["misclassified_as_downtime"]:
         found.append({
             "size": 1e9, "measurement": "downtime", "where": plant["plant"],
@@ -471,6 +551,12 @@ def unknowns(plant: dict) -> list[dict]:
                 out.append({"measurement": "downtime", "plant": plant["plant"],
                             "station": event.get("equipment"),
                             "because": event["unknown_because"]})
+        for event in (down.get("idle_stops") or {}).get("events") or []:
+            if not event.get("observed"):
+                out.append({"measurement": "downtime · idle", "plant": plant["plant"],
+                            "station": event.get("station"),
+                            "because": "the MES never watched this window, so whether it "
+                                       "called a starved machine down is unknown"})
         if down["labels"].get("unknown_because"):
             out.append({"measurement": "downtime · labels", "plant": plant["plant"],
                         "station": None, "because": down["labels"]["unknown_because"]})

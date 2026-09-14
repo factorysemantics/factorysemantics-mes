@@ -46,6 +46,18 @@ class ScriptedEvent:
     def is_fault(self) -> bool:
         return self.type == "down"
 
+    @property
+    def is_idle(self) -> bool:
+        """Starved or blocked: making nothing, and nothing is wrong with it.
+
+        A second mapping decision with the same consequence as `planned`. A
+        machine with nothing to work on, or nowhere to put what it has made,
+        is not broken; counting those minutes as downtime overstates
+        breakdowns and understates availability, and it is the kind of error
+        that survives for years because the number still looks plausible.
+        """
+        return self.type in ("starve", "block")
+
 
 def station_to_equipment(tag_map_path: Path) -> dict[str, str]:
     """The generator names stations ("Mill"); the MES codes them ("MILL01").
