@@ -106,6 +106,15 @@ BUILTIN_ROLES: dict[str, dict] = {
 
 PROTECTED = ("admin",)
 
+# What a protected role may not be saved without. Take `users.manage` off
+# `admin` and the screen that could grant it back is the screen you have just
+# locked yourself out of - a plant nobody can administer, with no way in from
+# the inside. Deletion is already refused for the same reason; this is the
+# other way to arrive at the same plant.
+REQUIRED: dict[str, tuple[str, ...]] = {
+    "admin": ("users.manage",),
+}
+
 
 def unknown(capabilities: list[str]) -> list[str]:
     """Capability names the product does not recognise.
@@ -114,3 +123,19 @@ def unknown(capabilities: list[str]) -> list[str]:
     grants the thing the admin thought they granted.
     """
     return sorted(c for c in capabilities if c not in CAPABILITIES)
+
+
+def missing_required(code: str, capabilities: list[str]) -> list[str]:
+    """What a protected role is about to lose that it may not lose."""
+    return [c for c in REQUIRED.get(code, ()) if c not in capabilities]
+
+
+def differs_from_shipped(code: str, capabilities: list[str]) -> bool:
+    """Whether this bundle is something other than the one the product ships.
+
+    A role nobody has changed keeps getting new capabilities from upgrades; a
+    role a plant has redefined must not, or the upgrade quietly overrules the
+    admin. This is the question that tells the two apart.
+    """
+    spec = BUILTIN_ROLES.get(code)
+    return spec is not None and set(capabilities) != set(spec["capabilities"])

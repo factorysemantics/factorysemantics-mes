@@ -67,7 +67,7 @@
         nothing else.</p>
       <div id="roles" class="role-list" data-assist="role-list"></div>
 
-      <h3 class="mt">Define a role</h3>
+      <h3 class="mt" id="role-form-title">Define a role</h3>
       <form id="form-role" class="stack" data-assist="role-form">
         <div class="row">
           <input name="code" placeholder="Code (e.g. line_lead)" required>
@@ -78,7 +78,10 @@
           <legend class="muted small">Capabilities</legend>
           <div id="cap-checks" class="cap-grid" data-assist="cap-checks"></div>
         </fieldset>
-        <div class="row"><button>Create role</button></div>
+        <div class="row">
+          <button id="role-save">Create role</button>
+          <button type="button" id="role-cancel" class="ghost hidden">Cancel</button>
+        </div>
       </form>
     </section>
 

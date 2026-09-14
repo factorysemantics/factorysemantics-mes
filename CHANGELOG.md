@@ -150,6 +150,31 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Fixed
 
+- **An edit to one of the roles the product ships now stays edited.** The
+  admin screen has had an Edit button on every role and the API has had
+  `PUT /admin/roles/{code}` since 0.1.0, but every listing of the roles calls
+  `ensure_builtin_roles`, which tops a shipped role back up to the
+  capabilities this version ships. So redefining `supervisor` or
+  `quality_inspector` saved, said "redefined — effective immediately", and was
+  silently undone by the screen's own eight-second refresh — with nothing
+  anywhere to say it had happened. Redefining what a shipped role grants now
+  clears its `builtin` mark: the role becomes this plant's own, the card stops
+  calling it built-in, and it stops picking up capabilities that later
+  versions add. A shipped role nobody has changed still gets the top-up, which
+  is what it is for; saving one back without touching its capabilities (a
+  better description, say) leaves it in the product's hands. Pinned by a test
+  that redefines a role and then asks the screen again.
+- **The `admin` role can no longer have `users.manage` taken off it.**
+  Deleting the admin role was already refused, because an MES with no
+  administrator is a plant nobody can administer; emptying it reached the same
+  place by another door, and the screen that could grant the capability back is
+  the one you would have locked yourself out of. `PUT /admin/roles/admin`
+  without `users.manage` is now a 400 that says so.
+- **The role edit form can be left.** Pressing Edit fills the "Define a role"
+  form in place; there was no way back out, so the panel stayed stuck
+  redefining that one role until the page was reloaded — and the next Create
+  overwrote the role instead of adding one. The form now names which role it
+  is editing and carries a Cancel.
 - **The container image no longer publishes before the release is approved.**
   `release.yml` gated PyPI and the GitHub Release behind the reviewer-approved
   `pypi` environment, but the `image` job ran beside that gate rather than

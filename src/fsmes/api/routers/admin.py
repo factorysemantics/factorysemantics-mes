@@ -82,21 +82,45 @@ def create_role(body: RoleIn, db: DbDep, actor: ActorDep) -> dict:
 
 @router.put("/roles/{code}", dependencies=[require("users.manage")])
 def update_role(code: str, body: RoleIn, db: DbDep, actor: ActorDep) -> dict:
+    """Redefine a role: its name, its description, and the whole bundle it
+    grants. Effective on everyone's next action, because capabilities are read
+    per request rather than baked into a session.
+
+    The body replaces the capability list; it does not add to it. That is what
+    lets a plant take something away.
+    """
     role = db.scalar(select(Role).where(Role.code == code))
     if role is None:
         raise NotFound(f"no role {code}")
+    # A misspelt capability grants nothing and says nothing - the same reason
+    # creating a role refuses one.
     bad = caps.unknown(body.capabilities)
     if bad:
         raise Invalid(f"unknown capabilities: {', '.join(bad)}")
+    lost = caps.missing_required(code, body.capabilities)
+    if lost:
+        raise Invalid(
+            f"{code} cannot be saved without {', '.join(lost)}: it is the role "
+            f"that administers this plant, and the screen that could grant "
+            f"{'them' if len(lost) > 1 else 'it'} back is the screen you would "
+            f"be locked out of."
+        )
 
-    before = role.granted()
+    before = {"capabilities": role.granted(), "builtin": role.builtin}
     role.name = body.name
     role.description = body.description
     role.capabilities = json.dumps(body.capabilities)
+    # A shipped role the plant has changed is no longer the shipped role, so
+    # stop topping it up from our defaults. Every listing calls
+    # ensure_builtin_roles, which used to write the product's idea of
+    # `supervisor` straight back over the admin's: the save said "redefined",
+    # the card showed the old bundle a moment later, and nothing said why.
+    if role.builtin and caps.differs_from_shipped(code, body.capabilities):
+        role.builtin = False
     db.flush()
     audit.record(db, actor=actor, action="role.updated", entity_type="role",
-                 entity_id=code, before={"capabilities": before},
-                 after={"capabilities": body.capabilities})
+                 entity_id=code, before=before,
+                 after={"capabilities": body.capabilities, "builtin": role.builtin})
     return _role_out(role)
 
 

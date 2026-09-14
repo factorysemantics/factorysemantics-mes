@@ -87,6 +87,12 @@ def register(mcp, call, write, identify) -> dict:
                     description: str | None = None, dry_run: bool = False,
                     on_behalf_of: str | None = None, client_ref: str | None = None) -> dict:
         """Change what a role grants. Effective on everyone's next action.
+
+        `capabilities` replaces the bundle, it does not add to it, so send the
+        whole list. Redefining one of the roles the product ships makes it this
+        plant's own: it stops picking up capabilities added by later versions.
+        The admin role cannot be saved without users.manage.
+
         users.manage - human by default, and the agent never holds it."""
         identify(on_behalf_of, client_ref)
         body = {"code": code, "name": name, "description": description, "capabilities": capabilities}
