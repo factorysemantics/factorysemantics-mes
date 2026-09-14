@@ -3287,27 +3287,67 @@ missing and the plant is observed only.</p>
 <ol>
 <li><strong>This tool created it, and wrote that down.</strong> When <code>fsmes fleet create</code>
    builds a plant from a pack it appends a line to its own <strong>ownership
-   file</strong> — <code>fleet.toml</code>, beside the registry, under the registry's
-   <code>data_dir</code> (<code>environment()</code> and <code>data_dir()</code>, <code>src/fsmes/plant.py</code>). The
-   line records the plant name, the pack and pack version, the host and OS
-   user it was created under, the time, and an <strong><code>instance_id</code></strong>: a random
-   identifier the tool generates and also writes into the plant's own data
-   directory, where the plant reads it at start-up.</li>
-<li><strong>The plant corroborates it.</strong> The plant's <code>/health</code> returns its <code>plant</code>
-   name (decision <a href="../0021-one-database-per-plant/">0021</a>, piece 1) and that
-   same <code>instance_id</code>. A plant that answers with a different id, or with no
-   id, <strong>is not owned</strong>, whatever the ownership file says. This is the
-   condition that makes ownership checkable from outside the file that claims
-   it, and it is what makes ownership <em>revocable by the plant</em>: delete the id
-   from the plant's data directory and the fleet tool can no longer prove
-   condition 2, so the plant falls back to observed.</li>
-<li><strong>The operator gave it a path to act on.</strong> Either <strong>local</strong> — same host,
+   file</strong> — <code>ownership.toml</code>, in the fleet's <code>data_dir</code> (<code>environment()</code> and
+   <code>data_dir()</code>, <code>src/fsmes/plant.py</code>). The line records the plant name, the
+   pack and pack fingerprint, the host and OS user it was created under, the
+   time, and an <strong><code>instance_id</code></strong>: a random identifier the tool generates and
+   also writes into the plant's own data directory, where the plant reads it
+   at start-up.</li>
+</ol>
+<p>The name is <code>ownership.toml</code> and not <code>fleet.toml</code>, which is what this
+   record said while <a href="../0022-what-a-plant-pack-may-contain/">0022</a> was still
+   being built. <code>fleet.toml</code> is the <strong>registry</strong> now — the list of packs a
+   machine runs — and the two files answer different questions: one says
+   what this machine runs, the other says what this installation may
+   manage. Two files of one name, in two directories, is a trap for whoever
+   reads the next traceback, and a name is cheap.
+2. <strong>The plant does not contradict it.</strong> The plant's <code>/health</code> returns its
+   <code>plant</code> name (decision <a href="../0021-one-database-per-plant/">0021</a>, piece 1)
+   and that same <code>instance_id</code>. A plant that answers with a different id, or
+   with no id, <strong>is not owned</strong>, whatever the ownership file says. This is
+   the condition that makes ownership checkable from outside the file that
+   claims it, and it is what makes ownership <em>revocable by the plant</em>: delete
+   the id from the plant's data directory and the fleet tool can no longer
+   prove condition 2, so the plant falls back to observed.</p>
+<p><strong>A plant that is not running is silent, and silence is not a
+   contradiction.</strong> The first draft of this record said a silent plant is
+   not owned for as long as it is silent. Read strictly that makes <strong>start</strong>
+   impossible — a stopped plant answers nothing, and starting one is a verb
+   on this list — so the condition is <em>the plant must not contradict us</em>,
+   which resolves three ways:</p>
+<table>
+<thead>
+<tr>
+<th>The plant is</th>
+<th>What the tool may do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>answering</td>
+<td>it must return this name and this id, or every verb refuses</td>
+</tr>
+<tr>
+<td>silent, and local</td>
+<td>the id this tool wrote into the plant's own data directory must still be there and still match — it is the other half of condition 2, and it is readable while the plant is down. Only <code>start</code> and <code>apply</code>, the two verbs a stopped plant can take, may proceed on it</td>
+</tr>
+<tr>
+<td>silent, and remote</td>
+<td>refused. There is no data directory to read on another host, so nothing corroborates anything</td>
+</tr>
+</tbody>
+</table>
+<p>The thing the strict reading was protecting stays protected: <strong>no verb
+   reaches into a <em>running</em> plant that has not just said who it is.</strong> What it
+   was also forbidding — building a plant and then starting it — was not a
+   danger, and a rule that forbids the tool's own first two steps is a rule
+   that would be worked around rather than kept.
+3. <strong>The operator gave it a path to act on.</strong> Either <strong>local</strong> — same host,
    same OS user, and the plant's process ids are the ones in this registry's
    own pid file (<code>pid_file</code>/<code>running_pids</code>, <code>src/fsmes/plant.py</code>) — or
    <strong>remote</strong> — the ownership file names an explicit credential for that
    host, put there by a person. A credential is never discovered, never
-   defaulted, and never reused from another plant's entry.</li>
-</ol>
+   defaulted, and never reused from another plant's entry.</p>
 <p>Ownership is <strong>per plant</strong>, and it is never inferred from reachability.
 Being able to reach a plant is not owning it. Knowing its name is not owning
 it. Having its password is not owning it. <code>fsmes fleet disown &lt;name&gt;</code> deletes
@@ -3367,15 +3407,28 @@ page. The console is a page that reads.</p>
 <li>One write path in one module can be reviewed in one sitting, which is what
   makes piece 4's <em>done when</em> checkable at all.</li>
 <li><strong>The credentials differ, and this is what keeps the read-only argument
-  rather than deleting it.</strong> The console's credential to every plant, owned
-  or not, stays the <strong>read-only machine role</strong> from the first draft: health,
-  shadow, metrics, service liveness, the OEE reads, nothing else. Observation
-  is all the page ever does, so its role is unchanged by this decision.
-  Managing runs as the person at the terminal, with local process control or
-  that plant's own credential, for as long as the command takes and no
-  longer. <strong>No long-running process holds a credential that can change a
-  plant.</strong></li>
+  rather than deleting it.</strong> Managing runs as the person at the terminal,
+  with local process control or that plant's own credential, for as long as
+  the command takes and no longer. <strong>No long-running process holds a
+  credential that can change a plant.</strong></li>
+<li><strong>The console's own credential is none at all</strong>, which is the strongest
+  form of that same sentence. The first draft reached for a <em>read-only
+  machine role</em> — an account that could call health, shadow, metrics,
+  service liveness and the OEE reads and nothing else — so that the page
+  would not have to run as a person or as <code>AGENT</code>. Everything the page
+  actually shows turns out to need no account: <code>/health</code> and <code>/shadow</code> were
+  already public, and <code>/pack</code> — which plant pack this plant runs, whether it
+  has drifted, its schema revision, the modules it serves — is published on
+  the same terms, because it is a statement about how a deployment is
+  configured rather than a number a plant produced. A console that holds no
+  credential cannot leak one, cannot be persuaded to spend one, and needs no
+  account provisioned on twelve plants before it can show a table.</li>
 </ul>
+<p>The read-only machine role is therefore <strong>not rejected, it is not yet
+  needed</strong>, and the day it is needed is visible from here: the first column
+  a console adds that a plant will not tell a stranger — OEE, the loss
+  breakdown, <code>/ops/services</code> — is the day this product grows that role. A
+  role nothing uses is an account nobody rotates.</p>
 <p>The console <strong>may</strong> grow buttons later — started with an explicit
 <code>--manage</code>, off by default, bound to loopback, each button calling the same
 gated function the command calls, never a second implementation. That is
@@ -3396,10 +3449,13 @@ and no tooling here starts plants by itself.</p>
    M8 verb is a read or a comparison, and there is no flag that changes this.</li>
 <li><strong>Silence is <code>unknown</code>.</strong> A plant that did not answer is never rendered as
    healthy and never as down, exactly as <code>list_plants()</code> already behaves. A
-   console that renders silence as green is worse than no console. A plant
-   that did not answer is also <strong>not owned for as long as it is silent</strong>,
-   because condition 2 cannot be met — so a plant cannot be managed through
-   a gap in which nobody can see it.</li>
+   console that renders silence as green is worse than no console. On the
+   page a silent plant's ownership is <code>unknown</code> too — it is shown as recorded
+   here and not answering, never as owned — because nothing it did not say
+   can corroborate anything. What the command may do with a silent plant is
+   condition 2's table above: it may start the plant it can still prove it
+   created, and it may reach into no running plant that has not just said who
+   it is.</li>
 <li><strong>It states its total.</strong> "12 plants, 11 answered, 1 unknown; 3 owned".
    The number configured is never the number seen.</li>
 <li><strong>It aggregates nothing that would be a lie.</strong> Twelve OEE numbers, not
@@ -3436,8 +3492,11 @@ for whoever runs them.</p>
 <p>Harder: ownership is a file, and files get copied. A plant directory cloned
 to make a second plant carries the first plant's <code>instance_id</code> until
 something regenerates it, and two plants claiming one id must be an error
-that refuses, not a coin toss. That belongs in <code>fsmes pack check</code> and in the
-fleet tool's own start-up.</p>
+that refuses, not a coin toss. That cannot be <code>fsmes pack check</code>'s job after
+all — a pack carries no instance id, by <a href="../0022-what-a-plant-pack-may-contain/">0022</a>,
+so a check that reads only a pack directory can never see one. It is caught
+where the ids actually live: the fleet tool refuses to read an ownership file
+in which two entries claim one id, and says which two.</p>
 <p>To revisit when a real fleet exists, and specifically the first time somebody
 other than the maintainer runs a plant this tooling created — that is when
 the remote branch of condition 3 stops being theory. Today there is a lab
@@ -3456,8 +3515,8 @@ machine.</p>
 the console cannot read shows as unknown pack, not as up to date. A plant
 whose <code>instance_id</code> the console cannot read shows as not owned, not as
 probably fine.</p>
-<p>Config, not code, at plant boundaries: ownership lives in <code>fleet.toml</code> and in
-the plant's own data directory. No plant name, host or credential belongs in
+<p>Config, not code, at plant boundaries: ownership lives in <code>ownership.toml</code>
+and in the plant's own data directory. No plant name, host or credential belongs in
 <code>src/</code>, and the <code>no_tenant_literals</code> guard test of M8 is what keeps it out.</p>
 
 

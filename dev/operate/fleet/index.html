@@ -1031,10 +1031,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#where-this-differs-from-decision-0023-as-written" class="md-nav__link">
+  <a href="#a-plant-that-is-silent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Where this differs from decision 0023 as written
+        A plant that is silent
       
     </span>
   </a>
@@ -1096,6 +1096,45 @@
     <span class="md-ellipsis">
       
         fsmes fleet status &lt;name&gt; and fsmes fleet list
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The console
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The console">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-page-cannot-do-and-how-to-check-that-yourself" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the page cannot do, and how to check that yourself
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-it-refuses-to-show" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it refuses to show
       
     </span>
   </a>
@@ -2983,10 +3022,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#where-this-differs-from-decision-0023-as-written" class="md-nav__link">
+  <a href="#a-plant-that-is-silent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Where this differs from decision 0023 as written
+        A plant that is silent
       
     </span>
   </a>
@@ -3048,6 +3087,45 @@
     <span class="md-ellipsis">
       
         fsmes fleet status &lt;name&gt; and fsmes fleet list
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The console
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The console">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-page-cannot-do-and-how-to-check-that-yourself" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the page cannot do, and how to check that yourself
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-it-refuses-to-show" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it refuses to show
       
     </span>
   </a>
@@ -3130,8 +3208,8 @@ fsmes<span class="w"> </span>fleet<span class="w"> </span>list<span class="w">  
 <h3 id="giving-ownership-back">Giving ownership back<a class="headerlink" href="#giving-ownership-back" title="Permanent link">&para;</a></h3>
 <p>Delete the instance file from the plant's data directory (<code>&lt;data_dir&gt;/&lt;name&gt;.instance</code>). Nothing can prove condition 2 after that, so the plant becomes observed like any other — and it keeps running. Deleting the <code>[[owned]]</code> entry does the same from the other side.</p>
 <p>Two plants claiming one instance id is an <strong>error that refuses</strong>, not a coin toss: a plant directory copied to make a second plant carries the first one's id until something regenerates it, and a tool that picked one of them would act on the wrong plant. <code>fsmes pack check</code> cannot catch this — a pack carries no instance id — so the fleet tool catches it when it reads the file.</p>
-<h3 id="where-this-differs-from-decision-0023-as-written">Where this differs from decision 0023 as written<a class="headerlink" href="#where-this-differs-from-decision-0023-as-written" title="Permanent link">&para;</a></h3>
-<p><a href="../../decisions/0023-the-fleet-console-observes/">Decision 0023</a> says a plant that is silent "is not owned for as long as it is silent, because condition 2 cannot be met". Read literally that makes <strong>start</strong> impossible: a plant that is not running cannot answer anything. So condition 2 is implemented as <em>the plant must not contradict us</em>:</p>
+<h3 id="a-plant-that-is-silent">A plant that is silent<a class="headerlink" href="#a-plant-that-is-silent" title="Permanent link">&para;</a></h3>
+<p>A plant that is not running is not contradicting anything, and a rule that treated silence as a contradiction would forbid the tool's own first two steps. So condition 2 is <em>the plant must not contradict us</em>, and it resolves three ways (<a href="../../decisions/0023-the-fleet-console-observes/">decision 0023</a> has the same table):</p>
 <table>
 <thead>
 <tr>
@@ -3154,7 +3232,7 @@ fsmes<span class="w"> </span>fleet<span class="w"> </span>list<span class="w">  
 </tr>
 </tbody>
 </table>
-<p>The gap the decision closes stays closed: <strong>no verb reaches into a <em>running</em> plant that has not just said who it is.</strong></p>
+<p>The thing the strict reading protects stays protected: <strong>no verb reaches into a <em>running</em> plant that has not just said who it is.</strong> On the console, a silent plant's ownership reads <code>unknown</code> rather than <code>yes</code>.</p>
 <h2 id="the-commands">The commands<a class="headerlink" href="#the-commands" title="Permanent link">&para;</a></h2>
 <h3 id="fsmes-fleet-create-pack"><code>fsmes fleet create &lt;pack&gt;</code><a class="headerlink" href="#fsmes-fleet-create-pack" title="Permanent link">&para;</a></h3>
 <p>Checks the pack and refuses on failure; makes the fleet's data directory; writes the plant its instance id; applies the pack (schema to head, then the master data the pack carries); and records the ownership last. It <strong>starts nothing</strong> — the plant exists after this, and runs when a person says so.</p>
@@ -3168,6 +3246,75 @@ fsmes<span class="w"> </span>fleet<span class="w"> </span>list<span class="w">  
 <h3 id="fsmes-fleet-status-name-and-fsmes-fleet-list"><code>fsmes fleet status &lt;name&gt;</code> and <code>fsmes fleet list</code><a class="headerlink" href="#fsmes-fleet-status-name-and-fsmes-fleet-list" title="Permanent link">&para;</a></h3>
 <p>Reads. <code>status</code> says whether the plant is owned and <strong>why</strong> — the same question every verb asks, answered before you hit it. <code>list</code> states its total: <em>"N plants, M answered, K unknown; J owned"</em>. The number recorded is never the number seen.</p>
 <p>A plant that did not answer is <strong>unknown</strong>. Never healthy, never down.</p>
+<h2 id="the-console">The console<a class="headerlink" href="#the-console" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>fleet<span class="w"> </span>console<span class="w"> </span>--port<span class="w"> </span><span class="m">8100</span><span class="w">        </span><span class="c1"># loopback; one page, at http://127.0.0.1:8100</span>
+</code></pre></div>
+<p>One page. Every plant in the list — the packs this machine runs, the plants this installation created, and the <code>[[observe]]</code> entries a person added — each polled on <code>/health</code> and <code>/pack</code>, one row each:</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Where it comes from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>plant, label</td>
+<td>the plant's own <code>/health</code>, not the address it was dialled at</td>
+</tr>
+<tr>
+<td>owned</td>
+<td><code>yes</code>, <code>no</code>, or <code>unknown</code> while the plant is silent</td>
+</tr>
+<tr>
+<td>answering</td>
+<td><code>answered</code> or <code>unknown</code></td>
+</tr>
+<tr>
+<td>profile, clock</td>
+<td><code>/health</code> — and a defaulted zone says it was defaulted</td>
+</tr>
+<tr>
+<td>shadow</td>
+<td><code>/health</code></td>
+</tr>
+<tr>
+<td>pack, drift</td>
+<td><code>/pack</code> — and <em>never applied</em> is not <em>no drift</em></td>
+</tr>
+<tr>
+<td>schema</td>
+<td><code>/pack</code>, against this build's head</td>
+</tr>
+<tr>
+<td>modules</td>
+<td><code>/pack</code> — how many this plant serves, and which it does not</td>
+</tr>
+<tr>
+<td>last answered</td>
+<td>when this console last heard from it</td>
+</tr>
+</tbody>
+</table>
+<p>At the top: <strong>"3 plants, 2 answered, 1 unknown"</strong>, and below it how many are owned, how many are recorded here but not answering, and how many are only watched. The number in the list is never the number seen.</p>
+<h3 id="what-the-page-cannot-do-and-how-to-check-that-yourself">What the page cannot do, and how to check that yourself<a class="headerlink" href="#what-the-page-cannot-do-and-how-to-check-that-yourself" title="Permanent link">&para;</a></h3>
+<p><strong>There is no control on it, and no path from it to <code>fsmes fleet</code>.</strong> Four things make that checkable by reading rather than by trusting this page:</p>
+<ol>
+<li><code>src/fsmes/fleet/console.py</code> declares two routes, both <code>GET</code>. No <code>app.post</code>, <code>app.put</code>, <code>app.patch</code> or <code>app.delete</code> appears in it.</li>
+<li>It imports <code>observe</code> and <code>owned</code> and <strong>never <code>commands</code></strong> — the verbs are not reachable from the process that serves the page.</li>
+<li><code>src/fsmes/web/fleet.js</code> makes exactly one kind of request: a <code>GET</code> of <code>/fleet.json</code>, its own server. The page has no form, no button and no input.</li>
+<li>Everything it asks a plant is a <code>GET</code> of <code>/health</code> or <code>/pack</code>, which a plant answers without a credential — so <strong>the console holds no credential at all</strong>. A console is a long-running process on a port, and whatever it can do, whoever can reach that port can do; the safest credential is the one that does not exist.</li>
+</ol>
+<p><code>tests/test_fleet_console.py</code> holds all four by parsing the source, so they stay true.</p>
+<p>The M8 design reached first for a <em>read-only machine role</em> for the console to run as. This console needs no account at all — every column above comes from an endpoint a plant answers to anyone who can reach it, and holding no credential is a stronger property than holding a read-only one. The role is not rejected, it is <strong>not yet needed</strong>: the day a console shows OEE, the loss breakdown or <code>/ops/services</code> is the day this product grows one, and nothing here assumes its absence.</p>
+<h3 id="what-it-refuses-to-show">What it refuses to show<a class="headerlink" href="#what-it-refuses-to-show" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>A plant that did not answer is <code>unknown</code>.</strong> Never healthy, never down. It is also not owned while it is silent, because nothing can corroborate the instance id — so a plant is never managed through a gap in which nobody can see it.</li>
+<li><strong>Nothing is added up across plants.</strong> No fleet OEE, no fleet availability, no single number of any kind. A fleet OEE is a lie unless every plant is the same shape, and no two are. Twelve plants are twelve rows.</li>
+<li><strong>It holds no plant data.</strong> The last answer is cached for display and nothing else. Orders, serials, people and events stay in the plant that made them.</li>
+<li><strong>It starts nothing.</strong> No scheduler, no reconciliation loop, no daemon that notices a stopped plant and brings it back.</li>
+</ul>
+<p>A console <code>--manage</code> flag — off by default, loopback only, each button calling the same gated function the command calls — is possible later and is deliberately not here.</p>
 <h2 id="ownershiptoml"><code>ownership.toml</code><a class="headerlink" href="#ownershiptoml" title="Permanent link">&para;</a></h2>
 <p>In the fleet's data directory (<code>[environment] data_dir</code> in the <a href="../registry/">fleet file</a>, or <code>labs/multiplant/.data</code> in a checkout).</p>
 <div class="highlight"><pre><span></span><code><span class="k">[[owned]]</span>
