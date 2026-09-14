@@ -881,6 +881,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../packs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — plant packs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../registry/" class="md-nav__link">
         
   
@@ -888,7 +916,7 @@
   <span class="md-ellipsis">
     
   
-    How-to — plants from a registry
+    How-to — plants from a fleet file
   
 
     
@@ -3000,7 +3028,7 @@ changes meaning without anyone noticing is worse than one that breaks.</p>
 migrate</code> takes its own copy: that copy lands in the same directory, on the
 same disk, as the database it is protecting.</p>
 <h2 id="a-plant-from-the-registry">A plant from the registry<a class="headerlink" href="#a-plant-from-the-registry" title="Permanent link">&para;</a></h2>
-<p>If your plants come from a registry (<a href="../registry/">Plants from a registry</a>),
+<p>If your plants come from a fleet file (<a href="../registry/">Plants from a fleet file</a>),
 migration is one command per plant, or <code>all</code> for every one of them:</p>
 <div class="highlight"><pre><span></span><code>systemctl<span class="w"> </span>--user<span class="w"> </span>stop<span class="w"> </span>fsmes-plant@bottling<span class="w">      </span><span class="c1"># or: fsmes plant bottling stop</span>
 pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>factorysemantics-mes<span class="w">      </span><span class="c1"># however you installed it</span>
@@ -3111,7 +3139,7 @@ caught by looking, not by a command.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../backup/">Backup and restore</a></li>
-<li><a href="../registry/">Plants from a registry</a></li>
+<li><a href="../registry/">Plants from a fleet file</a></li>
 <li><a href="../opc-readonly/">Connecting read-only to an OPC UA server</a></li>
 </ul>
 

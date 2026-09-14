@@ -881,6 +881,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../packs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — plant packs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../registry/" class="md-nav__link">
         
   
@@ -888,7 +916,7 @@
   <span class="md-ellipsis">
     
   
-    How-to — plants from a registry
+    How-to — plants from a fleet file
   
 
     
@@ -3097,10 +3125,22 @@ registers and which tables its rows live in.</p>
 </code></pre></div>
 <h2 id="what-this-is-for">What this is for<a class="headerlink" href="#what-this-is-for" title="Permanent link">&para;</a></h2>
 <p>M8's goal is two plant packs with different modules enabled running from one
-codebase. This setting is the mechanism; the plant pack is where it is going
-to live. When a <code>plant.toml</code> gains a <code>[modules]</code> table it will compile down to
-exactly this string, so a plant that sets <code>MES_MODULES</code> today is setting the
-same thing by hand.</p>
+codebase. This setting is the mechanism; the <a href="../packs/">plant pack</a> is where
+it lives. A pack's <code>[modules]</code> table compiles down to exactly this string, so
+a plant that sets <code>MES_MODULES</code> by hand is setting the same thing:</p>
+<div class="highlight"><pre><span></span><code><span class="k">[modules]</span>
+<span class="n">serialization</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+<span class="n">coa</span><span class="w">           </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+</code></pre></div>
+<p>becomes <code>all,-serialization,-coa</code>. <code>all</code> is written first and the pack's own
+words after it, so a module added by a later release arrives switched <strong>on</strong>
+rather than silently missing from a plant that has never heard of it. A
+module name this version does not have, or a kernel module, is refused by
+<code>fsmes pack check</code> before the plant ever starts.</p>
+<p><code>labs/multiplant/finewire</code> is the plant that does it: a wire-drawing hall
+with no serial units and no certificates, whose <code>/trace</code> and <code>/coa</code> routes
+answer 404 and whose agent registers eight tool files where a full plant
+registers ten.</p>
 <h2 id="how-the-boundary-is-kept">How the boundary is kept<a class="headerlink" href="#how-the-boundary-is-kept" title="Permanent link">&para;</a></h2>
 <p>Two tests, and they are worth knowing about because they are what stops this
 capability quietly rotting:</p>
@@ -3111,9 +3151,10 @@ capability quietly rotting:</p>
   start-up.</li>
 <li><strong><code>tests/test_no_tenant_literals.py</code></strong> forbids a plant's name, equipment
   code or material code appearing in code under <code>src/</code>. It builds its list
-  from the lab plants in <code>labs/</code> rather than from a list somebody typed, so a
-  new plant extends the guard instead of escaping it. This is house rule 4 —
-  <em>config, not code, at plant boundaries</em> — as a measurement.</li>
+  from the lab plants in <code>labs/</code> — each pack's <code>plant.toml</code> and its master
+  data — rather than from a list somebody typed, so a new plant extends the
+  guard instead of escaping it. This is house rule 4 — <em>config, not code, at
+  plant boundaries</em> — as a measurement.</li>
 </ul>
 
 
@@ -3152,7 +3193,7 @@ capability quietly rotting:</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../registry/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How-to — plants from a registry">
+          <a href="../registry/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How-to — plants from a fleet file">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -3162,7 +3203,7 @@ capability quietly rotting:</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                How-to — plants from a registry
+                How-to — plants from a fleet file
               </div>
             </div>
           </a>

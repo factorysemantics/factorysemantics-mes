@@ -972,6 +972,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../packs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — plant packs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../registry/" class="md-nav__link">
         
   
@@ -979,7 +1007,7 @@
   <span class="md-ellipsis">
     
   
-    How-to — plants from a registry
+    How-to — plants from a fleet file
   
 
     
@@ -2914,9 +2942,9 @@ promote script are in <code>deploy/</code>.</p>
 <td>a second clone pinned to a release tag</td>
 </tr>
 <tr>
-<td>Registry</td>
-<td><code>labs/multiplant/plants.toml</code> in the repo</td>
-<td><code>~/.config/fsmes/prod/plants.toml</code>, mode 600</td>
+<td>Fleet file</td>
+<td><code>labs/multiplant/fleet.toml</code> in the repo</td>
+<td><code>~/.config/fsmes/prod/fleet.toml</code>, mode 600, listing packs beside it</td>
 </tr>
 <tr>
 <td>Accounts</td>
@@ -2938,7 +2966,7 @@ promote script are in <code>deploy/</code>.</p>
 <p>First-time setup:</p>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/factorysemantics/factorysemantics-mes.git<span class="w"> </span>~/Projects/fsmes-prod
 mkdir<span class="w"> </span>-p<span class="w"> </span>~/.config/fsmes/prod<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>chmod<span class="w"> </span><span class="m">700</span><span class="w"> </span>~/.config/fsmes/prod
-<span class="c1"># write plants.toml and env (see the registry how-to); chmod 600 both</span>
+<span class="c1"># write fleet.toml, the packs it lists and env (see the fleet how-to); chmod 600 the file and the env</span>
 cp<span class="w"> </span>~/Projects/fsmes-prod/deploy/fsmes-prod-plant@.service<span class="w"> </span>~/.config/systemd/user/
 systemctl<span class="w"> </span>--user<span class="w"> </span>daemon-reload
 ~/Projects/fsmes-prod/deploy/promote.sh<span class="w"> </span>v0.1.0
@@ -2957,7 +2985,8 @@ than creating an account with an empty password.</p>
 </ul>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../registry/">Plants from a registry</a></li>
+<li><a href="../packs/">Plant packs</a></li>
+<li><a href="../registry/">Plants from a fleet file</a></li>
 <li><a href="../../reference/settings/">Settings reference</a></li>
 <li><a href="../security/">Security</a></li>
 </ul>

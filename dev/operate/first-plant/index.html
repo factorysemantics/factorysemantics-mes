@@ -1060,6 +1060,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../packs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — plant packs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../registry/" class="md-nav__link">
         
   
@@ -1067,7 +1095,7 @@
   <span class="md-ellipsis">
     
   
-    How-to — plants from a registry
+    How-to — plants from a fleet file
   
 
     
@@ -3182,6 +3210,12 @@ box, or when your IT department wants the backups in their existing regime:
 set <code>MES_DATABASE_URL=postgresql+psycopg://user:password@host:5432/dbname</code>
 and install with the <code>postgres</code> extra. Both are tested; see
 <a href="../compatibility/">compatibility</a>.</p>
+<p><strong>Your plant's own configuration is one directory</strong>, a
+<a href="../packs/">plant pack</a>: what this plant is called, what clock it keeps, which
+modules it serves, what it calls things, and the files that describe its
+machines and its master data. <code>fsmes pack check</code> reads it offline and refuses
+a typo instead of defaulting past it, and it holds no password, so it is safe
+to send to whoever you are asking for help. Step 4 is where you draft one.</p>
 <p>Everything the MES is configured with is an environment variable starting
 <code>MES_</code>, and it reads a <code>.env</code> file in the directory you run it from. There
 is no other config format to learn.</p>

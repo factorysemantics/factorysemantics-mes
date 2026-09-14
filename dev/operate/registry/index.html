@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://docs.factorysemantics.com/dev/operate/registry/">
       
       
-        <link rel="prev" href="../opc-readonly/">
+        <link rel="prev" href="../packs/">
       
       
         <link rel="next" href="../modules/">
@@ -27,7 +27,7 @@
     
     
       
-        <title>How-to — plants from a registry - FactorySemantics MES</title>
+        <title>How-to — plants from a fleet file - FactorySemantics MES</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#plants-from-a-registry" class="md-skip">
+        <a href="#plants-from-a-fleet-file" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              How-to — plants from a registry
+              How-to — plants from a fleet file
             
           </span>
         </div>
@@ -878,6 +878,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../packs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — plant packs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -897,7 +925,7 @@
   <span class="md-ellipsis">
     
   
-    How-to — plants from a registry
+    How-to — plants from a fleet file
   
 
     
@@ -915,7 +943,7 @@
   <span class="md-ellipsis">
     
   
-    How-to — plants from a registry
+    How-to — plants from a fleet file
   
 
     
@@ -939,6 +967,39 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The list
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-changed-and-why" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What changed, and why
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rules-worth-knowing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rules worth knowing
+      
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
@@ -2771,6 +2832,39 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#the-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The list
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-changed-and-why" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What changed, and why
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rules-worth-knowing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rules worth knowing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2806,57 +2900,107 @@
   
 
 
-<h1 id="plants-from-a-registry">Plants from a registry<a class="headerlink" href="#plants-from-a-registry" title="Permanent link">&para;</a></h1>
-<p><em>How-to. Run several independent plants — each its own database, OPC UA server and dashboard — from one TOML file, and never touch code to add one.</em></p>
-<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>plant<span class="w"> </span>all<span class="w"> </span>init<span class="w">       </span><span class="c1"># create every schema and seed every plant</span>
+<h1 id="plants-from-a-fleet-file">Plants from a fleet file<a class="headerlink" href="#plants-from-a-fleet-file" title="Permanent link">&para;</a></h1>
+<p><em>How-to. Run several independent plants — each its own database, OPC UA server and dashboard — from one list, and never touch code to add one.</em></p>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>plant<span class="w"> </span>all<span class="w"> </span>init<span class="w">       </span><span class="c1"># apply every pack and create every schema</span>
 fsmes<span class="w"> </span>plant<span class="w"> </span>all<span class="w"> </span>start<span class="w">      </span><span class="c1"># bring them all up</span>
 fsmes<span class="w"> </span>plant<span class="w"> </span>all<span class="w"> </span>status<span class="w">     </span><span class="c1"># who is alive and answering</span>
 fsmes<span class="w"> </span>plant<span class="w"> </span>cutlery<span class="w"> </span>run<span class="w">    </span><span class="c1"># foreground supervisor for one plant (what systemd runs)</span>
 fsmes<span class="w"> </span>plant<span class="w"> </span>all<span class="w"> </span>migrate<span class="w">    </span><span class="c1"># every stopped plant's database to the current schema, backup first</span>
 fsmes<span class="w"> </span>plant<span class="w"> </span>all<span class="w"> </span>stop
 </code></pre></div>
-<p>The registry is <code>labs/multiplant/plants.toml</code> in a checkout, or whatever
-<code>FSMES_PLANT_REGISTRY</code> points at outside it. A plant is a table:</p>
-<div class="highlight"><pre><span></span><code><span class="k">[environment]</span>
-<span class="n">data_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"~/.local/share/fsmes/prod"</span><span class="w">   </span><span class="c1"># databases, logs, certificates live here</span>
+<h2 id="the-list">The list<a class="headerlink" href="#the-list" title="Permanent link">&para;</a></h2>
+<p>The fleet file is <code>labs/multiplant/fleet.toml</code> in a checkout, or whatever <code>FSMES_PLANT_REGISTRY</code> points at outside one. It lists packs, and nothing else except where the databases go:</p>
+<div class="highlight"><pre><span></span><code><span class="n">packs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"bottling"</span><span class="p">,</span><span class="w"> </span><span class="s2">"machining"</span><span class="p">,</span><span class="w"> </span><span class="s2">"finewire"</span><span class="p">]</span>
 
-<span class="k">[plants.cutlery]</span>
-<span class="n">label</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="s2">"Cutlery Works — 60 million ids a day"</span>
-<span class="n">api_host</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="s2">"127.0.0.1"</span><span class="w">        </span><span class="c1"># the interface to serve on; a LAN address to share it</span>
-<span class="n">api_port</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="mi">9030</span>
-<span class="n">opc_port</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="mi">4844</span>
-<span class="n">tag_map</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="s2">"labs/cutlery/tag_map.json"</span>
-<span class="n">replay_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"labs/cutlery/out"</span><span class="w">  </span><span class="c1"># generated line data (fsmes sim-generate)</span>
-<span class="n">init</span><span class="w">       </span><span class="o">=</span><span class="w"> </span><span class="s2">"labs/cutlery/init.py"</span>
-<span class="n">simulate</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="w">               </span><span class="c1"># serve the API only, over an existing database</span>
-<span class="n">secret_key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"&lt;long random string&gt;"</span>
-<span class="n">accounts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
-<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="n">code</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"DEMO"</span><span class="p">,</span><span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"Demo visitor"</span><span class="p">,</span><span class="w">  </span><span class="n">role</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"viewer"</span><span class="p">,</span><span class="w"> </span><span class="n">password_env</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"FSMES_DEMO_PASSWORD"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="n">code</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"ADMIN"</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"Administrator"</span><span class="p">,</span><span class="w"> </span><span class="n">role</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"admin"</span><span class="p">,</span><span class="w">  </span><span class="n">password_env</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"MES_ADMIN_PASSWORD"</span><span class="w"> </span><span class="p">},</span>
-<span class="p">]</span>
+<span class="k">[environment]</span>
+<span class="n">data_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"~/.local/share/fsmes/prod"</span><span class="w">   </span><span class="c1"># databases, logs, certificates live here</span>
 </code></pre></div>
-<p>Keys the registry understands (2026-09-07): <code>label</code>, <code>api_host</code>, <code>api_port</code>,
-<code>opc_port</code>, <code>tag_map</code>, <code>replay_dir</code>, <code>init</code>, <code>post_boot</code>, <code>speed</code>,
-<code>simulate</code>, <code>secret_key</code>, <code>accounts</code>, <code>database_url</code>,
-<code>database_password_file</code>, <code>agent</code>, and <code>[environment] data_dir</code>.</p>
-<p>Rules worth knowing:</p>
+<p>Paths are relative to the fleet file, so a fleet file and its packs move together. Each directory is a <strong>plant pack</strong> — one <code>plant.toml</code> and the files it names — and <a href="../packs/">plant packs</a> is the page for what may be in one.</p>
+<p>A plant's name comes from its pack, not from the directory: the pack is what a plant says it is.</p>
+<h2 id="what-changed-and-why">What changed, and why<a class="headerlink" href="#what-changed-and-why" title="Permanent link">&para;</a></h2>
+<p>Until 2026-09-13 this file <em>was</em> the plant. Each entry carried seventeen keys — <code>label</code>, <code>api_port</code>, <code>opc_port</code>, <code>tag_map</code>, <code>init</code>, <code>secret_key</code>, <code>accounts</code> and the rest — read into a plain dict with <code>tomllib</code> and no schema. Two consequences, and both of them happened:</p>
 <ul>
-<li>A plant with <code>accounts</code> never receives the lab accounts. A <code>password_env</code>
-  that is not set refuses to start rather than creating an account with an
-  empty password.</li>
-<li><code>database_url</code> switches a plant to PostgreSQL; the default is SQLite in
-  <code>data_dir</code>.</li>
-<li><code>simulate = false</code> runs the API alone over whatever the database holds —
-  the way the public demo serves a copy of one scored hour.</li>
-<li>Adding a plant is an entry here plus a tag map and line data. If it needs
-  a code change, that is a bug — house rule 4 — and there is an issue form
-  for it.</li>
+<li><strong>Nothing could tell a key from a typo.</strong> <code>inspec_every</code> was a default nobody saw.</li>
+<li><strong>The file and this page drifted apart in both directions inside two weeks.</strong> Three keys the code read were undocumented; one key documented here was read by nothing.</li>
+</ul>
+<p>Every one of those keys is now in the plant's own <code>plant.toml</code>, or gone with a reason:</p>
+<table>
+<thead>
+<tr>
+<th>Registry key</th>
+<th>Where it went</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>label</code></td>
+<td><code>[plant] label</code></td>
+</tr>
+<tr>
+<td><code>api_host</code>, <code>api_port</code></td>
+<td><code>[serve] api_host</code>, <code>[serve] api_port</code></td>
+</tr>
+<tr>
+<td><code>opc_port</code></td>
+<td><code>[serve] opc_endpoint</code> — the whole endpoint, so a plant can point at a server that is not ours</td>
+</tr>
+<tr>
+<td><code>tag_map</code>, <code>replay_dir</code></td>
+<td><code>[files] tag_map</code>, <code>[files] replay_dir</code></td>
+</tr>
+<tr>
+<td><code>simulate</code>, <code>speed</code></td>
+<td><code>[serve] simulate</code>, <code>[serve] speed</code></td>
+</tr>
+<tr>
+<td><code>database_url</code>, <code>database_password_file</code></td>
+<td><code>[storage]</code></td>
+</tr>
+<tr>
+<td><code>inspect_every</code>, <code>issue_every</code>, <code>inspect_all</code></td>
+<td><code>[floor]</code></td>
+</tr>
+<tr>
+<td><code>accounts</code></td>
+<td><code>[[accounts]]</code></td>
+</tr>
+<tr>
+<td><code>secret_key</code></td>
+<td><strong>gone.</strong> A pack holds no secret. <code>[serve] secret_key_env</code> names the variable it lives in</td>
+</tr>
+<tr>
+<td><code>init</code></td>
+<td><strong>gone.</strong> A pack carries no code. Master data is data in <code>[files] masterdata</code>, seeded by <code>fsmes pack apply</code>; a plant whose master data is generated runs its own generator</td>
+</tr>
+<tr>
+<td><code>post_boot</code></td>
+<td><strong>gone</strong>, same reason. A scenario script belongs to the lab that wrote it</td>
+</tr>
+<tr>
+<td><code>agent</code></td>
+<td><strong>gone.</strong> It was in this page's key list and in no code path — the drift a schema exists to stop</td>
+</tr>
+<tr>
+<td><code>[environment] data_dir</code></td>
+<td>stays here: it is a fact about the machine, not about a plant</td>
+</tr>
+</tbody>
+</table>
+<p><code>fsmes pack migrate</code> does that conversion and prints the receipt. <code>FSMES_PLANT_REGISTRY</code> kept its name.</p>
+<h2 id="rules-worth-knowing">Rules worth knowing<a class="headerlink" href="#rules-worth-knowing" title="Permanent link">&para;</a></h2>
+<ul>
+<li>A pack with <code>[[accounts]]</code> never receives the lab accounts. A <code>password_env</code> that is not set refuses to start rather than creating an account with an empty password.</li>
+<li><code>[storage] database_url</code> switches a plant to PostgreSQL; the default is SQLite in <code>data_dir</code>.</li>
+<li><code>[serve] simulate = false</code> runs the API alone over whatever the database holds — the way the public demo serves a copy of one scored hour.</li>
+<li>Adding a plant is a directory and a line in this file. If it needs a code change, that is a bug — house rule 4 — and there is an issue form for it.</li>
 </ul>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
+<li><a href="../packs/">Plant packs</a> — what is in one, and the four commands that read it</li>
 <li><a href="../deploy/">Deploy</a></li>
 <li><a href="../../reference/settings/">Settings reference</a></li>
-<li>The cutlery lab, the largest registry entry: <code>labs/cutlery/README.md</code> in the repository</li>
+<li>The cutlery lab, the largest pack: <code>labs/cutlery/README.md</code> in the repository</li>
 </ul>
 
 
@@ -2895,7 +3039,7 @@ fsmes<span class="w"> </span>plant<span class="w"> </span>all<span class="w"> </
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../opc-readonly/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How-to — read-only OPC UA commissioning">
+          <a href="../packs/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Reference — plant packs">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2905,7 +3049,7 @@ fsmes<span class="w"> </span>plant<span class="w"> </span>all<span class="w"> </
                 Previous
               </span>
               <div class="md-ellipsis">
-                How-to — read-only OPC UA commissioning
+                Reference — plant packs
               </div>
             </div>
           </a>
