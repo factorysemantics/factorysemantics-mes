@@ -26,6 +26,13 @@ from fsmes.pack import format as fmt
 #: `[words]` key that is not here is a typo, and a typo that silently renames
 #: nothing is exactly what the registry did for two weeks. Grow it when a
 #: plant asks for a word, one line per word.
+#:
+#: Two obvious candidates are deliberately absent. `equipment` is the name of
+#: a field in every inbound event and every namespace payload, and `operator`
+#: is the name of a built-in role; a word that is both a label on a screen and
+#: an identifier a number is keyed on is exactly the ambiguity decision 0022
+#: clause 3 exists to stop. A plant that wants another word for a machine
+#: renames `machine`, which is a label and nothing else.
 RENAMEABLE: dict[str, str] = {
     "work order": "the order a plant runs - job, batch ticket, works order",
     "operation": "one step of a routing - step, task",
@@ -33,9 +40,8 @@ RENAMEABLE: dict[str, str] = {
     "material": "a thing with a code and a unit - part, item, SKU",
     "lot": "a quantity of one material with an identity - batch, heat",
     "serial": "one unit with an identity of its own - unit, tag number",
-    "equipment": "a machine - asset, resource, station",
+    "machine": "a piece of equipment - asset, resource, station",
     "work center": "the line or cell a machine belongs to - line, cell",
-    "operator": "the person at the machine - technician, associate",
     "shift": "the working period the calendar is drawn in",
     "non-conformance": "a recorded failure against a specification - defect, reject",
     "gauge": "a measuring instrument under calibration - instrument",
