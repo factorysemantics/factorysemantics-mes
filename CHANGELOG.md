@@ -42,6 +42,49 @@ goes under Honesty with a migration line, so plant people can find it.
   whole script against two fake plants with recorders in place of
   `systemctl`, `uv`, `pg_dump` and `pg_restore`.
 
+- **`fsmes db-status` and `fsmes pack status` report on the database they
+  were pointed at, and say which one.** Both read whatever database the
+  *process* was configured for, so on a machine where that is the default
+  SQLite file they answered about a file nobody had asked about. On
+  2026-09-14 a promote ran `fsmes pack apply` — which migrated the plant's
+  PostgreSQL to head and said so — and then `fsmes db-status` in the same
+  shell, which said *"There is no database yet"*; the script read that as
+  failure and rolled a healthy plant back. `fsmes pack status` on the same
+  migrated plant said the schema had *never been migrated* while `GET /pack`
+  on that plant said it was at head.
+
+  - `fsmes db-status` and `fsmes init-db` take **`--pack <dir>`** or
+    **`--plant <name>`** (a plant in the fleet file), and print **which
+    database they are looking at on the first line, every time** — including
+    with neither, where the line says the database is only the process
+    default. A stray database created beside a real one, and a status read
+    off the wrong one, both start with that line being absent.
+  - `fsmes pack status` reads the pack's own `[storage] database_url`, with
+    the password put back from the file `database_password_file` names, and
+    prints that database above the schema line. A pack that names no
+    database says so rather than answering about a default.
+  - `fsmes pack status`, `GET /pack`, `fsmes fleet status` and
+    `fsmes db-status` take the schema answer from **one function**, so they
+    cannot disagree about a database they were all pointed at.
+  - `fsmes pack apply` honours `database_password_file` for the first time;
+    the password merge is now one function shared with the fleet and with
+    the plant a fleet starts.
+
+### Honesty
+
+- **A database that could not be reached is no longer reported as one that
+  has never been migrated.** `fsmes pack status` and `GET /pack` caught every
+  connection failure and rendered it as *not stamped; this database has never
+  been migrated*, and `fsmes fleet status` rendered the resulting null as
+  *behind head*. Nobody-answered and never-migrated are different facts about
+  a plant, and a deployment script acting on the second when the first is
+  true will roll back a plant that is fine — which is what happened. All four
+  now say the database did not answer, and `at_head` on `GET /pack` is
+  tri-state with an `answered` field beside it saying which null this is.
+  **If you gate a deploy on these commands**, note that they now also exit
+  non-zero when they cannot reach or cannot identify the database, where
+  before some of those cases exited zero or reported an empty database.
+
 ## [0.2.0] — 2026-09-14
 
 Thirty pull requests, #8 to #37, since 0.1.2 on 2026-09-08. All thirty were

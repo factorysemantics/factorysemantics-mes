@@ -15,14 +15,27 @@ changes meaning without anyone noticing is worse than one that breaks.
 The first upgrade this project has had to describe. In order:
 
 ```bash
-fsmes backup --out /mnt/nas/fsmes         # first, always
+fsmes backup --out /mnt/nas/fsmes                 # first, always
 # stop the agent and the API
 pip install --upgrade factorysemantics-mes
-fsmes db-status                           # what you are at, and what 0.2.0 expects
-fsmes init-db                             # runs the migrations the wheel carries
-fsmes db-status                           # should now agree; it exits non-zero if not
+fsmes db-status --pack packs/yourplant            # what you are at, and what 0.2.0 expects
+fsmes init-db   --pack packs/yourplant            # runs the migrations the wheel carries
+fsmes db-status --pack packs/yourplant            # should now agree; it exits non-zero if not
 # start them again
 ```
+
+**Pass the pack** (or `--plant <name>`, if you run plants from a fleet file).
+Without it these commands are about *this process's* database — usually a
+SQLite file beside wherever you are standing — and not about your plant's.
+They say so on their first line, every time:
+
+```text
+Looking at postgresql+psycopg://fsmes:***@db:5432/plant (from the pack at packs/yourplant).
+```
+
+Read that line. On 2026-09-14 a promote script ran a bare `fsmes db-status`
+straight after a successful migration, read "There is no database yet" about
+a default nobody had asked about, and rolled a healthy plant back.
 
 Your database was made by a 0.1.2 wheel, which shipped no migration scripts,
 so it has tables and **no Alembic stamp**. `fsmes init-db` works out which
@@ -256,21 +269,31 @@ strength of it.
 ## Checking the upgrade landed
 
 ```bash
-fsmes info          # the version you meant to be on
-fsmes db-status     # the schema revision, and whether it is the current one
-fsmes erp check     # the ERP connector still reaches what it needs
-fsmes opc-verify    # every mapped tag still readable, run against the live server
+fsmes info                              # the version you meant to be on
+fsmes db-status --pack packs/yourplant  # the schema revision, and whether it is the current one
+fsmes erp check                         # the ERP connector still reaches what it needs
+fsmes opc-verify                        # every mapped tag still readable, run against the live server
 ```
 
-`fsmes db-status` prints the revision the database is at and the revision the
-installed version expects, and **exits non-zero when they differ** — so a
-deployment script can gate on it rather than on someone reading the output:
+`fsmes db-status` names the database on its first line, then prints the
+revision that database is at and the revision the installed version expects,
+and **exits non-zero when they differ** — so a deployment script can gate on
+it rather than on someone reading the output:
 
 ```text
+Looking at postgresql+psycopg://fsmes:***@db:5432/plant (from the pack at packs/yourplant).
 Current: a3f6c81d09e2
 Head:    a3f6c81d09e2
 The database is at the current schema.
 ```
+
+Three things it will not do. It will not report on a default database as
+though you had named one — with neither `--pack` nor `--plant` the first line
+says *the process default*. It will not say a database is empty when it could
+not reach it; a database that did not answer is reported as one that did not
+answer, and the exit code is still non-zero. And the password never appears:
+the pack names the file the password is in, and the URL is printed with the
+password replaced.
 
 Then open the dashboard and look at a shift from before the upgrade. History
 that was there before and is not there now is the thing to catch, and it is

@@ -69,7 +69,7 @@ What it cannot prove without a plant — that the OPC endpoint answers, that the
 $ fsmes pack check labs/multiplant/finewire
 Checking labs/multiplant/finewire against pack format 1.
   unknown the OPC endpoint opc.tcp://10.20.30.40:4840/FineWire/Hall2 - nothing here connects to it; `fsmes opc-verify` does
-  unknown the database - nothing here connects to it; `fsmes db-status` does
+  unknown the database - nothing here connects to it; `fsmes db-status --pack <this directory>` does
   unknown the environment variable FSMES_FINEWIRE_SECRET_KEY - whether it is set where this plant runs is a fact about that machine, not about this pack
   unknown the environment variable FSMES_FINEWIRE_OPERATOR_PASSWORD - account HALL2 refuses to be created without it, where this plant runs
 Usable, as far as a file can say: 9 file(s) read, nothing refused, 4 thing(s) only a running plant can answer.
@@ -77,7 +77,7 @@ Usable, as far as a file can say: 9 file(s) read, nothing refused, 4 thing(s) on
 
 ## `fsmes pack apply`
 
-Check, then the database, then the data, then the receipt. It is the one command that **becomes** the plant it acts on: it puts the pack's settings into its own environment, so the schema it upgrades and the rows it writes are that plant's.
+Check, then the database, then the data, then the receipt. It is the one command that **becomes** the plant it acts on: it puts the pack's settings into its own environment, so the schema it upgrades and the rows it writes are that plant's. The database it adopts is the pack's `[storage] database_url` with the password put back from the file the pack names — the same URL `fsmes pack status` and `fsmes db-status --pack` read, so applying a pack and asking about it cannot land on two different databases.
 
 **Pack before database.** A schema migration may need a value the pack now carries, so the pack is applied first — and `fsmes pack apply` runs the migrations itself, in that order.
 
@@ -95,12 +95,17 @@ $ fsmes pack status packs/finewire
   pack      packs/finewire
   applied   2026-09-13T18:22:04+00:00 by 0.1.2, format 1, 9 files
   drift     yes - the files in the pack have changed since it was applied. `fsmes pack apply` again to bring the plant to them.
+  database  postgresql+psycopg://fsmes:***@10.20.30.41:5432/finewire (from the pack at packs/finewire)
   schema    c8b1e40d7a92 (head)
 ```
 
 Drift is measured against the fingerprint `apply` recorded: a hash of every file a person wrote in the pack, names included, so a renamed file is a change. Generated line data is excluded.
 
-A plant that has never been applied says **never** rather than answering "no drift" — those are different facts, and the second one is a lie about the first. Exits non-zero on drift or a database behind head, so a deployment script can act on the answer.
+**The `database` line says which database the `schema` line is about**, and it is this pack's — `[storage] database_url`, with the password read from the file `database_password_file` names. Until 2026-09-14 the schema line was about whatever database the *process* was configured for, which is how this command once reported "never migrated" about a plant `fsmes pack apply` had migrated a minute earlier. The same answer is what the running plant returns on `GET /pack` and what `fsmes fleet status` prints, from one function, so the three cannot disagree.
+
+A pack that names no `[storage] database_url` leaves the choice of file to its fleet, so both lines say **unknown** and name `--plant` — this command will not answer about a default nobody asked for. A database that did not answer is reported as one that did not answer, never as one that is empty.
+
+A plant that has never been applied says **never** rather than answering "no drift" — those are different facts, and the second one is a lie about the first. Exits non-zero on drift, on a database behind head, and on a database it could not reach or could not identify, so a deployment script can act on the answer.
 
 ## `fsmes pack migrate`
 
