@@ -102,6 +102,9 @@ modules it serves, what it calls things, and the files that describe its
 machines and its master data. `fsmes pack check` reads it offline and refuses
 a typo instead of defaulting past it, and it holds no password, so it is safe
 to send to whoever you are asking for help. Step 4 is where you draft one.
+Running more than one plant from one installation is
+[the fleet](fleet.md), which builds each one from its pack and will only ever
+touch the plants it built.
 
 Everything the MES is configured with is an environment variable starting
 `MES_`, and it reads a `.env` file in the directory you run it from. There

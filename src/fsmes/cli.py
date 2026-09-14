@@ -1549,6 +1549,147 @@ def pack_migrate(
         typer.echo(f"Now check it: `fsmes pack check {receipt.written.parent}`.")
 
 
+fleet_app = typer.Typer(
+    help="The plants this installation created, and may therefore manage.")
+app.add_typer(fleet_app, name="fleet")
+
+
+def _fleet_root(root: Path | None) -> Path:
+    from fsmes import plant as plants_mod
+
+    return plants_mod.find_root(root)
+
+
+def _refused(exc: Exception) -> None:
+    typer.echo(str(exc))
+    raise typer.Exit(1) from None
+
+
+@fleet_app.command("create")
+def fleet_create(
+    directory: Path = typer.Argument(..., help="The pack directory (the one with plant.toml)."),
+    root: Path | None = typer.Option(None, help="Repository root (default: found from cwd)."),
+) -> None:
+    """Build a plant from a pack, and record that this installation made it.
+
+    Checks the pack and refuses on failure; makes the fleet's data directory;
+    writes the plant a random instance id, which the plant returns on
+    /health; applies the pack; and records the ownership. Only what this
+    command created can be started, stopped or re-packed by `fsmes fleet` -
+    every other plant is observed and cannot be touched.
+
+    It starts nothing. The plant exists after this; `fsmes fleet start` runs
+    it, when a person says so.
+    """
+    from fsmes.fleet import commands
+    from fsmes.fleet import owned as ownership
+    from fsmes.pack import format as pack_format
+
+    where = _fleet_root(root)
+    typer.echo(f"Creating a plant from {directory}.")
+    try:
+        commands.create(directory, root=where, echo=typer.echo)
+    except (ownership.NotOwned, commands.Refused, ownership.OwnershipError) as exc:
+        _refused(exc)
+    except pack_format.PackError as exc:
+        typer.echo(f"NOT OK  {exc}")
+        raise typer.Exit(2) from None
+
+
+@fleet_app.command("start")
+def fleet_start(
+    name: str = typer.Argument(..., help="A plant this installation owns."),
+    speed: float | None = typer.Option(None, help="Replay speed multiplier."),
+    root: Path | None = typer.Option(None, help="Repository root (default: found from cwd)."),
+) -> None:
+    """Start an owned plant. Refuses any plant this installation did not create."""
+    from fsmes.fleet import commands
+    from fsmes.fleet import owned as ownership
+
+    try:
+        commands.start(name, root=_fleet_root(root), speed=speed, echo=typer.echo)
+    except (ownership.NotOwned, commands.Refused, ownership.OwnershipError) as exc:
+        _refused(exc)
+
+
+@fleet_app.command("stop")
+def fleet_stop(
+    name: str = typer.Argument(..., help="A plant this installation owns."),
+    root: Path | None = typer.Option(None, help="Repository root (default: found from cwd)."),
+) -> None:
+    """Stop an owned plant. Refuses any plant this installation did not create."""
+    from fsmes.fleet import commands
+    from fsmes.fleet import owned as ownership
+
+    try:
+        commands.stop(name, root=_fleet_root(root), echo=typer.echo)
+    except (ownership.NotOwned, commands.Refused, ownership.OwnershipError) as exc:
+        _refused(exc)
+
+
+@fleet_app.command("apply")
+def fleet_apply(
+    name: str = typer.Argument(..., help="A plant this installation owns."),
+    directory: Path | None = typer.Option(None, "--pack", help="A different pack to apply."),
+    root: Path | None = typer.Option(None, help="Repository root (default: found from cwd)."),
+) -> None:
+    """Apply a pack to an owned, stopped plant.
+
+    `fsmes pack check` runs first and a failing check refuses the apply. A
+    plant that is still answering is refused too: applying a pack upgrades a
+    database, and doing that underneath a live process is how a plant ends
+    up half-upgraded.
+    """
+    from fsmes.fleet import commands
+    from fsmes.fleet import owned as ownership
+    from fsmes.pack import format as pack_format
+
+    try:
+        commands.apply(name, root=_fleet_root(root), directory=directory, echo=typer.echo)
+    except (ownership.NotOwned, commands.Refused, ownership.OwnershipError) as exc:
+        _refused(exc)
+    except pack_format.PackError as exc:
+        typer.echo(f"NOT OK  {exc}")
+        raise typer.Exit(2) from None
+
+
+@fleet_app.command("status")
+def fleet_status(
+    name: str = typer.Argument(..., help="Any plant in this fleet, owned or watched."),
+    root: Path | None = typer.Option(None, help="Repository root (default: found from cwd)."),
+) -> None:
+    """What one plant says about itself, and whether this installation owns it.
+
+    Reads only, and says why when the answer is no. A plant that did not
+    answer is `unknown`: never healthy, never down.
+    """
+    from fsmes.fleet import commands
+    from fsmes.fleet import owned as ownership
+
+    try:
+        commands.status(name, root=_fleet_root(root), echo=typer.echo)
+    except ownership.OwnershipError as exc:
+        _refused(exc)
+
+
+@fleet_app.command("list")
+def fleet_list(
+    root: Path | None = typer.Option(None, help="Repository root (default: found from cwd)."),
+) -> None:
+    """Every plant this installation owns or watches, with the totals.
+
+    The number recorded is never the number seen, so the line at the top
+    says both: "N plants, M answered, K unknown; J owned".
+    """
+    from fsmes.fleet import commands
+    from fsmes.fleet import owned as ownership
+
+    try:
+        commands.listing(root=_fleet_root(root), echo=typer.echo)
+    except ownership.OwnershipError as exc:
+        _refused(exc)
+
+
 @app.command()
 def plant(
     names: list[str] = typer.Argument(..., help="Plant name(s), or 'all'."),
@@ -1562,8 +1703,8 @@ def plant(
     """Run several independent MES plants side by side.
 
     Each plant is a separate MES with its own database, OPC UA server and
-    dashboard. The registry is labs/multiplant/plants.toml - adding a plant is
-    an entry there plus a tag map and line data, never a code change.
+    dashboard. The fleet file is labs/multiplant/fleet.toml - adding a plant is a
+    pack directory and a line there, never a code change.
 
         fsmes plant all init      create every schema and seed every plant
         fsmes plant all start     bring them all up

@@ -11,6 +11,32 @@ goes under Honesty with a migration line, so plant people can find it.
 ## [Unreleased]
 
 ### Added
+- **`fsmes fleet` — the plants this installation owns** — M8 piece 4 of
+  [the design](docs/design/m8-packs-and-fleet.md), under
+  [decision 0023](docs/decisions/0023-the-fleet-console-observes.md) as
+  revised. Six commands — `create`, `start`, `stop`, `apply`, `status`,
+  `list` — that manage a fleet of plants built from
+  [packs](docs/operate/packs.md), and that **refuse any plant this
+  installation did not create**. The safety property is not read-only; it is
+  *cannot touch a plant it does not own*.
+  A plant is owned when three things hold: this installation created it and
+  recorded that in `ownership.toml`; the plant returns the same random
+  **instance id** on `/health` that was written into its data directory; and
+  a path to act on it exists — same host and OS user, or a credential a
+  person named for another host. Any one missing and the plant is observed
+  only. The id is a **continuity check, not an authentication**, and the
+  [page](docs/operate/fleet.md) says so plainly.
+  Every write path calls one ownership function before it does anything, and
+  a ratchet in the suite reads the source to hold it there: a new verb that
+  forgets the gate fails a test rather than shipping. Deleting the id from a
+  plant's data directory gives ownership back, and two plants claiming one
+  id is an error that refuses rather than a coin toss.
+  `fsmes fleet` manages **plants, never production**: no PLC write, no ERP
+  send, no order, no booking, no master data and no audit row. A plant it
+  owns can be stopped; a plant it owns cannot be made to say it built
+  something. Nothing starts a plant on its own — there is no reconciler.
+  `/health` now carries `instance_id`, which is `null` for every plant no
+  fleet tool created — null means *not owned*, never *probably fine*.
 - **A plant is a pack** — M8 piece 3 of
   [the design](docs/design/m8-packs-and-fleet.md), building
   [decision 0022](docs/decisions/0022-what-a-plant-pack-may-contain.md). One

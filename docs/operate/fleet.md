@@ -1,0 +1,111 @@
+# The fleet: plants this installation owns
+
+*How-to and explanation. Build, start, stop and re-pack a fleet of plants from one command — and understand exactly which plants that command will refuse to touch.*
+
+```bash
+fsmes fleet create labs/multiplant/machining   # build a plant from a pack, and own it
+fsmes fleet start machining                    # start it
+fsmes fleet status machining                   # what it says about itself
+fsmes fleet stop machining
+fsmes fleet apply machining                    # a new version of its pack, to a stopped plant
+fsmes fleet list                               # everything owned or watched, with the totals
+```
+
+`fsmes fleet` manages **plants**, never **production**. It can stop a plant it owns; it cannot make one say it built something. No tag reaches a PLC through it, nothing goes to an ERP, no order is created or closed, no production is booked, and no master data, account or audit row is edited. Those stay each plant's own business, behind that plant's [shadow mode](shadow-mode.md), its capability roles and its approvals.
+
+## What ownership means
+
+A plant is **owned** by this installation when all three of these hold. Any one missing and the plant is **observed only**, and every verb above refuses it.
+
+1. **This installation created it, and wrote that down.** `fsmes fleet create` appends an entry to `ownership.toml` in the fleet's data directory: the plant's name, its pack, where its data lives, when and on which host and OS user it was created, and a random **instance id**.
+2. **The plant corroborates the id.** `fsmes fleet create` also writes that id into the plant's own data directory, and the plant returns it on `/health`. A plant answering with a *different* id, or with *no* id, is not owned — whatever the file says.
+3. **A path to act exists.** Either **local** — the same host and the same OS user that created it, so this process can signal that plant's processes — or **remote**, where the entry names an environment variable holding a credential a person put there. A credential is never discovered, never defaulted and never reused from another entry, and only its *name* is ever written down.
+
+Being able to reach a plant is not owning it. Knowing its name is not owning it. Having its password is not owning it.
+
+### What ownership does not prove
+
+**The instance id is a continuity check, not an authentication.** It proves the plant answering on that port is the plant this installation created and has not been swapped for a different one — the mistake case, which is the case that actually happens. It does not stop a person copying an id into the file on purpose. What keeps a stranger out of a plant is unchanged and is the plant's own business: its accounts, its [capability roles](security.md), its shadow mode.
+
+There is no enrolment handshake here, no certificate authority and no bootstrap token. On the remote branch of condition 3 the whole weight rests on a credential a person typed.
+
+### Giving ownership back
+
+Delete the instance file from the plant's data directory (`<data_dir>/<name>.instance`). Nothing can prove condition 2 after that, so the plant becomes observed like any other — and it keeps running. Deleting the `[[owned]]` entry does the same from the other side.
+
+Two plants claiming one instance id is an **error that refuses**, not a coin toss: a plant directory copied to make a second plant carries the first one's id until something regenerates it, and a tool that picked one of them would act on the wrong plant. `fsmes pack check` cannot catch this — a pack carries no instance id — so the fleet tool catches it when it reads the file.
+
+### Where this differs from decision 0023 as written
+
+[Decision 0023](../decisions/0023-the-fleet-console-observes.md) says a plant that is silent "is not owned for as long as it is silent, because condition 2 cannot be met". Read literally that makes **start** impossible: a plant that is not running cannot answer anything. So condition 2 is implemented as *the plant must not contradict us*:
+
+| The plant is | What happens |
+|---|---|
+| answering | it must return this name and this instance id, or the verb is refused |
+| silent, local | the instance id in its own data directory must still be there and still match; only `start` and `apply`, the two verbs a stopped plant can take, may proceed |
+| silent, remote | refused — there is no data directory to read on another host, so nothing corroborates anything |
+
+The gap the decision closes stays closed: **no verb reaches into a *running* plant that has not just said who it is.**
+
+## The commands
+
+### `fsmes fleet create <pack>`
+
+Checks the pack and refuses on failure; makes the fleet's data directory; writes the plant its instance id; applies the pack (schema to head, then the master data the pack carries); and records the ownership last. It **starts nothing** — the plant exists after this, and runs when a person says so.
+
+The order matters. The instance id is written *before* the pack is applied, so a plant that half-applies is still a plant this installation can prove it made; and the ownership entry is written *last*, because an entry for a plant that was never built is a claim about a plant that is not there.
+
+`fsmes plant` reads the fleet file (the list of packs), not the ownership file, so `create` prints the line to add to it if you want the plant to show up there too.
+
+### `fsmes fleet start|stop <name>`
+
+The ownership gate, then the machinery that already runs plants (`fsmes plant <name> start|stop`). Start and stop are local process control: there is no remote start in this product and this decision adds none.
+
+**Nothing starts a plant on its own.** There is no scheduler, no reconciliation loop, and no daemon that notices a stopped plant and brings it back. Desired state stays intent displayed as drift, never intent enforced.
+
+### `fsmes fleet apply <name> [--pack <dir>]`
+
+`fsmes pack check` first, refusing on failure; then the pack, to an owned plant that is **not answering** — applying a pack upgrades a database, and doing that underneath a live process is how a plant ends up half-upgraded. One plant's pack is never applied to another: a pack is a plant's identity.
+
+### `fsmes fleet status <name>` and `fsmes fleet list`
+
+Reads. `status` says whether the plant is owned and **why** — the same question every verb asks, answered before you hit it. `list` states its total: *"N plants, M answered, K unknown; J owned"*. The number recorded is never the number seen.
+
+A plant that did not answer is **unknown**. Never healthy, never down.
+
+## `ownership.toml`
+
+In the fleet's data directory (`[environment] data_dir` in the [fleet file](registry.md), or `labs/multiplant/.data` in a checkout).
+
+```toml
+[[owned]]
+name = "machining"
+pack = "/home/you/fsmes/labs/multiplant/machining"
+instance_id = "4f6c…"
+data_dir = "/home/you/fsmes/labs/multiplant/.data"
+api_host = "127.0.0.1"
+api_port = 8020
+control = "local"
+created_at = "2026-09-13T20:41:07+00:00"
+created_on_host = "workshop"
+created_by_user = "you"
+product_version = "0.1.2"
+pack_fingerprint = "9a1c…"
+
+[[observe]]
+name = "hall2"
+url = "http://10.20.30.41:8050"
+about = "someone else's plant; watched, never touched"
+```
+
+**It is not the fleet file.** `fleet.toml` lists the packs this machine runs; `ownership.toml` records the plants this installation created. Decision 0023 called the ownership file `fleet.toml` before [M8 piece 3](packs.md) gave that name to the registry, and two files of one name is a trap for whoever reads the next traceback.
+
+No password is ever written here — `credential_env` names the variable one lives in. `[[observe]]` entries are plants this installation does **not** own: they exist so a reader can see them, and no verb will act on one.
+
+## See also
+
+- [Plant packs](packs.md) — what a pack may contain, and `fsmes pack check`
+- [Plants from a fleet file](registry.md) — `fsmes plant`, the machinery underneath
+- [Beside your existing MES](first-plant.md) — the engineers' front door
+- [Decision 0023 — the console manages only the plants it owns](../decisions/0023-the-fleet-console-observes.md)
+- [The M8 design](../design/m8-packs-and-fleet.md) §8, which this is built from
