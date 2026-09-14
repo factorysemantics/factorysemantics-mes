@@ -41,6 +41,7 @@ from fsmes.sim.truth import load_truth
 API_RANGE = (8100, 8199)
 OPC_RANGE = (4900, 4999)
 
+
 def _whoami() -> str:
     try:
         return getpass.getuser()

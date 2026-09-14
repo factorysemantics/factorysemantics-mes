@@ -449,9 +449,17 @@ def test_every_write_verb_asks_the_gate_before_it_does_anything():
 
 
 def a_live_pid_file(fleet, name: str) -> int:
-    """This test process's own pid, written where the plant's would be. It is
-    alive by definition and nothing signals it: `plants.stop` is a recorder in
-    every test that gets this far."""
+    """This test process's own pid, written where the plant's would be.
+
+    Alive by definition, and nothing signals it: `plants.stop` is a recorder
+    in every test that gets this far, and `plants._alive` only *asks*.
+
+    That second half was not true on Windows until 2026-09-14, and this is the
+    line that found it. `_alive` used `os.kill(pid, 0)`; on Windows signal 0
+    is `CTRL_C_EVENT`, so asking whether this pid was alive sent Ctrl-C to
+    pytest's own console group and killed the run half way through. The fix is
+    in `plants._alive`; the tests that hold it are at the bottom of this file.
+    """
     where = commands.data_dir(fleet)
     (where / f"{name}.pids").write_text(f"{os.getpid()}\n", encoding="utf-8")
     return os.getpid()
@@ -565,3 +573,55 @@ def test_a_plant_that_has_never_been_migrated_is_empty_and_says_which_kind(creat
     said: list[str] = []
     commands.listing(root=fleet, echo=said.append, ask=ask, ask_pack=unmigrated)
     assert "no schema" in said[1]
+
+
+# ------------------------------------- asking is not touching, on any platform
+
+
+def test_a_process_that_is_running_reads_as_alive():
+    assert plants._alive(os.getpid()) is True
+
+
+def test_a_process_that_has_gone_reads_as_dead():
+    """A pid that was real and is not any more. Reaped first, so nothing is
+    racing the answer."""
+    import subprocess
+    import sys
+
+    gone = subprocess.Popen([sys.executable, "-c", ""])
+    gone.wait()
+    assert plants._alive(gone.pid) is False
+
+
+def test_a_pid_that_is_not_a_pid_reads_as_dead():
+    """0 and the negatives are process *groups* to `os.kill`, not processes.
+    Signalling a whole group to find out whether one plant is running is the
+    mistake this guard exists to make impossible."""
+    assert plants._alive(0) is False
+    assert plants._alive(-1) is False
+
+
+def test_asking_whether_a_plant_is_running_never_signals_it_on_windows(monkeypatch):
+    """The bug this file found on 2026-09-14, held so it cannot come back.
+
+    `os.kill(pid, 0)` is the POSIX idiom for "does this process exist". On
+    Windows `signal.CTRL_C_EVENT` is `0`, so the same call is not a probe at
+    all: CPython reads it as a console-control signal and sends **Ctrl-C to
+    that process's console group**. `fsmes plant status`, `fsmes fleet list`
+    and the refusal `fsmes fleet stop` prints all ask this question about a
+    plant they have no business interrupting.
+
+    Runs on every platform, because the point is the branch rather than the
+    ctypes call behind it: on Windows nothing here may reach `os.kill`.
+    """
+    signalled: list[tuple] = []
+    probed: list[int] = []
+    monkeypatch.setattr(plants.os, "kill", lambda *args: signalled.append(args))
+    monkeypatch.setattr(plants.sys, "platform", "win32")
+    monkeypatch.setattr(plants, "_alive_on_windows", lambda pid: probed.append(pid) or True)
+
+    assert plants._alive(os.getpid()) is True
+    assert signalled == [], (
+        "checking whether a plant is running signalled it; on Windows signal 0 is "
+        "CTRL_C_EVENT and that is a Ctrl-C to its console group")
+    assert probed == [os.getpid()]
