@@ -30,6 +30,24 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **A lab run can ask what `fsmes fleet console` made of its plants.** The
+  console's promise is decision 0023's — a plant that did not answer is
+  *unknown*, never healthy and never down — and nothing tested it against
+  plants that really start and really stop, because a console needs several
+  plants and a lab run has always had exactly one at a time. Which turns out to
+  be the fixture: the lab runs its plants one after another, so during a
+  several-plant experiment exactly one is answering and the rest are not. A run
+  that asks for `console` starts a real one on a claimed port, over its own
+  empty fleet file so it can never pick up plants somebody already has running,
+  tells it each plant's address the moment that plant comes up, and asks
+  `/fleet.json` at each phase. Two numbers come out: how many phases its count
+  of answering plants matched the truth, and how many stopped plants it read as
+  anything other than unknown — a defect at any value above zero, and the same
+  fault as calling a changeover downtime, at fleet scale.
+  `labs/experiments/two-plants-two-zones.toml` now asks for it, so CI proves
+  it. On this machine, twelve phases, the count right at all twelve, and no
+  stopped plant ever called anything but unknown.
+
 - **A lab run names a station whose own counts and own run time do not agree.**
   Northgate's Deburr on 2026-09-14 reported 826 units and 1,878 line seconds of
   run time for a machine the MES itself rates at 2.4 s a unit — 1,982 seconds

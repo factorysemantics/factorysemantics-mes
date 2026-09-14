@@ -102,13 +102,18 @@ class Watch:
     reply instead of the hour so far.
     """
 
-    def __init__(self, get=None) -> None:
+    def __init__(self, get=None, on_look=None) -> None:
         # Injected so the whole class can be exercised without a plant. The
         # default is the runner's own reader, which is the one the rest of the
         # lab already goes through.
         if get is None:
             from fsmes.sim.runner import _get as get
         self._get = get
+        # Called with (base, token, line_second, how many looks so far) after
+        # each look. The run uses it to tell the fleet console where this
+        # plant is: an ephemeral plant claims its ports when it starts, so the
+        # first look is the first moment anybody knows its address.
+        self._on_look = on_look
         self.looks: list[Look] = []
         self._cursor = -1
         self._good: dict[str, float] = {}
@@ -142,6 +147,15 @@ class Watch:
 
         self._ask(base, token, "/health", look)
         self.looks.append(look)
+        if self._on_look is not None:
+            # Same rule as the hook that calls this: whatever the run wants to
+            # do with a look must not be able to end the hour.
+            try:
+                self._on_look(base, token, look.line_second, len(self.looks))
+            except Exception as exc:                 # deliberate
+                self.failures["the run's own look"] = (
+                    self.failures.get("the run's own look", 0) + 1)
+                look.refused["the run's own look"] = f"{type(exc).__name__}: {exc}"
 
     def _absorb(self, said: dict) -> None:
         """Take the feed's cursor and add up what it booked since the last look.

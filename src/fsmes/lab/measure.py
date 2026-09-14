@@ -711,6 +711,141 @@ def _production_lag(looks: list[dict], truth: LineTruth, tag_map: dict[str, str]
     }
 
 
+# ----------------------------------------------------------------- console
+
+def console(phases: list[dict], plants_total: int, reason: str | None = None) -> dict:
+    """Did `fsmes fleet console` count the plants the run actually had?
+
+    One question, asked at every phase of the run: **of the plants this console
+    had been told about, how many were answering, and did that match how many
+    were really up?** The lab runs its plants one after another, so the answer
+    changes as the run goes, and the phase where it is worth having is the one
+    where a plant this run built is no longer there.
+
+    The rule the console lives by is decision 0023's: a plant that did not
+    answer is *unknown*, never healthy and never down. So this checks the
+    counts and it separately checks the words - a console that got the totals
+    right and called a stopped plant *down* would have invented a breakdown out
+    of a plant nobody could reach, which is the same fault as calling a
+    changeover downtime and the same size.
+    """
+    rows = []
+    for phase in phases:
+        totals = phase.get("totals") or {}
+        listed = list(phase.get("listed") or [])
+        running = list(phase.get("running") or [])
+        answered, unknown = totals.get("answered"), totals.get("unknown")
+        said_of = phase.get("plants") or {}
+
+        # Every plant the console had been told about that was not up. Each
+        # must read unknown: it is the console's whole promise.
+        misread = sorted(
+            name for name in listed if name not in running
+            and str((said_of.get(name) or {}).get("state") or "") not in ("unknown", ""))
+        rows.append({
+            "phase": phase.get("phase"),
+            "at": phase.get("at"),
+            "plants_in_the_plan": plants_total,
+            "plants_the_console_knew_of": len(listed),
+            "plants_really_running": len(running),
+            "running": running,
+            "console_says": phase.get("says"),
+            "console_answered": answered,
+            "console_unknown": unknown,
+            "console_plants": totals.get("plants"),
+            "answered_matches": _matches(answered, len(running), reason),
+            "counted_every_plant_it_knew_of": _matches(
+                None if totals.get("plants") is None else int(totals["plants"]),
+                len(listed), reason),
+            "stopped_plants_read_unknown": (None if reason or not listed
+                                            else not misread),
+            "stopped_plants_read_otherwise": misread,
+            "what_it_called_them": {name: (said_of.get(name) or {}).get("state")
+                                    for name in listed},
+            "unknown_because": reason or phase.get("unknown_because"),
+        })
+
+    answerable = [row for row in rows if row["unknown_because"] is None]
+    return {
+        "measurement": "console",
+        "question": "did the fleet console count the plants the run actually had?",
+        "unknown_because": reason,
+        "plants_total": plants_total,
+        "phases_total": len(rows),
+        "phases_answered": len(answerable),
+        "phases_where_the_count_matched": sum(1 for row in answerable
+                                              if row["answered_matches"] is True),
+        # The number that is a defect at any value above zero. A stopped plant
+        # the console called anything other than unknown is a plant somebody
+        # would act on.
+        "stopped_plants_not_read_as_unknown": sum(
+            len(row["stopped_plants_read_otherwise"]) for row in answerable),
+        "never_said_down": (None if not answerable else not any(
+            "down" in str(row["what_it_called_them"].values()).lower() for row in answerable)),
+        "note": ("the lab runs its plants one after another, so at any moment during a "
+                 "several-plant experiment exactly one is answering and the rest are not - "
+                 "which is the console's hardest case arriving for free, on real ports, over "
+                 "real HTTP"),
+        "phases": rows,
+    }
+
+
+def _matches(said, was: int, reason: str | None) -> bool | None:
+    """Did the console's count match what was true? None when unknowable."""
+    if reason or said is None:
+        return None
+    return int(said) == int(was)
+
+
+def console_findings(seen: dict) -> tuple[list[dict], list[dict]]:
+    """What the console measurement contributes to the differences and the
+    unknowns, as the same rows every other measurement produces.
+
+    Separate from `differences` and `unknowns` because those take one plant
+    and this one is about the run. Same shape, so the report and the roll-up
+    read it with the code they already have.
+    """
+    differences, unknowns = [], []
+    if seen.get("unknown_because"):
+        unknowns.append({"measurement": "console", "plant": None, "station": None,
+                         "because": seen["unknown_because"]})
+        return differences, unknowns
+    for phase in seen.get("phases") or []:
+        if phase.get("unknown_because"):
+            unknowns.append({"measurement": "console", "plant": None, "station": None,
+                             "because": f"{phase['phase']}: {phase['unknown_because']}"})
+            continue
+        for name in phase.get("stopped_plants_read_otherwise") or []:
+            called = (phase.get("what_it_called_them") or {}).get(name)
+            differences.append({
+                # The console's whole promise, so it ranks with the other
+                # things that are defects at any value above zero.
+                "size": 1e9, "measurement": "console",
+                "where": f"the console · {name}", "plant": name, "station": None,
+                "what": "a plant nobody could reach, not read as unknown",
+                "says": f"{phase['phase']}: the console called {name} {called!r} when it was "
+                        f"not running - a plant that did not answer is unknown, never healthy "
+                        f"and never down",
+                "numbers": {"phase": phase["phase"], "state": called,
+                            "running": phase.get("running")},
+            })
+        if phase.get("answered_matches") is False:
+            differences.append({
+                "size": abs((phase.get("console_answered") or 0)
+                            - phase.get("plants_really_running", 0)) * 1000,
+                "measurement": "console",
+                "where": "the console", "plant": None, "station": None,
+                "what": "the count of answering plants",
+                "says": f"{phase['phase']}: the console counted "
+                        f"{phase.get('console_answered')} answering and "
+                        f"{phase.get('plants_really_running')} really were",
+                "numbers": {"phase": phase["phase"],
+                            "console_answered": phase.get("console_answered"),
+                            "really_running": phase.get("plants_really_running")},
+            })
+    return differences, unknowns
+
+
 # --------------------------------------------------------------------- OEE
 
 def oee(truth: LineTruth, reported: dict, tag_map: dict[str, str], speed: float,

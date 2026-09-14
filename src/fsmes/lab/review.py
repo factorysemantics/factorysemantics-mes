@@ -82,6 +82,13 @@ def read_run(directory: Path) -> dict:
             rows["differences"].append({**row, "run": run})
         for row in measure.unknowns(plant):
             rows["unknowns"].append({**row, "run": run})
+    # Measurements about the run rather than about any one plant. Same rows,
+    # so every cluster downstream reads them with the code it already has.
+    seen = (scores.get("measurements") or {}).get("console")
+    if seen:
+        found, missing = measure.console_findings(seen)
+        rows["differences"].extend({**row, "run": run} for row in found)
+        rows["unknowns"].extend({**row, "run": run} for row in missing)
     for conversation in feedback_mod.read(directory):
         for turn in conversation.get("turns") or []:
             if turn.get("role") != "user":
