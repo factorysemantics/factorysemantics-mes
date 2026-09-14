@@ -27,6 +27,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from fsmes import __version__
+from fsmes.integrations.opc.tag_map import load_line_map
 from fsmes.lab import build as builder
 from fsmes.lab import feedback, measure, report
 from fsmes.lab import truth as truth_reader
@@ -100,6 +101,13 @@ def collector(codes: list[str], hours: float):
         ask("downtime", f"/analysis/downtime?hours={hours:.4f}")
         ask("production", f"/analysis/production?hours={hours:.4f}")
         ask("workorders", "/workorders?limit=200")
+        # Units a machine counted with no order open to book them against.
+        # Asked for one row: the totals in the envelope are for the whole
+        # selection, and the rows themselves are a list of counter deltas
+        # nobody would read. Without it a run can say the MES booked fewer
+        # units than the line made and cannot say whether the rest was
+        # dropped or kept, which are very different faults.
+        ask("unassigned", "/execution/unassigned?limit=1")
         ask("health", "/health")
         if codes:
             page = codes[:TIMELINE_PAGE]
@@ -122,8 +130,10 @@ def measure_plant(plan: Plan, built: builder.Built, card: dict, echo=print) -> d
     line = json.loads(built.line_json.read_text(encoding="utf-8"))
     truth = truth_reader.read(built.replay_dir, line, built.duration_s, overlap)
     mapping = station_to_equipment(Path(built.cfg["tag_map"]))
-    tag_map = json.loads(Path(built.cfg["tag_map"]).read_text(encoding="utf-8"))
-    order_tags = sum(1 for m in tag_map.get("machines", []) if m.get("order_tag"))
+    # Where the line publishes the order it is running, and how that value
+    # names an order in this MES. None when the map does not say, and the
+    # orders block then states that rather than guessing a join.
+    line_map = load_line_map(Path(built.cfg["tag_map"]))
 
     out: dict = {
         "plant": built.name,
@@ -154,7 +164,8 @@ def measure_plant(plan: Plan, built: builder.Built, card: dict, echo=print) -> d
     if "booking" in plan.measure:
         out["measurements"]["booking"] = measure.booking(
             truth, recorded.get("oee") or {}, recorded.get("workorders") or {},
-            mapping, order_tags, plan.speed, reason)
+            mapping, plan.speed, reason, line_map=line_map,
+            unassigned=recorded.get("unassigned") or {})
     if "downtime" in plan.measure:
         out["measurements"]["downtime"] = measure.downtime(
             truth, card, recorded.get("downtime") or {}, plan.speed, reason)

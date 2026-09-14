@@ -1,0 +1,61 @@
+# An hour nobody stops, against an order for less than an hour's work.
+#
+# The bottling line is rated at about 102 finished cases a minute and the order
+# it is running is for 4,000. Nothing in the script breaks, nothing changes
+# over, nobody halts the line: it simply keeps going, the way a line does when
+# the order quantity is a number in a system and not a gate on the floor. By
+# the end of the hour it has made something like six thousand.
+#
+# The question is what the MES says about that. A plant that books production
+# past an order and does not say so hands its ERP a confirmation for units
+# nobody ordered; a plant that refuses to book them loses production that
+# really happened. Neither is a rounding error - this is the sixteen-against-
+# fifteen class of fault, which is what the lab was built for.
+#
+# What makes it scoreable is the tag map's `line` block: the bottling line
+# publishes the order it is running on `Line.OrderId`, and the map says that
+# `4711` there means `WO-ACME-4711` here. So the order the line made units
+# under is read rather than inferred, and the over-run the MES reports about
+# itself has something true to sit beside.
+#
+#     fsmes lab run labs/experiments/over-run.toml
+#
+# About three minutes: one plant, an hour of line time at 30x, plus the seeding
+# and the drain. The plant is ephemeral, on loopback, with its own database and
+# its own ports.
+
+name = "over-run"
+note = """One order, one uninterrupted hour, and far more units than the order
+asked for. What to look at first: the orders table - what the line made past
+the order, and what the MES says it made past it."""
+
+packs = ["../multiplant/bottling"]
+
+# A full hour, because the over-run has to be big enough to be unmistakable
+# next to the band the replay's overlap allows.
+#
+# 20x rather than anything faster, for two reasons the page already gives:
+# the band grows with speed, and booking is the question here; and at 30x on
+# this machine the agent fell more than one sampling interval behind, which
+# withholds every number the plan exists to read. Three minutes of wall clock
+# that produce a readable run beat two that produce a withheld one.
+duration = 3600
+seed     = 42
+speed    = 20
+
+# Booking alone. Downtime and OEE are worth measuring and are not what this
+# plan is about; a starter that asks one question is a starter somebody reads
+# the answer to.
+measure = ["booking"]
+
+# An empty script, deliberately. The line's own hour has a changeover in it,
+# which would move production onto a second order the MES was never told about
+# and split the very number this plan exists to look at. Nothing goes wrong
+# here: the line runs, and nobody stops it at 4,000.
+[scenario.bottling]
+events = []
+
+# No `[init.bottling]`: since #53 the pack carries its own master data,
+# including `WO-ACME-4711` for 4,000 units, released. That order is the whole
+# subject of this plan, and it arrives with the pack rather than from a script
+# the plan names - which is why the plan does not name one.

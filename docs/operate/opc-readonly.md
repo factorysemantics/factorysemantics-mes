@@ -159,6 +159,36 @@ The decision that matters most in that file is which state values count as
 system will ever report, and nobody will be able to say why. Spend the time
 there.
 
+### If the line publishes the order it is running
+
+Many line-control PLCs publish the current order somewhere — a register on a
+line object, not on any one machine. Without it this MES *infers* which order
+a unit belongs to from what it has released, which is a reasonable guess and
+still a guess. If that tag exists, name it and the guess stops:
+
+```json
+"line": {
+  "object": "Line",
+  "publishes_order": "OrderId",
+  "order_code": "WO-ACME-{value}"
+}
+```
+
+- **`publishes_order` is read, never written.** It is the opposite of a
+  machine's `order_tag`, which is the MES pushing an order code *down* to a
+  machine. Reading it takes one more subscribed item and keeps the promise in
+  *[What this MES will not do to their server](#what-this-mes-will-not-do-to-their-server)*
+  exactly as it is: a historian or a server you have no write rights on can
+  still answer this.
+- **`order_code` is the translation**, because the two sides name the same
+  order differently and always will: the PLC publishes `4711` in an integer
+  register and this MES holds `WO-ACME-4711`. `{value}` is whatever the line
+  published. A line that publishes the code outright writes `"{value}"`.
+
+Leave the block out if there is no such tag. Nothing degrades — the MES infers
+as it did before, and anything reading the block says *unknown* rather than
+inventing a join.
+
 ## Prove the map before trusting it
 
 ```bash

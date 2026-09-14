@@ -53,7 +53,8 @@ def withheld(card: dict) -> str | None:
 # ------------------------------------------------------------------ booking
 
 def booking(truth: LineTruth, oee: dict, orders: dict, tag_map: dict[str, str],
-            order_tags: int, speed: float, reason: str | None = None) -> dict:
+            speed: float, reason: str | None = None, line_map=None,
+            unassigned: dict | None = None) -> dict:
     """Did the MES book what the line made?
 
     Per station, because a plant fixes one machine at a time, and in total,
@@ -108,7 +109,7 @@ def booking(truth: LineTruth, oee: dict, orders: dict, tag_map: dict[str, str],
                 (r["mes_good"] for r in rows if r["station"] == truth.last_station), None),
             "mes_good_all_stations": mes_total if answered else None,
         },
-        "orders": _orders(truth, listed, order_tags),
+        "orders": _orders(truth, listed, line_map, unassigned, reason),
     }
 
 
@@ -129,36 +130,177 @@ def _booking_verdict(booked: int | None, low: int, high: int, code: str | None,
     return "matched"
 
 
-def _orders(truth: LineTruth, listed: list[dict], order_tags: int) -> dict:
-    """What each order was told it made - and why that cannot be scored here.
+def _orders(truth: LineTruth, listed: list[dict], line_map=None,
+            unassigned: dict | None = None, reason: str | None = None) -> dict:
+    """What each order made, and how far past it the line ran.
 
-    The script numbers its orders; the MES numbers its own. Tying one to the
-    other needs the line to publish the order it is running, and these packs'
-    tag maps name no order tag - a CSV replay cannot be written to, so orders
-    flow from the MES's own released operations instead. The totals are still
-    comparable, and the over-run the MES reports is still worth reading; which
-    scripted order a unit belonged to is not known, and says so.
+    Two numbering schemes meet here. The script numbers its orders and the line
+    publishes the number it is running; the MES holds its own codes and, with
+    nothing telling it otherwise, infers which order a unit belongs to from
+    what it has released. For five runs this measurement could only say that
+    the two could not be matched.
+
+    What matches them is the tag map's `line` block: the tag the line publishes
+    its order on, and the rule that turns what it published into the code this
+    MES holds. That is a fact about the plant's wiring, so it is config, and it
+    is read rather than asserted - which is the difference between a join a
+    reader can check and one they have to take on trust.
+
+    The **ordered quantity** comes from the MES's own work order, because there
+    is only one of it: an order is for what the plant was told it was for, and
+    a second copy of that number in the line description would be a second
+    place for it to be wrong. What is compared is production - the line's own
+    count of what it made under that order - and the over-run the MES reports
+    against it.
+
+    Per-order truth is a **range**, like every other booking figure here: the
+    replay loops and a run drains through a little of a second pass, and units
+    made in that overlap are production the MES was right to book.
     """
     mes = [{"code": o.get("code"), "quantity": o.get("quantity"),
             "good": o.get("good_qty"), "scrap": o.get("scrap_qty"),
             "over": o.get("over_qty")} for o in listed]
-    why = ("this plant's tag map names no order tag, so which order a unit belongs to is "
-           "the MES's own inference and the script's order numbers cannot be matched to it"
-           if not order_tags else
-           "matching the script's order numbers to the MES's order codes is not attempted "
-           "in this version, so a per-order comparison would be a guess")
+    by_code = {str(o["code"]): o for o in mes if o.get("code")}
+
+    rows = [_order_row(truth, order_id, by_code, line_map, reason)
+            for order_id in sorted(truth.good_by_order)]
+    tied = [r for r in rows if r["unknown_because"] is None]
+    named = {str(r["code"]) for r in rows if r["code"]}
+
+    why = reason or (None if tied else _untied(line_map))
+    over_run_truth = sum(r["truth_over_run"] for r in tied
+                         if r["truth_over_run"] is not None) if tied else None
     return {
-        "tied_to_truth": False,
+        "tied_to_truth": bool(tied),
+        "tied_how": (f"the tag map says the line publishes its order on "
+                     f"{line_map.object}.{line_map.publishes_order} and that "
+                     f"{line_map.order_code!r} is how that value names an order here"
+                     if tied and line_map else None),
         "why": why,
         "truth_orders_total": len(truth.good_by_order),
         "truth_good_by_order": truth.good_by_order,
+        "orders_tied": len(tied),
         "mes_orders_total": len(mes),
         "mes_orders": mes,
+        # An order the MES holds that the line never published while this run
+        # was watching. Not a fault - a plant has orders that are not running -
+        # but it is why the two totals can differ, and a reader who is not told
+        # will work it out as a discrepancy.
+        "mes_orders_the_line_never_published": sorted(
+            str(o["code"]) for o in mes if str(o.get("code")) not in named),
         "mes_good_total": sum(o["good"] or 0 for o in mes) if mes else None,
         "over_run_reported": sum(o["over"] or 0 for o in mes) if mes else None,
-        "over_run_in_truth": None,
+        "over_run_in_truth": over_run_truth,
         "over_run_unknown_because": why,
+        "unassigned_production": _unassigned(unassigned),
+        "rows": rows,
     }
+
+
+def _unassigned(said: dict | None) -> dict:
+    """What the MES counted with no order open to book it against.
+
+    Printed beside the orders because the alternative is a report that says
+    the MES booked two thousand fewer units than the line made and cannot say
+    whether they were dropped or kept. Those are different faults with
+    different fixes, and the MES already answers the question - it just was
+    not being asked.
+    """
+    if not said:
+        return {"good": None, "scrap": None, "entries": None,
+                "unknown_because": "the run did not ask the MES what it counted with no order "
+                                   "open, so where production the orders did not take went is "
+                                   "not something this run establishes"}
+    return {"good": said.get("good_total"), "scrap": said.get("scrap_total"),
+            "entries": said.get("total"), "unknown_because": None,
+            "note": "counted by a machine with no order open to book it against; the MES keeps "
+                    "these rather than dropping them, with the machine and the time and no "
+                    "guess about which order they belonged to. Every machine on the line, not "
+                    "the last one - so it is not the counterpart of any single order's gap, "
+                    "and a line of six stations counts most units six times"}
+
+
+def _untied(line_map) -> str:
+    """Why nothing could be matched, naming what would match it."""
+    if line_map is None:
+        return ("this plant's tag map has no `line` block, so nothing says where the line "
+                "publishes the order it is running and which order a unit belongs to stays "
+                "the MES's own inference")
+    if not line_map.publishes_order:
+        return (f"this plant's tag map names the line object {line_map.object!r} and no tag on "
+                f"it carrying the order the line is running, so the script's order numbers "
+                f"cannot be matched to the MES's codes")
+    return (f"the tag map says the line publishes its order on "
+            f"{line_map.object}.{line_map.publishes_order}, and none of the orders the line "
+            f"published in this run is one the MES holds")
+
+
+def _order_row(truth: LineTruth, order_id: str, by_code: dict, line_map,
+               reason: str | None = None) -> dict:
+    """One order the line published, beside the MES's order of the same name."""
+    code = line_map.code_for(order_id) if line_map and line_map.publishes_order else None
+    said = by_code.get(str(code)) if code else None
+    made = truth.good_by_order.get(order_id, 0)
+    overlap = truth.overlap_good_by_order.get(order_id, 0)
+    quantity = None if said is None else said.get("quantity")
+    booked = None if said is None else said.get("good")
+    reported_over = None if said is None else said.get("over")
+
+    unknown = None
+    if reason:
+        # A run whose own harness fell behind is an instrument out of
+        # calibration. The stations already say so; an order row that went on
+        # printing a confident verdict underneath them would be the same
+        # withheld run answering two different ways on one page.
+        unknown = reason
+    elif code is None:
+        unknown = _untied(line_map)
+    elif said is None:
+        unknown = (f"the line published order {order_id}, which this tag map reads as {code}, "
+                   f"and the MES holds no order with that code - so what it made was booked "
+                   f"against whatever the MES inferred instead")
+    elif booked is None:
+        unknown = f"the MES listed {code} without a good count"
+
+    over_truth = None if quantity is None else max(0, made - float(quantity))
+    over_range = (None if quantity is None
+                  else [max(0, made - float(quantity)), max(0, made + overlap - float(quantity))])
+    return {
+        "order": order_id,
+        "code": code,
+        "truth_good": made,
+        "overlap_good": overlap,
+        "expected_range": [made, made + overlap],
+        "mes_quantity": quantity,
+        "mes_good": booked,
+        "verdict": _booking_verdict(booked, made, made + overlap, code, unknown),
+        "truth_over_run": over_truth,
+        "truth_over_run_range": over_range,
+        "mes_over_run": reported_over,
+        "over_run_verdict": _over_run_verdict(reported_over, over_range, unknown),
+        "unknown_because": unknown,
+    }
+
+
+def _over_run_verdict(reported, over_range, unknown: str | None) -> str:
+    """What the MES said it made past the order, against what the line made."""
+    if unknown:
+        return f"unknown - {unknown}"
+    if over_range is None:
+        return ("unknown - the MES holds no quantity for this order, so there is nothing for "
+                "production to be past")
+    if reported is None:
+        return "unknown - the MES reported no over-run for this order"
+    low, high = over_range
+    reported = float(reported)
+    if reported < low:
+        return f"reported {low - reported:,.0f} fewer past the order than the line made"
+    if reported > high:
+        return (f"reported {reported - high:,.0f} more past the order than the line made, "
+                f"beyond the replay's overlap")
+    if high > low:
+        return "inside the replay's overlap band"
+    return "matched" if reported else "the line did not run past the order, and the MES agrees"
 
 
 # ----------------------------------------------------------------- downtime
@@ -561,6 +703,30 @@ def differences(plant: dict) -> list[dict]:
                     "numbers": {"truth_good": row["truth_good"], "mes_good": booked,
                                 "expected_range": [low, high]},
                 })
+        for row in booking_out["orders"].get("rows") or []:
+            if row.get("unknown_because"):
+                continue
+            reported, band = row["mes_over_run"], row["truth_over_run_range"]
+            if reported is None or band is None:
+                continue
+            low, high = band
+            outside = (reported - high if reported > high
+                       else (reported - low if reported < low else 0))
+            if not outside:
+                continue
+            found.append({
+                "size": abs(outside), "measurement": "booking - orders",
+                "where": f"{plant['plant']} - {row['code']}",
+                "plant": plant["plant"], "station": None,
+                "what": "units past the order",
+                "says": f"{outside:+,.0f} outside the range {low:,.0f} to {high:,.0f} the line "
+                        f"actually made past an order for {row['mes_quantity']:,.0f}",
+                "numbers": {"truth_good": row["truth_good"],
+                            "mes_good": row["mes_good"],
+                            "mes_quantity": row["mes_quantity"],
+                            "truth_over_run_range": band,
+                            "mes_over_run": reported},
+            })
     oee_out = plant.get("measurements", {}).get("oee")
     if oee_out:
         mismatch = oee_out["window"]["mismatch_share"]
@@ -684,6 +850,12 @@ def unknowns(plant: dict) -> list[dict]:
         if orders.get("why"):
             out.append({"measurement": "booking · orders", "plant": plant["plant"],
                         "station": None, "because": orders["why"]})
+        for row in orders.get("rows") or []:
+            # The whole-measurement reason above already says it once; a row
+            # that is unknown for its own reason is a different fact.
+            if row.get("unknown_because") and row["unknown_because"] != orders.get("why"):
+                out.append({"measurement": "booking · orders", "plant": plant["plant"],
+                            "station": None, "because": row["unknown_because"]})
     down = plant.get("measurements", {}).get("downtime")
     if down:
         for event in down["breakdowns"]["events"]:

@@ -296,18 +296,18 @@ def test_booking_under_the_truth_is_a_finding_and_booking_inside_the_overlap_is_
     truth = _truth_for(tmp_path)
     cut = truth.stations["Cut"]
     said = _oee_saying(truth, Cut={"good_qty": cut.good - 1})
-    out = measure.booking(truth, said, {}, MAPPING, order_tags=0, speed=10.0)
+    out = measure.booking(truth, said, {}, MAPPING, speed=10.0)
     row = next(r for r in out["stations"] if r["station"] == "Cut")
     # The overlap can only ever add, so one unit fewer is real at any speed.
     assert row["verdict"] == "booked 1 fewer than the line made"
 
     inside = _oee_saying(truth, Cut={"good_qty": cut.good + cut.overlap_good})
-    out = measure.booking(truth, inside, {}, MAPPING, order_tags=0, speed=10.0)
+    out = measure.booking(truth, inside, {}, MAPPING, speed=10.0)
     row = next(r for r in out["stations"] if r["station"] == "Cut")
     assert row["verdict"] == "inside the replay's overlap band"
 
     over = _oee_saying(truth, Cut={"good_qty": cut.good + cut.overlap_good + 5})
-    out = measure.booking(truth, over, {}, MAPPING, order_tags=0, speed=10.0)
+    out = measure.booking(truth, over, {}, MAPPING, speed=10.0)
     row = next(r for r in out["stations"] if r["station"] == "Cut")
     assert "5 more than the line made" in row["verdict"]
 
@@ -316,7 +316,7 @@ def test_a_station_the_mes_never_reported_is_unknown_and_never_a_zero(tmp_path):
     truth = _truth_for(tmp_path)
     said = _oee_saying(truth)
     said["stations"] = [s for s in said["stations"] if s["code"] != "PACK01"]
-    out = measure.booking(truth, said, {}, MAPPING, order_tags=0, speed=10.0)
+    out = measure.booking(truth, said, {}, MAPPING, speed=10.0)
     row = next(r for r in out["stations"] if r["station"] == "Pack")
     assert row["mes_good"] is None
     assert row["verdict"].startswith("unknown")
@@ -324,13 +324,18 @@ def test_a_station_the_mes_never_reported_is_unknown_and_never_a_zero(tmp_path):
     assert out["stations_total"] == 2
 
 
-def test_which_scripted_order_a_unit_belonged_to_is_unknown_and_says_why(tmp_path):
+def test_a_tag_map_that_does_not_say_where_the_line_publishes_its_order_leaves_it_unknown(tmp_path):
+    """No `line` block, no join - and the refusal names what would make one.
+
+    The measurement is allowed to say it cannot match the two numbering
+    schemes. It is not allowed to say so without saying what would.
+    """
     truth = _truth_for(tmp_path)
     orders = {"items": [{"code": "WO-1", "quantity": 100, "good_qty": 101,
                          "scrap_qty": 0, "over_qty": 1}]}
-    out = measure.booking(truth, _oee_saying(truth), orders, MAPPING, order_tags=0, speed=10.0)
+    out = measure.booking(truth, _oee_saying(truth), orders, MAPPING, speed=10.0)
     assert out["orders"]["tied_to_truth"] is False
-    assert "no order tag" in out["orders"]["why"]
+    assert "no `line` block" in out["orders"]["why"]
     assert out["orders"]["over_run_in_truth"] is None
     # The over-run the MES reports about itself owes nothing to the overlap
     # band, which is what makes it the sharp reading for the 16-against-15
@@ -542,7 +547,7 @@ def test_a_performance_difference_inside_the_stations_own_band_is_not_a_finding(
 def test_a_withheld_run_makes_every_measurement_unknown_with_the_same_reason(tmp_path):
     truth = _truth_for(tmp_path)
     why = "the harness fell behind its own 50 ms sample"
-    out = measure.booking(truth, _oee_saying(truth), {}, MAPPING, order_tags=0,
+    out = measure.booking(truth, _oee_saying(truth), {}, MAPPING,
                           speed=10.0, reason=why)
     assert out["unknown_because"] == why
     assert all(r["verdict"].startswith("unknown") for r in out["stations"])
@@ -564,7 +569,7 @@ def test_the_report_prints_unknown_rather_than_a_zero_and_renders_the_notes(tmp_
             "replay_overlap_line_seconds": 10, "pipeline": {"sustained": None},
             "verdict_withheld": None, "overlay": {}, "views_refused": {},
             "measurements": {"booking": measure.booking(
-                truth, _oee_saying(truth), {}, MAPPING, order_tags=0, speed=10.0)},
+                truth, _oee_saying(truth), {}, MAPPING, speed=10.0)},
         }],
     }
     (tmp_path / "scores.json").write_text(json.dumps(scores), encoding="utf-8")
