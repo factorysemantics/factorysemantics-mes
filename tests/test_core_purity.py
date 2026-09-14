@@ -37,6 +37,7 @@ LADDER: tuple[tuple[str, tuple[str, ...]], ...] = (
         # Primitives and settings. Nothing here knows what a work order is,
         # except `db` and `schema`, which know only how to reach one.
         "core", "kernel", "config", "shadow", "db", "schema", "logging",
+        "identity",  # the plant's own name and clock: settings-level, imports nothing above
         "modules", "plant", "__init__",
     )),
     ("domain", (
