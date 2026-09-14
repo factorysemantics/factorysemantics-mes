@@ -1757,6 +1757,56 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="8. Proposal — the console">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#owned-and-how-a-tool-can-tell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Owned, and how a tool can tell
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-managing-an-owned-plant-is-and-what-it-is-not" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What managing an owned plant is, and what it is not
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-the-page-deliberately-does-not-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the page deliberately does not do
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-the-write-verbs-live-and-why-the-read-only-role-survives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the write verbs live, and why the read-only role survives
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1805,10 +1855,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#piece-4-the-console" class="md-nav__link">
+  <a href="#piece-4-the-console-and-the-fleet-tool-behind-it" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Piece 4 — the console
+        Piece 4 — the console, and the fleet tool behind it
       
     </span>
   </a>
@@ -2564,7 +2614,7 @@
   <span class="md-ellipsis">
     
   
-    0023 — The fleet console observes and never pushes, and silence is unknown
+    0023 — The console manages only the plants it owns, observes every other plant, and silence is unknown
   
 
     
@@ -3075,6 +3125,56 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="8. Proposal — the console">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#owned-and-how-a-tool-can-tell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Owned, and how a tool can tell
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-managing-an-owned-plant-is-and-what-it-is-not" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What managing an owned plant is, and what it is not
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-the-page-deliberately-does-not-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the page deliberately does not do
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-the-write-verbs-live-and-why-the-read-only-role-survives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the write verbs live, and why the read-only role survives
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -3123,10 +3223,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#piece-4-the-console" class="md-nav__link">
+  <a href="#piece-4-the-console-and-the-fleet-tool-behind-it" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Piece 4 — the console
+        Piece 4 — the console, and the fleet tool behind it
       
     </span>
   </a>
@@ -3722,28 +3822,64 @@ a plant, not a laptop</em> in one word, to the console and to its own start-up
 checks.</p>
 <hr />
 <h2 id="8-proposal-the-console">8. Proposal — the console<a class="headerlink" href="#8-proposal-the-console" title="Permanent link">&para;</a></h2>
-<p><strong>A read-only web page that polls a list of plants and shows what each one
-says about itself.</strong> One process, no database of its own beyond a cache, no
-credentials to a machine, no path to change anything anywhere.</p>
-<p>For a first version, per plant, one row: name and label; reachable or not, and
-when it last answered; shadow or live; MES version; schema revision against
-head; pack version against head; whether the ERP outbox has anything dead;
-whether the UNS backlog is draining; and the plant's line OEE for the current
-shift. Clicking a row opens that plant's own dashboard — the console does not
-re-implement a screen the product already has.</p>
-<p>What it deliberately does not do, and this is the decision in
-<a href="../../decisions/0023-the-fleet-console-observes/">0023</a>:</p>
+<p><strong>A page that polls a list of plants and shows what each one says about
+itself — and a separate command, <code>fsmes fleet</code>, that manages the plants this
+installation owns.</strong> The split, and the rule that draws the line, is decision
+<a href="../../decisions/0023-the-fleet-console-observes/">0023</a>: <em>the console may act
+only on plants it owns; for every other plant it observes and cannot push.</em></p>
+<p>For a first version, per plant, one row: name and label; owned or observed;
+reachable or not, and when it last answered; shadow or live; MES version;
+schema revision against head; pack version against head; whether the ERP
+outbox has anything dead; whether the UNS backlog is draining; and the
+plant's line OEE for the current shift. Clicking a row opens that plant's own
+dashboard — the console does not re-implement a screen the product already
+has.</p>
+<h3 id="owned-and-how-a-tool-can-tell">Owned, and how a tool can tell<a class="headerlink" href="#owned-and-how-a-tool-can-tell" title="Permanent link">&para;</a></h3>
+<p>A plant is <strong>owned</strong> when all three hold, and any one missing means observed
+only:</p>
+<ol>
+<li><strong>This installation created it from a pack</strong>, and recorded that in its own
+   ownership file — <code>fleet.toml</code>, beside the registry under the registry's
+   <code>data_dir</code> — with the plant name, the pack and version, the host and OS
+   user, the time, and a random <code>instance_id</code> it also wrote into the plant's
+   data directory.</li>
+<li><strong>The plant corroborates it</strong>: <code>/health</code> returns that <code>plant</code> name (piece
+   1) and that same <code>instance_id</code>. A different id, or no id, means not owned,
+   whatever the file says — which is also how a plant <em>revokes</em> ownership,
+   by dropping the id.</li>
+<li><strong>A path exists that a person gave it</strong>: same host and same OS user, with
+   the plant's pids in this registry's pid file (<code>running_pids</code>,
+   <code>src/fsmes/plant.py</code>); or an explicit credential for another host, typed
+   into the ownership file by a person and never defaulted.</li>
+</ol>
+<p>Being able to reach a plant is not owning it. The <code>instance_id</code> is a
+continuity check, not an authentication: it catches the wrong-plant mistake,
+which is the case that actually happens, and 0023 says plainly what it does
+not catch.</p>
+<h3 id="what-managing-an-owned-plant-is-and-what-it-is-not">What managing an owned plant is, and what it is not<a class="headerlink" href="#what-managing-an-owned-plant-is-and-what-it-is-not" title="Permanent link">&para;</a></h3>
+<p>Five verbs, and the list is closed: <strong>create</strong> from a pack, <strong>start</strong>,
+<strong>stop</strong>, <strong>apply</strong> a pack (<code>fsmes pack check</code> first, refusing on failure,
+pack before database, both refusing a plant still answering), and <strong>show</strong>
+status and drift.</p>
+<p>Never, even for an owned plant: writing a tag to a PLC, sending anything to
+an ERP, creating or closing or changing an order, booking production,
+editing master data, people or the audit trail. <strong>The tool manages plants,
+not production.</strong> A plant it owns can be stopped; a plant it owns cannot be
+made to say it built something.</p>
+<h3 id="what-the-page-deliberately-does-not-do">What the page deliberately does not do<a class="headerlink" href="#what-the-page-deliberately-does-not-do" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>It never writes to a plant.</strong> Not a setting, not a pack, not an order, not
-  a restart. Every M8 verb — enrol, telemetry, desired state, drift — is a
-  read or a comparison. A console that can push is a console that can push to
-  the wrong plant, and the blast radius of that is a factory.</li>
+<li><strong>It never acts on a plant it does not own.</strong> For an unowned plant every M8
+  verb — enrol, telemetry, desired state, drift — is a read or a comparison.
+  A console that can push to anything can push to the wrong thing, and the
+  blast radius of that is a factory.</li>
 <li><strong>A plant that did not answer is <code>unknown</code>, never healthy and never down.</strong>
   <code>list_plants</code> already does this and the console inherits it. A console that
-  renders silence as green is worse than no console.</li>
-<li><strong>It states its total.</strong> "12 plants, 11 answered, 1 unknown" — rule 4 of
-  <a href="../STYLE/">the style contract</a> applied to a fleet. The number of plants
-  configured is never the number of plants seen.</li>
+  renders silence as green is worse than no console. A silent plant is also
+  <em>not owned while it is silent</em>, because nothing can corroborate condition 2
+  — so no plant is ever managed through a gap in which nobody can see it.</li>
+<li><strong>It states its total.</strong> "12 plants, 11 answered, 1 unknown; 3 owned" —
+  rule 4 of <a href="../STYLE/">the style contract</a> applied to a fleet. The number of
+  plants configured is never the number of plants seen.</li>
 <li><strong>It aggregates nothing across plants that would be a lie.</strong> A fleet OEE is
   a lie unless every plant is the same shape; the console shows twelve
   numbers, not one. This is the same rule the
@@ -3752,15 +3888,48 @@ re-implement a screen the product already has.</p>
 <li><strong>It holds no plant data.</strong> It caches the last answer for display and
   nothing else. Orders, serials, people and events stay in the plant that
   made them.</li>
+<li><strong>It starts nothing by itself.</strong> No scheduler, no reconciliation loop, no
+  daemon that notices a stopped plant and brings it back. Desired state stays
+  intent <em>displayed as drift</em>, never intent enforced. On a development
+  machine the lab fleet runs when its owner starts it, and nothing in this
+  design starts a plant on anyone's behalf.</li>
 </ul>
+<h3 id="where-the-write-verbs-live-and-why-the-read-only-role-survives">Where the write verbs live, and why the read-only role survives<a class="headerlink" href="#where-the-write-verbs-live-and-why-the-read-only-role-survives" title="Permanent link">&para;</a></h3>
+<p>In <strong><code>fsmes fleet</code></strong>, a local command, not in the web page. The first version
+of the console has no write path at all; the verbs it would need are the
+command's.</p>
+<p>The earlier draft of §8 argued for a read-only console on the grounds that
+<em>the code can be reviewed for safety by reading it for calls that write</em>.
+That argument is not deleted by the ownership split — it moves, and it gets
+weaker in one specific place, which is worth saying out loud:</p>
+<ul>
+<li><strong>For the console it survives intact.</strong> The page reads. Its credential to
+  every plant, owned or observed, is the <strong>read-only machine role</strong> below.
+  Nothing about the page's review property changes.</li>
+<li><strong>For <code>fsmes fleet</code> it becomes a different question</strong>: not "is there a call
+  that writes" but "does every call that writes check ownership first". That
+  is a weaker property, because it depends on a check being present rather
+  than on a capability being absent. It is the price of the lab fleet, it is
+  paid knowingly, and piece 4's <em>done when</em> is written to make a reviewer
+  actually check it.</li>
+<li><strong>The credential split is what carries the safety.</strong> A long-running process
+  on a port never holds a credential that can change a plant. Managing runs
+  as the person at the terminal, for as long as the command takes.</li>
+</ul>
+<p>A console <code>--manage</code> flag — off by default, loopback only, each button
+calling the same gated function the command calls — is possible later. It is
+deliberately not in piece 4: the milestone's <em>done when</em> needs the page and
+does not need the buttons.</p>
 <p>"Enrol", then, means: <em>a person adds a plant to the console's list and gives
 it a credential the plant already understands.</em> Not a mutual handshake, not a
 certificate authority, not a bootstrap token — those are a control plane, and
-a control plane implies a plane that controls. What the product genuinely
-needs first is a <strong>read-only machine credential</strong>: an account that can call
-<code>/health</code>, <code>/shadow</code>, <code>/metrics</code>, <code>/ops/services</code> and the OEE endpoints and
-literally nothing else, so a console does not run as a person and does not
-run as <code>AGENT</code>. That is a capability set and a role, both of which
+a control plane implies a plane that controls. Enrolling makes a plant
+<em>visible</em>; it does not make it owned, because ownership comes from having
+created it. What the product genuinely needs first is a <strong>read-only machine
+credential</strong>: an account that can call <code>/health</code>, <code>/shadow</code>, <code>/metrics</code>,
+<code>/ops/services</code> and the OEE endpoints and literally nothing else, so a
+console does not run as a person and does not run as <code>AGENT</code>. That is a
+capability set and a role, both of which
 <code>src/fsmes/services/capabilities.py</code> already knows how to express.</p>
 <hr />
 <h2 id="9-the-order-of-work">9. The order of work<a class="headerlink" href="#9-the-order-of-work" title="Permanent link">&para;</a></h2>
@@ -3795,11 +3964,28 @@ time zone, a renamed protected term, and a <code>requires</code> this version do
 satisfy — each with one sentence naming the problem; and the third pack runs
 from the same wheel with two modules off, proven by its own API answering 404
 on those routes and its MCP tool list being shorter.</p>
-<h3 id="piece-4-the-console">Piece 4 — the console<a class="headerlink" href="#piece-4-the-console" title="Permanent link">&para;</a></h3>
-<p>The page from §8, over a read-only role, against a list of packs.</p>
-<p><strong>Done when:</strong> it shows three plants, one of which is switched off, as
-"2 answered, 1 unknown" — and a reviewer can read the code and see there is no
-call in it that writes.</p>
+<h3 id="piece-4-the-console-and-the-fleet-tool-behind-it">Piece 4 — the console, and the fleet tool behind it<a class="headerlink" href="#piece-4-the-console-and-the-fleet-tool-behind-it" title="Permanent link">&para;</a></h3>
+<p>The page from §8, over a read-only role, against a list of packs — plus
+<code>fsmes fleet</code> with the five verbs, the ownership file, and the ownership gate
+every one of them calls first.</p>
+<p><strong>Done when:</strong></p>
+<ul>
+<li>the page shows three plants, one of which is switched off, as
+  "2 answered, 1 unknown", and says which of them are owned;</li>
+<li>a reviewer can read the console's code and see there is no call in it that
+  writes to a plant — unchanged, because the page stays read-only;</li>
+<li><strong>a reviewer can read the fleet tool's code and see that every write path
+  checks ownership first, and that an unowned plant cannot be touched by any
+  of them</strong> — the ownership analogue of the old "no call that writes", and
+  the property <a href="../../decisions/0023-the-fleet-console-observes/">0023</a> is
+  written to make checkable;</li>
+<li>a test proves it rather than the reviewer alone: against a fake plant that
+  answers <code>/health</code> with the wrong <code>instance_id</code>, and against one that
+  answers with none, all five verbs refuse and say why.</li>
+</ul>
+<p>Nothing in this piece starts a plant on a development machine of its own
+accord. The fleet tool acts when a person runs it; the lab fleet is started
+by whoever owns it, and the tests run against fakes and in CI.</p>
 <p>Pieces 1 and 2 are independent of each other and of the rest. Piece 3 needs
 piece 2. Piece 4 needs pieces 1 and 3, and is the only one that closes the
 milestone's <em>done when</em>.</p>
@@ -3825,9 +4011,9 @@ milestone's <em>done when</em>.</p>
 <td>Protected terms are enumerated and tested. <code>[words]</code> reaches screens and reports only, never a topic, a <code>kind</code>, an enum or an API field</td>
 </tr>
 <tr>
-<td><strong>The console grows a button.</strong> "It only restarts the OPC agent."</td>
-<td>One write path, then a second</td>
-<td>Decision <a href="../../decisions/0023-the-fleet-console-observes/">0023</a>, plus the shadow ratchet: the console is code under <code>src/fsmes</code>, so a new outbound call must be registered, and a registered write to a plant is visible in review</td>
+<td><strong>Ownership creeps.</strong> A verb is added and the gate is not called; or "owned" is quietly widened to mean reachable, or configured, or trusted</td>
+<td>A sixth verb; a flag that skips the check "just for the lab"; a plant managed while it is unknown</td>
+<td>The gate is one function and the closed list of five verbs is in <a href="../../decisions/0023-the-fleet-console-observes/">0023</a>. Piece 4's <em>done when</em> makes a reviewer check every write path, and the wrong-<code>instance_id</code> test fails if one forgets. The shadow ratchet still applies: the fleet tool is code under <code>src/fsmes</code>, so a new outbound call must be registered</td>
 </tr>
 <tr>
 <td><strong>Migrating in two places.</strong> Pack format and database schema both move, and a plant ends up half-upgraded</td>
