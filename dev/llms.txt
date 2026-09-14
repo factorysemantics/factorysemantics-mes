@@ -71,5 +71,7 @@
 - [Agents — Reference — tools](https://docs.factorysemantics.com/dev/reference/tools/)
 - [Agents — Explanation — the write discipline](https://docs.factorysemantics.com/dev/agents/write-discipline/)
 - [Agents — Explanation — evals](https://docs.factorysemantics.com/dev/agents/evals/)
+- [Releases](https://docs.factorysemantics.com/dev/releases/)
+- [Releases — 0.2.0](https://docs.factorysemantics.com/dev/releases/0.2.0/)
 - [History — Landscape](https://docs.factorysemantics.com/dev/LANDSCAPE/)
 - [History — The private era](https://docs.factorysemantics.com/dev/history/private-era/)

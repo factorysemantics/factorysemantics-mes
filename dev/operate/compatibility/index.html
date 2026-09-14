@@ -334,6 +334,26 @@
     
     
       <li class="md-tabs__item">
+        <a href="../../releases/" class="md-tabs__link">
+          
+  
+  
+  Releases
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
         <a href="../../LANDSCAPE/" class="md-tabs__link">
           
   
@@ -2715,7 +2735,7 @@
   <span class="md-ellipsis">
     
   
-    History
+    Releases
   
 
     
@@ -2728,6 +2748,121 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Releases
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/0.2.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.2.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    History
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2863,12 +2998,15 @@
 
 
 <h1 id="compatibility">Compatibility<a class="headerlink" href="#compatibility" title="Permanent link">&para;</a></h1>
-<p><em>Explanation. What has actually been tested against what, as of 2026-09-10. "Untested" is a fact, not a warning label.</em></p>
+<p><em>Explanation. What has actually been tested against what, as of 2026-09-14 — the state of <code>main</code> that 0.2.0 is cut from. "Untested" is a fact, not a warning label.</em></p>
+<p><strong>Every row states the date it was last checked and what was run on that
+date.</strong> A row with no date is a row nobody can age.</p>
 <table>
 <thead>
 <tr>
 <th>Neighbour</th>
 <th>Status</th>
+<th>Last checked</th>
 <th>Evidence</th>
 </tr>
 </thead>
@@ -2876,66 +3014,82 @@
 <tr>
 <td><strong>KEPServerEX</strong> (OPC UA)</td>
 <td>tested in the lab</td>
-<td><code>labs/kepsim</code>: a trial server fed by ODBC from generated line data; <code>fsmes opc-verify</code> against it; certificate exchange and SignAndEncrypt</td>
+<td><strong>before 2026-09-08, exact date not recorded</strong></td>
+<td><code>labs/kepsim</code>: a trial server fed by ODBC from generated line data; <code>fsmes opc-verify</code> against it; certificate exchange and SignAndEncrypt. It was run in the private era and has not been run since the repository went public — nothing in CI touches it</td>
 </tr>
 <tr>
 <td><strong>The bundled OPC UA replay server</strong></td>
 <td>tested continuously</td>
-<td>every scored run and CI</td>
+<td>2026-09-14</td>
+<td>every scored run, and CI on every pull request</td>
 </tr>
 <tr>
 <td>Other OPC UA servers (Ignition, Siemens, Prosys)</td>
-<td>untested</td>
-<td>the client is <code>asyncua</code>; the tag map is the only server-specific part</td>
+<td><strong>untested</strong></td>
+<td>never</td>
+<td>nothing here has been on the other end of one. The client is <code>asyncua</code>; the tag map is the only server-specific part</td>
 </tr>
 <tr>
 <td><strong>ERP connectors</strong></td>
 <td>see the table below</td>
-<td>they have rules of their own</td>
+<td>see below</td>
+<td>they have rules of their own, and each row carries its own date</td>
 </tr>
 <tr>
 <td><strong>PostgreSQL 16.15</strong></td>
 <td>tested continuously</td>
-<td>the <code>postgres</code> cell in CI: <code>alembic upgrade head</code> from an empty database and then the whole suite, against a PostgreSQL 16.15 service container pinned by digest, on every pull request (2026-09-10). Also the Compose file and the cutlery plant's public demo</td>
+<td>2026-09-14</td>
+<td>the <code>postgres</code> cell in CI: <code>alembic upgrade head</code> from an empty database and then the whole suite, against a PostgreSQL 16.15 service container pinned by digest, on every pull request. Also the Compose file and the cutlery plant's public demo</td>
 </tr>
 <tr>
 <td><strong>SQLite</strong></td>
 <td>tested continuously</td>
-<td>the default; every test</td>
+<td>2026-09-14</td>
+<td>the default. The whole suite runs on in-memory SQLite on every pull request, on Ubuntu and Windows, Python 3.12 and 3.13; <code>wheel-demo</code> runs <code>fsmes demo</code> on a SQLite file from the built wheel, and <code>upgrade_from_previous_release.sh</code> upgrades a database made by the 0.1.2 wheel from PyPI. Version: whatever CPython ships</td>
 </tr>
 <tr>
 <td><strong>Claude Code</strong> as an MCP client</td>
 <td>tested</td>
-<td>the agent evals drive it headless</td>
+<td>scoring 2026-09-14; <strong>the live-model run's date is not recorded</strong></td>
+<td>the agent evals drive it headless. <code>tests/test_agent_eval.py</code> scores them on every pull request; the run that puts a real model against the live tool surface is <code>fsmes agent-eval</code>, a command a person types, and nothing records when it last ran</td>
 </tr>
 <tr>
 <td>Claude Desktop, other MCP clients</td>
-<td>untested</td>
+<td><strong>untested</strong></td>
+<td>never</td>
 <td>the server is streamable HTTP over the standard SDK</td>
 </tr>
 <tr>
 <td><strong>MQTT brokers</strong> (Mosquitto, HiveMQ, EMQX)</td>
-<td>untested</td>
-<td>both directions are built — <code>fsmes uns publish</code> and <code>fsmes inbound subscribe</code> — and both are driven by a fake transport in the suite. No broker has run against either; this repository does not start brokers on the machine it is developed on. The publisher has one opt-in test against a real broker (<code>MES_UNS_TEST_BROKER</code>)</td>
+<td><strong>untested</strong></td>
+<td>never</td>
+<td><strong>no broker has been on the other end of either direction.</strong> Both directions are built — <code>fsmes uns publish</code> and <code>fsmes inbound subscribe</code> — and both are driven by a fake transport in the suite. No broker has run against either; this repository does not start brokers on the machine it is developed on. The publisher has one opt-in test against a real broker (<code>MES_UNS_TEST_BROKER</code>)</td>
 </tr>
 <tr>
 <td>Node-RED, United Manufacturing Hub, Grafana</td>
-<td>untested; the MQTT halves exist</td>
+<td><strong>untested</strong>; the MQTT halves exist</td>
+<td>never</td>
 <td>the namespace is published and subscribed to over plain MQTT-JSON under an ISA-95 tree; no UMH or Node-RED deployment has been on the other end of it</td>
 </tr>
 <tr>
 <td>Windows (plant PCs)</td>
 <td>tested continuously</td>
-<td>CI runs the suite on Windows and Python 3.12/3.13</td>
+<td>2026-09-14</td>
+<td>CI runs <code>ruff</code> and the whole suite on <code>windows-latest</code>, Python 3.12 and 3.13, on every pull request. <code>tzdata</code> is a Windows-only dependency so <code>zoneinfo</code> can resolve a plant's zone. No plant PC in a real plant has run it</td>
 </tr>
 <tr>
 <td>Python</td>
 <td>3.12, 3.13</td>
-<td>CI</td>
+<td>2026-09-14</td>
+<td>CI, both on Ubuntu and on Windows. 3.11 and earlier are not supported; 3.14 is untested</td>
 </tr>
 </tbody>
 </table>
 <p>When a row changes, it changes here first, with the date and what was run.</p>
+<p>Nothing in this table has been run in a real plant. Every "tested
+continuously" row means a CI runner or a lab bench on the maintainer's own
+machine, and the <a href="https://github.com/factorysemantics/factorysemantics-mes/blob/main/ROADMAP.md">roadmap</a>
+says so too.</p>
 <h2 id="erp-connectors">ERP connectors<a class="headerlink" href="#erp-connectors" title="Permanent link">&para;</a></h2>
 <p>Three words, defined in decision
 <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/">0020</a>, and
@@ -2968,7 +3122,7 @@ rather than read is a table that misleads.</p>
 <td><strong>ERPNext</strong></td>
 <td>supported</td>
 <td>v15.120.0 (Frappe v15, MariaDB 10.6)</td>
-<td>2026-09-09, and on every pull request that touches it since</td>
+<td>2026-09-10, and on every pull request that touches the connector, its tests or its fixture since</td>
 <td>the <code>ERPNext (live)</code> job: a clean container from <code>labs/erpnext/docker-compose.yml</code>, images pinned by digest, seeded and put through the whole round trip in <code>tests/test_erpnext_live.py</code>, asserting against ERPNext's own documents. Includes what ERPNext does with an over-run, measured 2026-09-10: inside its own over-production allowance it books every unit, beyond it it refuses the stock entry whole and books nothing (<a href="../erpnext/#when-the-line-made-more-than-the-order-asked-for">what the connector does about it</a>). Also passes the conformance suite</td>
 </tr>
 <tr>
@@ -2982,14 +3136,14 @@ rather than read is a table that misleads.</p>
 <td><strong>file exchange</strong> (B2MML-lite)</td>
 <td>supported</td>
 <td>not applicable — the far side is a folder</td>
-<td>2026-09-10</td>
+<td>2026-09-14</td>
 <td><code>tests/test_file_erp.py</code>, <code>tests/test_erp_confirmation_files.py</code> and the conformance suite. The folder layout, the published schema and <code>fsmes erp validate</code> are on <a href="../confirmation-files/">the confirmation handoff</a></td>
 </tr>
 <tr>
 <td><strong>REST</strong> (against the bundled mock ERP)</td>
 <td>supported</td>
 <td>not applicable — the far side ships with it</td>
-<td>2026-09-10</td>
+<td>2026-09-14</td>
 <td><code>tests/test_erp_contract.py</code> and the conformance suite. Against a <em>real</em> ERP's REST API it is <strong>untested</strong>, and the three endpoints it needs are in <code>fsmes erp requirements</code></td>
 </tr>
 <tr>

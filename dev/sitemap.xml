@@ -356,4 +356,12 @@
          <loc>https://docs.factorysemantics.com/dev/reference/tools/</loc>
          <lastmod>2026-09-14</lastmod>
     </url>
+    <url>
+         <loc>https://docs.factorysemantics.com/dev/releases/</loc>
+         <lastmod>2026-09-14</lastmod>
+    </url>
+    <url>
+         <loc>https://docs.factorysemantics.com/dev/releases/0.2.0/</loc>
+         <lastmod>2026-09-14</lastmod>
+    </url>
 </urlset>
