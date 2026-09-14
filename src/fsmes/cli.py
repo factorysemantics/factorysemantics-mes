@@ -1283,6 +1283,14 @@ def info() -> None:
     # from the prompt.
     typer.echo(f"plant         {who['plant']}  ({who['profile']} profile)")
     typer.echo(f"time zone     {who['timezone_says']}")
+    # What this plant calls things, when it calls anything differently. Here
+    # because a support call that opens "our jobs are stuck" is a support call
+    # about work orders, and nobody on either end of it should have to guess
+    # that. Display only: the pack that set these was refused if any of them
+    # renamed something a number depends on.
+    if who["words"]:
+        said = ", ".join(f"{term} -> {word}" for term, word in sorted(who["words"].items()))
+        typer.echo(f"words         {said}")
 
     # Modules register through the `fsmes.modules` entry-point group, so this
     # reads what is actually installed rather than a hardcoded list — the same
