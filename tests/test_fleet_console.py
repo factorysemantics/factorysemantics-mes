@@ -20,6 +20,7 @@ Nothing here starts a plant, a broker, an OPC server or a port.
 """
 
 import ast
+import contextlib
 import os
 import re
 import shutil
@@ -101,6 +102,15 @@ def three_plants(tmp_path, monkeypatch, session):
     plants.environment.cache_clear()
     monkeypatch.setenv("MES_DATABASE_URL", f"sqlite:///{(tmp_path / 'fleet.db').as_posix()}")
     monkeypatch.setenv("MES_PLANT_TIMEZONE", "UTC")
+    # Two settings that are about this database being a **file**, which the
+    # rest of the suite's is not. `MES_TAG_RETENTION_DAYS=0` switches off the
+    # hourly pruner the API's lifespan starts: it opens its own session in a
+    # worker thread through `asyncio.to_thread`, `task.cancel()` does not stop
+    # a thread already inside a SQLite `BEGIN IMMEDIATE`, and against a file
+    # it contends with whatever the test is actually doing. Nothing here tests
+    # retention. And the engine is disposed rather than dropped, because on
+    # Windows an open handle is a file `tmp_path` cannot delete.
+    monkeypatch.setenv("MES_TAG_RETENTION_DAYS", "0")
     monkeypatch.setenv("FSMES_FINEWIRE_OPERATOR_PASSWORD", "a-password-for-this-test")
     monkeypatch.setattr(observe, "health", lambda *a, **k: observe.Answer(
         "http://fake", False, why="did not answer (nothing listening)"))
@@ -122,6 +132,9 @@ def three_plants(tmp_path, monkeypatch, session):
     os.environ.clear()
     os.environ.update(before)
     plants.environment.cache_clear()
+    if get_engine.cache_info().currsize:
+        with contextlib.suppress(Exception):
+            get_engine().dispose()
     for cache in (get_settings, get_engine, get_sessionmaker):
         cache.cache_clear()
 

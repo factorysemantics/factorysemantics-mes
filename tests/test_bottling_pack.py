@@ -54,12 +54,35 @@ KEPSIM_MAP = ROOT / "config" / "tag_map_kepsim.json"
 ORDER = "WO-ACME-4711"
 
 
+@pytest.fixture(autouse=True)
+def _close_what_this_file_opens():
+    """Every database this file makes, closed when the test ends.
+
+    In-memory, so there is no file for Windows to refuse to delete - but a
+    `StaticPool` holds its one connection for as long as the engine lives, and
+    a test module that opens two per test and disposes none leaves them to the
+    collector. Cheap to be tidy, and it keeps the reason written down.
+    """
+    OPENED.clear()
+    yield
+    for session in OPENED:
+        session.close()
+        session.get_bind().dispose()
+    OPENED.clear()
+
+
+#: Every session `blank` handed out during the test now running.
+OPENED: list[Session] = []
+
+
 def blank() -> Session:
     """One private in-memory database, with nothing seeded into it."""
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False},
                            poolclass=StaticPool)
     Base.metadata.create_all(engine)
-    return Session(engine, expire_on_commit=False)
+    session = Session(engine, expire_on_commit=False)
+    OPENED.append(session)
+    return session
 
 
 def by_the_product() -> Session:

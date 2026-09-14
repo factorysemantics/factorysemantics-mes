@@ -25,6 +25,7 @@ Nothing here starts a plant on a port. The application is built in-process
 against the database `create` actually wrote.
 """
 
+import contextlib
 import os
 import shutil
 from pathlib import Path
@@ -50,6 +51,25 @@ def nowhere(tmp_path, monkeypatch):
     old tests set, and setting it is what hid this bug for a fortnight. What
     is being proved is that a plant built by a person who exported nothing
     still gets its own database.
+
+    Two things here are about the database being a **file** rather than the
+    in-memory one the rest of the suite uses, and both were found on Windows.
+
+    `MES_TAG_RETENTION_DAYS=0` switches off the hourly pruner the API's
+    lifespan starts. It is a real background task doing real work - it opens
+    its own session in a worker thread through `asyncio.to_thread` - and
+    `task.cancel()` does not stop a thread that is already inside a SQLite
+    `BEGIN IMMEDIATE`. Against the suite's in-memory database that is
+    invisible; against a file it contends with the sign-in this test is
+    actually about, and a run that should take a second can sit on
+    `busy_timeout`. Nothing here is testing retention, so nothing here should
+    be starting it.
+
+    And the engine is **disposed**, not merely dropped from its cache.
+    `cache_clear()` releases the last reference and leaves the pooled
+    connection open until something collects it; on Windows an open handle is
+    a file that cannot be deleted, so `tmp_path` cleanup fails on a database
+    this fixture opened.
     """
     from fsmes.config import get_settings
     from fsmes.db import get_engine, get_sessionmaker
@@ -58,15 +78,23 @@ def nowhere(tmp_path, monkeypatch):
     for variable in ("MES_DATABASE_URL", plants.REGISTRY_ENV, applier.DATA_DIR_ENV):
         monkeypatch.delenv(variable, raising=False)
     monkeypatch.setenv("MES_PLANT_TIMEZONE", "UTC")
+    monkeypatch.setenv("MES_TAG_RETENTION_DAYS", "0")
     monkeypatch.setattr(observe, "health", lambda *a, **k: observe.Answer(
         "http://fake", False, why="did not answer (nothing listening)"))
     plants.environment.cache_clear()
-    for cache in (get_settings, get_engine, get_sessionmaker):
-        cache.cache_clear()
+    _release(get_settings, get_engine, get_sessionmaker)
     yield tmp_path
     os.environ.clear()
     os.environ.update(before)
     plants.environment.cache_clear()
+    _release(get_settings, get_engine, get_sessionmaker)
+
+
+def _release(get_settings, get_engine, get_sessionmaker) -> None:
+    """Close whatever database this process had, then forget it."""
+    if get_engine.cache_info().currsize:
+        with contextlib.suppress(Exception):
+            get_engine().dispose()
     for cache in (get_settings, get_engine, get_sessionmaker):
         cache.cache_clear()
 
