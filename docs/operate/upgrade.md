@@ -10,6 +10,113 @@ carries an **Honesty** section for anything that changed what a number
 before upgrading a plant that anyone reads numbers off, because a number that
 changes meaning without anyone noticing is worse than one that breaks.
 
+## 0.1.2 to 0.2.0
+
+The first upgrade this project has had to describe. In order:
+
+```bash
+fsmes backup --out /mnt/nas/fsmes         # first, always
+# stop the agent and the API
+pip install --upgrade factorysemantics-mes
+fsmes db-status                           # what you are at, and what 0.2.0 expects
+fsmes init-db                             # runs the migrations the wheel carries
+fsmes db-status                           # should now agree; it exits non-zero if not
+# start them again
+```
+
+Your database was made by a 0.1.2 wheel, which shipped no migration scripts,
+so it has tables and **no Alembic stamp**. `fsmes init-db` works out which
+revision those tables correspond to rather than assuming: it rebuilds the
+schema each revision in the chain produces, compares table and column names
+against yours, and **stamps only on an exact match** — then runs the
+migrations since. The exact-match case is the one below; the no-match case is
+[further down](#if-your-database-was-made-by-012-or-earlier), and it changes
+nothing at all.
+
+**Five migrations** have landed since 0.1.2 — `153379d6cf19` is the 0.1.2
+schema and `c8b1e40d7a92` is head — and every one of them is additive.
+Nothing existing is rewritten and no row is rebuilt:
+
+| Revision | What it adds |
+|---|---|
+| `a4d9c2e70f18` | `uns_publications`, so the namespace publisher can be a second reader of the outbox |
+| `a3f6c81d09e2` | makes `production_logs.work_order_id` nullable, so a booking may have no work order |
+| `b5c1d09e73af` | the source-attribution columns (`production_logs.source_system`, `equipment_states.reason_source`, `quality_checks.source_system` and `.supplied_result`) and the `inbound_events` ledger. Every column is nullable: a row from before the migration was observed by this MES, and null is the right answer |
+| `d9a3f61c48e0` | `inbound_watermarks`, empty for a plant that never runs the SQL poller |
+| `c8b1e40d7a92` | an index on `erp_messages (direction, id)` — the question both readers of the outbox ask |
+
+That is five, in that order. **What to check afterwards:** any report that
+groups production by source now has a third `ProductionSource` value,
+`external`, and any query reading `SUM(production_logs.good_qty)` as
+order-attributed production should filter on `work_order_id IS NOT NULL`.
+
+### If you run plants from a registry
+
+`plants.toml` is now `fleet.toml`, and everything it used to say about each
+plant lives in that plant's own `plant.toml` — a [pack](packs.md). The fleet
+loader names the command when it meets a file that still describes plants
+directly:
+
+```bash
+fsmes pack migrate /etc/fsmes/plants.toml --plant bottling --out /etc/fsmes/packs/bottling
+fsmes pack check /etc/fsmes/packs/bottling
+```
+
+`migrate` says what it moved, what it dropped and why, and the one value it
+will not guess: a registry never held a time zone, so you type
+`MES_PLANT_TIMEZONE` — or the pack's `timezone` — yourself. Read the whole
+output. `secret_key` is dropped because a pack holds no secret; `init` and
+`post_boot` are dropped because a pack carries no code, so a plant whose
+master data came from an `init` script either carries it as data under
+`[files] masterdata` or keeps its generator as a tool a person runs.
+
+### Read the Honesty section before you start
+
+[CHANGELOG 0.2.0 → Honesty](https://github.com/factorysemantics/factorysemantics-mes/blob/main/CHANGELOG.md).
+It is long for this release, and each entry carries a migration line. The
+ones that change what something already deployed will see:
+
+- **Outbound confirmation file names changed.** A collector that globbed
+  `confirmation_<order>_*.xml` must glob `*_<order>_op10.xml` or
+  `*_<order>_completion.xml` instead.
+- **`/metrics` series carry a `plant` label.** Add it to any dashboard,
+  alert or recording rule written against the old series.
+- **Shift patterns are read on the plant's clock.** A plant whose server does
+  not run in the plant's own zone should set `MES_PLANT_TIMEZONE` and then
+  check the shift boundaries on the dashboard.
+- **`fsmes erp outbox` counts the ERP's own queue only.** Anything reading
+  its totals as *all* pending outbound work needs `other_outbound` added.
+- **`MES_ERPNEXT_COMPANY` now filters inbound orders**, and its default is
+  empty. A bench holding more than one company's books must set it.
+- **`MES_MODULES` exists and defaults to `all`**, so an install that sets
+  nothing serves exactly what it served before.
+
+### What the gate proves, and what it does not
+
+Every pull request runs `upgrade_from_previous_release.sh`: it installs the
+release that is on PyPI, makes a database with it, upgrades that database
+with the wheel under test, and asks the database whether it is at head. So
+the upgrade path is proven on the bytes that ship, not on a checkout.
+
+**What it proves:** that a database with the *demo plant's* schema, made by
+the previous release's wheel, reaches head under this one, and that the row
+counts are read back out of it afterwards.
+
+**What it does not prove:** that *your* plant's database does. The gate runs
+one plant's shape. If yours has a table added by hand, or came from
+something other than a release, `init-db` will say so, name the nearest
+revision, list every difference and change nothing — which is the honest
+answer, not a failure of the upgrade. Take the backup first, and if
+`init-db` refuses, restore it and open a
+[Discussion](https://github.com/factorysemantics/factorysemantics-mes/discussions)
+with what it printed.
+
+It also does not prove anything about a **PostgreSQL** plant's upgrade: the
+gate's database is SQLite. The migrations themselves run against an empty
+PostgreSQL 16.15 in the `postgres` cell on every pull request, which is a
+different claim — the schema builds there; nobody has upgraded a populated
+PostgreSQL plant.
+
 ## Before anything
 
 ```bash
