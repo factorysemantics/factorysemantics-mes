@@ -157,6 +157,9 @@ nav:
       - Reference — tools: reference/tools.md
       - Explanation — the write discipline: agents/write-discipline.md
       - Explanation — evals: agents/evals.md
+  - Releases:
+      - releases/index.md
+      - 0.2.0: releases/0.2.0.md
   - History:
       - Landscape: LANDSCAPE.md
       - The private era: history/private-era.md
