@@ -42,6 +42,42 @@ goes under Honesty with a migration line, so plant people can find it.
   argument about the truth. What the report still will not do is say which of
   the two numbers is the wrong one.
 
+- **A tag map can say where the line publishes the order it is running.** Many
+  line-control PLCs publish the current order on a line-level register rather
+  than on any one machine. Nothing in this MES read it, so which order a unit
+  belonged to was always the MES's own inference from what it had released - a
+  reasonable guess, and still a guess. A tag map may now carry one `line`
+  block: the object the line's own tags sit on, the tag carrying the order it
+  is running, and `order_code`, the rule that turns what the line published
+  into the code this MES holds (`"WO-ACME-{value}"`, because a PLC publishes
+  `4711` in a register and the MES holds `WO-ACME-4711`). It is **read, never
+  written** - the opposite of a machine's `order_tag` - so a historian, a
+  replayed CSV or a server you have no write rights on can still answer it, and
+  the read-only promise in
+  [docs/operate/opc-readonly.md](docs/operate/opc-readonly.md) is unchanged. A
+  map with no such block behaves exactly as before. The three maps this
+  repository ships for its own lab lines now carry one.
+
+- **A lab run compares each order the line published with the order the MES
+  holds, and says how far past it the line ran.** For five runs every report in
+  the lab carried the same sentence under *what the runs could not answer* -
+  seven times - about a line that had been publishing its order number the
+  whole time. With the `line` block read, the booking measurement gains a row
+  per order: what the line made under it, what the MES booked against it, what
+  the order was for, and what each side says the line made past it. The ordered
+  quantity is the MES's own, because an order is for what the plant was told it
+  was for and a second copy of that number would be a second place for it to be
+  wrong. The truth side is a range (the replay loops); the over-run the MES
+  reports about itself owes the band nothing, which makes it the sharp reading
+  for the sixteen-against-fifteen class of fault. The run also asks the MES what
+  it counted with **no order open to book it against**, so a gap between what
+  the line made and what an order was booked for says whether the rest was
+  dropped or kept - different faults with different fixes. An order the line
+  published that the MES never held is *unknown* with the reason; an order the
+  MES holds that the line never published is listed and is not a difference.
+  New starter `labs/experiments/over-run.toml`: one order, one uninterrupted
+  hour, and about two thousand units more than the order asked for.
+
 ### Fixed
 
 - **Two ephemeral runs on one machine no longer choose the same port.** A

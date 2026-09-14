@@ -145,10 +145,32 @@ For that class of fault read the **over-run the MES reports itself**, which is
 in the orders table and owes nothing to the band. And run slowly when the
 question is booking.
 
-*Orders are not tied to the script.* These plants' tag maps name no order tag —
-a CSV replay cannot be written to — so which order a unit belongs to is the
-MES's own inference, and the script's order numbers cannot be matched to it.
-Both sides are printed; the per-order comparison says *unknown* and why.
+*Orders, and how far past them the line ran.* The line publishes the order it
+is running, and the tag map's `line` block says where and how that value names
+an order in this MES ([the tag map's side of it](../operate/opc-readonly.md#if-the-line-publishes-the-order-it-is-running)).
+With that read rather than guessed, each order the line published gets a row:
+what the line made under it, what the MES booked against it, what the order was
+for, and how far past it each side says the line ran.
+
+Three things about that row are worth knowing before you read one:
+
+* **The ordered quantity is the MES's own.** An order is for what the plant was
+  told it was for; a second copy of that number in the line description would
+  be a second place for it to be wrong, and a disagreement between the two
+  would read as a fault in a plant that had none. What is compared is
+  *production*.
+* **The join is read, not asserted.** It comes out of the plant's own wiring
+  file. A pack whose map has no `line` block leaves every order *unknown* and
+  the report says which block would end that, rather than quietly matching on
+  a resemblance between two numbers.
+* **The truth side is a range and the MES's is not.** The replay loops, so
+  units made in the overlap are production the MES was right to book. The
+  over-run the MES reports about itself owes the band nothing — which is what
+  makes it the sharp reading for the sixteen-against-fifteen class of fault.
+
+An order the line published that the MES never held is *unknown* with the
+reason, not a difference. An order the MES holds that the line never published
+is listed and is not one either: a plant holds orders that are not running.
 
 ### `downtime` — were the scripted stops seen, and the planned ones kept out?
 

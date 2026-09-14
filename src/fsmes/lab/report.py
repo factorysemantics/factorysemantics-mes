@@ -163,6 +163,88 @@ def _notes(directory: Path) -> str:
 
 # ----------------------------------------------------------------- sections
 
+def _orders_lede(orders: dict) -> str:
+    """How the two sides' order numbers were matched, or why they were not."""
+    if not orders.get("tied_to_truth"):
+        return (f'<p class="unknown">{esc(orders["why"])} — so the per-order comparison is '
+                f'<em>unknown</em> and both sides are printed instead. The MES lists '
+                f'{num(orders["mes_orders_total"])} order(s); the line published '
+                f'{num(orders["truth_orders_total"])}.</p>')
+    return (f'<p>{esc(orders["tied_how"])}. That is read out of the plant\'s own wiring, not '
+            f'asserted by this run. The ordered quantity is the MES\'s own — an order is for '
+            f'what the plant was told it was for, and a second copy of that number would be a '
+            f'second place for it to be wrong. What is compared is production: what the line '
+            f'made under each order, and what the MES says it made past it. '
+            f'{num(orders["orders_tied"])} of {num(orders["truth_orders_total"])} order(s) the '
+            f'line published are matched.</p>')
+
+
+def _order_rows(orders: dict) -> str:
+    rows = []
+    for row in orders.get("rows") or []:
+        low, high = row["expected_range"]
+        band = row["truth_over_run_range"]
+        booking_css = _verdict_class(row["verdict"])
+        over_css = _verdict_class(row["over_run_verdict"])
+        rows.append(
+            f"<tr><td class='mono'>{esc(row['order'])}</td>"
+            f"<td class='mono'>{esc(row['code'] or '—')}</td>"
+            f"<td>{num(row['mes_quantity'])}</td><td>{num(row['truth_good'])}</td>"
+            f"<td>{num(low)} to {num(high)}</td><td>{num(row['mes_good'])}</td>"
+            f"<td class='verdict {booking_css}'>{esc(row['verdict'])}</td>"
+            f"<td>{'—' if band is None else f'{num(band[0])} to {num(band[1])}'}</td>"
+            f"<td>{num(row['mes_over_run'])}</td>"
+            f"<td class='verdict {over_css}'>{esc(row['over_run_verdict'])}</td></tr>")
+    return "".join(rows) or ('<tr><td colspan="10" class="empty">The line published no '
+                             'orders.</td></tr>')
+
+
+def _verdict_class(verdict: str) -> str:
+    verdict = str(verdict)
+    if verdict.startswith("unknown"):
+        return "unknown"
+    if verdict == "inside the replay's overlap band":
+        return "band"
+    if verdict in ("matched", "the line did not run past the order, and the MES agrees"):
+        return ""
+    return "bad"
+
+
+def _never_published(orders: dict) -> str:
+    """Orders the MES holds that the line never said it was running.
+
+    Printed because the two totals otherwise differ for no stated reason, and
+    a reader who is not told works it out as a discrepancy. It is not one: a
+    plant holds orders that are not on the line.
+    """
+    listed = orders.get("mes_orders_the_line_never_published") or []
+    if not listed:
+        return ""
+    return (f'<p>The MES holds {len(listed)} order(s) the line never published while this run '
+            f'was watching: <code>{esc(", ".join(listed))}</code>. Not a difference — a plant '
+            f'holds orders that are not running.</p>')
+
+
+def _unassigned(orders: dict) -> str:
+    """Where production the orders did not take went.
+
+    Under the table rather than in it, because it belongs to no order - which
+    is the whole fact about it.
+    """
+    said = orders.get("unassigned_production") or {}
+    if said.get("unknown_because"):
+        return f'<p class="unknown">{esc(said["unknown_because"])}</p>'
+    if not said.get("entries"):
+        return ('<p>The MES counted nothing with no order open to book it against, so every '
+                'unit a machine counted found an order.</p>')
+    return (f'<p><strong>{num(said["good"])} good and {num(said["scrap"])} scrap</strong> were '
+            f'counted with no order open to book them against, in {num(said["entries"])} '
+            f'entries. A gap between what the line made and what an order was booked for is a '
+            f'different fault depending on whether the rest was dropped or kept, and this is '
+            f'the MES saying which — but read it as a presence, not as a quantity to subtract: '
+            f'{esc(said.get("note") or "")}.</p>')
+
+
 def _booking(booking: dict) -> str:
     rows = []
     for row in booking["stations"]:
@@ -182,9 +264,6 @@ def _booking(booking: dict) -> str:
         f"<tr><td class='mono'>{esc(o['code'])}</td><td>{num(o['quantity'])}</td>"
         f"<td>{num(o['good'])}</td><td>{num(o['scrap'])}</td><td>{num(o['over'])}</td></tr>"
         for o in orders["mes_orders"])
-    truth_orders = "".join(
-        f"<tr><td class='mono'>{esc(code)}</td><td>{num(made)}</td></tr>"
-        for code, made in orders["truth_good_by_order"].items())
     return f"""
 <h2 id="booking">Booking honesty</h2>
 <p>{esc(booking['question'])} The line made what the script made it make; the MES booked what its
@@ -196,18 +275,20 @@ an order for 15.</p>
 <thead><tr><th>Station</th><th>Machine</th><th>Truth good</th><th>Expected</th><th>MES good</th>
 <th>Difference</th><th>Truth scrap</th><th>MES scrap</th><th>Verdict</th></tr></thead>
 <tbody>{"".join(rows)}</tbody></table></div>
-<h3>Orders</h3>
-<p>{esc(orders['why'])} — so the per-order comparison is <em>unknown</em>, and both sides are printed
-instead. The MES lists {num(orders['mes_orders_total'])} order(s); the script ran
-{num(orders['truth_orders_total'])}.</p>
+<h3>Orders, and how far past them the line ran</h3>
+{_orders_lede(orders)}
+<div class="scroll"><table>
+<thead><tr><th>Line published</th><th>MES order</th><th>Ordered</th><th>Truth made</th>
+<th>Expected</th><th>MES booked</th><th>Booking</th><th>Truth past order</th><th>MES over-run</th>
+<th>Over-run</th></tr></thead>
+<tbody>{_order_rows(orders)}</tbody></table></div>
+<h3>Every order the MES holds</h3>
 <div class="scroll"><table>
 <thead><tr><th>MES order</th><th>Ordered</th><th>Good</th><th>Scrap</th><th>Over-run</th></tr></thead>
 <tbody>{order_rows or '<tr><td colspan="5" class="empty">The MES listed no orders.</td></tr>'}</tbody>
 </table></div>
-<div class="scroll"><table>
-<thead><tr><th>Scripted order</th><th>Units the line made</th></tr></thead>
-<tbody>{truth_orders or '<tr><td colspan="2" class="empty">The script names no orders.</td></tr>'}</tbody>
-</table></div>
+{_never_published(orders)}
+{_unassigned(orders)}
 """
 
 

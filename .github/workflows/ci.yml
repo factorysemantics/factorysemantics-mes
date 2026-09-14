@@ -177,7 +177,9 @@ jobs:
     # instrument reading, and failing a build on one would teach everybody to
     # stop reading it.
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # Every starter replays its whole hour, so the budget grows with the
+    # number of them. Raised from 25 when the over-run starter was added.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
