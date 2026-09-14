@@ -39,6 +39,7 @@
 - [Develop — Architecture](https://docs.factorysemantics.com/dev/ARCHITECTURE/)
 - [Develop — Tutorial — your first module](https://docs.factorysemantics.com/dev/develop/your-first-module/)
 - [Develop — Reference — writing an ERP connector](https://docs.factorysemantics.com/dev/develop/erp-connectors/)
+- [Develop — Explanation — experiments in the lab](https://docs.factorysemantics.com/dev/develop/experiments/)
 - [Develop — Style](https://docs.factorysemantics.com/dev/design/STYLE/)
 - [Develop — Design — M8 packs and fleet](https://docs.factorysemantics.com/dev/design/m8-packs-and-fleet/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/)

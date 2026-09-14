@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://docs.factorysemantics.com/dev/decisions/0019-count-everything-the-machine-counted/">
+        <link rel="canonical" href="https://docs.factorysemantics.com/dev/develop/experiments/">
       
       
-        <link rel="prev" href="../0018-public-on-2026-09-08-and-the-pre-tag-check/">
+        <link rel="prev" href="../erp-connectors/">
       
       
-        <link rel="next" href="../0020-what-supported-means-for-an-erp-connector/">
+        <link rel="next" href="../../design/STYLE/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>0019 — Count everything the machine counted: over-runs are booked, surplus is unassigned production - FactorySemantics MES</title>
+        <title>Explanation — experiments in the lab - FactorySemantics MES</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#0019-count-everything-the-machine-counted-over-runs-are-booked-surplus-is-unassigned-production" class="md-skip">
+        <a href="#explanation-experiments-in-the-lab" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              0019 — Count everything the machine counted: over-runs are booked, surplus is unassigned production
+              Explanation — experiments in the lab
             
           </span>
         </div>
@@ -294,7 +294,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../develop/" class="md-tabs__link">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -1520,7 +1520,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../develop/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -1576,7 +1576,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../develop/your-first-module/" class="md-nav__link">
+      <a href="../your-first-module/" class="md-nav__link">
         
   
   
@@ -1604,7 +1604,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../develop/erp-connectors/" class="md-nav__link">
+      <a href="../erp-connectors/" class="md-nav__link">
         
   
   
@@ -1629,10 +1629,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../develop/experiments/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — experiments in the lab
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1648,6 +1675,142 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The plan
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-run-writes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a run writes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-measurements-and-what-each-cannot-tell-you" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The measurements, and what each cannot tell you
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The measurements, and what each cannot tell you">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#booking-did-the-mes-book-what-the-line-made" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        booking — did the MES book what the line made?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#downtime-were-the-scripted-stops-seen-and-the-planned-ones-kept-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        downtime — were the scripted stops seen, and the planned ones kept out?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oee-does-the-mess-oee-match-the-hour-the-line-actually-had" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        oee — does the MES's OEE match the hour the line actually had?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#not-measured-yet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not measured yet
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-a-runs-numbers-are-withheld" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a run's numbers are withheld
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes-and-handing-a-run-to-somebody-else" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes, and handing a run to somebody else
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-two-starters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The two starters
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1713,8 +1876,6 @@
                 
   
   
-    
-  
   
   
     
@@ -1730,11 +1891,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_8" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_8" >
         
           
           <label class="md-nav__link" for="__nav_4_8" id="__nav_4_8_label" tabindex="">
@@ -1755,7 +1916,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_8_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_8_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_8">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1773,7 +1934,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../decisions/" class="md-nav__link">
         
   
   
@@ -1801,7 +1962,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0001-apache-2-with-dco/" class="md-nav__link">
+      <a href="../../decisions/0001-apache-2-with-dco/" class="md-nav__link">
         
   
   
@@ -1829,7 +1990,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0002-kernel-and-modules/" class="md-nav__link">
+      <a href="../../decisions/0002-kernel-and-modules/" class="md-nav__link">
         
   
   
@@ -1857,7 +2018,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0003-one-mcp-server/" class="md-nav__link">
+      <a href="../../decisions/0003-one-mcp-server/" class="md-nav__link">
         
   
   
@@ -1885,7 +2046,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0004-never-invent-production/" class="md-nav__link">
+      <a href="../../decisions/0004-never-invent-production/" class="md-nav__link">
         
   
   
@@ -1913,7 +2074,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0005-plain-html-no-build-step/" class="md-nav__link">
+      <a href="../../decisions/0005-plain-html-no-build-step/" class="md-nav__link">
         
   
   
@@ -1941,7 +2102,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
+      <a href="../../decisions/0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
         
   
   
@@ -1969,7 +2130,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0007-fresh-public-history/" class="md-nav__link">
+      <a href="../../decisions/0007-fresh-public-history/" class="md-nav__link">
         
   
   
@@ -1997,7 +2158,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0008-erp-connectors-are-modules/" class="md-nav__link">
+      <a href="../../decisions/0008-erp-connectors-are-modules/" class="md-nav__link">
         
   
   
@@ -2025,7 +2186,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0009-organisation-not-personal-account/" class="md-nav__link">
+      <a href="../../decisions/0009-organisation-not-personal-account/" class="md-nav__link">
         
   
   
@@ -2053,7 +2214,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0010-github-discussions-only/" class="md-nav__link">
+      <a href="../../decisions/0010-github-discussions-only/" class="md-nav__link">
         
   
   
@@ -2081,7 +2242,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0011-mkdocs-material-generated-reference/" class="md-nav__link">
+      <a href="../../decisions/0011-mkdocs-material-generated-reference/" class="md-nav__link">
         
   
   
@@ -2109,7 +2270,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0012-contributor-covenant-3/" class="md-nav__link">
+      <a href="../../decisions/0012-contributor-covenant-3/" class="md-nav__link">
         
   
   
@@ -2137,7 +2298,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0013-governance-is-one-page/" class="md-nav__link">
+      <a href="../../decisions/0013-governance-is-one-page/" class="md-nav__link">
         
   
   
@@ -2165,7 +2326,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0014-first-public-version-is-0-1-0/" class="md-nav__link">
+      <a href="../../decisions/0014-first-public-version-is-0-1-0/" class="md-nav__link">
         
   
   
@@ -2193,7 +2354,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0015-mcp-registry-name/" class="md-nav__link">
+      <a href="../../decisions/0015-mcp-registry-name/" class="md-nav__link">
         
   
   
@@ -2221,7 +2382,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0016-no-trademark-registration/" class="md-nav__link">
+      <a href="../../decisions/0016-no-trademark-registration/" class="md-nav__link">
         
   
   
@@ -2249,7 +2410,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
+      <a href="../../decisions/0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
         
   
   
@@ -2277,7 +2438,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
+      <a href="../../decisions/0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
         
   
   
@@ -2302,37 +2463,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    0019 — Count everything the machine counted: over-runs are booked, surplus is unassigned production
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../decisions/0019-count-everything-the-machine-counted/" class="md-nav__link">
         
   
   
@@ -2348,81 +2482,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Context
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#options-considered" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Options considered
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Decision
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Consequences
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#house-rules-touched" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        House rules touched
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2435,7 +2494,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
+      <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
         
   
   
@@ -2463,7 +2522,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0021-one-database-per-plant/" class="md-nav__link">
+      <a href="../../decisions/0021-one-database-per-plant/" class="md-nav__link">
         
   
   
@@ -2491,7 +2550,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0022-what-a-plant-pack-may-contain/" class="md-nav__link">
+      <a href="../../decisions/0022-what-a-plant-pack-may-contain/" class="md-nav__link">
         
   
   
@@ -2519,7 +2578,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0023-the-fleet-console-observes/" class="md-nav__link">
+      <a href="../../decisions/0023-the-fleet-console-observes/" class="md-nav__link">
         
   
   
@@ -2547,7 +2606,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../TEMPLATE/" class="md-nav__link">
+      <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
   
@@ -3039,10 +3098,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
+  <a href="#the-plan" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Context
+        The plan
       
     </span>
   </a>
@@ -3050,10 +3109,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#options-considered" class="md-nav__link">
+  <a href="#what-a-run-writes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Options considered
+        What a run writes
       
     </span>
   </a>
@@ -3061,10 +3120,71 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
+  <a href="#the-measurements-and-what-each-cannot-tell-you" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Decision
+        The measurements, and what each cannot tell you
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The measurements, and what each cannot tell you">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#booking-did-the-mes-book-what-the-line-made" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        booking — did the MES book what the line made?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#downtime-were-the-scripted-stops-seen-and-the-planned-ones-kept-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        downtime — were the scripted stops seen, and the planned ones kept out?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oee-does-the-mess-oee-match-the-hour-the-line-actually-had" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        oee — does the MES's OEE match the hour the line actually had?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#not-measured-yet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not measured yet
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-a-runs-numbers-are-withheld" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a run's numbers are withheld
       
     </span>
   </a>
@@ -3072,10 +3192,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
+  <a href="#notes-and-handing-a-run-to-somebody-else" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Consequences
+        Notes, and handing a run to somebody else
       
     </span>
   </a>
@@ -3083,10 +3203,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#house-rules-touched" class="md-nav__link">
+  <a href="#the-two-starters" class="md-nav__link">
     <span class="md-ellipsis">
       
-        House rules touched
+        The two starters
       
     </span>
   </a>
@@ -3110,7 +3230,7 @@
 
 
   
-    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/decisions/0019-count-everything-the-machine-counted.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/develop/experiments.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3118,94 +3238,208 @@
   
 
 
-<h1 id="0019-count-everything-the-machine-counted-over-runs-are-booked-surplus-is-unassigned-production">0019 — Count everything the machine counted: over-runs are booked, surplus is unassigned production<a class="headerlink" href="#0019-count-everything-the-machine-counted-over-runs-are-booked-surplus-is-unassigned-production" title="Permanent link">&para;</a></h1>
-<ul>
-<li><strong>Status:</strong> accepted</li>
-<li><strong>Date:</strong> 2026-09-09</li>
-<li><strong>Deciders:</strong> @kalwei</li>
-</ul>
-<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>On 2026-09-09 the release check ran <code>fsmes demo</code> from a built wheel and printed
-<code>Pack on PACK01: 16/15 good</code>, then <code>machine counted with no active order
-equipment=PACK01 good=1</code>, then crashed.</p>
-<p>Three facts sat behind that. Counter readings coalesce to the latest value per
-machine per batch, so one booking can carry a delta of more than one unit — 14
-booked plus a delta of 2 is 16 against an order for 15. <code>execution.report</code> books
-the delta without reference to the order quantity and only afterwards asks
-whether the operation is finished, so the order completes at 16. The next delta
-then finds no operation that is not <code>DONE</code>, and the unit the machine really made
-existed only as a warning line.</p>
-<p>Sixteen units were made. The MES kept a record of fifteen of them.</p>
-<p>The crash was separate and is fixed alongside: the demo printed
-<code>confirmations[-1]['lot']</code>, and the message that happened to land last was an
-operation confirmation, which has no finished-goods lot because an operation
-does not make one.</p>
-<h2 id="options-considered">Options considered<a class="headerlink" href="#options-considered" title="Permanent link">&para;</a></h2>
+<h1 id="explanation-experiments-in-the-lab">Explanation — experiments in the lab<a class="headerlink" href="#explanation-experiments-in-the-lab" title="Permanent link">&para;</a></h1>
+<p>An experiment is a <strong>plant</strong>, a <strong>scenario</strong> and a <strong>set of measurements</strong>, run
+as one command, leaving one directory somebody else can read.</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>fsmes<span class="w"> </span>lab<span class="w"> </span>run<span class="w"> </span>labs/experiments/one-line-bad-hour.toml
+</code></pre></div>
+<p>The pieces this joins all existed first: packs describe plants, the generator
+turns a line description into the data a replay obeys, the scorer reads the MES
+through its own HTTP API, and the runner builds an ephemeral plant and tears it
+down again. What was missing was the join — and a result that is still readable
+next week.</p>
+<p>Nothing starts by itself. A person types the command. The plant it builds is
+ephemeral: its own database, its own ports on loopback, gone when the questions
+have been asked, so it never disturbs a plant you already have running.</p>
+<h2 id="the-plan">The plan<a class="headerlink" href="#the-plan" title="Permanent link">&para;</a></h2>
+<p>A plan is TOML, because trying a different plant should be an edit and not a
+patch. Paths are relative to the plan file, so a plan and the packs it names
+travel together.</p>
+<div class="highlight"><pre><span></span><code><span class="n">name</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="s2">"one-line-bad-hour"</span>
+<span class="n">packs</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"../multiplant/bottling"</span><span class="p">]</span>
+
+<span class="n">duration</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3600</span><span class="w">          </span><span class="c1"># line seconds; omitted keeps each line's own</span>
+<span class="n">speed</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="mi">20</span><span class="w">            </span><span class="c1"># 20 replays a scripted hour in three minutes</span>
+<span class="n">seed</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="mi">42</span><span class="w">            </span><span class="c1"># omitted keeps each line's own</span>
+<span class="n">measure</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"booking"</span><span class="p">,</span><span class="w"> </span><span class="s2">"downtime"</span><span class="p">,</span><span class="w"> </span><span class="s2">"oee"</span><span class="p">]</span>
+
+<span class="c1"># Vary a pack without editing it. The copy the run builds from lands in the</span>
+<span class="c1"># results directory; the pack on disk is never touched. `modules` and `words`</span>
+<span class="c1"># only — anything more is a different plant, and belongs in its own pack.</span>
+<span class="k">[overlay.machining.modules]</span>
+<span class="n">serialization</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+
+<span class="c1"># A plant named here plays this script instead of its pack's own. The</span>
+<span class="c1"># vocabulary is the generator's: down, drift, scrap_burst, changeover,</span>
+<span class="c1"># counter_reset, micro_stops.</span>
+<span class="k">[scenario.machining]</span>
+<span class="n">events</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"down"</span><span class="p">,</span><span class="w"> </span><span class="n">station</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"Mill"</span><span class="p">,</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">600</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">720</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">]</span>
+
+<span class="c1"># A pack whose plant is seeded by a script rather than by master data. A pack</span>
+<span class="c1"># may never name a script (decision 0022); a plan is not a pack.</span>
+<span class="k">[init.bottling]</span>
+<span class="n">script</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"../multiplant/bottling/init.py"</span>
+</code></pre></div>
+<p><code>duration</code>, <code>seed</code> and <code>speed</code> are the whole of the determinism story: <strong>the
+same seed twice is the same run</strong>, and the report states the seed it used. A
+plan that shortens <code>duration</code> past a scripted event is refused rather than run
+with half a script.</p>
+<h2 id="what-a-run-writes">What a run writes<a class="headerlink" href="#what-a-run-writes" title="Permanent link">&para;</a></h2>
+<p>One directory per run, under <code>lab-results/</code> unless <code>--results</code> says otherwise:</p>
 <table>
 <thead>
 <tr>
-<th>Option</th>
-<th>For</th>
-<th>Against</th>
+<th>In the directory</th>
+<th>What it is</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Book it and mark it; surplus counted with no order open becomes unassigned production</td>
-<td>every unit a machine counted survives, and nothing is attributed to an order that cannot be shown to own it</td>
-<td>a nullable <code>work_order_id</code>, and a list a plant has to look at</td>
+<td><code>plan.toml</code></td>
+<td>the plan as it was read</td>
 </tr>
 <tr>
-<td>Book to the order, then keep counting as unassigned production, but cap the order at its quantity</td>
-<td>the ERP's order never exceeds what was asked for</td>
-<td>the order's own good count would then differ from what the machine counted, which is the invented number this project exists not to print</td>
+<td><code>line/&lt;plant&gt;.json</code></td>
+<td>the line description each plant actually played</td>
 </tr>
 <tr>
-<td>Cap and refuse: book 15, raise the surplus as an exception a person resolves</td>
-<td>cleanest for the ERP; a person looks at every over-run</td>
-<td>a real unit exists and the MES says it does not, until somebody clears a queue. That is inventing production with the sign reversed</td>
+<td><code>replay/&lt;plant&gt;/</code></td>
+<td>the data generated from it — the replay's own input</td>
 </tr>
 <tr>
-<td>Attribute the surplus to the order that just closed on that machine</td>
-<td>tidy; usually right</td>
-<td>usually is not a fact. A machine between orders, jogged by hand, or running a second order would be booked to the wrong one, and nothing downstream could tell</td>
+<td><code>packs/&lt;plant&gt;/</code></td>
+<td>the pack each plant was built from, overlay applied</td>
+</tr>
+<tr>
+<td><code>recorded/&lt;plant&gt;.json</code></td>
+<td>what the MES answered, view by view</td>
+</tr>
+<tr>
+<td><code>recorded/&lt;plant&gt;-scorecard.json</code></td>
+<td>the scorecard <code>fsmes score</code> writes</td>
+</tr>
+<tr>
+<td><code>truth.json</code></td>
+<td>what the line actually did, per station and per order</td>
+</tr>
+<tr>
+<td><code>scores.json</code></td>
+<td>every measurement, with the truth beside each number</td>
+</tr>
+<tr>
+<td><code>report.html</code></td>
+<td>one self-contained page — no network, no build step</td>
+</tr>
+<tr>
+<td><code>notes.md</code></td>
+<td>what a person saw that no number caught</td>
 </tr>
 </tbody>
 </table>
-<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
-<p>The MES books every unit a machine counts, and never guesses which order a unit
-belongs to.</p>
-<p>A counter delta that straddles the ordered quantity books in full. The operation
-completes as before, and the order reports <code>over_qty</code> — how far past the ordered
-quantity the line actually ran — on <code>GET /workorders/{code}</code> and in the ERP order
-completion, so an over-run reaches the ERP as its own number rather than as a
-good quantity that happens to be larger than the order.</p>
-<p>A count arriving when no operation is open is recorded as <strong>unassigned
-production</strong>: a production log row against the equipment with no work order.
-<code>production_logs.work_order_id</code> becomes nullable to hold it. These units are
-listed, with their totals, at <code>GET /execution/unassigned</code> and on the machine
-page's Operate tab. They are never rolled into an order.</p>
-<p>This applies to counter deltas only. A person typing a quantity against a machine
-with no order open still gets an error: a typed count with nothing to book it
-against is a mistake worth stopping, not a fact worth keeping.</p>
-<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
-<p>Easier: the number on the screen is the number the machine said, at every
-quantity, and an over-run is visible instead of being a 16 next to a 15 that a
-reader has to notice.</p>
-<p>Harder: <code>production_logs</code> no longer means "production against an order". Anything
-summing it for order-attributed production must filter <code>work_order_id IS NOT
-NULL</code>. OEE and the machine rollups sum by equipment and are unaffected — and
-they are now more right, because the units they count are all there.</p>
-<p>To revisit: unassigned production is currently only listed. Whether a person
-should be able to assign it to an order after the fact — with the assignment
-recorded as a decision a person made, not as a count a machine reported — is a
-real question, and one to answer once a plant has looked at a list of these and
-said what it wants to do with them. Nothing here forecloses it.</p>
-<h2 id="house-rules-touched">House rules touched<a class="headerlink" href="#house-rules-touched" title="Permanent link">&para;</a></h2>
-<p>Rules 1 and 2. Never invent production: no unit is attributed to an order that
-cannot be shown to own it, and no unit is deleted for want of one. Unknown is a
-valid answer: "these units exist and we do not know which order they belong to"
-is the honest record, and it is a list with a total rather than a zero.</p>
+<p><strong>The directory is the unit.</strong> Hand somebody that folder and they have the
+plan, the script, the data, the answers, the scores and the page, with nothing
+to install. <code>fsmes lab list</code> shows the runs you have; <code>fsmes lab open &lt;run&gt;</code>
+re-renders the report, which is how notes written after the run reach the page.</p>
+<h2 id="the-measurements-and-what-each-cannot-tell-you">The measurements, and what each cannot tell you<a class="headerlink" href="#the-measurements-and-what-each-cannot-tell-you" title="Permanent link">&para;</a></h2>
+<h3 id="booking-did-the-mes-book-what-the-line-made"><code>booking</code> — did the MES book what the line made?<a class="headerlink" href="#booking-did-the-mes-book-what-the-line-made" title="Permanent link">&para;</a></h3>
+<p>Per station and in total, because a plant fixes one machine at a time and
+confirms an order against the total.</p>
+<p><em>What it cannot tell you.</em> A replay <strong>loops</strong>: when the file runs out the
+counters wrap to zero and the hour starts again. A run is always left playing a
+little past the end, because the agent needs time to book what it has already
+read — so the MES is right to book whatever the line made in that overlap. The
+measurement states the overlap in line seconds and prints an <strong>expected range</strong>
+rather than a single number.</p>
+<p>The consequence is worth knowing before you plan a run: <strong>the band grows with
+speed.</strong> At 20× an eight-second drain is 160 line seconds of production; at
+120× it is nearly a thousand. So</p>
+<ul>
+<li><strong>under-booking is sharp at any speed</strong> — the overlap can only ever add, so a
+  single unit fewer than the truth is a real finding;</li>
+<li><strong>over-booking is blurred by the band</strong> — a run at 120× cannot see a plant
+  booking 16 units against an order for 15.</li>
+</ul>
+<p>For that class of fault read the <strong>over-run the MES reports itself</strong>, which is
+in the orders table and owes nothing to the band. And run slowly when the
+question is booking.</p>
+<p><em>Orders are not tied to the script.</em> These plants' tag maps name no order tag —
+a CSV replay cannot be written to — so which order a unit belongs to is the
+MES's own inference, and the script's order numbers cannot be matched to it.
+Both sides are printed; the per-order comparison says <em>unknown</em> and why.</p>
+<h3 id="downtime-were-the-scripted-stops-seen-and-the-planned-ones-kept-out"><code>downtime</code> — were the scripted stops seen, and the planned ones kept out?<a class="headerlink" href="#downtime-were-the-scripted-stops-seen-and-the-planned-ones-kept-out" title="Permanent link">&para;</a></h3>
+<p>The first two questions are the scorer's, read off the run's own scorecard
+rather than asked a second time: was a scripted breakdown detected, and how
+late, and was a changeover misclassified as downtime. Calling a planned stop
+downtime destroys every availability figure a plant reports, silently, which is
+why it is the first row of the section.</p>
+<p>Added beside them: how many seconds of downtime the MES reports against how
+many the line actually spent down. The MES records <strong>wall</strong> seconds and the
+script is written in <strong>line</strong> seconds, so the MES's figure is multiplied by the
+replay speed to compare. Both are labelled.</p>
+<p><em>What it cannot tell you.</em> Nothing in a run labels a stop — no downtime labels
+arrive by file, no operator names one — so the unlabelled share the MES reports
+has no truth beside it and says so. An event too brief to survive the sampling
+interval at the speed you chose is scored <em>unknown</em>, not <em>missed</em>: that would
+blame the MES for a limit of the harness. The report says the shortest event
+this run could have resolved.</p>
+<h3 id="oee-does-the-mess-oee-match-the-hour-the-line-actually-had"><code>oee</code> — does the MES's OEE match the hour the line actually had?<a class="headerlink" href="#oee-does-the-mess-oee-match-the-hour-the-line-actually-had" title="Permanent link">&para;</a></h3>
+<p>Availability, performance and quality per station, against the script. Two
+things stop this being a subtraction, and both are stated rather than corrected
+for:</p>
+<ul>
+<li><strong>The windows differ.</strong> The MES measures over the window it was watching; the
+  script is exactly <code>duration</code> long. An availability difference smaller than
+  that mismatch is not evidence, and the page does not mark it as one.</li>
+<li><strong>The rated cycle may differ.</strong> Performance prices units against what the
+  machine could have made, and the MES uses its master data's
+  <code>ideal_cycle_seconds</code> while the script uses the line's <code>rate_per_min</code>. Where
+  the two disagree the row says <em>not like for like</em> instead of reporting the
+  difference as a fault.</li>
+</ul>
+<h3 id="not-measured-yet">Not measured yet<a class="headerlink" href="#not-measured-yet" title="Permanent link">&para;</a></h3>
+<p><code>latency</code>, <code>console</code>, <code>quality</code> and <code>agent-eval</code> are named in the design and
+are not built. A plan that asks for one is <strong>refused by name</strong>: silently
+dropping a measurement is how a report comes to say less than its plan asked
+for without anybody noticing.</p>
+<h2 id="when-a-runs-numbers-are-withheld">When a run's numbers are withheld<a class="headerlink" href="#when-a-runs-numbers-are-withheld" title="Permanent link">&para;</a></h2>
+<p>If the replay could not keep the speed it was asked for, or the agent booked
+readings long after they arrived, the comparison is about the harness and not
+about the MES. The runner already withholds the scorecard's headline numbers in
+that case; the lab withholds every measurement for the same reason and prints
+it at the top of the plant's section. The per-event detail is still worth
+reading. The numbers are not worth trending.</p>
+<p>The fix is a slower replay. The report prints the speed the replay actually
+sustained, so the next run can ask for one it can keep.</p>
+<h2 id="notes-and-handing-a-run-to-somebody-else">Notes, and handing a run to somebody else<a class="headerlink" href="#notes-and-handing-a-run-to-somebody-else" title="Permanent link">&para;</a></h2>
+<p><code>notes.md</code> is written from a template with three headings — <em>what I saw on the
+screens</em>, <em>what was wrong</em>, <em>what I want next</em> — and rendered at the end of the
+report, so a person's observations travel with the numbers. Write it, then:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>fsmes<span class="w"> </span>lab<span class="w"> </span>open<span class="w"> </span><span class="m">2026</span>-09-14-one-line-bad-hour
+</code></pre></div>
+<p>which re-renders the page from <code>scores.json</code> and the notes. Nothing is
+recomputed; the numbers are the ones the run measured.</p>
+<p>To hand a run over, copy the directory. That is the whole procedure.</p>
+<h2 id="the-two-starters">The two starters<a class="headerlink" href="#the-two-starters" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Plan</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>labs/experiments/one-line-bad-hour.toml</code></td>
+<td>the six-station bottling line playing the six classic faults in an hour at 20×</td>
+</tr>
+<tr>
+<td><code>labs/experiments/two-plants-two-zones.toml</code></td>
+<td>Kansas City and Northgate, different products, clocks, modules and words, one after another at 30×</td>
+</tr>
+</tbody>
+</table>
+<p>Both run in CI on every pull request, which is what stops the instrument
+rotting between the times anybody uses it.</p>
 
 
 
@@ -3243,7 +3477,7 @@ is the honest record, and it is a list with a total rather than a zero.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 0018 — Public on 2026-09-08, and a release check that runs the built wheel">
+          <a href="../erp-connectors/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Reference — writing an ERP connector">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -3253,20 +3487,20 @@ is the honest record, and it is a list with a total rather than a zero.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                0018 — Public on 2026-09-08, and a release check that runs the built wheel
+                Reference — writing an ERP connector
               </div>
             </div>
           </a>
         
         
           
-          <a href="../0020-what-supported-means-for-an-erp-connector/" class="md-footer__link md-footer__link--next" aria-label="Next: 0020 — What &#34;supported&#34; means for an ERP connector, and what it is called before that">
+          <a href="../../design/STYLE/" class="md-footer__link md-footer__link--next" aria-label="Next: Style">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                0020 — What "supported" means for an ERP connector, and what it is called before that
+                Style
               </div>
             </div>
             <div class="md-footer__button md-icon">
