@@ -37,7 +37,7 @@ promote script are in `deploy/`.
 | | test | promoted |
 |---|---|---|
 | Checkout | your working clone on `main` | a second clone pinned to a release tag |
-| Registry | `labs/multiplant/plants.toml` in the repo | `~/.config/fsmes/prod/plants.toml`, mode 600 |
+| Fleet file | `labs/multiplant/fleet.toml` in the repo | `~/.config/fsmes/prod/fleet.toml`, mode 600, listing packs beside it |
 | Accounts | lab accounts, lab passwords | the registry's `accounts`, passwords from `~/.config/fsmes/prod/env` |
 | Units | `fsmes-plant@<name>` | `fsmes-prod-plant@<name>` |
 | Changes | every merge | `deploy/promote.sh <tag>` only |
@@ -47,7 +47,7 @@ First-time setup:
 ```bash
 git clone https://github.com/factorysemantics/factorysemantics-mes.git ~/Projects/fsmes-prod
 mkdir -p ~/.config/fsmes/prod && chmod 700 ~/.config/fsmes/prod
-# write plants.toml and env (see the registry how-to); chmod 600 both
+# write fleet.toml, the packs it lists and env (see the fleet how-to); chmod 600 the file and the env
 cp ~/Projects/fsmes-prod/deploy/fsmes-prod-plant@.service ~/.config/systemd/user/
 systemctl --user daemon-reload
 ~/Projects/fsmes-prod/deploy/promote.sh v0.1.0
@@ -68,6 +68,7 @@ than creating an account with an empty password.
 
 ## See also
 
-- [Plants from a registry](registry.md)
+- [Plant packs](packs.md)
+- [Plants from a fleet file](registry.md)
 - [Settings reference](../reference/settings.md)
 - [Security](security.md)

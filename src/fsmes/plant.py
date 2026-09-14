@@ -15,11 +15,11 @@ plant" needs no product code:
     MES_REPLAY_DIR     which line data       -> different physics
     MES_SECRET_KEY     per-plant token key   -> neither accepts the other's logins
 
-This is the cross-platform port of labs/multiplant/fsplant.ps1. The registry
-moved out of the script and into a file, because a registry that lives in code
-is one an agent cannot edit safely — and then, in M8 piece 3, out of that file
-and into a **plant pack** per plant, because a file with no schema cannot tell
-a key from a typo.
+This started as the cross-platform port of a PowerShell launcher that held
+the registry in its own code. The registry moved out of the script and into a
+file, because a registry that lives in code is one an agent cannot edit
+safely — and then, in M8 piece 3, out of that file and into a **plant pack**
+per plant, because a file with no schema cannot tell a key from a typo.
 
 What is left here is the running of a plant, not the describing of one. A
 plant arrives as the plain dictionary `fsmes.pack.fleet.compile_pack` makes

@@ -86,11 +86,13 @@ The first pure module, and the highest-demand feature in every "why is there no 
 
 **Done when:** an ERPNext work order round-trips through a full simulated production run, and the file adapter passes B2MML symmetry tests.
 
-## M8 — As big or as small as the customer requires: packs + fleet 🟡 *(two plant packs prove the boundary; packs as a product and the console are open)*
+## M8 — As big or as small as the customer requires: packs + fleet 🟡 *(packs, their validator and three packs are built; the console is open)*
 
 **Scope:** site scoping on kernel tables; **plant packs** (`plant.toml`: which modules enabled, timezone, vocabulary mappings) with the adversarial second demo pack and the two guard tests (`no_tenant_literals`, `core_purity`) adopted from factorysemantics.com on day one of this milestone; deployment profiles (laptop SQLite / plant compose / fleet); adopt the observe-don't-push control plane pattern (enroll, telemetry, desired-state-as-intent, drift display) for multi-plant visibility.
 
 **Done when:** two packs with different modules enabled run from one codebase, and the console shows both.
+
+**Where it stands (2026-09-13):** pieces 1 to 3 of the design are built. A plant says its own name, keeps its own clock and states its profile; `core_purity` and `no_tenant_literals` are in the suite; and a plant is now a **pack** — `plant.toml`, `fsmes pack check|apply|status|migrate`, master data as data, and the registry as a list of packs ([the page](docs/operate/packs.md)). Three lab packs run from one wheel, one of them invented to disagree with the format and serving two modules fewer, proven by 404s and a shorter agent tool list. **Three of the four clauses of the *done when* are met; the console is piece 4 and is not built.**
 
 **Designed before it is built (2026-09-10):** [docs/design/m8-packs-and-fleet.md](docs/design/m8-packs-and-fleet.md) states what a plant is today with file paths, measures the two lab plants against the *done when* above, proposes what a pack may and may not contain, scopes the console, and breaks the work into four pieces. The three decisions it turns on — [0021](docs/decisions/0021-one-database-per-plant.md), [0022](docs/decisions/0022-what-a-plant-pack-may-contain.md) and [0023](docs/decisions/0023-the-fleet-console-observes.md) — are **proposed**, not accepted.
 

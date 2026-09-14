@@ -114,10 +114,26 @@ curl -s localhost:8000/openapi.json | grep -c '"/trace'
 ## What this is for
 
 M8's goal is two plant packs with different modules enabled running from one
-codebase. This setting is the mechanism; the plant pack is where it is going
-to live. When a `plant.toml` gains a `[modules]` table it will compile down to
-exactly this string, so a plant that sets `MES_MODULES` today is setting the
-same thing by hand.
+codebase. This setting is the mechanism; the [plant pack](packs.md) is where
+it lives. A pack's `[modules]` table compiles down to exactly this string, so
+a plant that sets `MES_MODULES` by hand is setting the same thing:
+
+```toml
+[modules]
+serialization = false
+coa           = false
+```
+
+becomes `all,-serialization,-coa`. `all` is written first and the pack's own
+words after it, so a module added by a later release arrives switched **on**
+rather than silently missing from a plant that has never heard of it. A
+module name this version does not have, or a kernel module, is refused by
+`fsmes pack check` before the plant ever starts.
+
+`labs/multiplant/finewire` is the plant that does it: a wire-drawing hall
+with no serial units and no certificates, whose `/trace` and `/coa` routes
+answer 404 and whose agent registers eight tool files where a full plant
+registers ten.
 
 ## How the boundary is kept
 
@@ -130,6 +146,7 @@ capability quietly rotting:
   start-up.
 - **`tests/test_no_tenant_literals.py`** forbids a plant's name, equipment
   code or material code appearing in code under `src/`. It builds its list
-  from the lab plants in `labs/` rather than from a list somebody typed, so a
-  new plant extends the guard instead of escaping it. This is house rule 4 —
-  *config, not code, at plant boundaries* — as a measurement.
+  from the lab plants in `labs/` — each pack's `plant.toml` and its master
+  data — rather than from a list somebody typed, so a new plant extends the
+  guard instead of escaping it. This is house rule 4 — *config, not code, at
+  plant boundaries* — as a measurement.

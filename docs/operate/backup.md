@@ -197,6 +197,6 @@ by date, and keep at least one that is older than the last upgrade.
 ## See also
 
 - [Upgrading](upgrade.md) — the other time a backup matters
-- [Plants from a registry](registry.md) — where a multi-plant install keeps
+- [Plants from a fleet file](registry.md) — where a multi-plant install keeps
   each plant's database and certificates
 - [Running beside your existing MES](first-plant.md)

@@ -22,7 +22,7 @@ same disk, as the database it is protecting.
 
 ## A plant from the registry
 
-If your plants come from a registry ([Plants from a registry](registry.md)),
+If your plants come from a fleet file ([Plants from a fleet file](registry.md)),
 migration is one command per plant, or `all` for every one of them:
 
 ```bash
@@ -169,5 +169,5 @@ caught by looking, not by a command.
 ## See also
 
 - [Backup and restore](backup.md)
-- [Plants from a registry](registry.md)
+- [Plants from a fleet file](registry.md)
 - [Connecting read-only to an OPC UA server](opc-readonly.md)

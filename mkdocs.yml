@@ -96,7 +96,8 @@ nav:
       - Tutorial — beside your existing MES: operate/first-plant.md
       - Tutorial — deploy: operate/deploy.md
       - How-to — read-only OPC UA commissioning: operate/opc-readonly.md
-      - How-to — plants from a registry: operate/registry.md
+      - Reference — plant packs: operate/packs.md
+      - How-to — plants from a fleet file: operate/registry.md
       - How-to — switch a module off: operate/modules.md
       - How-to — running beside an existing MES: operate/shadow-mode.md
       - How-to — the shadow scorecard: operate/shadow-scorecard.md

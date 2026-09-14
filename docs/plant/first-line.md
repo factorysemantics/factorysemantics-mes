@@ -51,7 +51,7 @@ ones a plant would use.
 ## 4. Next
 
 - Run a whole plant from a registry, with its own database, OPC UA server
-  and dashboard: [plants from a registry](../operate/registry.md).
+  and dashboard: [plants from a fleet file](../operate/registry.md).
 - Point the same agent at a real Kepware server with a worksheet:
   [IT guide](../onboarding/GUIDE-IT.md) and [Engineering guide](../onboarding/GUIDE-ENGINEERING.md).
 - Let an agent operate it: [connect an MCP client](../agents/connect-mcp-client.md).

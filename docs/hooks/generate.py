@@ -99,8 +99,9 @@ def _settings() -> str:
         else:
             shown = f"`{default}`"
         lines.append(f"| `{name}` | `MES_{name.upper()}` | {shown} |")
-    lines += ["", "Plant registries (`fsmes plant`) carry per-plant values that override these; "
-              "see [plants from a registry](../operate/registry.md).", ""]
+    lines += ["", "A plant pack carries per-plant values that compile to these; see "
+              "[plant packs](../operate/packs.md). `MES_WORDS` is what a pack's `[words]` "
+              "table becomes, and a pack is where it is checked.", ""]
     return "\n".join(lines)
 
 

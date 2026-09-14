@@ -14,7 +14,7 @@ set -euo pipefail
 TAG=${1:?usage: promote.sh <tag>}
 PROD=${FSMES_PROD_ROOT:-$HOME/Projects/fsmes-prod}
 CONF=${FSMES_PROD_CONF:-$HOME/.config/fsmes/prod}
-export FSMES_PLANT_REGISTRY=${FSMES_PLANT_REGISTRY:-$CONF/plants.toml}
+export FSMES_PLANT_REGISTRY=${FSMES_PLANT_REGISTRY:-$CONF/fleet.toml}
 UNIT=fsmes-prod-plant@
 
 cd "$PROD"
