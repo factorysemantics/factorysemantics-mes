@@ -10,55 +10,369 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-09-14
+
+Thirty pull requests, #8 to #37, since 0.1.2 on 2026-09-08. All thirty were
+opened by the maintainer, [@kalwei](https://github.com/kalwei); there are no
+outside contributors to thank yet. Within each section the entries run in the
+order a plant person would read them: the ERP and its connectors first, then
+the pieces a first real plant needs, then plant packs and the fleet, then
+packaging and CI. **Read the Honesty section before upgrading a plant anyone
+reads numbers off** — it holds every change to what a number, a file name or a
+setting means, each with its migration line.
+
 ### Added
-- **`fsmes fleet` — the plants this installation owns** — M8 piece 4 of
-  [the design](docs/design/m8-packs-and-fleet.md), under
-  [decision 0023](docs/decisions/0023-the-fleet-console-observes.md) as
-  revised. Six commands — `create`, `start`, `stop`, `apply`, `status`,
-  `list` — that manage a fleet of plants built from
-  [packs](docs/operate/packs.md), and that **refuse any plant this
-  installation did not create**. The safety property is not read-only; it is
-  *cannot touch a plant it does not own*.
-  A plant is owned when three things hold: this installation created it and
-  recorded that in `ownership.toml`; the plant returns the same random
-  **instance id** on `/health` that was written into its data directory; and
-  a path to act on it exists — same host and OS user, or a credential a
-  person named for another host. Any one missing and the plant is observed
-  only. The id is a **continuity check, not an authentication**, and the
-  [page](docs/operate/fleet.md) says so plainly.
-  Every write path calls one ownership function before it does anything, and
-  a ratchet in the suite reads the source to hold it there: a new verb that
-  forgets the gate fails a test rather than shipping. Deleting the id from a
-  plant's data directory gives ownership back, and two plants claiming one
-  id is an error that refuses rather than a coin toss.
-  `fsmes fleet` manages **plants, never production**: no PLC write, no ERP
-  send, no order, no booking, no master data and no audit row. A plant it
-  owns can be stopped; a plant it owns cannot be made to say it built
-  something. Nothing starts a plant on its own — there is no reconciler.
-  `/health` now carries `instance_id`, which is `null` for every plant no
-  fleet tool created — null means *not owned*, never *probably fine*.
-- **The fleet console** — M8 piece 4's other half, and what closes the
-  milestone. `fsmes fleet console` serves one page that shows every plant in
-  the list — the packs this machine runs, the plants this installation
-  created, and the plants a person added to watch — each polled on `/health`
-  and `/pack`: name, whether it is owned, whether it answered, profile,
-  clock, shadow mode, which pack and whether it has drifted, schema revision
-  against head, which modules it serves, and when it last answered. At the
-  top, the total: *"3 plants, 2 answered, 1 unknown"*.
-  **A plant that did not answer is `unknown`** — never healthy, never down —
-  and it is not owned while it is silent, because nothing can corroborate
-  the instance id. Nothing is aggregated across plants: a fleet OEE is a lie
-  unless every plant is the same shape.
-  **The page has no write path.** It declares two routes, both GET; it
-  imports no fleet verb, so the command is not reachable from the process
-  serving the page; its script makes one GET to its own server; and it holds
-  no credential, because everything it asks a plant is public. Four tests
-  parse the source to keep each of those true.
-  New **`GET /pack`** on every plant: which pack it was given, when and by
-  which product version, whether the files have drifted since, the schema
-  revision against head, and the modules this plant serves — four separate
-  facts, never merged into one light, with `drifted: null` for *never
-  applied* and every unknown carrying its reason.
+
+- **The outbox is a domain event log.** It carried ERP confirmations and
+  nothing else, because the ERP sync read every pending row as one. It now
+  selects the kinds its contract can parse, which leaves room for the plant
+  events no ERP asked for: **equipment state changes** (the state entered,
+  the reason, the state left and how long that had been open) and **order
+  holds and resumes**, with the reason a hold always carries. Each is
+  written in the same transaction as the fact it describes, so an event
+  cannot exist without its fact or a fact without its event. The
+  unified-namespace publisher picks them up with no change: a machine going
+  down reaches
+  `umh/v1/<enterprise>/<site>/…/<machine>/_mes/equipment_state_change`, and
+  a hold reaches the site. `MES_OUTBOX_DOMAIN_EVENTS=false` keeps the log to
+  what the ERP is owed. See [the unified namespace](docs/operate/uns.md). ([#15](https://github.com/factorysemantics/factorysemantics-mes/pull/15))
+
+- **`fsmes erp setup` and `fsmes erp check`.** The ERPNext connector needs
+  five custom fields on Work Order (`custom_mes_synced`,
+  `custom_mes_good_qty`, `custom_mes_scrap_qty`, `custom_mes_over_qty`,
+  `custom_mes_lot`). Until now the only thing that created them was a demo
+  seeding script in `labs/`, which is not in the wheel — so nobody who
+  installed the package could create them at all. The definitions moved into
+  the package, `fsmes erp setup` creates any that are missing and is safe to
+  run twice, and `fsmes erp check` says in words whether the URL, the
+  credentials, all five fields and the company are each in order, exiting
+  non-zero if the connector would not work. `fsmes run-erp-sync` runs the field check when it
+  starts and says so on the console; it still starts, because an ERP that is
+  briefly unreachable is not a reason to refuse to run. The `labs/` seeder
+  now uses the same definitions.
+  See [the ERPNext connector](docs/operate/erpnext.md). ([#16](https://github.com/factorysemantics/factorysemantics-mes/pull/16))
+
+- **The ERPNext connector is tested against a real ERPNext.** A new
+  `ERPNext (live)` job stands up ERPNext v15.120.0 in containers pinned to
+  image digests (`labs/erpnext/`), seeds the plant, and runs the whole round
+  trip: a Work Order submitted in ERPNext, pulled by the connector,
+  acknowledged, confirmed, and then checked by reading ERPNext's own
+  documents back — the custom fields, `produced_qty`, one submitted
+  Manufacture stock entry, the comment. A retried confirmation is asserted to
+  leave exactly one stock entry. The old live test fetched orders, asserted a
+  list, and was deselected by CI's own settings, so it had never run. The job
+  is not on every pull request: it takes about three and a half minutes and
+  runs only when the connector, its tests or its fixture change. See
+  [the ERPNext connector](docs/operate/erpnext.md). ([#17](https://github.com/factorysemantics/factorysemantics-mes/pull/17))
+
+- **A connector contract, so the next ERP is not the first one all over
+  again.** The ERP port had three methods — fetch, acknowledge, confirm —
+  and they said nothing about the three things that actually bit the
+  ERPNext connector: what has to exist on the far side, how a write is
+  proved to have landed, and how a person checks it before trusting it.
+  Each was fixed in ERPNext-specific code, so Odoo or SAP or Oracle would
+  have rediscovered all three. The port now carries **`requirements()`**
+  (what this connector needs on the ERP side, as data a person can act on),
+  **`setup()`** (create or verify it, idempotently) and **`check()`**
+  (connectivity, credentials and requirements in plain language, non-zero
+  when something is wrong). All three have defaults, so a transport that
+  needs nothing — and a connector written against the older three-method
+  port — keeps working. **`fsmes.integrations.erp.conformance`** ships
+  inside the package: eight obligations any connector can be run against
+  without vendoring this project's tests, each of them something a
+  connector got wrong once. Every adapter that ships passes it.
+  [Writing an ERP connector](docs/develop/erp-connectors.md) is the page
+  for the person who would write the next one, and decision record
+  [0020](docs/decisions/0020-what-supported-means-for-an-erp-connector.md)
+  says what this project requires before it calls one supported. Odoo, SAP
+  and Oracle are still not written; the contract and the suite exist, the
+  connectors do not. ([#18](https://github.com/factorysemantics/factorysemantics-mes/pull/18))
+
+- **`fsmes erp requirements`.** What the configured connector needs on the
+  ERP side, and which of it the MES can create itself — the list to send
+  whoever administers the ERP, who is usually not the person running the
+  MES. ([#18](https://github.com/factorysemantics/factorysemantics-mes/pull/18))
+
+- **A unified-namespace publisher.** `fsmes uns publish` relays the MES's
+  own event stream — the transactional outbox the ERP connector already
+  delivers from — to an MQTT broker as JSON, under an ISA-95 topic tree
+  read out of the equipment model (`umh/v1/<enterprise>/<site>/<area>/<line>/<machine>/_mes/<kind>`).
+  Broker, credentials, prefix and the enterprise and site names are
+  settings; every rung between them comes from the plant's own equipment
+  codes, at whatever depth it modelled them. Delivery is at-least-once with
+  the outbox's retry, backoff and dead-letter behaviour, and every payload
+  carries the event id a consumer dedupes on. The MQTT client is the new
+  `[mqtt]` extra, so the core install does not grow a dependency;
+  `MES_UNS_MODE=log` prints the whole namespace without a broker.
+  `fsmes uns topics` and `fsmes uns queue` show the tree and the backlog.
+  Off by default. See [the unified namespace](docs/operate/uns.md). ([#11](https://github.com/factorysemantics/factorysemantics-mes/pull/11))
+
+- **Shadow mode: `MES_SHADOW=true`.** One setting that lets this MES watch a
+  real plant and change nothing in it. It reads the OPC UA tags and books
+  production exactly as it would in charge; every path by which it could
+  reach past its own database is shut. No setpoint reaches a machine (the
+  order-code write-back included, which was never approval-gated); no live
+  ERP is contacted; nothing is published to a broker; the ERP file adapter
+  reads its inbox and moves nothing, because that folder may be the
+  incumbent's; the optional cloud model is refused, so the plant's numbers
+  stay on the box; `fsmes demo` refuses to run a fake plant beside a real
+  one. `MES_ERP_MODE` may only be `off` or `file` and `MES_UNS_MODE` only
+  `off` or `log` — anything else refuses to start, in one sentence naming
+  the variable. A mode you never set is settled rather than refused.
+
+  Every outbound path in the package is listed in one place,
+  `fsmes/shadow.py`, with what shadow mode does to each and why; a test
+  walks each closed path and holds the refusal, and a second test scans the
+  source for outbound primitives so a new path cannot be added without the
+  register hearing about it. It shows on every screen as a bar that cannot
+  be dismissed, in `fsmes info`, at `GET /health` and `GET /shadow`, in the
+  MCP server's description and per plant in `list_plants()`, and in the
+  audit trail as `shadow.on` / `shadow.off` at start-up. There is no runtime
+  toggle: leaving shadow mode is a restart.
+  See [running beside an existing MES](docs/operate/shadow-mode.md). ([#21](https://github.com/factorysemantics/factorysemantics-mes/pull/21))
+
+- **A second front door: events other systems tell this MES.** The OPC agent
+  is how the MES sees a plant; it is not how it learns why a machine stopped,
+  what an inspector measured, or how many units somebody counted by hand.
+  Those are typed into whatever system the plant already has, and until now
+  none of it could reach the MES. `fsmes.integrations.inbound.contract` is
+  three typed shapes — **`DowntimeLabel`**, **`QualityResult`**,
+  **`ManualCount`** — each carrying who supplied it (`source`, a free name
+  such as `replay:incumbent-mes`, plus a `source_kind` category), the
+  supplier's own id (`external_key`), and when the *supplier* recorded it
+  (`recorded_at`). `fsmes.services.inbound` writes them through the services
+  that already own the rules, deduplicating on
+  `(source, kind, external_key)`, so the same file delivered twice changes
+  nothing. It matters most for a shadow run: technicians label stops in the
+  incumbent, and a shadow that never hears those shows an unlabelled stop
+  where the incumbent shows a reason code, which reads as a data problem in
+  the shadow when it is a plumbing problem. ([#22](https://github.com/factorysemantics/factorysemantics-mes/pull/22))
+
+- **The first inbound driver: files in a folder.** `fsmes inbound watch`
+  reads CSV — or the same rows as JSON — from one inbox per event type,
+  through a column mapping that is *your* configuration and not code. No
+  input file is ever deleted: it moves to `processed/`, or to `rejected/`
+  when nothing could be taken from it, and a rejects report beside it states
+  the file's totals and the first reason for each row refused. `fsmes
+  inbound check` says whether the mapping and the folders are usable before
+  any file exists. [Feeding the MES what people typed
+  elsewhere](docs/operate/inbound.md) is the page. A SQL poller and an MQTT
+  subscriber are the same three shapes over a different transport, and are
+  not written. ([#22](https://github.com/factorysemantics/factorysemantics-mes/pull/22))
+
+- **The confirmation handoff: a published schema, worked example files and
+  a validator.** A plant running this MES in shadow mode has no live ERP
+  link, and its people still have to answer whether what it *would* send
+  is correct. That answer used to live in Pydantic models, an XML renderer
+  and a symmetry test, none of which an ERP analyst can read. Now the
+  contract is published as a **JSON Schema, generated from the same models
+  that write the files**, with every field carrying what it means on the
+  floor, where the MES gets it, and when it is null and why null is the
+  honest value ([the contract](docs/reference/erp-confirmations.md)); six
+  **worked example files** — a clean operation, one with scrap and consumed
+  lots, an over-run, a completion with a lot, one carrying an over-run, one
+  with no lot — generated from a run of the demo plant rather than typed,
+  as JSON and B2MML side by side, and pinned by a test that regenerates
+  them; and **`fsmes erp validate <path>`**, which checks a file or a whole
+  outbox against the contract and the house rules with no ERP, no connector
+  and no database, exiting non-zero so it can gate a deployment. Problems
+  and notes are kept apart: a negative work in progress, a completion with
+  no lot and a missing cost centre are reported and do not fail, because
+  every one of them is a fact the MES states on purpose.
+  [The confirmation handoff](docs/operate/confirmation-files.md) is the page
+  for the ERP team, and it says plainly that the contract is SAP-*shaped*
+  and that no SAP has consumed one of these. ([#23](https://github.com/factorysemantics/factorysemantics-mes/pull/23))
+
+- **`fsmes backup` and `fsmes restore`.** A plant that cannot restore has no
+  backup, and until now the only copy anything made was the one
+  `fsmes plant <name> migrate` takes before a schema change. `fsmes backup`
+  writes one timestamped folder holding the database, the tag map, the line
+  layout and the **OPC UA client certificate** — the last is the one people
+  forget, because minting a new one means asking whoever administers the OPC
+  server to trust it again. On SQLite the copy goes through SQLite's own
+  online backup, so it is safe while the agent is running and cannot lose a
+  transaction still sitting in the write-ahead log, which a plain file copy
+  of the `.db` does. It never copies `.env`: that holds the OPC password, the
+  ERP credentials and the token signing key, and a backup folder gets mailed
+  around. The manifest states its own totals and names everything it did not
+  copy and why. On a server database it copies no database at all and says
+  so in those words, rather than handing somebody a folder that looks like a
+  backup and has no production record in it. `fsmes restore` checks every
+  file against its recorded hash before writing anything, refuses to write
+  over a database that is already there without `--force`, has a `--dry-run`
+  that proves a backup is restorable without touching the plant, and reads
+  the row counts back out of the restored file rather than repeating the
+  manifest. Files land where the settings of the machine being restored to
+  say — a restore onto a new PC is a different `.env`, not a different
+  backup. [Backup and restore](docs/operate/backup.md). ([#24](https://github.com/factorysemantics/factorysemantics-mes/pull/24))
+
+- **`fsmes shadow scorecard` — the instrument a shadow run is judged with.**
+  Running this MES beside the one in charge only answers anything if
+  somebody puts the two records side by side, and until now the only
+  comparison in the package was `fsmes score` against a simulated plant,
+  whose truth is scripted. A real plant's truth is whatever the incumbent
+  booked, and that arrives as a file a person exported, not as an API. The
+  command reads that export — CSV or JSON, a documented generic column set,
+  with the incumbent's own headings and order and equipment codes mapped in
+  a **config file rather than in code** — and this MES's own confirmations,
+  either the shadow outbox folder or the outbox in its database. It reports,
+  per order and per operation, where the two agree and where they do not on
+  good quantity, scrap, start, end and duration, within tolerances the plant
+  sets. Output is the terminal, a JSON, and one self-contained HTML page
+  with no scripts and nothing to fetch, because a plant network often cannot
+  reach the internet and the page gets mailed around.
+  **Three things it deliberately will not do:** say which side is right — it
+  names the difference with both records' numbers and stops; read a blank
+  cell as zero — a field one side never stated is *not compared*, never an
+  agreement; or add operations up into an order total, because good units at
+  two operations of the same order are usually the same units. Every report
+  ends with *what this cannot tell you*: orders only one record holds,
+  comparisons that could not be made, and the periods neither record covers.
+  See [the shadow scorecard](docs/operate/shadow-scorecard.md). ([#27](https://github.com/factorysemantics/factorysemantics-mes/pull/27))
+
+- **`fsmes inbound subscribe`: the MES listens to the plant's MQTT broker.**
+  It has published to a broker since the unified namespace landed and could
+  not hear. Two kinds of thing arrive and are kept apart. **Tag values** — a
+  counter, a state word, a process value from a gateway — are machine data,
+  wired in an `mqtt` section of the tag map beside the OPC machines so one
+  document describes one plant, and held to the OPC agent's own discipline:
+  a delta is the rise of a monotonic total, an unmapped state word is
+  refused rather than guessed at, and a reading for a machine this MES does
+  not hold is refused rather than inventing the machine. **Inbound events**
+  are the contract already there: a stream in the mapping file gains a
+  `topic`, and the mapping, the parsing, the deduplication and the writers
+  are the folder driver's, unchanged. Off by default; needs the same
+  `[mqtt]` extra as the publisher, and its own client id, because a broker
+  disconnects the older session when two clients share one. Nothing here
+  publishes, and shadow mode does not gate it — being told things is the
+  opposite direction from changing something. No broker has been tested
+  against it; the suite drives it with a fake source.
+  See [the inbound page](docs/operate/inbound.md#the-broker-mqtt). ([#28](https://github.com/factorysemantics/factorysemantics-mes/pull/28))
+
+- **The second inbound driver: `fsmes inbound poll-sql`.** A CSV export needs
+  a person every day; a query needs a person once. Where the system holding
+  downtime labels, quality results or counts has a database you can be given
+  read-only credentials to, the poller runs **your** query against it on a
+  schedule and feeds the same contract. The query is configuration, not code,
+  and emphatically so: this repository contains no commercial system's
+  schema, table names or SQL, and cannot — the docs describe the *shape* a
+  query must return and say nothing about where to find it in any product.
+  The shipped example reads a SQLite file the page tells you how to make, and
+  names no product. It only reads: the query is inspected before it is ever
+  sent (one statement, `SELECT` or `WITH`, no word that could change
+  anything — a data-modifying CTE included), the connection is opened
+  read-only and given a statement timeout wherever the dialect has a way to
+  say so, and where a dialect has neither, `fsmes inbound sql-check` says so
+  in those words rather than staying quiet. Every row is fetched and the
+  connection closed **before** this MES writes anything, so a slow write here
+  can never become a lock in a system somebody else depends on. New setting
+  `MES_INBOUND_SQL_FILE`; migration `d9a3f61c48e0` adds `inbound_watermarks`,
+  additive and empty for a plant that never runs it. ([#29](https://github.com/factorysemantics/factorysemantics-mes/pull/29))
+
+- **A cursor that will not step over a row it could not read.** The poller
+  keeps how far it has read as the supplier's *own* ordering value, handed
+  back as the text that column gave — a timestamp re-read into this MES's
+  convention would move the boundary by the supplier's UTC offset, and the
+  rows in that gap would go missing with nothing to say so. `start_from` is
+  required and has no default, because the two values this MES could guess
+  are "now", which silently skips that system's backlog, and "the
+  beginning", which pulls ten years through a plant network. When a row
+  cannot be recorded the cursor **stops at that row**: the rows after it are
+  still recorded, but the next pass asks for the bad one again and keeps
+  saying which row and why, on every pass, until somebody deals with it.
+  Stepping over it is a person's decision, made in words with `fsmes inbound
+  sql-watermark --set ... --force`, which prints what will never be read
+  before it does it. Correctness does not rest on the cursor: `inbound_events`
+  is still keyed on the supplier's own id, so a cursor that is behind costs a
+  re-read and changes nothing. ([#29](https://github.com/factorysemantics/factorysemantics-mes/pull/29))
+
+- **M8 designed before it is built — docs only, no product code.**
+  [Plant packs and the fleet console](docs/design/m8-packs-and-fleet.md)
+  states what a plant is today with file paths, measures the two lab plants
+  against the milestone's own *done when*, proposes what a pack may and may
+  not contain, scopes the console, and breaks the work into four
+  pieces. Decisions [0021](docs/decisions/0021-one-database-per-plant.md),
+  [0022](docs/decisions/0022-what-a-plant-pack-may-contain.md) and
+  [0023](docs/decisions/0023-the-fleet-console-observes.md) are **proposed**,
+  not accepted. ([#31](https://github.com/factorysemantics/factorysemantics-mes/pull/31))
+
+- **Decision 0023 revised: the console manages only the plants it owns.**
+  The first draft made the fleet console purely read-only. The maintainer
+  read it and said read-only is not the safety property he needs — managing
+  a lab fleet of simulated plants one plant at a time is friction with no
+  threat model behind it, while pushing to somebody else's plant is a
+  remote-execution path into their machinery. The rule is now *the console
+  may act only on plants it owns; for every other plant it observes and
+  cannot push*. Ownership is defined so a test can check it: this
+  installation created the plant from a pack and recorded it with an
+  `instance_id`, the plant's own `/health` returns that same id, and the
+  operator gave it a path — same host and user, or a credential a person
+  typed. Managing means five verbs and no more — create, start, stop, apply
+  a pack, show drift — and never writing to a PLC, an ERP or production
+  data. The write verbs live in `fsmes fleet`, a local command; the page
+  stays read-only and its credential stays the read-only machine role.
+  [Design §8 and piece 4](docs/design/m8-packs-and-fleet.md) match, and
+  [0023](docs/decisions/0023-the-fleet-console-observes.md) is still
+  **proposed**. Docs only, no product code. ([#32](https://github.com/factorysemantics/factorysemantics-mes/pull/32))
+
+- **A module registry, so a plant can switch a module off.**
+  [Decision 0002](docs/decisions/0002-kernel-and-modules.md) said a small
+  kernel is always present and everything else is a module; until now that
+  was a sentence rather than a mechanism, because `api/app.py` mounted all
+  twenty-three routers unconditionally and `mcp_server.py` registered all ten
+  agent tool files at import. `src/fsmes/modules.py` is now the one place
+  that says which modules exist and, for each, the routers it mounts, the
+  screens it serves, the agent tools it registers, the settings it owns and
+  the tables its rows live in. `MES_MODULES` filters it — `all` (the
+  default), `all,-quality`, or `quality,maintenance` — and a name this
+  version does not have is refused at start-up rather than ignored. Off means
+  **not served**: the routes answer 404, the module is absent from
+  `/openapi.json`, its screens are gone and its tools are not registered. Off
+  does **not** mean not stored: the schema is one chain for every plant, so a
+  disabled module's tables and rows are untouched and come back when it is
+  switched on. Nine of the twenty-three modules are the kernel and cannot be
+  switched off; fourteen can.
+  [How-to — switch a module off](docs/operate/modules.md). This is M8 piece 2
+  of [the design](docs/design/m8-packs-and-fleet.md); piece 3 moves the
+  setting into a plant pack's `[modules]` table. ([#33](https://github.com/factorysemantics/factorysemantics-mes/pull/33))
+
+- **The two guard tests M8 promised: `core_purity` and `no_tenant_literals`.**
+  Named on the roadmap since M8 was planned and, until now, nowhere else in
+  the repository. `tests/test_core_purity.py` holds the layering rule that
+  lived only as a docstring in `fsmes/kernel/__init__.py`: the kernel imports
+  nothing from a module — which is what makes a module switchable at all —
+  and no layer imports a layer above it. Six upward imports exist, each
+  allowed in one of two tables with a reason that is checked rather than
+  asserted. `tests/test_no_tenant_literals.py` holds house rule 4: no lab
+  plant's name, equipment code or material code may appear in code under
+  `src/`. It builds its forbidden list from `labs/` rather than from a typed
+  list, so a new lab plant extends the guard instead of escaping it, and it
+  scans code rather than prose — a comment naming the plant a finding came
+  from is provenance, and the house rules ask for it. ([#33](https://github.com/factorysemantics/factorysemantics-mes/pull/33))
+
+- **A plant knows its own name, and what clock it keeps** — M8 piece 1 of
+  [the design](docs/design/m8-packs-and-fleet.md). `MES_PLANT_NAME` is now a
+  real identity: **required** for any deployment that is not a laptop, and
+  validated as a code (the characters a namespace topic segment keeps
+  unchanged) so `/health` and the broker can never disagree about what this
+  plant is called. It reaches every surface a reader has — `/health`,
+  `/shadow`, a label on every `/metrics` series, the dashboard header,
+  `fsmes info`, the backup manifest, `list_plants()` over MCP — so a console
+  can tell two plants apart from what they say about themselves rather than
+  from the address it dialled.
+  New `MES_PLANT_PROFILE` (`laptop` | `plant` | `fleet`) says what shape the
+  deployment is; it is what lets a plant node say *I am a plant, not a
+  laptop* in one word. A laptop with nothing set is the demo plant and keeps
+  working exactly as before.
+  New `MES_PLANT_TIMEZONE` is a real IANA zone, validated at start-up (on
+  Windows it needs the `tzdata` package, and the refusal says so). Every
+  wall-clock boundary the MES draws is now drawn on it: the shift calendar,
+  and "today" on the gauge register. On the screens, every clock, stamp, due
+  date and chart axis reads in the plant's zone instead of the browser's.
+  Left unset it is the machine's own zone, and **every reader is told it was
+  defaulted** — including, honestly, when the machine's zone has no name to
+  report. ([#34](https://github.com/factorysemantics/factorysemantics-mes/pull/34))
+
 - **A plant is a pack** — M8 piece 3 of
   [the design](docs/design/m8-packs-and-fleet.md), building
   [decision 0022](docs/decisions/0022-what-a-plant-pack-may-contain.md). One
@@ -86,165 +400,100 @@ goes under Honesty with a migration line, so plant people can find it.
   New `MES_WORDS` is what a checked pack's `[words]` table compiles to, and
   the words ride on `/health`, `/shadow` and `fsmes info` beside the plant's
   name and clock.
-  [The page](docs/operate/packs.md).
-- **A plant knows its own name, and what clock it keeps** — M8 piece 1 of
-  [the design](docs/design/m8-packs-and-fleet.md). `MES_PLANT_NAME` is now a
-  real identity: **required** for any deployment that is not a laptop, and
-  validated as a code (the characters a namespace topic segment keeps
-  unchanged) so `/health` and the broker can never disagree about what this
-  plant is called. It reaches every surface a reader has — `/health`,
-  `/shadow`, a label on every `/metrics` series, the dashboard header,
-  `fsmes info`, the backup manifest, `list_plants()` over MCP — so a console
-  can tell two plants apart from what they say about themselves rather than
-  from the address it dialled.
-  New `MES_PLANT_PROFILE` (`laptop` | `plant` | `fleet`) says what shape the
-  deployment is; it is what lets a plant node say *I am a plant, not a
-  laptop* in one word. A laptop with nothing set is the demo plant and keeps
-  working exactly as before.
-  New `MES_PLANT_TIMEZONE` is a real IANA zone, validated at start-up (on
-  Windows it needs the `tzdata` package, and the refusal says so). Every
-  wall-clock boundary the MES draws is now drawn on it: the shift calendar,
-  and "today" on the gauge register. On the screens, every clock, stamp, due
-  date and chart axis reads in the plant's zone instead of the browser's.
-  Left unset it is the machine's own zone, and **every reader is told it was
-  defaulted** — including, honestly, when the machine's zone has no name to
-  report.
-- **A module registry, so a plant can switch a module off.**
-  [Decision 0002](docs/decisions/0002-kernel-and-modules.md) said a small
-  kernel is always present and everything else is a module; until now that
-  was a sentence rather than a mechanism, because `api/app.py` mounted all
-  twenty-three routers unconditionally and `mcp_server.py` registered all ten
-  agent tool files at import. `src/fsmes/modules.py` is now the one place
-  that says which modules exist and, for each, the routers it mounts, the
-  screens it serves, the agent tools it registers, the settings it owns and
-  the tables its rows live in. `MES_MODULES` filters it — `all` (the
-  default), `all,-quality`, or `quality,maintenance` — and a name this
-  version does not have is refused at start-up rather than ignored. Off means
-  **not served**: the routes answer 404, the module is absent from
-  `/openapi.json`, its screens are gone and its tools are not registered. Off
-  does **not** mean not stored: the schema is one chain for every plant, so a
-  disabled module's tables and rows are untouched and come back when it is
-  switched on. Nine of the twenty-three modules are the kernel and cannot be
-  switched off; fourteen can.
-  [How-to — switch a module off](docs/operate/modules.md). This is M8 piece 2
-  of [the design](docs/design/m8-packs-and-fleet.md); piece 3 moves the
-  setting into a plant pack's `[modules]` table.
-- **The two guard tests M8 promised: `core_purity` and `no_tenant_literals`.**
-  Named on the roadmap since M8 was planned and, until now, nowhere else in
-  the repository. `tests/test_core_purity.py` holds the layering rule that
-  lived only as a docstring in `fsmes/kernel/__init__.py`: the kernel imports
-  nothing from a module — which is what makes a module switchable at all —
-  and no layer imports a layer above it. Six upward imports exist, each
-  allowed in one of two tables with a reason that is checked rather than
-  asserted. `tests/test_no_tenant_literals.py` holds house rule 4: no lab
-  plant's name, equipment code or material code may appear in code under
-  `src/`. It builds its forbidden list from `labs/` rather than from a typed
-  list, so a new lab plant extends the guard instead of escaping it, and it
-  scans code rather than prose — a comment naming the plant a finding came
-  from is provenance, and the house rules ask for it.
-- **Decision 0023 revised: the console manages only the plants it owns.**
-  The first draft made the fleet console purely read-only. The maintainer
-  read it and said read-only is not the safety property he needs — managing
-  a lab fleet of simulated plants one plant at a time is friction with no
-  threat model behind it, while pushing to somebody else's plant is a
-  remote-execution path into their machinery. The rule is now *the console
-  may act only on plants it owns; for every other plant it observes and
-  cannot push*. Ownership is defined so a test can check it: this
-  installation created the plant from a pack and recorded it with an
-  `instance_id`, the plant's own `/health` returns that same id, and the
-  operator gave it a path — same host and user, or a credential a person
-  typed. Managing means five verbs and no more — create, start, stop, apply
-  a pack, show drift — and never writing to a PLC, an ERP or production
-  data. The write verbs live in `fsmes fleet`, a local command; the page
-  stays read-only and its credential stays the read-only machine role.
-  [Design §8 and piece 4](docs/design/m8-packs-and-fleet.md) match, and
-  [0023](docs/decisions/0023-the-fleet-console-observes.md) is still
-  **proposed**. Docs only, no product code.
-- **M8 designed before it is built — docs only, no product code.**
-  [Plant packs and the fleet console](docs/design/m8-packs-and-fleet.md)
-  states what a plant is today with file paths, measures the two lab plants
-  against the milestone's own *done when*, proposes what a pack may and may
-  not contain, scopes the console, and breaks the work into four
-  pieces. Decisions [0021](docs/decisions/0021-one-database-per-plant.md),
-  [0022](docs/decisions/0022-what-a-plant-pack-may-contain.md) and
-  [0023](docs/decisions/0023-the-fleet-console-observes.md) are **proposed**,
-  not accepted.
-- **`fsmes shadow scorecard` — the instrument a shadow run is judged with.**
-  Running this MES beside the one in charge only answers anything if
-  somebody puts the two records side by side, and until now the only
-  comparison in the package was `fsmes score` against a simulated plant,
-  whose truth is scripted. A real plant's truth is whatever the incumbent
-  booked, and that arrives as a file a person exported, not as an API. The
-  command reads that export — CSV or JSON, a documented generic column set,
-  with the incumbent's own headings and order and equipment codes mapped in
-  a **config file rather than in code** — and this MES's own confirmations,
-  either the shadow outbox folder or the outbox in its database. It reports,
-  per order and per operation, where the two agree and where they do not on
-  good quantity, scrap, start, end and duration, within tolerances the plant
-  sets. Output is the terminal, a JSON, and one self-contained HTML page
-  with no scripts and nothing to fetch, because a plant network often cannot
-  reach the internet and the page gets mailed around.
-  **Three things it deliberately will not do:** say which side is right — it
-  names the difference with both records' numbers and stops; read a blank
-  cell as zero — a field one side never stated is *not compared*, never an
-  agreement; or add operations up into an order total, because good units at
-  two operations of the same order are usually the same units. Every report
-  ends with *what this cannot tell you*: orders only one record holds,
-  comparisons that could not be made, and the periods neither record covers.
-  See [the shadow scorecard](docs/operate/shadow-scorecard.md).
-- **`fsmes inbound subscribe`: the MES listens to the plant's MQTT broker.**
-  It has published to a broker since the unified namespace landed and could
-  not hear. Two kinds of thing arrive and are kept apart. **Tag values** — a
-  counter, a state word, a process value from a gateway — are machine data,
-  wired in an `mqtt` section of the tag map beside the OPC machines so one
-  document describes one plant, and held to the OPC agent's own discipline:
-  a delta is the rise of a monotonic total, an unmapped state word is
-  refused rather than guessed at, and a reading for a machine this MES does
-  not hold is refused rather than inventing the machine. **Inbound events**
-  are the contract already there: a stream in the mapping file gains a
-  `topic`, and the mapping, the parsing, the deduplication and the writers
-  are the folder driver's, unchanged. Off by default; needs the same
-  `[mqtt]` extra as the publisher, and its own client id, because a broker
-  disconnects the older session when two clients share one. Nothing here
-  publishes, and shadow mode does not gate it — being told things is the
-  opposite direction from changing something. No broker has been tested
-  against it; the suite drives it with a fake source.
-  See [the inbound page](docs/operate/inbound.md#the-broker-mqtt).
+  [The page](docs/operate/packs.md). ([#35](https://github.com/factorysemantics/factorysemantics-mes/pull/35))
+
+- **`fsmes fleet` — the plants this installation owns** — M8 piece 4 of
+  [the design](docs/design/m8-packs-and-fleet.md), under
+  [decision 0023](docs/decisions/0023-the-fleet-console-observes.md) as
+  revised. Six commands — `create`, `start`, `stop`, `apply`, `status`,
+  `list` — that manage a fleet of plants built from
+  [packs](docs/operate/packs.md), and that **refuse any plant this
+  installation did not create**. The safety property is not read-only; it is
+  *cannot touch a plant it does not own*.
+  A plant is owned when three things hold: this installation created it and
+  recorded that in `ownership.toml`; the plant returns the same random
+  **instance id** on `/health` that was written into its data directory; and
+  a path to act on it exists — same host and OS user, or a credential a
+  person named for another host. Any one missing and the plant is observed
+  only. The id is a **continuity check, not an authentication**, and the
+  [page](docs/operate/fleet.md) says so plainly.
+  Every write path calls one ownership function before it does anything, and
+  a ratchet in the suite reads the source to hold it there: a new verb that
+  forgets the gate fails a test rather than shipping. Deleting the id from a
+  plant's data directory gives ownership back, and two plants claiming one
+  id is an error that refuses rather than a coin toss.
+  `fsmes fleet` manages **plants, never production**: no PLC write, no ERP
+  send, no order, no booking, no master data and no audit row. A plant it
+  owns can be stopped; a plant it owns cannot be made to say it built
+  something. Nothing starts a plant on its own — there is no reconciler.
+  `/health` now carries `instance_id`, which is `null` for every plant no
+  fleet tool created — null means *not owned*, never *probably fine*. ([#36](https://github.com/factorysemantics/factorysemantics-mes/pull/36))
+
+- **The fleet console** — M8 piece 4's other half, and what closes the
+  milestone. `fsmes fleet console` serves one page that shows every plant in
+  the list — the packs this machine runs, the plants this installation
+  created, and the plants a person added to watch — each polled on `/health`
+  and `/pack`: name, whether it is owned, whether it answered, profile,
+  clock, shadow mode, which pack and whether it has drifted, schema revision
+  against head, which modules it serves, and when it last answered. At the
+  top, the total: *"3 plants, 2 answered, 1 unknown"*.
+  **A plant that did not answer is `unknown`** — never healthy, never down —
+  and it is not owned while it is silent, because nothing can corroborate
+  the instance id. Nothing is aggregated across plants: a fleet OEE is a lie
+  unless every plant is the same shape.
+  **The page has no write path.** It declares two routes, both GET; it
+  imports no fleet verb, so the command is not reachable from the process
+  serving the page; its script makes one GET to its own server; and it holds
+  no credential, because everything it asks a plant is public. Four tests
+  parse the source to keep each of those true.
+  New **`GET /pack`** on every plant: which pack it was given, when and by
+  which product version, whether the files have drifted since, the schema
+  revision against head, and the modules this plant serves — four separate
+  facts, never merged into one light, with `drifted: null` for *never
+  applied* and every unknown carrying its reason. ([#37](https://github.com/factorysemantics/factorysemantics-mes/pull/37))
+
+- CI builds the wheel and runs `fsmes demo` from it in a fresh virtual
+  environment in an empty directory, on every pull request and every push to
+  `main`. The same check runs against the exact wheel a tag is about to
+  publish, before it reaches PyPI. This is the clean-machine install that
+  0.1.0 needed and did not get. ([#9](https://github.com/factorysemantics/factorysemantics-mes/pull/9))
+
+- `tzdata` is now a dependency **on Windows only**. Windows ships no IANA
+  time-zone database, so `zoneinfo` there cannot resolve `America/Chicago`
+  — or even `UTC` — without it, and the inbound driver reads a plant's
+  exports in the plant's own local time. Linux and macOS have a database
+  already and gain nothing. ([#22](https://github.com/factorysemantics/factorysemantics-mes/pull/22))
+
+- **Ten decision records, 0009 to 0018.** The choices made in the week the
+  repository went public were in chat logs and commit messages and nowhere a
+  reader could find them: the organisation account rather than a personal
+  one, Discussions and no forum, MkDocs Material with generated reference,
+  Contributor Covenant 3.0, one-page governance, `0.1.0` as the first public
+  version, the MCP registry name, no trademark registration, one public demo
+  that is gated and bounded, and going public on 2026-09-08 with the pre-tag
+  check that release night asked for. [The index](docs/decisions/index.md). ([#8](https://github.com/factorysemantics/factorysemantics-mes/pull/8))
 
 ### Changed
-- **The plant registry is a list of packs.** `labs/multiplant/plants.toml`
-  becomes `labs/multiplant/fleet.toml`, holding `packs = [...]` and
-  `[environment] data_dir` and nothing else; every one of the seventeen keys
-  it used to carry per plant moved into that plant's `plant.toml` or went,
-  with the reason recorded in `fsmes.pack.migrate` and in
-  [the fleet how-to](docs/operate/registry.md). `secret_key` went because a
-  pack holds no secret; `init` and `post_boot` went because a pack carries no
-  code; `opc_port` became a whole `opc_endpoint`; `agent` went because
-  nothing in the product ever read it. `FSMES_PLANT_REGISTRY` keeps its name.
-  **If you run plants from a registry**, `fsmes pack migrate <registry>
-  --plant <name> --out <dir>` writes the pack, and the fleet loader names the
-  command when it meets a file that still describes plants directly. A plant
-  whose master data was an `init` script now either carries it as data under
-  `[files] masterdata` or keeps its generator as a tool a person runs — the
-  two scale labs do the second, and `fsmes pack apply` says it seeded nothing
-  rather than implying it seeded something.
-- **`/metrics` series now carry a `plant` label.** A Prometheus scraping a
-  fleet had two plants' `mes_work_orders{status="running"}` under one name,
-  and read their sum as one plant's number. A dashboard or alert written
-  against the old series needs the label adding. New `mes_plant_info` gives
-  the plant's name as a series of its own.
-- **Shift patterns are read on the plant's clock, not the process's.** A
-  plant that set no zone sees no change; a plant whose server runs in
-  another zone will find its shifts move to where the plant floor always
-  said they were. `calendar.describe` now states the zone and whether it was
-  defaulted.
-- **The night shift reads the plant registry instead of naming two plants.**
-  `fsmes autoloop` hard-coded `bottling` and `machining` with their ports —
-  a tenant literal inside the product, found by the new
-  `no_tenant_literals` guard. It now runs against every plant in the registry
-  this checkout points at, so a third plant joins the night shift by being in
-  the registry. `MES_AUTOLOOP_PLANTS` narrows it to a comma-separated subset;
-  `MES_AUTOLOOP_BOTTLING` and `MES_AUTOLOOP_MACHINING` are gone.
+
+- **`fsmes erp setup` and `fsmes erp check` no longer know that ERPNext
+  exists.** They are the port's `setup()` and `check()`, so they act on
+  whatever `MES_ERP_MODE` names — including a connector published on its
+  own. They used to refuse every mode but `erpnext`, which was exactly
+  backwards. `fsmes run-erp-sync` runs the configured connector's `check()`
+  at start-up instead of ERPNext's field check, and still starts, because
+  an ERP that is briefly unreachable is not a reason to refuse to run.
+  `check` reports what it could not verify as **unknown** rather than
+  counting it as working: the REST connector can prove it reached the ERP's
+  order list and cannot prove the confirmation endpoint works without
+  posting a confirmation, so a green check that skipped something says
+  `Ready, as far as anything above was checked.` ([#18](https://github.com/factorysemantics/factorysemantics-mes/pull/18))
+
+- **[Compatibility](docs/operate/compatibility.md) has a rule for
+  connectors.** Every connector row states the exact version tested and the
+  date it was tested, and a connector with no live test says so in those
+  words. Three words are defined there and nothing uses others: supported,
+  contributed, experimental. ([#18](https://github.com/factorysemantics/factorysemantics-mes/pull/18))
+
 - **The unified-namespace publisher at plant volume.** It shipped off by
   default and carrying two event kinds; it now carries equipment state
   changes — one event per transition — and the first real plant will turn it
@@ -252,7 +501,7 @@ goes under Honesty with a migration line, so plant people can find it.
   oldest first. What changed is what a cycle costs. Measured on the fake
   broker, one full batch of 200 confirmations from two machines:
   **1602 statements and 202 commits before, 210 statements and 3 commits
-  after**, and 1000 equipment lookups down to 6.
+  after**, and 1000 equipment lookups down to 6. ([#30](https://github.com/factorysemantics/factorysemantics-mes/pull/30))
   - A topic depends on the kind and the machine and nothing else, so it is
     worked out once per machine per cycle instead of once per event.
   - The results of a cycle are written in one transaction after the last
@@ -273,189 +522,50 @@ goes under Honesty with a migration line, so plant people can find it.
     outage at `MES_UNS_BATCH / MES_UNS_POLL_SECONDS` events a second however
     fast the broker was.
 
-### Honesty
-- **A published event has one `published_at`, not two.** The envelope
-  stamped the clock when the batch was built and the publication row stamped
-  it again when the result was written, so the MES's own record disagreed
-  with what it had already told the plant about the same event. One clock
-  read per cycle now, and a test compares the two.
-- **A counter over MQTT must be a running total, never an increment.** MQTT
-  at QoS 1 is at-least-once, and nothing in a redelivered message tells it
-  from the first: a repeated total is not a rise and books nothing, while a
-  repeated increment would book units the plant never made. A mapping that
-  declares an increment is refused at start-up and told the two ways out.
-- **A retained MQTT message sets a counter baseline and nothing else.** The
-  broker replays it to every new subscriber as though it had just happened
-  and nothing in it says how old it is, so it never becomes a state change
-  or a tag-history row. Counted in the run's report, not dropped in silence.
-- **The test suite runs on PostgreSQL in CI.** Every test ran on in-memory
-  SQLite; PostgreSQL was documented, configured and shipped in the Compose
-  file, and nothing exercised it. A `postgres` cell now runs
-  `alembic upgrade head` against an empty PostgreSQL 16.15 — pinned by
-  digest — and then the whole suite against the same server, on every pull
-  request. `MES_TEST_DATABASE_URL` points the suite at any database;
-  unset, the default is still in-memory SQLite and nothing about running
-  `python -m pytest` changes. A test in the suite fails if it is not on the
-  database that variable names, so a typo cannot leave the cell green.
-  See [compatibility](docs/operate/compatibility.md).
-- **`fsmes backup` and `fsmes restore`.** A plant that cannot restore has no
-  backup, and until now the only copy anything made was the one
-  `fsmes plant <name> migrate` takes before a schema change. `fsmes backup`
-  writes one timestamped folder holding the database, the tag map, the line
-  layout and the **OPC UA client certificate** — the last is the one people
-  forget, because minting a new one means asking whoever administers the OPC
-  server to trust it again. On SQLite the copy goes through SQLite's own
-  online backup, so it is safe while the agent is running and cannot lose a
-  transaction still sitting in the write-ahead log, which a plain file copy
-  of the `.db` does. It never copies `.env`: that holds the OPC password, the
-  ERP credentials and the token signing key, and a backup folder gets mailed
-  around. The manifest states its own totals and names everything it did not
-  copy and why. On a server database it copies no database at all and says
-  so in those words, rather than handing somebody a folder that looks like a
-  backup and has no production record in it. `fsmes restore` checks every
-  file against its recorded hash before writing anything, refuses to write
-  over a database that is already there without `--force`, has a `--dry-run`
-  that proves a backup is restorable without touching the plant, and reads
-  the row counts back out of the restored file rather than repeating the
-  manifest. Files land where the settings of the machine being restored to
-  say — a restore onto a new PC is a different `.env`, not a different
-  backup. [Backup and restore](docs/operate/backup.md).
-- **The confirmation handoff: a published schema, worked example files and
-  a validator.** A plant running this MES in shadow mode has no live ERP
-  link, and its people still have to answer whether what it *would* send
-  is correct. That answer used to live in Pydantic models, an XML renderer
-  and a symmetry test, none of which an ERP analyst can read. Now the
-  contract is published as a **JSON Schema, generated from the same models
-  that write the files**, with every field carrying what it means on the
-  floor, where the MES gets it, and when it is null and why null is the
-  honest value ([the contract](docs/reference/erp-confirmations.md)); six
-  **worked example files** — a clean operation, one with scrap and consumed
-  lots, an over-run, a completion with a lot, one carrying an over-run, one
-  with no lot — generated from a run of the demo plant rather than typed,
-  as JSON and B2MML side by side, and pinned by a test that regenerates
-  them; and **`fsmes erp validate <path>`**, which checks a file or a whole
-  outbox against the contract and the house rules with no ERP, no connector
-  and no database, exiting non-zero so it can gate a deployment. Problems
-  and notes are kept apart: a negative work in progress, a completion with
-  no lot and a missing cost centre are reported and do not fail, because
-  every one of them is a fact the MES states on purpose.
-  [The confirmation handoff](docs/operate/confirmation-files.md) is the page
-  for the ERP team, and it says plainly that the contract is SAP-*shaped*
-  and that no SAP has consumed one of these.
-- **Shadow mode: `MES_SHADOW=true`.** One setting that lets this MES watch a
-  real plant and change nothing in it. It reads the OPC UA tags and books
-  production exactly as it would in charge; every path by which it could
-  reach past its own database is shut. No setpoint reaches a machine (the
-  order-code write-back included, which was never approval-gated); no live
-  ERP is contacted; nothing is published to a broker; the ERP file adapter
-  reads its inbox and moves nothing, because that folder may be the
-  incumbent's; the optional cloud model is refused, so the plant's numbers
-  stay on the box; `fsmes demo` refuses to run a fake plant beside a real
-  one. `MES_ERP_MODE` may only be `off` or `file` and `MES_UNS_MODE` only
-  `off` or `log` — anything else refuses to start, in one sentence naming
-  the variable. A mode you never set is settled rather than refused.
+- **The night shift reads the plant registry instead of naming two plants.**
+  `fsmes autoloop` hard-coded `bottling` and `machining` with their ports —
+  a tenant literal inside the product, found by the new
+  `no_tenant_literals` guard. It now runs against every plant in the registry
+  this checkout points at, so a third plant joins the night shift by being in
+  the registry. `MES_AUTOLOOP_PLANTS` narrows it to a comma-separated subset;
+  `MES_AUTOLOOP_BOTTLING` and `MES_AUTOLOOP_MACHINING` are gone. ([#33](https://github.com/factorysemantics/factorysemantics-mes/pull/33))
 
-  Every outbound path in the package is listed in one place,
-  `fsmes/shadow.py`, with what shadow mode does to each and why; a test
-  walks each closed path and holds the refusal, and a second test scans the
-  source for outbound primitives so a new path cannot be added without the
-  register hearing about it. It shows on every screen as a bar that cannot
-  be dismissed, in `fsmes info`, at `GET /health` and `GET /shadow`, in the
-  MCP server's description and per plant in `list_plants()`, and in the
-  audit trail as `shadow.on` / `shadow.off` at start-up. There is no runtime
-  toggle: leaving shadow mode is a restart.
-  See [running beside an existing MES](docs/operate/shadow-mode.md).
+- `fsmes demo` exits non-zero, with the reason, when its loop does not close:
+  the order never completed, the ERP was never told, or no finished lot was
+  booked. It used to exit 0 either way, which is why a wheel that booked
+  nothing looked like a success. A final line now says which happened. An OEE
+  component reported as null is still a closed loop — that is an honest
+  answer, not a failure. ([#9](https://github.com/factorysemantics/factorysemantics-mes/pull/9))
 
+- **The roadmap says where this actually stands.** *Where this stands* had
+  been written before the repository went public and still read as a plan.
+  It now states each numbered item's condition against the code, with file
+  paths, and says plainly which parts are done, which are partly done and
+  what is open in each. [ROADMAP.md](ROADMAP.md). ([#10](https://github.com/factorysemantics/factorysemantics-mes/pull/10))
 
-- **A second front door: events other systems tell this MES.** The OPC agent
-  is how the MES sees a plant; it is not how it learns why a machine stopped,
-  what an inspector measured, or how many units somebody counted by hand.
-  Those are typed into whatever system the plant already has, and until now
-  none of it could reach the MES. `fsmes.integrations.inbound.contract` is
-  three typed shapes — **`DowntimeLabel`**, **`QualityResult`**,
-  **`ManualCount`** — each carrying who supplied it (`source`, a free name
-  such as `replay:incumbent-mes`, plus a `source_kind` category), the
-  supplier's own id (`external_key`), and when the *supplier* recorded it
-  (`recorded_at`). `fsmes.services.inbound` writes them through the services
-  that already own the rules, deduplicating on
-  `(source, kind, external_key)`, so the same file delivered twice changes
-  nothing. It matters most for a shadow run: technicians label stops in the
-  incumbent, and a shadow that never hears those shows an unlabelled stop
-  where the incumbent shows a reason code, which reads as a data problem in
-  the shadow when it is a plumbing problem.
-- **The first inbound driver: files in a folder.** `fsmes inbound watch`
-  reads CSV — or the same rows as JSON — from one inbox per event type,
-  through a column mapping that is *your* configuration and not code. No
-  input file is ever deleted: it moves to `processed/`, or to `rejected/`
-  when nothing could be taken from it, and a rejects report beside it states
-  the file's totals and the first reason for each row refused. `fsmes
-  inbound check` says whether the mapping and the folders are usable before
-  any file exists. [Feeding the MES what people typed
-  elsewhere](docs/operate/inbound.md) is the page. A SQL poller and an MQTT
-  subscriber are the same three shapes over a different transport, and are
-  not written.
-- **The second inbound driver: `fsmes inbound poll-sql`.** A CSV export needs
-  a person every day; a query needs a person once. Where the system holding
-  downtime labels, quality results or counts has a database you can be given
-  read-only credentials to, the poller runs **your** query against it on a
-  schedule and feeds the same contract. The query is configuration, not code,
-  and emphatically so: this repository contains no commercial system's
-  schema, table names or SQL, and cannot — the docs describe the *shape* a
-  query must return and say nothing about where to find it in any product.
-  The shipped example reads a SQLite file the page tells you how to make, and
-  names no product. It only reads: the query is inspected before it is ever
-  sent (one statement, `SELECT` or `WITH`, no word that could change
-  anything — a data-modifying CTE included), the connection is opened
-  read-only and given a statement timeout wherever the dialect has a way to
-  say so, and where a dialect has neither, `fsmes inbound sql-check` says so
-  in those words rather than staying quiet. Every row is fetched and the
-  connection closed **before** this MES writes anything, so a slow write here
-  can never become a lock in a system somebody else depends on. New setting
-  `MES_INBOUND_SQL_FILE`; migration `d9a3f61c48e0` adds `inbound_watermarks`,
-  additive and empty for a plant that never runs it.
-- **A cursor that will not step over a row it could not read.** The poller
-  keeps how far it has read as the supplier's *own* ordering value, handed
-  back as the text that column gave — a timestamp re-read into this MES's
-  convention would move the boundary by the supplier's UTC offset, and the
-  rows in that gap would go missing with nothing to say so. `start_from` is
-  required and has no default, because the two values this MES could guess
-  are "now", which silently skips that system's backlog, and "the
-  beginning", which pulls ten years through a plant network. When a row
-  cannot be recorded the cursor **stops at that row**: the rows after it are
-  still recorded, but the next pass asks for the bad one again and keeps
-  saying which row and why, on every pass, until somebody deals with it.
-  Stepping over it is a person's decision, made in words with `fsmes inbound
-  sql-watermark --set ... --force`, which prints what will never be read
-  before it does it. Correctness does not rest on the cursor: `inbound_events`
-  is still keyed on the supplier's own id, so a cursor that is behind costs a
-  re-read and changes nothing.
-- `tzdata` is now a dependency **on Windows only**. Windows ships no IANA
-  time-zone database, so `zoneinfo` there cannot resolve `America/Chicago`
-  — or even `UTC` — without it, and the inbound driver reads a plant's
-  exports in the plant's own local time. Linux and macOS have a database
-  already and gain nothing.
-- **A connector contract, so the next ERP is not the first one all over
-  again.** The ERP port had three methods — fetch, acknowledge, confirm —
-  and they said nothing about the three things that actually bit the
-  ERPNext connector: what has to exist on the far side, how a write is
-  proved to have landed, and how a person checks it before trusting it.
-  Each was fixed in ERPNext-specific code, so Odoo or SAP or Oracle would
-  have rediscovered all three. The port now carries **`requirements()`**
-  (what this connector needs on the ERP side, as data a person can act on),
-  **`setup()`** (create or verify it, idempotently) and **`check()`**
-  (connectivity, credentials and requirements in plain language, non-zero
-  when something is wrong). All three have defaults, so a transport that
-  needs nothing — and a connector written against the older three-method
-  port — keeps working. **`fsmes.integrations.erp.conformance`** ships
-  inside the package: eight obligations any connector can be run against
-  without vendoring this project's tests, each of them something a
-  connector got wrong once. Every adapter that ships passes it.
-  [Writing an ERP connector](docs/develop/erp-connectors.md) is the page
-  for the person who would write the next one, and decision record
-  [0020](docs/decisions/0020-what-supported-means-for-an-erp-connector.md)
-  says what this project requires before it calls one supported. Odoo, SAP
-  and Oracle are still not written; the contract and the suite exist, the
-  connectors do not.
+### Fixed
+
+- The ERPNext connector never acknowledged an order. Its `fetch_orders`
+  returned plain dicts while the sync worker reads `request.code` off each
+  one, so every inbound order raised `AttributeError` immediately after
+  being imported, `custom_mes_synced` was never set, and the same order was
+  re-imported on every poll. It now returns the `ProductionRequest` the
+  adapter contract declares, and a test acknowledges what `fetch_orders`
+  returned so the two cannot drift apart again. ([#16](https://github.com/factorysemantics/factorysemantics-mes/pull/16))
+
+- `fsmes demo` crashed with `KeyError: 'lot'` at the end of a run. It printed
+  whichever ERP confirmation happened to arrive last, and an operation
+  confirmation has no finished-goods lot because an operation does not make
+  one. It now looks for the order completion for its own order, and says so
+  plainly if the completion has not arrived rather than crashing. ([#13](https://github.com/factorysemantics/factorysemantics-mes/pull/13))
+
+- **The B2MML confirmation carries its idempotency key.** `message_key` — the
+  only thing that stops one confirmation being posted twice — was never
+  written into the XML, so a folder of operation confirmations gave a
+  collector no way to tell a re-sent file from a second confirmation. It is
+  the first element of both documents now, and a reader rebuilds it for
+  files written before today with the same rule that made it. ([#23](https://github.com/factorysemantics/factorysemantics-mes/pull/23))
+
 - **The session cookie is marked HTTPS-only behind TLS.** Writing the
   [TLS page](docs/operate/tls.md) turned this up: the dashboard's session
   cookie was `HttpOnly` and `SameSite=Lax` but never `Secure`, so a plant
@@ -463,82 +573,64 @@ goes under Honesty with a migration line, so plant people can find it.
   session sent back in clear over one stray `http://` link. The flag now
   follows the request's own scheme, which behind a proxy is the scheme in
   `X-Forwarded-Proto`. A laptop on `http://127.0.0.1:8000` gets no `Secure`
-  flag, because there it is a cookie the browser silently drops.
+  flag, because there it is a cookie the browser silently drops. ([#24](https://github.com/factorysemantics/factorysemantics-mes/pull/24))
 
-- **`fsmes erp requirements`.** What the configured connector needs on the
-  ERP side, and which of it the MES can create itself — the list to send
-  whoever administers the ERP, who is usually not the person running the
-  MES.
-- **The outbox is a domain event log.** It carried ERP confirmations and
-  nothing else, because the ERP sync read every pending row as one. It now
-  selects the kinds its contract can parse, which leaves room for the plant
-  events no ERP asked for: **equipment state changes** (the state entered,
-  the reason, the state left and how long that had been open) and **order
-  holds and resumes**, with the reason a hold always carries. Each is
-  written in the same transaction as the fact it describes, so an event
-  cannot exist without its fact or a fact without its event. The
-  unified-namespace publisher picks them up with no change: a machine going
-  down reaches
-  `umh/v1/<enterprise>/<site>/…/<machine>/_mes/equipment_state_change`, and
-  a hold reaches the site. `MES_OUTBOX_DOMAIN_EVENTS=false` keeps the log to
-  what the ERP is owed. See [the unified namespace](docs/operate/uns.md).
-- **`fsmes erp setup` and `fsmes erp check`.** The ERPNext connector needs
-  five custom fields on Work Order (`custom_mes_synced`,
-  `custom_mes_good_qty`, `custom_mes_scrap_qty`, `custom_mes_over_qty`,
-  `custom_mes_lot`). Until now the only thing that created them was a demo
-  seeding script in `labs/`, which is not in the wheel — so nobody who
-  installed the package could create them at all. The definitions moved into
-  the package, `fsmes erp setup` creates any that are missing and is safe to
-  run twice, and `fsmes erp check` says in words whether the URL, the
-  credentials, all five fields and the company are each in order, exiting
-  non-zero if the connector would not work. `fsmes run-erp-sync` runs the field check when it
-  starts and says so on the console; it still starts, because an ERP that is
-  briefly unreachable is not a reason to refuse to run. The `labs/` seeder
-  now uses the same definitions.
-  See [the ERPNext connector](docs/operate/erpnext.md).
-- **A unified-namespace publisher.** `fsmes uns publish` relays the MES's
-  own event stream — the transactional outbox the ERP connector already
-  delivers from — to an MQTT broker as JSON, under an ISA-95 topic tree
-  read out of the equipment model (`umh/v1/<enterprise>/<site>/<area>/<line>/<machine>/_mes/<kind>`).
-  Broker, credentials, prefix and the enterprise and site names are
-  settings; every rung between them comes from the plant's own equipment
-  codes, at whatever depth it modelled them. Delivery is at-least-once with
-  the outbox's retry, backoff and dead-letter behaviour, and every payload
-  carries the event id a consumer dedupes on. The MQTT client is the new
-  `[mqtt]` extra, so the core install does not grow a dependency;
-  `MES_UNS_MODE=log` prints the whole namespace without a broker.
-  `fsmes uns topics` and `fsmes uns queue` show the tree and the backlog.
-  Off by default. See [the unified namespace](docs/operate/uns.md).
-- **The ERPNext connector is tested against a real ERPNext.** A new
-  `ERPNext (live)` job stands up ERPNext v15.120.0 in containers pinned to
-  image digests (`labs/erpnext/`), seeds the plant, and runs the whole round
-  trip: a Work Order submitted in ERPNext, pulled by the connector,
-  acknowledged, confirmed, and then checked by reading ERPNext's own
-  documents back — the custom fields, `produced_qty`, one submitted
-  Manufacture stock entry, the comment. A retried confirmation is asserted to
-  leave exactly one stock entry. The old live test fetched orders, asserted a
-  list, and was deselected by CI's own settings, so it had never run. The job
-  is not on every pull request: it takes about three and a half minutes and
-  runs only when the connector, its tests or its fixture change. See
-  [the ERPNext connector](docs/operate/erpnext.md).
-- CI builds the wheel and runs `fsmes demo` from it in a fresh virtual
-  environment in an empty directory, on every pull request and every push to
-  `main`. The same check runs against the exact wheel a tag is about to
-  publish, before it reaches PyPI. This is the clean-machine install that
-  0.1.0 needed and did not get.
+- **A backup's folder name and its manifest could name different seconds.**
+  `fsmes backup` read the clock twice — once to build the timestamped folder
+  name and again to write the manifest's `taken` — so when the two reads
+  landed either side of a second boundary the folder said `…-113219` while
+  the manifest inside it said `…:32:20`. One second, and it is the backup's
+  own record of itself being wrong: a restore that trusts `taken` names a
+  time the folder does not carry. It reads the clock once now, at the top of
+  `back_up`, and uses that instant for both. It had also made the overwrite
+  test race — it failed that way once on `windows-latest, 3.13` on a branch
+  that does not touch backup at all — and a new test moves a fake clock
+  forward on every read, so it can only pass for a backup that reads once.
+  `restore` reads no clock and is unchanged. ([#26](https://github.com/factorysemantics/factorysemantics-mes/pull/26))
 
-### Changed
-- **The file connector's outbound folder is deterministic.** Names lead with
-  a six-digit sequence number, so sorting the folder by name replays the
-  order the confirmations happened; the number is read back from the folder
-  at start-up, so a restart continues rather than collides; each document is
-  written to a `.part` file and renamed into place, so a collector never
-  reads half a document; and anything outside `A-Za-z0-9_-` in an order code
-  becomes a dash, so an order code cannot decide where a file lands. A
-  collector that globbed `confirmation_<order>_*.xml` must now glob
-  `*_<order>_op10.xml` or `*_<order>_completion.xml`.
+- `database is locked` under concurrent writes on SQLite. WAL and
+  `busy_timeout` were set and their comment claimed that prevented it; they
+  do not. A transaction already open when it first writes has to upgrade to
+  SQLite's single write lock, and SQLite refuses that upgrade outright
+  instead of waiting — `busy_timeout` covers waiting, not a refusal. The OPC
+  agent's booking is that shape: it opens a savepoint per state change and
+  writes inside it, which is why one CI run of `fsmes demo` lost two batches
+  of plant readings to it. Transactions on SQLite now begin with
+  `BEGIN IMMEDIATE`, so the refusal becomes a wait that `busy_timeout` does
+  cover. `busy_timeout` is also set before the WAL switch rather than after
+  it, so a new connection meeting a lock waits rather than failing. SQLite
+  now serialises transactions rather than only writes, so no session may be
+  held open across a network call; the OPC agent's adjustment loop was the
+  one place doing that, and a test now keeps it that way. PostgreSQL is
+  untouched — the change is gated on the SQLite dialect. ([#12](https://github.com/factorysemantics/factorysemantics-mes/pull/12))
 
-### Fixed
+- **`fsmes --version` told you the wrong version.** A 0.1.2 install answered
+  `0.1.0`, because the number was written down twice — in `pyproject.toml`
+  and again in `src/fsmes/__init__.py` — and only one copy was bumped for
+  either release. It is written down once now: `src/fsmes/__init__.py` holds
+  it, and hatchling stamps the wheel, the sdist and the container tag from
+  that line, so a release bumps one file. The first question a new user asks
+  their install now gets a true answer. A test compares what the CLI prints
+  with the installed distribution's metadata, and the wheel check that runs
+  on every pull request asks the built artifact the same question two ways
+  and fails if the answers differ, so a mismatch cannot reach PyPI.
+  `CITATION.cff` still carries a hand-typed version — the citation format has
+  no way to read one from the package — so it was corrected from the stale
+  `0.1.0` to `0.1.2`, and the release workflow now refuses a tag that
+  disagrees with it. ([#14](https://github.com/factorysemantics/factorysemantics-mes/pull/14))
+
+- **A list search ignored case on SQLite and not on PostgreSQL.** Every list
+  search in the API — equipment, materials, routings, people, work orders,
+  lots, maintenance plans and orders, specifications, non-conformances,
+  certificates, the audit trail — is built on `LIKE`. SQLite's `LIKE`
+  ignores case for ASCII and PostgreSQL's does not, so a plant on PostgreSQL
+  got nothing back for a code typed in lower case where the same search on a
+  laptop found it. They all say `ILIKE` now. Case-insensitive is what the
+  product already meant: the document catalogue, the trigger list and the
+  gauge register filter in Python on `.lower()`, and the SQL-side searches
+  only agreed with them by SQLite's accident. Found by the new PostgreSQL
+  cell. ([#19](https://github.com/factorysemantics/factorysemantics-mes/pull/19))
+
 - **A PyPI install could not upgrade its own database.** `fsmes init-db`
   ran the Alembic migrations only when there was an `alembic.ini` in the
   working directory, and the wheel shipped neither that file nor the
@@ -557,55 +649,60 @@ goes under Honesty with a migration line, so plant people can find it.
   with the wheel under test, and asks the database whether it is at head, so
   the upgrade path a plant takes is proven on the bytes that ship.
   [Upgrading between versions](docs/operate/upgrade.md) loses its
-  run-from-a-checkout-at-a-tag workaround.
-- **A list search ignored case on SQLite and not on PostgreSQL.** Every list
-  search in the API — equipment, materials, routings, people, work orders,
-  lots, maintenance plans and orders, specifications, non-conformances,
-  certificates, the audit trail — is built on `LIKE`. SQLite's `LIKE`
-  ignores case for ASCII and PostgreSQL's does not, so a plant on PostgreSQL
-  got nothing back for a code typed in lower case where the same search on a
-  laptop found it. They all say `ILIKE` now. Case-insensitive is what the
-  product already meant: the document catalogue, the trigger list and the
-  gauge register filter in Python on `.lower()`, and the SQL-side searches
-  only agreed with them by SQLite's accident. Found by the new PostgreSQL
-  cell.
-- **The B2MML confirmation carries its idempotency key.** `message_key` — the
-  only thing that stops one confirmation being posted twice — was never
-  written into the XML, so a folder of operation confirmations gave a
-  collector no way to tell a re-sent file from a second confirmation. It is
-  the first element of both documents now, and a reader rebuilds it for
-  files written before today with the same rule that made it.
-- **`fsmes --version` told you the wrong version.** A 0.1.2 install answered
-  `0.1.0`, because the number was written down twice — in `pyproject.toml`
-  and again in `src/fsmes/__init__.py` — and only one copy was bumped for
-  either release. It is written down once now: `src/fsmes/__init__.py` holds
-  it, and hatchling stamps the wheel, the sdist and the container tag from
-  that line, so a release bumps one file. The first question a new user asks
-  their install now gets a true answer. A test compares what the CLI prints
-  with the installed distribution's metadata, and the wheel check that runs
-  on every pull request asks the built artifact the same question two ways
-  and fails if the answers differ, so a mismatch cannot reach PyPI.
-  `CITATION.cff` still carries a hand-typed version — the citation format has
-  no way to read one from the package — so it was corrected from the stale
-  `0.1.0` to `0.1.2`, and the release workflow now refuses a tag that
-  disagrees with it.
+  run-from-a-checkout-at-a-tag workaround. ([#25](https://github.com/factorysemantics/factorysemantics-mes/pull/25))
+
 ### Honesty
-- **A database made before the migrations shipped is recognised, not
-  guessed at.** A database created by a 0.1.x wheel has tables and no
-  Alembic stamp, so nothing in it says which revision its tables correspond
-  to. `fsmes init-db` works it out rather than assuming: it rebuilds the
-  schema each revision in the chain produces, in a throwaway SQLite
-  database, compares table names and column names, and stamps only on an
-  exact match — then runs the migrations since. A database made by the 0.1.2
-  wheel on PyPI is recognised as `153379d6cf19`, stamped there, and moved
-  forward by the migrations that have landed since. If nothing matches — a
-  table added by hand, a file from something other than a release — it names
-  the nearest revision, lists every difference,
-  and **changes nothing**, because a stamp that is not true of a database is
-  worse than no stamp: every later migration is then skipped or applied
-  twice on the strength of it. `fsmes plant <name> migrate` prints what
-  `init-db` recognised instead of discarding it, and reports an unstamped
-  database as unstamped rather than as `None`.
+
+- **`fsmes erp outbox` counts the ERP's own queue, not the whole log.** The
+  same table now holds plant events waiting for a different reader, and
+  counting those as pending ERP work would report a backlog that does not
+  exist. The status counts cover the confirmation kinds only; the rest are
+  stated as `other_outbound` and broken down by kind, so nothing is hidden
+  either.
+  **Migration:** anything reading `fsmes erp outbox` totals as *all* pending
+  outbound work now needs `other_outbound` added to them; the status counts
+  cover the confirmation kinds only. ([#15](https://github.com/factorysemantics/factorysemantics-mes/pull/15))
+
+- `MES_ERPNEXT_COMPANY` now does something. It was defined and documented and
+  nothing read it, so a shared Frappe bench handed this MES every company's
+  work orders. Inbound orders are filtered by it. Its default changed from
+  the demo's company (`ACME Beverages`) to empty, which means every company
+  on the site — the right answer for a single-company ERPNext, and better
+  than a default that silently imports nothing on a stranger's site. A bench
+  holding more than one company's books must now set it.
+  **Migration:** a Frappe bench holding more than one company's books must
+  now set `MES_ERPNEXT_COMPANY`. Its default is empty, which means every
+  company on the site; it used to be the demo's company, which on a
+  stranger's site silently imported nothing. ([#16](https://github.com/factorysemantics/factorysemantics-mes/pull/16))
+
+- **`docs/operate/erpnext.md` said the connector worked "with nothing
+  installed on the ERPNext side". It did not.** It has always needed four
+  custom fields on Work Order. The page now names them, says what creates
+  them, and says what happens when they are absent. ([#16](https://github.com/factorysemantics/factorysemantics-mes/pull/16))
+
+- **A confirmation to an ERPNext missing a field was recorded as delivered.**
+  Frappe answers `200` to a `PUT` naming a field its doctype does not have
+  and drops the value, so the MES marked the outbox message sent and the
+  plant's counted quantity existed nowhere. Every write to a Work Order is
+  now read back and compared with what was sent; a value that did not
+  survive raises, so the confirmation stays in the outbox and retries and
+  the log names the field. Rounding to the site's float precision is not
+  treated as a loss. That Frappe drops the field silently is what its
+  document layer does when read, but is **not verified against a live
+  ERPNext** — see the connector page. ([#16](https://github.com/factorysemantics/factorysemantics-mes/pull/16))
+
+- **What a missing ERPNext custom field does is now measured, not assumed.**
+  Against ERPNext v15.120.0: a `PUT` to a submitted Work Order naming a field
+  the doctype does not have returns `200`, and the value is neither stored nor
+  returned. A site missing one of the MES fields therefore accepts a
+  confirmation and silently loses whichever number that field carried. An
+  HTTP success is not proof a value landed. The experiment runs on every live
+  job, so a change of behaviour in ERPNext shows up there. ([#17](https://github.com/factorysemantics/factorysemantics-mes/pull/17))
+
+- `docs/operate/compatibility.md` says ERPNext v15.120.0 is tested
+  continuously and v16 is untested, in place of "tested against a development
+  bench, not yet against a current stable release in a clean container". ([#17](https://github.com/factorysemantics/factorysemantics-mes/pull/17))
+
 - **What ERPNext does with an over-run is now measured, and a refusal is
   never recorded as delivered.** The MES books every unit a machine counted,
   so an order for 400 that ran to 420 is confirmed as 420 good with 20 over.
@@ -625,142 +722,8 @@ goes under Honesty with a migration line, so plant people can find it.
   `custom_mes_over_qty` still carry what the machines counted, beside a
   `produced_qty` of 0. Nothing partial is posted in place of the refused
   entry. Once somebody raises the allowance or agrees what the ERP should
-  hold, `POST /erp/outbox/{id}/retry` sends the same confirmation again.
-- **A new production source, `external`, because "we counted it" and "we were
-  told" are different facts.** `ProductionSource` had `manual` and `opc`; a
-  count that reached the MES from another system had nowhere honest to sit,
-  and calling it `manual` would have claimed somebody typed it *here*.
-  `external` is now the third value, with **`ProductionLog.source_system`**
-  naming the system that supplied it. Null there means this MES counted it
-  itself — there is no other system to name, and naming one would be a guess.
-  **Migration `b5c1d09e73af`** adds `production_logs.source_system`,
-  `equipment_states.reason_source`, `quality_checks.source_system` and
-  `quality_checks.supplied_result`, and the `inbound_events` ledger. Every
-  column is nullable and nothing existing is rewritten: a row from before the
-  migration was observed by this MES, and null is the right answer.
-  **What to check after upgrading:** any report that groups production by
-  source, or that assumes `ProductionSource` has two values, now has a third.
-- **A supplied downtime label goes on a stop this MES observed, and never
-  creates one.** The interval stays this MES's own observation; `reason` and
-  `reason_source` record who named it. A label for a stop the MES never saw
-  is refused and reported, because manufacturing an interval from another
-  system's claim would put seconds into availability that nothing here ever
-  watched, with no way afterwards to tell them from the real ones. A supplied
-  label never overwrites one given here.
-- **A quality result keeps both verdicts when they disagree.** The `result`
-  on a check is always this MES's own, from this MES's spec.
-  `supplied_result` keeps the verdict the other system sent. Two systems
-  disagreeing about the same reading is a finding about the two systems, and
-  storing only one of them would hide it. A reading for a characteristic this
-  MES has no spec for is refused rather than measured against an invented
-  spec, and a gauge code this MES does not know is reported as untraceable
-  rather than created.
-- **The downtime pareto says who named each stop.** Every bucket gains
-  `labelled_by`, seconds by labeller: `here` is this MES's own, the rest are
-  named by supplier. Supplied labels are counted the same as local ones —
-  they are real evidence — but they are not the same claim, and a pareto that
-  cannot separate them cannot be audited.
-- **A count supplied by another system with no order open here is kept, not
-  refused.** It is booked against an open operation when there is one, and
-  otherwise recorded as unassigned production against the machine with the
-  supplying system named — the same rule the OPC path already had, for the
-  same reason: the system that took the count had the order, and a unit the
-  plant made may not disappear because this MES had nowhere tidy to put it. A
-  count typed *into this MES* with no order open is still an error.
-- **A timestamp with no time zone, in a stream whose mapping does not say
-  which zone that system writes, is rejected row by row.** Reading a local
-  timestamp as UTC would move every stop in a shift by hours, silently.
-- **What a missing ERPNext custom field does is now measured, not assumed.**
-  Against ERPNext v15.120.0: a `PUT` to a submitted Work Order naming a field
-  the doctype does not have returns `200`, and the value is neither stored nor
-  returned. A site missing one of the MES fields therefore accepts a
-  confirmation and silently loses whichever number that field carried. An
-  HTTP success is not proof a value landed. The experiment runs on every live
-  job, so a change of behaviour in ERPNext shows up there.
-- `docs/operate/compatibility.md` says ERPNext v15.120.0 is tested
-  continuously and v16 is untested, in place of "tested against a development
-  bench, not yet against a current stable release in a clean container".
-- **`fsmes erp outbox` counts the ERP's own queue, not the whole log.** The
-  same table now holds plant events waiting for a different reader, and
-  counting those as pending ERP work would report a backlog that does not
-  exist. The status counts cover the confirmation kinds only; the rest are
-  stated as `other_outbound` and broken down by kind, so nothing is hidden
-  either.
+  hold, `POST /erp/outbox/{id}/retry` sends the same confirmation again. ([#20](https://github.com/factorysemantics/factorysemantics-mes/pull/20))
 
-### Changed
-- **`fsmes erp setup` and `fsmes erp check` no longer know that ERPNext
-  exists.** They are the port's `setup()` and `check()`, so they act on
-  whatever `MES_ERP_MODE` names — including a connector published on its
-  own. They used to refuse every mode but `erpnext`, which was exactly
-  backwards. `fsmes run-erp-sync` runs the configured connector's `check()`
-  at start-up instead of ERPNext's field check, and still starts, because
-  an ERP that is briefly unreachable is not a reason to refuse to run.
-  `check` reports what it could not verify as **unknown** rather than
-  counting it as working: the REST connector can prove it reached the ERP's
-  order list and cannot prove the confirmation endpoint works without
-  posting a confirmation, so a green check that skipped something says
-  `Ready, as far as anything above was checked.`
-- **[Compatibility](docs/operate/compatibility.md) has a rule for
-  connectors.** Every connector row states the exact version tested and the
-  date it was tested, and a connector with no live test says so in those
-  words. Three words are defined there and nothing uses others: supported,
-  contributed, experimental.
-- `MES_ERPNEXT_COMPANY` now does something. It was defined and documented and
-  nothing read it, so a shared Frappe bench handed this MES every company's
-  work orders. Inbound orders are filtered by it. Its default changed from
-  the demo's company (`ACME Beverages`) to empty, which means every company
-  on the site — the right answer for a single-company ERPNext, and better
-  than a default that silently imports nothing on a stranger's site. A bench
-  holding more than one company's books must now set it.
-- `fsmes demo` exits non-zero, with the reason, when its loop does not close:
-  the order never completed, the ERP was never told, or no finished lot was
-  booked. It used to exit 0 either way, which is why a wheel that booked
-  nothing looked like a success. A final line now says which happened. An OEE
-  component reported as null is still a closed loop — that is an honest
-  answer, not a failure.
-
-### Fixed
-- The ERPNext connector never acknowledged an order. Its `fetch_orders`
-  returned plain dicts while the sync worker reads `request.code` off each
-  one, so every inbound order raised `AttributeError` immediately after
-  being imported, `custom_mes_synced` was never set, and the same order was
-  re-imported on every poll. It now returns the `ProductionRequest` the
-  adapter contract declares, and a test acknowledges what `fetch_orders`
-  returned so the two cannot drift apart again.
-
-### Honesty
-- **`docs/operate/erpnext.md` said the connector worked "with nothing
-  installed on the ERPNext side". It did not.** It has always needed four
-  custom fields on Work Order. The page now names them, says what creates
-  them, and says what happens when they are absent.
-- **A confirmation to an ERPNext missing a field was recorded as delivered.**
-  Frappe answers `200` to a `PUT` naming a field its doctype does not have
-  and drops the value, so the MES marked the outbox message sent and the
-  plant's counted quantity existed nowhere. Every write to a Work Order is
-  now read back and compared with what was sent; a value that did not
-  survive raises, so the confirmation stays in the outbox and retries and
-  the log names the field. Rounding to the site's float precision is not
-  treated as a loss. That Frappe drops the field silently is what its
-  document layer does when read, but is **not verified against a live
-  ERPNext** — see the connector page.
-
-### Fixed
-- `database is locked` under concurrent writes on SQLite. WAL and
-  `busy_timeout` were set and their comment claimed that prevented it; they
-  do not. A transaction already open when it first writes has to upgrade to
-  SQLite's single write lock, and SQLite refuses that upgrade outright
-  instead of waiting — `busy_timeout` covers waiting, not a refusal. The OPC
-  agent's booking is that shape: it opens a savepoint per state change and
-  writes inside it, which is why one CI run of `fsmes demo` lost two batches
-  of plant readings to it. Transactions on SQLite now begin with
-  `BEGIN IMMEDIATE`, so the refusal becomes a wait that `busy_timeout` does
-  cover. `busy_timeout` is also set before the WAL switch rather than after
-  it, so a new connection meeting a lock waits rather than failing. SQLite
-  now serialises transactions rather than only writes, so no session may be
-  held open across a network call; the OPC agent's adjustment loop was the
-  one place doing that, and a test now keeps it that way. PostgreSQL is
-  untouched — the change is gated on the SQLite dialect.
-### Honesty
 - **A unit a machine counted is never discarded.** A counter delta can carry
   more than one unit, so a booking can straddle the ordered quantity: the
   release check saw `16/15 good` on an order for fifteen, and the next unit
@@ -776,14 +739,165 @@ goes under Honesty with a migration line, so plant people can find it.
   Existing rows are untouched. A plant that has been reading
   `SUM(production_logs.good_qty)` as order-attributed production should now
   filter on `work_order_id IS NOT NULL`, or read the wider number knowing
-  what it includes.
+  what it includes. ([#13](https://github.com/factorysemantics/factorysemantics-mes/pull/13))
 
-### Fixed
-- `fsmes demo` crashed with `KeyError: 'lot'` at the end of a run. It printed
-  whichever ERP confirmation happened to arrive last, and an operation
-  confirmation has no finished-goods lot because an operation does not make
-  one. It now looks for the order completion for its own order, and says so
-  plainly if the completion has not arrived rather than crashing.
+- **A new production source, `external`, because "we counted it" and "we were
+  told" are different facts.** `ProductionSource` had `manual` and `opc`; a
+  count that reached the MES from another system had nowhere honest to sit,
+  and calling it `manual` would have claimed somebody typed it *here*.
+  `external` is now the third value, with **`ProductionLog.source_system`**
+  naming the system that supplied it. Null there means this MES counted it
+  itself — there is no other system to name, and naming one would be a guess.
+  **Migration `b5c1d09e73af`** adds `production_logs.source_system`,
+  `equipment_states.reason_source`, `quality_checks.source_system` and
+  `quality_checks.supplied_result`, and the `inbound_events` ledger. Every
+  column is nullable and nothing existing is rewritten: a row from before the
+  migration was observed by this MES, and null is the right answer.
+  **What to check after upgrading:** any report that groups production by
+  source, or that assumes `ProductionSource` has two values, now has a third. ([#22](https://github.com/factorysemantics/factorysemantics-mes/pull/22))
+
+- **A supplied downtime label goes on a stop this MES observed, and never
+  creates one.** The interval stays this MES's own observation; `reason` and
+  `reason_source` record who named it. A label for a stop the MES never saw
+  is refused and reported, because manufacturing an interval from another
+  system's claim would put seconds into availability that nothing here ever
+  watched, with no way afterwards to tell them from the real ones. A supplied
+  label never overwrites one given here. ([#22](https://github.com/factorysemantics/factorysemantics-mes/pull/22))
+
+- **A quality result keeps both verdicts when they disagree.** The `result`
+  on a check is always this MES's own, from this MES's spec.
+  `supplied_result` keeps the verdict the other system sent. Two systems
+  disagreeing about the same reading is a finding about the two systems, and
+  storing only one of them would hide it. A reading for a characteristic this
+  MES has no spec for is refused rather than measured against an invented
+  spec, and a gauge code this MES does not know is reported as untraceable
+  rather than created. ([#22](https://github.com/factorysemantics/factorysemantics-mes/pull/22))
+
+- **The downtime pareto says who named each stop.** Every bucket gains
+  `labelled_by`, seconds by labeller: `here` is this MES's own, the rest are
+  named by supplier. Supplied labels are counted the same as local ones —
+  they are real evidence — but they are not the same claim, and a pareto that
+  cannot separate them cannot be audited. ([#22](https://github.com/factorysemantics/factorysemantics-mes/pull/22))
+
+- **A count supplied by another system with no order open here is kept, not
+  refused.** It is booked against an open operation when there is one, and
+  otherwise recorded as unassigned production against the machine with the
+  supplying system named — the same rule the OPC path already had, for the
+  same reason: the system that took the count had the order, and a unit the
+  plant made may not disappear because this MES had nowhere tidy to put it. A
+  count typed *into this MES* with no order open is still an error. ([#22](https://github.com/factorysemantics/factorysemantics-mes/pull/22))
+
+- **A timestamp with no time zone, in a stream whose mapping does not say
+  which zone that system writes, is rejected row by row.** Reading a local
+  timestamp as UTC would move every stop in a shift by hours, silently. ([#22](https://github.com/factorysemantics/factorysemantics-mes/pull/22))
+
+- **The file connector's outbound folder is deterministic.** Names lead with
+  a six-digit sequence number, so sorting the folder by name replays the
+  order the confirmations happened; the number is read back from the folder
+  at start-up, so a restart continues rather than collides; each document is
+  written to a `.part` file and renamed into place, so a collector never
+  reads half a document; and anything outside `A-Za-z0-9_-` in an order code
+  becomes a dash, so an order code cannot decide where a file lands. A
+  collector that globbed `confirmation_<order>_*.xml` must now glob
+  `*_<order>_op10.xml` or `*_<order>_completion.xml`.
+  **Migration:** a collector that globbed `confirmation_<order>_*.xml` must
+  glob `*_<order>_op10.xml` or `*_<order>_completion.xml` instead. ([#23](https://github.com/factorysemantics/factorysemantics-mes/pull/23))
+
+- **A counter over MQTT must be a running total, never an increment.** MQTT
+  at QoS 1 is at-least-once, and nothing in a redelivered message tells it
+  from the first: a repeated total is not a rise and books nothing, while a
+  repeated increment would book units the plant never made. A mapping that
+  declares an increment is refused at start-up and told the two ways out. ([#28](https://github.com/factorysemantics/factorysemantics-mes/pull/28))
+
+- **A retained MQTT message sets a counter baseline and nothing else.** The
+  broker replays it to every new subscriber as though it had just happened
+  and nothing in it says how old it is, so it never becomes a state change
+  or a tag-history row. Counted in the run's report, not dropped in silence. ([#28](https://github.com/factorysemantics/factorysemantics-mes/pull/28))
+
+- **A published event has one `published_at`, not two.** The envelope
+  stamped the clock when the batch was built and the publication row stamped
+  it again when the result was written, so the MES's own record disagreed
+  with what it had already told the plant about the same event. One clock
+  read per cycle now, and a test compares the two. ([#30](https://github.com/factorysemantics/factorysemantics-mes/pull/30))
+
+- **The module registry ships with everything on.** `MES_MODULES` defaults
+  to `all`, so an install that upgrades to 0.2.0 and sets nothing serves
+  exactly the routes, screens and agent tools it served before — the wall is
+  new, the default is not a change. Switching a module off is opt-in, and
+  off means *not served*, never *not stored*: the schema is one chain for
+  every plant, so a disabled module's tables and rows are untouched and come
+  back when it is switched on. Nine of the twenty-three modules are the
+  kernel and cannot be switched off; fourteen can.
+  **Migration:** none. A plant that wants a smaller surface sets
+  `MES_MODULES` (or a pack's `[modules]` table) and restarts. ([#33](https://github.com/factorysemantics/factorysemantics-mes/pull/33))
+
+- **`/metrics` series now carry a `plant` label.** A Prometheus scraping a
+  fleet had two plants' `mes_work_orders{status="running"}` under one name,
+  and read their sum as one plant's number. A dashboard or alert written
+  against the old series needs the label adding. New `mes_plant_info` gives
+  the plant's name as a series of its own.
+  **Migration:** add the `plant` label to any dashboard, alert or recording
+  rule written against a series this MES exports. `mes_plant_info` gives the
+  plant's name as a series of its own. ([#34](https://github.com/factorysemantics/factorysemantics-mes/pull/34))
+
+- **Shift patterns are read on the plant's clock, not the process's.** A
+  plant that set no zone sees no change; a plant whose server runs in
+  another zone will find its shifts move to where the plant floor always
+  said they were. `calendar.describe` now states the zone and whether it was
+  defaulted.
+  **Migration:** a plant whose server does not run in the plant's own zone
+  should set `MES_PLANT_TIMEZONE`, then check the shift boundaries on the
+  dashboard: they move to where the plant floor always said they were.
+  `calendar.describe` states the zone and whether it was defaulted. ([#34](https://github.com/factorysemantics/factorysemantics-mes/pull/34))
+
+- **The plant registry is a list of packs.** `labs/multiplant/plants.toml`
+  becomes `labs/multiplant/fleet.toml`, holding `packs = [...]` and
+  `[environment] data_dir` and nothing else; every one of the seventeen keys
+  it used to carry per plant moved into that plant's `plant.toml` or went,
+  with the reason recorded in `fsmes.pack.migrate` and in
+  [the fleet how-to](docs/operate/registry.md). `secret_key` went because a
+  pack holds no secret; `init` and `post_boot` went because a pack carries no
+  code; `opc_port` became a whole `opc_endpoint`; `agent` went because
+  nothing in the product ever read it. `FSMES_PLANT_REGISTRY` keeps its name.
+  **If you run plants from a registry**, `fsmes pack migrate <registry>
+  --plant <name> --out <dir>` writes the pack, and the fleet loader names the
+  command when it meets a file that still describes plants directly. A plant
+  whose master data was an `init` script now either carries it as data under
+  `[files] masterdata` or keeps its generator as a tool a person runs — the
+  two scale labs do the second, and `fsmes pack apply` says it seeded nothing
+  rather than implying it seeded something.
+  **Migration:** `fsmes pack migrate <registry> --plant <name> --out <dir>`
+  writes the pack for a plant that still lives in a registry; the fleet
+  loader names the command when it meets a file that still describes plants
+  directly. ([#35](https://github.com/factorysemantics/factorysemantics-mes/pull/35))
+
+- **The test suite runs on PostgreSQL in CI.** Every test ran on in-memory
+  SQLite; PostgreSQL was documented, configured and shipped in the Compose
+  file, and nothing exercised it. A `postgres` cell now runs
+  `alembic upgrade head` against an empty PostgreSQL 16.15 — pinned by
+  digest — and then the whole suite against the same server, on every pull
+  request. `MES_TEST_DATABASE_URL` points the suite at any database;
+  unset, the default is still in-memory SQLite and nothing about running
+  `python -m pytest` changes. A test in the suite fails if it is not on the
+  database that variable names, so a typo cannot leave the cell green.
+  See [compatibility](docs/operate/compatibility.md). ([#19](https://github.com/factorysemantics/factorysemantics-mes/pull/19))
+
+- **A database made before the migrations shipped is recognised, not
+  guessed at.** A database created by a 0.1.x wheel has tables and no
+  Alembic stamp, so nothing in it says which revision its tables correspond
+  to. `fsmes init-db` works it out rather than assuming: it rebuilds the
+  schema each revision in the chain produces, in a throwaway SQLite
+  database, compares table names and column names, and stamps only on an
+  exact match — then runs the migrations since. A database made by the 0.1.2
+  wheel on PyPI is recognised as `153379d6cf19`, stamped there, and moved
+  forward by the migrations that have landed since. If nothing matches — a
+  table added by hand, a file from something other than a release — it names
+  the nearest revision, lists every difference,
+  and **changes nothing**, because a stamp that is not true of a database is
+  worse than no stamp: every later migration is then skipped or applied
+  twice on the strength of it. `fsmes plant <name> migrate` prints what
+  `init-db` recognised instead of discarding it, and reports an unstamped
+  database as unstamped rather than as `None`. ([#25](https://github.com/factorysemantics/factorysemantics-mes/pull/25))
 
 ## [0.1.2] — 2026-09-08
 
