@@ -79,6 +79,21 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Fixed
 
+- **The container image no longer publishes before the release is approved.**
+  `release.yml` gated PyPI and the GitHub Release behind the reviewer-approved
+  `pypi` environment, but the `image` job ran beside that gate rather than
+  behind it. On 2026-09-14 the v0.2.0 run waited for approval while
+  `ghcr.io/factorysemantics/fsmes:0.2.0` was already served and `latest`
+  pointed at it, with PyPI still on 0.1.2 and no GitHub Release: for the
+  length of the wait, anyone pulling `latest` got a version nothing else in
+  the project acknowledged. The push, the cosign signature and the SBOM move
+  into a new `image-push` job that `needs: pypi`, so they cannot start until
+  that approval lands. The build stays where it was and now pushes nothing on
+  either path, and `pypi` needs it — so a Dockerfile that no longer builds
+  stops the run before the reviewer is asked, rather than after PyPI has
+  published. A `workflow_dispatch` rehearsal still builds both platforms and
+  publishes nothing. What is published has not changed, only when.
+
 - **`deploy/promote.sh` can promote a fleet, and can undo one.** It defaulted
   `FSMES_PLANT_REGISTRY` to `fleet.toml` and then read `plants` — the table a
   fleet file stopped having when a plant became a pack — so at 0.2.0 it could

@@ -12,10 +12,27 @@ name: Release
 # which is the night decision 0018 exists because of. Now it can be found on a
 # Tuesday. Nothing about the tag path depends on the dispatch path being run.
 #
-# The four steps that are skipped on a dispatch, and only those: the `pypi`
-# job, the image push (`push:` is false, so buildx still builds both
-# platforms and throws the result away), the cosign signature and SBOM for an
-# image that was never pushed, and the whole `github-release` job.
+# The three jobs that are skipped on a dispatch, and only those: `pypi`,
+# `image-push` (the registry push, the cosign signature and the SBOM), and
+# `github-release`. The `image` job still runs, building both platforms
+# through the same Dockerfile and the same buildx and throwing the result
+# away.
+#
+# ONE DECISION, ONE CONSEQUENCE.
+#
+# `pypi` is the reviewer-gated environment: a human approves it, and that
+# approval is the decision to publish this version. Everything public waits
+# behind it. `image` builds the container before the gate — that is evidence,
+# and `pypi` needs it, so a Dockerfile that no longer builds stops the run
+# before anyone is asked to approve anything. `image-push` needs `pypi`, so
+# the bytes reach ghcr.io only after that approval, in the same run, or not
+# at all.
+#
+# It was not always so. On 2026-09-14 the v0.2.0 run waited at the gate while
+# ghcr.io already served `fsmes:0.2.0` and pointed `latest` at it, with PyPI
+# still on 0.1.2 and no GitHub Release: for the length of that wait, anyone
+# pulling `latest` got a version nothing else in the project acknowledged.
+
 on:
   push:
     tags: ["v*"]
@@ -104,9 +121,13 @@ jobs:
         run: .github/scripts/demo_from_wheel.sh "$(ls dist/*.whl)"
 
   pypi:
-    # Publishes. Tag only.
+    # Publishes. Tag only. This is the gate: the `pypi` environment holds the
+    # run until a reviewer approves it, and every public step in this file is
+    # downstream of that approval. It needs `image` as well as the wheel, so
+    # a container that no longer builds fails the run before the reviewer is
+    # asked — nothing is published on the strength of half the artefacts.
     if: github.event_name == 'push'
-    needs: [build, wheel-demo]
+    needs: [build, wheel-demo, image]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -119,7 +140,48 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
 
   image:
+    # Builds. Pushes nothing, ever, on either path — `push: false` is not
+    # conditional. Both platforms go through the same Dockerfile and the same
+    # buildx as the real push, so a broken Dockerfile or a platform that no
+    # longer compiles is a red job here: on a dispatch, before a tag exists;
+    # on a tag, before the reviewer is asked to approve anything.
     needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      # The tags are never used here — nothing is pushed — but working out what
+      # they would be is part of what a rehearsal is for. This is where a
+      # metadata action that has changed its mind about `latest` shows up.
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/factorysemantics/fsmes
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=latest
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # `image-push` reads this cache, so on a tag the layers it pushes are
+          # the ones this job already built rather than a second build of the
+          # same commit. A miss costs that job the build time again; it does
+          # not change what ships, and an export that fails stops the run here,
+          # with nothing published.
+          cache-to: type=gha,mode=max
+
+  image-push:
+    # Publishes. Tag only, and only after the gate. `needs: pypi` is the whole
+    # point of this job existing apart from `image`: it is what keeps ghcr.io
+    # from carrying a version the reviewer has not approved.
+    if: github.event_name == 'push'
+    needs: [image, pypi]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -129,9 +191,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: docker/setup-qemu-action@v4
       - uses: docker/setup-buildx-action@v4
-      # Nothing to log in to when nothing is being pushed.
       - uses: docker/login-action@v4
-        if: github.event_name == 'push'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -143,26 +203,19 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=raw,value=latest
-      # On a dispatch `push` is false: both platforms are still built, through
-      # the same Dockerfile and the same buildx, and the result is discarded.
-      # A broken Dockerfile or a platform that no longer compiles is a red job
-      # here rather than a half-published release.
       - uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/Dockerfile
           platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name == 'push' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-      # You cannot sign, or bill of materials, an image that was not pushed.
+          cache-from: type=gha
       - uses: sigstore/cosign-installer@v3
-        if: github.event_name == 'push'
       - name: Sign the image (keyless)
-        if: github.event_name == 'push'
         run: cosign sign --yes ghcr.io/factorysemantics/fsmes:${GITHUB_REF_NAME#v}
       - uses: anchore/sbom-action@v0
-        if: github.event_name == 'push'
         with:
           image: ghcr.io/factorysemantics/fsmes:${{ steps.meta.outputs.version }}
           artifact-name: sbom.spdx.json
@@ -170,7 +223,7 @@ jobs:
   github-release:
     # Publishes. Tag only.
     if: github.event_name == 'push'
-    needs: [pypi, image]
+    needs: [pypi, image-push]
     runs-on: ubuntu-latest
     permissions:
       contents: write
