@@ -62,9 +62,18 @@ def test_the_pass_rate_kpi_says_what_it_covers():
 
 
 def test_every_level_of_a_machines_breadcrumb_is_a_link():
+    """One renderer, used by both screens that draw the trail. Each having
+    its own rule is how the machine page came to send a line to the Line
+    view while the tree screen sent the same line somewhere else - and the
+    person reading it could not tell which levels were clickable without
+    trying them. tests/test_ui_nav.py clicks them in a browser; this is the
+    cheap guard that the two screens still share one rule."""
     machine, common, machines = _read("machine.js"), _read("common.js"), _read("machines.js")
-    assert 'FS.link("equipment"' in machine
+    assert "FS.crumbs = function crumbs(" in common
+    assert 'FS.link("line"' in common and 'FS.link("equipment"' in common
     assert "/dashboard/machines?under=" in common
+    assert "FS.crumbs(" in machine, "the machine page draws its own crumbs again"
+    assert "FS.crumbs(" in machines, "the tree screen draws its own crumbs again"
     assert 'searchParams.get("under")' in machines
     assert 'id="tree-crumbs"' in _read("machines.html")
 

@@ -78,13 +78,15 @@ function scope(tree) {
     crumbs.append(all);
     return { roots: tree.roots, label: "the plant" };
   }
+  // The whole plant, then every ancestor, then this node as text. The link
+  // for each level is FS.crumbs' business, not this screen's - the machine
+  // page draws the same trail and the two must agree about which levels are
+  // clickable and where each one goes.
   const all = el("a", "obj", "Plant");
   all.href = "/dashboard/machines";
-  crumbs.append(all, el("span", "sep", "›"));
-  for (const ancestor of hit.path) {
-    crumbs.append(FS.link("equipment", ancestor.code, null, ancestor.name || ancestor.code), el("span", "sep", "›"));
-  }
-  crumbs.append(el("span", "mono", hit.node.code));
+  const rest = el("nav");
+  FS.crumbs(rest, hit.path, hit.node.code);
+  crumbs.append(all, el("span", "sep", "›"), ...rest.childNodes);
   return { roots: [hit.node], label: `${hit.node.level.replace("_", " ")} ${hit.node.code}` };
 }
 

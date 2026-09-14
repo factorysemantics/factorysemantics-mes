@@ -75,6 +75,38 @@
     return a;
   };
 
+  /* ---------- breadcrumbs, one rule for every screen ----------
+     A machine page and the Machines tree both draw the same trail -
+     enterprise > site > area > line > machine - and each used to pick its
+     own link for each level, so which ancestors were clickable, and where
+     they went, depended on which screen you were standing on. A person
+     reading that trail on a large plant found one level of five clickable
+     and said so. The rule lives here now, once:
+
+     - a work center is a line, and opens the Line view;
+     - every other ancestor opens the Machines tree scoped to that node,
+       which is the screen that shows a site, an area or an enterprise;
+     - the node you are already on is text, not a link to itself, and says
+       so to a screen reader.
+
+     `path` is the ancestor chain the API hands over, outermost first -
+     `/equipment/{code}`'s `path`, or the ancestors of a scoped tree. */
+
+  FS.crumbs = function crumbs(container, path, current) {
+    container.replaceChildren();
+    for (const node of path) {
+      const a = node.level === "work_center"
+        ? FS.link("line", node.code, null, node.name || node.code)
+        : FS.link("equipment", node.code, null, node.name || node.code);
+      if (node.level) a.title = `${String(node.level).replace("_", " ")} ${node.code}`;
+      container.append(a, FS.el("span", "sep", "\u203a"));
+    }
+    const here = FS.el("span", "mono", current);
+    here.setAttribute("aria-current", "page");
+    container.append(here);
+    return container;
+  };
+
   /* ---------- DOM helpers ---------- */
 
   FS.$ = (sel, root = document) => root.querySelector(sel);
