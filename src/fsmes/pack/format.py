@@ -345,6 +345,38 @@ def settings(pack: Pack) -> dict[str, str]:
     return out
 
 
+def database_url(pack: Pack) -> tuple[str, str]:
+    """The database this pack's plant keeps its data in, and where that came
+    from - the sentence a status command prints on its first line.
+
+    The password is put back from the file `[storage] database_password_file`
+    names, because a pack names the file and never the secret. A pack that
+    names no database at all raises `storage.Unknown`: which file the fleet
+    would give it is the fleet's fact, not the pack's, and answering about
+    this process's own database instead is exactly the mistake that made
+    `fsmes pack status` report "never migrated" about a plant at head.
+    """
+    from fsmes import storage
+
+    table = pack.table("storage")
+    url = str(table.get("database_url") or "").strip()
+    if not url:
+        raise storage.Unknown(
+            f"{pack.directory} names no `[storage] database_url`, so this plant keeps its "
+            "data in the file its fleet gives it - and which file that is belongs to the "
+            "fleet, not to the pack. Pass --plant <name> to ask about a plant in the "
+            "fleet file.")
+    named = table.get("database_password_file")
+    try:
+        resolved = storage.with_password(url, named)
+    except OSError as exc:
+        raise storage.Unknown(
+            f"{pack.directory} names {storage.redacted(url)}, whose password is in "
+            f"{named} - and that file could not be read here "
+            f"({exc.strerror or exc}). Nothing here can reach that database.") from None
+    return resolved, f"from the pack at {pack.directory}"
+
+
 # ------------------------------------------------------------- what it hashes
 
 #: Files whose contents are not the pack: editor leftovers, and the data a

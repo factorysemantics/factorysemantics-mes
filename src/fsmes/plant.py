@@ -47,7 +47,7 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-from fsmes import identity
+from fsmes import identity, storage
 
 REGISTRY = Path("labs/multiplant/fleet.toml")
 
@@ -145,14 +145,11 @@ def database_url(name: str, cfg: dict, root: Path) -> str:
     url = cfg.get("database_url")
     if not url:
         return f"sqlite:///{(data_dir(root) / f'{name}.db').as_posix()}"
-    url = os.path.expandvars(url)
-    secret = cfg.get("database_password_file")
-    if secret and "@" in url and ":" not in url.split("://", 1)[1].split("@", 1)[0]:
-        password = Path(os.path.expanduser(secret)).read_text(encoding="utf-8").strip()
-        scheme, rest = url.split("://", 1)
-        user, host = rest.split("@", 1)
-        url = f"{scheme}://{user}:{password}@{host}"
-    return url
+    # One merge, in one place. `fsmes db-status --pack`, `fsmes pack status`
+    # and the plant this starts all put the password back the same way, so a
+    # status command and the plant it is about cannot be looking at two
+    # different URLs.
+    return storage.with_password(url, cfg.get("database_password_file"))
 
 
 def plant_env(name: str, cfg: dict, root: Path, speed: float | None = None) -> dict[str, str]:
@@ -351,7 +348,10 @@ def migrate(name: str, cfg: dict, root: Path, echo=print, upgrade=None) -> dict:
             return {"plant": name, "migrated": False, "reason": "running"}
         _run_init_db(root, env, echo)
         ensure_accounts(root, env, cfg, echo)
-        echo(f"  {name}: migrated {env['MES_DATABASE_URL'].split('@')[-1]} to head")
+        # Printed from the URL the *pack* wrote, which never holds a
+        # password - not from the resolved one with `@` sliced off it, which
+        # was a redaction by coincidence and one edit away from not being one.
+        echo(f"  {name}: migrated {storage.redacted(str(cfg['database_url']))} to head")
         return {"plant": name, "migrated": True, "backup": None}
     db = Path(env["MES_DATABASE_URL"].removeprefix("sqlite:///"))
     if not db.exists():

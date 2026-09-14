@@ -122,3 +122,26 @@ def compile_pack(pack: fmt.Pack) -> dict:
         "replay_dir": pack.path(str(files["replay_dir"])).as_posix()
         if files.get("replay_dir") else None,
     }
+
+
+def database_url(name: str, root: Path | None = None) -> tuple[str, str]:
+    """The database this fleet gives one plant, and where that came from.
+
+    The same file `fsmes fleet` reads - `FSMES_PLANT_REGISTRY` when it is set
+    - and the same function that builds the URL when the plant is started, so
+    `fsmes db-status --plant x` and the running plant x cannot be looking at
+    two different databases.
+    """
+    from fsmes import storage
+
+    where = plants.find_root(root)
+    fleet = path(where)
+    try:
+        known = load(where)
+    except (FileNotFoundError, FleetError) as exc:
+        raise storage.Unknown(str(exc)) from None
+    if name not in known:
+        raise storage.Unknown(
+            f"{fleet} has no plant called {name!r}. It lists {len(known)}: "
+            f"{', '.join(sorted(known)) or 'none'}.")
+    return plants.database_url(name, known[name], where), f"the plant {name} in {fleet}"

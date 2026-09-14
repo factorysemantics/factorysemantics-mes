@@ -259,7 +259,10 @@ def main() -> None:
         admin_url = base_url.rsplit("/", 1)[0] + "/postgres"
         _pg(admin_url, f'create database "{run_db_name}"')
         database_url = base_url.rsplit("/", 1)[0] + "/" + run_db_name
-        print(f"database: {run_db_name} on {database_url.split('@')[-1]}")
+        # Built from the registry's own URL, which holds no password, rather
+        # than from the resolved one with `@` sliced off it.
+        where = str(registry["database_url"]).rsplit("/", 1)[0].split("@")[-1]
+        print(f"database: {run_db_name} on {where}/{run_db_name}")
 
     baseline = sample_resources(os.getpid())
     print(f"baseline: mem used {baseline['mem_used_mb']} MB, avail {baseline['mem_avail_mb']} MB, "

@@ -224,8 +224,18 @@ def render(row: Plant) -> list[str]:
                      + ("never applied" if drifted is None
                         else "drifted" if drifted else "no drift"))
         schema = pack_said.get("schema") or {}
-        lines.append(f"    schema     {schema.get('revision') or 'not stamped'}"
-                     + ("" if schema.get("at_head") else ", behind head"))
+        # Three states, not two. A plant whose database did not answer is
+        # `unknown`, never "behind head": rendering the null as behind is how
+        # a healthy plant gets rolled back by a script reading this line.
+        if schema.get("answered") is False:
+            lines.append("    schema     unknown - this plant's database did not answer")
+        elif schema.get("at_head"):
+            lines.append(f"    schema     {schema.get('revision')} (head)")
+        elif schema.get("revision") is None:
+            lines.append("    schema     not stamped; this database has never been migrated")
+        else:
+            lines.append(f"    schema     {schema.get('revision')}, behind head "
+                         f"{schema.get('head') or 'unknown'}")
         modules = pack_said.get("modules") or {}
         if modules:
             lines.append(f"    modules    {len(modules.get('on', []))} on, "

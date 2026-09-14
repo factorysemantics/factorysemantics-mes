@@ -36,7 +36,7 @@ from pathlib import Path
 
 import structlog
 
-from fsmes import __version__
+from fsmes import __version__, storage
 from fsmes.pack import check as checker
 from fsmes.pack import format as fmt
 
@@ -115,6 +115,21 @@ def adopt(pack: fmt.Pack) -> dict[str, str]:
     from fsmes.db import get_engine, get_sessionmaker
 
     values = fmt.settings(pack)
+    # The pack names its database and names the file holding the password,
+    # and never the password (decision 0022). Everything downstream of here
+    # gets one URL it can actually connect with - the same one `fsmes pack
+    # status` and `fsmes db-status --pack` read.
+    if values.get("MES_DATABASE_URL"):
+        from fsmes import storage
+
+        try:
+            url, _ = fmt.database_url(pack)
+        except storage.Unknown as exc:
+            raise Refused(checker.Report(
+                directory=pack.directory,
+                problems=(checker.Problem("[storage] database_url", str(exc)),),
+                unknowns=(), checked=0)) from None
+        values["MES_DATABASE_URL"] = url
     os.environ.update(values)
     get_settings.cache_clear()
     get_engine.cache_clear()
@@ -207,8 +222,24 @@ class Status:
     pack: Path
     applied: Applied | None
     fingerprint_now: str
-    revision: str | None
-    head: str | None
+    #: What the pack's own database said, or `None` when nothing asked it.
+    reading: storage.Reading | None = None
+    #: Why nothing here can say which database this pack means. Set instead
+    #: of `reading`, never beside it.
+    storage_unknown: str | None = None
+
+    @property
+    def revision(self) -> str | None:
+        return self.reading.revision if self.reading else None
+
+    @property
+    def head(self) -> str | None:
+        return self.reading.head if self.reading else None
+
+    @property
+    def at_head(self) -> bool | None:
+        """True, False, or None when nothing here reached the database."""
+        return self.reading.at_head if self.reading else None
 
     @property
     def drifted(self) -> bool | None:
@@ -233,13 +264,16 @@ class Status:
                 "`fsmes pack apply` again to bring the plant to them."
                 if self.drifted else "no - the files on disk still make the fingerprint "
                                      "that was applied"))
-        if self.revision is None:
-            lines.append("  schema    not stamped; this database has never been migrated")
-        elif self.head and self.revision != self.head:
-            lines.append(f"  schema    {self.revision}, behind head {self.head}. "
-                         "`fsmes init-db` brings it forward.")
+        if self.storage_unknown is not None:
+            lines.append(f"  database  unknown - {self.storage_unknown}")
+            lines.append("  schema    unknown - nothing here knows which database to ask")
+        elif self.reading is None:
+            lines.append("  database  not asked")
+            lines.append("  schema    not asked")
         else:
-            lines.append(f"  schema    {self.revision} (head)")
+            lines.append(f"  database  {storage.redacted(self.reading.url)} "
+                         f"({self.reading.source})")
+            lines.append(f"  schema    {self.reading.short()}")
         return lines
 
 
@@ -273,7 +307,6 @@ def what_this_plant_runs() -> dict:
     """
     from fsmes import identity
     from fsmes.config import get_settings
-    from fsmes.schema import current_revision, head_revision
 
     settings = get_settings()
     name = identity.plant_name(settings)
@@ -309,11 +342,15 @@ def what_this_plant_runs() -> dict:
             unknown["drift"] = ("the pack this plant was given is not on this machine any "
                                 "more, so nothing here can tell whether it has changed")
 
-    try:
-        revision, head = current_revision(), head_revision()
-    except Exception:
-        revision = head = None
-        unknown["schema"] = "this plant's database did not answer"
+    url, source = storage.of_process()
+    reading = storage.look(url, source)
+    if not reading.answered:
+        # Same rule as the drift reason above: the driver's words name the
+        # host and the account it tried, and a public endpoint is owed
+        # neither. The log has them.
+        log.warning("database did not answer", url=storage.redacted(url), error=reading.why)
+        unknown["schema"] = ("this plant's database did not answer, so nothing here can say "
+                             "what schema it is at; `fsmes db-status` on that machine says why")
 
     return {
         "plant": name,
@@ -325,8 +362,10 @@ def what_this_plant_runs() -> dict:
         # Tri-state on purpose. None is *never applied*, or a pack this
         # machine cannot read - neither of which is "no drift".
         "drifted": drifted,
-        "schema": {"revision": revision, "head": head,
-                   "at_head": None if revision is None else revision == head},
+        # One function took this, the same one `fsmes pack status` and
+        # `fsmes db-status` take theirs from, so the CLI and this endpoint
+        # cannot disagree about a database they were both pointed at.
+        "schema": reading.payload(),
         "modules": {
             "on": [m.name for m in settings.enabled_modules()],
             "off": [m.name for m in settings.disabled_modules()],
@@ -337,18 +376,29 @@ def what_this_plant_runs() -> dict:
 
 
 def status(directory: Path, *, into: Path | None = None, ask_database: bool = True) -> Status:
-    """What this plant runs, and whether it still matches its pack."""
-    pack = fmt.read(directory)
-    revision = head = None
-    if ask_database:
-        adopt(pack)
-        from fsmes.schema import current_revision, head_revision
+    """What this plant runs, and whether it still matches its pack.
 
-        head = head_revision()
+    The database asked is **the pack's**, not this process's. Reading a
+    status command's own default and reporting it as the plant's is what
+    made `fsmes pack status` say a migrated plant had never been migrated;
+    the URL comes from `[storage] database_url` with the password put back
+    from the file the pack names, and a pack that does not say which database
+    it uses is reported as unknown rather than answered about.
+
+    It reads. Unlike `apply`, it does not adopt the pack's environment: a
+    command that says what a plant is should not become it.
+    """
+    pack = fmt.read(directory)
+    reading = None
+    unknown = None
+    if ask_database:
         try:
-            revision = current_revision()
-        except Exception:
-            revision = None
+            url, source = fmt.database_url(pack)
+        except storage.Unknown as exc:
+            unknown = str(exc)
+        else:
+            reading = storage.look(url, source)
     return Status(plant=pack.name, pack=pack.directory,
                   applied=Applied.read(stamp_path(pack.name, into)),
-                  fingerprint_now=fmt.fingerprint(pack), revision=revision, head=head)
+                  fingerprint_now=fmt.fingerprint(pack),
+                  reading=reading, storage_unknown=unknown)
