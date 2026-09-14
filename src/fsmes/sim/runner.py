@@ -387,6 +387,11 @@ def scored_run(
 
         echo(f"  replaying {duration}s of line time at {speed}x "
              f"(~{duration / speed:.0f}s wall clock), sampling every {publish_ms}ms")
+        # Which data this run replays, in the run's own log. A card that does
+        # not say what it replayed cannot be told apart from a card about a
+        # different hour, which is how a sweep came to print one run three
+        # times and call it a comparison.
+        echo(f"  replaying from {env.get('MES_REPLAY_DIR') or 'the plant default'}")
         procs.append(subprocess.Popen([mes, "run-opc-sim", "--replay"], cwd=root,
                                       env=env, stdout=log, stderr=subprocess.STDOUT))
 
@@ -434,6 +439,10 @@ def scored_run(
         card = score_run(truth, timeline, t0, speed,
                          observe_interval_s=publish_ms / 1000.0)
         card["plant"] = name
+        # The data actually replayed, read off the environment the replay
+        # process was given rather than off the caller's intention.
+        card["replay_dir"] = env.get("MES_REPLAY_DIR")
+        card["line_json"] = str(line)
         # Whether the harness itself kept up. A miss on a run whose own
         # pipeline fell behind is not evidence about the MES, and the card
         # must not read as if it were.

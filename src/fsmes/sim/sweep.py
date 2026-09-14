@@ -106,6 +106,9 @@ def compare(cards: list[dict]) -> dict:
     Reports what differs, not everything - a table where every row is
     identical teaches nothing, and the point of a sweep is the row that
     is not.
+
+    Every row names the data it replayed, so a reader can tell "these
+    variants behaved the same" from "these variants were the same run".
     """
     rows = []
     for card in cards:
@@ -115,6 +118,9 @@ def compare(cards: list[dict]) -> dict:
         rows.append({
             "variant": card.get("variant") or "baseline",
             "plant": card.get("plant"),
+            # Which hour this row is about. Two rows naming one directory are
+            # two readings of the same run, not two points of a sweep.
+            "replay_dir": card.get("replay_dir"),
             "planned_stop_misclassified": m.get("planned_stop_misclassified"),
             "breakdown_recall": m.get("breakdown_recall"),
             "faults_scored": m.get("faults_scored"),

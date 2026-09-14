@@ -175,6 +175,19 @@ goes under Honesty with a migration line, so plant people can find it.
   redefining that one role until the page was reloaded — and the next Create
   overwrote the role instead of adding one. The form now names which role it
   is editing and carries a Cancel.
+- **`fsmes sweep` scores every variant against its own data.** A sweep
+  generated a fresh hour of line data per variant and then started each plant
+  from the compiled configuration with `replay_dir` swapped — but the replay
+  reads `MES_REPLAY_DIR`, which is compiled out of the pack's `plant.toml` and
+  did not move. Every variant replayed the pack's original hour, so
+  `fsmes sweep machining -k buffer_capacity=2,6,20` printed three readings of
+  one run and any spread it showed was noise. Each variant is now built from a
+  copy of its pack rewritten to point at that variant's data and recompiled, so
+  the setting and the intention agree by construction; the rule and now the code
+  are shared with `fsmes lab`, which had solved it the same way. The comparison
+  table, the JSON it writes and each run's log name the directory a variant
+  replayed, so two rows about one hour can be told from two rows about two.
+
 - **The container image no longer publishes before the release is approved.**
   `release.yml` gated PyPI and the GitHub Release behind the reviewer-approved
   `pypi` environment, but the `image` job ran beside that gate rather than

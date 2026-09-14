@@ -15,26 +15,21 @@ Three rules, and they are the whole file:
    `MES_REPLAY_DIR` is compiled from the pack, so a caller that overrides only
    the dictionary key gets a plant that replays the old data and a scorer that
    compares it against the new script. Rewriting the file makes the two agree
-   by construction.
+   by construction. That rule is not the lab's alone - `fsmes sweep` needs it
+   too - so it lives in `fsmes.pack.repoint` and this module translates its
+   refusals into the plan's own.
 """
 
 from __future__ import annotations
 
 import json
-import shutil
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
 from fsmes.lab.plan import Plan, PlanError
-from fsmes.pack import check as checker
 from fsmes.pack import fleet as packs
 from fsmes.pack import format as fmt
-from fsmes.pack import migrate
-
-#: Directories inside a pack that are output rather than input. Copied nowhere:
-#: a run generates its own.
-NOT_INPUT = ("out", ".data", "__pycache__", ".venv")
+from fsmes.pack import repoint
 
 
 @dataclass(frozen=True)
@@ -119,45 +114,14 @@ def script(plan: Plan, pack: fmt.Pack, into: Path) -> tuple[Path, int, int | Non
 def overlaid_pack(plan: Plan, pack: fmt.Pack, into: Path, replay_dir: Path) -> tuple[Path, dict]:
     """Copy the pack, point it at this run's data, apply the overlay, check it.
 
-    The check is the same `fsmes pack check` a person would run, on the copy
-    rather than on a second opinion written here - so an overlay that makes a
-    pack unusable is refused before a plant is built from it, with the problems
-    named.
+    `fsmes.pack.repoint` does the work, because a sweep needs the same copy for
+    the same reason. What is the lab's own is the overlay the plan carries and
+    the error a plan is refused with.
     """
-    if into.exists():
-        shutil.rmtree(into)
-    shutil.copytree(pack.directory, into, ignore=shutil.ignore_patterns(*NOT_INPUT))
-
-    raw = tomllib.loads((into / fmt.PLANT_FILE).read_text(encoding="utf-8"))
-    accounts = raw.pop("accounts", [])
-    raw.setdefault("files", {})["replay_dir"] = replay_dir.as_posix()
-    applied = plan.overlay.get(pack.name, {})
-    for table, values in applied.items():
-        raw.setdefault(table, {}).update(values)
-
-    text = migrate.render(raw, accounts)
-    # The renderer writes the schema's sections in the schema's order. A key it
-    # did not know would vanish silently, and a plant built from a pack quietly
-    # missing a setting is exactly the class of thing this lab exists to catch,
-    # so the copy is read back and compared before anything is built from it.
-    written = tomllib.loads(text)
-    written.pop("accounts", None)
-    lost = {f"[{table}] {key}" for table, body in raw.items() if isinstance(body, dict)
-            for key in body if key not in written.get(table, {})}
-    if lost:
-        raise PlanError(
-            f"{pack.name}: writing the run's copy of the pack would drop {', '.join(sorted(lost))}. "
-            "That is a gap in the pack writer, not in this plan - the run stopped rather than "
-            "build a plant from a pack missing a setting.")
-    (into / fmt.PLANT_FILE).write_text(text, encoding="utf-8")
-
-    report = checker.check(into)
-    if not report.ok:
-        problems = "; ".join(f"{p.where} {p.says}" for p in report.problems)
-        raise PlanError(
-            f"{pack.name}: the run's copy of the pack has {len(report.problems)} problem(s) "
-            f"and nothing was started - {problems}")
-    return into, applied
+    try:
+        return repoint.pointed_at(pack, into, replay_dir, plan.overlay.get(pack.name, {}))
+    except repoint.RepointError as exc:
+        raise PlanError(str(exc)) from exc
 
 
 def seeding(plan: Plan, pack: fmt.Pack) -> str | None:
