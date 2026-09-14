@@ -16,6 +16,7 @@ let queue = [];
 let pendingState = null;   // a state change awaiting its reason
 let completing = null;     // a maintenance order awaiting findings
 let qSpecs = [];           // specs for what this machine is running now
+let qSpecsTotal = 0;       // how many that material has in all
 let qMaterial = null;      // the material those specs belong to
 
 function live(ok) {
@@ -264,6 +265,9 @@ function wireIssue() {
    the whole plant's specifications. */
 
 const Q_RECENT = 6;
+// One material's characteristics. Bounded by the material rather than by the
+// plant, but counted all the same - a list that stops short says so.
+const QUALITY_CHARACTERISTICS = 200;
 
 function qKey() {
   return $("#q-char").value;
@@ -310,8 +314,14 @@ async function renderQuality() {
     qSpecs = [];
     if (material) {
       try {
-        qSpecs = await api(`/quality/specs?material=${encodeURIComponent(material)}`);
-      } catch (err) { qSpecs = []; }
+        // One material's characteristics: bounded by the material, not by the
+        // plant. /quality/specs answers with the standard envelope, so this
+        // names a page and reads `items`.
+        const page = await api(
+          `/quality/specs?material=${encodeURIComponent(material)}&limit=${QUALITY_CHARACTERISTICS}`);
+        qSpecs = page.items || [];
+        qSpecsTotal = page.total || qSpecs.length;
+      } catch (err) { qSpecs = []; qSpecsTotal = 0; }
     }
     const keep = select.value;
     select.textContent = "";
@@ -329,6 +339,10 @@ async function renderQuality() {
     $("#q-spec").textContent = `No characteristic has a specification for ${material}.`;
   } else {
     showSpec();
+    // A list that stops short must never look complete (STYLE.md rule 4).
+    if (qSpecsTotal > qSpecs.length) {
+      $("#q-spec").textContent += ` — ${qSpecs.length} of ${qSpecsTotal} characteristics listed.`;
+    }
   }
   await renderRecent();
 }

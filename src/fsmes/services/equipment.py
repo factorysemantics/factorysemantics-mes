@@ -220,8 +220,13 @@ def production_sums(session: Session, equipment_ids: list[int], start: datetime,
 
 
 def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) -> dict[str, dict]:
-    """OEE for every machine given, over one trailing window, in three
-    grouped queries rather than three per machine. {code: oee dict}."""
+    """OEE for every machine given, over one trailing window, in a handful of
+    grouped queries rather than three per machine. {code: oee dict}.
+
+    "A handful" is three, plus one for each distinct instant at which a
+    machine was first observed inside the window - which on a plant that has
+    been running longer than the window is none at all.
+    """
     end = utcnow()
     asked = end - timedelta(hours=hours)
     ids = [m.id for m in machines]
@@ -233,12 +238,24 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
     seconds = state_seconds(session, ids, asked, end)
     # Production is counted from each machine's own clamped start. The usual
     # case - every machine observed for the whole window - is one grouped
-    # query; a machine the MES met partway through the window is asked alone.
-    whole = [m.id for m in machines if starts[m.id] <= asked]
-    made = production_sums(session, whole, asked)
+    # query. Machines the MES met partway through the window are grouped by
+    # the instant it met them, so a batch commissioned together costs one
+    # query between them rather than one each.
+    #
+    # It used to be one query per such machine, which is invisible on a plant
+    # that has been running for days (nothing is partway through an eight-hour
+    # window) and is one query per machine in the plant, on every refresh of
+    # every screen, on the day a plant stands up. A set, not a list: `in` over
+    # a thousand-element list inside a thousand-iteration loop is its own
+    # quiet cliff.
+    whole = {m.id for m in machines if starts[m.id] <= asked}
+    made = production_sums(session, list(whole), asked)
+    partway: dict[datetime, list[int]] = {}
     for m in machines:
         if m.id not in whole and starts[m.id] < end:
-            made.update(production_sums(session, [m.id], starts[m.id]))
+            partway.setdefault(starts[m.id], []).append(m.id)
+    for start, batch in partway.items():
+        made.update(production_sums(session, batch, start))
 
     out = {}
     for m in machines:

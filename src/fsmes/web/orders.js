@@ -184,24 +184,9 @@ function applyFilters() {
   refresh();
 }
 
-function popover(toggleSel, popSel) {
-  const toggle = $(toggleSel);
-  const pop = $(popSel);
-  toggle.addEventListener("click", () => {
-    const open = pop.classList.toggle("hidden");
-    toggle.setAttribute("aria-expanded", String(!open));
-  });
-  document.addEventListener("click", (event) => {
-    if (!pop.contains(event.target) && event.target !== toggle) {
-      pop.classList.add("hidden");
-      toggle.setAttribute("aria-expanded", "false");
-    }
-  });
-}
-
 function wireFilters() {
-  popover("#due-toggle", "#due-pop");
-  popover("#status-toggle", "#status-pop");
+  FS.popover("#due-toggle", "#due-pop");
+  FS.popover("#status-toggle", "#status-pop");
 
   $("#f-status").addEventListener("change", (e) => setStatus(e.target.value));
   for (const [id, value] of Object.entries(TILE_VALUES)) {

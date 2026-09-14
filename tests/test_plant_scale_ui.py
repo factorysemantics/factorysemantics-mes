@@ -45,15 +45,33 @@ def test_a_filtered_floor_is_a_link():
 
 def test_quality_lists_are_filtered_and_paged():
     html, js = _read("quality.html"), _read("quality.js")
-    for control in ("q-material", "s-q", "s-material", "s-pager", "h-material", "h-char", "h-result",
-                    "h-pager", "n-status", "n-q", "n-pager"):
+    for control in ("q-material", "q-char", "s-q", "s-material", "s-pager", "h-material", "h-char",
+                    "h-result", "h-from", "h-to", "h-pager", "n-status", "n-q", "n-pager"):
         assert f'id="{control}"' in html, control
     # History and the chart are the server's answer for the chosen
     # characteristic, not a client-side slice of the last 200 checks.
     assert "material=" in js and "characteristic=" in js and "offset" in js
     assert js.count("FS.pager(") >= 3
-    # The tab strip is one material's characteristics, never the plant's.
-    assert "s.material === filters.material" in js
+    # Four cards, four server pages: measurements, specifications, history
+    # and non-conformances. Nothing here slices a list the browser fetched.
+    for query in ("/quality/specs?${p}", "/quality/checks?${p}", "/quality/nonconformances?${p}"):
+        assert query in js, query
+    # The tab strip asks the server for one material's characteristics, and
+    # the filter selects come from the facets - never from a fetch of every
+    # specification the plant has.
+    assert "/quality/specs/facets" in js
+    assert 'p = new URLSearchParams({ material: filters.material' in js
+    assert 'api("/quality/specs")' not in js
+
+
+def test_every_quality_filter_is_in_the_address_bar():
+    """A supervisor who narrowed the history to last night's failures can
+    send that screen to the person who has to answer for it."""
+    js = _read("quality.js")
+    assert "history.replaceState" in js
+    for key in ("h_material", "h_char", "h_result", "h_from", "h_to",
+                "s_q", "s_material", "n_q", "char_q"):
+        assert f'"{key}"' in js, key
 
 
 def test_the_pass_rate_kpi_says_what_it_covers():

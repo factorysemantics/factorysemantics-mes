@@ -40,6 +40,7 @@
         inference.</p>
       <div class="filter-bar" data-assist="measurement-filters">
         <select id="q-material" aria-label="Material"><option value="">Choose a material</option></select>
+        <input id="q-char" type="search" placeholder="Characteristic" aria-label="Characteristic">
         <span id="q-scope" class="muted small"></span>
       </div>
       <div id="spec-tabs" class="tabs"></div>
@@ -122,12 +123,25 @@
           <option value="fail">Failures only</option>
           <option value="pass">Passes only</option>
         </select>
+        <div class="popover-host">
+          <button id="h-when-toggle" class="ghost" type="button" aria-expanded="false">When ▾</button>
+          <div id="h-when-pop" class="popover hidden">
+            <div class="field">
+              <label for="h-from">Taken from</label>
+              <input id="h-from" type="date" aria-label="Taken from">
+            </div>
+            <div class="field">
+              <label for="h-to">Taken to</label>
+              <input id="h-to" type="date" aria-label="Taken to">
+            </div>
+          </div>
+        </div>
         <button id="h-clear" class="ghost" type="button">Clear</button>
       </div>
       <div class="table-wrap">
         <table id="checks">
           <thead><tr><th>When</th><th>Material</th><th>Characteristic</th>
-            <th class="num">Measured</th><th>Result</th><th>Inspector</th></tr></thead>
+            <th class="num">Measured</th><th>Result</th><th>Order</th><th>Inspector</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>

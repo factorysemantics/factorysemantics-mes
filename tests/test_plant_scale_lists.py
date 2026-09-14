@@ -242,9 +242,15 @@ def test_specifications_search_and_stay_ordered(client, session):
     for name in ("zz_scale_last", "aa_scale_first"):
         session.add(QualitySpec(material=material, characteristic=name, unit="x", min_value=1.0, max_value=2.0))
     session.flush()
-    rows = [r["characteristic"] for r in client.get("/quality/specs?material=FG-COLA").json()]
+    page = client.get("/quality/specs?material=FG-COLA").json()
+    rows = [r["characteristic"] for r in page["items"]]
+    assert {"items", "total", "has_more", "limit", "offset"} <= set(page)
     assert rows == sorted(rows) and rows[0] == "aa_scale_first" and rows[-1] == "zz_scale_last"
-    assert [r["characteristic"] for r in client.get("/quality/specs?q=zz_scale").json()] == ["zz_scale_last"]
+    assert page["total"] == len(rows)
+    assert [r["characteristic"] for r in
+            client.get("/quality/specs?q=zz_scale").json()["items"]] == ["zz_scale_last"]
+    assert [r["characteristic"] for r in
+            client.get("/quality/specs?characteristic=aa_scale_first").json()["items"]] == ["aa_scale_first"]
 
 
 def test_a_filtered_gauge_register_keeps_the_plants_verdict(admin):

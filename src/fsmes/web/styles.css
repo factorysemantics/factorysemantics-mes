@@ -289,9 +289,22 @@ td.code { font-family: var(--mono); font-size: 13px; }
 .actions .stack { margin-bottom: 18px; }
 .actions .stack:last-child { margin-bottom: 0; }
 /* The action forms side by side on a wide panel; the panel itself keeps
-   its own chrome (STYLE.md rule 1) - the difference is the heading colour
-   and the layout inside. */
+   its own chrome (STYLE.md rule 1) - the difference is the heading colour,
+   an accent edge, and the layout inside.
+
+   The edge is the whole point of the strip: what you DO here has to be
+   findable without reading, and separate from what you READ here. Drawn
+   from --accent and --panel-2 so all four themes follow with no theme
+   knowing this component exists. */
 .actions > h2 { color: var(--accent); }
+.actions {
+  /* An inset shadow, not a left border: the panel's own 1px border is part
+     of the system (STYLE.md rule 1) and replacing one side of it leaves the
+     panel with no border at all. */
+  box-shadow: inset 3px 0 0 var(--accent);
+  background: var(--panel-2);
+}
+.actions h3 { color: var(--text); }
 .actions .forms { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
 .actions .forms .stack { margin-bottom: 0; }
 .machine-line { flex-basis: 100%; font-size: 12px; }
@@ -304,6 +317,9 @@ td.code { font-family: var(--mono); font-size: 13px; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
 .row > select { flex: 1 1 120px; min-width: 0; }
 .row > input { flex: 0 1 90px; min-width: 0; }
+/* A code typed against a datalist needs the room a select had: "Machine"
+   truncated to "Machir" is not a label anyone can act on. */
+.row > input[list] { flex: 1 1 120px; }
 
 .feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 320px; overflow-y: auto; }
 .feed li { display: grid; gap: 2px; font-size: 13px; padding-bottom: 8px; border-bottom: 1px solid rgba(38,48,64,.5); }

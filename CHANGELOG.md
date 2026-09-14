@@ -152,6 +152,47 @@ goes under Honesty with a migration line, so plant people can find it.
   one record with its whole history. All three are proposals like every other
   write; nothing an agent does to a quality record happens without a person.
 
+- **The floor and the Quality screen page and filter on the server.** Four
+  lists that used to be drawn out of a copy of the whole plant now ask for a
+  page and are told the total:
+  - `GET /dashboard/summary` takes `machine_q`, `machine_state`,
+    `machine_limit` and `machine_offset`, and answers with `machines_page`
+    alongside `machines` — `total`, `scope_total`, `limit`, `offset`,
+    `has_more`. Left out, `machine_limit` still returns every machine in
+    scope, so the `machines` agent tool is unchanged. `line` stays a *scope*
+    (the tiles follow it, as the Line screen needs); `machine_q` and
+    `machine_state` filter the grid alone. Each machine now says which line
+    it is on, so a screen no longer downloads the equipment tree to label
+    twenty-four cards.
+  - `GET /quality/specs` takes `characteristic`, `limit` and `offset`.
+  - `GET /quality/checks` takes `order`, `since` and `until`, and each row
+    names the work order it was taken against. There is deliberately **no**
+    station filter: a measurement records the material, the characteristic,
+    the inspector, the gauge and the order — not the machine it was taken
+    at. Deriving one from the order's route would name a station nobody
+    stood at.
+  - `GET /workorders`'s `q` matches a material code as well as an order
+    code, which is what the floor screen's box has always said it did.
+
+- **A plant's first morning is no longer one OEE query per machine.** OEE
+  clamps each machine's window to when the MES first saw it, and asked for
+  that machine's production on its own whenever it was first seen inside the
+  window. On a plant that has been running longer than the window that branch
+  never fires; on the day a plant stands up it fires for every machine, on
+  every refresh of every screen. Machines first seen at the same instant —
+  which is what commissioning a plant looks like — now share one query. Same
+  numbers, found by the thousand-machine test.
+
+- **`GET /quality/specs/facets`** — the distinct materials and
+  characteristics that specifications exist for, each with a count, plus the
+  totals. A filter dropdown is built from this instead of from a fetch of
+  every specification in the plant.
+
+- **Every filter on the Quality screen is in the address bar.** A supervisor
+  who has narrowed the inspection history to last night's failures on one
+  characteristic can send that screen to whoever has to answer for it. The
+  measurements card gains a characteristic search that narrows the tab strip
+  on the server, and the history gains a date range.
 
 - **`fsmes fleet plan`** — what a deployment script needs to know about every
   plant in a fleet: where each pack is, where each database is and what kind
@@ -252,6 +293,16 @@ goes under Honesty with a migration line, so plant people can find it.
 
 
 ### Changed
+
+- **`GET /quality/specs` answers with the standard list envelope** —
+  `{items, total, limit, offset, has_more}` — where it used to answer with a
+  bare array, and returns fifty at a time unless asked for more (500 max),
+  like every other list in this API. **If you read this endpoint, read
+  `items`.** It was the last list that handed over the whole table, which was
+  fine at the 127 characteristics of the lab plant and is not a habit that
+  survives a catalogue ten times the size. The `quality` agent tool reports
+  `total`, `shown` and `has_more` rather than presenting the first two
+  hundred as the plant.
 
 - **The GitHub Actions this repository runs are on their current majors, and
   the welcome message survived the move.** `actions/checkout` v4→v7,
@@ -412,6 +463,15 @@ goes under Honesty with a migration line, so plant people can find it.
     the plant a fleet starts.
 
 ### Honesty
+
+- **"Active orders" counted the twenty-five orders listed under it.** The
+  floor's tile summed the order card's own page, so a plant with sixty
+  released orders was told it had twenty-five, and one with two hundred was
+  told the same. It is a count over the whole table now, and agrees with
+  `GET /workorders/summary`. Plant OEE had the same shape of error the
+  moment the machine list became a page, and is computed for the whole
+  scope; so is "machines running". No migration: nothing stored changes,
+  only what the three tiles report, and they report more than they did.
 
 - **A database that could not be reached is no longer reported as one that
   has never been migrated.** `fsmes pack status` and `GET /pack` caught every

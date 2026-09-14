@@ -127,7 +127,18 @@ async function load() {
 
 (async function boot() {
   await FS.whoami().catch(() => {});
-  specs = await api("/quality/specs");
+  // Page by page, to a stated ceiling. The picker needs every
+  // material/characteristic pair to group them, and a single response is no
+  // longer the whole table - so it reads to the end and says whether it got
+  // there.
+  const all = await FS.allPages("/quality/specs", { limit: 500, cap: 2000 });
+  specs = all.items;
+  const scope = $("#spec-scope");
+  if (scope) {
+    scope.textContent = all.complete
+      ? `${all.total.toLocaleString()} characteristic${all.total === 1 ? "" : "s"}`
+      : `first ${specs.length.toLocaleString()} of ${all.total.toLocaleString()} characteristics`;
+  }
   const select = $("#spec");
   // Grouped by material: 127 specifications in one flat list is a scroll,
   // not a choice.

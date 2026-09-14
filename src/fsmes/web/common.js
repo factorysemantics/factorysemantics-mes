@@ -259,6 +259,45 @@
              has_more: offset + limit < matching.length };
   };
 
+  /* A filter bar holds one line (docs/design/STYLE.md): a long tail of
+     controls goes behind a toggle. Written once here because the Orders
+     screen and the Quality screen were about to have one each. */
+  FS.popover = function popover(toggleSel, popSel) {
+    const toggle = document.querySelector(toggleSel);
+    const pop = document.querySelector(popSel);
+    if (!toggle || !pop) return;
+    toggle.addEventListener("click", () => {
+      const open = pop.classList.toggle("hidden");
+      toggle.setAttribute("aria-expanded", String(!open));
+    });
+    document.addEventListener("click", (event) => {
+      if (!pop.contains(event.target) && event.target !== toggle) {
+        pop.classList.add("hidden");
+        toggle.setAttribute("aria-expanded", "false");
+      }
+    });
+  };
+
+  /* Every row of a paged list, page by page, up to a stated ceiling.
+
+     For the handful of places that genuinely need the whole of a bounded
+     list - a picker that groups every characteristic by its material - and
+     never for a list that grows with time. It returns `complete`, so a
+     screen that hit the ceiling says so instead of presenting a truncated
+     list as the plant. */
+  FS.allPages = async function allPages(path, { limit = 500, cap = 2000 } = {}) {
+    const join = path.includes("?") ? "&" : "?";
+    let items = [];
+    let total = 0;
+    for (let offset = 0; offset < cap; offset += limit) {
+      const page = await FS.api(`${path}${join}limit=${limit}&offset=${offset}`);
+      total = page.total || 0;
+      items = items.concat(page.items || []);
+      if (!page.has_more || !(page.items || []).length) break;
+    }
+    return { items, total, complete: items.length >= total };
+  };
+
   /* "— 25 of 306", or "— 25 of 41 matching, 306 in the plant": the count
      always says what it covers (STYLE.md rule 4). */
   FS.countText = function countText(page, allCount, where) {
