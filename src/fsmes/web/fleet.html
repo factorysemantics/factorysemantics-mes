@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FactorySemantics MES — Fleet</title>
+  <link rel="stylesheet" href="/static/themes.css">
+  <link rel="stylesheet" href="/static/fleet.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🏭</text></svg>">
+  <script>
+    /* Before first paint: a daylight user must never see a flash of the
+       dark control-room palette. */
+    try {
+      document.documentElement.setAttribute(
+        "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+    } catch (e) { /* private window: the default stands */ }
+  </script>
+</head>
+<body>
+
+<header class="bar">
+  <h1>Fleet</h1>
+  <p class="reads">This page reads. It cannot start, stop or change any plant — those live in
+    <code>fsmes fleet</code>, at a terminal.</p>
+  <p id="asked" class="muted"></p>
+</header>
+
+<main>
+  <p id="totals" class="totals">Asking every plant…</p>
+  <p id="ownership" class="muted"></p>
+
+  <table id="fleet">
+    <thead>
+      <tr>
+        <th>Plant</th>
+        <th>Owned</th>
+        <th>Answering</th>
+        <th>Profile</th>
+        <th>Clock</th>
+        <th>Shadow</th>
+        <th>Pack</th>
+        <th>Schema</th>
+        <th>Modules</th>
+        <th>Last answered</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <p id="empty" class="muted" hidden>
+    No plants in the list. <code>fsmes fleet create &lt;pack&gt;</code> makes the first one.
+  </p>
+
+  <p class="muted footnote">
+    A plant that did not answer is <b>unknown</b> — never healthy, never down — and it is
+    not owned while it is silent, because nothing can corroborate the instance id it was
+    given. Nothing on this page is added up across plants: a fleet OEE would be a lie
+    unless every plant were the same shape, and no two are.
+  </p>
+</main>
+
+<script src="/static/fleet.js"></script>
+</body>
+</html>

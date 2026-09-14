@@ -1672,6 +1672,32 @@ def fleet_status(
         _refused(exc)
 
 
+@fleet_app.command("console")
+def fleet_console(
+    host: str = typer.Option("127.0.0.1", help="Interface to serve the page on."),
+    port: int = typer.Option(8100, help="Port to serve the page on."),
+    root: Path | None = typer.Option(None, help="Repository root (default: found from cwd)."),
+) -> None:
+    """Serve the fleet console: one page that observes every plant in the list.
+
+    It reads. There is no control on the page and no path from it to
+    `fsmes fleet`: a console is a long-running process on a port, and
+    whatever it can do, whoever can reach that port can do. It holds no
+    credential either - everything it asks a plant is a GET of an endpoint
+    the plant answers without one.
+
+    Loopback by default. A plant that did not answer is shown as unknown,
+    never as healthy and never as down.
+    """
+    import uvicorn
+
+    from fsmes.fleet.console import create_app
+
+    where = _fleet_root(root)
+    typer.echo(f"Fleet console on http://{host}:{port} - reading only.")
+    uvicorn.run(create_app(where), host=host, port=port, log_level="info")
+
+
 @fleet_app.command("list")
 def fleet_list(
     root: Path | None = typer.Option(None, help="Repository root (default: found from cwd)."),

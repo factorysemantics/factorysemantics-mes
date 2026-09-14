@@ -1,0 +1,61 @@
+/* The fleet console. One page, one table, no controls.
+
+   Colours come from themes.css, like every other screen, so the console a
+   person opens beside a dashboard is the same product. */
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.bar {
+  padding: 18px 24px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.bar h1 { margin: 0; font-size: 20px; letter-spacing: 0.02em; }
+.bar .reads { margin: 6px 0 0; color: var(--muted); max-width: 70ch; }
+.bar code, .footnote code { color: var(--accent); }
+
+main { padding: 18px 24px 40px; }
+
+.totals { font-size: 16px; font-weight: 600; margin: 0 0 2px; }
+.muted { color: var(--muted); }
+.footnote { margin-top: 22px; max-width: 82ch; }
+
+table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+
+th, td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+tbody tr:hover { background: var(--panel-2); }
+
+td .name { font-weight: 600; }
+td .label { color: var(--muted); display: block; font-size: 12px; }
+td .why { color: var(--muted); display: block; font-size: 12px; max-width: 46ch; }
+
+.pill {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+}
+
+.pill.yes { color: var(--running); border-color: var(--running); }
+.pill.no { color: var(--muted); }
+.pill.unknown { color: var(--unknown); border-color: var(--unknown); }
+.pill.answered { color: var(--running); border-color: var(--running); }
+.pill.drift { color: var(--idle); border-color: var(--idle); }
+.pill.shadow { color: var(--accent); border-color: var(--accent); }
+
+a { color: var(--accent); }

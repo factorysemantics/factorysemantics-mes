@@ -483,3 +483,35 @@ def test_the_fleet_file_lists_every_multiplant_pack():
 
     fleet = tomllib.loads((LABS / "multiplant" / "fleet.toml").read_text(encoding="utf-8"))
     assert sorted(fleet["packs"]) == ["bottling", "finewire", "machining"]
+
+
+def test_a_pack_that_cannot_be_read_never_puts_the_parsers_words_on_the_public_endpoint(applied):
+    """`GET /pack` is public. A parser's message can carry the pack's path or
+    a library's own words, and a stranger is owed neither; the log gets the
+    reason and the payload gets a sentence that says where to look."""
+    import os
+
+    from fsmes.config import get_settings
+
+    directory, into = applied
+    name = fmt.read(directory).name
+    applier.apply(directory, into=into, echo=lambda _: None)
+    (directory / fmt.PLANT_FILE).write_text("[plant\nname = ", encoding="utf-8")
+
+    before = dict(os.environ)
+    os.environ["FSMES_DATA_DIR"] = str(into)
+    os.environ["MES_PLANT_NAME"] = name
+    get_settings.cache_clear()
+    try:
+        said = applier.what_this_plant_runs()
+    finally:
+        os.environ.clear()
+        os.environ.update(before)
+        get_settings.cache_clear()
+
+    reason = said["unknown"]["drift"]
+    assert said["drifted"] is None
+    assert "fsmes pack check" in reason
+    assert str(directory) not in reason
+    assert "TOML" not in reason and "line" not in reason
+

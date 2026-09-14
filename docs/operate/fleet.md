@@ -35,9 +35,9 @@ Delete the instance file from the plant's data directory (`<data_dir>/<name>.ins
 
 Two plants claiming one instance id is an **error that refuses**, not a coin toss: a plant directory copied to make a second plant carries the first one's id until something regenerates it, and a tool that picked one of them would act on the wrong plant. `fsmes pack check` cannot catch this — a pack carries no instance id — so the fleet tool catches it when it reads the file.
 
-### Where this differs from decision 0023 as written
+### A plant that is silent
 
-[Decision 0023](../decisions/0023-the-fleet-console-observes.md) says a plant that is silent "is not owned for as long as it is silent, because condition 2 cannot be met". Read literally that makes **start** impossible: a plant that is not running cannot answer anything. So condition 2 is implemented as *the plant must not contradict us*:
+A plant that is not running is not contradicting anything, and a rule that treated silence as a contradiction would forbid the tool's own first two steps. So condition 2 is *the plant must not contradict us*, and it resolves three ways ([decision 0023](../decisions/0023-the-fleet-console-observes.md) has the same table):
 
 | The plant is | What happens |
 |---|---|
@@ -45,7 +45,7 @@ Two plants claiming one instance id is an **error that refuses**, not a coin tos
 | silent, local | the instance id in its own data directory must still be there and still match; only `start` and `apply`, the two verbs a stopped plant can take, may proceed |
 | silent, remote | refused — there is no data directory to read on another host, so nothing corroborates anything |
 
-The gap the decision closes stays closed: **no verb reaches into a *running* plant that has not just said who it is.**
+The thing the strict reading protects stays protected: **no verb reaches into a *running* plant that has not just said who it is.** On the console, a silent plant's ownership reads `unknown` rather than `yes`.
 
 ## The commands
 
@@ -72,6 +72,50 @@ The ownership gate, then the machinery that already runs plants (`fsmes plant <n
 Reads. `status` says whether the plant is owned and **why** — the same question every verb asks, answered before you hit it. `list` states its total: *"N plants, M answered, K unknown; J owned"*. The number recorded is never the number seen.
 
 A plant that did not answer is **unknown**. Never healthy, never down.
+
+## The console
+
+```bash
+fsmes fleet console --port 8100        # loopback; one page, at http://127.0.0.1:8100
+```
+
+One page. Every plant in the list — the packs this machine runs, the plants this installation created, and the `[[observe]]` entries a person added — each polled on `/health` and `/pack`, one row each:
+
+| Column | Where it comes from |
+|---|---|
+| plant, label | the plant's own `/health`, not the address it was dialled at |
+| owned | `yes`, `no`, or `unknown` while the plant is silent |
+| answering | `answered` or `unknown` |
+| profile, clock | `/health` — and a defaulted zone says it was defaulted |
+| shadow | `/health` |
+| pack, drift | `/pack` — and *never applied* is not *no drift* |
+| schema | `/pack`, against this build's head |
+| modules | `/pack` — how many this plant serves, and which it does not |
+| last answered | when this console last heard from it |
+
+At the top: **"3 plants, 2 answered, 1 unknown"**, and below it how many are owned, how many are recorded here but not answering, and how many are only watched. The number in the list is never the number seen.
+
+### What the page cannot do, and how to check that yourself
+
+**There is no control on it, and no path from it to `fsmes fleet`.** Four things make that checkable by reading rather than by trusting this page:
+
+1. `src/fsmes/fleet/console.py` declares two routes, both `GET`. No `app.post`, `app.put`, `app.patch` or `app.delete` appears in it.
+2. It imports `observe` and `owned` and **never `commands`** — the verbs are not reachable from the process that serves the page.
+3. `src/fsmes/web/fleet.js` makes exactly one kind of request: a `GET` of `/fleet.json`, its own server. The page has no form, no button and no input.
+4. Everything it asks a plant is a `GET` of `/health` or `/pack`, which a plant answers without a credential — so **the console holds no credential at all**. A console is a long-running process on a port, and whatever it can do, whoever can reach that port can do; the safest credential is the one that does not exist.
+
+`tests/test_fleet_console.py` holds all four by parsing the source, so they stay true.
+
+The M8 design reached first for a *read-only machine role* for the console to run as. This console needs no account at all — every column above comes from an endpoint a plant answers to anyone who can reach it, and holding no credential is a stronger property than holding a read-only one. The role is not rejected, it is **not yet needed**: the day a console shows OEE, the loss breakdown or `/ops/services` is the day this product grows one, and nothing here assumes its absence.
+
+### What it refuses to show
+
+- **A plant that did not answer is `unknown`.** Never healthy, never down. It is also not owned while it is silent, because nothing can corroborate the instance id — so a plant is never managed through a gap in which nobody can see it.
+- **Nothing is added up across plants.** No fleet OEE, no fleet availability, no single number of any kind. A fleet OEE is a lie unless every plant is the same shape, and no two are. Twelve plants are twelve rows.
+- **It holds no plant data.** The last answer is cached for display and nothing else. Orders, serials, people and events stay in the plant that made them.
+- **It starts nothing.** No scheduler, no reconciliation loop, no daemon that notices a stopped plant and brings it back.
+
+A console `--manage` flag — off by default, loopback only, each button calling the same gated function the command calls — is possible later and is deliberately not here.
 
 ## `ownership.toml`
 

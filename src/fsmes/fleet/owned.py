@@ -30,13 +30,11 @@ It does not stop somebody copying an id into this file on purpose, and
 nothing here pretends otherwise; what keeps a stranger out of a plant is that
 plant's own accounts, capability roles and shadow mode.
 
-### Where this differs from 0023 as written, and why
+### A plant that is silent is not contradicting anything
 
-0023 says a plant that is silent "is not owned for as long as it is silent,
-because condition 2 cannot be met". Taken literally that makes **start**
-impossible: a plant that is not running cannot answer anything, and starting
-it is one of the five verbs. So condition 2 is implemented as *the plant must
-not contradict us*:
+A stopped plant answers nothing, and starting one is a verb on the list, so
+condition 2 is *the plant must not contradict us* rather than *silence means
+unowned*. It resolves three ways, and 0023 carries the same table:
 
 - **answering** - it must say this name and this id, or the verb is refused;
 - **silent** - the id this tool wrote into the plant's own data directory
@@ -46,8 +44,9 @@ not contradict us*:
 - **silent and remote** - refused. There is no data directory to read on
   another host, so nothing corroborates anything.
 
-The gap the decision was closing stays closed: no verb reaches into a
-*running* plant that has not just said who it is.
+The thing the strict reading protects stays protected: no verb reaches into a
+*running* plant that has not just said who it is. The console renders a
+silent plant's ownership as unknown for the same reason.
 """
 
 from __future__ import annotations
@@ -63,10 +62,10 @@ from pathlib import Path
 from fsmes.fleet import observe
 
 #: The file, in the fleet's data directory. Not `fleet.toml`: that name is
-#: taken, by the list of packs this machine runs
-#: (`fsmes.pack.fleet`). Decision 0023 called this one `fleet.toml` before
-#: M8 piece 3 renamed the registry; two files of one name, one listing packs
-#: and one recording ownership, is a trap for whoever reads the next
+#: the **registry**, the list of packs this machine runs
+#: (`fsmes.pack.fleet`). The two files answer different questions - what
+#: this machine runs, and what this installation may manage - and two files
+#: of one name, in two directories, is a trap for whoever reads the next
 #: traceback.
 FILE = "ownership.toml"
 
@@ -331,6 +330,37 @@ def here() -> tuple[str, str]:
     return socket.gethostname(), getpass.getuser()
 
 
+def agrees(entry: Entry, said: dict | None) -> tuple[bool, str]:
+    """Condition 2, as a pure function: does what this plant said corroborate
+    the entry that claims it?
+
+    One definition, called by the gate and by the console, so the command
+    and the page can never disagree about which plants are owned. `said` is
+    what `/health` returned; `None` means the plant did not answer, which is
+    neither corroboration nor contradiction.
+    """
+    if said is None:
+        return False, (f"{entry.name} did not answer, and a plant that is not saying "
+                       "anything cannot corroborate that this is the plant this "
+                       "installation created. Unknown is not owned.")
+    answered_as = said.get("plant") or "a plant that will not say its name"
+    if answered_as != entry.name:
+        return False, (f"{entry.base} answers as {answered_as!r}, not as {entry.name}. "
+                       "Something else is on that port, and this installation did not "
+                       "create it.")
+    heard = said.get("instance_id")
+    if not heard:
+        return False, (f"{entry.name} answers with no instance id, so nothing corroborates "
+                       "that this is the plant this installation created. That is how a "
+                       "plant gives ownership back; it is observed now, not owned.")
+    if heard != entry.instance_id:
+        return False, (f"{entry.name} answers with a different instance id from the one "
+                       "this installation recorded. This is not the plant that entry was "
+                       "written for, and no verb will touch it.")
+    return True, (f"created here, and {entry.name} answers with the instance id this "
+                  "installation gave it")
+
+
 def gate(verb: str, name: str, *, data_dir: Path, ask=None) -> Ownership:
     """Refuse unless this installation owns this plant. Called first, always.
 
@@ -388,25 +418,11 @@ def gate(verb: str, name: str, *, data_dir: Path, ask=None) -> Ownership:
     answer = ask(entry.base)
     if answer.answered:
         said = answer.body or {}
-        answered_as = said.get("plant") or "a plant that will not say its name"
-        if answered_as != name:
-            raise NotOwned(
-                f"{entry.base} answers as {answered_as!r}, not as {name}. Something else "
-                "is on that port, and this installation did not create it.")
-        heard = said.get("instance_id")
-        if not heard:
-            raise NotOwned(
-                f"{name} answers with no instance id, so nothing corroborates that this is "
-                "the plant this installation created. That is how a plant gives ownership "
-                "back; it is observed now, not owned.")
-        if heard != entry.instance_id:
-            raise NotOwned(
-                f"{name} answers with a different instance id from the one "
-                f"{record.where} recorded. This is not the plant that entry was written "
-                "for, and no verb will touch it.")
+        agreed, why = agrees(entry, said)
+        if not agreed:
+            raise NotOwned(why)
         return Ownership(name=name, owned=True, entry=entry, answering=True, said=said,
-                         reason=f"created here, and {name} answers with the instance id "
-                                "this installation gave it")
+                         reason=why)
 
     if entry.control == REMOTE:
         raise NotOwned(
