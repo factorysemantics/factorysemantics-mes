@@ -47,6 +47,8 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
+from fsmes import identity
+
 REGISTRY = Path("labs/multiplant/fleet.toml")
 
 # The fleet file *is* the environment. Set this to one outside the checkout
@@ -157,16 +159,22 @@ def plant_env(name: str, cfg: dict, root: Path, speed: float | None = None) -> d
     """The complete MES_* contract for one plant.
 
     Almost all of it is the pack's, compiled once when the fleet was read.
-    Three things are added here because they are facts about *running* this
+    Four things are added here because they are facts about *running* this
     plant on this machine rather than facts about the plant: where its
-    database file goes, where its log goes, and a signing key when nothing
-    supplied one.
+    database file goes, where its data directory is, where its log goes, and
+    a signing key when nothing supplied one.
     """
     env = dict(os.environ)
     env.update(cfg.get("env") or {})
     env["MES_PLANT_NAME"] = name
     env["MES_DATABASE_URL"] = database_url(name, cfg, root)
     env["MES_LOG_DIR"] = f"logs/{name}"
+    # Where this plant's own files live: its database, the record of the pack
+    # it was given, and the instance id that says which installation created
+    # it. A plant started any other way does not know, and /health then
+    # reports no instance id - which is the honest answer, because nothing
+    # can corroborate ownership of a plant nobody can locate.
+    env[identity.DATA_DIR_SETTING] = str(data_dir(root))
     if speed is not None:
         env["MES_SIM_SPEED"] = str(speed)
     if not env.get("MES_SECRET_KEY"):

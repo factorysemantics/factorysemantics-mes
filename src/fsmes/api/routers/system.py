@@ -28,7 +28,13 @@ def health(db: DbDep) -> dict:
     guess about the plant and a reader is entitled to know it was one.
     """
     db.execute(text("SELECT 1"))
-    return {"status": "ok", "shadow": shadow_mode.enabled(), **identity.summary()}
+    return {"status": "ok", "shadow": shadow_mode.enabled(), **identity.summary(),
+            # Not part of `summary()`: the id is between this plant and the
+            # installation that created it, and has no business in the
+            # namespace envelope or the backup manifest. None here means no
+            # fleet tool created this plant, which means no fleet tool owns
+            # it - decision 0023, condition 2.
+            "instance_id": identity.instance_id()}
 
 
 @router.get("/shadow")

@@ -91,7 +91,7 @@ class Outbound:
 #: `allowed`    — it runs, because nothing about the plant leaves this box
 #:                by it, and nothing outside this MES changes.
 #:
-#: **32 entries.** The count is stated because a register that quietly loses
+#: **33 entries.** The count is stated because a register that quietly loses
 #: a row is worse than no register, and `tests/test_shadow_mode.py` scans the
 #: source for outbound primitives and fails on any call site not covered by
 #: an entry here.
@@ -332,6 +332,19 @@ REGISTER: tuple[Outbound, ...] = (
         verdict="allowed",
         note="`fsmes plant … status|start|stop` supervises MES processes on "
              "this machine",
+    ),
+    Outbound(
+        name="fleet.observe",
+        where="fsmes.fleet.observe",
+        reaches="the public endpoints of the plants this installation owns or "
+                "watches",
+        verdict="allowed",
+        note="the one place the fleet tooling and the console reach the "
+             "network, and every question it asks is a GET of an endpoint a "
+             "plant already answers without a credential: /health and /pack. "
+             "It signs in nowhere, sends no body, and holds no credential to "
+             "steal. A plant that does not answer comes back as unknown, "
+             "never as down",
     ),
     Outbound(
         name="ops.liveness_probe",

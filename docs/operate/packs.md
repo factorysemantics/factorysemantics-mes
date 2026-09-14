@@ -143,6 +143,7 @@ See [plants from a fleet file](registry.md) for running them.
 
 - [Switch a module off](modules.md) — what `[modules]` compiles to
 - [Plants from a fleet file](registry.md)
+- [The fleet this installation owns](fleet.md) — `fsmes fleet`, and what "owns" means
 - [Beside your existing MES](first-plant.md) — the engineers' front door
 - [Decision 0022 — what a plant pack may contain](../decisions/0022-what-a-plant-pack-may-contain.md)
 - [The M8 design](../design/m8-packs-and-fleet.md) §6, which this is built from

@@ -64,6 +64,12 @@ LADDER: tuple[tuple[str, tuple[str, ...]], ...] = (
         # live. `fsmes.plant` stays below it and never imports it: a pack is
         # compiled into the plain dictionary that module already ran.
         "pack",
+        # The fleet tooling: it reads packs, asks plants over HTTP what they
+        # say about themselves, and hands starting and stopping back to
+        # `fsmes.plant`. An edge for the same reason `pack` is one, and it
+        # sits beside it rather than above it because nothing below may
+        # import it.
+        "fleet",
     )),
     ("cli", (
         # The top of the ladder: everything may be imported by the CLI and
