@@ -199,6 +199,29 @@ def test_a_page_of_the_floor_does_not_cost_a_query_per_machine_in_the_plant(clie
     assert len(everything) > MACHINES
 
 
+def test_a_plant_on_its_first_morning_is_not_one_oee_query_per_machine(client, megaplant, session):
+    """Found by the test above, on this fixture, and not by anything before it.
+
+    OEE clamps each machine's window to when the MES first saw it, and asked
+    for production one machine at a time for any machine met partway through
+    the window. On a plant that has been running for days that branch never
+    fires; on the morning a plant stands up it fires for every machine, on
+    every refresh of every screen. Machines that were first seen at the same
+    instant - which is what commissioning a plant looks like - now share one
+    query.
+    """
+    from fsmes.services import equipment as equipment_service
+
+    machines = megaplant["machines"]
+    first = session.scalar(select(func.min(EquipmentState.started_at)))
+    assert first > utcnow() - timedelta(hours=8), "the fixture is inside the OEE window"
+
+    with statements(session) as asked:
+        equipment_service.oee_many(session, machines, hours=8.0)
+    sums = [s for s in asked if "production_logs" in s and "sum" in s.lower()]
+    assert len(sums) <= 2, f"{len(sums)} production queries for {len(machines)} machines"
+
+
 def test_a_filtered_floor_never_makes_the_plant_look_smaller(client, megaplant, session):
     whole = client.get("/dashboard/summary?machine_limit=1").json()
     running = whole["plant"]["machines_running"]

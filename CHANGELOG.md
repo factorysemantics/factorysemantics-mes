@@ -174,6 +174,15 @@ goes under Honesty with a migration line, so plant people can find it.
   - `GET /workorders`'s `q` matches a material code as well as an order
     code, which is what the floor screen's box has always said it did.
 
+- **A plant's first morning is no longer one OEE query per machine.** OEE
+  clamps each machine's window to when the MES first saw it, and asked for
+  that machine's production on its own whenever it was first seen inside the
+  window. On a plant that has been running longer than the window that branch
+  never fires; on the day a plant stands up it fires for every machine, on
+  every refresh of every screen. Machines first seen at the same instant —
+  which is what commissioning a plant looks like — now share one query. Same
+  numbers, found by the thousand-machine test.
+
 - **`GET /quality/specs/facets`** — the distinct materials and
   characteristics that specifications exist for, each with a count, plus the
   totals. A filter dropdown is built from this instead of from a fetch of
