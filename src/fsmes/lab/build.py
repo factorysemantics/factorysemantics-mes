@@ -139,14 +139,22 @@ def seeding(plan: Plan, pack: fmt.Pack) -> str | None:
     """What will put machines in this plant's empty database - or a refusal.
 
     A pack normally carries its plant as data under `masterdata/`, and
-    `fsmes pack apply` seeds from it. Two of the three lab plants do not: their
-    lines are seeded by a script, because one of them is the product's own
-    reference line and the other is generated. Decision 0022 keeps a script out
-    of a *pack*; `fsmes.sim.runner` still takes one from a lab tool, and an
-    experiment plan is a lab tool. So a plan may name it, and a plant with
-    neither is refused before anything is started - an ephemeral plant with no
-    equipment rows answers every question with nothing, which reads as an MES
-    that saw nothing rather than as a plant that was never built.
+    `fsmes pack apply` seeds from it. The scale labs do not: their master data
+    is generated rather than written, so they carry none and seed themselves.
+    Decision 0022 keeps a script out of a *pack*; `fsmes.sim.runner` still
+    takes one from a lab tool, and an experiment plan is a lab tool. So a plan
+    may name it, and a plant with neither is refused before anything is
+    started - an ephemeral plant with no equipment rows answers every question
+    with nothing, which reads as an MES that saw nothing rather than as a
+    plant that was never built.
+
+    Bottling was one of the packs that carried none, until 2026-09-14. Its
+    line is the product's own reference line and the argument was that a copy
+    could drift from what it copied; what the absence actually did was leave
+    `fsmes fleet create`, `fsmes plant bottling init` and `fsmes score
+    bottling` all building a plant with no machines, and only a plan could
+    name the script that fixed it. The refusal below is the same instinct as
+    this one, reached from the other side - and the pack carries its line now.
     """
     named = plan.init.get(pack.name)
     if named:

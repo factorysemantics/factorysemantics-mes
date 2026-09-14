@@ -30,11 +30,12 @@ The shape, in full:
     chat   = true
     claude = false
 
-    # A plant whose pack carries no master data needs something to seed it.
+    # A plant whose pack carries no master data needs something to seed it -
+    # the scale labs, whose master data is generated rather than written.
     # A pack may never name a script (decision 0022); a lab plan is not a
     # pack, and `fsmes.sim.runner` already takes one from a lab tool.
-    [init.bottling]
-    script = "../multiplant/bottling/init.py"
+    [init.megafactory]
+    script = "../megafactory/init.py"
 
 Paths are relative to the plan file, so a plan and the packs it names travel
 together the way a fleet file and its packs do.

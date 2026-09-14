@@ -43,10 +43,12 @@ serialization = false
 [scenario.machining]
 events = [ { type = "down", station = "Mill", start = 600, end = 720 } ]
 
-# A pack whose plant is seeded by a script rather than by master data. A pack
-# may never name a script (decision 0022); a plan is not a pack.
-[init.bottling]
-script = "../multiplant/bottling/init.py"
+# A pack whose plant is seeded by a script rather than by master data — the
+# scale labs, whose master data is generated rather than written. A pack may
+# never name a script (decision 0022); a plan is not a pack. A plant with
+# neither is refused before anything is started.
+[init.megafactory]
+script = "../megafactory/init.py"
 
 # The on-screen design panel, on for every lab plant so a note can be left
 # while you are looking at the thing you want to complain about. Claude is off
