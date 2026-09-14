@@ -47,13 +47,30 @@ function renderOee(data) {
       unknown.className = "b-unknown";
       unknown.title = "Not enough observed history to compute OEE";
       bar.appendChild(unknown);
+    } else if (s.performance !== null && s.performance > 1) {
+      // A waterfall only adds up while every loss is a loss. Performance is
+      // not capped (see `fsmes.services.oee`), and a station that out-ran its
+      // rating has a performance loss below zero — a segment with no width to
+      // draw and no side of the axis to sit on. So the bar stops pretending:
+      // one full segment, the true figure in the score, and the master-data
+      // finding in words under the row. Squeezing the losses in beside a
+      // hundred per cent is what made the first draft of this read as though
+      // a station with an OEE of 171 % had lost time it had not.
+      const whole = document.createElement("i");
+      whole.className = "b-oee";
+      whole.style.width = "100%";
+      whole.title =
+        `OEE ${pct(s.oee)} — the losses are not drawn while performance is ` +
+        `above rated, because one of them is negative. ${s.performance_note}`;
+      bar.appendChild(whole);
     } else {
       // A waterfall: what survived, then each loss in the order it is taken.
+      const perf = s.performance ?? 1;
       const segments = [
         ["b-oee", s.oee, `OEE ${pct(s.oee)}`],
         ["b-avail", 1 - s.availability, `Availability loss — ${duration(s.loss.availability_seconds)} not running`],
-        ["b-perf", s.availability * (1 - (s.performance ?? 1)), `Performance loss — ${num(s.loss.performance_units)} units below rated rate`],
-        ["b-qual", s.availability * (s.performance ?? 1) * (1 - (s.quality ?? 1)), `Quality loss — ${num(s.loss.quality_units)} scrapped`],
+        ["b-perf", s.availability * (1 - perf), `Performance loss — ${num(s.loss.performance_units)} units below rated rate`],
+        ["b-qual", s.availability * perf * (1 - (s.quality ?? 1)), `Quality loss — ${num(s.loss.quality_units)} scrapped`],
       ];
       for (const [cls, width, title] of segments) {
         if (!width || width <= 0.0005) continue;
@@ -71,9 +88,20 @@ function renderOee(data) {
     score.title =
       `A ${pct(s.availability)} · P ${pct(s.performance)} · Q ${pct(s.quality)}\n` +
       `${num(s.good_qty)} good, ${num(s.scrap_qty)} scrap\n` +
-      `running ${duration(s.runtime_seconds)}, down ${duration(s.downtime_seconds)}`;
+      `running ${duration(s.runtime_seconds)}, down ${duration(s.downtime_seconds)}` +
+      (s.performance_note ? `\nPerformance: ${s.performance_note}` : "");
 
     row.append(who, bar, score);
+    // A station that beat its rating is a master-data finding, and it is the
+    // one case worth a mark on the row rather than only a tooltip: the number
+    // it replaces used to be a silent 1.0.
+    if (s.performance_note && s.performance !== null && s.performance > 1) {
+      const flag = document.createElement("div");
+      flag.className = "rated-slow";
+      flag.textContent = `P ${pct(s.performance)} — rating slower than the machine`;
+      flag.title = s.performance_note;
+      row.appendChild(flag);
+    }
     host.appendChild(row);
   }
 }

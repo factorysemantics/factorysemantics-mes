@@ -7,6 +7,7 @@ import pytest
 from fsmes.db import utcnow
 from fsmes.domain import EquipmentState, EquipmentStateName, ProductionLog
 from fsmes.services import equipment, masterdata, workorders
+from fsmes.services import oee as oee_rules
 
 
 def test_set_state_closes_previous_interval(session):
@@ -73,3 +74,49 @@ def test_oee_math(session):
     assert result["performance"] == pytest.approx(4.0 * 20 / 1800, rel=0.02)
     assert result["quality"] == pytest.approx(0.9)
     assert result["oee"] == pytest.approx(0.5 * (4.0 * 20 / 1800) * 0.9, rel=0.05)
+
+
+def _ran_and_made(session, *, minutes_running: float, units: int) -> None:
+    """MIX01 ran for this long inside the last hour and counted this many."""
+    mixer = masterdata.get_equipment(session, "MIX01")
+    now = utcnow()
+    session.add(
+        EquipmentState(
+            equipment_id=mixer.id,
+            state=EquipmentStateName.RUNNING,
+            started_at=now - timedelta(minutes=50),
+            ended_at=now - timedelta(minutes=50 - minutes_running),
+        )
+    )
+    wo = workorders.create(session, code="WO-PERF", material_code="FG-COLA", quantity=units)
+    session.add(
+        ProductionLog(work_order_id=wo.id, equipment_id=mixer.id, good_qty=units, scrap_qty=0,
+                      ts=now - timedelta(minutes=40))
+    )
+    session.flush()
+
+
+def test_a_machine_slower_than_its_rating_reports_below_one(session):
+    """MIX01 is rated at 4 s a unit: 30 minutes running rates 450 units."""
+    _ran_and_made(session, minutes_running=30, units=300)
+    result = equipment.oee(session, equipment_code="MIX01", hours=1.0)
+    assert result["performance"] == pytest.approx(4.0 * 300 / 1800, rel=0.02)
+    assert result["performance_note"] is None
+
+
+def test_a_machine_faster_than_its_rating_is_reported_above_one_with_the_reason(session):
+    """The cap this replaces made every station in the lab read exactly 1.0.
+    Above rated is a master-data finding, not a score, and it is printed."""
+    _ran_and_made(session, minutes_running=30, units=900)
+    result = equipment.oee(session, equipment_code="MIX01", hours=1.0)
+    assert result["performance"] == pytest.approx(2.0, rel=0.02)
+    assert "rating is slower than the machine" in result["performance_note"]
+
+
+def test_a_machine_with_no_rated_cycle_reports_performance_unknown(session):
+    masterdata.get_equipment(session, "MIX01").ideal_cycle_seconds = None
+    _ran_and_made(session, minutes_running=30, units=300)
+    result = equipment.oee(session, equipment_code="MIX01", hours=1.0)
+    assert result["performance"] is None
+    assert result["performance_note"] == oee_rules.NO_RATING
+    assert result["oee"] is None

@@ -288,8 +288,11 @@ function machineCard(m) {
     const row = el("div", `bar-row${index === 3 ? " total" : ""}`);
     const bar = el("div", "bar");
     const fill = el("i");
+    // Full bar, true number: performance is not capped, so a machine that beat
+    // its rating shows the real figure with `performance_note` explaining it.
     fill.style.width = `${Math.min(100, (value || 0) * 100)}%`;
     bar.append(fill);
+    if (label === "Performance" && m.oee.performance_note) row.title = m.oee.performance_note;
     row.append(el("span", null, label), bar, el("span", "num", pct(value)));
     bars.append(row);
   });

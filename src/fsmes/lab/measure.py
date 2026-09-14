@@ -311,18 +311,33 @@ def oee(truth: LineTruth, reported: dict, tag_map: dict[str, str], speed: float,
         reason: str | None = None) -> dict:
     """Availability, performance and quality per station, against the script.
 
-    Two things make this a comparison rather than a subtraction, and both are
-    stated rather than corrected for:
+    Three things make this a comparison rather than a subtraction, and all
+    three are stated rather than quietly corrected for:
 
     * **The windows differ.** The MES measures over the window it was watching,
       which starts when the agent subscribed and ends after the run was left to
       drain; the script is exactly `duration_s` long. An availability
       difference smaller than that mismatch is not evidence.
+    * **The clocks differ, and only performance notices.** Availability and
+      quality are each a ratio of two things measured the same way, so the
+      replay speed cancels out of both. Performance does not cancel: its
+      numerator is priced in the line's own seconds - the rated cycle a person
+      wrote down - and its denominator is run time the MES measured on the wall
+      clock. Replay an hour at 20x and the MES's run time is a twentieth of the
+      line's, so the figure it reports is twenty times the line's. Until
+      2026-09-14 that was invisible, because the MES capped performance at 1.0
+      and every station in every run read exactly 1.0. So the row restates the
+      MES's performance on the line's clock - the MES's own rating, its own
+      counts, its own run time multiplied by the replay speed - and compares
+      that. At speed 1 it is the reported figure unchanged.
     * **The rated cycle may differ.** Performance is units against what the
       machine could have made, and the MES prices that at its master data's
       `ideal_cycle_seconds` while the script prices it at the line's
       `rate_per_min`. Where the two disagree the two performance figures are
       not measuring the same thing, and the row says so.
+
+    Neither side is capped. A performance above 1.0 means the machine beat the
+    cycle it was rated at, which is a finding about the rating.
     """
     window = (reported.get("window") or {})
     mes_window_line_s = None
@@ -341,11 +356,31 @@ def oee(truth: LineTruth, reported: dict, tag_map: dict[str, str], speed: float,
         truth_quality = _share(station.good, station.total)
         cycle = station.ideal_cycle_seconds
         truth_performance = (
-            round(min(1.0, cycle * station.total / station.running_seconds), 4)
+            round(cycle * station.total / station.running_seconds, 4)
             if cycle and station.running_seconds else None)
         mes_cycle = None if said is None else said.get("ideal_cycle_seconds")
         like_for_like = (cycle is not None and mes_cycle is not None
                          and abs(mes_cycle - cycle) <= 0.01 * cycle)
+
+        # The MES's own numbers, restated on the line's clock. Nothing of the
+        # MES's is replaced: this is its rating, its counts and its run time,
+        # with the run time multiplied by the speed the replay played at.
+        mes_runtime_line_s = (
+            None if said is None or said.get("runtime_seconds") is None
+            else round(float(said["runtime_seconds"]) * speed, 1))
+        mes_units = (
+            None if said is None
+            else (said.get("good_qty") or 0) + (said.get("scrap_qty") or 0))
+        mes_performance_line = (
+            round(mes_cycle * mes_units / mes_runtime_line_s, 4)
+            if mes_cycle and mes_units and mes_runtime_line_s else None)
+        # Performance divides units by run time, so the two sides can only be
+        # told apart down to how differently they measured that run time. The
+        # MES drains past the end of the script, which is the same reason the
+        # window mismatch exists, priced per station instead of per line.
+        performance_resolution = (
+            round(abs(mes_runtime_line_s - station.running_seconds) / station.running_seconds, 4)
+            if mes_runtime_line_s is not None and station.running_seconds else None)
         rows.append({
             "station": name,
             "equipment": code,
@@ -369,19 +404,28 @@ def oee(truth: LineTruth, reported: dict, tag_map: dict[str, str], speed: float,
                 "good": said.get("good_qty"),
                 "scrap": said.get("scrap_qty"),
                 "ideal_cycle_seconds": mes_cycle,
+                # As reported, the MES is on the wall clock; these two put it
+                # on the line's, which is the only way the figures compare.
+                "runtime_line_seconds": mes_runtime_line_s,
+                "performance_line_seconds": mes_performance_line,
+                "performance_note": said.get("performance_note"),
             },
             "difference": None if said is None else {
                 "availability": _difference(said.get("availability"), truth_availability),
-                "performance": _difference(said.get("performance"), truth_performance),
+                # Performance on the line's clock, both sides. Comparing the
+                # reported figure here would be comparing an hour with three
+                # minutes of it.
+                "performance": _difference(mes_performance_line, truth_performance),
                 "quality": _difference(said.get("quality"), truth_quality),
             },
             "performance_like_for_like": None if said is None else like_for_like,
-            # The MES caps performance at 1.0 - a machine can out-run its rated
-            # cycle, and a bar below the axis would imply the line invented
-            # units. So a reported 1.0 means "at or above rated", and the
-            # distance from the script's figure is a floor on the difference
-            # rather than the difference.
-            "mes_performance_at_cap": None if said is None else said.get("performance") == 1.0,
+            "performance_resolution": performance_resolution,
+            # The MES said this machine beat the cycle its master data rates it
+            # at. On a replay that is usually the clocks rather than the plant,
+            # which is what `performance_line_seconds` is for.
+            "mes_performance_above_rated": (
+                None if said is None or said.get("performance") is None
+                else said["performance"] > 1.0),
             "unknown_because": _oee_reason(said, code, reason),
         })
 
@@ -433,6 +477,21 @@ def significant(row: dict, mismatch: float | None) -> bool:
     return abs(difference) > floor
 
 
+def performance_significant(row: dict) -> bool:
+    """Same question for performance, against its own band.
+
+    Performance has a per-station band rather than the line's window mismatch:
+    the two sides divide by run time, and they measured run time over different
+    stretches. A difference inside that cannot be told apart from it. A station
+    the two sides rate differently is not compared at all - the figures are not
+    measuring the same thing, and the row already says so.
+    """
+    difference = (row.get("difference") or {}).get("performance")
+    if difference is None or row.get("performance_like_for_like") is False:
+        return False
+    floor = max(WINDOW_TOLERANCE, row.get("performance_resolution") or 0.0)
+    return abs(difference) > floor
+
 # ------------------------------------------------- what disagreed, as data
 
 def differences(plant: dict) -> list[dict]:
@@ -475,22 +534,38 @@ def differences(plant: dict) -> list[dict]:
                 value = diff.get(key)
                 if value is None:
                     continue
-                floor = max(WINDOW_TOLERANCE, mismatch or 0.0) if key == "availability" \
-                    else WINDOW_TOLERANCE
+                # Each of the three is judged against the band the run can
+                # actually resolve it to: availability against the line's
+                # window mismatch, performance against the station's own run
+                # times, quality against nothing but the floor.
+                if key == "availability":
+                    floor = max(WINDOW_TOLERANCE, mismatch or 0.0)
+                elif key == "performance":
+                    floor = max(WINDOW_TOLERANCE, row.get("performance_resolution") or 0.0)
+                else:
+                    floor = WINDOW_TOLERANCE
                 if abs(value) <= floor:
                     continue
                 says = f"{value * 100:+.1f} points"
-                if key == "performance" and row.get("mes_performance_at_cap"):
-                    says += " — the MES caps performance at 100%, so this is a floor"
-                elif key == "performance" and row.get("performance_like_for_like") is False:
+                if key == "performance" and row.get("performance_like_for_like") is False:
                     says += " — but the two sides rate this machine differently"
+                elif key == "performance":
+                    says += " — both sides on the line's clock"
                 found.append({
                     "size": abs(value) * 1000, "measurement": "oee",
                     "where": f"{plant['plant']} · {row['station']}",
                     "plant": plant["plant"], "station": row["station"],
                     "what": key, "says": says,
-                    "numbers": {"truth": (row["truth"] or {}).get(key),
-                                "mes": (row["mes"] or {}).get(key), "difference": value},
+                    # For performance this is the figure that was compared —
+                    # the MES's own, restated on the line's clock — not the
+                    # wall-clock figure it reported. Quoting the other one
+                    # beside the difference would not add up.
+                    "numbers": {
+                        "truth": (row["truth"] or {}).get(key),
+                        "mes": (row["mes"] or {}).get(
+                            "performance_line_seconds" if key == "performance" else key),
+                        "difference": value,
+                    },
                 })
     down = plant.get("measurements", {}).get("downtime")
     idle = (down or {}).get("idle_stops") or {}

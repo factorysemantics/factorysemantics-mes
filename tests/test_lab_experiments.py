@@ -267,14 +267,21 @@ def _truth_for(tmp_path) -> lab_truth.LineTruth:
     return lab_truth.read(out, TINY_LINE, 120, overlap_s=10)
 
 
-def _oee_saying(truth: lab_truth.LineTruth, **per_station) -> dict:
+def _oee_saying(truth: lab_truth.LineTruth, *, speed: float = 1.0, **per_station) -> dict:
+    """What a plant that saw exactly this line would report.
+
+    `speed` is the replay speed to pretend the MES lived through: its run time
+    is wall-clock, so at 10x it sees a tenth of the seconds the line had, which
+    is the whole reason performance has to be restated before it is compared.
+    """
     stations = []
     for name, station in truth.stations.items():
         code = {"Cut": "CUT01", "Pack": "PACK01"}[name]
         stations.append({
             "code": code, "good_qty": station.good, "scrap_qty": station.scrap,
             "availability": 0.5, "performance": 0.5, "quality": 1.0, "oee": 0.25,
-            "runtime_seconds": station.running_seconds, "downtime_seconds": station.down_seconds,
+            "runtime_seconds": round(station.running_seconds / speed, 1),
+            "downtime_seconds": station.down_seconds,
             "ideal_cycle_seconds": station.ideal_cycle_seconds,
             **per_station.get(name, {}),
         })
@@ -356,6 +363,64 @@ def test_oee_performance_is_not_compared_when_the_two_sides_rate_the_machine_dif
     assert cut["performance_like_for_like"] is False
     assert pack["performance_like_for_like"] is True
     assert out["window"]["mismatch_share"] is not None
+
+
+def test_the_mes_performance_is_put_on_the_lines_clock_before_it_is_compared(tmp_path):
+    """Availability and quality are ratios of two wall-clock numbers, so the
+    replay speed cancels out of both. Performance divides line seconds (the
+    rated cycle) by wall-clock seconds (the run time), so it does not: a plant
+    that saw exactly this line at 10x reports ten times the line's performance.
+    Comparing that figure unconverted is how nine stations in two plants came
+    to read 1.0 on 2026-09-14 and nobody could see what the cap was hiding."""
+    truth = _truth_for(tmp_path)
+    said = _oee_saying(truth, speed=10.0)
+    out = measure.oee(truth, said, MAPPING, speed=10.0)
+
+    for row in out["stations"]:
+        station = truth.stations[row["station"]]
+        # The same numbers the line had, restated: rating x units / run time.
+        assert row["mes"]["runtime_line_seconds"] == pytest.approx(station.running_seconds, rel=0.01)
+        assert row["mes"]["performance_line_seconds"] == pytest.approx(row["truth"]["performance"],
+                                                                      rel=0.01)
+        assert row["difference"]["performance"] == pytest.approx(0.0, abs=0.01)
+        assert measure.performance_significant(row) is False
+
+
+def test_a_station_that_beat_its_rating_is_reported_above_one_not_capped(tmp_path):
+    """Neither side caps. The script's own figure can exceed 1.0 too, and the
+    row says which side said so rather than trimming either."""
+    truth = _truth_for(tmp_path)
+    cut = truth.stations["Cut"]
+    said = _oee_saying(truth, speed=10.0,
+                       Cut={"performance": 14.0,
+                            "performance_note": "rating is slower than the machine",
+                            # Twice the units the line made, in the same run time.
+                            "good_qty": cut.good * 2})
+    out = measure.oee(truth, said, MAPPING, speed=10.0)
+    row = next(r for r in out["stations"] if r["station"] == "Cut")
+
+    assert row["mes_performance_above_rated"] is True
+    assert row["mes"]["performance_note"] == "rating is slower than the machine"
+    assert row["mes"]["performance_line_seconds"] > 1.0
+    # And the difference is real rather than a floor: it is outside the band.
+    assert measure.performance_significant(row) is True
+
+
+def test_a_performance_difference_inside_the_stations_own_band_is_not_a_finding(tmp_path):
+    """Both sides divide by run time, and the MES drains past the end of the
+    script. A difference smaller than that cannot be told apart from it."""
+    truth = _truth_for(tmp_path)
+    cut = truth.stations["Cut"]
+    # The MES watched a tenth longer than the script ran, and made a tenth more.
+    said = _oee_saying(truth, speed=10.0,
+                       Cut={"runtime_seconds": round(cut.running_seconds * 1.1 / 10.0, 1),
+                            "good_qty": int(cut.good * 1.05)})
+    row = next(r for r in measure.oee(truth, said, MAPPING, speed=10.0)["stations"]
+               if r["station"] == "Cut")
+
+    assert row["performance_resolution"] == pytest.approx(0.1, abs=0.02)
+    assert abs(row["difference"]["performance"]) < row["performance_resolution"]
+    assert measure.performance_significant(row) is False
 
 
 def test_a_withheld_run_makes_every_measurement_unknown_with_the_same_reason(tmp_path):
