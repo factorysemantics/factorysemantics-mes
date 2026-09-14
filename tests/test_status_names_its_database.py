@@ -138,6 +138,46 @@ def test_the_cli_and_the_plant_s_own_endpoint_give_the_same_schema_answer(pack_a
     assert from_outside.at_head is from_inside["at_head"] is True
 
 
+def test_no_line_any_status_command_prints_ever_contains_the_password(tmp_path, monkeypatch):
+    """The line that says which database a command is looking at is the one
+    new thing these commands print, and it prints a URL. A URL that has just
+    had `database_password_file` merged into it holds a secret that the pack
+    went to some trouble not to write down - so every path that prints one,
+    including the one where the database refuses to answer, is checked
+    against the password itself.
+    """
+    from fsmes.config import get_settings
+    from fsmes.db import get_engine, get_sessionmaker
+
+    secret = tmp_path / "pg-password"
+    secret.write_text("correct-horse-battery-staple\n", encoding="utf-8")
+    directory = tmp_path / "withsecret"
+    directory.mkdir()
+    (directory / "plant.toml").write_text(PACK.split("[storage]")[0] + f'''[storage]
+database_url = "postgresql+psycopg://fsmes@127.0.0.1:1/plant"
+database_password_file = "{secret.as_posix()}"
+''', encoding="utf-8")
+
+    monkeypatch.delenv("MES_DATABASE_URL", raising=False)
+    monkeypatch.chdir(tmp_path)
+    for cache in (get_settings, get_engine, get_sessionmaker):
+        cache.cache_clear()
+    try:
+        printed = "\n".join([
+            runner.invoke(app, ["db-status", "--pack", str(directory)]).output,
+            runner.invoke(app, ["pack", "status", str(directory)]).output,
+            "\n".join(applier.status(directory, into=tmp_path).render()),
+        ])
+    finally:
+        for cache in (get_settings, get_engine, get_sessionmaker):
+            cache.cache_clear()
+
+    # Port 1 answers nothing, so this covers the failure path too: a driver's
+    # message quotes the connection it was handed, password included.
+    assert "correct-horse-battery-staple" not in printed
+    assert "fsmes:***@127.0.0.1:1/plant" in printed
+
+
 def test_a_pack_that_keeps_its_password_in_a_file_is_read_with_the_password_and_prints_it_to_nobody(tmp_path):
     """A pack names the file holding the password and never the password
     (decision 0022), so a command that reads the pack's database has to put
