@@ -37,6 +37,9 @@ from pathlib import Path
 from fsmes import __version__
 from fsmes.pack import check as checker
 from fsmes.pack import format as fmt
+import structlog
+
+log = structlog.get_logger("pack.apply")
 
 STAMP_SUFFIX = ".pack.json"
 
@@ -295,7 +298,12 @@ def what_this_plant_runs() -> dict:
             try:
                 drifted = fmt.fingerprint(fmt.read(directory)) != applied.fingerprint
             except fmt.PackError as exc:
-                unknown["drift"] = f"the pack this plant was given cannot be read here: {exc}"
+                # The reason stays out of the payload: this endpoint is public,
+                # and a parser's message can carry a path or a library's words.
+                # The log has it; `fsmes pack check` on this machine says why.
+                log.warning("pack unreadable", pack=pack_name, error=str(exc))
+                unknown["drift"] = ("the pack this plant was given cannot be read here; run "
+                                    "`fsmes pack check` on this machine to see why")
         else:
             unknown["drift"] = ("the pack this plant was given is not on this machine any "
                                 "more, so nothing here can tell whether it has changed")
