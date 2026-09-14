@@ -54,10 +54,17 @@ systemctl --user daemon-reload
 systemctl --user enable --now fsmes-prod-plant@<name>
 ```
 
-`promote.sh` checks out the tag, backs up every database, migrates, and on
-any failure puts the previous tag and the backups back before exiting
-non-zero. A password variable that is not set refuses the promote rather
-than creating an account with an empty password.
+`promote.sh` refuses a tag that is not on the remote it promotes from
+(`FSMES_PROMOTE_REMOTE`, default `public`), stops every plant, backs each one
+up — a SQLite file copied with its write-ahead log, a PostgreSQL database
+dumped with `pg_dump -Fc` — and only then checks out the tag, applies each
+pack and starts. It then asks each plant itself: `/health` must call itself
+by the name the fleet knows it by and `/pack` must say its schema is at head.
+Any failure after the checkout puts the previous tag, the previous venv and
+the backups that run made back. A plant whose database it cannot copy refuses
+the whole promote, and a password variable that is not set refuses it rather
+than creating an account with an empty password. `deploy/README.md` is the
+full list; `fsmes fleet plan` shows what a promote would act on.
 
 ## Verify
 

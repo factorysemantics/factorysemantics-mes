@@ -10,6 +10,38 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+### Added
+
+- **`fsmes fleet plan`** — what a deployment script needs to know about every
+  plant in a fleet: where each pack is, where each database is and what kind
+  it is, whether the plant simulates a line worth regenerating, and where to
+  ask it whether it came back. `--json` for a script, and the totals on the
+  envelope: how many packs the fleet lists, and how many of those the
+  deployment tooling could back up before migrating. Reads only, touches no
+  plant, and prints no password unless `--with-password` asks for one.
+
+### Fixed
+
+- **`deploy/promote.sh` can promote a fleet, and can undo one.** It defaulted
+  `FSMES_PLANT_REGISTRY` to `fleet.toml` and then read `plants` — the table a
+  fleet file stopped having when a plant became a pack — so at 0.2.0 it could
+  not promote a fleet at all. It now asks `fsmes fleet plan --json` instead of
+  reading the file a second time in bash. Four more things it got wrong: it
+  fetched `origin` rather than the remote the release is on (now
+  `FSMES_PROMOTE_REMOTE`, default `public`, and a tag that is not on it, or a
+  local tag of that name pointing elsewhere, is refused before anything
+  stops); its backups covered only file plants, so a PostgreSQL plant had
+  none (now `pg_dump -Fc`, with `pg_restore --clean --if-exists
+  --single-transaction` to put it back, and a plant whose database it cannot
+  copy refuses the whole promote); it backed up while the plants were still
+  running; and its health check believed a CLI in its own shell rather than
+  the plant. Every PostgreSQL call now carries `PGOPTIONS='-c
+  statement_timeout=0'`, and the health check reads `/health` and `/pack`
+  from each plant — the plant must call itself by the name the fleet knows it
+  by and say its schema is at head. `tests/test_promote_script.py` runs the
+  whole script against two fake plants with recorders in place of
+  `systemctl`, `uv`, `pg_dump` and `pg_restore`.
+
 ## [0.2.0] — 2026-09-14
 
 Thirty pull requests, #8 to #37, since 0.1.2 on 2026-09-08. All thirty were
