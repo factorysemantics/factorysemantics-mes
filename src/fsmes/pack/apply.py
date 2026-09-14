@@ -34,10 +34,11 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+import structlog
+
 from fsmes import __version__
 from fsmes.pack import check as checker
 from fsmes.pack import format as fmt
-import structlog
 
 log = structlog.get_logger("pack.apply")
 
