@@ -37,7 +37,7 @@ goes under Honesty with a migration line, so plant people can find it.
   names and carries the citation. `release.yml` keeps its pinned versions in
   this change; it runs only on a tag, so its bumps go separately, behind a
   dry run that can be exercised without one.
-  ([#43](https://github.com/factorysemantics/factorysemantics-mes/pull/43))
+  ([#44](https://github.com/factorysemantics/factorysemantics-mes/pull/44))
 
 ### Fixed
 
