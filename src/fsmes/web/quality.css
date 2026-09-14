@@ -39,3 +39,37 @@
 
 .result-pass { color: var(--running); }
 .result-fail { color: var(--down); font-weight: 600; }
+
+/* ---------- the life of a non-conformance ----------
+   Raised, reviewed, decided, closed. The history is indented under the row
+   rather than behind a click, because the question a screen like this gets
+   asked is always "who said that" and the answer should already be on it. */
+
+.nc-actions { display: flex; gap: var(--s2); flex-wrap: wrap; align-items: flex-start; }
+.nc-actions button { min-height: 34px; }
+
+.nc-history {
+  list-style: none;
+  margin: var(--s2) 0 0;
+  padding: 0 0 0 var(--s3);
+  border-left: 2px solid var(--line);
+  display: grid;
+  gap: 2px;
+}
+
+.pill.under_review  { background: rgba(163,113,247,.16); color: var(--setup); }
+.pill.dispositioned { background: rgba(74,158,255,.16);  color: var(--accent); }
+.pill.closed        { background: rgba(139,152,165,.16); color: var(--muted); }
+.pill.open          { background: rgba(248,81,73,.16);   color: var(--down); }
+
+/* The disposition form. Same chrome as the station's reason box: a panel
+   that asks for a reason before it will let you past. */
+.reason {
+  margin-top: var(--s3);
+  display: grid;
+  gap: var(--s2);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: var(--s3);
+}
+.reason .row { display: flex; gap: var(--s2); justify-content: flex-end; }

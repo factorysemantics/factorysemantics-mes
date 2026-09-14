@@ -95,6 +95,10 @@ def test_an_inspector_cannot_close_the_non_conformance_they_raised(inspector):
     code = made.json().get("non_conformance")
     assert code, "an out-of-spec check must raise one"
     assert inspector.post(f"/quality/nonconformances/{code}/close").status_code == 403
+    # The same boundary holds for every step of the disposition, not just the last.
+    assert inspector.post(f"/quality/nonconformances/{code}/review").status_code == 403
+    assert inspector.post(f"/quality/nonconformances/{code}/disposition",
+                          json={"disposition": "scrap", "reason": "no"}).status_code == 403
 
 
 def test_an_inspector_can_still_read_the_plant(inspector):

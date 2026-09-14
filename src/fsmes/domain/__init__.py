@@ -43,7 +43,14 @@ from fsmes.domain.masterdata import (
     Routing,
     RoutingOperation,
 )
-from fsmes.domain.quality import CheckResult, NcStatus, NonConformance, QualityCheck, QualitySpec
+from fsmes.domain.quality import (
+    CheckResult,
+    NcDisposition,
+    NcStatus,
+    NonConformance,
+    QualityCheck,
+    QualitySpec,
+)
 from fsmes.domain.scheduling import ScheduledSlot, SlotKind
 from fsmes.domain.serialization import (
     SerialSequence,
@@ -90,6 +97,7 @@ __all__ = [
     "MaterialType",
     "MessageDirection",
     "MessageStatus",
+    "NcDisposition",
     "NcStatus",
     "NonConformance",
     "OperationStatus",

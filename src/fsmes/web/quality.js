@@ -318,6 +318,93 @@ function fillHistoryChars() {
 
 /* ---------- non-conformances: by status, searchable, paged ---------- */
 
+/* ---------- the life of a non-conformance ----------
+   open → under review → a disposition on the material → closed. Each step
+   carries who took it and when, and the screen shows that rather than a
+   status word on its own: "closed" without a name is the row nobody can
+   answer a question about later. The server says which steps are next, so
+   the rules live in one place. */
+
+const DISPOSITIONS = {
+  use_as_is: "use as is",
+  rework: "rework",
+  scrap: "scrap",
+  return: "return to supplier",
+};
+
+const STEP_WORDS = {
+  opened: "raised",
+  under_review: "under review",
+  dispositioned: "decided",
+  closed: "closed",
+};
+
+function ncButton(nc, label, run) {
+  const button = el("button", "ghost", label);
+  button.type = "button";
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    try {
+      await run();
+      toast(`${nc.code}: ${label.toLowerCase().replace("…", "")}`);
+      await refresh();
+    } catch (err) {
+      // These are supervisor actions; an operator being refused is the
+      // system working, so say which it was.
+      toast(err.message, "bad");
+      button.disabled = false;
+    }
+  });
+  return button;
+}
+
+function drawHistory(nc) {
+  const wrap = el("ol", "nc-history");
+  for (const step of nc.history || []) {
+    const item = el("li", "muted small");
+    item.append(STEP_WORDS[step.step] || step.step);
+    // Unknown is not "system": these rows predate the MES asking who.
+    item.append(step.by ? ` by ${step.by}` : " by — (not recorded)");
+    if (step.at) item.append(` · ${stamp(step.at)}`);
+    wrap.appendChild(item);
+  }
+  return wrap;
+}
+
+function openDisposition(nc) {
+  $("#d-code").textContent = nc.code;
+  $("#d-what").textContent = nc.description || "";
+  $("#d-choice").value = "";
+  $("#d-reason").value = "";
+  $("#d-save").disabled = true;
+  $("#disposition").classList.remove("hidden");
+  $("#d-choice").focus();
+}
+
+function wireDisposition() {
+  const ready = () => {
+    $("#d-save").disabled = !$("#d-choice").value || !$("#d-reason").value.trim();
+  };
+  $("#d-choice").addEventListener("change", ready);
+  $("#d-reason").addEventListener("input", ready);
+  $("#d-cancel").addEventListener("click", () => $("#disposition").classList.add("hidden"));
+  $("#d-save").addEventListener("click", async () => {
+    const code = $("#d-code").textContent;
+    $("#d-save").disabled = true;
+    try {
+      await api(`/quality/nonconformances/${code}/disposition`, { method: "POST", body: {
+        disposition: $("#d-choice").value, reason: $("#d-reason").value.trim(),
+      }});
+      toast(`${code}: ${DISPOSITIONS[$("#d-choice").value]}`);
+      $("#disposition").classList.add("hidden");
+      await refresh();
+    } catch (err) {
+      toast(err.message, "bad");
+      $("#d-save").disabled = false;
+    }
+  });
+}
+
 function drawNcs() {
   // The server's page, filtered there: a day of a busy plant is two
   // thousand non-conformances, and a month is a list no screen should fetch.
@@ -348,30 +435,39 @@ function drawNcs() {
     }
     if (nc.closed_at) detail.append(` · closed ${stamp(nc.closed_at)}`);
     body.appendChild(detail);
+
+    if (nc.disposition) {
+      const decided = el("div", "muted small");
+      decided.append(`disposition: ${DISPOSITIONS[nc.disposition] || nc.disposition}`);
+      if (nc.disposition_reason) decided.append(` — ${nc.disposition_reason}`);
+      body.appendChild(decided);
+    }
+    body.appendChild(drawHistory(nc));
     li.appendChild(body);
 
     // Gated: showing a button that will 403 is worse than not showing
     // it. This reverses the earlier let-the-403-do-the-talking decision.
-    if (nc.status !== "open" || !window.FS || !FS.can("quality.close_nc")) {
+    const steps = nc.next_steps || [];
+    if (!steps.length || !window.FS || !FS.can("quality.close_nc")) {
       list.appendChild(li);
       continue;
     }
-    const close = el("button", "ghost", "Close");
-    close.type = "button";
-    close.addEventListener("click", async () => {
-      close.disabled = true;
-      try {
-        await api(`/quality/nonconformances/${nc.code}/close`, { method: "POST" });
-        toast(`${nc.code} closed`);
-        await refresh();
-      } catch (err) {
-        // Closing is a supervisor action; an operator being refused is the
-        // system working, so say which it was.
-        toast(err.message, "bad");
-        close.disabled = false;
-      }
-    });
-    li.appendChild(close);
+    const actions = el("div", "nc-actions");
+    if (steps.includes("review")) {
+      actions.appendChild(ncButton(nc, "Take under review", () =>
+        api(`/quality/nonconformances/${nc.code}/review`, { method: "POST" })));
+    }
+    if (steps.includes("disposition")) {
+      const decide = el("button", "ghost", "Decide…");
+      decide.type = "button";
+      decide.addEventListener("click", () => openDisposition(nc));
+      actions.appendChild(decide);
+    }
+    if (steps.includes("close")) {
+      actions.appendChild(ncButton(nc, "Close", () =>
+        api(`/quality/nonconformances/${nc.code}/close`, { method: "POST" })));
+    }
+    li.appendChild(actions);
     list.appendChild(li);
   }
   FS.pager($("#n-pager"), page, (offset) => { filters.nOffset = offset; refresh(); });
@@ -458,6 +554,7 @@ $("#n-q").addEventListener("input", () => {
   // Know who is asking before the first draw, or capability-gated buttons
   // appear one refresh late.
   await FS.whoami().catch(() => {});
+  wireDisposition();
   readUrl();
   await refresh();
   setInterval(refresh, REFRESH_MS);

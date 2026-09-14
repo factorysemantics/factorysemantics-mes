@@ -335,9 +335,40 @@ def record_check(plant: str, material: str, characteristic: str, value: float,
 
 
 @mcp.tool()
+def nonconformance(plant: str, code: str) -> dict:
+    """One non-conformance with every step it has been through: who raised it,
+    who reviewed it, what was decided about the material and why, who closed it."""
+    return {"plant": plant, **_call(plant, "GET", f"/quality/nonconformances/{code}")}
+
+
+@mcp.tool()
+def review_nonconformance(plant: str, code: str, dry_run: bool = False,
+                 on_behalf_of: str | None = None, client_ref: str | None = None) -> dict:
+    """Take a non-conformance under review - a supervisor action saying somebody
+    has picked it up. Recorded against them with the time."""
+    _identity.set((on_behalf_of.upper() if on_behalf_of else None, client_ref))
+    return _write(plant, f"/quality/nonconformances/{code}/review", {}, dry_run,
+                  f"take non-conformance {code} under review")
+
+
+@mcp.tool()
+def disposition_nonconformance(plant: str, code: str, disposition: str, reason: str,
+                 dry_run: bool = False, on_behalf_of: str | None = None,
+                 client_ref: str | None = None) -> dict:
+    """Decide what happens to the material: use_as_is, rework, scrap or return.
+    The reason is required and is what somebody reads a year later. A supervisor
+    action, audited as AGENT."""
+    _identity.set((on_behalf_of.upper() if on_behalf_of else None, client_ref))
+    return _write(plant, f"/quality/nonconformances/{code}/disposition",
+                  {"disposition": disposition, "reason": reason}, dry_run,
+                  f"disposition non-conformance {code} as {disposition}: {reason}")
+
+
+@mcp.tool()
 def close_nonconformance(plant: str, code: str, dry_run: bool = False,
                  on_behalf_of: str | None = None, client_ref: str | None = None) -> dict:
-    """Close a non-conformance - a supervisor action, audited as AGENT."""
+    """Close a non-conformance - a supervisor action, audited as AGENT. Refused
+    until the material has been dispositioned."""
     _identity.set((on_behalf_of.upper() if on_behalf_of else None, client_ref))
     return _write(plant, f"/quality/nonconformances/{code}/close", {}, dry_run,
                   f"close non-conformance {code}")
