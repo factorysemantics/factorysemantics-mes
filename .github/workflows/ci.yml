@@ -134,6 +134,28 @@ jobs:
             echo "| Suite on PostgreSQL 16.15 | ${PG_TEST_SECONDS:-—} |"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  score-bottling:
+    # The one thing the test suite cannot ask, because it starts no plant, no
+    # OPC server and no port: does the reference plant still tell the truth
+    # about a line it replayed? And, since 2026-09-14, the cheaper question
+    # underneath it - does it have a line to read at all. The bottling pack
+    # carried no master data for a day, so a scored run built a plant with no
+    # machines and died on its first read with a 404, and nothing in `test`
+    # above could see it.
+    #
+    # One cell: what this catches is a pack or a seeder that stopped building
+    # a plant, not a platform difference. About two minutes, most of it the
+    # scripted hour replayed at 60x.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,mcp,agent]"
+      - name: The reference plant scores its own scripted hour
+        run: .github/scripts/score_bottling.sh
+
   wheel-demo:
     # The check that would have caught 0.1.0. `test` above proves the source
     # works; this proves the *artifact* works — installed into a fresh venv in

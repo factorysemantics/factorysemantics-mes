@@ -94,7 +94,9 @@ goes under Honesty with a migration line, so plant people can find it.
   run builds had no machines and its first read answered 404. The line is in
   `labs/multiplant/bottling/masterdata/` now, generated from `seed_kepsim`
   itself and pinned against it by a test that seeds one database each way and
-  compares them.
+  compares them. CI scores bottling on every push, in its own job beside the
+  wheel demo: the test suite starts no plant, no OPC server and no port, and
+  a scored run is all three, so nothing in it could have caught this.
 
 ### Added
 
