@@ -54,13 +54,13 @@
         <div class="row">
           <input name="equipment" list="machine-options" placeholder="Machine" aria-label="Machine"
                  autocomplete="off" data-assist="report-equipment" required>
-          <datalist id="machine-options"></datalist>
           <select name="order" aria-label="Order" data-assist="report-order"
                   title="Which order this output books against"></select>
           <input name="good" type="number" step="1" min="0" placeholder="Good" value="1" data-assist="report-good">
           <input name="scrap" type="number" step="1" min="0" placeholder="Scrap" value="0" data-assist="report-scrap">
           <button data-assist="report-submit">Book</button>
         </div>
+        <datalist id="machine-options"></datalist>
       </form>
       <form id="form-consume" class="stack" data-assist="consume-form" data-needs-cap="production.consume">
         <h3>Issue material</h3>

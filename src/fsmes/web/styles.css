@@ -317,6 +317,9 @@ td.code { font-family: var(--mono); font-size: 13px; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
 .row > select { flex: 1 1 120px; min-width: 0; }
 .row > input { flex: 0 1 90px; min-width: 0; }
+/* A code typed against a datalist needs the room a select had: "Machine"
+   truncated to "Machir" is not a label anyone can act on. */
+.row > input[list] { flex: 1 1 120px; }
 
 .feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 320px; overflow-y: auto; }
 .feed li { display: grid; gap: 2px; font-size: 13px; padding-bottom: 8px; border-bottom: 1px solid rgba(38,48,64,.5); }
