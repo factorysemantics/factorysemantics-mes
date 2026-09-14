@@ -1,0 +1,51 @@
+# A line that is not broken and is not making anything.
+#
+# Two things a plant does every week and an MES can get badly wrong: the
+# supply of empties runs out, so the first machine has nothing to work on;
+# and the palletiser stops taking cases, so the machine feeding it has
+# nowhere to put them. Neither machine has a fault. Both are making nothing.
+#
+# A plant that books those minutes as downtime reports a breakdown that never
+# happened and an availability figure that is wrong in the direction nobody
+# checks - it looks *worse*, so it is believed. That is the whole reason this
+# plan exists: it scripts the two states and the run asks what the MES called
+# them.
+#
+#     fsmes lab run labs/experiments/starved-and-blocked.toml
+#
+# About a minute: one plant, twenty minutes of line time at 20x, plus the
+# seeding and the drain. The plant is ephemeral, on loopback, with its own
+# database and its own ports.
+
+name = "starved-and-blocked"
+note = """Nothing is broken and nothing is being made. What to look at first:
+the starved and blocked windows in the downtime section - a machine waiting
+for work is not a machine that failed."""
+
+packs = ["../multiplant/bottling"]
+
+# Twenty minutes is enough for both scripted windows and the knock-on that
+# follows them. The script this plan writes replaces the line's own, so the
+# hour's six faults are not in this run: this run is about one question.
+duration = 1200
+seed     = 42
+speed    = 20
+
+measure = ["booking", "downtime", "oee"]
+
+# LD is the first station on the line, so starving it is the empties running
+# out - and every station after it starves in turn as the buffers drain, which
+# the generator does on its own rather than being told to. Refill is blocked
+# later, which is the palletiser refusing to take any more.
+[scenario.bottling]
+events = [
+  { type = "starve", station = "LD",     start = 240, end = 420 },
+  { type = "block",  station = "Refill", start = 700, end = 850 },
+  { type = "down",   station = "Washer", start = 950, end = 1040 },
+]
+
+# See the note on this table in one-line-bad-hour.toml: this pack's line is the
+# product's own reference line and carries no master data, so the plan names
+# the script that seeds it. A pack may never name one (decision 0022).
+[init.bottling]
+script = "../multiplant/bottling/init.py"

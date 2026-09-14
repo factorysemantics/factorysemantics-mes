@@ -92,10 +92,21 @@ def script(plan: Plan, pack: fmt.Pack, into: Path) -> tuple[Path, int, int | Non
     if duration <= 0:
         raise PlanError(f"{pack.name}: its line declares no duration_s, so a run has no length.")
 
+    from fsmes.sim.generate import EVENT_TYPES
+
     stations = {s.get("name") for s in source.get("stations", [])}
     for event in source.get("events", []):
         kind = event.get("type")
         where = event.get("station")
+        if kind not in EVENT_TYPES:
+            # The generator refuses this too, but it does it by exiting the
+            # process from inside a library call, several steps later, after
+            # the run has made a directory. A plan is refused before anything
+            # is built, with the vocabulary printed.
+            raise PlanError(
+                f"{pack.name}: a scripted event has type {kind!r}, which is not something a "
+                f"line can be told to do. The vocabulary is:\n" + "\n".join(
+                    f"    {name:<14} {says}" for name, says in sorted(EVENT_TYPES.items())))
         if kind != "changeover" and where not in stations:
             raise PlanError(
                 f"{pack.name}: a scripted {kind!r} names station {where!r}, and this line has "

@@ -28,6 +28,29 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **A scenario can starve or block a station, and the run asks what the MES
+  called it.** Two new scripted events — `starve` (nothing arrives) and `block`
+  (nowhere to put it) — join the line vocabulary, which is now written down in
+  one place and **closed**: a plan naming anything else is refused before a
+  directory is made, with the list printed, instead of exiting the process from
+  inside the generator several steps later. They script the cause rather than
+  the symptom, so the rest of the line starves in turn on its own as the
+  buffers drain. Every scripted window is scored against what the MES recorded
+  *for that machine* — a neighbour that really broke in the same minutes is not
+  counted against it — and a window the MES was not watching is *unknown*,
+  never a pass. New starter experiment `labs/experiments/starved-and-blocked.toml`.
+
+### Honesty
+
+- **A scripted stop is printed in the line's own seconds.** The scorer measures
+  in wall seconds and the script is written in line seconds; the lab's downtime
+  section was printing the first under a heading that said the second, so a
+  180-second stop replayed at 20× read as "9 s scripted". Both are now given,
+  each named for the clock it belongs to. No change to any recall or
+  misclassification figure — those are ratios and were never affected.
+
+### Added
+
 - **A note left at a screen during an experiment lands in that run's report,
   beside the numbers for the screen it is about.** The on-screen design panel
   is on for every plant `fsmes lab run` starts (on the on-device model unless

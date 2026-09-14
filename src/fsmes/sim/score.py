@@ -110,6 +110,7 @@ def score_run(
     floor = resolution_sim_seconds(speed, observe_interval_s) * SAMPLES_TO_RESOLVE
     planned_checks: list[dict] = []
     fault_checks: list[dict] = []
+    idle_checks: list[dict] = []
 
     for event in truth["events"]:
         if event.start_s is None or event.end_s is None:
@@ -133,6 +134,31 @@ def score_run(
                 "window_sim_s": [event.start_s, event.end_s],
                 "scripted_seconds": round(scripted, 1),
                 "observed": _observed(timeline, start, end),
+                "misclassified_as_downtime": bool(offenders),
+                "offenders": offenders,
+            })
+
+        elif event.is_idle:
+            # Starved or blocked: this machine, and only this one. Unlike a
+            # changeover, which is the whole line stopping together, having
+            # nothing to work on is a fact about one station - so the check
+            # is scoped to its own equipment, and a neighbour that really was
+            # down in the same minutes is not counted against it.
+            offenders = []
+            for iv in _intervals_for(timeline, event.equipment):
+                if iv["state"] in DOWN_STATES:
+                    bad = _overlap_seconds(start, end, _parse(iv["start"]), _parse(iv["end"]))
+                    if bad > 0:
+                        offenders.append({"equipment": iv["equipment"],
+                                          "seconds": round(bad, 1),
+                                          "reason": iv.get("reason")})
+            idle_checks.append({
+                "event": event.type,
+                "equipment": event.equipment,
+                "station": event.station,
+                "window_sim_s": [event.start_s, event.end_s],
+                "scripted_seconds": round(scripted, 1),
+                "observed": _observed(timeline, start, end, event.equipment),
                 "misclassified_as_downtime": bool(offenders),
                 "offenders": offenders,
             })
@@ -202,6 +228,9 @@ def score_run(
     # (faults filtered out above were unobserved or unresolvable; both are
     #  "unknown", and averaging unknowns into a recall figure would invent one)
     answered_planned = [c for c in planned_checks if c["observed"]]
+    # A window the MES was not watching answers nothing, the same rule the
+    # planned stops already follow - never a zero standing in for silence.
+    answered_idle = [c for c in idle_checks if c["observed"]]
 
     # The fastest replay at which every scripted event would still be
     # resolvable - actionable guidance rather than a shrug.
@@ -244,8 +273,17 @@ def score_run(
             "faults_recorded_late": len(late_faults),
             "planned_stops_scripted": len(planned_checks),
             "planned_stops_scored": len(answered_planned),
+            # The same availability-killer from the other direction: a machine
+            # that was starved or blocked is not a machine that broke.
+            "idle_stop_misclassified": (
+                sum(1 for c in answered_idle if c["misclassified_as_downtime"])
+                if answered_idle else None
+            ),
+            "idle_stops_scripted": len(idle_checks),
+            "idle_stops_scored": len(answered_idle),
         },
         "planned_stops": planned_checks,
+        "idle_stops": idle_checks,
         "faults": fault_checks,
         "late_faults": late_faults,
         "window": timeline.get("window"),

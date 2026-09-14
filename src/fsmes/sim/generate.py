@@ -40,6 +40,27 @@ from fsmes.kernel.tags import COUNTER_TAGS, MANIFEST_NAME
 STOPPED, RUNNING, STARVED, BLOCKED, DOWN, CHANGEOVER = 0, 1, 2, 3, 4, 5
 STATE_WORDS = {0: "stopped", 1: "running", 2: "starved", 3: "blocked", 4: "down", 5: "changeover"}
 
+#: Everything a scenario may script, and what each one does to the line.
+#: Written down because an event type this module does not know used to be
+#: read, ignored and simulated as nothing: a scenario that scripts a fault
+#: nobody plays is worse than one that refuses, because the run still produces
+#: a report and the report says the plant behaved.
+EVENT_TYPES = {
+    "down": "the machine has broken: it makes nothing and reports DOWN",
+    "changeover": "the whole line is changing over: planned, and never downtime",
+    "micro_stops": "short random stops, pre-rolled from the seed so a run repeats",
+    "drift": "an analog ramps from its base to `to` across the window",
+    "scrap_burst": "the station's scrap rate is `scrap_pct` for the window",
+    "counter_reset": "the station's counters go back to zero at `at`",
+    "starve": "nothing arrives: the machine is willing and has nothing to work on",
+    "block": "nowhere to put it: the machine is willing and downstream is full",
+}
+
+#: Scripted states that are not the machine's fault and are not a breakdown.
+#: A plant that counts them as downtime reports an availability figure that is
+#: wrong in the direction nobody checks.
+IDLE_TYPES = ("starve", "block")
+
 
 # ------------------------------------------------------------------ config
 def _read_json(path: Path) -> dict:
@@ -75,9 +96,9 @@ def _validate_line(config: dict, label: str) -> dict:
     duration = int(config.get("duration_s", 3600))
     for event in config.get("events", []):
         kind = event.get("type")
-        if kind not in ("down", "drift", "scrap_burst", "changeover",
-                        "counter_reset", "micro_stops"):
-            sys.exit(f"{label}: unknown event type {kind!r}.")
+        if kind not in EVENT_TYPES:
+            sys.exit(f"{label}: unknown event type {kind!r}. A scenario scripts "
+                     f"{', '.join(sorted(EVENT_TYPES))}.")
         station = event.get("station")
         if kind != "changeover" and station not in names:
             sys.exit(f"{label}: event {kind!r} names station {station!r}, which is not in stations.")
@@ -243,6 +264,8 @@ def simulate(config: dict) -> dict[str, list[list]]:
     changeovers: list[tuple[int, int]] = []
     resets: dict[str, list[int]] = {}                 # station -> reset times
     effects: dict[str, list[dict]] = {}               # target station -> analog offsets from elsewhere
+    starved: dict[str, list[tuple[int, int]]] = {}    # station -> windows with nothing to work on
+    blocked: dict[str, list[tuple[int, int]]] = {}    # station -> windows with nowhere to put it
 
     for event in config.get("events", []):
         kind, station = event["type"], event.get("station")
@@ -260,6 +283,10 @@ def simulate(config: dict) -> dict[str, list[list]]:
             bursts.setdefault(station, []).append(event)
         elif kind == "counter_reset":
             resets.setdefault(station, []).append(int(event["at"]))
+        elif kind == "starve":
+            starved.setdefault(station, []).append((int(event["start"]), int(event["end"])))
+        elif kind == "block":
+            blocked.setdefault(station, []).append((int(event["start"]), int(event["end"])))
         elif kind == "micro_stops":
             # Pre-roll the random micro-stops so the run stays deterministic.
             every_lo, every_hi = event.get("every_s", [90, 150])
@@ -308,6 +335,19 @@ def simulate(config: dict) -> dict[str, list[list]]:
                 continue
             if any(in_win(t, a, b) for a, b in stops.get(name, [])):
                 states[i] = STOPPED
+                continue
+            # Scripted starving and blocking sit here, above the emergent
+            # ones, because they are the *cause* a scenario wanted: the
+            # supply lorry is late, or the palletiser downstream is full.
+            # Whatever they do to the machines around this one still emerges
+            # from the buffers on its own, which is the point - starve the
+            # first station and the rest of the line starves in order, the
+            # way it would on the floor.
+            if any(in_win(t, a, b) for a, b in blocked.get(name, [])):
+                states[i] = BLOCKED
+                continue
+            if any(in_win(t, a, b) for a, b in starved.get(name, [])):
+                states[i] = STARVED
                 continue
             if i < n - 1 and buffers[i] >= capacity:
                 states[i] = BLOCKED       # no space downstream
@@ -567,8 +607,14 @@ def _scenario_rows(config: dict) -> list[tuple[str, str]]:
             out.append((f"{mmss(int(event['start']))}-{mmss(int(event['end']))}",
                         "changeover (whole line)"))
         else:
-            what = {"down": "DOWN", "drift": f"analog drifts to {event.get('to')}",
-                    "scrap_burst": f"scrap burst {event.get('scrap_pct')}%"}[kind]
+            # A `.get` here would print "None" for a type somebody added and
+            # forgot; the timeline is what a person runs the exercise from,
+            # so an unknown kind stops the write instead of printing a blank.
+            what = {"down": "DOWN",
+                    "drift": f"analog drifts to {event.get('to')}",
+                    "scrap_burst": f"scrap burst {event.get('scrap_pct')}%",
+                    "starve": "STARVED — nothing arriving, nothing wrong with it",
+                    "block": "BLOCKED — nowhere to put it, nothing wrong with it"}[kind]
             for effect in event.get("effects", []):
                 what += (f"; meanwhile {effect['station']}.{effect['analog']} "
                          f"{float(effect['offset']):+g} with no alarm of its own")

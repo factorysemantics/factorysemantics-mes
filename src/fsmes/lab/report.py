@@ -236,6 +236,22 @@ def _downtime(down: dict) -> str:
         f"</tr>"
         for s in stops["events"])
     labels = down["labels"]
+    idle = down.get("idle_stops") or {}
+    def _named(event: dict) -> str:
+        return ", ".join(f"{o['equipment']} {o['seconds']}s"
+                         for o in (event.get("offenders") or [])) or "—"
+
+    idle_rows = "".join(
+        f"<tr><td>{esc(e['event'])}</td><td>{esc(e['station'] or '—')}</td>"
+        f"<td class='mono'>{esc(e['equipment'] or '—')}</td>"
+        f"<td>{num(e['scripted_line_seconds'])} s</td>"
+        f"<td>{'yes' if e['observed'] else 'no'}</td>"
+        f"<td class='{'bad' if e['misclassified_as_downtime'] else ''}'>"
+        f"{'yes' if e['misclassified_as_downtime'] else 'no'}</td>"
+        f"<td class='wide'>{esc(_named(e))}</td>"
+        f"</tr>"
+        for e in idle.get("events") or [])
+    truth_idle = idle.get("truth_line_seconds") or {}
     return f"""
 <h2 id="downtime">Downtime honesty</h2>
 <p>{esc(down['question'])} A planned stop booked as downtime destroys every availability figure the
@@ -245,6 +261,8 @@ plant reports, silently — which is why it is the first row here and not the la
        f"{breaks['scored']} of {breaks['scripted']} scripted stops could be scored")}
 {_tile("planned stops misclassified", num(stops['misclassified_as_downtime']),
        f"{stops['scored']} of {stops['scripted']} scored")}
+{_tile("starved or blocked, called down", num(idle.get('misclassified_as_downtime')),
+       f"{idle.get('scored')} of {idle.get('scripted')} scored")}
 {_tile("down, the line's clock", num(total['truth_line_seconds'], 0, " s"),
        f"the MES reports {num(total['mes_line_seconds'], 0, ' s')} in line seconds")}
 {_tile("unlabelled downtime", pct(labels['mes_unlabelled_share']),
@@ -261,6 +279,17 @@ plant reports, silently — which is why it is the first row here and not the la
 <thead><tr><th>Scripted</th><th>Observed</th><th>Counted as downtime</th><th>Which machines</th></tr></thead>
 <tbody>{stop_rows or '<tr><td colspan="4" class="empty">The script wrote no planned stops.</td></tr>'}</tbody>
 </table></div>
+<h3>Starved and blocked</h3>
+<p>{esc(idle.get('question') or '')}. The line spent
+{num(truth_idle.get('starved'), 0, ' s')} starved and {num(truth_idle.get('blocked'), 0, ' s')}
+blocked in total — most of that is the knock-on from whatever was scripted, because starving one
+station starves the next one on its own. The table is the scripted windows only.</p>
+<div class="scroll"><table>
+<thead><tr><th>Event</th><th>Station</th><th>Machine</th><th>Scripted</th><th>Observed</th>
+<th>Counted as downtime</th><th>Which machines</th></tr></thead>
+<tbody>{idle_rows or '<tr><td colspan="7" class="empty">The script starved and blocked nothing.</td></tr>'}</tbody>
+</table></div>
+
 <h3>Labels</h3>
 <p class="unknown">{esc(labels['unknown_because'])}</p>
 """
