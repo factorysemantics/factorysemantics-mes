@@ -73,6 +73,50 @@ Reads. `status` says whether the plant is owned and **why** — the same questio
 
 A plant that did not answer is **unknown**. Never healthy, never down.
 
+## The console
+
+```bash
+fsmes fleet console --port 8100        # loopback; one page, at http://127.0.0.1:8100
+```
+
+One page. Every plant in the list — the packs this machine runs, the plants this installation created, and the `[[observe]]` entries a person added — each polled on `/health` and `/pack`, one row each:
+
+| Column | Where it comes from |
+|---|---|
+| plant, label | the plant's own `/health`, not the address it was dialled at |
+| owned | `yes`, `no`, or `unknown` while the plant is silent |
+| answering | `answered` or `unknown` |
+| profile, clock | `/health` — and a defaulted zone says it was defaulted |
+| shadow | `/health` |
+| pack, drift | `/pack` — and *never applied* is not *no drift* |
+| schema | `/pack`, against this build's head |
+| modules | `/pack` — how many this plant serves, and which it does not |
+| last answered | when this console last heard from it |
+
+At the top: **"3 plants, 2 answered, 1 unknown"**, and below it how many are owned, how many are recorded here but not answering, and how many are only watched. The number in the list is never the number seen.
+
+### What the page cannot do, and how to check that yourself
+
+**There is no control on it, and no path from it to `fsmes fleet`.** Four things make that checkable by reading rather than by trusting this page:
+
+1. `src/fsmes/fleet/console.py` declares two routes, both `GET`. No `app.post`, `app.put`, `app.patch` or `app.delete` appears in it.
+2. It imports `observe` and `owned` and **never `commands`** — the verbs are not reachable from the process that serves the page.
+3. `src/fsmes/web/fleet.js` makes exactly one kind of request: a `GET` of `/fleet.json`, its own server. The page has no form, no button and no input.
+4. Everything it asks a plant is a `GET` of `/health` or `/pack`, which a plant answers without a credential — so **the console holds no credential at all**. A console is a long-running process on a port, and whatever it can do, whoever can reach that port can do; the safest credential is the one that does not exist.
+
+`tests/test_fleet_console.py` holds all four by parsing the source, so they stay true.
+
+The M8 design asks for a *read-only machine role* for the console to run as. It is not needed by this console and is deliberately not in it: every column above comes from an endpoint that needs no credential, and holding none is a stronger property than holding a read-only one. The role becomes the right thing to add the day a console shows OEE or service liveness — this one shows neither.
+
+### What it refuses to show
+
+- **A plant that did not answer is `unknown`.** Never healthy, never down. It is also not owned while it is silent, because nothing can corroborate the instance id — so a plant is never managed through a gap in which nobody can see it.
+- **Nothing is added up across plants.** No fleet OEE, no fleet availability, no single number of any kind. A fleet OEE is a lie unless every plant is the same shape, and no two are. Twelve plants are twelve rows.
+- **It holds no plant data.** The last answer is cached for display and nothing else. Orders, serials, people and events stay in the plant that made them.
+- **It starts nothing.** No scheduler, no reconciliation loop, no daemon that notices a stopped plant and brings it back.
+
+A console `--manage` flag — off by default, loopback only, each button calling the same gated function the command calls — is possible later and is deliberately not here.
+
 ## `ownership.toml`
 
 In the fleet's data directory (`[environment] data_dir` in the [fleet file](registry.md), or `labs/multiplant/.data` in a checkout).

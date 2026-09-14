@@ -56,6 +56,37 @@ def shadow() -> dict:
     }
 
 
+@router.get("/pack")
+def pack() -> dict:
+    """Which pack this plant runs, whether it has drifted, and its schema.
+
+    The console's other half. `/health` says which plant this is; this says
+    what it was *given* - the pack, when it was applied and by which product
+    version, whether the files have changed since, the schema revision
+    against head, and which modules this plant serves. Four separate facts
+    and a list, never merged into one light, because a person needs them
+    apart.
+
+    Public, like `/health` and `/shadow`, and for the same reason. A fleet
+    console is a long-running process on a port: whatever credential it
+    holds, whoever reaches that port holds too. Everything here is a
+    statement about how this deployment is configured - no order, no serial,
+    no person, no number a plant produced - so the console can hold no
+    credential at all, which is a stronger property than holding a read-only
+    one. The read-only machine role of the M8 design is still the right
+    thing to add the day a console shows OEE or service liveness; this one
+    shows neither.
+
+    Anything this plant cannot know is in `unknown` with the reason, rather
+    than defaulted: `drifted` is `null` when no pack has been applied or
+    when the pack is not on this machine any more, and null is not "no
+    drift".
+    """
+    from fsmes.pack import apply as applied
+
+    return applied.what_this_plant_runs()
+
+
 @router.get("/metrics", response_class=PlainTextResponse)
 def metrics(db: DbDep) -> str:
     # Every series carries the plant, because a fleet scrapes several into

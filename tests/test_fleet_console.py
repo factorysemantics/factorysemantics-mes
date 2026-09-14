@@ -1,0 +1,285 @@
+"""The console observes, and closes M8's *done when*.
+
+Two things are proved here.
+
+**The milestone.** Three plants in one fleet, two of them answering from two
+packs with **different modules enabled**, the third stopped - and the page
+saying *"3 plants, 2 answered, 1 unknown"*, with the stopped one shown as
+unknown rather than as down, and with the two answering ones showing the
+modules each actually serves. The two answering plants are the real
+application, built from the real packs, answering the real `/health` and
+`/pack`; only the transport is replaced, because starting a plant on a
+development machine is its operator's business and not a test's.
+
+**That it cannot act.** By reading the source: the console's module imports
+no verb, declares no route that is not a GET, and its script sends no
+request but one GET to its own server. That is the property decision 0023
+says survives intact for the page, and these are the tests that hold it.
+
+Nothing here starts a plant, a broker, an OPC server or a port.
+"""
+
+import ast
+import os
+import re
+import shutil
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+
+from fsmes import plant as plants
+from fsmes.fleet import commands, console, observe
+from fsmes.fleet import owned as ownership
+
+ROOT = Path(__file__).resolve().parents[1]
+LABS = ROOT / "labs" / "multiplant"
+SOURCE = ROOT / "src" / "fsmes" / "fleet" / "console.py"
+WEB = ROOT / "src" / "fsmes" / "web"
+
+
+# ------------------------------------------------------- plants that answer
+
+
+def as_that_plant(pack_dir: Path, session, data_dir: Path) -> dict:
+    """What the real application answers when it is that plant.
+
+    Settings are process-wide and cached, so two plants cannot be alive in
+    one process at once. Each question therefore builds the app from the
+    pack it is about, asks it, and puts the caches back - which is slower
+    than one client and is the only way two plants can both be answered
+    truthfully from one interpreter.
+    """
+    from fsmes.api.app import create_app
+    from fsmes.api.deps import get_db
+    from fsmes.config import get_settings
+    from fsmes.pack import format as fmt
+
+    before = dict(os.environ)
+    values = dict(fmt.settings(fmt.read(pack_dir)))
+    values.pop("MES_DATABASE_URL", None)
+    os.environ.update(values)
+    os.environ["FSMES_DATA_DIR"] = str(data_dir)
+    get_settings.cache_clear()
+    try:
+        app = create_app()
+
+        def _same_session():
+            yield session
+            session.flush()
+
+        app.dependency_overrides[get_db] = _same_session
+        with TestClient(app) as client:
+            return {"/health": client.get("/health").json(),
+                    "/pack": client.get("/pack").json()}
+    finally:
+        os.environ.clear()
+        os.environ.update(before)
+        get_settings.cache_clear()
+
+
+@pytest.fixture()
+def three_plants(tmp_path, monkeypatch, session):
+    """A fleet of three: two that answer, one that is not running.
+
+    `bottling` serves every module. `finewire` - the pack written to
+    disagree with the format - serves every module except `serialization`
+    and `coa`. `machining` is created and never started, which is the
+    commonest state of a lab fleet and the one a console must not render as
+    healthy.
+
+    The one change made to a pack here: `finewire`'s `[storage]` table names
+    a PostgreSQL this machine does not have, and is dropped so the suite's
+    own database can stand in. What is being proved is which modules a plant
+    *serves*, not where it stores rows.
+    """
+    from fsmes.config import get_settings
+    from fsmes.db import get_engine, get_sessionmaker
+
+    before = dict(os.environ)
+    monkeypatch.delenv(plants.REGISTRY_ENV, raising=False)
+    plants.environment.cache_clear()
+    monkeypatch.setenv("MES_DATABASE_URL", f"sqlite:///{(tmp_path / 'fleet.db').as_posix()}")
+    monkeypatch.setenv("MES_PLANT_TIMEZONE", "UTC")
+    monkeypatch.setenv("FSMES_FINEWIRE_OPERATOR_PASSWORD", "a-password-for-this-test")
+    monkeypatch.setattr(observe, "health", lambda *a, **k: observe.Answer(
+        "http://fake", False, why="did not answer (nothing listening)"))
+
+    packs = {}
+    for name in ("bottling", "finewire", "machining"):
+        directory = tmp_path / name
+        shutil.copytree(LABS / name, directory)
+        packs[name] = directory
+    text = (packs["finewire"] / "plant.toml").read_text(encoding="utf-8")
+    text = re.sub(r"\n\[storage\][^\[]*", "\n", text, count=1)
+    (packs["finewire"] / "plant.toml").write_text(text, encoding="utf-8")
+
+    for name in ("bottling", "finewire", "machining"):
+        commands.create(packs[name], root=tmp_path, echo=lambda _: None)
+
+    yield tmp_path, packs, commands.data_dir(tmp_path)
+
+    os.environ.clear()
+    os.environ.update(before)
+    plants.environment.cache_clear()
+    for cache in (get_settings, get_engine, get_sessionmaker):
+        cache.cache_clear()
+
+
+@pytest.fixture()
+def watching(three_plants, session):
+    """A console over that fleet, with two of the three plants answering."""
+    root, packs, data_dir = three_plants
+    record = ownership.load(data_dir)
+    answering = {}
+    for name in ("bottling", "finewire"):
+        entry = record.entry(name)
+        answering[entry.base] = as_that_plant(packs[name], session, data_dir)
+
+    def health(base, **_kwargs) -> observe.Answer:
+        if base not in answering:
+            return observe.Answer(base, False, why="did not answer (nothing listening)")
+        return observe.Answer(base, True, body=answering[base]["/health"], status=200)
+
+    def pack(base, **_kwargs) -> observe.Answer:
+        if base not in answering:
+            return observe.Answer(base, False, why="did not answer (nothing listening)")
+        return observe.Answer(base, True, body=answering[base]["/pack"], status=200)
+
+    return console.Console(root, health=health, pack=pack)
+
+
+# ---------------------------------------------------------- the *done when*
+
+
+def test_three_plants_with_one_stopped_read_as_two_answered_and_one_unknown(watching):
+    fleet = watching.look()
+    assert fleet["says"] == "3 plants, 2 answered, 1 unknown"
+    assert fleet["totals"] == {"plants": 3, "answered": 2, "unknown": 1,
+                               "owned": 2, "claimed_but_silent": 1, "observed": 0}
+
+    silent = next(p for p in fleet["plants"] if p["name"] == "machining")
+    assert silent["state"] == "unknown"
+    assert silent["answered"] is False
+    assert "down" not in str(fleet).lower().replace("shutdown", "")
+
+
+def test_the_console_shows_two_packs_running_different_modules_from_one_codebase(watching):
+    """M8's *done when*, on the page: the milestone asks for two packs with
+    different modules enabled, and for the console to show both."""
+    fleet = {p["name"]: p for p in watching.look()["plants"]}
+
+    assert fleet["bottling"]["modules_off"] == []
+    assert set(fleet["finewire"]["modules_off"]) == {"serialization", "coa"}
+    assert fleet["bottling"]["modules_total"] == fleet["finewire"]["modules_total"]
+    assert len(fleet["finewire"]["modules_on"]) == len(fleet["bottling"]["modules_on"]) - 2
+
+
+def test_each_answering_plant_says_who_it_is_rather_than_where_it_was_dialled(watching):
+    fleet = {p["name"]: p for p in watching.look()["plants"]}
+    assert fleet["finewire"]["profile"] == "plant"
+    assert fleet["finewire"]["timezone"] == "Europe/Berlin"
+    assert fleet["bottling"]["profile"] == "laptop"
+
+
+def test_a_plant_that_did_not_answer_is_never_reported_as_owned(watching):
+    """Nothing corroborates an instance id a plant is not there to give, and
+    ownership is never carried forward on faith."""
+    fleet = {p["name"]: p for p in watching.look()["plants"]}
+    assert fleet["machining"]["owned"] == "unknown"
+    assert "did not answer" in fleet["machining"]["ownership"]
+    assert fleet["bottling"]["owned"] == "yes"
+
+
+def test_a_plant_this_installation_never_created_is_shown_as_observed(three_plants, session):
+    root, _packs, data_dir = three_plants
+    record = ownership.load(data_dir)
+    ownership.save(ownership.Record(
+        where=record.where, owned=record.owned,
+        observed=(ownership.Observed(name="hall2", url="http://10.20.30.41:8050",
+                                     about="somebody else's plant"),)))
+    watcher = console.Console(root, health=lambda base, **k: observe.Answer(
+        base, False, why="did not answer"), pack=lambda base, **k: observe.Answer(base, False))
+    fleet = {p["name"]: p for p in watcher.look()["plants"]}
+    assert fleet["hall2"]["owned"] == "no"
+    assert "did not create it" in fleet["hall2"]["ownership"]
+    assert watcher.look()["totals"]["observed"] == 1
+
+
+def test_the_page_and_its_json_are_the_two_routes_the_console_has(watching, tmp_path):
+    app = console.create_app(tmp_path, console=watching)
+    methods = sorted({method for path, ops in app.openapi()["paths"].items()
+                      for method in ops})
+    assert methods == ["get"], f"the console declares a route that is not a read: {methods}"
+    with TestClient(app) as client:
+        assert client.get("/").status_code == 200
+        body = client.get("/fleet.json").json()
+        assert body["says"] == "3 plants, 2 answered, 1 unknown"
+        assert client.post("/fleet.json").status_code == 405
+
+
+def test_the_plant_says_unknown_rather_than_no_drift_when_it_was_never_applied(session, tmp_path):
+    """`drifted` is tri-state: None means never applied, which a console that
+    rendered it as green would be turning into a lie."""
+    from fsmes.config import get_settings
+
+    before = dict(os.environ)
+    os.environ["FSMES_DATA_DIR"] = str(tmp_path / "nothing-here")
+    os.environ["MES_PLANT_NAME"] = "unapplied"
+    get_settings.cache_clear()
+    try:
+        from fsmes.pack import apply as applier
+
+        said = applier.what_this_plant_runs()
+    finally:
+        os.environ.clear()
+        os.environ.update(before)
+        get_settings.cache_clear()
+    assert said["drifted"] is None
+    assert said["pack"] is None
+    assert "no pack has been applied" in said["unknown"]["pack"]
+
+
+# --------------------------------------------- it cannot act, by inspection
+
+
+def test_the_console_never_imports_a_verb():
+    """The strongest form of "no path from the page to the fleet tool": the
+    module that serves the page cannot reach the module that acts."""
+    tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                imported.add(f"{node.module}.{alias.name}")
+        elif isinstance(node, ast.Import):
+            imported.update(alias.name for alias in node.names)
+    offenders = sorted(name for name in imported if "commands" in name)
+    assert not offenders, (
+        f"the console imports {offenders}. The verbs live in fsmes fleet, at a terminal; "
+        "a page that can reach them is a page whose blast radius is a network.")
+
+
+def test_the_console_declares_no_route_that_writes():
+    source = SOURCE.read_text(encoding="utf-8")
+    for verb in ("post", "put", "patch", "delete"):
+        assert f"app.{verb}(" not in source, f"the console declares an app.{verb} route"
+
+
+def test_the_consoles_script_sends_one_kind_of_request_and_it_is_a_get():
+    script = (WEB / "fleet.js").read_text(encoding="utf-8")
+    calls = re.findall(r"fetch\(([^)]*)\)", script, re.S)
+    assert calls, "the script fetches nothing; this test has stopped working"
+    for call in calls:
+        assert '"/fleet.json"' in call, f"the page calls something other than its own server: {call}"
+        assert "GET" in call, f"a fetch in the page does not say it is a GET: {call}"
+    for verb in ('"POST"', '"PUT"', '"PATCH"', '"DELETE"'):
+        assert verb not in script
+
+
+def test_the_page_offers_no_control():
+    html = (WEB / "fleet.html").read_text(encoding="utf-8")
+    for control in ("<form", "<button", "<input"):
+        assert control not in html, (
+            f"the console page has a {control}. The first version of the console has no "
+            "write path at all; the verbs it would need are the command's.")

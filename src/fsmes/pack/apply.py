@@ -239,6 +239,94 @@ class Status:
         return lines
 
 
+def told_data_dir() -> Path | None:
+    """The plant's own data directory, when something told this process where
+    it is - and `None` when nothing did.
+
+    Deliberately not the guess `data_dir()` makes. A running plant answering
+    `/pack` is being asked what it was given, and the honest answer for a
+    plant nobody told is *unknown*: a guess that walked up from the working
+    directory would answer for a different plant's record, or create a
+    directory on a read.
+    """
+    named = os.environ.get(DATA_DIR_ENV)
+    return Path(named).expanduser() if named else None
+
+
+def what_this_plant_runs() -> dict:
+    """What a plant can say about its own pack, from inside the plant.
+
+    `fsmes pack status` reads a pack directory and a record beside it. This
+    is the same four facts asked of a *running* plant by something outside
+    it, which is what a fleet console needs - and every one of them is
+    reported as unknown rather than guessed when this plant cannot know it.
+
+    Four separate answers, never merged into one light: which pack, when it
+    was applied and by which product version, whether the files have drifted
+    since, and what schema revision the database is at. Plus the modules
+    this plant serves, because "the same codebase with two modules off" is
+    only visible from outside if a plant will say which.
+    """
+    from fsmes import identity
+    from fsmes.config import get_settings
+    from fsmes.schema import current_revision, head_revision
+
+    settings = get_settings()
+    name = identity.plant_name(settings)
+    unknown: dict[str, str] = {}
+
+    where = told_data_dir()
+    applied = None
+    if where is None:
+        unknown["pack"] = ("this plant was not told where its data directory is, so it "
+                           "cannot say which pack it was given")
+    else:
+        applied = Applied.read(stamp_path(name, where))
+        if applied is None:
+            unknown["pack"] = ("no pack has been applied to this plant, as far as its "
+                               "data directory can see")
+
+    drifted = None
+    pack_name = None
+    if applied is not None:
+        directory = Path(applied.pack)
+        pack_name = directory.name
+        if (directory / fmt.PLANT_FILE).is_file():
+            try:
+                drifted = fmt.fingerprint(fmt.read(directory)) != applied.fingerprint
+            except fmt.PackError as exc:
+                unknown["drift"] = f"the pack this plant was given cannot be read here: {exc}"
+        else:
+            unknown["drift"] = ("the pack this plant was given is not on this machine any "
+                                "more, so nothing here can tell whether it has changed")
+
+    try:
+        revision, head = current_revision(), head_revision()
+    except Exception:
+        revision = head = None
+        unknown["schema"] = "this plant's database did not answer"
+
+    return {
+        "plant": name,
+        "pack": pack_name,
+        "applied_at": applied.applied_at if applied else None,
+        "product_version": applied.product_version if applied else None,
+        "format": applied.format if applied else None,
+        "files": applied.files if applied else None,
+        # Tri-state on purpose. None is *never applied*, or a pack this
+        # machine cannot read - neither of which is "no drift".
+        "drifted": drifted,
+        "schema": {"revision": revision, "head": head,
+                   "at_head": None if revision is None else revision == head},
+        "modules": {
+            "on": [m.name for m in settings.enabled_modules()],
+            "off": [m.name for m in settings.disabled_modules()],
+            "total": len(settings.enabled_modules()) + len(settings.disabled_modules()),
+        },
+        "unknown": unknown,
+    }
+
+
 def status(directory: Path, *, into: Path | None = None, ask_database: bool = True) -> Status:
     """What this plant runs, and whether it still matches its pack."""
     pack = fmt.read(directory)

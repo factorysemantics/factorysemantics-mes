@@ -37,6 +37,28 @@ goes under Honesty with a migration line, so plant people can find it.
   something. Nothing starts a plant on its own — there is no reconciler.
   `/health` now carries `instance_id`, which is `null` for every plant no
   fleet tool created — null means *not owned*, never *probably fine*.
+- **The fleet console** — M8 piece 4's other half, and what closes the
+  milestone. `fsmes fleet console` serves one page that shows every plant in
+  the list — the packs this machine runs, the plants this installation
+  created, and the plants a person added to watch — each polled on `/health`
+  and `/pack`: name, whether it is owned, whether it answered, profile,
+  clock, shadow mode, which pack and whether it has drifted, schema revision
+  against head, which modules it serves, and when it last answered. At the
+  top, the total: *"3 plants, 2 answered, 1 unknown"*.
+  **A plant that did not answer is `unknown`** — never healthy, never down —
+  and it is not owned while it is silent, because nothing can corroborate
+  the instance id. Nothing is aggregated across plants: a fleet OEE is a lie
+  unless every plant is the same shape.
+  **The page has no write path.** It declares two routes, both GET; it
+  imports no fleet verb, so the command is not reachable from the process
+  serving the page; its script makes one GET to its own server; and it holds
+  no credential, because everything it asks a plant is public. Four tests
+  parse the source to keep each of those true.
+  New **`GET /pack`** on every plant: which pack it was given, when and by
+  which product version, whether the files have drifted since, the schema
+  revision against head, and the modules this plant serves — four separate
+  facts, never merged into one light, with `drifted: null` for *never
+  applied* and every unknown carrying its reason.
 - **A plant is a pack** — M8 piece 3 of
   [the design](docs/design/m8-packs-and-fleet.md), building
   [decision 0022](docs/decisions/0022-what-a-plant-pack-may-contain.md). One

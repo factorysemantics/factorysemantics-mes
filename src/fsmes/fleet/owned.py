@@ -331,6 +331,37 @@ def here() -> tuple[str, str]:
     return socket.gethostname(), getpass.getuser()
 
 
+def agrees(entry: Entry, said: dict | None) -> tuple[bool, str]:
+    """Condition 2, as a pure function: does what this plant said corroborate
+    the entry that claims it?
+
+    One definition, called by the gate and by the console, so the command
+    and the page can never disagree about which plants are owned. `said` is
+    what `/health` returned; `None` means the plant did not answer, which is
+    neither corroboration nor contradiction.
+    """
+    if said is None:
+        return False, (f"{entry.name} did not answer, and a plant that is not saying "
+                       "anything cannot corroborate that this is the plant this "
+                       "installation created. Unknown is not owned.")
+    answered_as = said.get("plant") or "a plant that will not say its name"
+    if answered_as != entry.name:
+        return False, (f"{entry.base} answers as {answered_as!r}, not as {entry.name}. "
+                       "Something else is on that port, and this installation did not "
+                       "create it.")
+    heard = said.get("instance_id")
+    if not heard:
+        return False, (f"{entry.name} answers with no instance id, so nothing corroborates "
+                       "that this is the plant this installation created. That is how a "
+                       "plant gives ownership back; it is observed now, not owned.")
+    if heard != entry.instance_id:
+        return False, (f"{entry.name} answers with a different instance id from the one "
+                       "this installation recorded. This is not the plant that entry was "
+                       "written for, and no verb will touch it.")
+    return True, (f"created here, and {entry.name} answers with the instance id this "
+                  "installation gave it")
+
+
 def gate(verb: str, name: str, *, data_dir: Path, ask=None) -> Ownership:
     """Refuse unless this installation owns this plant. Called first, always.
 
@@ -388,25 +419,11 @@ def gate(verb: str, name: str, *, data_dir: Path, ask=None) -> Ownership:
     answer = ask(entry.base)
     if answer.answered:
         said = answer.body or {}
-        answered_as = said.get("plant") or "a plant that will not say its name"
-        if answered_as != name:
-            raise NotOwned(
-                f"{entry.base} answers as {answered_as!r}, not as {name}. Something else "
-                "is on that port, and this installation did not create it.")
-        heard = said.get("instance_id")
-        if not heard:
-            raise NotOwned(
-                f"{name} answers with no instance id, so nothing corroborates that this is "
-                "the plant this installation created. That is how a plant gives ownership "
-                "back; it is observed now, not owned.")
-        if heard != entry.instance_id:
-            raise NotOwned(
-                f"{name} answers with a different instance id from the one "
-                f"{record.where} recorded. This is not the plant that entry was written "
-                "for, and no verb will touch it.")
+        agreed, why = agrees(entry, said)
+        if not agreed:
+            raise NotOwned(why)
         return Ownership(name=name, owned=True, entry=entry, answering=True, said=said,
-                         reason=f"created here, and {name} answers with the instance id "
-                                "this installation gave it")
+                         reason=why)
 
     if entry.control == REMOTE:
         raise NotOwned(

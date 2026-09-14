@@ -30,6 +30,7 @@ EXCLUDED = {
     "GET /design/conversations/{conversation_id}": "dev tool; conversations are read by /design-triage",
     # system plumbing
     "GET /metrics": "for Prometheus, not a screen",
+    "GET /pack": "for the fleet console, which is a page of its own and not a plant's screen",
     "GET /audit": "the Ops screen reads the richer /ops/activity instead",
     # kpis router: superseded by /dashboard/summary and /analysis; candidate for removal
     "GET /kpis/oee/{equipment_code}": "the `fsmes demo` walkthrough reads it; screens use /equipment/{code}/oee",
