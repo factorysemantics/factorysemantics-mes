@@ -23,6 +23,13 @@ The shape, in full:
     [scenario.bottling]
     events = [ { type = "down", station = "LD", start = 600, end = 612 } ]
 
+    # The on-screen design chat, on for every lab plant so a note can be left
+    # while the line is stopped. The local model is enough to take a note, so
+    # Claude stays off unless a plan says otherwise.
+    [feedback]
+    chat   = true
+    claude = false
+
     # A plant whose pack carries no master data needs something to seed it.
     # A pack may never name a script (decision 0022); a lab plan is not a
     # pack, and `fsmes.sim.runner` already takes one from a lab tool.
@@ -83,6 +90,8 @@ class Plan:
     scenario: dict[str, list[dict]] = field(default_factory=dict)
     init: dict[str, Path] = field(default_factory=dict)
     note: str = ""
+    feedback_chat: bool = True
+    feedback_claude: bool = False
 
     @property
     def directory(self) -> Path:
@@ -170,6 +179,17 @@ def read_plan(path: Path) -> Plan:
             raise PlanError(f"{path}: `[scenario.{plant}] events` is a list of tables, one per event.")
         scenario[plant] = [dict(e) for e in events]
 
+    feedback = _table(raw, "feedback", str(path))
+    for key in feedback:
+        if key not in ("chat", "claude"):
+            raise PlanError(
+                f"{path}: `[feedback] {key}` is not a setting. A plan chooses `chat` "
+                "(the on-screen design panel) and `claude` (whether design questions "
+                "leave this machine).")
+    for key in ("chat", "claude"):
+        if key in feedback and not isinstance(feedback[key], bool):
+            raise PlanError(f"{path}: `[feedback] {key}` is true or false.")
+
     init_raw = _table(raw, "init", str(path))
     init: dict[str, Path] = {}
     for plant, body in init_raw.items():
@@ -194,6 +214,8 @@ def read_plan(path: Path) -> Plan:
         scenario=scenario,
         init=init,
         note=str(raw.get("note") or ""),
+        feedback_chat=bool(feedback.get("chat", True)),
+        feedback_claude=bool(feedback.get("claude", False)),
     )
 
 

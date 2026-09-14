@@ -48,6 +48,14 @@ events = [ { type = "down", station = "Mill", start = 600, end = 720 } ]
 # may never name a script (decision 0022); a plan is not a pack.
 [init.bottling]
 script = "../multiplant/bottling/init.py"
+
+# The on-screen design panel, on for every lab plant so a note can be left
+# while you are looking at the thing you want to complain about. Claude is off
+# unless a plan asks for it: taking a note is work the on-device model does for
+# nothing, and a run left going while you make coffee should not bill an API.
+[feedback]
+chat   = true
+claude = false
 ```
 
 `duration`, `seed` and `speed` are the whole of the determinism story: **the
@@ -71,6 +79,7 @@ One directory per run, under `lab-results/` unless `--results` says otherwise:
 | `scores.json` | every measurement, with the truth beside each number |
 | `report.html` | one self-contained page — no network, no build step |
 | `notes.md` | what a person saw that no number caught |
+| `feedback/conversations.jsonl` | the run's copy of what was said at its screens |
 
 **The directory is the unit.** Hand somebody that folder and they have the
 plan, the script, the data, the answers, the scores and the page, with nothing
@@ -163,6 +172,99 @@ reading. The numbers are not worth trending.
 The fix is a slower replay. The report prints the speed the replay actually
 sustained, so the next run can ask for one it can keep.
 
+## What you said while watching it
+
+Reviewing a product means noticing something on a screen. A note typed into a
+terminal an hour later is a memory; a note typed into the screen while the line
+is stopped is evidence. So the design panel is **on for every lab plant**, and
+the run ties what you say to itself.
+
+Four tags make a remark into evidence:
+
+| Tag | Where it comes from |
+|---|---|
+| `lab_run` | the plant's own environment, set by `fsmes lab run` |
+| `lab_plant` | the same |
+| `screen` | the panel, which knows which screen you are on |
+| the moment | the run, which knows its own `t0` and the script it played |
+
+The run id is deliberately **not** taken from the browser. A run id that
+arrived in a request body would let any page claim any run, and the whole value
+of a tagged note is that the tag is not a guess. A body that disagrees with the
+plant's environment is filed against no run rather than against the one it
+claims.
+
+The moment is resolved by the run, for the same reason: a plant does not know
+when the replay's first tick was — that instant is decided by the runner, which
+waits for the log line rather than guessing it. So every note carries the
+**line second** it was made at and the scripted events live at that second:
+
+> — SCOTT · `2026-09-14-one-line-bad-hour` · bottling · line second 3,100,
+> during down at LD (3,000 to 3,180 s)
+
+A note made before the first tick says so rather than being rounded to second
+zero, and one made after the script ran out says that: a remark about a plant
+that had stopped is a different remark.
+
+### From the terminal
+
+For a run watched without a browser:
+
+```console
+$ fsmes lab note 2026-09-14-one-line-bad-hour \
+      "the orders list does not say how many there are" \
+      --screen /dashboard/orders --plant bottling
+```
+
+It goes into the same store with the same tags. A note made while the run is
+going is picked up when the run exports its feedback at the end; one made
+afterwards is picked up by `fsmes lab open`, which re-exports before it
+re-renders.
+
+### Where it lands
+
+At the end of the run the conversations tagged to it are **copied** into
+`feedback/conversations.jsonl` and rendered in `report.html` beside the section
+for the screen they name — a note about the work orders screen sits under the
+booking table, not in an appendix. Notes about a screen with no measurement
+behind it yet are still printed, in the plant's own block.
+
+The store itself (`~/.local/share/fsmes/design.db`, or wherever
+`MES_DESIGN_STORE` points) is never moved, emptied or written into a plant's
+database. It is one person's notes going back weeks; a run takes a copy of the
+part that belongs to it.
+
+Everything is printed **verbatim**, with who said it and when. Nothing here
+summarises or scores: a remark that turns out to be wrong is still what
+somebody said while they were looking at the screen.
+
+## Reading several runs together
+
+One run is an instrument reading. A finding is a thing that happened twice.
+
+```console
+$ fsmes lab review --out findings.md
+$ fsmes lab review 2026-09-13-one-line-bad-hour 2026-09-14-one-line-bad-hour --out findings.md
+```
+
+It clusters three things across the runs you name — every note left at a
+screen, every row where the MES and the script differed, and every question a
+run could not answer — by the screen and the measurement they belong to. Each
+cluster names its runs, its plants, its stations and its numbers, and quotes
+the notes verbatim.
+
+Three rules:
+
+* **It never says which side is right.** A run states the truth the generator
+  obeyed and the answer the MES gave; putting several of those beside each
+  other adds no authority to either. A test forbids the words.
+* **Every line is cited.** A roll-up nobody can trace back is a rumour.
+* **It works with no model at all.** Clustering is by screen and measurement,
+  which are facts in the files, so CI runs it and so can a machine with no
+  Ollama. When the local model is there it is asked for one thing: a short
+  heading for a cluster somebody has to skim. `--no-model` is the plain
+  version; a heading that comes back as a verdict is dropped for the plain one.
+
 ## Notes, and handing a run to somebody else
 
 `notes.md` is written from a template with three headings — *what I saw on the
@@ -186,4 +288,8 @@ To hand a run over, copy the directory. That is the whole procedure.
 | `labs/experiments/two-plants-two-zones.toml` | Kansas City and Northgate, different products, clocks, modules and words, one after another at 30× |
 
 Both run in CI on every pull request, which is what stops the instrument
-rotting between the times anybody uses it.
+rotting between the times anybody uses it. CI also proves the feedback loop
+with no model anywhere: it leaves a note against the first run, checks that the
+note appears in that run's report beside the booking table it is about, and
+rolls both runs up into a `findings.md` that cites each of them and quotes the
+note.

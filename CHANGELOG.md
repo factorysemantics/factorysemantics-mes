@@ -12,6 +12,34 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **A note left at a screen during an experiment lands in that run's report,
+  beside the numbers for the screen it is about.** The on-screen design panel
+  is on for every plant `fsmes lab run` starts (on the on-device model unless
+  the plan's `[feedback] claude` says otherwise), and every conversation is
+  tagged with the run, the plant and the screen. The run id comes from the
+  plant's own environment rather than from the browser — a body claiming a
+  different run is filed against no run at all — and the **moment** is
+  resolved by the run, which is the only thing that knows when the replay's
+  first tick was: each note carries the line second it was made at and the
+  scripted events live at that second, or says it was made before the first
+  tick or after the script ran out rather than being rounded to either end.
+  At the end of the run the conversations are **copied** into
+  `feedback/conversations.jsonl` — the design store is never moved, emptied or
+  written into a plant's database — and rendered verbatim in `report.html`
+  under the section for their screen. `fsmes lab note <run> "…" --screen
+  --plant` writes one from the terminal for a run watched without a browser,
+  and `MES_DESIGN_STORE` points the store somewhere else for a scripted run.
+
+- **`fsmes lab review [runs…] --out findings.md`** — several runs read
+  together. It clusters every note left at a screen, every row where the MES
+  and the script differed and every question a run could not answer, by the
+  screen and the measurement they belong to; each cluster names its runs,
+  plants, stations and numbers and quotes the notes verbatim. It never says
+  which side is right — a test forbids the words — and it works with no model
+  at all, so CI runs it: the clustering is by screen and measurement, which
+  are facts in the files, and the local model is asked for one thing only, a
+  short heading, which is dropped if it comes back as a verdict.
+
 - **`fsmes lab` — an experiment is a plan, a command and a directory somebody
   else can read.** `fsmes lab run <experiment.toml>` builds each plant in the
   plan from its pack, generates the line data for this run from the line
