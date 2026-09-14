@@ -2049,12 +2049,12 @@ def sweep(
         # copy makes the two agree by construction - the same rule, and now
         # the same code, as `fsmes lab`.
         try:
-            copy, _ = repoint.pointed_at(
+            pack_copy, _ = repoint.pointed_at(
                 pack_format.read(Path(cfg["pack"])), workdir / f"v{index}-pack", data)
         except repoint.RepointError as exc:
             typer.echo(str(exc))
             raise typer.Exit(2) from exc
-        point = fleet.compile_pack(pack_format.read(copy))
+        point = fleet.compile_pack(pack_format.read(pack_copy))
         card = scored_run(name, point, where, speed, line_json=line, echo=typer.echo)
         card["variant"] = text
         store.record(card, variant={k: v for k, v in variant.items()
