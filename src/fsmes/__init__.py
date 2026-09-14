@@ -12,6 +12,6 @@ for what exists today and what is still a promise.
 # this line and nothing else; `fsmes --version` and the installed
 # distribution's metadata are then the same fact by construction, and a test
 # pins that they still are.
-__version__ = "0.1.2"
+__version__ = "0.2.0"
 
 __all__ = ["__version__"]
