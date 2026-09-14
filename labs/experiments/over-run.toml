@@ -55,9 +55,7 @@ measure = ["booking"]
 [scenario.bottling]
 events = []
 
-# See the note on this table in one-line-bad-hour.toml: this pack's line is the
-# product's own reference line and carries no master data, so the plan names
-# the script that seeds it - including the order for 4,000 that the hour runs
-# past. A pack may never name a script (decision 0022).
-[init.bottling]
-script = "../multiplant/bottling/init.py"
+# No `[init.bottling]`: since #53 the pack carries its own master data,
+# including `WO-ACME-4711` for 4,000 units, released. That order is the whole
+# subject of this plan, and it arrives with the pack rather than from a script
+# the plan names - which is why the plan does not name one.
