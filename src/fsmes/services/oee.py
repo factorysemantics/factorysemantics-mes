@@ -12,11 +12,10 @@ the plant.
 So there is no cap here. Three answers, and each one says what it is:
 
 * **A number below 1.0** — the machine ran slower than its rating.
-* **A number above 1.0** — the machine ran faster than its rating. That is a
-  finding about the master data, not a plant running at 112 % of physics, and
-  a plant wants to see it: somebody typed a cycle time that is slower than the
-  machine, or the counter is counting something other than what the rating
-  rates. It is reported with the note that says so.
+* **A number above 1.0** — the MES has recorded more work than its own run
+  time can hold, and one of those two numbers is wrong. It does not say which,
+  because it cannot tell. See `COUNTS_OUTRUN_RUN_TIME` below for why that sentence
+  changed on 2026-09-14.
 * **`None`** — there is no honest number, and `note` says why (house rule 2:
   unknown is a valid answer, zero is not).
 
@@ -39,11 +38,40 @@ NOT_RUNNING = "the MES did not see this machine running in this window"
 #: Nothing was counted. Zero units in zero seconds is not zero performance.
 NOTHING_COUNTED = "nothing was counted on this machine in this window"
 
-#: Said when the measured rate beats the rating. Formatted with the rating.
-ABOVE_RATING = (
-    "ran faster than its rated cycle of {cycle} s per unit — the rating is "
-    "slower than the machine, which is a master-data finding rather than a "
-    "score above 100 %"
+#: Said when the counted work will not fit inside the run time.
+#:
+#: Until later on 2026-09-14 this sentence read "the rating is slower than the
+#: machine, which is a master-data finding". That was a cause the MES cannot
+#: know. The lab caught it out: on Northgate's Deburr the MES reported 826
+#: units and 1,878 line-seconds of run time at a rated 2.4 s a unit — 1,982
+#: seconds of work inside 1,878 seconds of running — and announced the rating
+#: was slow. The script that made the data rated the machine at the same 2.4 s
+#: and fitted its own 831 units inside its own 1,996 running seconds. The
+#: rating was right to within a tenth of a percent; the MES's run time was
+#: short, because the machine changed state every 2.7 seconds and the agent
+#: only saw it every 15. No timestamp fixes that — decision 0026 records the
+#: attempt and what it measured — so the MES says so instead.
+#:
+#: `performance > 1.0` and "counted work exceeds run time" are the same
+#: inequality, and it has at least three causes the MES cannot tell apart:
+#: a rating slower than the machine, run time it did not see, and units
+#: counted at an instant it did not have the machine running. So the note
+#: states the disagreement and its candidates, and names the one of the three
+#: the MES can actually measure.
+COUNTS_OUTRUN_RUN_TIME = (
+    "counted work will not fit inside the run time: {units:g} units at the "
+    "rated cycle of {cycle:g} s is {work:g} s of work, inside {runtime:g} s of "
+    "running. One of those two numbers is wrong and the MES cannot tell which "
+    "— the rating may be slower than the machine, or the run time may be short "
+    "of what the machine really ran"
+)
+
+#: Appended to `COUNTS_OUTRUN_RUN_TIME` when the MES booked some of the
+#: units at an instant its own state history did not have the machine running. Measured,
+#: not inferred: it is the one candidate cause the MES holds evidence for.
+COUNTED_OUTSIDE = (
+    ". {outside:g} of those units were counted while the MES did not have this "
+    "machine running"
 )
 
 
@@ -51,6 +79,7 @@ def performance(
     cycle_seconds: float | None,
     units: float,
     runtime_seconds: float,
+    counted_outside_run_time: float | None = None,
 ) -> tuple[float | None, str | None]:
     """`(value, note)` — ideal time for the units made ÷ time spent running.
 
@@ -59,9 +88,15 @@ def performance(
     unit took cycle time to make), `runtime_seconds` the observed running time
     in the window.
 
+    `counted_outside_run_time` is how many of those units the MES booked at an
+    instant its own state history did not have the machine running. It is
+    named in the note and nothing else: it is not taken out of `units`,
+    because the MES does not know that those units were made outside run time
+    — only that it counted them there.
+
     Never capped. `note` is a sentence for the screen beside the number: the
-    reason when the value is `None`, the master-data finding when it is above
-    1.0, and `None` when the number speaks for itself.
+    reason when the value is `None`, the disagreement when it is above 1.0,
+    and `None` when the number speaks for itself.
     """
     if not cycle_seconds or cycle_seconds <= 0:
         return None, NO_RATING
@@ -70,7 +105,16 @@ def performance(
     if units <= 0:
         return None, NOTHING_COUNTED
 
-    value = cycle_seconds * units / runtime_seconds
+    work_seconds = cycle_seconds * units
+    value = work_seconds / runtime_seconds
     if value > 1.0:
-        return value, ABOVE_RATING.format(cycle=cycle_seconds)
+        note = COUNTS_OUTRUN_RUN_TIME.format(
+            units=round(units, 2),
+            cycle=round(cycle_seconds, 3),
+            work=round(work_seconds, 1),
+            runtime=round(runtime_seconds, 1),
+        )
+        if counted_outside_run_time:
+            note += COUNTED_OUTSIDE.format(outside=round(counted_outside_run_time, 2))
+        return value, note
     return value, None

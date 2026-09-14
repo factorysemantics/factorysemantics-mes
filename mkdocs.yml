@@ -153,6 +153,7 @@ nav:
           - decisions/0023-the-fleet-console-observes.md
           - decisions/0024-a-nonconformance-has-a-life.md
           - decisions/0025-performance-is-measured-not-capped.md
+          - decisions/0026-counts-that-outrun-the-run-time.md
           - Template: decisions/TEMPLATE.md
   - Agents:
       - agents/index.md

@@ -75,10 +75,10 @@
   font-weight: 700;
   font-size: 17px;
 }
-/* A station that beat its rated cycle time. Not a score above 100 %: a
-   master-data finding, said under the bar rather than capped away the way the
-   old 1.0 cap on performance did. */
-.oee-row .rated-slow {
+/* A station whose counted work will not fit inside its run time. Not a score
+   above 100 %: two of the MES's own numbers disagreeing, said under the bar
+   rather than capped away the way the old 1.0 cap on performance did. */
+.oee-row .counts-outrun {
   grid-column: 1 / -1;
   margin-top: -4px;
   font-size: 11px;

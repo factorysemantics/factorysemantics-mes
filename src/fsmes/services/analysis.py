@@ -133,14 +133,14 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0)
         runtime = seconds[EquipmentStateName.RUNNING.value]
         downtime = seconds[EquipmentStateName.DOWN.value]
 
-        good, scrap = made.get(unit.id, (0.0, 0.0))
+        good, scrap, outside = made.get(unit.id, (0.0, 0.0, 0.0))
         total = good + scrap
 
         cycle = unit.ideal_cycle_seconds
         availability = runtime / window_seconds if window_seconds >= _MIN_WINDOW_SECONDS else None
         # Never capped, and the note is the sentence the screen puts beside it
         # — see `fsmes.services.oee`.
-        performance, performance_note = oee_rules.performance(cycle, total, runtime)
+        performance, performance_note = oee_rules.performance(cycle, total, runtime, outside)
         quality = good / total if total > 0 else None
         overall = (
             availability * performance * quality if None not in (availability, performance, quality) else None
@@ -170,6 +170,10 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0)
                 "seconds_by_state": {k: round(v, 1) for k, v in seconds.items()},
                 "good_qty": good,
                 "scrap_qty": scrap,
+                # How many of those units the MES booked at an instant it did
+                # not have this machine running — named, never netted off.
+                # See `equipment.production_sums`.
+                "counted_outside_run_time": round(outside, 3),
                 "loss": {
                     # What downtime cost, priced at the machine's own rated rate.
                     "availability_seconds": round(window_seconds - runtime, 1),

@@ -201,22 +201,57 @@ def first_seen(session: Session, equipment_ids: list[int]) -> dict[int, datetime
     return {equipment_id: seen for equipment_id, seen in rows}
 
 
+def _running_when_booked():
+    """True for a production row whose own instant falls inside one of this
+    machine's running intervals.
+
+    A correlated `EXISTS`, not a join: a booking can only ever sit inside one
+    interval, and a join would have to be made distinct again afterwards. It
+    is an index seek per production row on
+    `ix_equipment_states_eq_started`, and the rows never leave the database -
+    the same rule the rest of this module follows.
+    """
+    return (
+        select(literal(1))
+        .where(
+            EquipmentState.equipment_id == ProductionLog.equipment_id,
+            EquipmentState.state == EquipmentStateName.RUNNING,
+            EquipmentState.started_at <= ProductionLog.ts,
+            or_(EquipmentState.ended_at.is_(None), EquipmentState.ended_at > ProductionLog.ts),
+        )
+        .exists()
+    )
+
+
 def production_sums(session: Session, equipment_ids: list[int], start: datetime,
-                    end: datetime | None = None) -> dict[int, tuple[float, float]]:
-    """(good, scrap) booked per machine since `start` (to `end` when given)."""
+                    end: datetime | None = None) -> dict[int, tuple[float, float, float]]:
+    """(good, scrap, counted_outside_run_time) per machine since `start`
+    (to `end` when given).
+
+    The third number is how many of those units - good and scrap together -
+    the MES booked at an instant its own state history did not have the
+    machine running. It is a fact about this MES's two records of the same
+    machine, not a claim about the plant: a counter catching up after a stop
+    looks like this, and so does run time the MES sampled too coarsely to
+    see. It is reported and named; nothing is moved or dropped because of it
+    (house rule 1).
+    """
     if not equipment_ids:
         return {}
+    running = _running_when_booked()
+    outside = case((running, 0.0), else_=ProductionLog.good_qty + ProductionLog.scrap_qty)
     query = (
         select(ProductionLog.equipment_id,
                func.coalesce(func.sum(ProductionLog.good_qty), 0.0),
-               func.coalesce(func.sum(ProductionLog.scrap_qty), 0.0))
+               func.coalesce(func.sum(ProductionLog.scrap_qty), 0.0),
+               func.coalesce(func.sum(outside), 0.0))
         .where(ProductionLog.equipment_id.in_(equipment_ids), ProductionLog.ts >= start)
         .group_by(ProductionLog.equipment_id)
     )
     if end is not None:
         query = query.where(ProductionLog.ts <= end)
-    return {equipment_id: (float(good), float(scrap))
-            for equipment_id, good, scrap in session.execute(query).all()}
+    return {equipment_id: (float(good), float(scrap), float(outside_qty))
+            for equipment_id, good, scrap, outside_qty in session.execute(query).all()}
 
 
 def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) -> dict[str, dict]:
@@ -264,14 +299,15 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
         by_state = seconds.get(m.id, {})
         runtime = by_state.get(EquipmentStateName.RUNNING.value, 0.0)
         downtime = by_state.get(EquipmentStateName.DOWN.value, 0.0)
-        good, scrap = made.get(m.id, (0.0, 0.0))
+        good, scrap, outside = made.get(m.id, (0.0, 0.0, 0.0))
         total = good + scrap
 
         # Too little observed time to divide by: say "unknown", never "zero".
         availability = runtime / window_seconds if window_seconds >= _MIN_WINDOW_SECONDS else None
         # Never capped, and the note is the sentence the screen puts beside it
         # — see `fsmes.services.oee`.
-        performance, performance_note = oee_rules.performance(m.ideal_cycle_seconds, total, runtime)
+        performance, performance_note = oee_rules.performance(
+            m.ideal_cycle_seconds, total, runtime, outside)
         quality = good / total if total > 0 else None
         overall = (
             availability * performance * quality
@@ -290,6 +326,8 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
             "scrap_qty": scrap,
             "runtime_seconds": round(runtime, 1),
             "downtime_seconds": round(downtime, 1),
+            # Named, never netted off: see `production_sums`.
+            "counted_outside_run_time": round(outside, 3),
         }
     return out
 

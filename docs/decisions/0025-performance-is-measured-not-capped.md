@@ -1,6 +1,6 @@
 # 0025 — OEE performance is measured against the rating, and never capped at 1.0
 
-- **Status:** accepted
+- **Status:** accepted, amended by [0026](0026-counts-that-outrun-the-run-time.md)
 - **Date:** 2026-09-14
 - **Deciders:** maintainer
 
@@ -60,6 +60,14 @@ note:
 - **Above 1.0** — the machine ran faster than its rating. Reported as it is,
   with the note that says what it means: *the rating is slower than the
   machine*, a master-data finding, not a score above physics.
+
+  !!! warning "Amended the same day by [0026](0026-counts-that-outrun-the-run-time.md)"
+
+      That second sentence was wrong, and the lab caught it within hours.
+      `performance > 1.0` is the same inequality as *the counted work will not
+      fit inside the run time*, and the master data is only one of its
+      candidate causes. The figure is still uncapped and still reported; the
+      note now states the disagreement instead of naming a culprit.
 - **`None`** — there is no honest number, and the note says which of the
   three reasons applies: no rated cycle time in master data, the machine was
   not seen running, or nothing was counted. Never 1.0 and never 0.
