@@ -3453,10 +3453,13 @@ systemctl<span class="w"> </span>--user<span class="w"> </span>start<span class=
 <p>The version you were on matters: the restored file carries the old schema,
 and the new code expects the new one.</p>
 <p><code>deploy/promote.sh</code> in the repository does exactly this automatically for a
-pinned-tag deployment — stop, migrate, and on any failure restore each
-plant's newest <code>pre-migrate</code> copy and check the tree back out at the previous
-tag. If your plant is deployed from a checkout at a tag, use that script
-rather than these steps by hand.</p>
+pinned-tag deployment — stop every plant, back each one up, migrate, and on
+any failure restore the backups <em>that run made</em> and check the tree back out
+at the previous tag. It covers a PostgreSQL plant too, with <code>pg_dump -Fc</code> and
+<code>pg_restore</code>, and every call it makes to PostgreSQL turns the statement
+timeout off, because a restore a timeout can cancel is not one. If your plant
+is deployed from a checkout at a tag, use that script rather than these steps
+by hand; <code>deploy/README.md</code> says what it does in order.</p>
 <h2 id="a-single-install-not-from-the-registry">A single install, not from the registry<a class="headerlink" href="#a-single-install-not-from-the-registry" title="Permanent link">&para;</a></h2>
 <p>One plant, one database, no registry — the ordinary first install:</p>
 <div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>backup<span class="w"> </span>--out<span class="w"> </span>/mnt/nas/fsmes

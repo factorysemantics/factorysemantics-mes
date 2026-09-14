@@ -1122,6 +1122,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fsmes-fleet-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fsmes fleet plan
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3228,6 +3239,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fsmes-fleet-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fsmes fleet plan
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3327,6 +3349,7 @@ fsmes<span class="w"> </span>fleet<span class="w"> </span>status<span class="w">
 fsmes<span class="w"> </span>fleet<span class="w"> </span>stop<span class="w"> </span>machining
 fsmes<span class="w"> </span>fleet<span class="w"> </span>apply<span class="w"> </span>machining<span class="w">                    </span><span class="c1"># a new version of its pack, to a stopped plant</span>
 fsmes<span class="w"> </span>fleet<span class="w"> </span>list<span class="w">                               </span><span class="c1"># everything owned or watched, with the totals</span>
+fsmes<span class="w"> </span>fleet<span class="w"> </span>plan<span class="w">                               </span><span class="c1"># what a deployment script would act on</span>
 </code></pre></div>
 <p><code>fsmes fleet</code> manages <strong>plants</strong>, never <strong>production</strong>. It can stop a plant it owns; it cannot make one say it built something. No tag reaches a PLC through it, nothing goes to an ERP, no order is created or closed, no production is booked, and no master data, account or audit row is edited. Those stay each plant's own business, behind that plant's <a href="../shadow-mode/">shadow mode</a>, its capability roles and its approvals.</p>
 <h2 id="what-ownership-means">What ownership means<a class="headerlink" href="#what-ownership-means" title="Permanent link">&para;</a></h2>
@@ -3381,6 +3404,14 @@ fsmes<span class="w"> </span>fleet<span class="w"> </span>list<span class="w">  
 <h3 id="fsmes-fleet-status-name-and-fsmes-fleet-list"><code>fsmes fleet status &lt;name&gt;</code> and <code>fsmes fleet list</code><a class="headerlink" href="#fsmes-fleet-status-name-and-fsmes-fleet-list" title="Permanent link">&para;</a></h3>
 <p>Reads. <code>status</code> says whether the plant is owned and <strong>why</strong> — the same question every verb asks, answered before you hit it. <code>list</code> states its total: <em>"N plants, M answered, K unknown; J owned"</em>. The number recorded is never the number seen.</p>
 <p>A plant that did not answer is <strong>unknown</strong>. Never healthy, never down.</p>
+<h3 id="fsmes-fleet-plan"><code>fsmes fleet plan</code><a class="headerlink" href="#fsmes-fleet-plan" title="Permanent link">&para;</a></h3>
+<p>Reads. What a deployment script needs to know about every plant the <strong>fleet file</strong> lists — owned or not, since a promote moves a whole machine: where each pack is, where each database is and what kind it is, whether the plant simulates a line worth regenerating, and where to ask it whether it came back.</p>
+<p>It states its total the same way <code>list</code> does: how many packs the fleet lists, and how many of those this product's deployment tooling could back up before migrating. Those two differing is the fact that matters — it means a plant nobody could roll back.</p>
+<div class="highlight"><pre><span></span><code>~/.config/fsmes/prod/fleet.toml: 2 plants, 2 this tooling can back up before migrating.
+  bottling       http://127.0.0.1:9010      sqlite      backup: copy
+  cutlery        http://127.0.0.1:9030      postgresql  backup: pg_dump
+</code></pre></div>
+<p><code>--json</code> is the form <a href="https://github.com/factorysemantics/factorysemantics-mes/blob/main/deploy/promote.sh"><code>deploy/promote.sh</code></a> reads, so the promote does not parse <code>fleet.toml</code> a second time in bash. No password is printed unless <code>--with-password</code> asks for one, which is for a script piping it straight into <code>pg_dump</code>; the plain output is safe to paste into an issue.</p>
 <h2 id="the-console">The console<a class="headerlink" href="#the-console" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>fleet<span class="w"> </span>console<span class="w"> </span>--port<span class="w"> </span><span class="m">8100</span><span class="w">        </span><span class="c1"># loopback; one page, at http://127.0.0.1:8100</span>
 </code></pre></div>
