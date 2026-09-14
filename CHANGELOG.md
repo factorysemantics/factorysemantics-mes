@@ -20,6 +20,28 @@ goes under Honesty with a migration line, so plant people can find it.
   deployment tooling could back up before migrating. Reads only, touches no
   plant, and prints no password unless `--with-password` asks for one.
 
+### Changed
+
+- **The GitHub Actions this repository runs are on their current majors, and
+  the welcome message survived the move.** `actions/checkout` v4→v7,
+  `actions/setup-python` v5→v7, `github/codeql-action/upload-sarif` v3→v4 and
+  `actions/first-interaction` v1→v3, in `ci.yml`, `dco.yml`, `docs.yml`,
+  `scorecard.yml`, `erpnext-live.yml` and `welcome.yml`. For every action but
+  one the majors are a Node 20 → Node 24 runtime change with no input this
+  repository passes removed. The exception is `actions/first-interaction`,
+  whose v2 rewrite renamed all three inputs from hyphens to underscores
+  (`repo-token` → `repo_token`, and the two messages likewise), and which
+  reads all three as required before it asks whether anyone is a first-time
+  contributor — so the bump on its own would have failed the welcome job on
+  every issue and pull request opened. Dependabot's own bump was green with
+  the hyphens still in it, because `pull_request_target` runs the copy of the
+  workflow on the base branch. `welcome.yml` now passes the underscore names
+  and carries the citation, and the next pull request opened after this merges
+  is what proves it. `release.yml` keeps its pinned versions in
+  this change; it runs only on a tag, so its bumps go separately, behind a
+  dry run that can be exercised without one.
+  ([#44](https://github.com/factorysemantics/factorysemantics-mes/pull/44))
+
 ### Fixed
 
 - **`deploy/promote.sh` can promote a fleet, and can undo one.** It defaulted
