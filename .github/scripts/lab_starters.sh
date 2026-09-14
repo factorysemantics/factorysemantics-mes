@@ -33,6 +33,7 @@ fsmes lab list --results "$results"
 
 python - "$results" "${#plans[@]}" <<'PY'
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -65,8 +66,8 @@ for run in runs:
                    f"{', '.join(scores['measurements_asked_for'])} |")
     print(f"{run.name}: {scores['plants_run']} plant(s), {withheld} verdict(s) withheld")
 
-step = Path(__import__("os").environ.get("GITHUB_STEP_SUMMARY", ""))
-if str(step):
-    with step.open("a", encoding="utf-8") as handle:
+step = os.environ.get("GITHUB_STEP_SUMMARY")
+if step:
+    with Path(step).open("a", encoding="utf-8") as handle:
         handle.write("\n".join(summary) + "\n")
 PY
