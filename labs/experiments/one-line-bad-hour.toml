@@ -1,0 +1,44 @@
+# One line, one bad hour.
+#
+# The six-station bottling line playing the script it was written with: a jam
+# too short to ripple, a motor that heats for ten minutes and then fails, a
+# quality excursion at the washer that underweights every bottle downstream, a
+# planned changeover, a counter that snaps to zero mid-shift, and micro-stops
+# on the palletiser all the way through. Six things a real plant does in an
+# hour, and six chances for an MES to say something untrue about them.
+#
+#     fsmes lab run labs/experiments/one-line-bad-hour.toml
+#
+# About four minutes: one plant, an hour of line time replayed at 20x, plus the
+# seeding and the drain. Nothing you already have running is touched - the
+# plant this builds is ephemeral, on loopback, with its own database and its
+# own ports.
+
+name = "one-line-bad-hour"
+note = """One line playing the six classic faults. What to look at first: the
+changeover must not appear as downtime, and the counter reset must book
+nothing."""
+
+packs = ["../multiplant/bottling"]
+
+# The line's own hour, unchanged - this plan varies nothing. Stating the seed
+# anyway is the point of stating it: the same seed twice is the same run, and
+# the report says which seed it used.
+duration = 3600
+seed     = 42
+
+# 20x replays the hour in three minutes. Slower is sharper: the booking
+# comparison has to allow for whatever the replay played while the agent
+# drained, and that band grows with speed. See docs/develop/experiments.md.
+speed = 20
+
+measure = ["booking", "downtime", "oee"]
+
+# This pack carries no master data. Its line is the product's own reference
+# line - the six stations `fsmes seed-kepsim` builds - so `plant.toml` names no
+# `masterdata` directory and a plant built from the pack alone would have no
+# machines at all. A pack may never name a script (decision 0022); a lab plan
+# is not a pack, and the runner already takes one from a lab tool. So the plan
+# names the script this lab has always had, and the pack stays as it is.
+[init.bottling]
+script = "../multiplant/bottling/init.py"

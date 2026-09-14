@@ -76,6 +76,12 @@ LADDER: tuple[tuple[str, tuple[str, ...]], ...] = (
         # sits beside it rather than above it because nothing below may
         # import it.
         "fleet",
+        # The lab: one experiment plan, run to a directory. It reads packs,
+        # generates a line's data, runs a plant through `sim`'s own runner and
+        # reads the MES back over HTTP - four edges and no rule of its own, so
+        # it sits with them. Nothing below imports it, and nothing in it is
+        # reachable from a plant that is only being served.
+        "lab",
     )),
     ("cli", (
         # The top of the ladder: everything may be imported by the CLI and

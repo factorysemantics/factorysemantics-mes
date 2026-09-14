@@ -12,6 +12,27 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **`fsmes lab` — an experiment is a plan, a command and a directory somebody
+  else can read.** `fsmes lab run <experiment.toml>` builds each plant in the
+  plan from its pack, generates the line data for this run from the line
+  description (so the seed in the plan is the seed that ran), replays the
+  scripted hour through an ephemeral plant on loopback, reads the MES back
+  through its own HTTP API and writes one directory: the plan, the script each
+  plant played, the data generated from it, the pack each plant was built from,
+  what each plant recorded view by view, the truth read out of the replay's own
+  input, the scores, a self-contained `report.html` and a `notes.md` for what a
+  person saw that no number caught. `fsmes lab list` and `fsmes lab open <run>`
+  — which re-renders the report, so notes written after the run reach the page.
+  Three measurements, each with the truth beside it: **booking** (units booked
+  against units made, per station and in total), **downtime** (the scorer's own
+  two questions plus seconds down on the line's clock) and **oee**
+  (availability, performance and quality per station against the script).
+  `latency`, `console`, `quality` and `agent-eval` are designed and not built,
+  and a plan asking for one is refused by name rather than quietly given a
+  report that says less than it asked for. Two starter experiments in
+  `labs/experiments/`, both run in CI on every pull request. The page is
+  `docs/develop/experiments.md`.
+
 - **`fsmes fleet plan`** — what a deployment script needs to know about every
   plant in a fleet: where each pack is, where each database is and what kind
   it is, whether the plant simulates a line worth regenerating, and where to
@@ -19,6 +40,27 @@ goes under Honesty with a migration line, so plant people can find it.
   envelope: how many packs the fleet lists, and how many of those the
   deployment tooling could back up before migrating. Reads only, touches no
   plant, and prints no password unless `--with-password` asks for one.
+
+### Honesty
+
+- **A replayed run's booking comparison states a band, and says which
+  direction is sharp.** A CSV replay loops: when the file runs out the counters
+  wrap to zero and the hour starts again, and a run is always left playing a
+  little past the end because the agent needs time to book what it has already
+  read. Units made in that overlap the MES is right to book. So `fsmes lab`
+  prints an **expected range** rather than a single number, states the overlap
+  in line seconds, and says what follows from it — under-booking is a real
+  finding at any speed, because the overlap can only ever add; over-booking is
+  blurred by a band that grows with replay speed, and the sharp reading for
+  that class of fault is the over-run the MES reports about itself.
+- **Counters are summed as deltas on both sides of every comparison.** A
+  scripted counter reset zeroes the column the replay publishes, so the last
+  row of a station's data holds what it made *since* the reset and not what it
+  made in the hour. The lab's first run read it as the hour's total and
+  accused the MES of booking four thousand units it had not — the truth was
+  wrong, not the plant. Both sides now count the same way the MES books: a
+  counter that goes backwards has been re-baselined, and the step across the
+  reset is dropped rather than counted.
 
 ### Changed
 
@@ -619,6 +661,27 @@ setting means, each with its migration line.
   version, the MCP registry name, no trademark registration, one public demo
   that is gated and bounded, and going public on 2026-09-08 with the pre-tag
   check that release night asked for. [The index](docs/decisions/index.md). ([#8](https://github.com/factorysemantics/factorysemantics-mes/pull/8))
+
+### Honesty
+
+- **A replayed run's booking comparison states a band, and says which
+  direction is sharp.** A CSV replay loops: when the file runs out the counters
+  wrap to zero and the hour starts again, and a run is always left playing a
+  little past the end because the agent needs time to book what it has already
+  read. Units made in that overlap the MES is right to book. So `fsmes lab`
+  prints an **expected range** rather than a single number, states the overlap
+  in line seconds, and says what follows from it — under-booking is a real
+  finding at any speed, because the overlap can only ever add; over-booking is
+  blurred by a band that grows with replay speed, and the sharp reading for
+  that class of fault is the over-run the MES reports about itself.
+- **Counters are summed as deltas on both sides of every comparison.** A
+  scripted counter reset zeroes the column the replay publishes, so the last
+  row of a station's data holds what it made *since* the reset and not what it
+  made in the hour. The lab's first run read it as the hour's total and
+  accused the MES of booking four thousand units it had not — the truth was
+  wrong, not the plant. Both sides now count the same way the MES books: a
+  counter that goes backwards has been re-baselined, and the step across the
+  reset is dropped rather than counted.
 
 ### Changed
 

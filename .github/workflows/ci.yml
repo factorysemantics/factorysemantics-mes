@@ -161,6 +161,41 @@ jobs:
       - name: The wheel upgrades a database made by the previous release
         run: .github/scripts/upgrade_from_previous_release.sh "$(ls dist/*.whl)"
 
+  lab:
+    # The lab's starter experiments, on a runner.
+    #
+    # These are the only checks here that run the product as a plant rather
+    # than as a library: two plants seeded from their packs, an hour of line
+    # time each replayed through a real OPC server, read back through the HTTP
+    # API and scored against the script the generator obeyed. That is slow and
+    # it is the point - nothing else in this file would notice the day
+    # `fsmes lab run` stopped producing a readable run, because the only person
+    # who runs an experiment runs it by hand.
+    #
+    # It asserts that a run *happened* and left a directory holding what it
+    # says it holds. It does not assert a measurement: a scored run is an
+    # instrument reading, and failing a build on one would teach everybody to
+    # stop reading it.
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+      - name: The starter experiments run and leave a readable directory
+        run: .github/scripts/lab_starters.sh
+      - name: Keep the runs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lab-results
+          path: lab-results/
+          retention-days: 7
+          if-no-files-found: warn
+
   audit:
     # Known-vulnerable pins. Advisory until the first public release has
     # shaken it out; then it becomes required.

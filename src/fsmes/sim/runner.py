@@ -321,6 +321,13 @@ def scored_run(
     # through the public API like every other scenario actor per the
     # dogfood rule. None (the default) changes nothing for an existing run.
     post_boot: Callable[[str, str], None] | None = None,
+    # Called with (base_url, token) after the scripted hour, while the plant
+    # is still answering and before anything is torn down. Whatever it returns
+    # lands on the card as `recorded`. The scorecard reads the three views it
+    # scores against; a caller that needs more of the MES's own answer - the
+    # lab, which puts bookings and OEE beside the truth - asks for it here
+    # rather than keeping a plant alive to ask later. None changes nothing.
+    collect: Callable[[str, str], dict] | None = None,
 ) -> dict:
     """Run one plant through its scripted hour and score what it reported."""
     line = Path(line_json) if line_json else root / Path(cfg["replay_dir"]).parent / "line.json"
@@ -449,6 +456,8 @@ def scored_run(
             why = f"the MES recorded a fault only after its window had passed ({late}): behind, not wrong"
             withhold_verdict(card, why)
             echo(f"  verdict withheld - {why}")
+        if collect is not None:
+            card["recorded"] = collect(base, token)
         card["oee_reported"] = {k: v for k, v in oee.items() if k != "machines"}
         card["downtime_reported"] = {
             "total_seconds": downtime.get("total_seconds"),

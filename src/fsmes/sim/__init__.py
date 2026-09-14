@@ -12,6 +12,6 @@ a scenario we cannot express rather than as a silent weakness.
 """
 
 from fsmes.sim.score import score_run
-from fsmes.sim.truth import ScriptedEvent, load_truth
+from fsmes.sim.truth import ScriptedEvent, load_truth, station_to_equipment
 
-__all__ = ["ScriptedEvent", "load_truth", "score_run"]
+__all__ = ["ScriptedEvent", "load_truth", "score_run", "station_to_equipment"]

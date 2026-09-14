@@ -123,6 +123,7 @@ nav:
       - Architecture: ARCHITECTURE.md
       - Tutorial — your first module: develop/your-first-module.md
       - Reference — writing an ERP connector: develop/erp-connectors.md
+      - Explanation — experiments in the lab: develop/experiments.md
       - Style: design/STYLE.md
       - Design — M8 packs and fleet: design/m8-packs-and-fleet.md
       - Decisions:

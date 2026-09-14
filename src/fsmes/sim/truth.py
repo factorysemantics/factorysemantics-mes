@@ -47,7 +47,7 @@ class ScriptedEvent:
         return self.type == "down"
 
 
-def _station_to_equipment(tag_map_path: Path) -> dict[str, str]:
+def station_to_equipment(tag_map_path: Path) -> dict[str, str]:
     """The generator names stations ("Mill"); the MES codes them ("MILL01").
 
     The tag map already holds both, so the mapping is read rather than
@@ -92,7 +92,7 @@ def load_truth(line_json: Path, tag_map: Path) -> dict:
     rather than solved here.
     """
     line = json.loads(Path(line_json).read_text(encoding="utf-8"))
-    mapping = _station_to_equipment(Path(tag_map))
+    mapping = station_to_equipment(Path(tag_map))
 
     if "lines" in line:
         from fsmes.sim.generate import _prefix_line

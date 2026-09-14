@@ -1,0 +1,58 @@
+# Two plants, two time zones, two different products, one command.
+#
+# Kansas City bottles at 110 a minute behind buffers of twenty; Northgate
+# machines at 22 a minute behind buffers of six. They disagree about station
+# count, station names, analog names and units, cycle rates, buffer sizes,
+# order numbering and their clocks - America/Chicago and America/New_York. If
+# any of that has leaked into code rather than staying in config, running the
+# two side by side is where it shows.
+#
+# Northgate also runs with two modules off and two of the product's own words
+# renamed, applied as an *overlay*: the copy of the pack this run builds from
+# lands in the results directory, and the pack on disk is not touched.
+#
+#     fsmes lab run labs/experiments/two-plants-two-zones.toml
+#
+# About five minutes: two plants, fifty minutes of line time each at 30x, run
+# one after another so neither competes with the other for the machine.
+#
+# Not yet here, and why: the third lab plant (`finewire`) is the one with a
+# genuinely different zone *and* a PostgreSQL, and it wants that server and an
+# operator password before it will start - which a CI runner has not got. And
+# stopping one plant mid-run so `fsmes fleet console` has to say *unknown* is
+# the console measurement, which this version does not take yet.
+
+name = "two-plants-two-zones"
+note = """Two plants that agree about nothing except the MES running them.
+What to look at first: whether either plant's numbers read as if the other's
+configuration had leaked into it."""
+
+packs = ["../multiplant/bottling", "../multiplant/machining"]
+
+# Fifty minutes, which is past Northgate's breakdown at 2700-2880 s and past
+# the bottling line's counter reset at 3000 s. A shorter run would cut the
+# scripts off, and this refuses to run a script it cannot finish rather than
+# score half of one.
+duration = 3000
+seed     = 11
+speed    = 30
+
+measure = ["booking", "downtime", "oee"]
+
+# Northgate machines steel; nothing here carries a serial and no certificate of
+# analysis is issued. Proven legal on the finewire pack already - `[words]`
+# renames a label on a screen and `fsmes pack check` refuses it the moment it
+# tries to rename a state, a KPI, a role or an event kind.
+# Kansas City's line is the product's own reference line, so its pack carries
+# no master data and a plant built from the pack alone would have no machines.
+# A pack may never name a script (decision 0022); a plan is not a pack. See the
+# note on the same table in one-line-bad-hour.toml.
+[init.bottling]
+script = "../multiplant/bottling/init.py"
+
+[overlay.machining.modules]
+serialization = false
+coa = false
+
+[overlay.machining.words]
+lot = "batch"
