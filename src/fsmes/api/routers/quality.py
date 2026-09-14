@@ -1,10 +1,10 @@
 """Quality endpoints: specs, checks, non-conformances."""
 
-from datetime import date
+from datetime import date, datetime
 
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from fsmes.api import paging
 from fsmes.api.deps import ActorDep, DbDep, require
@@ -30,29 +30,91 @@ class SpecIn(BaseModel):
     max_value: float | None = None
 
 
+@router.get("/specs/facets")
+def spec_facets(
+    db: DbDep,
+    material: str | None = Query(None, description="Narrow the characteristics to this material's."),
+    limit: int = Query(500, ge=1, le=2000, description="How many of each to name."),
+) -> dict:
+    """What the Quality screen's filter selects can offer, without reading
+    every specification to find out.
+
+    A screen that builds "any material" from the whole specification list has
+    fetched the whole table to draw a dropdown - which is the thing this
+    endpoint exists to stop. Both lists say their total, so a select that is
+    showing the first 500 of 1,240 can say so rather than looking complete.
+    """
+    materials = db.execute(
+        select(Material.code, func.count(QualitySpec.id))
+        .join(QualitySpec, QualitySpec.material_id == Material.id)
+        .group_by(Material.code)
+        .order_by(Material.code)
+        .limit(limit)).all()
+    materials_total = db.scalar(
+        select(func.count(func.distinct(QualitySpec.material_id)))) or 0
+
+    chars = select(QualitySpec.characteristic, func.count(QualitySpec.id))
+    if material:
+        chars = chars.join(Material, QualitySpec.material_id == Material.id).where(Material.code == material)
+    chars = chars.group_by(QualitySpec.characteristic).order_by(QualitySpec.characteristic).limit(limit)
+
+    distinct_chars = select(func.count(func.distinct(QualitySpec.characteristic)))
+    if material:
+        distinct_chars = distinct_chars.join(
+            Material, QualitySpec.material_id == Material.id).where(Material.code == material)
+
+    return {
+        "materials": [{"code": code, "specs": n} for code, n in materials],
+        "materials_total": materials_total,
+        "characteristics": [{"name": name, "specs": n} for name, n in db.execute(chars).all()],
+        "characteristics_total": db.scalar(distinct_chars) or 0,
+        "specs_total": db.scalar(select(func.count(QualitySpec.id))) or 0,
+        "material": material,
+        "limit": limit,
+    }
+
+
 @router.get("/specs")
 def list_specs(
     db: DbDep,
     material: str | None = None,
+    characteristic: str | None = Query(None, description="Exactly this characteristic, on any material."),
     q: str | None = Query(None, description="Match a material code or a characteristic."),
-) -> list[SpecIn]:
+    limit: int = paging.LimitQuery,
+    offset: int = paging.OffsetQuery,
+) -> dict:
+    """Specifications, by material then characteristic, one page at a time.
+
+    This used to answer with every specification the plant has. At 127 that
+    was 13 KB and nobody noticed; the screens that read it - the Quality
+    workspace, master data, the SPC picker - were each drawing a dropdown out
+    of the whole table, which is the habit that does not survive a catalogue
+    ten times the size. The envelope is the same one every other list uses,
+    so a screen states its total instead of looking complete.
+    """
     query = select(QualitySpec).join(Material, QualitySpec.material_id == Material.id).order_by(
         Material.code, QualitySpec.characteristic)
     if material:
         query = query.where(Material.code == material)
+    if characteristic:
+        query = query.where(QualitySpec.characteristic == characteristic)
     if q:
         like = f"%{q}%"
         query = query.where(Material.code.ilike(like) | QualitySpec.characteristic.ilike(like))
-    return [
-        SpecIn(
-            material=s.material.code,
-            characteristic=s.characteristic,
-            unit=s.unit,
-            min_value=s.min_value,
-            max_value=s.max_value,
-        )
-        for s in db.scalars(query)
-    ]
+    rows, total = paging.paginate(db, query, limit, offset)
+    return paging.page(
+        [
+            SpecIn(
+                material=s.material.code,
+                characteristic=s.characteristic,
+                unit=s.unit,
+                min_value=s.min_value,
+                max_value=s.max_value,
+            )
+            for s in rows
+        ],
+        total, limit, offset,
+    )
 
 
 @router.post("/specs", status_code=201, dependencies=[require("masterdata.write")])
@@ -95,17 +157,36 @@ def list_checks(
     material: str | None = None,
     characteristic: str | None = None,
     result: str | None = Query(None, description="pass or fail."),
+    order: str | None = Query(None, description="Only checks recorded against this work order."),
+    since: datetime | None = Query(None, description="Taken at or after this."),
+    until: datetime | None = Query(None, description="Taken at or before this."),
     limit: int = paging.LimitQuery,
     offset: int = paging.OffsetQuery,
 ) -> dict:
     """Inspection history, newest first.
 
     Filtering by result is the one a supervisor actually wants: a year of
-    passes is not what anybody came here to read.
+    passes is not what anybody came here to read. A date range is the other
+    one - "what did this shift measure" is a question about a window, and
+    scrolling back through a quarter to find it is not an answer.
+
+    There is no station filter, and that is not an oversight: a measurement
+    records the material, the characteristic, the inspector, the gauge and
+    the order it was taken against, and *not* the machine it was taken at.
+    Deriving one from the order's route would name a station nobody stood at.
+    Filtering by station needs that fact recorded first, which is a schema
+    change and somebody's decision, not this endpoint's guess.
     """
     query = select(QualityCheck).order_by(QualityCheck.id.desc())
     if result:
         query = query.where(QualityCheck.result == result)
+    if since:
+        query = query.where(QualityCheck.ts >= since)
+    if until:
+        query = query.where(QualityCheck.ts <= until)
+    if order:
+        query = query.where(QualityCheck.work_order_id.in_(
+            select(WorkOrder.id).where(WorkOrder.code == order)))
     if material or characteristic:
         query = query.join(QualitySpec)
         if characteristic:
@@ -114,6 +195,10 @@ def list_checks(
             query = query.join(Material).where(Material.code == material)
 
     checks, total = paging.paginate(db, query, limit, offset)
+    order_codes = {}
+    ids = {c.work_order_id for c in checks if c.work_order_id}
+    if ids:
+        order_codes = {wo.id: wo.code for wo in db.scalars(select(WorkOrder).where(WorkOrder.id.in_(ids)))}
     return paging.page(
         [
             {
@@ -122,6 +207,7 @@ def list_checks(
                 "value": c.value,
                 "result": c.result,
                 "checked_by": c.checked_by,
+                "order": order_codes.get(c.work_order_id),
                 "ts": c.ts,
             }
             for c in checks

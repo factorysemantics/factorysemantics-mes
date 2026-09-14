@@ -61,6 +61,22 @@ class Floor:
         r.raise_for_status()
         return r.json()
 
+    async def every(self, path: str, **params) -> list[dict]:
+        """Every row of a paged list, page by page.
+
+        The simulator is not a screen: it inspects against every
+        specification the plant has, so it reads to the end of the envelope
+        rather than taking the first page and calling it the plant.
+        """
+        out: list[dict] = []
+        offset = 0
+        while True:
+            page = await self.get(path, limit=500, offset=offset, **params)
+            out.extend(page["items"])
+            if not page.get("has_more") or not page["items"]:
+                return out
+            offset += len(page["items"])
+
     # ---------------------------------------------------------- inspections
 
     async def _measured_value(self, spec: dict, machines: list[dict]) -> float | None:
@@ -308,7 +324,7 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
                     log.warning("shop floor step failed", error=str(exc)[:160])
 
         async def do_inspect(summary, orders):
-            specs = await floor.get("/quality/specs")
+            specs = await floor.every("/quality/specs")
             await floor.inspect(specs, summary.get("machines", []), orders, every_spec=inspect_all)
 
         async def do_issue(summary, orders):

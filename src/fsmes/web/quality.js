@@ -4,28 +4,53 @@
    with no node toolchain - a charting library would be the one dependency
    that eventually stops installing.
 
-   At 127 specifications the strip of tabs was a wall and the history was a
-   slice of the last 200 checks across the whole plant. The chart is now
-   chosen by material then characteristic and reads its own series from the
-   server; the history, the specifications and the non-conformances are
-   filtered and paged, and each says how much of the whole it is showing
-   (STYLE.md rule 4). */
+   Every list here is the server's page, filtered on the server: the
+   measurements, the specifications, the inspection history and the
+   non-conformances. The specifications card and the tab strip used to be
+   drawn out of one fetch of every specification the plant has, which is the
+   habit Scott hit on the 108-station plant ("way too many tags") and the one
+   that does not survive a catalogue ten times the size. The filter selects
+   are built from /quality/specs/facets - the distinct materials and
+   characteristics with their counts - so filling a dropdown no longer means
+   reading the whole table.
+
+   Every filter is in the address bar, so a filtered screen is a link. */
 
 const REFRESH_MS = 5000;
 const HISTORY_PAGE = 50;
 const SPEC_PAGE = 25;
 const NC_PAGE = 25;
+// One material's characteristics, for the tab strip and the chart's limits.
+// A material with more than this many is a real possibility and the strip
+// says so rather than quietly stopping.
+const CHAR_PAGE = 200;
+// What the non-conformances card opens on. "Still open" is three states, not
+// one: a record taken under review must not drop out of the list somebody is
+// working. It is also the value the address bar leaves out.
+const NC_DEFAULT_SCOPE = "open,under_review,dispositioned";
+// How many points the chart draws. Newest first from the server, then drawn
+// oldest to newest.
+const SERIES_POINTS = 200;
 
-let specs = [];
+let facets = { materials: [], materials_total: 0, characteristics: [],
+               characteristics_total: 0, specs_total: 0 };
+let charFacets = facets;   // the characteristics the history filter offers
+let chars = { items: [], total: 0 };   // the chosen material's specifications
 let series = [];       // the checks behind the chart: one material/characteristic
-let ncPage = { items: [], total: 0, limit: 50, offset: 0, has_more: false };  // the server's page of non-conformances
-let active = null;     // "material/characteristic"
+let specPage = { items: [], total: 0, limit: SPEC_PAGE, offset: 0, has_more: false };
 let historyPage = { items: [], total: 0, limit: HISTORY_PAGE, offset: 0, has_more: false };
-const filters = { material: "", hMaterial: "", hChar: "", hResult: "", hOffset: 0,
-                  sQ: "", sMaterial: "", sOffset: 0,
-                  // "Still open" is three states, not one: a record taken under
-                  // review must not drop out of the list somebody is working.
-                  nStatus: "open,under_review,dispositioned", nQ: "", nOffset: 0 };
+let ncPage = { items: [], total: 0, limit: NC_PAGE, offset: 0, has_more: false };
+
+const filters = {
+  // the chart
+  material: "", characteristic: "", charQ: "",
+  // inspection history
+  hMaterial: "", hChar: "", hResult: "", hFrom: "", hTo: "", hOffset: 0,
+  // specifications
+  sQ: "", sMaterial: "", sOffset: 0,
+  // non-conformances
+  nStatus: NC_DEFAULT_SCOPE, nQ: "", nOffset: 0,
+};
 
 const $ = (sel) => document.querySelector(sel);
 const el = (tag, cls, text) => {
@@ -43,7 +68,14 @@ const svgEl = (tag, attrs = {}) => {
 // works in. See common.js.
 const clock = (ts) => FS.fmt.clock(ts);
 const stamp = (ts) => (ts ? FS.fmt.stamp(ts) : "");
-const key = (o) => `${o.material}/${o.characteristic}`;
+
+/* The specification the chart is drawing, out of the chosen material's
+   characteristics. Never out of "every spec in the plant" - that list is
+   not on this screen any more. */
+function currentSpec() {
+  if (!filters.material || !filters.characteristic) return null;
+  return chars.items.find((s) => s.characteristic === filters.characteristic) || null;
+}
 
 async function api(path, options = {}) {
   const r = await fetch(path, {
@@ -70,28 +102,58 @@ function toast(message, kind = "good") {
   node._t = setTimeout(() => node.classList.add("hidden"), 3500);
 }
 
-/* A link can open the screen on one characteristic:
-   /dashboard/quality?material=FG-FILL1&characteristic=fill_weight */
+/* ---------- the filters, in the address bar ----------
+   Every card's filter, not just the chart's: a supervisor who has narrowed
+   the history to last night's failures on one characteristic can send that
+   screen to the person who has to answer for it. The design chat reads the
+   same state, so a critique arrives with the slice it was made about. */
+
+const URL_KEYS = [
+  ["material", "material"], ["characteristic", "characteristic"], ["char_q", "charQ"],
+  ["h_material", "hMaterial"], ["h_char", "hChar"], ["h_result", "hResult"],
+  ["h_from", "hFrom"], ["h_to", "hTo"],
+  ["s_q", "sQ"], ["s_material", "sMaterial"],
+  ["n_q", "nQ"],
+];
+
 function readUrl() {
   const p = new URL(window.location).searchParams;
-  if (p.get("material")) filters.material = p.get("material");
-  if (p.get("material") && p.get("characteristic")) active = `${p.get("material")}/${p.get("characteristic")}`;
+  for (const [key, field] of URL_KEYS) if (p.get(key)) filters[field] = p.get(key);
+  if (p.has("n_status")) filters.nStatus = p.get("n_status");
+  filters.hOffset = Math.max(0, parseInt(p.get("h_offset") || "0", 10) || 0);
+  filters.sOffset = Math.max(0, parseInt(p.get("s_offset") || "0", 10) || 0);
+  filters.nOffset = Math.max(0, parseInt(p.get("n_offset") || "0", 10) || 0);
+  $("#q-char").value = filters.charQ;
+  $("#s-q").value = filters.sQ;
+  $("#n-q").value = filters.nQ;
+  $("#n-status").value = filters.nStatus;
+  $("#h-result").value = filters.hResult;
+  $("#h-from").value = filters.hFrom;
+  $("#h-to").value = filters.hTo;
 }
 
 function writeUrl() {
   const url = new URL(window.location);
-  const spec = specs.find((s) => key(s) === active);
-  if (spec) { url.searchParams.set("material", spec.material); url.searchParams.set("characteristic", spec.characteristic); }
-  else { url.searchParams.delete("material"); url.searchParams.delete("characteristic"); }
+  const set = (key, value) => {
+    if (value === "" || value === 0 || value === undefined || value === null) url.searchParams.delete(key);
+    else url.searchParams.set(key, String(value));
+  };
+  for (const [key, field] of URL_KEYS) set(key, filters[field]);
+  set("h_offset", filters.hOffset);
+  set("s_offset", filters.sOffset);
+  set("n_offset", filters.nOffset);
+  if (filters.nStatus === NC_DEFAULT_SCOPE) url.searchParams.delete("n_status");
+  else url.searchParams.set("n_status", filters.nStatus);
   history.replaceState(null, "", url);
 }
 
-const materials = () => [...new Set(specs.map((s) => s.material))].sort();
-
+/* A select of materials, built from the facets rather than from every
+   specification in the plant. */
 function fillMaterialSelect(select, keep, first) {
-  const chosen = keep;
-  select.replaceChildren(new Option(first, ""), ...materials().map((m) => new Option(m, m)));
-  if (materials().includes(chosen)) select.value = chosen;
+  const codes = facets.materials.map((m) => m.code);
+  select.replaceChildren(new Option(first, ""),
+    ...facets.materials.map((m) => new Option(`${m.code} (${m.specs})`, m.code)));
+  select.value = codes.includes(keep) ? keep : "";
 }
 
 /* ---------- the chart ---------- */
@@ -103,7 +165,7 @@ function drawChart() {
   const svg = $("#chart");
   svg.textContent = "";
 
-  const spec = specs.find((s) => key(s) === active);
+  const spec = currentSpec();
   const points = series.slice().sort((a, b) => (a.ts < b.ts ? -1 : 1));
 
   $("#chart-label").textContent = spec
@@ -175,17 +237,17 @@ function drawChart() {
 }
 
 async function loadSeries() {
-  const spec = specs.find((s) => key(s) === active);
+  const spec = currentSpec();
   if (!spec) { series = []; return; }
   const page = await api(`/quality/checks?material=${encodeURIComponent(spec.material)}`
-    + `&characteristic=${encodeURIComponent(spec.characteristic)}&limit=200`);
+    + `&characteristic=${encodeURIComponent(spec.characteristic)}&limit=${SERIES_POINTS}`);
   series = page.items || [];
 }
 
 async function showInstruction() {
   const box = document.querySelector("#wi-inline");
   if (!box) return;
-  const spec = specs.find((s) => key(s) === active);
+  const spec = currentSpec();
   if (!spec) { box.classList.add("hidden"); return; }
   try {
     const found = await api(
@@ -209,21 +271,42 @@ async function showInstruction() {
   }
 }
 
-/* The tabs are one material's characteristics - a handful, not the plant's
-   hundred. The material comes from the select above them. */
+/* ---------- measurements: one material's characteristics ----------
+   The tab strip is the chosen material's characteristics, asked for by
+   name - never the plant's. It says how many of the plant's it is showing,
+   and what it has left out if a single material has more than a page. */
+
+async function loadChars() {
+  if (!filters.material) { chars = { items: [], total: 0 }; return; }
+  // The search narrows the strip on the SERVER. "Way too many tags" was one
+  // material's hundred characteristics laid end to end; typing "fill" is how
+  // you get to the one you came for.
+  const p = new URLSearchParams({ material: filters.material, limit: String(CHAR_PAGE) });
+  if (filters.charQ) p.set("q", filters.charQ);
+  chars = await api(`/quality/specs?${p}`);
+  if (filters.characteristic && !chars.items.some((s) => s.characteristic === filters.characteristic)) {
+    filters.characteristic = "";
+  }
+  if (!filters.characteristic && chars.items.length) filters.characteristic = chars.items[0].characteristic;
+}
+
 function drawTabs() {
   const tabs = $("#spec-tabs");
   tabs.textContent = "";
-  const mine = specs.filter((s) => s.material === filters.material);
+  const shown = chars.items.length;
   $("#q-scope").textContent = filters.material
-    ? `${mine.length} characteristic${mine.length === 1 ? "" : "s"} on ${filters.material}, of ${specs.length} in the plant`
-    : `${materials().length} materials, ${specs.length} characteristics in the plant`;
-  for (const spec of mine) {
-    const k = key(spec);
-    const tab = el("button", "tab" + (k === active ? " active" : ""), spec.characteristic);
+    ? `${shown} of ${chars.total.toLocaleString()} characteristic${chars.total === 1 ? "" : "s"} `
+      + `${filters.charQ ? "matching " : ""}on ${filters.material}, `
+      + `of ${facets.specs_total.toLocaleString()} in the plant`
+    : `${facets.materials_total.toLocaleString()} materials, `
+      + `${facets.specs_total.toLocaleString()} characteristics in the plant`;
+  for (const spec of chars.items) {
+    const tab = el("button", "tab" + (spec.characteristic === filters.characteristic ? " active" : ""),
+                   spec.characteristic);
     tab.type = "button";
     tab.addEventListener("click", async () => {
-      active = k; writeUrl(); drawTabs();
+      filters.characteristic = spec.characteristic;
+      writeUrl(); drawTabs();
       await loadSeries().catch(() => { series = []; });
       drawChart(); showInstruction();
     });
@@ -231,24 +314,23 @@ function drawTabs() {
   }
 }
 
-/* ---------- specifications: filtered and paged in the browser ----------
-   The endpoint answers with the whole list (127 rows, 13 KB - fine); the
-   screen still says how many it is showing. */
+/* ---------- specifications: the server's page ---------- */
+
+function specQuery() {
+  const p = new URLSearchParams({ limit: String(SPEC_PAGE), offset: String(filters.sOffset) });
+  if (filters.sMaterial) p.set("material", filters.sMaterial);
+  if (filters.sQ) p.set("q", filters.sQ);
+  return `/quality/specs?${p}`;
+}
 
 function drawSpecs() {
-  const q = filters.sQ.toLowerCase();
-  const matching = specs.filter((s) =>
-    (!filters.sMaterial || s.material === filters.sMaterial)
-    && (!q || s.material.toLowerCase().includes(q) || s.characteristic.toLowerCase().includes(q)));
-  if (filters.sOffset >= matching.length) filters.sOffset = 0;
-  const page = {
-    items: matching.slice(filters.sOffset, filters.sOffset + SPEC_PAGE),
-    total: matching.length, limit: SPEC_PAGE, offset: filters.sOffset,
-    has_more: filters.sOffset + SPEC_PAGE < matching.length,
-  };
-  $("#s-count").textContent = matching.length === specs.length
-    ? `— ${page.items.length} of ${specs.length}`
-    : `— ${page.items.length} of ${matching.length} matching, ${specs.length} in the plant`;
+  const page = specPage;
+  filters.sOffset = page.offset;
+  const narrowed = Boolean(filters.sQ || filters.sMaterial);
+  $("#s-count").textContent = narrowed
+    ? `— ${page.items.length} of ${page.total.toLocaleString()} matching, `
+      + `${facets.specs_total.toLocaleString()} in the plant`
+    : `— ${page.items.length} of ${page.total.toLocaleString()}`;
   const body = $("#specs tbody");
   body.textContent = "";
   for (const s of page.items) {
@@ -257,8 +339,11 @@ function drawSpecs() {
     open.href = `/dashboard/quality?material=${encodeURIComponent(s.material)}&characteristic=${encodeURIComponent(s.characteristic)}`;
     open.addEventListener("click", async (event) => {
       event.preventDefault();
-      filters.material = s.material; $("#q-material").value = s.material;
-      active = key(s); writeUrl(); drawTabs();
+      filters.material = s.material; filters.characteristic = s.characteristic;
+      $("#q-material").value = s.material;
+      writeUrl();
+      await loadChars().catch(() => { chars = { items: [], total: 0 }; });
+      drawTabs();
       await loadSeries().catch(() => { series = []; });
       drawChart(); showInstruction();
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -274,7 +359,7 @@ function drawSpecs() {
     const row = el("tr"); const cell = el("td", "muted", "No specification matches."); cell.colSpan = 5;
     row.appendChild(cell); body.appendChild(row);
   }
-  FS.pager($("#s-pager"), page, (offset) => { filters.sOffset = offset; drawSpecs(); });
+  FS.pager($("#s-pager"), page, (offset) => { filters.sOffset = offset; writeUrl(); refresh(); });
 }
 
 /* ---------- inspection history: the server's page ---------- */
@@ -284,14 +369,34 @@ function historyQuery() {
   if (filters.hMaterial) p.set("material", filters.hMaterial);
   if (filters.hChar) p.set("characteristic", filters.hChar);
   if (filters.hResult) p.set("result", filters.hResult);
+  // A date box is a plant day, not an instant: "from the 3rd" means from the
+  // start of the 3rd, and "to the 3rd" means to the end of it.
+  if (filters.hFrom) p.set("since", `${filters.hFrom}T00:00:00`);
+  if (filters.hTo) p.set("until", `${filters.hTo}T23:59:59`);
   return `/quality/checks?${p}`;
 }
 
+function decorateWhen() {
+  const toggle = $("#h-when-toggle");
+  if (!filters.hFrom && !filters.hTo) {
+    toggle.textContent = "When ▾";
+    toggle.classList.remove("filtering");
+    return;
+  }
+  const short = (d) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString(undefined,
+    { month: "short", day: "numeric" }) : "…");
+  toggle.textContent = `${short(filters.hFrom)}–${short(filters.hTo)}`;
+  toggle.classList.add("filtering");
+}
+
 function drawChecks() {
+  decorateWhen();
   const body = $("#checks tbody");
   body.textContent = "";
   const page = historyPage;
-  const narrowed = filters.hMaterial || filters.hChar || filters.hResult;
+  filters.hOffset = page.offset;
+  const narrowed = Boolean(filters.hMaterial || filters.hChar || filters.hResult
+                           || filters.hFrom || filters.hTo);
   $("#h-count").textContent = `— ${page.items.length} of ${(page.total || 0).toLocaleString()}${narrowed ? " matching" : ""}`;
   for (const c of page.items) {
     const row = el("tr");
@@ -300,23 +405,34 @@ function drawChecks() {
     row.appendChild(el("td", null, c.characteristic));
     row.appendChild(el("td", "num", c.value));
     row.appendChild(el("td", c.result === "fail" ? "result-fail" : "result-pass", c.result));
+    const order = el("td");
+    if (c.order) {
+      const link = el("a", "obj", c.order);
+      link.href = `/dashboard/orders?q=${encodeURIComponent(c.order)}`;
+      order.appendChild(link);
+    } else {
+      // Not "—": a check taken against no order is a different fact from a
+      // check whose order we lost.
+      order.appendChild(el("span", "muted", "no order"));
+    }
+    row.appendChild(order);
     row.appendChild(el("td", "mono", c.checked_by || ""));
     body.appendChild(row);
   }
   if (!page.items.length) {
-    const row = el("tr"); const cell = el("td", "muted", "No checks match."); cell.colSpan = 6;
+    const row = el("tr"); const cell = el("td", "muted", "No checks match."); cell.colSpan = 7;
     row.appendChild(cell); body.appendChild(row);
   }
-  FS.pager($("#h-pager"), page, (offset) => { filters.hOffset = offset; refresh(); });
+  FS.pager($("#h-pager"), page, (offset) => { filters.hOffset = offset; writeUrl(); refresh(); });
 }
 
 function fillHistoryChars() {
   const select = $("#h-char");
   const keep = filters.hChar;
-  const chars = [...new Set(specs.filter((s) => !filters.hMaterial || s.material === filters.hMaterial)
-                                  .map((s) => s.characteristic))].sort();
-  select.replaceChildren(new Option("Any characteristic", ""), ...chars.map((c) => new Option(c, c)));
-  if (chars.includes(keep)) select.value = keep; else filters.hChar = "";
+  const names = charFacets.characteristics.map((c) => c.name);
+  select.replaceChildren(new Option("Any characteristic", ""),
+    ...charFacets.characteristics.map((c) => new Option(`${c.name} (${c.specs})`, c.name)));
+  if (names.includes(keep)) select.value = keep; else { filters.hChar = ""; select.value = ""; }
 }
 
 /* ---------- non-conformances: by status, searchable, paged ---------- */
@@ -418,18 +534,26 @@ function wireDisposition() {
   });
 }
 
+function ncQuery() {
+  const p = new URLSearchParams({ limit: String(NC_PAGE), offset: String(filters.nOffset) });
+  // Repeatable, one value each - "still open" is three states, and the API
+  // answers a comma list with a 422.
+  for (const one of filters.nStatus.split(",").filter(Boolean)) p.append("status", one);
+  if (filters.nQ) p.set("q", filters.nQ);
+  return `/quality/nonconformances?${p}`;
+}
+
 function drawNcs() {
   // The server's page, filtered there: a day of a busy plant is two
   // thousand non-conformances, and a month is a list no screen should fetch.
   const list = $("#ncs");
   list.textContent = "";
-  const q = filters.nQ.toLowerCase();
   const page = ncPage;
   filters.nOffset = page.offset;
   const what = NC_SCOPES[filters.nStatus] || "in any status";
-  $("#n-count").textContent = `— ${page.items.length} of ${page.total.toLocaleString()} ${what}${q ? " matching" : ""}`;
+  $("#n-count").textContent = `— ${page.items.length} of ${page.total.toLocaleString()} ${what}${filters.nQ ? " matching" : ""}`;
   if (!page.items.length) {
-    list.appendChild(el("li", "muted", filters.nStatus.startsWith("open") && !q
+    list.appendChild(el("li", "muted", filters.nStatus.startsWith("open") && !filters.nQ
       ? "none open — the line is inside spec" : "none match"));
   }
   for (const nc of page.items) {
@@ -483,21 +607,18 @@ function drawNcs() {
     li.appendChild(actions);
     list.appendChild(li);
   }
-  FS.pager($("#n-pager"), page, (offset) => { filters.nOffset = offset; refresh(); });
+  FS.pager($("#n-pager"), page, (offset) => { filters.nOffset = offset; writeUrl(); refresh(); });
 }
 
 /* ---------- refresh ---------- */
 
 async function refresh() {
   try {
-    const ncParams = new URLSearchParams({ limit: String(NC_PAGE), offset: String(filters.nOffset) });
-    for (const one of filters.nStatus.split(",").filter(Boolean)) ncParams.append("status", one);
-    if (filters.nQ) ncParams.set("q", filters.nQ);
-    const ncQuery = `/quality/nonconformances?${ncParams}`;
-    const [s, h, n, all, failed, stillOpen] = await Promise.all([
-      api("/quality/specs"),
+    const [f, sp, h, n, all, failed, stillOpen] = await Promise.all([
+      api("/quality/specs/facets"),
+      api(specQuery()),
       api(historyQuery()),
-      api(ncQuery),
+      api(ncQuery()),
       api("/quality/checks?limit=1"),
       api("/quality/checks?limit=1&result=fail"),
       // Not closed, which is three states now. A tile counting only the
@@ -505,12 +626,25 @@ async function refresh() {
       api("/quality/nonconformances?status=open&status=under_review"
           + "&status=dispositioned&limit=1"),
     ]);
-    specs = s || [];
+    facets = f;
+    specPage = sp;
     historyPage = h;
-    ncPage = n || ncPage;
-    if (!filters.material && specs.length) filters.material = (specs.find((x) => key(x) === active) || specs[0]).material;
-    if (!active) { const first = specs.find((x) => x.material === filters.material); if (first) active = key(first); }
-    if (active && !specs.some((x) => key(x) === active)) active = null;
+    ncPage = n;
+
+    // The chart opens on something: the material asked for in the address
+    // bar, else the first material that has a specification at all.
+    if (!filters.material && facets.materials.length) filters.material = facets.materials[0].code;
+    if (filters.material && !facets.materials.some((m) => m.code === filters.material)) {
+      filters.material = facets.materials.length ? facets.materials[0].code : "";
+      filters.characteristic = "";
+    }
+    await loadChars().catch(() => { chars = { items: [], total: 0 }; });
+
+    // The history's characteristic list narrows to its material when one is
+    // chosen; otherwise it is the plant's.
+    charFacets = filters.hMaterial
+      ? await api(`/quality/specs/facets?material=${encodeURIComponent(filters.hMaterial)}`).catch(() => facets)
+      : facets;
 
     fillMaterialSelect($("#q-material"), filters.material, "Choose a material");
     fillMaterialSelect($("#h-material"), filters.hMaterial, "Any material");
@@ -521,13 +655,21 @@ async function refresh() {
     $("#kpi-checks").textContent = total.toLocaleString();
     $("#kpi-pass").textContent = total ? (((total - (failed.total || 0)) / total) * 100).toFixed(1) + "%" : "—";
     $("#kpi-ncs").textContent = stillOpen && stillOpen.total !== undefined ? stillOpen.total.toLocaleString() : "—";
-    $("#kpi-specs").textContent = specs.length;
+    $("#kpi-specs").textContent = (facets.specs_total || 0).toLocaleString();
 
     await loadSeries().catch(() => { series = []; });
+    writeUrl();
     drawTabs(); drawChart(); drawSpecs(); drawChecks(); drawNcs();
-    window.__fsmesPageData = { specs: specs.length, active, series: series.slice(0, 40),
-                               history: { total: historyPage.total, shown: historyPage.items.length },
-                               nonconformances: ncPage.items.slice(0, 40), filters: { ...filters } };
+    window.__fsmesPageData = {
+      specs_total: facets.specs_total, materials_total: facets.materials_total,
+      chart: { material: filters.material, characteristic: filters.characteristic,
+               points: series.length },
+      series: series.slice(0, 40),
+      specifications: { total: specPage.total, shown: specPage.items.length },
+      history: { total: historyPage.total, shown: historyPage.items.length },
+      nonconformances: ncPage.items.slice(0, 40),
+      filters: { ...filters },
+    };
     showInstruction();
     live(true);
   } catch (err) {
@@ -539,31 +681,57 @@ async function refresh() {
 
 $("#q-material").addEventListener("change", async () => {
   filters.material = $("#q-material").value;
-  const first = specs.find((x) => x.material === filters.material);
-  active = first ? key(first) : null;
+  filters.characteristic = "";
+  await loadChars().catch(() => { chars = { items: [], total: 0 }; });
   writeUrl(); drawTabs();
   await loadSeries().catch(() => { series = []; });
   drawChart(); showInstruction();
 });
 
-$("#s-q").addEventListener("input", () => { filters.sQ = $("#s-q").value.trim(); filters.sOffset = 0; drawSpecs(); });
-$("#s-material").addEventListener("change", () => { filters.sMaterial = $("#s-material").value; filters.sOffset = 0; drawSpecs(); });
+let charTyping = null;
+$("#q-char").addEventListener("input", () => {
+  clearTimeout(charTyping);
+  charTyping = setTimeout(async () => {
+    filters.charQ = $("#q-char").value.trim();
+    await loadChars().catch(() => { chars = { items: [], total: 0 }; });
+    writeUrl(); drawTabs();
+    await loadSeries().catch(() => { series = []; });
+    drawChart(); showInstruction();
+  }, 250);
+});
+
+let specTyping = null;
+$("#s-q").addEventListener("input", () => {
+  clearTimeout(specTyping);
+  specTyping = setTimeout(() => {
+    filters.sQ = $("#s-q").value.trim(); filters.sOffset = 0; writeUrl(); refresh();
+  }, 250);
+});
+$("#s-material").addEventListener("change", () => {
+  filters.sMaterial = $("#s-material").value; filters.sOffset = 0; writeUrl(); refresh();
+});
 
 $("#h-material").addEventListener("change", () => {
-  filters.hMaterial = $("#h-material").value; filters.hOffset = 0; fillHistoryChars(); refresh();
+  filters.hMaterial = $("#h-material").value; filters.hChar = ""; filters.hOffset = 0; writeUrl(); refresh();
 });
-$("#h-char").addEventListener("change", () => { filters.hChar = $("#h-char").value; filters.hOffset = 0; refresh(); });
-$("#h-result").addEventListener("change", () => { filters.hResult = $("#h-result").value; filters.hOffset = 0; refresh(); });
+$("#h-char").addEventListener("change", () => { filters.hChar = $("#h-char").value; filters.hOffset = 0; writeUrl(); refresh(); });
+$("#h-result").addEventListener("change", () => { filters.hResult = $("#h-result").value; filters.hOffset = 0; writeUrl(); refresh(); });
+FS.popover("#h-when-toggle", "#h-when-pop");
+$("#h-from").addEventListener("change", () => { filters.hFrom = $("#h-from").value; filters.hOffset = 0; writeUrl(); refresh(); });
+$("#h-to").addEventListener("change", () => { filters.hTo = $("#h-to").value; filters.hOffset = 0; writeUrl(); refresh(); });
 $("#h-clear").addEventListener("click", () => {
-  filters.hMaterial = ""; filters.hChar = ""; filters.hResult = ""; filters.hOffset = 0;
-  $("#h-material").value = ""; $("#h-result").value = ""; fillHistoryChars(); refresh();
+  filters.hMaterial = ""; filters.hChar = ""; filters.hResult = "";
+  filters.hFrom = ""; filters.hTo = ""; filters.hOffset = 0;
+  $("#h-material").value = ""; $("#h-result").value = "";
+  $("#h-from").value = ""; $("#h-to").value = "";
+  writeUrl(); refresh();
 });
 
-$("#n-status").addEventListener("change", () => { filters.nStatus = $("#n-status").value; filters.nOffset = 0; refresh(); });
+$("#n-status").addEventListener("change", () => { filters.nStatus = $("#n-status").value; filters.nOffset = 0; writeUrl(); refresh(); });
 let ncTyping = null;
 $("#n-q").addEventListener("input", () => {
   clearTimeout(ncTyping);
-  ncTyping = setTimeout(() => { filters.nQ = $("#n-q").value.trim(); filters.nOffset = 0; refresh(); }, 250);
+  ncTyping = setTimeout(() => { filters.nQ = $("#n-q").value.trim(); filters.nOffset = 0; writeUrl(); refresh(); }, 250);
 });
 
 (async function boot() {

@@ -156,17 +156,38 @@ function wireMaterials() {
   });
 }
 
-/* ---------- specifications ---------- */
+/* ---------- specifications ----------
+   The only list on this screen the server pages, because it is the only one
+   that grows with the product catalogue rather than with the plant: a
+   thousand finished goods with a dozen characteristics each is twelve
+   thousand rows, and this screen used to ask for all of them to draw
+   twenty-five. The filter and the page are the server's; `specsTotal` is
+   the plant's own count, from the facets, so the line still reads
+   "25 of 41 matching, 12,000 in the plant". */
+
+let specPage = { items: [], total: 0, limit: PAGE, offset: 0, has_more: false };
+let specsTotal = 0;
+
+function specQuery() {
+  const p = new URLSearchParams({ limit: String(PAGE), offset: String(filters.specOffset) });
+  if (filters.specMaterial) p.set("material", filters.specMaterial);
+  if (filters.specQ) p.set("q", filters.specQ);
+  return `/quality/specs?${p}`;
+}
 
 async function loadSpecs() {
-  specs = await api("/quality/specs");
+  const [page, facets] = await Promise.all([
+    api(specQuery()),
+    api("/quality/specs/facets?limit=1").catch(() => null),
+  ]);
+  specPage = page;
+  specs = page.items;
+  if (facets) specsTotal = facets.specs_total;
   drawSpecs();
 }
 
 function drawSpecs() {
-  const matching = specs.filter((s) =>
-    (!filters.specMaterial || s.material === filters.specMaterial) && has(`${s.material} ${s.characteristic}`, filters.specQ));
-  const page = FS.clientPage(matching, filters.specOffset, PAGE);
+  const page = specPage;
   filters.specOffset = page.offset;
   const body = $("#spec-table tbody");
   body.replaceChildren();
@@ -182,8 +203,8 @@ function drawSpecs() {
     body.append(tr);
   }
   if (!page.items.length) { const tr = el("tr"); const td = el("td", "muted", "No specification matches."); td.colSpan = 6; tr.append(td); body.append(tr); }
-  $("#spec-count").textContent = FS.countText(page, specs.length);
-  FS.pager($("#spec-pager"), page, (offset) => { filters.specOffset = offset; drawSpecs(); });
+  $("#spec-count").textContent = FS.countText(page, Math.max(specsTotal, page.total));
+  FS.pager($("#spec-pager"), page, (offset) => { filters.specOffset = offset; loadSpecs().catch(fail); });
 }
 
 function wireSpecs() {
@@ -234,7 +255,13 @@ function wireFilters() {
   });
   bind("eq-q", "eqQ", drawEquipment); bind("eq-filter-level", "eqLevel", drawEquipment);
   bind("mat-q", "matQ", drawMaterials); bind("mat-filter-type", "matType", drawMaterials);
-  bind("spec-q", "specQ", drawSpecs); bind("spec-filter-material", "specMaterial", drawSpecs);
+  // The specifications card asks the server again; the rest redraw what
+  // they already hold. Typing is debounced, because a filter that is a
+  // request must not be one request per keystroke.
+  let typing = null;
+  const reload = () => { clearTimeout(typing); typing = setTimeout(() => loadSpecs().catch(fail), 250); };
+  bind("spec-q", "specQ", reload);
+  bind("spec-filter-material", "specMaterial", reload);
   bind("person-q", "pQ", drawPeople); bind("person-filter-role", "pRole", drawPeople);
 }
 

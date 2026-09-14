@@ -300,7 +300,7 @@ def order_action(plant: str, code: str, action: str, reason: str | None = None,
 def quality(plant: str) -> dict:
     """The quality picture: specs, recent checks with pass/fail, and open
     non-conformances."""
-    specs = _call(plant, "GET", "/quality/specs")
+    specs = _call(plant, "GET", "/quality/specs?limit=200")
     checks = _call(plant, "GET", "/quality/checks")
     ncs = _call(plant, "GET", "/quality/nonconformances?status=open&limit=50")
     if isinstance(checks, dict) and "items" in checks:
@@ -316,6 +316,12 @@ def quality(plant: str) -> dict:
                     "items": ncs["items"]}
     else:
         open_ncs = ncs
+    if isinstance(specs, dict) and "items" in specs:
+        # The first two hundred and how many there are. An agent told the
+        # plant has 200 characteristics when it has 1,240 will reason about
+        # the wrong plant.
+        specs = {"total": specs["total"], "shown": len(specs["items"]),
+                 "has_more": specs["has_more"], "items": specs["items"]}
     return {"plant": plant, "specs": specs, "checks": summary, "open_nonconformances": open_ncs}
 
 
