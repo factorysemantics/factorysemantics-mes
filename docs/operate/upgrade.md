@@ -196,10 +196,13 @@ The version you were on matters: the restored file carries the old schema,
 and the new code expects the new one.
 
 `deploy/promote.sh` in the repository does exactly this automatically for a
-pinned-tag deployment — stop, migrate, and on any failure restore each
-plant's newest `pre-migrate` copy and check the tree back out at the previous
-tag. If your plant is deployed from a checkout at a tag, use that script
-rather than these steps by hand.
+pinned-tag deployment — stop every plant, back each one up, migrate, and on
+any failure restore the backups *that run made* and check the tree back out
+at the previous tag. It covers a PostgreSQL plant too, with `pg_dump -Fc` and
+`pg_restore`, and every call it makes to PostgreSQL turns the statement
+timeout off, because a restore a timeout can cancel is not one. If your plant
+is deployed from a checkout at a tag, use that script rather than these steps
+by hand; `deploy/README.md` says what it does in order.
 
 ## A single install, not from the registry
 
