@@ -1703,6 +1703,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#what-a-scenario-can-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a scenario can script
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What a scenario can script">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-these-two-are-worth-a-measurement-of-their-own" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why these two are worth a measurement of their own
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-a-run-writes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1847,10 +1875,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-two-starters" class="md-nav__link">
+  <a href="#the-starters" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The two starters
+        The starters
       
     </span>
   </a>
@@ -3187,6 +3215,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#what-a-scenario-can-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a scenario can script
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What a scenario can script">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-these-two-are-worth-a-measurement-of-their-own" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why these two are worth a measurement of their own
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-a-run-writes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3331,10 +3387,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-two-starters" class="md-nav__link">
+  <a href="#the-starters" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The two starters
+        The starters
       
     </span>
   </a>
@@ -3398,8 +3454,7 @@ travel together.</p>
 <span class="n">serialization</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 
 <span class="c1"># A plant named here plays this script instead of its pack's own. The</span>
-<span class="c1"># vocabulary is the generator's: down, drift, scrap_burst, changeover,</span>
-<span class="c1"># counter_reset, micro_stops.</span>
+<span class="c1"># vocabulary is closed — see below.</span>
 <span class="k">[scenario.machining]</span>
 <span class="n">events</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"down"</span><span class="p">,</span><span class="w"> </span><span class="n">station</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"Mill"</span><span class="p">,</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">600</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">720</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">]</span>
 
@@ -3420,6 +3475,63 @@ travel together.</p>
 same seed twice is the same run</strong>, and the report states the seed it used. A
 plan that shortens <code>duration</code> past a scripted event is refused rather than run
 with half a script.</p>
+<h2 id="what-a-scenario-can-script">What a scenario can script<a class="headerlink" href="#what-a-scenario-can-script" title="Permanent link">&para;</a></h2>
+<p>The vocabulary is closed, and a plan that names anything else is refused
+before a directory is made, with the list printed:</p>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>What the line does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>down</code></td>
+<td>the machine has broken: it makes nothing and reports DOWN</td>
+</tr>
+<tr>
+<td><code>changeover</code></td>
+<td>the whole line is changing over: planned, and never downtime</td>
+</tr>
+<tr>
+<td><code>micro_stops</code></td>
+<td>short random stops, pre-rolled from the seed so a run repeats</td>
+</tr>
+<tr>
+<td><code>drift</code></td>
+<td>an analog ramps from its base to <code>to</code> across the window</td>
+</tr>
+<tr>
+<td><code>scrap_burst</code></td>
+<td>the station's scrap rate is <code>scrap_pct</code> for the window</td>
+</tr>
+<tr>
+<td><code>counter_reset</code></td>
+<td>the station's counters go back to zero at <code>at</code></td>
+</tr>
+<tr>
+<td><code>starve</code></td>
+<td>nothing arrives: the machine is willing and has nothing to work on</td>
+</tr>
+<tr>
+<td><code>block</code></td>
+<td>nowhere to put it: the machine is willing and downstream is full</td>
+</tr>
+</tbody>
+</table>
+<p><code>starve</code> and <code>block</code> script the <strong>cause</strong>, not the symptom, and the rest of
+the line follows on its own: starve the first station and every station after
+it starves in turn as its buffer drains, the way it would on the floor. So the
+run's total starved seconds are mostly knock-on, and the table in the report
+shows the scripted windows separately from the line's own total.</p>
+<h3 id="why-these-two-are-worth-a-measurement-of-their-own">Why these two are worth a measurement of their own<a class="headerlink" href="#why-these-two-are-worth-a-measurement-of-their-own" title="Permanent link">&para;</a></h3>
+<p>A machine with nothing to work on, or nowhere to put what it has made, is
+making nothing and <strong>there is nothing wrong with it</strong>. Booking those minutes as
+downtime invents a breakdown that never happened and reports an availability
+figure that is wrong in the direction nobody checks — it looks <em>worse</em>, so it
+is believed. It is the changeover fault from the other side, and
+<code>labs/experiments/starved-and-blocked.toml</code> is the starter that looks for it.</p>
 <h2 id="what-a-run-writes">What a run writes<a class="headerlink" href="#what-a-run-writes" title="Permanent link">&para;</a></h2>
 <p>One directory per run, under <code>lab-results/</code> unless <code>--results</code> says otherwise:</p>
 <table>
@@ -3516,6 +3628,18 @@ why it is the first row of the section.</p>
 many the line actually spent down. The MES records <strong>wall</strong> seconds and the
 script is written in <strong>line</strong> seconds, so the MES's figure is multiplied by the
 replay speed to compare. Both are labelled.</p>
+<p><em>Lags.</em> The shortest event a run could notice at all is one sampling interval
+of line time — thirty line seconds at 60×. A detection lag smaller than that is
+quantisation, so it is printed as <em>within resolution</em>, with the resolution
+beside it, rather than as a signed number somebody could put in a trend. A
+sweep once reported a breakdown detected one second <em>before</em> it was scripted.</p>
+<p><em>Starved and blocked.</em> Every scripted <code>starve</code> and <code>block</code> window is checked
+against what the MES recorded <strong>for that machine</strong>: unlike a changeover, which
+is the whole line stopping together, having nothing to work on is a fact about
+one station, so a neighbour that really did break in the same minutes is not
+counted against it. A window the MES was not watching scores <em>unknown</em>, never a
+pass. Beside the table, the line's own total seconds starved and blocked —
+most of which is the knock-on nobody scripted.</p>
 <p><em>What it cannot tell you.</em> Nothing in a run labels a stop — no downtime labels
 arrive by file, no operator names one — so the unlabelled share the MES reports
 has no truth beside it and says so. An event too brief to survive the sampling
@@ -3652,7 +3776,7 @@ report, so a person's observations travel with the numbers. Write it, then:</p>
 <p>which re-renders the page from <code>scores.json</code> and the notes. Nothing is
 recomputed; the numbers are the ones the run measured.</p>
 <p>To hand a run over, copy the directory. That is the whole procedure.</p>
-<h2 id="the-two-starters">The two starters<a class="headerlink" href="#the-two-starters" title="Permanent link">&para;</a></h2>
+<h2 id="the-starters">The starters<a class="headerlink" href="#the-starters" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -3668,6 +3792,10 @@ recomputed; the numbers are the ones the run measured.</p>
 <tr>
 <td><code>labs/experiments/two-plants-two-zones.toml</code></td>
 <td>Kansas City and Northgate, different products, clocks, modules and words, one after another at 30×</td>
+</tr>
+<tr>
+<td><code>labs/experiments/starved-and-blocked.toml</code></td>
+<td>twenty minutes in which nothing breaks and nothing is made: the empties run out, then the palletiser stops taking cases</td>
 </tr>
 </tbody>
 </table>
