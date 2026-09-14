@@ -66,6 +66,20 @@ class Settings(BaseSettings):
     # screens all say it was defaulted rather than chosen.
     plant_timezone: str = ""
 
+    # --- This plant's own words -------------------------------------------
+    # What this plant calls things, as JSON: the product's display term ->
+    # the plant's own word. `{"work order": "job"}` puts "job" on the screens
+    # and in the reports of a plant that says job.
+    #
+    # Display only, and the boundary is load-bearing (decision 0022 clause 3):
+    # it may not rename a state, a KPI, a capability, a role, an event kind or
+    # anything a topic or an API field is built from, because two plants whose
+    # events mean different things while saying the same word are two plants a
+    # fleet view compares as though they were one. The refusal lives in
+    # `fsmes pack check`, which is where the words are written; this setting is
+    # what a checked pack compiles to, and it is checked here for shape only.
+    words: str = "{}"
+
     # Signs session tokens. Generated per process if unset — fine for a laptop,
     # but a real deployment must set it (otherwise a restart logs everyone out,
     # and scaled-out API instances won't accept each other's tokens).
@@ -287,6 +301,29 @@ class Settings(BaseSettings):
         """The modules this plant does not serve. The other half of the
         answer, so a report of the state can state its total."""
         return module_registry.disabled(self.modules)
+
+    @model_validator(mode="after")
+    def _the_words_are_words(self) -> "Settings":
+        """Refuse to start on a vocabulary that is not one.
+
+        Shape only - that it is an object of term to word, and that no word is
+        blank. What a plant may rename is decided where a pack is written, by
+        `fsmes pack check`, against a protected list read from the product.
+        """
+        import json
+
+        try:
+            table = json.loads(self.words or "{}")
+        except ValueError:
+            raise ValueError(
+                "MES_WORDS is not JSON. It is an object of the product's term to this "
+                'plant\'s word, e.g. {"work order": "job"}.') from None
+        if not isinstance(table, dict) or not all(
+                isinstance(k, str) and isinstance(v, str) and v.strip() for k, v in table.items()):
+            raise ValueError(
+                "MES_WORDS is an object of the product's term to this plant's word, and "
+                "every word is a non-empty string.")
+        return self
 
     @model_validator(mode="after")
     def _the_plant_says_who_it_is(self) -> "Settings":

@@ -63,7 +63,9 @@ _lock = threading.Lock()
 
 
 def _registry() -> dict[str, dict]:
-    return plants.load_registry(ROOT)
+    from fsmes.pack import fleet
+
+    return fleet.load(ROOT)
 
 
 def _line_for(name: str, cfg: dict) -> Path:

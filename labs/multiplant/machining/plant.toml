@@ -1,0 +1,34 @@
+# The machining plant, as a pack.
+#
+# Written by `fsmes pack migrate` from this lab's old registry entry, then
+# finished by hand. Unlike bottling, this plant's line is not the product's:
+# its whole definition used to be `seed.py`, 156 lines of Python the registry
+# named and `fsmes plant machining init` ran as a subprocess. Decision 0022
+# says a pack carries no code, so the same plant is now the six files under
+# masterdata/, and `fsmes pack apply` seeds from them.
+
+[pack]
+format = 1
+requires = ">=0.1.2"
+
+[plant]
+name       = "machining"
+label      = "Northgate Machining / Cell A — 3-station machining cell"
+timezone   = "America/New_York"
+profile    = "laptop"
+enterprise = "NORTHGATE"
+site       = "NG1"
+
+[serve]
+api_host     = "127.0.0.1"
+api_port     = 8020
+opc_endpoint = "opc.tcp://127.0.0.1:4842/fsmes/machining"
+simulate     = true
+
+[files]
+tag_map    = "tag_map.json"
+replay_dir = "out"
+masterdata = "masterdata"
+
+[erp]
+mode = "off"

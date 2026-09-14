@@ -56,6 +56,14 @@ LADDER: tuple[tuple[str, tuple[str, ...]], ...] = (
         # an agent, a simulator, a migration runner, a seed script.
         "api", "integrations", "mcp", "mcp_server", "sim", "migrations",
         "seed", "seed_line", "seed_kepsim", "demo_feed", "backup",
+        # The plant pack: a format that reads a directory and writes a plant.
+        # An edge, not a foundation, and deliberately so - checking a pack
+        # means running each file's *own* validator (the tag map's, the
+        # inbound mapping's) and applying one means writing master data
+        # through the services, so the module that does it sits where those
+        # live. `fsmes.plant` stays below it and never imports it: a pack is
+        # compiled into the plain dictionary that module already ran.
+        "pack",
     )),
     ("cli", (
         # The top of the ladder: everything may be imported by the CLI and

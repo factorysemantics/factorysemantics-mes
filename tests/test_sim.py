@@ -326,8 +326,12 @@ def test_an_ephemeral_run_binds_loopback_whatever_the_plant_does():
 
     from fsmes import plant as plants
 
-    cfg = {"api_host": "192.0.2.10", "api_port": 8010, "opc_port": 4841,
-           "tag_map": "config/tag_map_kepsim.json", "replay_dir": "labs/kepsim/out"}
+    cfg = {"api_host": "192.0.2.10", "api_port": 8010,
+           "tag_map": "config/tag_map_kepsim.json", "replay_dir": "labs/kepsim/out",
+           "env": {"MES_API_HOST": "192.0.2.10", "MES_API_PORT": "8010",
+                   "MES_OPC_ENDPOINT": "opc.tcp://127.0.0.1:4841/fsmes/bottling",
+                   "MES_TAG_MAP_FILE": "config/tag_map_kepsim.json",
+                   "MES_REPLAY_DIR": "labs/kepsim/out"}}
     env = plants.plant_env("bottling", cfg, Path("."))
     assert env["MES_API_HOST"] == "192.0.2.10", "the plant itself keeps its bind"
 

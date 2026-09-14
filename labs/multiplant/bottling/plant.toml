@@ -1,0 +1,39 @@
+# The bottling plant, as a pack.
+#
+# Written by `fsmes pack migrate` from this lab's old registry entry, then
+# finished by hand: a registry never held a time zone, a profile, a module
+# list or a word, and `fsmes pack migrate` will not invent one.
+#
+# This plant's line is the product's own reference line - the same six
+# stations `fsmes seed-kepsim` builds - so the pack carries no master data
+# and `fsmes pack apply` says so. See README.md.
+
+[pack]
+format = 1
+requires = ">=0.1.2"
+
+[plant]
+name       = "bottling"
+label      = "ACME Beverages / Kansas City — 6-station bottling line"
+timezone   = "America/Chicago"
+profile    = "laptop"
+enterprise = "ACME"
+site       = "KC1"
+
+[serve]
+# The interface to serve on; a LAN or tailnet address to share it.
+api_host     = "127.0.0.1"
+api_port     = 8010
+opc_endpoint = "opc.tcp://127.0.0.1:4841/fsmes/bottling"
+simulate     = true
+
+[files]
+tag_map    = "tag_map.json"
+replay_dir = "../../kepsim/out"
+
+[erp]
+# No ERP in the lab: every plant would otherwise poll the same mock ERP and
+# fight over the same orders, which would look like an MES bug. This used to
+# be hard-coded in `plant_env` for every registry plant, which meant no
+# registry plant could reach an ERP at all - finding 1 of the M8 design.
+mode = "off"

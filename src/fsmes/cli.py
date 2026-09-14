@@ -1398,6 +1398,149 @@ def restore(
         typer.echo("Then bring the schema to this version: `fsmes init-db`.")
 
 
+pack_app = typer.Typer(
+    help="Plant packs: the one directory that says which plant this is.")
+app.add_typer(pack_app, name="pack")
+
+
+def _pack_or_exit(directory: Path):
+    from fsmes.pack import format as pack_format
+
+    try:
+        return pack_format.read(directory)
+    except pack_format.PackError as exc:
+        typer.echo(f"NOT OK  {exc}")
+        raise typer.Exit(2) from None
+
+
+@pack_app.command("check")
+def pack_check(
+    directory: Path = typer.Argument(..., help="The pack directory (the one with plant.toml)."),
+) -> None:
+    """Say everything wrong with a plant pack, without touching a plant.
+
+    No database, no network, no plant: it reads the directory and refuses an
+    unknown key, a bad time zone, a renamed protected term, a module this
+    version does not have, a `requires` this release does not satisfy, and a
+    file the pack names that is missing or that its own reader will not
+    accept. Every problem, not the first - a person fixing a pack beside a
+    line should need one round trip.
+
+    What it cannot prove without a plant - that the OPC endpoint answers,
+    that the database is reachable - it reports as unknown rather than
+    counting it as passing.
+    """
+    from fsmes.pack import check as checker
+    from fsmes.pack import format as pack_format
+
+    _pack_or_exit(directory)
+    try:
+        report = checker.check(directory)
+    except pack_format.PackError as exc:
+        typer.echo(f"NOT OK  {exc}")
+        raise typer.Exit(2) from None
+    typer.echo(f"Checking {directory} against pack format {pack_format.FORMAT}.")
+    for line in report.render():
+        typer.echo(line)
+    if not report.ok:
+        typer.echo(f"Not a usable pack: {len(report.problems)} problem(s), "
+                   f"{len(report.unknowns)} thing(s) this check cannot know.")
+        raise typer.Exit(1)
+    typer.echo(f"Usable, as far as a file can say: {report.checked} file(s) read, "
+               f"nothing refused, {len(report.unknowns)} thing(s) only a running plant "
+               "can answer.")
+
+
+@pack_app.command("apply")
+def pack_apply(
+    directory: Path = typer.Argument(..., help="The pack directory."),
+    data_dir: Path | None = typer.Option(None, help="Where to record what was applied."),
+) -> None:
+    """Make the plant this pack describes match this pack.
+
+    Checks first and refuses on failure; adopts the pack's settings; brings
+    the schema to head (pack before database, decision 0022); seeds the
+    master data the pack carries, or says it carries none; and records what
+    was applied, so `fsmes pack status` can answer whether the plant has
+    drifted from it. Safe to run twice.
+    """
+    from fsmes.pack import apply as applier
+    from fsmes.pack import format as pack_format
+
+    _pack_or_exit(directory)
+    typer.echo(f"Applying {directory}.")
+    try:
+        applier.apply(directory, into=data_dir, echo=typer.echo)
+    except applier.Refused as exc:
+        for line in exc.report.render():
+            typer.echo(line)
+        typer.echo("Refused - nothing was written. Fix the pack and run "
+                   f"`fsmes pack check {directory}`.")
+        raise typer.Exit(1) from None
+    except pack_format.PackError as exc:
+        typer.echo(f"NOT OK  {exc}")
+        raise typer.Exit(2) from None
+
+
+@pack_app.command("status")
+def pack_status(
+    directory: Path = typer.Argument(..., help="The pack directory."),
+    data_dir: Path | None = typer.Option(None, help="Where the record was written."),
+) -> None:
+    """Which pack this plant runs, whether it has drifted, and its schema.
+
+    Exits non-zero when the files on disk no longer make the fingerprint that
+    was applied, or when the database is behind the schema head, so a
+    deployment script can act on the answer rather than read it. A plant that
+    has never been applied says so - never applied is not the same as no
+    drift.
+    """
+    from fsmes.pack import apply as applier
+
+    _pack_or_exit(directory)
+    state = applier.status(directory, into=data_dir)
+    for line in state.render():
+        typer.echo(line)
+    if state.drifted or (state.head and state.revision != state.head):
+        raise typer.Exit(1)
+
+
+@pack_app.command("migrate")
+def pack_migrate(
+    source: Path = typer.Argument(..., help="A pack directory, or a plant registry file."),
+    plant_name: str | None = typer.Option(None, "--plant", help="Which plant in the registry."),
+    out: Path | None = typer.Option(None, "--out", help="Where to write the pack."),
+    root: Path | None = typer.Option(None, help="What the registry's relative paths are from."),
+) -> None:
+    """Bring a pack forward, or write one from a plant registry entry.
+
+    The one step that exists is from a registry entry - what a plant was
+    before packs - to format 1. It says what it moved, what it dropped and
+    why, and what it could not know: a registry never held a time zone, so
+    the pack is written without one and the receipt says to set it. Guessing
+    it from this machine's clock would be inventing a fact about a plant.
+    """
+    from fsmes.pack import format as pack_format
+    from fsmes.pack import migrate as migrator
+
+    try:
+        if source.is_dir():
+            receipt = migrator.migrate(source)
+        else:
+            if not plant_name or out is None:
+                typer.echo("A registry holds several plants: say which with --plant, and "
+                           "where the pack goes with --out.")
+                raise typer.Exit(2)
+            receipt = migrator.from_registry(source, plant_name, out, root=root)
+    except pack_format.PackError as exc:
+        typer.echo(f"NOT OK  {exc}")
+        raise typer.Exit(2) from None
+    for line in receipt.render():
+        typer.echo(line)
+    if receipt.written:
+        typer.echo(f"Now check it: `fsmes pack check {receipt.written.parent}`.")
+
+
 @app.command()
 def plant(
     names: list[str] = typer.Argument(..., help="Plant name(s), or 'all'."),
@@ -1423,6 +1566,7 @@ def plant(
                                   current schema (backup first, receipt after)
     """
     from fsmes import plant as plants_mod
+    from fsmes.pack import fleet
 
     valid = {"init", "start", "stop", "status", "run", "migrate"}
     if action not in valid:
@@ -1430,7 +1574,7 @@ def plant(
         raise typer.Exit(2)
 
     where = plants_mod.find_root(root)
-    registry = plants_mod.load_registry(where)
+    registry = fleet.load(where)
 
     try:
         targets = plants_mod.resolve(list(names), registry)
@@ -1478,10 +1622,11 @@ def score(
     import json as _json
 
     from fsmes import plant as plants_mod
+    from fsmes.pack import fleet
     from fsmes.sim.runner import scored_run
 
     where = plants_mod.find_root(root)
-    registry = plants_mod.load_registry(where)
+    registry = fleet.load(where)
     if name not in registry:
         typer.echo(f"Unknown plant '{name}'. Known: {', '.join(registry)}.")
         raise typer.Exit(2)
@@ -1565,12 +1710,13 @@ def sweep(
     import tempfile
 
     from fsmes import plant as plants_mod
+    from fsmes.pack import fleet
     from fsmes.sim import store
     from fsmes.sim import sweep as sweep_mod
     from fsmes.sim.runner import scored_run
 
     where = plants_mod.find_root(root)
-    registry = plants_mod.load_registry(where)
+    registry = fleet.load(where)
     if name not in registry:
         typer.echo(f"Unknown plant '{name}'. Known: {', '.join(registry)}.")
         raise typer.Exit(2)

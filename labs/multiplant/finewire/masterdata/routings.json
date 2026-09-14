@@ -1,0 +1,13 @@
+[
+  {
+    "code": "RT-WIRE",
+    "name": "Draw, Anneal, Spool and Wrap 1.5mm Wire",
+    "material": "FG-WIRE-15",
+    "operations": [
+      {"seq": 10, "name": "Draw", "equipment": "DRW01"},
+      {"seq": 20, "name": "Anneal", "equipment": "ANN01"},
+      {"seq": 30, "name": "Spool", "equipment": "SPL01"},
+      {"seq": 40, "name": "Wrap", "equipment": "WRP01"}
+    ]
+  }
+]

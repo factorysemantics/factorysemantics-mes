@@ -362,10 +362,18 @@ def scored_run(
         echo(f"  seeding an ephemeral {name} (api {api_port}, opc {opc_port})")
         subprocess.run([mes, "init-db"], cwd=root, env=env, check=True,
                        stdout=subprocess.DEVNULL)
-        seed = subprocess.run([os.sys.executable, cfg["init"]], cwd=root, env=env,
-                              capture_output=True, text=True)
+        # A plant described by a pack is seeded by applying it; a lab tool
+        # that composes a configuration in code may still hand this an `init`
+        # script, which is what the two scale labs' generators do. A pack can
+        # never name one - decision 0022, held by `fsmes pack check`.
+        if cfg.get("init"):
+            seed = subprocess.run([os.sys.executable, cfg["init"]], cwd=root, env=env,
+                                  capture_output=True, text=True)
+        else:
+            seed = subprocess.run([mes, "pack", "apply", str(cfg["pack"])], cwd=root, env=env,
+                                  capture_output=True, text=True)
         if seed.returncode != 0:
-            raise RuntimeError(f"seed failed: {seed.stderr.strip()}")
+            raise RuntimeError(f"seed failed: {(seed.stderr or seed.stdout).strip()}")
         for code, full, password, role in plants.LAB_USERS:
             subprocess.run([mes, "add-user", code, full, password, "--role", role],
                            cwd=root, env=env, capture_output=True)

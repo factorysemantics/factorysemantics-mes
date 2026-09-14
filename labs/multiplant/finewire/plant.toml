@@ -1,0 +1,97 @@
+# Fine Wire Drawing Works, Hall 2 — the pack that disagrees with the format.
+#
+# Invented for this repository, entirely. There is no such works, no such
+# company and no such customer; every code, name and number below was made up
+# to put pressure on the pack format, which is what a third pack is for.
+#
+# The other two lab plants disagree about the *line* — station count, names,
+# analogs, rates, buffers, product, routing, specification — and that is what
+# shakes out a hard-coded station name. They agree about everything a
+# `plant.toml` carries: same modules, same clock, same words, same ERP mode,
+# same storage. A pack format is proved by a plant that disagrees with the
+# format.
+#
+# So this one disagrees with all of it:
+#
+#   clock      Europe/Berlin, not America/*
+#   profile    plant, not laptop — so it must say its own name, and does
+#   modules    serialization and coa off: continuous wire has no serial unit
+#              and this works issues no certificate
+#   words      a coil, not a lot; an alloy, not a material
+#   storage    PostgreSQL, with the password in a file the pack names
+#   ERP        file handoff, not off
+#   namespace  log mode: builds every topic, publishes to no broker
+#   inbound    a downtime feed from the hall's own terminal, in Berlin time
+#   serving    it does not simulate; there is no line to replay
+#   accounts   one, whose password comes from a variable this pack names
+#
+# Nothing here has ever been started. `fsmes pack check` reads it, and
+# `tests/test_pack_third.py` builds settings from it and asks the API and the
+# agent what they serve.
+
+[pack]
+format   = 1
+requires = ">=0.1.2"
+
+[plant]
+name       = "finewire"
+label      = "Fine Wire Drawing Works / Hall 2 — 4-station drawing and spooling line"
+timezone   = "Europe/Berlin"
+profile    = "plant"
+enterprise = "FINEWIRE"
+site       = "FW2"
+
+[modules]
+# Wire leaves this hall on a coil, by weight. There is no unit to serialise,
+# and a traceability screen that can only ever be empty is worse than no
+# screen: it reads as broken rather than as absent.
+serialization = false
+# No certificate of analysis is issued here; the customer's own laboratory
+# releases the coil.
+coa = false
+
+[words]
+# Display only. Refused the moment either of these tried to rename a state, a
+# KPI, a capability, a role or an event kind — `fsmes pack check` holds that,
+# against a list read from the product itself.
+lot      = "coil"
+material = "alloy"
+
+[storage]
+database_url           = "postgresql+psycopg://fsmes@localhost:5433/finewire"
+database_password_file = "~/.config/fsmes/finewire-pg-password"
+
+[serve]
+api_host       = "127.0.0.1"
+api_port       = 8050
+opc_endpoint   = "opc.tcp://10.20.30.40:4840/FineWire/Hall2"
+# Nothing simulates. There is no line data for this plant and there is not
+# meant to be: it exists to be read, checked and served, never started.
+simulate       = false
+secret_key_env = "FSMES_FINEWIRE_SECRET_KEY"
+
+[files]
+tag_map = "tag_map.json"
+masterdata = "masterdata"
+
+[erp]
+# The confirmation-file handoff: what a first real plant gets instead of a
+# live connection.
+mode = "file"
+
+[uns]
+mode         = "log"
+topic_prefix = "umh/v1"
+
+[inbound]
+mapping = "mappings/inbound_mapping.json"
+
+[floor]
+inspect_every = 1800
+inspect_all   = true
+
+[[accounts]]
+code         = "HALL2"
+name         = "Hall 2 line terminal"
+role         = "operator"
+password_env = "FSMES_FINEWIRE_OPERATOR_PASSWORD"

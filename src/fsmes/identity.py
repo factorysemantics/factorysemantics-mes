@@ -1,4 +1,4 @@
-"""Which plant this is, and what clock it keeps.
+"""Which plant this is, what clock it keeps, and what it calls things.
 
 Two facts, and until now neither of them had an owner. `MES_PLANT_NAME`
 existed, defaulted to empty, and reached the unified namespace as
@@ -189,6 +189,28 @@ def today(settings=None) -> date:
     return datetime.now(clock(settings).tz).date()
 
 
+def words(settings=None) -> dict[str, str]:
+    """What this plant calls things: the product's display term -> its word.
+
+    Empty for the overwhelming majority of plants, which use the product's
+    own words. A reader looks a term up and falls back to the term itself, so
+    a plant that renames two labels renames two labels and nothing else.
+    """
+    import json
+
+    raw = getattr(_settings(settings), "words", "") or "{}"
+    try:
+        table = json.loads(raw)
+    except ValueError:
+        return {}
+    return {str(k): str(v) for k, v in table.items()} if isinstance(table, dict) else {}
+
+
+def say(term: str, settings=None) -> str:
+    """This plant's word for a product term, or the product's own."""
+    return words(settings).get(term, term)
+
+
 def plant_name(settings=None) -> str:
     """What this plant is called. Never empty: see `Settings`."""
     return _settings(settings).plant_name
@@ -209,6 +231,11 @@ def summary(settings=None) -> dict:
         "timezone": the_clock.name,
         "timezone_defaulted": the_clock.defaulted,
         "timezone_says": the_clock.says(),
+        # What this plant calls things. On health and shadow because a reader
+        # that is about to render this plant's numbers beside another's needs
+        # to know which of the two words on the two screens is a rename and
+        # which is a different thing.
+        "words": words(settings),
     }
 
 

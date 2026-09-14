@@ -1,0 +1,16 @@
+{
+  "downtime": {
+    "source": "terminal:hall2",
+    "source_kind": "terminal",
+    "timezone": "Europe/Berlin",
+    "columns": {
+      "external_key": "stop_id",
+      "recorded_at": "erfasst_am",
+      "equipment": "maschine",
+      "started_at": "beginn",
+      "ended_at": "ende",
+      "reason": "grund",
+      "note": "bemerkung"
+    }
+  }
+}

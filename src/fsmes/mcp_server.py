@@ -102,7 +102,9 @@ def serve_locally(plant: str, base_url: str) -> None:
 
 
 def _registry() -> dict[str, dict]:
-    return plants.load_registry(ROOT)
+    from fsmes.pack import fleet
+
+    return fleet.load(ROOT)
 
 
 def _client(plant: str) -> httpx.Client:

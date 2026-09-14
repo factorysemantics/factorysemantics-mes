@@ -64,10 +64,11 @@ def plants() -> dict[str, str]:
     a clean night.
     """
     from fsmes import plant as registry
+    from fsmes.pack import fleet
 
     try:
-        found = registry.load_registry(registry.find_root())
-    except (FileNotFoundError, KeyError, ValueError):
+        found = fleet.load(registry.find_root())
+    except (FileNotFoundError, KeyError, ValueError, fleet.FleetError):
         return {}
     wanted = [n.strip() for n in os.environ.get("MES_AUTOLOOP_PLANTS", "").split(",") if n.strip()]
     return {name: registry.dashboard_url(cfg).removesuffix("/dashboard")

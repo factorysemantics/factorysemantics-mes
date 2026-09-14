@@ -1,0 +1,10 @@
+[
+  {"code": "FINEWIRE", "name": "Fine Wire Drawing Works", "level": "enterprise"},
+  {"code": "FW2", "name": "Hall 2", "level": "site", "parent": "FINEWIRE"},
+  {"code": "DRAWING", "name": "Drawing and Spooling", "level": "area", "parent": "FW2"},
+  {"code": "FWLINE", "name": "Hall 2 Drawing Line", "level": "work_center", "parent": "DRAWING"},
+  {"code": "DRW01", "name": "Drawing Bench 01", "level": "work_unit", "parent": "FWLINE"},
+  {"code": "ANN01", "name": "Annealer 01", "level": "work_unit", "parent": "FWLINE"},
+  {"code": "SPL01", "name": "Spooler 01", "level": "work_unit", "parent": "FWLINE"},
+  {"code": "WRP01", "name": "Wrapper 01", "level": "work_unit", "parent": "FWLINE"}
+]
