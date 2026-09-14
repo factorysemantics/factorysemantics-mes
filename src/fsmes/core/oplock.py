@@ -34,16 +34,18 @@ class WriterBusy(RuntimeError):
     """
 
 
-@contextmanager
-def single_writer(
+def claim_lock(
     lock_path: Path,
     stale_after_s: float,
     busy_error: type[WriterBusy] = WriterBusy,
-) -> Iterator[None]:
-    """Hold ``lock_path`` for the duration of the block, or raise ``busy_error``.
+) -> Path:
+    """Take ``lock_path``, or raise ``busy_error``. The caller unlinks it.
 
-    ``busy_error`` lets a caller keep its own exception type so existing
-    handlers do not need to change.
+    Split out of ``single_writer`` for the callers whose lock outlives a
+    block - a run that has claimed a port holds it from before the plant is
+    seeded until after it is torn down, which is several subprocesses and no
+    single ``with`` statement. The primitive and the staleness rule are the
+    same for both, which is the point of having one of them.
     """
     lock_path = Path(lock_path)
     lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -59,9 +61,24 @@ def single_writer(
         log.warning("reclaiming lock abandoned %.0fs ago (holder died?)", age)
         lock_path.unlink(missing_ok=True)
         fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    os.write(fd, f"{os.getpid()} {datetime.now(UTC).isoformat()}".encode())
+    os.close(fd)
+    return lock_path
+
+
+@contextmanager
+def single_writer(
+    lock_path: Path,
+    stale_after_s: float,
+    busy_error: type[WriterBusy] = WriterBusy,
+) -> Iterator[None]:
+    """Hold ``lock_path`` for the duration of the block, or raise ``busy_error``.
+
+    ``busy_error`` lets a caller keep its own exception type so existing
+    handlers do not need to change.
+    """
+    lock_path = claim_lock(lock_path, stale_after_s, busy_error)
     try:
-        os.write(fd, f"{os.getpid()} {datetime.now(UTC).isoformat()}".encode())
-        os.close(fd)
         yield
     finally:
         lock_path.unlink(missing_ok=True)

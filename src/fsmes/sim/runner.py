@@ -12,6 +12,7 @@ gap in the product's own surface - which is the point.
 
 from __future__ import annotations
 
+import getpass
 import json
 import os
 import shutil
@@ -22,6 +23,7 @@ import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -34,16 +36,103 @@ from fsmes.sim.truth import load_truth
 API_RANGE = (8100, 8199)
 OPC_RANGE = (4900, 4999)
 
+def _whoami() -> str:
+    try:
+        return getpass.getuser()
+    except Exception:                 # no passwd entry (a container, a service)
+        return "unknown"
 
-def _free_port(low: int, high: int) -> int:
+
+#: Where one run tells the others which ports it has taken. A port is claimed
+#: for the whole of a run, not for the instant it was probed.
+#:
+#: Per user, not per machine: the lock coordinates *these* runs, and the bind
+#: probe already covers everything else on the box. A directory shared between
+#: two accounts would hand the second one a permission error instead of a port.
+PORT_LOCKS = Path(tempfile.gettempdir()) / f"fsmes-ports-{_whoami()}"
+
+#: A run that has held a port for longer than this is dead. The longest thing
+#: the lab runs is an hour of line time at 10x - ten minutes - and the whole
+#: ephemeral-plant machinery exists to be torn down, so an hour is generous by
+#: a wide margin. A lock older than this is reclaimed rather than wedging the
+#: range permanently when a run is killed.
+PORT_LOCK_STALE_S = 3600.0
+
+
+@dataclass
+class Reservation:
+    """A port this machine has promised to one run, and how to give it back."""
+
+    port: int
+    lock: Path
+
+    def release(self) -> None:
+        self.lock.unlink(missing_ok=True)
+
+
+def bindable(port: int) -> bool:
+    with socket.socket() as s:
+        try:
+            s.bind(("127.0.0.1", port))
+            return True
+        except OSError:
+            return False
+
+
+def reserve_port(low: int, high: int, what: str = "port") -> Reservation:
+    """Take a port for the length of a run, not for the length of a probe.
+
+    Probing with a bind and closing the socket again says a port was free a
+    moment ago, which is a different claim from "this port is mine". Two runs
+    started seconds apart both probed 8100, both found it free, and the second
+    one's plant came up on a port the first one's API was about to take - so a
+    read in the middle of a run answered *connection refused*. Seen on this
+    box on 2026-09-14 when a two-plant starter ran beside other ephemeral
+    plants; alone, the same plan was clean.
+
+    So the claim is written down. `O_EXCL` is the atomic primitive on both
+    platforms (`fsmes.core.oplock` settled that already, and this MES runs on
+    plant PCs), the holder writes its pid, and a lock left by a killed run is
+    reclaimed once it is stale. The bind probe still happens, for everything
+    on this machine that is not one of these runs.
+    """
+    from fsmes.core.oplock import WriterBusy, claim_lock
+
+    held, busy = 0, 0
     for port in range(low, high + 1):
-        with socket.socket() as s:
-            try:
-                s.bind(("127.0.0.1", port))
-                return port
-            except OSError:
-                continue
-    raise RuntimeError(f"No free port in {low}-{high}")
+        lock = PORT_LOCKS / f"{port}.lock"
+        try:
+            claim_lock(lock, PORT_LOCK_STALE_S)
+        except WriterBusy:
+            held += 1
+            continue
+        if not bindable(port):
+            # Something that is not one of these runs is listening - a
+            # standing plant, somebody's editor, the console. Give the claim
+            # straight back rather than holding a port we cannot use.
+            lock.unlink(missing_ok=True)
+            busy += 1
+            continue
+        return Reservation(port=port, lock=lock)
+    raise RuntimeError(
+        f"No free {what} in {low}-{high}: {held} held by other runs on this machine, "
+        f"{busy} in use by something else.")
+
+
+def reserve_ports() -> tuple[Reservation, Reservation]:
+    """The two ports one ephemeral plant needs, or neither of them.
+
+    A run that took an API port and then found no OPC port would leave the
+    first one claimed by a run that never started. It would be reclaimed when
+    it went stale, but an hour of a range quietly shrinking is not a thing to
+    leave for the staleness rule to mop up.
+    """
+    api = reserve_port(*API_RANGE, "API port")
+    try:
+        return api, reserve_port(*OPC_RANGE, "OPC port")
+    except BaseException:
+        api.release()
+        raise
 
 
 def _login(base: str, code: str = "SCOTT", password: str = "operator",
@@ -348,7 +437,12 @@ def scored_run(
         raise ValueError(f"{line} does not declare duration_s")
 
     publish_ms = publish_interval_ms(truth, speed)
-    api_port, opc_port = _free_port(*API_RANGE), _free_port(*OPC_RANGE)
+    # Claimed for the whole run, and given back in the `finally` below. Two
+    # runs started seconds apart used to probe the same port, both find it
+    # free, and one of them then read *connection refused* in the middle of
+    # its own hour.
+    api, opc = reserve_ports()
+    api_port, opc_port = api.port, opc.port
     workdir = Path(tempfile.mkdtemp(prefix=f"fsmes-run-{name}-"))
     db = (workdir / "run.db").as_posix()
 
@@ -509,6 +603,8 @@ def scored_run(
             except subprocess.TimeoutExpired:
                 p.kill()
         log.close()
+        api.release()
+        opc.release()
         # A swept run keeps its evidence; the results store records where
         # it is so a retention pass can find it later.
         if not keep_evidence:
