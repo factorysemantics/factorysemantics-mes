@@ -40,6 +40,11 @@ def ensure_builtin_roles(session: Session) -> int:
     New capabilities added to a shipped role reach existing databases here -
     a plant that installed before a capability existed should still have it
     on the built-in roles, without an admin re-creating them by hand.
+
+    Only for roles the plant has left alone. Redefining a shipped role clears
+    its `builtin` mark (see `PUT /admin/roles/{code}`), which takes it out of
+    this top-up: an upgrade must never quietly overrule an admin's decision
+    about who may do what.
     """
     import json
 
@@ -56,6 +61,7 @@ def ensure_builtin_roles(session: Session) -> int:
                              builtin=True))
             made += 1
         elif role.builtin and set(role.granted()) != set(spec["capabilities"]):
+            # Still ours to maintain: nobody has redefined it.
             role.capabilities = json.dumps(spec["capabilities"])
     session.flush()
     return made

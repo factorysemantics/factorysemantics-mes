@@ -127,17 +127,7 @@ function renderRoles() {
     const editRow = el("div", "role-actions");
     const edit = el("button", "ghost small", "Edit");
     edit.type = "button";
-    edit.addEventListener("click", () => {
-      const f = $("#form-role");
-      f.code.value = role.code;
-      f.code.readOnly = true;
-      f.name.value = role.name;
-      f.description.value = role.description || "";
-      document.querySelectorAll("#cap-checks input").forEach((b) => (b.checked = role.capabilities.includes(b.value)));
-      f.dataset.editing = role.code;
-      f.querySelector("button").textContent = `Save ${role.code}`;
-      f.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
+    edit.addEventListener("click", () => startRoleEdit(role));
     editRow.appendChild(edit);
     card.appendChild(editRow);
     if (!role.protected) {
@@ -168,6 +158,35 @@ function renderRoles() {
     if (role.code === "operator") opt.selected = true;
     select.appendChild(opt);
   }
+}
+
+/* One form defines a role and redefines one. Which it is doing has to be
+   visible, and there has to be a way back out - otherwise pressing Edit locks
+   the screen into redefining that one role until somebody reloads the page. */
+
+function startRoleEdit(role) {
+  const f = $("#form-role");
+  f.code.value = role.code;
+  f.code.readOnly = true;
+  f.name.value = role.name;
+  f.description.value = role.description || "";
+  document.querySelectorAll("#cap-checks input").forEach((b) => (b.checked = role.capabilities.includes(b.value)));
+  f.dataset.editing = role.code;
+  $("#role-form-title").textContent = `Edit ${role.code}`;
+  $("#role-save").textContent = `Save ${role.code}`;
+  $("#role-cancel").classList.remove("hidden");
+  f.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function endRoleEdit() {
+  const f = $("#form-role");
+  f.reset();
+  delete f.dataset.editing;
+  f.code.readOnly = false;
+  $("#role-form-title").textContent = "Define a role";
+  $("#role-save").textContent = "Create role";
+  $("#role-cancel").classList.add("hidden");
+  document.querySelectorAll("#cap-checks input").forEach((b) => (b.checked = false));
 }
 
 function renderCapabilityChecks() {
@@ -258,6 +277,7 @@ $("#form-role").addEventListener("submit", async (event) => {
   if (!chosen.length) { toast("A role that grants nothing is not a role.", "bad"); return; }
   try {
     const editing = f.dataset.editing;
+    const was = roles.find((r) => r.code === editing);
     const body = {
       code: f.code.value.trim(),
       name: f.name.value.trim(),
@@ -267,16 +287,24 @@ $("#form-role").addEventListener("submit", async (event) => {
     // The same form defines a role and redefines one; the difference is
     // whether Edit filled it. A redefinition is effective on everyone's next
     // action, because capabilities are read live.
-    await api(editing ? `/admin/roles/${editing}` : "/admin/roles", { method: editing ? "PUT" : "POST", body });
-    toast(editing ? `${editing} redefined — effective immediately` : `${f.code.value} created`);
-    f.reset();
-    delete f.dataset.editing;
-    f.code.readOnly = false;
-    f.querySelector("button").textContent = "Create role";
-    document.querySelectorAll("#cap-checks input:checked").forEach((b) => (b.checked = false));
+    const saved = await api(editing ? `/admin/roles/${editing}` : "/admin/roles",
+                            { method: editing ? "PUT" : "POST", body });
+    if (!editing) {
+      toast(`${f.code.value} created`);
+    } else if (was && was.builtin && !saved.builtin) {
+      // Worth saying out loud: it has left the set the product maintains, so
+      // a later version adding a capability to this role will pass it by.
+      toast(`${editing} redefined — effective immediately. It is this plant's own role now, `
+            + "and no longer picks up capabilities added by later versions.");
+    } else {
+      toast(`${editing} redefined — effective immediately`);
+    }
+    endRoleEdit();
     await refresh();
   } catch (err) { toast(err.message, "bad"); }
 });
+
+$("#role-cancel").addEventListener("click", endRoleEdit);
 
 $("#add-op").addEventListener("click", () => {
   addOperationRow(($("#ops").children.length + 1) * 10);

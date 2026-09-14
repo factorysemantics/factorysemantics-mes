@@ -7,6 +7,8 @@ every operator could also book production, issue material and change machine
 states. These tests are that question, asked of the code.
 """
 
+import json
+
 import pytest
 
 from fsmes.services import capabilities as caps
@@ -159,6 +161,171 @@ def test_changing_a_users_role_takes_effect_on_their_next_call(sign_in, session)
     assert hire.post("/equipment/MIX01/state", json={"state": "down"}).status_code == 403
 
 
+# ------------------------------------------------------ redefining a role
+
+def test_an_admin_can_change_what_a_role_grants(sign_in):
+    """Scott, at the admin screen: "I should be able to edit roles." """
+    admin = sign_in("ADMIN", "admin")
+    r = admin.put("/admin/roles/quality_inspector", json={
+        "code": "quality_inspector", "name": "Quality Inspector",
+        "description": "Records inspections, and labels the stop it caused.",
+        "capabilities": ["plant.read", "quality.record", "equipment.state"],
+    })
+    assert r.status_code == 200, r.text
+    assert set(r.json()["capabilities"]) == {
+        "plant.read", "quality.record", "equipment.state"}
+
+
+def test_a_redefined_shipped_role_is_still_redefined_when_the_screen_asks_again(sign_in):
+    """The admin screen re-reads the roles every eight seconds, and listing
+    them tops up the roles the product ships. That top-up used to write the
+    shipped bundle straight back over the edit: the save said "redefined", the
+    card showed the old capabilities a moment later, and nothing said why.
+    """
+    admin = sign_in("ADMIN", "admin")
+    shipped = caps.BUILTIN_ROLES["supervisor"]["capabilities"]
+    assert admin.put("/admin/roles/supervisor", json={
+        "code": "supervisor", "name": "Supervisor",
+        "description": "Supervisors here do not close orders.",
+        "capabilities": [c for c in shipped if c != "orders.close"],
+    }).status_code == 200
+
+    again = next(r for r in admin.get("/admin/roles").json() if r["code"] == "supervisor")
+    assert "orders.close" not in again["capabilities"]
+
+
+def test_a_shipped_role_the_plant_has_changed_stops_being_marked_built_in(sign_in):
+    """`builtin` is what puts a role in the set the product maintains. Once a
+    plant has decided what the role grants, the product is not entitled to
+    that decision any more, and the screen stops calling it built-in."""
+    admin = sign_in("ADMIN", "admin")
+    r = admin.put("/admin/roles/viewer", json={
+        "code": "viewer", "name": "Viewer",
+        "description": "Reads the plant and the audit trail.",
+        "capabilities": ["plant.read", "audit.read"],
+    })
+    assert r.status_code == 200, r.text
+    assert r.json()["builtin"] is False
+
+
+def test_saving_a_shipped_role_unchanged_leaves_it_in_the_products_hands(sign_in):
+    """Opening the form and pressing save without changing a capability is not
+    a decision about what the role grants, so it must not opt the role out of
+    later top-ups."""
+    admin = sign_in("ADMIN", "admin")
+    r = admin.put("/admin/roles/viewer", json={
+        "code": "viewer", "name": "Viewer",
+        "description": "A slightly better sentence about viewers.",
+        "capabilities": list(caps.BUILTIN_ROLES["viewer"]["capabilities"]),
+    })
+    assert r.status_code == 200, r.text
+    assert r.json()["builtin"] is True
+    assert r.json()["description"] == "A slightly better sentence about viewers."
+
+
+def test_a_shipped_role_nobody_has_changed_still_gains_new_capabilities(session):
+    """The top-up is why a plant that installed before a capability existed
+    still has it on the shipped roles. Redefining a role opts it out; leaving
+    it alone must not."""
+    from sqlalchemy import select
+
+    from fsmes.domain import Role
+    from fsmes.services import auth
+
+    auth.ensure_builtin_roles(session)
+    role = session.scalar(select(Role).where(Role.code == "supervisor"))
+    role.capabilities = json.dumps([c for c in role.granted() if c != "orders.close"])
+    session.flush()
+
+    auth.ensure_builtin_roles(session)
+    assert "orders.close" in role.granted()
+
+
+def test_a_misspelt_capability_is_refused_when_redefining_a_role_too(sign_in):
+    admin = sign_in("ADMIN", "admin")
+    r = admin.put("/admin/roles/quality_inspector", json={
+        "code": "quality_inspector", "name": "Quality Inspector",
+        "capabilities": ["plant.read", "quality.recrod"],
+    })
+    assert r.status_code == 400
+    assert "quality.recrod" in r.json()["detail"]
+
+
+def test_the_admin_role_cannot_have_user_administration_taken_off_it(sign_in):
+    """The other way to reach a plant nobody can administer. Deleting the
+    admin role is already refused; emptying it was not, and the screen that
+    could put users.manage back is the one you would be locked out of."""
+    admin = sign_in("ADMIN", "admin")
+    r = admin.put("/admin/roles/admin", json={
+        "code": "admin", "name": "Administrator",
+        "description": "Everything.",
+        "capabilities": ["plant.read", "masterdata.write"],
+    })
+    assert r.status_code == 400
+    assert "users.manage" in r.json()["detail"]
+
+    still = next(x for x in admin.get("/admin/roles").json() if x["code"] == "admin")
+    assert "users.manage" in still["capabilities"]
+    assert "masterdata.write" in still["capabilities"], "the refusal changed nothing"
+
+
+def test_redefining_a_role_says_in_the_trail_what_it_used_to_grant(sign_in, session):
+    """A capability that went missing has to be answerable from the trail: who
+    took it off, when, and what the role held before they did."""
+    from sqlalchemy import select
+
+    from fsmes.domain import AuditLog
+
+    admin = sign_in("ADMIN", "admin")
+    assert admin.put("/admin/roles/quality_inspector", json={
+        "code": "quality_inspector", "name": "Quality Inspector",
+        "capabilities": ["plant.read"],
+    }).status_code == 200
+
+    row = session.scalar(select(AuditLog).where(AuditLog.action == "role.updated",
+                                                AuditLog.entity_id == "quality_inspector"))
+    assert row is not None, "a role change nobody can find is not audited"
+    assert row.actor == "ADMIN"
+    assert "quality.record" in row.before["capabilities"]
+    assert row.after["capabilities"] == ["plant.read"]
+
+
+def test_a_person_holding_a_redefined_role_has_its_new_powers_at_once(sign_in, session):
+    """What the screen promises: capabilities resolve per request, so a role
+    that gains a power hands it to its holders on their very next action."""
+    from fsmes.services import auth
+
+    auth.create_user(session, code="INSPECTOR2", name="Second Inspector",
+                     password="pw", role="quality_inspector")
+    session.flush()
+
+    inspector = sign_in("INSPECTOR2", "pw")
+    assert inspector.post("/equipment/MIX01/state",
+                          json={"state": "idle"}).status_code == 403
+
+    admin = sign_in("ADMIN", "admin")
+    assert admin.put("/admin/roles/quality_inspector", json={
+        "code": "quality_inspector", "name": "Quality Inspector",
+        "capabilities": ["plant.read", "quality.record", "equipment.state"],
+    }).status_code == 200
+
+    # Same token, no second sign-in.
+    assert inspector.post("/equipment/MIX01/state",
+                          json={"state": "idle"}).status_code == 200
+
+
+def test_redefining_a_role_that_does_not_exist_says_so(sign_in):
+    admin = sign_in("ADMIN", "admin")
+    r = admin.put("/admin/roles/line_lead", json={
+        "code": "line_lead", "name": "Line Lead", "capabilities": ["plant.read"]})
+    assert r.status_code == 404
+
+
+def test_a_non_admin_cannot_redefine_a_role(client):
+    assert client.put("/admin/roles/viewer", json={
+        "code": "viewer", "name": "Viewer", "capabilities": []}).status_code == 403
+
+
 def test_a_non_admin_cannot_administer_roles(client):
     assert client.get("/admin/users").status_code == 403
     assert client.post("/admin/roles", json={"code": "x", "name": "X"}).status_code == 403
@@ -187,6 +354,17 @@ def test_no_screen_gates_on_a_role_name():
         text = path.read_text(encoding="utf-8")
         assert "data-min-role" not in text, f"{path.name} still gates on a role name"
         assert "ROLES.indexOf" not in text, f"{path.name} still ranks roles"
+
+
+def test_the_roles_panel_can_leave_the_edit_it_started():
+    """Edit fills the create form in place. Without a way back out, pressing
+    it locks the panel into redefining that one role until the page is
+    reloaded - and the next Create writes over the role instead."""
+    html = (WEB / "admin.html").read_text(encoding="utf-8")
+    js = (WEB / "admin.js").read_text(encoding="utf-8")
+    assert 'id="role-cancel"' in html, "no way out of the edit"
+    assert 'id="role-save"' in html
+    assert "endRoleEdit" in js and '$("#role-cancel").addEventListener' in js
 
 
 def test_every_ui_capability_gate_names_a_real_capability():
