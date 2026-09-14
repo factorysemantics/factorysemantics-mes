@@ -14,6 +14,10 @@ tags: [fsmes, design, backlog]
 # The specifications card is the server's page
 
 **built** — The last list in the API that handed over the whole table now answers with the standard envelope.
+*Judged twice, from two branches: `specifications-card-filtering.md` is the
+same idea seen from `feat/station-quality-and-ncr`, and points here. This
+note is the detailed record of what moved.*
+
 ## What he asked
 
 "specifications needs filtering."

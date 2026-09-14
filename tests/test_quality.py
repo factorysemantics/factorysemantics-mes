@@ -186,7 +186,7 @@ def test_a_station_can_ask_for_only_the_specs_of_what_it_is_running(supervisor):
     """A measurement with nothing to judge it against cannot pass or fail, so
     the card offers the characteristics that have a spec for this material and
     no others."""
-    mine = supervisor.get("/quality/specs?material=FG-COLA").json()
+    mine = supervisor.get("/quality/specs?material=FG-COLA").json()["items"]
     assert mine and all(s["material"] == "FG-COLA" for s in mine)
     assert "brix" in {s["characteristic"] for s in mine}
 
