@@ -1716,6 +1716,54 @@ def fleet_list(
         _refused(exc)
 
 
+@fleet_app.command("plan")
+def fleet_plan(
+    as_json: bool = typer.Option(False, "--json", help="Print the plan as JSON, for a script."),
+    with_password: bool = typer.Option(
+        False, "--with-password",
+        help="Include each database password, for a promote that must run pg_dump. "
+             "JSON only; send it to a variable and never to a file."),
+    root: Path | None = typer.Option(None, help="Repository root (default: found from cwd)."),
+) -> None:
+    """What a deployment script needs to know about every plant in this fleet.
+
+    Where each pack is, where each database is and what kind it is, whether
+    the plant simulates a line worth regenerating, and where to ask it
+    whether it came back. `deploy/promote.sh` reads this rather than parsing
+    the fleet file a second time in bash - which is how the 0.2.0 script came
+    to look for a table the format no longer has.
+
+    Reads only, and touches no plant. The password is left out unless it is
+    asked for, so the plain output is safe to paste into an issue.
+    """
+    import json as json_lib
+
+    from fsmes.pack import fleet as packs
+    from fsmes.pack import format as pack_format
+    from fsmes.pack import plan as planner
+
+    if with_password and not as_json:
+        typer.echo("`--with-password` is for a script: pass `--json` with it.")
+        raise typer.Exit(2)
+    try:
+        answer = planner.plan(_fleet_root(root), with_password=with_password)
+    except (packs.FleetError, pack_format.PackError, FileNotFoundError) as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(2) from None
+
+    if as_json:
+        typer.echo(json_lib.dumps(answer, indent=2, sort_keys=True))
+        return
+    typer.echo(f"{answer['fleet']}: {answer['count']} plants, "
+               f"{answer['can_back_up']} this tooling can back up before migrating.")
+    for row in answer["plants"]:
+        storage = row["storage"]
+        typer.echo(f"  {row['name']:<14} {row['health']:<26} {storage['kind']:<11} "
+                   f"backup: {storage['backup']}")
+        if storage.get("why"):
+            typer.echo(f"      {storage['why']}")
+
+
 @app.command()
 def plant(
     names: list[str] = typer.Argument(..., help="Plant name(s), or 'all'."),

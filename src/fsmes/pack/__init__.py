@@ -12,10 +12,11 @@ what may be in one; `docs/operate/packs.md` is the page a person reads.
     fsmes pack status <dir>    what the plant runs, and whether it has drifted
     fsmes pack migrate ...     a registry entry, brought forward into a pack
 
-Four modules, in the order a pack meets them: `format` says what a pack may
+Six modules, in the order a pack meets them: `format` says what a pack may
 contain and what it compiles to, `check` refuses one, `apply` applies it and
 reports its status, `migrate` writes one from what came before, `masterdata`
-reads the data a pack seeds, and `fleet` is the list of packs a machine runs.
+reads the data a pack seeds, `fleet` is the list of packs a machine runs, and
+`plan` is that list as `deploy/promote.sh` needs it.
 """
 
 from fsmes.pack.format import FORMAT, PLANT_FILE, Pack, PackError, read, settings

@@ -9,6 +9,7 @@ fsmes fleet status machining                   # what it says about itself
 fsmes fleet stop machining
 fsmes fleet apply machining                    # a new version of its pack, to a stopped plant
 fsmes fleet list                               # everything owned or watched, with the totals
+fsmes fleet plan                               # what a deployment script would act on
 ```
 
 `fsmes fleet` manages **plants**, never **production**. It can stop a plant it owns; it cannot make one say it built something. No tag reaches a PLC through it, nothing goes to an ERP, no order is created or closed, no production is booked, and no master data, account or audit row is edited. Those stay each plant's own business, behind that plant's [shadow mode](shadow-mode.md), its capability roles and its approvals.
@@ -72,6 +73,20 @@ The ownership gate, then the machinery that already runs plants (`fsmes plant <n
 Reads. `status` says whether the plant is owned and **why** — the same question every verb asks, answered before you hit it. `list` states its total: *"N plants, M answered, K unknown; J owned"*. The number recorded is never the number seen.
 
 A plant that did not answer is **unknown**. Never healthy, never down.
+
+### `fsmes fleet plan`
+
+Reads. What a deployment script needs to know about every plant the **fleet file** lists — owned or not, since a promote moves a whole machine: where each pack is, where each database is and what kind it is, whether the plant simulates a line worth regenerating, and where to ask it whether it came back.
+
+It states its total the same way `list` does: how many packs the fleet lists, and how many of those this product's deployment tooling could back up before migrating. Those two differing is the fact that matters — it means a plant nobody could roll back.
+
+```
+~/.config/fsmes/prod/fleet.toml: 2 plants, 2 this tooling can back up before migrating.
+  bottling       http://127.0.0.1:9010      sqlite      backup: copy
+  cutlery        http://127.0.0.1:9030      postgresql  backup: pg_dump
+```
+
+`--json` is the form [`deploy/promote.sh`](https://github.com/factorysemantics/factorysemantics-mes/blob/main/deploy/promote.sh) reads, so the promote does not parse `fleet.toml` a second time in bash. No password is printed unless `--with-password` asks for one, which is for a script piping it straight into `pg_dump`; the plain output is safe to paste into an issue.
 
 ## The console
 
