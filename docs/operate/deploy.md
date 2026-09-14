@@ -26,7 +26,11 @@ To leave twin mode, point `MES_OPC_ENDPOINT` at your server and
 `MES_ERP_MODE` to `erpnext`, `file`, or `off`.
 
 The image is `ghcr.io/factorysemantics/fsmes` (amd64 and arm64), signed with
-cosign and shipped with an SBOM from each release.
+cosign and shipped with an SBOM from each release. It is pushed only after
+the same approval that publishes the package to PyPI, in the same run — so a
+tag in the registry means that version was released, not that a build of it
+happened to succeed. Pin the version tag rather than `latest` on anything you
+care about; `latest` moves with each release.
 
 ## systemd: test and promoted environments on one host
 
