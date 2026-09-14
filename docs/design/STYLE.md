@@ -48,7 +48,17 @@ where the crawler cannot.
 9. **No build step** (principle 5). Plain HTML/JS/CSS, hand-drawn SVG for
    charts, no bundler, no framework, no font or script fetched from outside
    the box.
-10. **New screens join the system.** Same header/nav, same `.panel` grid,
+10. **What you DO sits apart from what you READ.** A screen's action forms
+    are one strip, first on the page, with the accent edge and surface
+    `.actions` carries in `styles.css` — styled once there, so all four
+    themes follow without knowing the component exists. At a hundred
+    machines the floor's action forms were a screen and a half below the
+    fold, which is the same as not having them.
+11. **A filter bar holds one line.** A long tail of controls goes behind a
+    `.popover` toggle (`FS.popover`), and the toggle says what it is
+    filtering to rather than looking idle. A wrapping row of controls puts a
+    slab of chrome above the table it is meant to serve.
+12. **New screens join the system.** Same header/nav, same `.panel` grid,
     same `.kpi` strip when there are KPIs, themed via the palette from day
     one — and they are crawled automatically (ui-check reads the routes from
     `app.py`), so a new screen is watched the day it exists.
