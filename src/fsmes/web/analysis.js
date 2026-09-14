@@ -47,18 +47,27 @@ function renderOee(data) {
       unknown.className = "b-unknown";
       unknown.title = "Not enough observed history to compute OEE";
       bar.appendChild(unknown);
+    } else if (s.performance !== null && s.performance > 1) {
+      // A waterfall only adds up while every loss is a loss. Performance is
+      // not capped (see `fsmes.services.oee`), and a station that out-ran its
+      // rating has a performance loss below zero — a segment with no width to
+      // draw and no side of the axis to sit on. So the bar stops pretending:
+      // one full segment, the true figure in the score, and the master-data
+      // finding in words under the row. Squeezing the losses in beside a
+      // hundred per cent is what made the first draft of this read as though
+      // a station with an OEE of 171 % had lost time it had not.
+      const whole = document.createElement("i");
+      whole.className = "b-oee";
+      whole.style.width = "100%";
+      whole.title =
+        `OEE ${pct(s.oee)} — the losses are not drawn while performance is ` +
+        `above rated, because one of them is negative. ${s.performance_note}`;
+      bar.appendChild(whole);
     } else {
       // A waterfall: what survived, then each loss in the order it is taken.
-      //
-      // Performance is not capped (see `fsmes.services.oee`), so a station
-      // that out-ran its rating has an OEE above 1 and losses below zero. The
-      // bar is a hundred per cent wide either way — it cannot draw more than
-      // itself — and the negative segments are skipped below, so what the
-      // reader sees is a full bar, the true figure in the score, and the
-      // master-data note beside it.
       const perf = s.performance ?? 1;
       const segments = [
-        ["b-oee", Math.min(s.oee, 1), `OEE ${pct(s.oee)}`],
+        ["b-oee", s.oee, `OEE ${pct(s.oee)}`],
         ["b-avail", 1 - s.availability, `Availability loss — ${duration(s.loss.availability_seconds)} not running`],
         ["b-perf", s.availability * (1 - perf), `Performance loss — ${num(s.loss.performance_units)} units below rated rate`],
         ["b-qual", s.availability * perf * (1 - (s.quality ?? 1)), `Quality loss — ${num(s.loss.quality_units)} scrapped`],
