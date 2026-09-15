@@ -186,10 +186,14 @@ def _run(session: Session) -> None:
     workorders.complete_operation(session, "WO-2026-0041", 20, actor="examples")
 
     # An over-run: one OPC counter delta carrying the line past the order,
-    # which is how 16 against an order for 15 really happens.
+    # which is how 16 against an order for 15 really happens. The operations
+    # are finished here rather than by the sixteenth unit, because reaching a
+    # quantity is not the same fact as being finished (decision 0028).
     _order_from_the_erp(session, "WO-2026-0042", 15, "4400042")
     execution.report(session, equipment_code="MIX01", good=16, source=ProductionSource.OPC)
     execution.report(session, equipment_code="PACK01", good=16, source=ProductionSource.OPC)
+    workorders.complete_operation(session, "WO-2026-0042", 10, actor="examples")
+    workorders.complete_operation(session, "WO-2026-0042", 20, actor="examples")
 
     # An order that made nothing good.
     _order_from_the_erp(session, "WO-2026-0043", 4, "4400043")

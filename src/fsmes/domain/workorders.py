@@ -74,11 +74,12 @@ class WorkOrder(Base):
     def over_qty(self) -> float:
         """How far past the ordered quantity the line actually ran.
 
-        Counter deltas coalesce, so one booking can carry several units and
-        land the order on sixteen good against an order for fifteen. Sixteen
-        is what the machine counted and sixteen is what gets booked; this is
-        the number that says so out loud, instead of leaving a reader of the
-        screen to notice that 16/15 is not a typo.
+        Sixteen good against an order for fifteen, or six thousand against an
+        order for four: whatever the machine counted is what gets booked, and
+        this is the number that says so out loud instead of leaving a reader
+        of the screen to notice that 16/15 is not a typo. It is the true
+        over-run because booking does not stop at the quantity and the order
+        does not finish itself there (decision 0028).
         """
         return max(self.good_qty - self.quantity, 0.0)
 

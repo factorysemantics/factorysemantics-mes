@@ -37,3 +37,4 @@ Declined ideas stay, so nobody re-proposes them without new facts.
 | [0026](0026-counts-that-outrun-the-run-time.md) | Counted work that will not fit inside the run time names the disagreement, not a culprit | 2026-09-14 |
 | [0027](0027-an-spc-signal-raises-a-hold.md) | An SPC signal raises a quality hold, and an inspected characteristic with a specification is a check | 2026-09-14 |
 | [0028](0028-which-shift-a-minute-belongs-to.md) | A shift is half-open, belongs to the day it started, and covers nothing it does not roster | 2026-09-14 |
+| [0028](0028-an-order-does-not-finish-itself.md) | An order does not finish itself at its quantity; the over-run it reports is the true one | 2026-09-14 |

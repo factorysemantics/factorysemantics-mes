@@ -24,6 +24,9 @@ def _finished_order(session, code="WO-COA-1"):
     serialization.produce(session, material_code="FG-COLA", order_code=code, serial="BTL-COA-1", actor="test")
     execution.report(session, equipment_code="MIX01", good=4, source=ProductionSource.OPC)
     execution.report(session, equipment_code="PACK01", good=4, source=ProductionSource.OPC)
+    # Reaching the quantity does not finish the order; a person does.
+    for op in sorted(wo.operations, key=lambda o: o.seq):
+        workorders.complete_operation(session, code, op.seq, actor="test")
     session.flush()
     return wo
 
@@ -38,7 +41,9 @@ def test_completing_an_order_issues_its_certificate_with_the_evidence(session):
     assert "LOT-COA-SYRUP" in body and "brix" in body and "NC-" in body
     assert "BTL-COA-1" in body
     doc = session.scalar(select(Document).where(Document.code == "COA-WO-COA-1"))
-    assert doc.status is DocumentStatus.APPROVED and doc.approved_by == "system"
+    # Approved by whoever finished the order. It used to say "system", because
+    # the order finished itself the moment the count reached the quantity.
+    assert doc.status is DocumentStatus.APPROVED and doc.approved_by == "test"
     data = coa.gather(session, wo.code)
     assert data["produced_lot"] == "WO-COA-1-FG" and data["consumed"][0]["lot"] == "LOT-COA-SYRUP"
     [ch] = data["characteristics"]

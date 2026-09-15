@@ -30,6 +30,8 @@ def test_full_roundtrip(session, erp, scope):
     workorders.release(session, "WO-ERP-1", "test")
     execution.report(session, equipment_code="MIX01", good=3, source=ProductionSource.OPC)
     execution.report(session, equipment_code="PACK01", good=3, source=ProductionSource.OPC)
+    for op in sorted(wo.operations, key=lambda o: o.seq):
+        workorders.complete_operation(session, wo.code, op.seq, actor="test")
     assert wo.status is OrderStatus.COMPLETED
 
     cycle(erp, scope)  # outbound: one confirmation per operation, then the completion
