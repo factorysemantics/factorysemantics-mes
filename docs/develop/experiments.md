@@ -103,7 +103,7 @@ no alarm of its own. The failed fill-weight checks land on the filler and the
 cause is at the washer, which is the whole difficulty of the thing.
 
 Since the control chart's rules are judged when a reading is recorded
-(decision [0026](../decisions/0026-an-spc-signal-raises-a-hold.md)), a run now
+(decision [0027](../decisions/0027-an-spc-signal-raises-a-hold.md)), a run now
 shows the hold being raised while the line is still running the thing that
 caused it: look for `spc signal` in the log, with the rule and the NC it
 raised. `labs/experiments/scrap-burst.toml` is the starter, and it runs at 2× — much

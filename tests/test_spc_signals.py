@@ -5,7 +5,7 @@ Western Electric rules ran only when somebody opened the chart, and nothing
 read what they returned; and the station inspection path wrote no quality
 check, so a scrap burst's readings never reached the rules at all.
 
-Decision record 0026. Each test is named after the behaviour it pins.
+Decision record 0027. Each test is named after the behaviour it pins.
 """
 
 from sqlalchemy import func, select

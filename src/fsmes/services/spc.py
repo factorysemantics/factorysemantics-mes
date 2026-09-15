@@ -290,7 +290,7 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
 
     Called from the write path, so a rule that trips is acted on whether or
     not anybody has the chart open. What it does is raise a non-conformance -
-    a quality hold a person works through, per decision record 0026. It does
+    a quality hold a person works through, per decision record 0027. It does
     not stop a line, scrap a lot or write to a machine: those stay a person's
     act, or a trigger the plant configured on `spc.signal`.
 

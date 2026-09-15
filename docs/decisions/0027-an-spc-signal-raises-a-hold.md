@@ -1,4 +1,4 @@
-# 0026 — An SPC signal raises a quality hold, and an inspected characteristic with a specification is a check
+# 0027 — An SPC signal raises a quality hold, and an inspected characteristic with a specification is a check
 
 - **Status:** accepted
 - **Date:** 2026-09-14

@@ -31,7 +31,7 @@ goes under Honesty with a migration line, so plant people can find it.
   things, not two — the check, the non-conformance and the signals; `a9c4e17b3d60`
   adds `spc_signals`, `non_conformances.evidence` and `quality_checks.equipment_id`
   and changes no data. Decision record
-  [0026](docs/decisions/0026-an-spc-signal-raises-a-hold.md).
+  [0027](docs/decisions/0027-an-spc-signal-raises-a-hold.md).
 
 - **Every number a lab run stores about the MES's OEE says which clock it is
   on.** A run at 20x stored the MES's performance as `19.77` under the plain
@@ -68,6 +68,7 @@ goes under Honesty with a migration line, so plant people can find it.
   `labs/experiments/two-plants-two-zones.toml` now asks for it, so CI proves
   it. On this machine, twelve phases, the count right at all twelve, and no
   stopped plant ever called anything but unknown.
+
 - **A plant can say what an SPC signal should set off, without that being a code
   change.** The trigger catalogue gains `spc.signal`: a tag no PLC publishes,
   raised by the MES on the station whose reading tripped a rule, carrying the

@@ -633,7 +633,7 @@ def ingest_inspections(session: Session, events: list[dict], actor: str = "opc-a
     inspection, so the chart and the station card can see it; one with no
     specification stays an inspection and is named in `uncharted`. Which is
     which is the plant's configuration, not this code's guess - see decision
-    record 0026.
+    record 0027.
 
     Returns counts: units created, inspections recorded, members packed,
     duplicates skipped (a serial the plant already holds - a replayed event),
@@ -760,7 +760,7 @@ def _checks_from_inspections(session: Session, events: list[dict], id_of: dict[s
     the unit is already scrapped or good; opening a record per bad piece on a
     machine inspecting ten a second is noise a supervisor learns to scroll
     past. What raises a hold is the SPC signal, once per excursion - decision
-    record 0026.
+    record 0027.
     """
     wanted: dict[tuple[str, str], list[dict]] = defaultdict(list)
     uncharted: set[str] = set()

@@ -112,4 +112,4 @@ that is a finding.
 
 The reasoning, the options that were rejected, and what has still to be
 decided are in decision record
-[0026](../decisions/0026-an-spc-signal-raises-a-hold.md).
+[0027](../decisions/0027-an-spc-signal-raises-a-hold.md).

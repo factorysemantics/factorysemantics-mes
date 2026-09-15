@@ -69,7 +69,7 @@ def record_check(
     if it was out of spec, and the SPC signals recording it caused. The rules
     run here, on the write, not only when somebody opens the chart - a
     control chart that only computes on demand tells whoever happened to
-    look, which is nobody at two in the morning. See decision record 0026.
+    look, which is nobody at two in the morning. See decision record 0027.
     """
     material = masterdata.get_material(session, material_code)
     spec = session.scalar(

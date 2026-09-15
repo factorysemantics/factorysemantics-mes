@@ -16,7 +16,7 @@ Three changes and no data change:
   readings a station took. Existing rows stay null, which is the truth:
   this MES did not record where a measurement was taken.
 
-See docs/decisions/0026.
+See docs/decisions/0027.
 """
 
 from collections.abc import Sequence
