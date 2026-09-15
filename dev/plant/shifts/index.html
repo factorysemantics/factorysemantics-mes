@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://docs.factorysemantics.com/dev/reference/settings/">
+        <link rel="canonical" href="https://docs.factorysemantics.com/dev/plant/shifts/">
       
       
-        <link rel="prev" href="../../operate/inbound/">
+        <link rel="prev" href="../quality-signals/">
       
       
-        <link rel="next" href="../cli/">
+        <link rel="next" href="../never-invent-production/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Reference — settings - FactorySemantics MES</title>
+        <title>Reference — shifts - FactorySemantics MES</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#settings-reference" class="md-skip">
+        <a href="#shifts-which-shift-a-minute-belongs-to" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Reference — settings
+              Reference — shifts
             
           </span>
         </div>
@@ -248,11 +248,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../plant/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -268,12 +270,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../../operate/" class="md-tabs__link">
           
   
@@ -442,26 +442,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
             
   
   
@@ -479,7 +484,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -497,7 +502,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plant/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -525,7 +530,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plant/first-line/" class="md-nav__link">
+      <a href="../first-line/" class="md-nav__link">
         
   
   
@@ -559,17 +564,20 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3" >
         
           
-          <label class="md-nav__link" for="__nav_2_3" id="__nav_2_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_3" id="__nav_2_3_label" tabindex="">
             
   
   
@@ -669,7 +677,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plant/reading-oee/" class="md-nav__link">
+      <a href="../reading-oee/" class="md-nav__link">
         
   
   
@@ -697,7 +705,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plant/quality-signals/" class="md-nav__link">
+      <a href="../quality-signals/" class="md-nav__link">
         
   
   
@@ -722,10 +730,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../plant/shifts/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — shifts
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -741,6 +776,109 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-shift-is-here" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a shift is here
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#which-clock" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which clock
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-three-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The three rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-carries-a-shift" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What carries a shift
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#asking-for-a-shift" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Asking for a shift
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Asking for a shift">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-shift-still-running" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A shift still running
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrading-a-plant-that-already-has-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrading a plant that already has history
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -753,7 +891,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../plant/never-invent-production/" class="md-nav__link">
+      <a href="../never-invent-production/" class="md-nav__link">
         
   
   
@@ -785,31 +923,26 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
             
   
   
@@ -827,7 +960,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1293,7 +1426,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../erp-confirmations/" class="md-nav__link">
+      <a href="../../reference/erp-confirmations/" class="md-nav__link">
         
   
   
@@ -1346,19 +1479,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../reference/settings/" class="md-nav__link">
         
   
   
@@ -1374,7 +1498,6 @@
   
 
       </a>
-      
     </li>
   
 
@@ -1387,7 +1510,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cli/" class="md-nav__link">
+      <a href="../../reference/cli/" class="md-nav__link">
         
   
   
@@ -1415,7 +1538,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/" class="md-nav__link">
+      <a href="../../reference/api/" class="md-nav__link">
         
   
   
@@ -2797,7 +2920,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tools/" class="md-nav__link">
+      <a href="../../reference/tools/" class="md-nav__link">
         
   
   
@@ -3131,6 +3254,97 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-shift-is-here" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a shift is here
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#which-clock" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which clock
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-three-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The three rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-carries-a-shift" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What carries a shift
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#asking-for-a-shift" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Asking for a shift
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Asking for a shift">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-shift-still-running" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A shift still running
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrading-a-plant-that-already-has-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrading a plant that already has history
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -3146,7 +3360,7 @@
 
 
   
-    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/reference/settings.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/plant/shifts.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3154,370 +3368,131 @@
   
 
 
-<h1 id="settings-reference">Settings reference<a class="headerlink" href="#settings-reference" title="Permanent link">&para;</a></h1>
-<p>Generated from the settings model at build time. Every setting is an environment variable prefixed <code>MES_</code> (or a line in <code>.env</code>); the table shows the default a laptop gets.</p>
+<h1 id="shifts-which-shift-a-minute-belongs-to">Shifts: which shift a minute belongs to<a class="headerlink" href="#shifts-which-shift-a-minute-belongs-to" title="Permanent link">&para;</a></h1>
+<p>A plant is run and measured by shift. It is the unit a supervisor is
+accountable for, the unit a handover is written in, and the unit the MES you
+already have almost certainly reports in. This page is what this MES means by
+a shift, what it writes down, and how to ask a screen or an API for one.</p>
+<p>The rules on this page are decided in
+<a href="../../decisions/0028-which-shift-a-minute-belongs-to/">decision 0028</a>.</p>
+<h2 id="what-a-shift-is-here">What a shift is here<a class="headerlink" href="#what-a-shift-is-here" title="Permanent link">&para;</a></h2>
+<p>A shift is a <strong>pattern plus a date</strong>. There is no table of shift occurrences;
+<code>shift_patterns</code> holds the pattern — a code, a name, a start time, an end time
+and a seven-character day mask, Monday first — and the occurrence is worked out
+from it. <code>1111100</code> is weekdays; <code>1111111</code> is every day.</p>
+<p>A pattern belongs to the whole site, or to one line when it names a machine. A
+line's own pattern beats the site-wide one.</p>
+<p>Shifts are master data, so they come from a <a href="../../operate/packs/">plant pack</a>
+in <code>masterdata/shifts.json</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DAY"</span><span class="p">,</span><span class="w">   </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Day shift"</span><span class="p">,</span><span class="w">   </span><span class="nt">"starts"</span><span class="p">:</span><span class="w"> </span><span class="s2">"06:00"</span><span class="p">,</span><span class="w"> </span><span class="nt">"ends"</span><span class="p">:</span><span class="w"> </span><span class="s2">"22:00"</span><span class="p">,</span><span class="w"> </span><span class="nt">"days"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1111111"</span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"NIGHT"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Night shift"</span><span class="p">,</span><span class="w"> </span><span class="nt">"starts"</span><span class="p">:</span><span class="w"> </span><span class="s2">"22:00"</span><span class="p">,</span><span class="w"> </span><span class="nt">"ends"</span><span class="p">:</span><span class="w"> </span><span class="s2">"06:00"</span><span class="p">,</span><span class="w"> </span><span class="nt">"days"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1111111"</span><span class="p">}</span>
+<span class="p">]</span>
+</code></pre></div>
+<p><code>ends</code> earlier than or equal to <code>starts</code> means the shift crosses midnight. No
+flag to set; it follows from the two times.</p>
+<h2 id="which-clock">Which clock<a class="headerlink" href="#which-clock" title="Permanent link">&para;</a></h2>
+<p>The plant's. Every instant this MES stores is UTC, and every one of them is
+turned into the plant's own wall clock before it is compared with a shift time.
+Set <code>MES_PLANT_TIMEZONE</code> to an IANA name — <code>America/Chicago</code>, <code>Europe/Berlin</code>.</p>
+<p>If nothing sets it, the process's own zone is used and <strong>every screen and API
+says the zone was defaulted</strong>. A shift boundary drawn in the wrong zone is off
+by hours and looks exactly like a correct one, so it is never guessed silently.</p>
+<p>One consequence worth expecting: on the night the clocks go forward, a
+22:00–06:00 shift is <strong>seven hours</strong>, not eight. That is what the plant lived
+through, and it is what the reports say.</p>
+<h2 id="the-three-rules">The three rules<a class="headerlink" href="#the-three-rules" title="Permanent link">&para;</a></h2>
+<p><strong>A shift is half-open.</strong> <code>[starts, ends)</code>. A unit counted at 22:00:00 belongs
+to the shift that began at 22:00, not to the one that ended. One second belongs
+to one shift, so adding two shifts up never counts anything twice.</p>
+<p><strong>A shift belongs to the day it started.</strong> Friday night is Friday's shift at
+two on Saturday morning, which is how the roster is written. <code>shift_day</code>
+carries that date, and <code>2026-09-11/NIGHT</code> is how you name it.</p>
+<p><strong>An hour no pattern covers is not attributed.</strong> A plant rostering 06:00–14:00
+and nothing else has sixteen hours a day belonging to no shift. Those rows
+carry a null shift and every screen says <em>not attributed</em>. They are not pushed
+into the nearest shift: an hour nobody rostered is something to fix in the
+calendar, and filling it in would hide it.</p>
+<p><strong>Calendar exceptions.</strong> An <em>overtime</em> day attributes normally — a Saturday the
+plant deliberately worked gets the shift whose hours it fell in, because
+otherwise a whole day of production leaves every per-shift report. A <em>shutdown</em>
+day does <strong>not</strong> un-attribute: a line that ran on a day the calendar called
+dark still ran, and those units keep their shift. The exception is the finding.</p>
+<h2 id="what-carries-a-shift">What carries a shift<a class="headerlink" href="#what-carries-a-shift" title="Permanent link">&para;</a></h2>
+<p>Four tables, each with <code>shift_code</code> and <code>shift_day</code>, written once when the row
+is written:</p>
 <table>
 <thead>
 <tr>
-<th>Setting</th>
-<th>Environment variable</th>
-<th>Default</th>
+<th>Row</th>
+<th>The instant it is read from</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>database_url</code></td>
-<td><code>MES_DATABASE_URL</code></td>
-<td><code>sqlite:///fsmes.db</code></td>
+<td>Production booking (<code>production_logs</code>)</td>
+<td>when the units were counted — including a <code>ts</code> another system supplied, so a count replayed from last night lands on last night's shift</td>
 </tr>
 <tr>
-<td><code>shadow</code></td>
-<td><code>MES_SHADOW</code></td>
-<td><code>false</code></td>
+<td>Equipment state interval (<code>equipment_states</code>)</td>
+<td>when the interval <strong>began</strong></td>
 </tr>
 <tr>
-<td><code>log_level</code></td>
-<td><code>MES_LOG_LEVEL</code></td>
-<td><code>INFO</code></td>
+<td>Quality check (<code>quality_checks</code>)</td>
+<td>when the reading was taken</td>
 </tr>
 <tr>
-<td><code>log_dir</code></td>
-<td><code>MES_LOG_DIR</code></td>
-<td><code>logs</code></td>
-</tr>
-<tr>
-<td><code>api_host</code></td>
-<td><code>MES_API_HOST</code></td>
-<td><code>127.0.0.1</code></td>
-</tr>
-<tr>
-<td><code>api_port</code></td>
-<td><code>MES_API_PORT</code></td>
-<td><code>8000</code></td>
-</tr>
-<tr>
-<td><code>plant_name</code></td>
-<td><code>MES_PLANT_NAME</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>plant_profile</code></td>
-<td><code>MES_PLANT_PROFILE</code></td>
-<td><code>laptop</code></td>
-</tr>
-<tr>
-<td><code>plant_timezone</code></td>
-<td><code>MES_PLANT_TIMEZONE</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>words</code></td>
-<td><code>MES_WORDS</code></td>
-<td><code>{}</code></td>
-</tr>
-<tr>
-<td><code>secret_key</code></td>
-<td><code>MES_SECRET_KEY</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>token_ttl_seconds</code></td>
-<td><code>MES_TOKEN_TTL_SECONDS</code></td>
-<td><code>43200</code></td>
-</tr>
-<tr>
-<td><code>admin_password</code></td>
-<td><code>MES_ADMIN_PASSWORD</code></td>
-<td><code>admin</code></td>
-</tr>
-<tr>
-<td><code>operator_password</code></td>
-<td><code>MES_OPERATOR_PASSWORD</code></td>
-<td><code>operator</code></td>
-</tr>
-<tr>
-<td><code>opc_endpoint</code></td>
-<td><code>MES_OPC_ENDPOINT</code></td>
-<td><code>opc.tcp://127.0.0.1:4840/mes-twin/sim</code></td>
-</tr>
-<tr>
-<td><code>opc_namespace</code></td>
-<td><code>MES_OPC_NAMESPACE</code></td>
-<td><code>urn:mes-twin:sim</code></td>
-</tr>
-<tr>
-<td><code>tag_map_file</code></td>
-<td><code>MES_TAG_MAP_FILE</code></td>
-<td><code>config/tag_map.json</code></td>
-</tr>
-<tr>
-<td><code>line_layout_file</code></td>
-<td><code>MES_LINE_LAYOUT_FILE</code></td>
-<td><code>config/line_layout.json</code></td>
-</tr>
-<tr>
-<td><code>opc_security</code></td>
-<td><code>MES_OPC_SECURITY</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>opc_user</code></td>
-<td><code>MES_OPC_USER</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>opc_password</code></td>
-<td><code>MES_OPC_PASSWORD</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>opc_cert_dir</code></td>
-<td><code>MES_OPC_CERT_DIR</code></td>
-<td><code>certs</code></td>
-</tr>
-<tr>
-<td><code>opc_application_uri</code></td>
-<td><code>MES_OPC_APPLICATION_URI</code></td>
-<td><code>urn:mes-twin:agent</code></td>
-</tr>
-<tr>
-<td><code>replay_dir</code></td>
-<td><code>MES_REPLAY_DIR</code></td>
-<td><code>labs/kepsim/out</code></td>
-</tr>
-<tr>
-<td><code>inbound_dir</code></td>
-<td><code>MES_INBOUND_DIR</code></td>
-<td><code>inbound</code></td>
-</tr>
-<tr>
-<td><code>inbound_mapping_file</code></td>
-<td><code>MES_INBOUND_MAPPING_FILE</code></td>
-<td><code>config/inbound_mapping.json</code></td>
-</tr>
-<tr>
-<td><code>inbound_poll_seconds</code></td>
-<td><code>MES_INBOUND_POLL_SECONDS</code></td>
-<td><code>10.0</code></td>
-</tr>
-<tr>
-<td><code>inbound_sql_file</code></td>
-<td><code>MES_INBOUND_SQL_FILE</code></td>
-<td><code>config/inbound_sql.json</code></td>
-</tr>
-<tr>
-<td><code>inbound_mqtt_mode</code></td>
-<td><code>MES_INBOUND_MQTT_MODE</code></td>
-<td><code>off</code></td>
-</tr>
-<tr>
-<td><code>inbound_mqtt_broker_url</code></td>
-<td><code>MES_INBOUND_MQTT_BROKER_URL</code></td>
-<td><code>mqtt://127.0.0.1:1883</code></td>
-</tr>
-<tr>
-<td><code>inbound_mqtt_username</code></td>
-<td><code>MES_INBOUND_MQTT_USERNAME</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>inbound_mqtt_password</code></td>
-<td><code>MES_INBOUND_MQTT_PASSWORD</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>inbound_mqtt_client_id</code></td>
-<td><code>MES_INBOUND_MQTT_CLIENT_ID</code></td>
-<td><code>fsmes-inbound</code></td>
-</tr>
-<tr>
-<td><code>inbound_mqtt_qos</code></td>
-<td><code>MES_INBOUND_MQTT_QOS</code></td>
-<td><code>1</code></td>
-</tr>
-<tr>
-<td><code>inbound_mqtt_source</code></td>
-<td><code>MES_INBOUND_MQTT_SOURCE</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>inbound_mqtt_report_seconds</code></td>
-<td><code>MES_INBOUND_MQTT_REPORT_SECONDS</code></td>
-<td><code>60.0</code></td>
-</tr>
-<tr>
-<td><code>erp_mode</code></td>
-<td><code>MES_ERP_MODE</code></td>
-<td><code>rest</code></td>
-</tr>
-<tr>
-<td><code>erp_base_url</code></td>
-<td><code>MES_ERP_BASE_URL</code></td>
-<td><code>http://127.0.0.1:8001</code></td>
-</tr>
-<tr>
-<td><code>erp_inbox</code></td>
-<td><code>MES_ERP_INBOX</code></td>
-<td><code>erp_exchange/inbox</code></td>
-</tr>
-<tr>
-<td><code>erp_outbox</code></td>
-<td><code>MES_ERP_OUTBOX</code></td>
-<td><code>erp_exchange/outbox</code></td>
-</tr>
-<tr>
-<td><code>erp_archive</code></td>
-<td><code>MES_ERP_ARCHIVE</code></td>
-<td><code>erp_exchange/archive</code></td>
-</tr>
-<tr>
-<td><code>erp_poll_seconds</code></td>
-<td><code>MES_ERP_POLL_SECONDS</code></td>
-<td><code>5.0</code></td>
-</tr>
-<tr>
-<td><code>erpnext_base_url</code></td>
-<td><code>MES_ERPNEXT_BASE_URL</code></td>
-<td><code>http://localhost:8090</code></td>
-</tr>
-<tr>
-<td><code>erpnext_site</code></td>
-<td><code>MES_ERPNEXT_SITE</code></td>
-<td><code>mes.localhost</code></td>
-</tr>
-<tr>
-<td><code>erpnext_user</code></td>
-<td><code>MES_ERPNEXT_USER</code></td>
-<td><code>Administrator</code></td>
-</tr>
-<tr>
-<td><code>erpnext_password</code></td>
-<td><code>MES_ERPNEXT_PASSWORD</code></td>
-<td><code>admin</code></td>
-</tr>
-<tr>
-<td><code>erpnext_api_key</code></td>
-<td><code>MES_ERPNEXT_API_KEY</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>erpnext_api_secret</code></td>
-<td><code>MES_ERPNEXT_API_SECRET</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>erpnext_company</code></td>
-<td><code>MES_ERPNEXT_COMPANY</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>erpnext_post_stock_entry</code></td>
-<td><code>MES_ERPNEXT_POST_STOCK_ENTRY</code></td>
-<td><code>true</code></td>
-</tr>
-<tr>
-<td><code>outbox_domain_events</code></td>
-<td><code>MES_OUTBOX_DOMAIN_EVENTS</code></td>
-<td><code>true</code></td>
-</tr>
-<tr>
-<td><code>uns_mode</code></td>
-<td><code>MES_UNS_MODE</code></td>
-<td><code>off</code></td>
-</tr>
-<tr>
-<td><code>uns_broker_url</code></td>
-<td><code>MES_UNS_BROKER_URL</code></td>
-<td><code>mqtt://127.0.0.1:1883</code></td>
-</tr>
-<tr>
-<td><code>uns_username</code></td>
-<td><code>MES_UNS_USERNAME</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>uns_password</code></td>
-<td><code>MES_UNS_PASSWORD</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>uns_client_id</code></td>
-<td><code>MES_UNS_CLIENT_ID</code></td>
-<td><code>fsmes</code></td>
-</tr>
-<tr>
-<td><code>uns_topic_prefix</code></td>
-<td><code>MES_UNS_TOPIC_PREFIX</code></td>
-<td><code>umh/v1</code></td>
-</tr>
-<tr>
-<td><code>uns_enterprise</code></td>
-<td><code>MES_UNS_ENTERPRISE</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>uns_site</code></td>
-<td><code>MES_UNS_SITE</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>uns_schema</code></td>
-<td><code>MES_UNS_SCHEMA</code></td>
-<td><code>_mes</code></td>
-</tr>
-<tr>
-<td><code>uns_qos</code></td>
-<td><code>MES_UNS_QOS</code></td>
-<td><code>1</code></td>
-</tr>
-<tr>
-<td><code>uns_retain</code></td>
-<td><code>MES_UNS_RETAIN</code></td>
-<td><code>false</code></td>
-</tr>
-<tr>
-<td><code>uns_poll_seconds</code></td>
-<td><code>MES_UNS_POLL_SECONDS</code></td>
-<td><code>2.0</code></td>
-</tr>
-<tr>
-<td><code>uns_batch</code></td>
-<td><code>MES_UNS_BATCH</code></td>
-<td><code>200</code></td>
-</tr>
-<tr>
-<td><code>uns_inflight</code></td>
-<td><code>MES_UNS_INFLIGHT</code></td>
-<td><code>10</code></td>
-</tr>
-<tr>
-<td><code>sim_speed</code></td>
-<td><code>MES_SIM_SPEED</code></td>
-<td><code>1.0</code></td>
-</tr>
-<tr>
-<td><code>opc_publish_ms</code></td>
-<td><code>MES_OPC_PUBLISH_MS</code></td>
-<td><code>500</code></td>
-</tr>
-<tr>
-<td><code>tag_retention_days</code></td>
-<td><code>MES_TAG_RETENTION_DAYS</code></td>
-<td><code>14.0</code></td>
-</tr>
-<tr>
-<td><code>opc_endpoints</code></td>
-<td><code>MES_OPC_ENDPOINTS</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>modules</code></td>
-<td><code>MES_MODULES</code></td>
-<td><code>all</code></td>
+<td>Non-conformance (<code>non_conformances</code>)</td>
+<td>when it was <strong>raised</strong> — review, disposition and close happen on other shifts and keep their own timestamps</td>
 </tr>
 </tbody>
 </table>
-<p>A plant pack carries per-plant values that compile to these; see <a href="../../operate/packs/">plant packs</a>. <code>MES_WORDS</code> is what a pack's <code>[words]</code> table becomes, and a pack is where it is checked.</p>
+<p>A state interval that runs past a boundary is <strong>not split</strong>. It is one thing
+the machine did, and cutting it in two would invent a state change that never
+happened. The <em>reporting</em> splits instead: a shift window clips every interval
+to its own two ends, so a run from 03:00 to 09:00 gives three hours to the
+night shift and six to the day shift, and neither report claims the other's.</p>
+<h2 id="asking-for-a-shift">Asking for a shift<a class="headerlink" href="#asking-for-a-shift" title="Permanent link">&para;</a></h2>
+<p>Every <code>/analysis/*</code> endpoint takes <code>shift=</code> beside <code>hours=</code>:</p>
+<div class="highlight"><pre><span></span><code>GET /analysis/oee?shift=current
+GET /analysis/downtime?shift=previous
+GET /analysis/timeline?shift=2026-09-14/NIGHT&amp;line=LINE1
+</code></pre></div>
+<p>Three spellings and nothing else: <code>current</code>, <code>previous</code>, and
+<code>YYYY-MM-DD/CODE</code> on the plant's own date.</p>
+<p>The two window kinds are <strong>alternatives</strong>. A request that names a shift gets
+that shift; <code>hours</code> is ignored rather than averaged in. A shift that names
+nothing — the plant is between shifts, the code is not a pattern, the pattern
+does not run that day — is a <code>400</code> with one sentence saying which, never a
+quiet fall-back to eight hours.</p>
+<p><code>GET /analysis/shifts</code> is what a picker reads: the shifts of the last few days
+with their keys, which one is running, the total, and the clock the boundaries
+are drawn on. The <strong>Analysis</strong> screen's <em>Shift</em> selector is driven by it, and
+keeps its choice in the address bar so a screen can be handed to somebody else.</p>
+<p>The MCP tools <code>downtime</code> and <code>tag_trend</code> take the same <code>shift</code> argument, and
+<code>shifts</code> lists them.</p>
+<h3 id="a-shift-still-running">A shift still running<a class="headerlink" href="#a-shift-still-running" title="Permanent link">&para;</a></h3>
+<p>It is clipped to now, not to the hour it is rostered to end. Asking for
+<code>shift=current</code> two hours into an eight-hour shift reports two hours. The other
+six have not happened, and counting them as time the plant was not running
+would call a line that never stopped 25 % available. The response says
+<code>in_progress: true</code> and how much of the shift has run.</p>
+<h2 id="upgrading-a-plant-that-already-has-history">Upgrading a plant that already has history<a class="headerlink" href="#upgrading-a-plant-that-already-has-history" title="Permanent link">&para;</a></h2>
+<p>The migration that adds these columns backfills existing rows from the shift
+patterns <strong>as they stand when you upgrade</strong>.</p>
+<div class="admonition warning">
+<p class="admonition-title">The backfill is an assumption</p>
+<p>This product keeps no history of shift patterns. If you moved a shift
+boundary last month, last month's rows are attributed to this month's
+pattern, and nothing in the data can tell the difference afterwards. Rows
+no pattern covers stay null and read as <em>not attributed</em>.</p>
+<p>If a per-shift trend across a roster change has to be trusted, treat the
+rows before the change as unattributed rather than believing the backfill.
+Giving shift patterns a validity period is the honest fix and is recorded
+as the thing to revisit in decision 0028.</p>
+</div>
+<p>Run <code>fsmes db-status</code> after upgrading; it says which revision the database is
+at and whether anything is outstanding.</p>
 
 
 
@@ -3555,7 +3530,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../../operate/inbound/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How-to — inbound events from other systems">
+          <a href="../quality-signals/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Explanation — when a control chart notices something">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -3565,20 +3540,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                How-to — inbound events from other systems
+                Explanation — when a control chart notices something
               </div>
             </div>
           </a>
         
         
           
-          <a href="../cli/" class="md-footer__link md-footer__link--next" aria-label="Next: Reference — CLI">
+          <a href="../never-invent-production/" class="md-footer__link md-footer__link--next" aria-label="Next: Explanation — never invent production">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Reference — CLI
+                Explanation — never invent production
               </div>
             </div>
             <div class="md-footer__button md-icon">
