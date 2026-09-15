@@ -24,6 +24,9 @@
   --down: #f85149;
   --setup: #a371f7;
   --unknown: #6e7681;
+  /* The connection, not a state. Deliberately the same grey as
+     unknown: a machine nobody can see is not red and not green. */
+  --disconnected: #6e7681;
   --quality: #db6ec4;
   --glow: #17324f;
   --track: #0d1117;
@@ -43,6 +46,9 @@
   --down: #b3251c;
   --setup: #6b34b0;
   --unknown: #6b7684;
+  /* The connection, not a state. Deliberately the same grey as
+     unknown: a machine nobody can see is not red and not green. */
+  --disconnected: #6b7684;
   --quality: #a3348a;
   --glow: #cfdcec;
   --track: #d3dae4;
@@ -64,6 +70,9 @@
   --down: #ff6b5e;
   --setup: #d19cff;
   --unknown: #b0b0b0;
+  /* The connection, not a state. Deliberately the same grey as
+     unknown: a machine nobody can see is not red and not green. */
+  --disconnected: #b0b0b0;
   --quality: #ff8fd8;
   --glow: #10233a;
   --track: #1e1e1e;
@@ -84,6 +93,9 @@
   --down: #ff7a5c;
   --setup: #d3a06b;
   --unknown: #8a6a4a;
+  /* The connection, not a state. Deliberately the same grey as
+     unknown: a machine nobody can see is not red and not green. */
+  --disconnected: #8a6a4a;
   --quality: #d98fa0;
   --glow: #2a1a0c;
   --track: #1c1309;

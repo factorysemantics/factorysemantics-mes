@@ -196,7 +196,15 @@ def state_seconds(session: Session, equipment_ids: list[int], start: datetime,
 
 
 def first_seen(session: Session, equipment_ids: list[int]) -> dict[int, datetime]:
-    """When the MES first recorded a state for each machine."""
+    """When the MES started watching each machine — whichever it recorded
+    first, a state or a connection.
+
+    Watching and succeeding are different things. A machine whose agent has
+    never once reached its server has no state row, and clamping its window to
+    the state history alone would report it as a machine the MES has not been
+    watching rather than one it has been failing to see. Both are unknown
+    time; only one of them is a fault somebody has to go and fix.
+    """
     if not equipment_ids:
         return {}
     rows = session.execute(
@@ -204,7 +212,11 @@ def first_seen(session: Session, equipment_ids: list[int]) -> dict[int, datetime
         .where(EquipmentState.equipment_id.in_(equipment_ids))
         .group_by(EquipmentState.equipment_id)
     ).all()
-    return {equipment_id: seen for equipment_id, seen in rows}
+    seen = {equipment_id: first for equipment_id, first in rows}
+    for equipment_id, first in connection_service.first_seen(session, equipment_ids).items():
+        if equipment_id not in seen or first < seen[equipment_id]:
+            seen[equipment_id] = first
+    return seen
 
 
 def _running_when_booked():

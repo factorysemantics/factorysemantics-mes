@@ -27,6 +27,7 @@ from fsmes.domain import (
     ProductionLog,
     WorkOrder,
 )
+from fsmes.services import connection as connection_service
 from fsmes.services import equipment as equipment_service
 from fsmes.services import line as line_service
 from fsmes.services import masterdata, workorders
@@ -201,6 +202,10 @@ def _build_summary(db: Session, oee_hours: float, line: str | None = None,
     # the page only — at 24 machines that is 24 queries and at a thousand it
     # was a thousand, every second, for every screen watching.
     oees = equipment_service.oee_many(db, scope, oee_hours)
+    # Whether the MES can still see each machine, in one query for the
+    # whole page. A tile that says `unknown` and cannot say why is the
+    # thing this answers.
+    connections = connection_service.open_connections(db, [eq.id for eq in wanted])
     next_up: dict[int, object] = {}
     for op in workorders.dispatch_list(db):
         next_up.setdefault(op.equipment_id, op)
@@ -217,6 +222,9 @@ def _build_summary(db: Session, oee_hours: float, line: str | None = None,
                 "state": state.state if state else "unknown",
                 "reason": state.reason if state else None,
                 "since": state.started_at if state else None,
+                # A second fact, never folded into the first: a machine can
+                # be down and reachable, or fine and unreachable (0027).
+                "connection": connection_service.summary(connections.get(eq.id)),
                 # The machine's process value under its own name. Not always a
                 # temperature: a washer reports WashTemp, a filler FillWeight, a
                 # loader FeedRate. Asking every machine for ".Temperature" is why

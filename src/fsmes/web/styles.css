@@ -217,6 +217,10 @@ main {
 .machine.idle    { border-left-color: var(--idle); }
 .machine.down    { border-left-color: var(--down); }
 .machine.setup   { border-left-color: var(--setup); }
+/* Nobody is watching this machine. Not red (that would be a breakdown it may
+   not be having) and not green: the same grey the rest of the product uses
+   for unknown - decision 0027. */
+.machine.disconnected { border-left-color: var(--disconnected); }
 
 .machine-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
 .machine-code { font-weight: 700; font-size: 16px; }
@@ -235,6 +239,17 @@ main {
 .state.down    { background: rgba(248,81,73,.16); color: var(--down); }
 .state.setup   { background: rgba(163,113,247,.16); color: var(--setup); }
 .state.unknown { background: rgba(110,118,129,.16); color: var(--unknown); }
+.state.disconnected, .pill.disconnected {
+  background: rgba(110,118,129,.16); color: var(--disconnected);
+  /* A dashed edge, so the two greys are still told apart without colour:
+     unknown is "we have no record", disconnected is "we had one and lost
+     it". */
+  border: 1px dashed var(--disconnected);
+}
+
+/* The strip under a tile that says since when, and why. */
+.disconnect { color: var(--disconnected); margin-top: 4px; }
+.disconnect .muted { color: var(--disconnected); opacity: .8; }
 
 .machine-meta { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 12px; }
 .machine-meta strong { color: var(--text); font-weight: 600; font-family: var(--mono); font-size: 12px; }

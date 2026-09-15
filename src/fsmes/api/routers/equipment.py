@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from fsmes.api.deps import ActorDep, DbDep, require
 from fsmes.domain import EquipmentStateName
+from fsmes.services import connection as connection_service
 from fsmes.services import equipment
 
 router = APIRouter()
@@ -21,6 +22,35 @@ def current_states(db: DbDep) -> list[dict]:
         }
         for s in equipment.current_states(db)
     ]
+
+
+@router.get("/connections")
+def connections(db: DbDep) -> dict:
+    """Whether this MES can see each machine, and since when.
+
+    Separate from `/states` because it is a separate fact: a machine can be
+    down and reachable, or fine and unreachable, and a screen that has to
+    pick one of those has lost the more useful half (decision 0027).
+
+    Every machine appears, including the ones nothing has ever reported a
+    connection for - they are `unknown`, which is not the same as connected
+    and is not a fault. The envelope states the total, so a list that is
+    shorter than the plant cannot read as the whole plant.
+    """
+    units = equipment.work_units(db)
+    open_rows = connection_service.open_connections(db, [unit.id for unit in units])
+    counts = connection_service.watching(db)
+    return {
+        "machines": [
+            {"equipment": unit.code, "name": unit.name,
+             **connection_service.summary(open_rows.get(unit.id))}
+            for unit in units
+        ],
+        "machines_total": counts["machines"],
+        "connected": counts["connected"],
+        "disconnected": counts["disconnected"],
+        "unknown": counts["unknown"],
+    }
 
 
 class StateIn(BaseModel):

@@ -8,6 +8,7 @@ from fsmes import identity
 from fsmes import shadow as shadow_mode
 from fsmes.api.deps import DbDep, require
 from fsmes.domain import AuditLog, ErpMessage, MessageStatus, OrderStatus, TagValue, WorkOrder
+from fsmes.services import connection as connection_service
 
 router = APIRouter()
 
@@ -29,6 +30,14 @@ def health(db: DbDep) -> dict:
     """
     db.execute(text("SELECT 1"))
     return {"status": "ok", "shadow": shadow_mode.enabled(), **identity.summary(),
+            # How much of this plant the MES can currently see. A statement
+            # about this deployment's own reach, not a number the plant
+            # produced, which is what keeps it on the public side of the line
+            # decision 0023 draws. A monitor that knows a plant is up and does
+            # not know it has been blind to nine machines since Tuesday will
+            # read its silence as everything being fine - the same argument
+            # `shadow` rides on health for (decision 0027).
+            "watching": connection_service.watching(db),
             # Not part of `summary()`: the id is between this plant and the
             # installation that created it, and has no business in the
             # namespace envelope or the backup manifest. None here means no

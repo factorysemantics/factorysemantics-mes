@@ -204,8 +204,8 @@ async function loadAi() {
     where.textContent = c.output;
     row.appendChild(where);
     const state = el("td");
-    const cls = { ok: "running", idle: "idle", stale: "idle",
-                  down: "down", unknown: "unknown" }[c.state] || "unknown";
+    const cls = { ok: "running", idle: "idle", stale: "idle", down: "down",
+                  disconnected: "disconnected", unknown: "unknown" }[c.state] || "unknown";
     state.appendChild(el("span", `pill ${cls}`, c.state));
     row.appendChild(state);
     if (c.note) row.title = c.note;

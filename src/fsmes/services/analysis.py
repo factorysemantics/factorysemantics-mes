@@ -114,7 +114,12 @@ def _shift(db: Session, shift: str | None) -> calendar_service.Shift | None:
 
 def _window(db: Session, units: list[Equipment], hours: float,
             shift: calendar_service.Shift | None = None) -> tuple[datetime, datetime]:
-    """The reporting window, clamped to when the MES first saw this line."""
+    """The reporting window, clamped to when the MES started watching this line.
+
+    Started watching, not started seeing: a line whose agent has never reached
+    its server has no state rows and would otherwise report an empty window,
+    which reads as "nothing to say" rather than "blind since Tuesday".
+    """
     end = utcnow()
     if shift is not None:
         # A shift in progress ends now, not at the hour it is rostered to
@@ -122,11 +127,9 @@ def _window(db: Session, units: list[Equipment], hours: float,
         start, end = shift.starts_at, min(shift.ends_at, end)
     else:
         start = end - timedelta(hours=hours)
-    first_seen = db.scalar(
-        select(func.min(EquipmentState.started_at)).where(
-            EquipmentState.equipment_id.in_([u.id for u in units])
-        )
-    )
+    seen = equipment_service.first_seen(db, [u.id for u in units])
+    first_seen = min(seen.values()) if seen else None
+
     if first_seen is None:
         return end, end
     start = max(start, first_seen)

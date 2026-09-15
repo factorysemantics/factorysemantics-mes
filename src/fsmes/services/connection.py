@@ -194,6 +194,25 @@ def unknown_seconds(session: Session, equipment_ids: list[int], start: datetime,
     return out
 
 
+def first_seen(session: Session, equipment_ids: list[int]) -> dict[int, datetime]:
+    """When the MES first recorded a connection fact for each machine.
+
+    Half of "when did this MES start watching". The other half is the state
+    history; a machine whose agent has never once reached its server has no
+    state row at all, and a window clamped to the state history alone would
+    say the MES has not been watching it - when in fact it has been watching
+    it fail since the agent came up.
+    """
+    if not equipment_ids:
+        return {}
+    rows = session.execute(
+        select(EquipmentConnection.equipment_id, func.min(EquipmentConnection.started_at))
+        .where(EquipmentConnection.equipment_id.in_(equipment_ids))
+        .group_by(EquipmentConnection.equipment_id)
+    ).all()
+    return {equipment_id: seen for equipment_id, seen in rows}
+
+
 def intervals(session: Session, equipment_ids: list[int], start: datetime,
               end: datetime) -> dict[int, list[EquipmentConnection]]:
     """Every disconnection overlapping the window, per machine, oldest first —

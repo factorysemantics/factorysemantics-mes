@@ -76,6 +76,31 @@ function lineCell(plant) {
   return plant.line_equipment + " machines";
 }
 
+/* What that plant can currently see of its own machines. Three ways to be
+   unable to say so, and none of them is "0 disconnected": the plant did not
+   answer, the plant answered from a build with no such block, or the plant
+   has never had a connection reported for any machine. */
+function watchingCell(plant) {
+  const w = plant.watching || {};
+  if (!plant.answered || w.machines === undefined || w.machines === null) return "unknown";
+  if (!w.machines) return "no machines";
+  const node = document.createElement("span");
+  if (w.disconnected) {
+    node.appendChild(pill(w.disconnected + " of " + w.machines + " disconnected", "unknown"));
+  } else {
+    node.appendChild(document.createTextNode(w.connected + " of " + w.machines + " connected"));
+  }
+  if (w.unknown) {
+    const why = document.createElement("span");
+    why.className = "why";
+    // Not a fault: nothing has ever reported a connection for these, which
+    // is what a plant fed by hand or over MQTT looks like.
+    why.textContent = w.unknown + " with no connection reported";
+    node.appendChild(why);
+  }
+  return node;
+}
+
 function draw(fleet) {
   document.getElementById("totals").textContent = fleet.says;
   document.getElementById("ownership").textContent = fleet.ownership_says;
@@ -126,6 +151,7 @@ function draw(fleet) {
       ? known(plant.schema_revision) + (plant.schema_at_head === false ? " (behind head)" : "")
       : "unknown");
     cell(row, lineCell(plant));
+    cell(row, watchingCell(plant));
     cell(row, modulesCell(plant));
     cell(row, known(plant.last_answered));
 
