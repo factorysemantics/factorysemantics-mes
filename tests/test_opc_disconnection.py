@@ -384,3 +384,9 @@ def test_a_machine_going_dark_reaches_the_floor_without_waiting_for_the_cache(se
     mine = next(m for m in after if m["code"] == "MIX01")
     assert mine["connection"]["state"] == "disconnected"
     assert mine["state"] == "unknown"
+
+
+def test_the_connections_list_is_not_public(session, anon):
+    """It names every machine in the plant. `/health` carries the counts, and
+    the counts are the part a monitor needs without an account."""
+    assert anon.get("/equipment/connections").status_code in (401, 403)
