@@ -422,6 +422,46 @@
   }
 
 
+  /* ---------- the connection, shared ----------
+     Whether the MES can still see a machine is a second fact beside what the
+     machine is doing, and every screen that shows a state has to show it
+     (decision 0030). One helper, so the five screens cannot drift apart on
+     what "disconnected" looks like.
+
+     `unknown` here means nothing has ever reported a connection for this
+     machine - fed by hand, or over MQTT - and is deliberately silent: a badge
+     on every machine on a plant with no OPC agent is noise, not information.
+     Only a connection that was there and is gone gets a badge. */
+
+  FS.connection = {
+    lost(m) {
+      const c = m && m.connection;
+      return c && c.state === "disconnected" ? c : null;
+    },
+    /* The class the card and the pill take: the machine's state, unless the
+       MES cannot see it, in which case there is no honest state to show. */
+    stateClass(m) {
+      return FS.connection.lost(m) ? "disconnected" : (m.state || "unknown");
+    },
+    stateText(m) {
+      return FS.connection.lost(m) ? "disconnected" : (m.state || "unknown");
+    },
+    /* The strip that says since when, and why. Null when the link is fine. */
+    badge(m) {
+      const c = FS.connection.lost(m);
+      if (!c) return null;
+      const node = FS.el("div", "disconnect small");
+      const since = c.since ? FS.fmt.clock(c.since) : "an unknown time";
+      node.append(`⚡ no connection since ${since}`);
+      if (c.reason) node.append(FS.el("span", "muted", ` — ${c.reason}`));
+      // The whole point: nobody knows what the machine did in this gap, so
+      // nothing here guesses.
+      node.title = "Nothing was watching this machine. Its time in this gap "
+                 + "counts as unknown, not as running, idle or down.";
+      return node;
+    },
+  };
+
   /* ---------- the time window, shared ----------
      One control every page with a window reads: ?hours= wins, then what the
      viewer last chose, then eight hours - a shift. */

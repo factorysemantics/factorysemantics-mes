@@ -75,6 +75,7 @@ For the demo plant (`ACME` → `KC1` → `PKG` → `LINE1` → `MIX01`):
 |---|---|
 | operation confirmation on a machine | `umh/v1/ACME/KC1/PKG/LINE1/MIX01/_mes/operation_confirmation` |
 | equipment state change on a machine | `umh/v1/ACME/KC1/PKG/LINE1/MIX01/_mes/equipment_state_change` |
+| the MES losing sight of a machine | `umh/v1/ACME/KC1/PKG/LINE1/MIX01/_mes/equipment_connection_change` |
 | order completion (no machine) | `umh/v1/ACME/KC1/_mes/order_completion` |
 | order hold (no machine) | `umh/v1/ACME/KC1/_mes/order_hold` |
 
@@ -189,13 +190,14 @@ is what they are in the envelope for.
 
 ## What is published today
 
-Four kinds, and this list is the whole of it:
+Five kinds, and this list is the whole of it:
 
 | Kind | What it says | Where it hangs |
 |---|---|---|
 | `operation_confirmation` | what one operation of one order did — input, good, scrap, WIP, setup, machine and labour time, cost centre, lots consumed | the machine |
 | `order_completion` | the order closed: ordered, good and scrap totals and the finished-goods lot | the site |
 | `equipment_state_change` | a machine moved between running, idle, down and setup — the state it entered, the reason if there was one, the state it left and how long that had been open | the machine |
+| `equipment_connection_change` | the MES gained or lost its view of a machine — which way, why in words, what was dialled, the last moment there was evidence of the link and when it was noticed. After a `disconnected`, the last state that machine published stands for nothing until a `connected` arrives | the machine |
 | `order_hold` / `order_resume` | an order stopped without being finished, with the reason, and later went back to work | the site |
 
 Two things that list does not include, said plainly rather than left to be

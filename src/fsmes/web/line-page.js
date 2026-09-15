@@ -39,16 +39,19 @@ function rememberLine(code) {
 /* ---------- overview ---------- */
 
 function tile(m, alarms) {
-  const card = el("div", `machine ${m.state}`);
+  const shown = FS.connection.stateClass(m);
+  const card = el("div", `machine ${shown}`);
   const head = el("div", "machine-head");
   head.append(FS.link("machine", m.code, "machine-code"), el("span", "machine-name", m.name),
-              el("span", `state ${m.state}`, m.state));
+              el("span", `state ${shown}`, FS.connection.stateText(m)));
   const meta = el("div", "machine-meta");
   const order = el("span");
   order.append("Order ", el("strong", null, m.current_order || "—"));
   const analog = el("span");
   analog.append(m.analog ? `${m.analog.name} ` : "Value ", el("strong", null, m.analog ? fmt.qty(m.analog.value) : "—"));
   meta.append(order, analog);
+  const lost = FS.connection.badge(m);
+  if (lost) meta.append(lost);
   card.append(head, meta);
   const active = alarms[m.code] || [];
   if (active.length) card.append(el("div", "alarm small", "▲ " + active.join(", ")));

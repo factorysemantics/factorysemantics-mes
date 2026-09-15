@@ -37,6 +37,7 @@ from fsmes.domain import (
 )
 from fsmes.integrations.opc.tag_map import load_manifest, load_tag_map
 from fsmes.kernel.tags import STRUCTURAL_TAGS
+from fsmes.services import connection as connection_service
 from fsmes.services import execution, masterdata, workorders
 
 # A tag written once a second that has not written for a minute is not live.
@@ -275,6 +276,8 @@ def head(db: Session, unit: Equipment) -> dict:
         "state": state.state.value if state else "unknown",
         "reason": state.reason if state else None,
         "since": state.started_at if state else None,
+        "connection": connection_service.summary(
+            connection_service.open_connections(db, [unit.id]).get(unit.id)),
         "current_order": current.order.code if current else None,
         "current_operation": current.name if current else None,
         "current_seq": current.seq if current else None,

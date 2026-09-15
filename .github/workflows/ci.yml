@@ -178,8 +178,10 @@ jobs:
     # stop reading it.
     runs-on: ubuntu-latest
     # Every starter replays its whole hour, so the budget grows with the
-    # number of them. Raised from 25 when the over-run starter was added.
-    timeout-minutes: 35
+    # number of them. Raised from 25 when the over-run starter was added, and
+    # again when the lost-connection starter was (twenty-five minutes of line
+    # time at 20x, plus its seeding and drain).
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7

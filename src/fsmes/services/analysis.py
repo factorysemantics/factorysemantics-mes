@@ -50,6 +50,7 @@ from fsmes.domain import (
 from fsmes.kernel.tags import STRUCTURAL_TAGS
 from fsmes.services import NotFound, masterdata
 from fsmes.services import calendar as calendar_service
+from fsmes.services import connection as connection_service
 from fsmes.services import equipment as equipment_service
 from fsmes.services import line as line_service
 from fsmes.services import oee as oee_rules
@@ -113,7 +114,12 @@ def _shift(db: Session, shift: str | None) -> calendar_service.Shift | None:
 
 def _window(db: Session, units: list[Equipment], hours: float,
             shift: calendar_service.Shift | None = None) -> tuple[datetime, datetime]:
-    """The reporting window, clamped to when the MES first saw this line."""
+    """The reporting window, clamped to when the MES started watching this line.
+
+    Started watching, not started seeing: a line whose agent has never reached
+    its server has no state rows and would otherwise report an empty window,
+    which reads as "nothing to say" rather than "blind since Tuesday".
+    """
     end = utcnow()
     if shift is not None:
         # A shift in progress ends now, not at the hour it is rostered to
@@ -121,11 +127,9 @@ def _window(db: Session, units: list[Equipment], hours: float,
         start, end = shift.starts_at, min(shift.ends_at, end)
     else:
         start = end - timedelta(hours=hours)
-    first_seen = db.scalar(
-        select(func.min(EquipmentState.started_at)).where(
-            EquipmentState.equipment_id.in_([u.id for u in units])
-        )
-    )
+    seen = equipment_service.first_seen(db, [u.id for u in units])
+    first_seen = min(seen.values()) if seen else None
+
     if first_seen is None:
         return end, end
     start = max(start, first_seen)
@@ -189,6 +193,9 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
     ids = [u.id for u in units]
     by_machine = equipment_service.state_seconds(db, ids, start, end)
     made = equipment_service.production_sums(db, ids, start, end)
+    # Seconds the MES could not see each machine. Out of availability's
+    # denominator and stated as a share beside it - decision 0030.
+    unknown_by_machine = connection_service.unknown_seconds(db, ids, start, end)
 
     stations = []
     for unit in units:
@@ -200,8 +207,13 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
         good, scrap, outside = made.get(unit.id, (0.0, 0.0, 0.0))
         total = good + scrap
 
+        unknown = min(unknown_by_machine.get(unit.id, 0.0), window_seconds)
+        observed = max(0.0, window_seconds - unknown)
+
         cycle = unit.ideal_cycle_seconds
-        availability = runtime / window_seconds if window_seconds >= _MIN_WINDOW_SECONDS else None
+        # Run time over *observed* time. Time nobody watched is not time the
+        # machine spent not running.
+        availability = runtime / observed if observed >= _MIN_WINDOW_SECONDS else None
         # Never capped, and the note is the sentence the screen puts beside it
         # — see `fsmes.services.oee`.
         performance, performance_note = oee_rules.performance(cycle, total, runtime, outside)
@@ -231,6 +243,12 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
                 "oee": _round(overall),
                 "runtime_seconds": round(runtime, 1),
                 "downtime_seconds": round(downtime, 1),
+                # Not a state: the machine has no state for these seconds,
+                # because nothing was watching it. Reported beside the states
+                # rather than inside them.
+                "unknown_seconds": round(unknown, 1),
+                "observed_seconds": round(observed, 1),
+                "unknown_share": round(unknown / window_seconds, 4) if window_seconds > 0 else None,
                 "seconds_by_state": {k: round(v, 1) for k, v in seconds.items()},
                 "good_qty": good,
                 "scrap_qty": scrap,
@@ -239,9 +257,12 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
                 # See `equipment.production_sums`.
                 "counted_outside_run_time": round(outside, 3),
                 "loss": {
-                    # What downtime cost, priced at the machine's own rated rate.
-                    "availability_seconds": round(window_seconds - runtime, 1),
-                    "availability_units": round((window_seconds - runtime) / cycle, 1) if cycle else None,
+                    # What downtime cost, priced at the machine's own rated
+                    # rate. Measured against observed time: an outage is not a
+                    # loss the machine caused, and pricing it as one would
+                    # bill a plant for the minutes its network was down.
+                    "availability_seconds": round(observed - runtime, 1),
+                    "availability_units": round((observed - runtime) / cycle, 1) if cycle else None,
                     # What running slower than rated cost.
                     "performance_units": round(capable - total, 1) if capable is not None else None,
                     "quality_units": scrap,
@@ -262,6 +283,13 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
         # long as was asked for.
         "window": _window_json(start, end, hours, the_shift),
         "stations": stations,
+        # The line's blind spots, so a reader of the rollup does not have to
+        # add up the stations to find out how much of the window was watched.
+        "unknown_seconds": round(sum(s["unknown_seconds"] for s in stations), 1),
+        "machines_disconnected_now": sum(
+            1 for row in connection_service.open_connections(db, ids).values()
+            if row.state.value == "disconnected"),
+        "machines_total": len(units),
         "line_oee": _round(min(rated)) if rated else None,
         "constraint": worst["code"] if worst else None,
         "good_qty": produced,
@@ -338,6 +366,11 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float = 8.0
     start, end = _window(db, units, hours, the_shift)
 
     rows = []
+    # The gaps: stretches where the MES could not see the machine at all. They
+    # are drawn as their own intervals rather than left as white space,
+    # because a hole in a Gantt reads as "nothing happened" and this one means
+    # "nobody was looking" (decision 0030).
+    gaps = connection_service.intervals(db, [u.id for u in units], start, end)
     for unit in units:
         # Columns, not objects: a dozen machines over eight busy hours is
         # tens of thousands of intervals, and hydrating each one was most of
@@ -373,6 +406,25 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float = 8.0
                     }
                     for state, reason, reason_source, started_at, ended_at, shift_code in states
         ]
+        drawn += [
+            {
+                "state": "disconnected",
+                "reason": gap.reason,
+                # Not a stop anybody named: it is this MES saying it lost
+                # sight of the machine, so the source is the connection.
+                "reason_source": "connection",
+                "start": max(gap.started_at, start),
+                "end": min(gap.ended_at or end, end),
+                "seconds": round(max(0.0, (min(gap.ended_at or end, end)
+                                           - max(gap.started_at, start)).total_seconds()), 1),
+                "open": gap.ended_at is None,
+                # When the MES noticed, as against when the evidence stops.
+                # The seconds between them belong to neither side.
+                "detected_at": gap.detected_at,
+            }
+            for gap in gaps.get(unit.id, [])
+        ]
+        drawn.sort(key=lambda interval: interval["start"])
         # One pixel of the chart as drawn, so the floor scales with the window
         # rather than being a magic number. A shift window is as wide as the
         # shift has run, which is what the axis will show.
@@ -449,12 +501,27 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float = 8.
         bucket["share"] = round(exact / total, 4) if total else None
         bucket["cumulative"] = round(running / total, 4) if total else None
 
+    # How much of this window nobody was watching. Not a bucket - a
+    # disconnection is not downtime and must never be sorted beside a reason -
+    # but stated on the same object, for the same reason the unlabelled bucket
+    # exists: a pareto that does not say how blind its window was reads as
+    # complete.
+    unknown = sum(connection_service.unknown_seconds(db, ids, start, end).values())
+    window_seconds = (end - start).total_seconds()
+
     return {
         "line": {"code": centre.code, "name": centre.name},
         "window": _window_json(start, end, hours, the_shift),
         "total_seconds": round(total, 1),
         "reasons": ordered,
         "unlabelled_share": next((b["share"] for b in ordered if b["reason"] == UNLABELLED), 0.0),
+        "unknown_seconds": round(unknown, 1),
+        # Machine-seconds unwatched over machine-seconds in the window, so a
+        # plant of a hundred machines with one disconnected reads as 1% rather
+        # than as the whole window being blind.
+        "unknown_share": (round(unknown / (window_seconds * len(ids)), 4)
+                          if window_seconds > 0 and ids else None),
+        "machines_total": len(units),
     }
 
 

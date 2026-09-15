@@ -51,3 +51,55 @@ class EquipmentState(ShiftStamped, Base):
     # proportion the machine actually spent there.
 
     equipment: Mapped[Equipment] = relationship()
+
+
+class ConnectionStateName(enum.StrEnum):
+    """Whether this MES can currently see the machine. Two values, and they
+    are not production states — see decision 0030."""
+
+    CONNECTED = "connected"
+    DISCONNECTED = "disconnected"
+
+
+class EquipmentConnection(Base):
+    """One contiguous stretch of being able - or unable - to see a machine.
+
+    The same shape as `EquipmentState` because it answers the same kind of
+    question: the open interval (ended_at IS NULL) is now, and the closed ones
+    are history a window can be re-read against.
+
+    It is a *separate* history because it is a separate fact. A machine can be
+    broken and reachable, or fine and unreachable, and a plant that has to
+    choose one column for both has thrown away the more useful half. A machine
+    with no row here has no connection fact at all - nothing is watching it
+    over a connection - and that is reported as unknown, never as connected.
+    """
+
+    __tablename__ = "equipment_connections"
+    __table_args__ = (
+        Index("ix_equipment_connections_eq_started", "equipment_id", "started_at"),
+        # "Which machines are disconnected right now" is asked by every floor
+        # refresh and by /health; the same index the state history needed.
+        Index("ix_equipment_connections_ended", "ended_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    equipment_id: Mapped[int] = mapped_column(ForeignKey("equipment.id"))
+    state: Mapped[ConnectionStateName] = mapped_column(str_enum(ConnectionStateName))
+    #: The last moment the MES had positive evidence of the link - not the
+    #: moment it noticed. For a disconnection those are different, and the
+    #: seconds between them are genuinely unknown.
+    started_at: Mapped[datetime] = mapped_column(default=utcnow)
+    #: When the MES noticed. Equal to `started_at` for a connection coming up,
+    #: later than it for one going down.
+    detected_at: Mapped[datetime] = mapped_column(default=utcnow)
+    ended_at: Mapped[datetime | None]
+    #: Why, in the words of whatever noticed: "the server did not answer",
+    #: "the agent stopped". Never a code nobody can read.
+    reason: Mapped[str | None] = mapped_column(String(200))
+    #: What was dialled - the OPC endpoint, usually. Provenance for the same
+    #: reason `opc.connected` is audited: a replay and a real server leave
+    #: identical rows otherwise.
+    source: Mapped[str | None] = mapped_column(String(200))
+
+    equipment: Mapped[Equipment] = relationship()

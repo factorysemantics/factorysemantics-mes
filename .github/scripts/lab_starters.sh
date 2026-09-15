@@ -40,7 +40,24 @@ fsmes lab list --results "$results"
 # The feedback loop, end to end and with no model anywhere: a note left
 # against a run appears in that run's report beside the screen it names, and
 # `fsmes lab review` rolls every run up into one cited findings.md.
-first_run="$(ls -d "$results"/*/ | head -1)"
+# The note is left against a run that measured `booking`, because the check
+# below is that it renders *beside the booking numbers* - a run whose plan
+# asked for other measurements has no such section for it to sit beside, and
+# asserting against one is a check about which starter happens to sort first.
+first_run="$(python - "$results" <<'PICK'
+import json
+import sys
+from pathlib import Path
+
+for run in sorted(p for p in Path(sys.argv[1]).iterdir() if (p / "scores.json").is_file()):
+    scores = json.loads((run / "scores.json").read_text(encoding="utf-8"))
+    if "booking" in scores.get("measurements_asked_for", []):
+        print(run)
+        break
+else:
+    sys.exit("no run measured booking, so the feedback check has nothing to sit beside.")
+PICK
+)/"
 plant="$(python -c "import json,sys; print(json.load(open(sys.argv[1]))['plants'][0]['plant'])" \
          "${first_run}scores.json")"
 note="the orders list does not say how many orders there are"
@@ -89,9 +106,13 @@ for run in runs:
                    f"{', '.join(scores['measurements_asked_for'])} |")
     print(f"{run.name}: {scores['plants_run']} plant(s), {withheld} verdict(s) withheld")
 
-# The note went to the first run; it has to be in that run's report, under the
-# section for the screen it names rather than in an appendix somewhere.
-first = runs[0]
+# The note went to the first run that measured booking; it has to be in that
+# run's report, under the section for the screen it names rather than in an
+# appendix somewhere.
+first = next(run for run in runs
+             if "booking" in json.loads(
+                 (run / "scores.json").read_text(encoding="utf-8")
+             ).get("measurements_asked_for", []))
 page = (first / "report.html").read_text(encoding="utf-8")
 if note not in page:
     sys.exit(f"{first.name}: the note left with `fsmes lab note` is not in report.html.")

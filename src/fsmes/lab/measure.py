@@ -29,6 +29,11 @@ from fsmes.lab.truth import IDLE_STATES, LineTruth
 #: told apart from the window the MES happened to measure over.
 WINDOW_TOLERANCE = 0.02
 
+#: How many of the agent's own health checks an outage has to span before the
+#: agent could be expected to see it at all. Two, for the same reason the
+#: scorer wants two samples across a stop: one check can fall either side.
+SAMPLES_TO_SEE = 2
+
 
 def _share(value: float | None, of: float | None) -> float | None:
     if value is None or not of:
@@ -1026,6 +1031,197 @@ def oee(truth: LineTruth, reported: dict, tag_map: dict[str, str], speed: float,
         "line_oee_reported": reported.get("line_oee"),
         "constraint_reported": reported.get("constraint"),
     }
+
+
+# ------------------------------------------------------------------ connection
+
+def connection(card: dict, watched: dict, oee: dict, tag_map: dict[str, str],
+               speed: float, reason: str | None = None) -> dict:
+    """What did the MES say about the minutes it could not see?
+
+    The only measurement here that *has* to be read from during the run. By the
+    time the hour is over the plant has reconnected and every screen says so;
+    the question is what they said while the link was down, and a plant asked
+    afterwards cannot answer it.
+
+    Three things are asked of each scripted outage, and each has an honest
+    unknown:
+
+    * **Did the machines read as disconnected?** Not down, not idle, not the
+      last state they were in. A look that did not happen inside the window -
+      because the watch had not started, because the route did not answer -
+      is *unknown*, never a miss.
+    * **Did anything claim to know what the machines were doing?** A machine
+      still showing `running` or `down` in the middle of an outage is the
+      whole fault this exists to catch, and it is reported by name.
+    * **Did the window come back as unknown time rather than as run time?**
+      Read off the OEE answer at the end, which is where a plant's numbers
+      actually come from: `unknown_seconds` has to cover roughly the scripted
+      outage, restated on the line's clock.
+    """
+    windows = card.get("disconnects") or []
+    looks = watched.get("looks") or []
+    resolution = (watched.get("resolution_line_seconds")
+                  or (round(watched.get("every_wall_seconds", 0) * speed, 1)
+                      if watched.get("every_wall_seconds") else None))
+    seconds = [float(look.get("line_second") or 0) for look in looks]
+    first, last = (min(seconds), max(seconds)) if seconds else (None, None)
+
+    # The agent's own health check, on the line's clock. An outage shorter than
+    # a couple of these cannot be seen at all, and a measurement that called
+    # that a miss would be blaming the MES for the speed the harness chose. The
+    # same rule the scorer applies to a stop shorter than its sample, for the
+    # same reason.
+    health = (card.get("observation") or {}).get("agent_health_interval_s")
+    floor = round(health * speed * SAMPLES_TO_SEE, 1) if health else None
+
+    events = []
+    for window in windows:
+        start, end = window["window_sim_s"]
+        inside = [look for look in looks
+                  if start <= float(look.get("line_second") or 0) <= end]
+        events.append(_one_outage(window, inside, start, end, first, last, floor, reason))
+
+    # What the numbers said afterwards. The MES's seconds are wall seconds and
+    # the script's are line seconds, so the MES's are restated on the line's
+    # clock before the two are put beside each other - the same conversion
+    # every other measurement here makes, and for the same reason.
+    scripted_line_seconds = sum(float(w["window_sim_s"][1]) - float(w["window_sim_s"][0])
+                                for w in windows if w.get("window_sim_s"))
+    stations = oee.get("stations") or []
+    unknown_by_station = [
+        {"station": name, "equipment": tag_map.get(name),
+         "unknown_line_seconds": _unknown_line_seconds(stations, tag_map.get(name), speed),
+         "availability": _availability_of(stations, tag_map.get(name))}
+        for name in sorted(tag_map)
+    ]
+    counted = [row["unknown_line_seconds"] for row in unknown_by_station
+               if row["unknown_line_seconds"] is not None]
+
+    return {
+        "measurement": "connection",
+        "question": "what did the MES say about the minutes it could not see?",
+        "unknown_because": reason,
+        "speed": speed,
+        "scripted_outages": len(windows),
+        "scripted_line_seconds": round(scripted_line_seconds, 1),
+        "watched": {
+            "looks": watched.get("looks_total", len(looks)),
+            "resolution_line_seconds": resolution,
+            "agent_health_interval_line_seconds": round(health * speed, 1) if health else None,
+            "shortest_outage_the_agent_could_see": floor,
+            "first_look_line_second": first,
+            "last_look_line_second": last,
+            "note": ("a machine is only ever known to have read disconnected by the look that "
+                     "saw it, so the polling interval is the resolution of every figure here"),
+        },
+        "outages": events,
+        "after_the_run": {
+            "note": ("the MES counts wall seconds and the script is in line seconds; these are "
+                     "the MES's own figures restated on the line's clock"),
+            "stations": unknown_by_station,
+            # Machine-seconds, because the endpoint carries every machine: one
+            # outage of N seconds on a line of six is six machines' worth.
+            "unknown_line_seconds_total": round(sum(counted), 1) if counted else None,
+            "unknown_line_seconds_expected": (
+                round(scripted_line_seconds * len(unknown_by_station), 1) if windows else 0.0),
+            **_overhang(sum(counted) if counted else None,
+                        scripted_line_seconds * len(unknown_by_station) if windows else 0.0),
+        },
+    }
+
+
+def _one_outage(window: dict, inside: list[dict], start: float, end: float,
+                first: float | None, last: float | None, floor: float | None,
+                reason: str | None) -> dict:
+    """One scripted outage, and what the screens said inside it."""
+    scripted_line_seconds = float(end) - float(start)
+    row = {**window, "scripted_line_seconds": round(scripted_line_seconds, 1),
+           "resolvable_at_this_speed": None if floor is None else scripted_line_seconds >= floor}
+    if reason:
+        return {**row, "verdict": "unknown", "unknown_because": reason}
+    if floor is not None and scripted_line_seconds < floor:
+        # Shorter than the agent could notice at this replay speed. Not a
+        # miss - the same rule, and the same refusal to accuse, that the
+        # scorer applies to a stop shorter than its own sample.
+        return {**row, "verdict": "unknown", "looks_inside": len(inside),
+                "unknown_because": (f"the outage is {scripted_line_seconds:.0f} s of line time and "
+                                    f"the agent's health check is every {floor / SAMPLES_TO_SEE:.0f} s "
+                                    f"at this speed: shorter than it could see")}
+    if not inside:
+        why = ("the watch had not started yet" if first is None or first > end
+               else "the run ended before this window" if last is not None and last < start
+               else "no look landed inside the window")
+        return {**row, "verdict": "unknown", "unknown_because": why}
+
+    machines = sorted({code for look in inside for code in (look.get("connections") or {})})
+    said_disconnected = sorted({
+        code for look in inside
+        for code, state in (look.get("connections") or {}).items()
+        if state == "disconnected"})
+    # One look disagreeing with itself: the same instant in which the plant
+    # says it cannot see a machine, and a screen says what that machine is
+    # doing. Per look, not across the window - the looks before the agent
+    # noticed are legitimately still showing the last state it heard, and
+    # counting those would report the detection lag as a lie.
+    claiming = sorted({
+        f"{code} ({state})"
+        for look in inside
+        for code, state in (look.get("states") or {}).items()
+        if (look.get("connections") or {}).get(code) == "disconnected"
+        and state not in ("unknown", "disconnected")})
+    worst = max((int((look.get("watching") or {}).get("disconnected") or 0)
+                 for look in inside), default=0)
+
+    return {
+        **row,
+        "looks_inside": len(inside),
+        "machines_seen": len(machines),
+        "machines_read_disconnected": said_disconnected,
+        "health_said_disconnected_at_worst": worst,
+        "machines_still_claiming_a_state": claiming,
+        "verdict": ("nothing read as disconnected" if not said_disconnected
+                    else "a machine kept claiming a state through the outage" if claiming
+                    else "read as disconnected"),
+    }
+
+
+def _overhang(measured: float | None, expected: float) -> dict:
+    """How the MES's unknown time compares with the script's, and which way.
+
+    The two directions are not symmetrical and the measurement must not average
+    them into one "difference". **More** unknown time than was scripted is the
+    detection and reconnect lag: the agent takes up to one health check to
+    notice the link has gone and up to one retry to find it back, and in
+    between it is honestly saying it does not know. **Less** is the fault -
+    the MES claiming knowledge of minutes it did not have.
+    """
+    if measured is None:
+        return {"difference_line_seconds": None,
+                "difference_says": "no station reported an unknown figure"}
+    difference = measured - expected
+    if difference >= 0:
+        says = ("longer than the script by the agent's detection and reconnect lag - it "
+                "notices the link is gone at its next health check and finds it back at its "
+                "next retry, and says it does not know in between")
+    else:
+        says = ("SHORTER than the script: the MES accounted for minutes it could not see, "
+                "which is knowledge it did not have")
+    return {"difference_line_seconds": round(difference, 1), "difference_says": says}
+
+
+def _unknown_line_seconds(stations: list[dict], code: str | None, speed: float) -> float | None:
+    if not code:
+        return None
+    said = next((s for s in stations if s.get("code") == code), None)
+    if said is None or said.get("unknown_seconds") is None:
+        return None
+    return round(float(said["unknown_seconds"]) * speed, 1)
+
+
+def _availability_of(stations: list[dict], code: str | None) -> float | None:
+    said = next((s for s in stations if s.get("code") == code), None)
+    return None if said is None else said.get("availability")
 
 
 def _difference(said, truth_value) -> float | None:

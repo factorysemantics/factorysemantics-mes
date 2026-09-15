@@ -211,6 +211,13 @@ class Console:
             "modules_off": modules.get("off"),
             "modules_total": modules.get("total"),
             "pack_unknown": pack_said.get("unknown") or {},
+            # What that plant can currently see of itself. A plant that is up
+            # and blind to nine of its machines is not the same fact as a
+            # plant that is up, and a console that shows only the first light
+            # lets the second one hide behind it (decision 0030). Empty when
+            # the plant did not answer, or answered from a build that predates
+            # the block - not zero, which would claim it can see everything.
+            "watching": (said or {}).get("watching") or {},
             "last_answered": self.last_answered.get(plant.name),
         }
 

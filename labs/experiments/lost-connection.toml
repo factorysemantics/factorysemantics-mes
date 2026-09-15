@@ -1,0 +1,82 @@
+# Somebody pulls the cable.
+#
+# A real plant loses its connection to the machine layer most weeks: a switch
+# reboots, a certificate expires, an engineer unplugs the wrong port. The line
+# does not stop. The machines are fine. The MES just cannot see any of it.
+#
+# The two ways to get this wrong are symmetrical, and both survive for years
+# because the number still looks plausible:
+#
+#   * read the gap as *down*, and the plant has a breakdown that never
+#     happened, on a machine that was running the whole time;
+#   * read it as *the last state we heard*, and the plant has availability
+#     nobody was watching - it looks better, so it is believed.
+#
+# The honest answer is neither. For those minutes the MES has no state for the
+# machine at all, the connection history says since when and why, and every
+# window that overlaps the gap says how much of itself was unknown. Decision
+# 0030, and the first thing an incumbent MES's operators will test when this
+# one is stood up beside it in shadow mode.
+#
+#     fsmes lab run labs/experiments/lost-connection.toml
+#
+# About two minutes: one plant, twenty-five minutes of line time at 20x, plus
+# the seeding and the drain. The plant is ephemeral, on loopback, with its own
+# database and its own ports.
+
+name = "lost-connection"
+note = """Nobody was watching for four minutes, and then for three. What to
+look at first: no station may show a breakdown inside a disconnect window, and
+no screen may keep showing the state a machine was in when the link died.
+
+Then look at the booking table, because it carries a finding this run was not
+written to look for. The agent's counter baseline is rebuilt with the
+connection, so the units the line counted while nobody was watching book
+nothing: every station comes out a few hundred below what the line made. It is
+not double-counting and it is not invention - it is a silent shortfall, and it
+is a second question, written up in decision 0030 under what that record does
+not solve."""
+
+packs = ["../multiplant/bottling"]
+
+# Twenty-five minutes: a long outage, a short one, and enough line either side
+# of both to have something real to lose sight of.
+duration = 1500
+seed     = 42
+speed    = 20
+
+# `connection` is the measurement this plan exists for, and it is read from
+# what the run saw *while the hour played* - by the time a run is over the
+# plant has reconnected and every screen says so. `oee` is here because the
+# claim that matters afterwards is an availability figure with a hole in it
+# that says how big the hole was; `downtime` because the thing that must NOT
+# happen is the gap turning up in the pareto as a breakdown.
+#
+# `booking` is here for a question the others cannot ask. The counters keep
+# counting while nobody is watching them, and they are cumulative, so the
+# agent's first reading after the link comes back is a delta that spans the
+# whole outage. Nothing should be lost - and *not losing* it is the claim,
+# because the alternative is a plant that quietly under-books every network
+# blip it has.
+measure = ["booking", "connection", "downtime", "oee"]
+
+# A disconnect names no station: the endpoint carries the whole line, which is
+# what a switch losing power actually costs. The Washer's breakdown is inside
+# the first outage on purpose - a real fault the MES genuinely could not see,
+# so the run can show that it is reported as unknown rather than either
+# invented or missed. The second, shorter outage is there because a four-
+# minute gap and a three-minute gap are different things to a shift report,
+# and an MES that rounds one into the other is no use for either. Both are
+# comfortably longer than the agent's own health check restated on the line's
+# clock (at 20x, about sixty line seconds); the report prints that floor, and
+# an outage shorter than it is reported as unknown rather than as missed.
+[scenario.bottling]
+events = [
+  { type = "down",       station = "Washer", start = 420,  end = 560 },
+  { type = "disconnect",                     start = 360,  end = 600 },
+  { type = "disconnect",                     start = 1080, end = 1260 },
+]
+
+# No `[init.bottling]`: this pack carries its own master data, so the plant it
+# builds needs nothing from the plan. See the note on the same absence in
+# one-line-bad-hour.toml for what it cost when it did.

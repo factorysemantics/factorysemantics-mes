@@ -54,7 +54,15 @@ EVENT_TYPES = {
     "counter_reset": "the station's counters go back to zero at `at`",
     "starve": "nothing arrives: the machine is willing and has nothing to work on",
     "block": "nowhere to put it: the machine is willing and downstream is full",
+    "disconnect": "the OPC endpoint closes: the line runs on and the MES cannot see it",
 }
+
+#: Scripted events that do nothing whatever to the line. A disconnect is a
+#: fault in the *observer*, not in the plant: the machines keep running, the
+#: counters keep counting, and the generated tables are exactly what they
+#: would have been. What changes is that nobody is there to read them, which
+#: is why it lives in the manifest rather than in the CSVs.
+OBSERVER_TYPES = ("disconnect",)
 
 #: Scripted states that are not the machine's fault and are not a breakdown.
 #: A plant that counts them as downtime reports an availability figure that is
@@ -100,7 +108,10 @@ def _validate_line(config: dict, label: str) -> dict:
             sys.exit(f"{label}: unknown event type {kind!r}. A scenario scripts "
                      f"{', '.join(sorted(EVENT_TYPES))}.")
         station = event.get("station")
-        if kind != "changeover" and station not in names:
+        # A changeover is the whole line; a disconnect is the whole endpoint.
+        # Neither belongs to one machine, and demanding a station for them
+        # would be asking which machine the network outage happened to.
+        if kind not in ("changeover", *OBSERVER_TYPES) and station not in names:
             sys.exit(f"{label}: event {kind!r} names station {station!r}, which is not in stations.")
         for key in ("start", "end", "at"):
             if key in event and not 0 <= int(event[key]) <= duration:
@@ -554,10 +565,27 @@ def write_manifest(config: dict, out: Path) -> Path:
                  "Read by the OPC replay (which tags are live and writable), "
                  "the tag browser, and the write guard.",
         "tables": tables,
+        # Windows in which the replay closes its endpoint altogether. Here
+        # rather than in the CSVs because nothing about the *line* changes:
+        # the machines run on and the tables say exactly what they would have
+        # said. It is the server that goes away.
+        "disconnects": disconnects(config),
     }
     path = out / MANIFEST_NAME
     path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return path
+
+
+def disconnects(config: dict) -> list[dict]:
+    """The scripted windows in which the OPC endpoint is closed, in line
+    seconds. A factory's lines are merged before this is read, so a disconnect
+    on any of them closes the one endpoint they all share - which is what a
+    switch losing power actually does."""
+    return [
+        {"start": int(event["start"]), "end": int(event["end"])}
+        for event in config.get("events", [])
+        if event.get("type") == "disconnect"
+    ]
 
 
 def station_inspection(station: dict) -> dict | None:
@@ -606,6 +634,10 @@ def _scenario_rows(config: dict) -> list[tuple[str, str]]:
         elif kind == "changeover":
             out.append((f"{mmss(int(event['start']))}-{mmss(int(event['end']))}",
                         "changeover (whole line)"))
+        elif kind == "disconnect":
+            out.append((f"{mmss(int(event['start']))}-{mmss(int(event['end']))}",
+                        "OPC endpoint closed — the line runs on and the MES "
+                        "cannot see any of it"))
         else:
             # A `.get` here would print "None" for a type somebody added and
             # forgot; the timeline is what a person runs the exercise from,

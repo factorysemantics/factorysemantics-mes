@@ -92,7 +92,7 @@ def script(plan: Plan, pack: fmt.Pack, into: Path) -> tuple[Path, int, int | Non
     if duration <= 0:
         raise PlanError(f"{pack.name}: its line declares no duration_s, so a run has no length.")
 
-    from fsmes.sim.generate import EVENT_TYPES
+    from fsmes.sim.generate import EVENT_TYPES, OBSERVER_TYPES
 
     stations = {s.get("name") for s in source.get("stations", [])}
     for event in source.get("events", []):
@@ -107,7 +107,10 @@ def script(plan: Plan, pack: fmt.Pack, into: Path) -> tuple[Path, int, int | Non
                 f"{pack.name}: a scripted event has type {kind!r}, which is not something a "
                 f"line can be told to do. The vocabulary is:\n" + "\n".join(
                     f"    {name:<14} {says}" for name, says in sorted(EVENT_TYPES.items())))
-        if kind != "changeover" and where not in stations:
+        # A changeover is the whole line and a disconnect is the whole
+        # endpoint. Asking which machine the network outage happened to is
+        # not a question either of them has an answer to.
+        if kind not in ("changeover", *OBSERVER_TYPES) and where not in stations:
             raise PlanError(
                 f"{pack.name}: a scripted {kind!r} names station {where!r}, and this line has "
                 f"{', '.join(sorted(str(s) for s in stations)) or 'none'}.")

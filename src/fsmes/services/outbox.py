@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session
 from fsmes.config import Settings, get_settings
 from fsmes.domain import (
     Equipment,
+    EquipmentConnection,
     EquipmentState,
     ErpMessage,
     MessageDirection,
@@ -36,6 +37,7 @@ from fsmes.domain import (
 )
 from fsmes.integrations.events import (
     DomainEvent,
+    EquipmentConnectionChange,
     EquipmentStateChange,
     OrderHold,
     OrderResume,
@@ -103,6 +105,39 @@ def equipment_state_changed(session: Session, *, equipment: Equipment,
         previous_state=closed.state.value if closed is not None else None,
         previous_seconds=previous_seconds,
         started_at=opened.started_at,
+        actor=str(actor),
+    ))
+
+
+def equipment_connection_changed(session: Session, *, equipment: Equipment,
+                                 opened: EquipmentConnection,
+                                 closed: EquipmentConnection | None,
+                                 actor: str, settings: Settings | None = None) -> ErpMessage | None:
+    """The MES gained or lost its view of a machine. Decision 0030.
+
+    Written in the same transaction as the connection interval, like a state
+    change, so the namespace can never disagree with the history about when
+    the plant went quiet.
+
+    Returns None when domain events are switched off.
+    """
+    if not domain_events_enabled(settings):
+        return None
+    line = masterdata.work_center_of(session, equipment)
+    previous_seconds = None
+    if closed is not None and closed.ended_at is not None:
+        previous_seconds = round((closed.ended_at - closed.started_at).total_seconds(), 3)
+    return _record_event(session, EquipmentConnectionChange(
+        message_key=f"equipment:{equipment.code}:connection:{opened.id}",
+        equipment=equipment.code,
+        work_center=line.code if line is not None else None,
+        connection=opened.state.value,
+        reason=opened.reason,
+        source=opened.source,
+        previous_connection=closed.state.value if closed is not None else None,
+        previous_seconds=previous_seconds,
+        started_at=opened.started_at,
+        detected_at=opened.detected_at,
         actor=str(actor),
     ))
 

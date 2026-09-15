@@ -70,6 +70,57 @@ goes under Honesty with a migration line, so plant people can find it.
   rows attributed to the current pattern, and rows no pattern covers stay
   null. `docs/plant/shifts.md` says what to do about that.
 
+- **A lost connection to a machine reads as *disconnected*, and the gap it
+  leaves is unknown time — never as a stop and never as the last state.**
+  The OPC agent used to catch a dropped connection, log it and sleep. No
+  interval was closed, so the machine's open state stayed open: a machine that
+  was `running` when the cable was pulled read as running for as long as the
+  link was down, that invented run time went into availability's numerator,
+  and `maintenance.runtime_hours` accrued against a machine nobody could see.
+  A connection is now a dimension of its own (decision 0030), recorded in the
+  new `equipment_connections` table with the same interval shape the state
+  history has. Recording a disconnection **closes the machine's open state
+  interval** at the last moment there was evidence and opens nothing in its
+  place, so for the length of an outage the machine has no state and every
+  screen answers *unknown*. A machine with no row has no connection fact at
+  all — nothing is watching it over a connection — and reads as `unknown`,
+  never as connected.
+  **Migration:** availability is now run time ÷ *observed* time, where
+  observed time is the window less the seconds that machine was disconnected
+  inside it. On a plant that has never lost a connection nothing changes. On
+  one that has, availability rises, because time nobody watched is no longer
+  counted as time the machine spent not running. Both OEE answers gained
+  `unknown_seconds` and `unknown_share` (and `observed_seconds` /
+  `observed_hours`); `loss.availability_seconds` is now measured against
+  observed time, so an outage is no longer priced in units as though the
+  machine had caused it. The downtime pareto gained `unknown_seconds` and
+  `unknown_share` — a disconnection is never a bucket in it. The reporting
+  window now clamps to when the MES started *watching* a machine rather than
+  to its first recorded state, so a machine whose agent has never reached its
+  server reports a window that is wholly unknown instead of an empty one.
+
+- **Known and named, not fixed here: units a machine counted during an outage
+  are not booked.** The agent books production from the *increase* of a
+  cumulative counter and its memory of the last value lives with the
+  connection, so the first reading after a reconnect starts a fresh baseline
+  and whatever the counter climbed while nobody was watching books nothing.
+  Not new — it has been true of every reconnect since the agent was written —
+  but the lab can see it now: with two scripted outages totalling seven minutes
+  of line time, the line counted about 520 units per station inside them and the
+  MES booked 306 to 337 fewer than the line made, on every station. Nothing is
+  invented and nothing is double-counted; the shortfall is real and silent.
+  Settling it is a second decision — those units happened, so decision 0019
+  says book them, and nothing can say when inside the gap they were made or
+  which order they belong to — so it is written down in decision 0030 under
+  what that record does not solve, and in
+  `docs/operate/opc-disconnections.md`, rather than quietly chosen.
+
+- **A breakdown the lab scripted inside a scripted outage scores unknown, not
+  missed.** The MES was blind for those minutes by the script's own doing, and
+  scoring it as recall 0 is the same false accusation the scorer already
+  refuses to make about a stop shorter than its own sample. Fault checks gained
+  `unseen_sim_seconds` and `inside_a_disconnect`.
+
 - **Every number a lab run stores about the MES's OEE says which clock it is
   on.** A run at 20x stored the MES's performance as `19.77` under the plain
   name `performance` while the difference printed beside it had been computed
@@ -99,6 +150,40 @@ goes under Honesty with a migration line, so plant people can find it.
   anybody chose it. The screen keeps line, window, shift and machine in the
   address bar. The MCP tools `downtime` and `tag_trend` take the same `shift`
   argument and a new `shifts` tool lists them.
+
+- **Every screen that shows a machine's state says whether the MES can still
+  see it.** The floor tiles, the machine page, the line view and the fleet
+  console carry the connection beside the state; a disconnected tile takes the
+  grey the product already uses for unknown, with a dashed edge and a strip
+  saying since when and why. `GET /equipment/connections` lists every machine
+  with its connection and states its total; `GET /health` gained a `watching`
+  block — machines, connected, disconnected, and how many have no connection
+  fact at all — so a monitor that knows a plant is up also knows it has been
+  blind to nine machines since Tuesday. The state timeline draws the outage as
+  its own interval rather than as white space. `equipment_connection_change`
+  joins the domain events, so a namespace subscriber knows when the last state
+  it heard stopped meaning anything.
+
+- **The OPC agent notices a lost connection rather than waiting to be told.**
+  A watchdog asks the server whether the session is alive every
+  `opc_health_periods` publish intervals (three by default, never faster than
+  once a second — config, not code). It is a positive check: OPC UA publishes
+  on change, so a machine standing idle correctly says nothing for an hour, and
+  inferring an outage from silence invents one. Without it a read-only source —
+  a replay, a historian, a server this MES may not write to — held a dead
+  subscription for ever.
+
+- **The lab can script a lost connection.** `disconnect` joins the generator's
+  closed event vocabulary: the replay closes its OPC endpoint outright for the
+  window and reopens it afterwards, while the line runs on and the tables say
+  exactly what they always said. It names no station, because asking which
+  machine a network outage happened to has no answer. A new `connection`
+  measurement, read from what the run saw *while the hour played*, asks whether
+  the machines read as disconnected, whether any single look disagreed with
+  itself, and whether the window came back as unknown time; an outage shorter
+  than a couple of the agent's own health checks is reported as unknown rather
+  than as missed. `labs/experiments/lost-connection.toml` is the starter, with
+  a real breakdown scripted inside the first outage.
 
 - **A lab run can ask what `fsmes fleet console` made of its plants.** The
   console's promise is decision 0023's — a plant that did not answer is

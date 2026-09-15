@@ -111,6 +111,19 @@ def score_run(
     planned_checks: list[dict] = []
     fault_checks: list[dict] = []
     idle_checks: list[dict] = []
+    # Scripted outages of the OPC endpoint. Carried, never scored: nothing
+    # happened to the line, so there is no MES answer to be right or wrong
+    # about here. What the MES said about the minutes it could not see is the
+    # lab's `connection` measurement, which reads these windows off the card
+    # rather than the line description a second time.
+    disconnects: list[dict] = []
+
+    # The blind windows, gathered before anything is scored: a fault the MES
+    # could not see is not a fault the MES missed, and the check below has to
+    # know about an outage that comes later in the file than the fault it
+    # covers.
+    blind = [(e.start_s, e.end_s) for e in truth["events"]
+             if e.is_disconnect and e.start_s is not None and e.end_s is not None]
 
     for event in truth["events"]:
         if event.start_s is None or event.end_s is None:
@@ -118,7 +131,15 @@ def score_run(
         start, end = _window(event, t0, speed)
         scripted = (end - start).total_seconds()
 
-        if event.planned:
+        if event.is_disconnect:
+            disconnects.append({
+                "event": "disconnect",
+                "window_sim_s": [event.start_s, event.end_s],
+                "scripted_seconds": round(scripted, 1),
+                "window_wall": [start.isoformat(), end.isoformat()],
+            })
+
+        elif event.planned:
             # A changeover is line-wide: every machine must avoid calling it
             # downtime, so check them all.
             offenders = []
@@ -193,7 +214,16 @@ def score_run(
                     (_parse(iv["start"]) - start).total_seconds()))
                 lag = round((_parse(nearest["start"]) - start).total_seconds() * speed, 1)
 
-            scoreable = observed and resolvable
+            # How much of this fault's window nobody could see. A breakdown
+            # scripted inside a scripted outage is the MES being blind, not
+            # the MES being wrong, and scoring it as recall 0 is the same
+            # false accusation this scorer already refuses to make for a
+            # window it did not sample fast enough. Decision 0030.
+            unseen = sum(max(0.0, min(event.end_s, b) - max(event.start_s, a))
+                         for a, b in blind)
+            blinded = unseen > 0
+
+            scoreable = observed and resolvable and not blinded
             # Recorded, but entirely after its window: the MES saw the fault
             # and saw it late, which is a pipeline lag and not a miss. Scoring
             # that as recall 0 turned "minutes behind" into "got it wrong" in
@@ -214,6 +244,10 @@ def score_run(
                 # Too brief to survive the sampling interval at this speed:
                 # not the MES's failure, and not scored as one.
                 "resolvable_at_this_speed": resolvable,
+                # Line seconds of this fault's window that the MES could not
+                # see at all, because the script closed the endpoint over it.
+                "unseen_sim_seconds": round(unseen, 1),
+                "inside_a_disconnect": blinded,
                 "detected": (seen > 0) if scoreable else None,
                 "detected_seconds": round(seen, 1) if scoreable else None,
                 "recall": round(seen / scripted, 3) if scoreable and scripted else None,
@@ -284,6 +318,7 @@ def score_run(
         },
         "planned_stops": planned_checks,
         "idle_stops": idle_checks,
+        "disconnects": disconnects,
         "faults": fault_checks,
         "late_faults": late_faults,
         "window": timeline.get("window"),

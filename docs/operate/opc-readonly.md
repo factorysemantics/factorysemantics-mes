@@ -256,6 +256,24 @@ One agent process, one subscription per entry, each with its own tag map.
 Each server's owner needs the same five things and the same certificate
 step.
 
+## When their server goes away
+
+It will. A switch reboots, a certificate expires, somebody unplugs the wrong
+port. The agent reconnects for ever, so nothing needs doing — but what the MES
+*says* about the gap is worth knowing before the first one happens, because it
+is the first thing an incumbent MES's operators will test.
+
+Every machine on that endpoint reads **disconnected**, with since-when, on the
+floor tiles, the machine page, the line view, `/equipment/connections` and the
+fleet console; `/health` says how many. None of them shows the state the
+machine was in when the link died, and none of them shows *down*: for those
+minutes the MES has no state for the machine, and the seconds leave
+availability's denominator instead of counting against the machine.
+
+The full story, including the one case it does not cover — an agent killed
+outright writes nothing — is in
+[losing sight of a machine](opc-disconnections.md).
+
 ## Which servers this has been tested against
 
 Read [compatibility](compatibility.md) before you promise anybody anything.
@@ -266,6 +284,8 @@ and the tag map is the only server-specific part — which is a reason to
 expect it to work, not evidence that it does.
 
 ## See also
+
+- [Losing sight of a machine](opc-disconnections.md)
 
 - [IT access request](../onboarding/GUIDE-IT.md) — the page to hand over
 - [Engineering worksheet](../onboarding/GUIDE-ENGINEERING.md) — the page to hand over

@@ -78,12 +78,33 @@ performance never means extra units were invented — that rule is house rule 1
 and lives in [never invent production](never-invent-production.md). It means
 two of the MES's numbers do not agree, and it says so rather than choosing one.
 
-## Stale is not stopped
+## Stale is not stopped, and unseen is neither
 
 A machine whose tags stopped changing is **stale**, not down. Stale means
 the MES stopped hearing, which is a different fact from the machine
-stopping. Downtime is only booked from a state tag that says so; stale time
-is reported as stale and excluded from availability with a reason.
+stopping. Downtime is only booked from a state tag that says so.
+
+A machine the MES cannot **reach** is a third thing again, and since
+2026-09-14 it is recorded as one. For the minutes the connection is gone the
+machine has no state at all — not `down`, which would invent a breakdown, and
+not the state it was last seen in, which would invent availability. Those
+seconds leave availability's **denominator** rather than its numerator, and
+every OEE answer says how many of them there were:
+
+| Figure | What it means |
+|---|---|
+| `runtime_seconds` | seconds the MES saw the machine running |
+| `observed_seconds` | seconds the MES could see the machine at all |
+| `unknown_seconds` | seconds inside the window that nobody was watching |
+| `unknown_share` | that, as a share of the window |
+
+So 92 % availability over forty observed minutes of an eight-hour window is
+still 92 %, and the object carrying it says the other seven hours and twenty
+minutes were unknown. Read both. A shift whose `unknown_share` is a third is
+not a shift to make a decision from, however good its OEE looks.
+
+[Losing sight of a machine](../operate/opc-disconnections.md) is the whole
+story, including the one case this does not cover.
 
 ## Unlabelled is reported as unlabelled
 
@@ -98,7 +119,8 @@ it moves up the list.
 1. Fill the rated cycle time for every machine in the worksheet.
 2. Give every machine a scrap counter, or accept that quality is unknown.
 3. Keep the agent running: the window it was not watching cannot be
-   reconstructed later, by design.
+   reconstructed later, by design. `/health` says how many machines this
+   plant can currently see, which is the thing to alert on.
 
 A rated cycle time that is wrong does not make grey; it makes a performance
 figure over 100 % with a note beside it. Both are worth a walk to the
@@ -107,6 +129,7 @@ machine, and only one of them looks like a problem at first glance.
 ## See also
 
 - [Never invent production](never-invent-production.md)
+- [Losing sight of a machine](../operate/opc-disconnections.md)
 - [Engineering guide — the worksheet](../onboarding/GUIDE-ENGINEERING.md)
 - Decision record [0004](../decisions/0004-never-invent-production.md)
 - Decision record [0025](../decisions/0025-performance-is-measured-not-capped.md)

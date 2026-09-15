@@ -41,10 +41,15 @@ function renderHead(h) {
   $("#m-code").textContent = h.code;
   $("#m-name").textContent = h.name;
   const pill = $("#m-state");
-  pill.className = `pill ${h.state}`;
-  pill.textContent = h.state;
-  $("#m-since").textContent = h.since
-    ? `since ${fmt.clock(h.since)}` + (h.reason ? ` — ${h.reason}` : "") : "";
+  const lost = FS.connection.lost(h);
+  pill.className = `pill ${FS.connection.stateClass(h)}`;
+  pill.textContent = FS.connection.stateText(h);
+  // When the link is gone the "since" line is about the link, not about a
+  // state the MES stopped being able to see.
+  $("#m-since").textContent = lost
+    ? `no connection since ${lost.since ? fmt.clock(lost.since) : "an unknown time"}`
+      + (lost.reason ? ` — ${lost.reason}` : "")
+    : (h.since ? `since ${fmt.clock(h.since)}` + (h.reason ? ` — ${h.reason}` : "") : "");
   $("#m-order").textContent = h.current_order || "—";
   $("#m-op").textContent = h.current_operation ? `${h.current_operation} (op ${h.current_seq})` : "—";
   $("#m-cc").textContent = h.cost_center || "—";

@@ -79,6 +79,7 @@ before a directory is made, with the list printed:
 | `counter_reset` | the station's counters go back to zero at `at` |
 | `starve` | nothing arrives: the machine is willing and has nothing to work on |
 | `block` | nowhere to put it: the machine is willing and downstream is full |
+| `disconnect` | the OPC endpoint closes: the line runs on and the MES cannot see it |
 
 `starve` and `block` script the **cause**, not the symptom, and the rest of
 the line follows on its own: starve the first station and every station after
@@ -120,6 +121,21 @@ The distance worth measuring — from the first underweight bottle to the moment
 the hold exists — is not measured yet: `quality` is a planned measurement, not
 a built one. The starter exists first so the measurement has a run to be built
 against.
+
+### `disconnect` names no station, because it belongs to no machine
+
+A `disconnect` is a fault in the **observer**, not in the plant. The replay
+stops its OPC server outright for the window and starts it again afterwards;
+the machines keep running, the counters keep counting, and the generated
+tables are byte-for-byte what they would have been. What changes is that
+nothing is there to read them, which is exactly what a switch losing power
+costs a plant.
+
+So it takes no `station` — asking which machine the network outage happened to
+has no answer — and it can be scripted over a `down` on purpose, which is the
+sharpest case there is: a real breakdown the MES genuinely could not see. A
+fault inside a scripted outage is scored **unknown**, never missed;
+`labs/experiments/lost-connection.toml` is the starter that uses it.
 
 ## What a run writes
 
@@ -397,6 +413,49 @@ as calling a changeover downtime, at fleet scale.
 *What it cannot tell you.* Whether a console would still be right about a plant
 that is up but wedged, or about twelve plants rather than two. The phases are
 the ones this run happened to live through.
+
+### `connection` — what did the MES say about the minutes it could not see?
+
+The measurement this exists for, and the only one that **has** to be read from
+during the run. By the time the hour is over the plant has reconnected and
+every screen says so; the question is what they said while the link was down.
+
+It is [decision 0030](../decisions/0030-a-lost-connection-is-unknown-time.md)
+put to a plant that is really losing a real socket. Per scripted outage:
+
+* **Did the machines read as disconnected?** Not down, not idle, and not the
+  state they were in when the link died.
+* **Did any single look disagree with itself?** The plant saying it cannot see
+  a machine, while a screen in the same instant says what that machine is
+  doing. Per look and not across the window — the looks before the agent's
+  health check came round are legitimately still showing the last state it
+  heard, and counting those would report the detection lag as a lie.
+* **Did `/health` say how many machines were dark?** The number a monitor
+  reads.
+* **Did the window come back as unknown time?** Read off the OEE answer at the
+  end, which is where a plant's numbers actually come from.
+
+Two resolutions bound it, and both are printed rather than assumed. The
+**polling interval** is the same one `latency` states. The **agent's own
+health check** is the new one: it asks its server whether the session is alive
+every `opc_health_periods` publish intervals, so an outage shorter than a
+couple of those, restated on the line's clock, could not have been seen by
+anything. Such a window is reported as *unknown* with the arithmetic beside
+it, never as missed.
+
+*What it cannot tell you.* Whether a real OPC server fails the way a stopped
+one does. A socket that closes is one failure mode; a server that accepts
+connections and answers nothing, a certificate that expires mid-session, a
+switch that drops half the packets are others, and none of them is scripted
+here yet.
+
+*The direction of the difference matters.* The MES almost always records
+**more** unknown time than was scripted, because it takes up to one health
+check to notice the link has gone and up to one retry to find it back. That
+overhang is honest — it is the MES saying it does not know, when it does not
+know. **Less** unknown time than was scripted is the fault: the MES
+accounting for minutes it could not see. The report names which of the two it
+found rather than printing a difference the reader has to interpret.
 
 ### Not measured yet
 

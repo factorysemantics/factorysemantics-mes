@@ -55,6 +55,36 @@ class EquipmentStateChange(BaseModel):
     actor: str
 
 
+class EquipmentConnectionChange(BaseModel):
+    """The MES gained or lost its view of a machine.
+
+    A subscriber that only ever hears state changes has no way to tell a
+    machine that has been running steadily for an hour from one whose last
+    message arrived an hour ago and whose link died a second later. This is
+    the event that closes that hole: after a `disconnected`, the last state
+    this machine published stands for nothing until a `connected` arrives.
+
+    Decision 0030.
+    """
+
+    kind: Literal["equipment_connection_change"] = "equipment_connection_change"
+    message_key: str
+    equipment: str                       # the machine (ISA-95 work unit)
+    work_center: str | None = None       # the line it belongs to, if any
+    connection: str                      # connected | disconnected
+    reason: str | None = None            # in words: "the server did not answer"
+    source: str | None = None            # what was dialled, usually an OPC endpoint
+    previous_connection: str | None = None
+    # How long the interval just closed had been open. Null when there was no
+    # previous interval - not zero.
+    previous_seconds: float | None = None
+    # The last moment there was positive evidence of the link, and when the
+    # MES noticed it was gone. They differ, and the difference is unknown time.
+    started_at: datetime
+    detected_at: datetime
+    actor: str
+
+
 class OrderHold(BaseModel):
     """An order was stopped without being finished.
 
@@ -95,12 +125,13 @@ class OrderResume(BaseModel):
     actor: str
 
 
-DomainEvent = EquipmentStateChange | OrderHold | OrderResume
+DomainEvent = EquipmentStateChange | EquipmentConnectionChange | OrderHold | OrderResume
 
 # The kinds this module defines. The ERP sync selects by kind and will not
 # touch these; the namespace publisher takes every outbound kind it finds,
 # so a new one added here reaches the broker with no change there.
-DOMAIN_KINDS = frozenset({"equipment_state_change", "order_hold", "order_resume"})
+DOMAIN_KINDS = frozenset({"equipment_state_change", "equipment_connection_change",
+                          "order_hold", "order_resume"})
 
 
 def as_payload(event: DomainEvent) -> dict:

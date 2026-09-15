@@ -39,6 +39,7 @@ from fsmes.domain import (
 from fsmes.integrations.opc.tag_map import load_tag_map
 from fsmes.kernel.tags import STRUCTURAL_TAGS
 from fsmes.services import NotFound, masterdata, workorders
+from fsmes.services import connection as connection_service
 
 # One poll should never hand the renderer more work than it can animate. A client
 # that has been away longer than this is told the feed was truncated and resyncs
@@ -328,6 +329,7 @@ def events(db: Session, line_code: str | None = None, since: int = -1) -> dict:
             # so nothing is skipped once the client catches up.
             head = rows[MAX_UNITS - 1].id
 
+    connections = connection_service.open_connections(db, [unit.id for unit in ordered])
     stations = []
     for unit in ordered:
         state = db.scalar(
@@ -342,6 +344,7 @@ def events(db: Session, line_code: str | None = None, since: int = -1) -> dict:
                 "state": state.state if state else "unknown",
                 "reason": state.reason if state else None,
                 "since": state.started_at if state else None,
+                "connection": connection_service.summary(connections.get(unit.id)),
                 "analog": analog_reading(db, unit),
                 "order": current.order.code if current else None,
                 "operation": current.name if current else None,

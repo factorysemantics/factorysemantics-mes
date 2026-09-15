@@ -610,6 +610,17 @@ def scored_run(
 
         card = score_run(truth, timeline, t0, speed,
                          observe_interval_s=publish_ms / 1000.0)
+        # How often the agent in this run asked its server whether the session
+        # was alive. It is the resolution of a scripted outage the same way the
+        # publish interval is the resolution of a scripted stop: an outage
+        # shorter than a couple of these cannot be seen at all, and a
+        # measurement that called that a miss would be blaming the MES for the
+        # speed the harness chose to replay at.
+        from fsmes.config import get_settings
+        from fsmes.integrations.opc.agent import health_seconds
+
+        card["observation"]["agent_health_interval_s"] = round(
+            health_seconds(get_settings().model_copy(update={"opc_publish_ms": publish_ms})), 3)
         card["plant"] = name
         # How the run watched while it played, so a latency figure can state
         # the resolution it was measured at instead of implying it is exact.

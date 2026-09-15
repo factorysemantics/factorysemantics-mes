@@ -267,10 +267,14 @@ function renderMachines(machines, envelope) {
 }
 
 function machineCard(m) {
-  const card = el("div", `machine ${m.state}`);
+  // A machine the MES cannot see has no state to show. The card says so
+  // instead of showing the last one it heard, which would be a claim about
+  // a machine nobody is watching (decision 0030).
+  const shown = FS.connection.stateClass(m);
+  const card = el("div", `machine ${shown}`);
   const head = el("div", "machine-head");
   head.append(FS.link("machine", m.code, "machine-code"), el("span", "machine-name", m.name),
-              el("span", `state ${m.state}`, m.state));
+              el("span", `state ${shown}`, FS.connection.stateText(m)));
   const meta = el("div", "machine-meta");
   const order = el("span");
   order.append("Order ", el("strong", null, m.current_order || "—"));
@@ -280,6 +284,8 @@ function machineCard(m) {
   analog.append(m.analog ? `${m.analog.name} ` : "Value ",
                 el("strong", null, m.analog ? m.analog.value.toFixed(1) : "—"));
   meta.append(order, analog);
+  const lostLink = FS.connection.badge(m);
+  if (lostLink) meta.append(lostLink);
   const line = m.line;
   if (line) {
     const where = el("div", "machine-line");

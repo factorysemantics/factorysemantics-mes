@@ -16,6 +16,7 @@
   --down: #f85149;
   --setup: #a371f7;
   --unknown: #6e7681;
+  --disconnected: #6e7681;
   --radius: 10px;
   --mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
 }
