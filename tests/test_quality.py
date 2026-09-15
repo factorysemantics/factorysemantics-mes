@@ -12,7 +12,7 @@ from fsmes.services import Conflict, quality
 
 
 def test_check_in_spec_passes(session):
-    check, nc = quality.record_check(
+    check, nc, _signals = quality.record_check(
         session, material_code="FG-COLA", characteristic="brix", value=10.2, actor="scott"
     )
     assert check.result is CheckResult.PASS
@@ -20,7 +20,7 @@ def test_check_in_spec_passes(session):
 
 
 def test_check_out_of_spec_opens_nonconformance(session):
-    check, nc = quality.record_check(session, material_code="FG-COLA", characteristic="brix",
+    check, nc, _signals = quality.record_check(session, material_code="FG-COLA", characteristic="brix",
                                      value=13.0, actor="ines")
     assert check.result is CheckResult.FAIL
     assert nc is not None and nc.status is NcStatus.OPEN
@@ -29,7 +29,7 @@ def test_check_out_of_spec_opens_nonconformance(session):
 
 
 def raise_one(session, actor="ines"):
-    _check, nc = quality.record_check(session, material_code="FG-COLA", characteristic="brix",
+    _check, nc, _signals = quality.record_check(session, material_code="FG-COLA", characteristic="brix",
                                       value=13.0, actor=actor)
     return nc
 

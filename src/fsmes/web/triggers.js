@@ -131,8 +131,22 @@ async function loadForm() {
   }
   const machine = $("#t-machine");
   machine.replaceChildren(new Option("any machine", ""), ...states.map((s) => new Option(s.equipment, s.equipment)).sort());
+  // The machines' tags, and the tags the MES raises itself. `spc.signal` is
+  // on no PLC: it is offered here so a plant can say what a control-chart
+  // rule should set off, without that being a code change.
   const names = [...new Set(tags.rows.map((r) => r.tag))].sort();
-  $("#tag-names").replaceChildren(...names.map((n) => { const o = document.createElement("option"); o.value = n; return o; }));
+  const events = Object.entries(catalog.event_tags || {});
+  $("#tag-names").replaceChildren(
+    ...events.map(([n, help]) => { const o = document.createElement("option"); o.value = n; o.label = help; return o; }),
+    ...names.map((n) => { const o = document.createElement("option"); o.value = n; return o; }));
+  const tagHelp = $("#tag-help");
+  if (tagHelp) {
+    const say = () => {
+      const help = (catalog.event_tags || {})[$("#t-tag").value];
+      tagHelp.textContent = help || "";
+    };
+    $("#t-tag").addEventListener("input", say); say();
+  }
 }
 
 function wire() {

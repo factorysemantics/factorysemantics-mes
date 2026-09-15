@@ -136,19 +136,29 @@ class CheckIn(BaseModel):
     characteristic: str
     value: float
     order: str | None = None
+    equipment: str | None = None
 
 
 @router.post("/checks", status_code=201, dependencies=[require("quality.record")])
 def record_check(body: CheckIn, db: DbDep, actor: ActorDep) -> dict:
-    check, nc = quality.record_check(
+    """Record one reading, and say what it set off.
+
+    `spc` is the signals recording this reading tripped - a Western Electric
+    rule fires on the write, not when somebody next opens the chart, and each
+    signal names the hold it raised. Empty is the usual answer and means the
+    process is behaving, not that nothing was checked.
+    """
+    check, nc, signals = quality.record_check(
         db,
         material_code=body.material,
         characteristic=body.characteristic,
         value=body.value,
         work_order_code=body.order,
+        equipment_code=body.equipment,
         actor=actor,
     )
-    return {"result": check.result, "value": check.value, "non_conformance": nc.code if nc else None}
+    return {"result": check.result, "value": check.value, "non_conformance": nc.code if nc else None,
+            "spc": signals}
 
 
 @router.get("/checks")
@@ -276,6 +286,10 @@ def _nc_out(nc: NonConformance, order: str | None = None) -> dict:
         "closed_by": nc.closed_by,
         "history": nc.history(),
         "next_steps": _next_steps(nc),
+        # What the MES saw, when the MES raised it. Null for one a person
+        # raised: they wrote the description, and inventing evidence for them
+        # would be worse than having none.
+        "evidence": nc.evidence,
     }
 
 

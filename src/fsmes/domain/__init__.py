@@ -50,6 +50,7 @@ from fsmes.domain.quality import (
     NonConformance,
     QualityCheck,
     QualitySpec,
+    SpcSignal,
 )
 from fsmes.domain.scheduling import ScheduledSlot, SlotKind
 from fsmes.domain.serialization import (
@@ -116,6 +117,7 @@ __all__ = [
     "SerialUnit",
     "ShiftPattern",
     "SlotKind",
+    "SpcSignal",
     "TagValue",
     "Trigger",
     "TriggerCondition",

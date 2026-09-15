@@ -5,7 +5,7 @@ from __future__ import annotations
 import enum
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy import JSON, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from fsmes.db import Base, utcnow
@@ -48,6 +48,11 @@ class QualityCheck(Base):
     gauge_id: Mapped[int | None] = mapped_column(ForeignKey("gauges.id"), index=True)
     # Which system supplied the reading, when it did not come from here.
     source_system: Mapped[str | None] = mapped_column(String(80))
+    # The station that took the reading, when a station took it. A person
+    # with a gauge does not record one, and null there means *not recorded*,
+    # not "no machine": deriving a station from the order's route would name
+    # a machine nobody stood at.
+    equipment_id: Mapped[int | None] = mapped_column(ForeignKey("equipment.id"), index=True)
     # The verdict that system sent with it, if it sent one. `result` above is
     # always this MES's own verdict, from this MES's spec. The two disagreeing
     # is a finding, not an error, and losing theirs would hide it.
@@ -108,6 +113,11 @@ class NonConformance(Base):
     disposition_by: Mapped[str | None] = mapped_column(String(40))
     disposition_at: Mapped[datetime | None]
     closed_by: Mapped[str | None] = mapped_column(String(40))
+    # What the MES saw, when the MES raised this itself. A record a machine
+    # opened has to carry the reason it opened it, or a supervisor is being
+    # asked to trust an assertion. Null when a person raised it: they wrote
+    # the description, and inventing evidence for them would be worse.
+    evidence: Mapped[dict | None] = mapped_column(JSON)
 
     def history(self) -> list[dict]:
         """The steps this non-conformance has actually been through.
@@ -130,3 +140,39 @@ class NonConformance(Base):
         if self.closed_at:
             steps.append({"step": "closed", "by": self.closed_by, "at": self.closed_at, "detail": None})
         return steps
+
+
+class SpcSignal(Base):
+    """One Western Electric rule firing on one characteristic, once.
+
+    A control chart that computes its rules on demand tells whoever happens
+    to open the screen. A signal recorded here happened whether or not
+    anybody looked, and carries what it was looking at when it fired.
+
+    `window_key` is the identity of the readings the rule judged - the first
+    and last check id of its window - so re-running the rules over the same
+    stored readings finds this row and raises nothing a second time. That is
+    what makes evaluating on every write safe.
+    """
+
+    __tablename__ = "spc_signals"
+    __table_args__ = (UniqueConstraint("spec_id", "rule", "window_key"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    spec_id: Mapped[int] = mapped_column(ForeignKey("quality_specs.id"), index=True)
+    rule: Mapped[int]
+    window_key: Mapped[str] = mapped_column(String(60))
+    # The reading the rule fired on, and the station that took it when one did.
+    check_id: Mapped[int | None] = mapped_column(ForeignKey("quality_checks.id"))
+    value: Mapped[float]
+    what: Mapped[str] = mapped_column(String(120))
+    # The chart as it stood when the rule fired: centre, sigma, the limits and
+    # how many readings they came from. Recomputing them later gives different
+    # numbers, and then nobody can see what the MES actually acted on.
+    window: Mapped[dict | None] = mapped_column(JSON)
+    ts: Mapped[datetime] = mapped_column(default=utcnow)
+    # The non-conformance this signal raised, or the one already open for this
+    # rule on this characteristic - the same excursion, not a second finding.
+    nonconformance_id: Mapped[int | None] = mapped_column(ForeignKey("non_conformances.id"), index=True)
+
+    spec: Mapped[QualitySpec] = relationship()

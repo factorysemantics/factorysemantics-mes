@@ -88,6 +88,20 @@ def _generate_coa(session: Session, trigger: Trigger, equipment_code: str, tag: 
     return {"certificate": doc.code, "revision": doc.revision}
 
 
+#: Tags a trigger may watch that no PLC publishes: the MES raises them
+#: itself, and feeds them to the evaluator the same way a reading arrives.
+#: A plant that wants a control-chart rule to stop a line or raise
+#: maintenance configures that here rather than in code - the hold the
+#: signal raises is the product's own act and is not configurable.
+EVENT_TAGS = {
+    "spc.signal": "Raised on the station whose reading tripped a Western Electric rule; "
+                  "the value is the rule number (1 is a point beyond three sigma). The MES "
+                  "has already opened the quality hold - a trigger here is what the plant "
+                  "wants to happen next. A signal on a reading with no station recorded "
+                  "reaches no trigger.",
+}
+
+
 ACTIONS: dict[str, Callable] = {
     "generate_coa": _generate_coa,
     "propose_adjustment": _propose_adjustment,

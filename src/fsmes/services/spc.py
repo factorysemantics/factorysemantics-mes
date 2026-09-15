@@ -24,7 +24,16 @@ import math
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from fsmes.domain import Material, QualityCheck, QualitySpec
+from fsmes.domain import (
+    Equipment,
+    Material,
+    NcStatus,
+    NonConformance,
+    QualityCheck,
+    QualitySpec,
+    SpcSignal,
+    WorkOrder,
+)
 from fsmes.services import NotFound
 
 # For an individuals chart the estimate of sigma is mean moving range over
@@ -187,7 +196,8 @@ def chart(session: Session, material: str, characteristic: str,
             "sigma_overall": round(overall, 4),
         }
 
-    signals = _western_electric(values, centre, sigma)
+    signals = _acted_on(session, spec, _western_electric(values, centre, sigma),
+                        [c.id for c in checks])
     stable = not signals
     return {
         **base,
@@ -198,6 +208,31 @@ def chart(session: Session, material: str, characteristic: str,
         # The sentence that keeps the two questions apart.
         "verdict": _verdict(stable, capability, signals),
     }
+
+
+def _acted_on(session: Session, spec: QualitySpec, signals: list[dict], ids: list[int]) -> list[dict]:
+    """Each signal, with the hold it raised when it raised one.
+
+    The chart used to say a rule had fired and stop there, which left the
+    reader to wonder whether anybody had been told. A signal the MES acted on
+    names the non-conformance; one it did not - because the window pre-dates
+    this behaviour, or because the same excursion already had a hold open -
+    says so by carrying none.
+    """
+    if not signals:
+        return []
+    keys = {_window_key(ids, s["index"], s["rule"]): s["index"] for s in signals}
+    rows = session.scalars(select(SpcSignal).where(
+        SpcSignal.spec_id == spec.id, SpcSignal.window_key.in_(keys))).all()
+    holds = {}
+    for row in rows:
+        nc = session.get(NonConformance, row.nonconformance_id) if row.nonconformance_id else None
+        holds[(row.rule, row.window_key)] = nc.code if nc else None
+    out = []
+    for signal in signals:
+        key = _window_key(ids, signal["index"], signal["rule"])
+        out.append({**signal, "nonconformance": holds.get((signal["rule"], key))})
+    return out
 
 
 def _verdict(stable: bool, capability: dict | None, signals: list[dict]) -> str:
@@ -215,3 +250,169 @@ def _verdict(stable: bool, capability: dict | None, signals: list[dict]) -> str:
                 f"little room for drift")
     return (f"in control but not capable (Cpk {cpk}) - the process is stable "
             f"and stably producing out-of-spec work")
+
+
+# --------------------------------------------------------------- acting on a signal
+
+#: How many readings back a rule looks. Rule 1 judges one point; the others
+#: judge a window ending at that point. The window is what makes a signal
+#: identifiable, so it is written down once and used by both the detector and
+#: the record.
+RULE_WINDOW = {1: 1, 2: 3, 3: 5, 4: 8}
+
+#: The pseudo-tag a trigger watches to act on an SPC signal. No PLC publishes
+#: it; the MES raises it. See `fsmes.services.triggers.EVENT_TAGS`.
+SIGNAL_TAG = "spc.signal"
+
+
+def _window_key(ids: list[int], index: int, rule: int) -> str:
+    """Which readings this firing judged, as a stable string.
+
+    First and last check id of the rule's window. Re-running the rules over
+    the same stored readings produces the same key, which is what lets the
+    write path evaluate on every check without raising the same finding
+    twice.
+    """
+    span = RULE_WINDOW.get(rule, 1)
+    first = ids[max(0, index - span + 1)]
+    return f"{first}-{ids[index]}"
+
+
+def _description(material: str, spec: QualitySpec, signal: dict, control: dict, n: int) -> str:
+    return (f"SPC rule {signal['rule']} on {material}/{spec.characteristic}: {signal['what']} "
+            f"({signal['value']}{spec.unit} against centre {control['centre']}, "
+            f"control limits [{control['lower']}, {control['upper']}] from {n} readings)")
+
+
+def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None,
+             limit: int = 200, actor: str = "spc") -> list[dict]:
+    """Run the rules over this characteristic's readings and act on what fires.
+
+    Called from the write path, so a rule that trips is acted on whether or
+    not anybody has the chart open. What it does is raise a non-conformance -
+    a quality hold a person works through, per decision record 0026. It does
+    not stop a line, scrap a lot or write to a machine: those stay a person's
+    act, or a trigger the plant configured on `spc.signal`.
+
+    `since_id` is the first of the readings just written. A rule only acts on
+    a window that ends on one of them. Without that, one wild reading moves
+    the centre line and every settled reading behind it is suddenly eight in
+    a row on one side of it - two dozen signals about a fortnight nobody was
+    worried about until a moment ago. A rule fires *on a reading*, and the
+    reading has to be new.
+
+    Returns one entry per signal it raised, newest last. A signal whose
+    window was already recorded returns nothing: the same readings are the
+    same finding.
+    """
+    from fsmes.services import quality
+
+    checks = list(session.scalars(
+        select(QualityCheck).where(QualityCheck.spec_id == spec.id)
+        .order_by(QualityCheck.id.desc()).limit(limit)))
+    checks.reverse()
+    if len(checks) < MIN_POINTS:
+        return []
+
+    values = [c.value for c in checks]
+    ids = [c.id for c in checks]
+    centre = sum(values) / len(values)
+    moving = [abs(b - a) for a, b in itertools.pairwise(values)]
+    mean_range = sum(moving) / len(moving) if moving else 0.0
+    sigma = mean_range / D2_N2
+    if sigma <= 0:
+        # No variation to judge against. A chart of identical readings is not
+        # in control, it is un-chartable, and saying so beats dividing by zero.
+        return []
+
+    control = {"centre": round(centre, 4), "sigma": round(sigma, 4),
+               "upper": round(centre + 3 * sigma, 4), "lower": round(centre - 3 * sigma, 4)}
+    signals = _western_electric(values, centre, sigma)
+    if not signals:
+        return []
+
+    material = spec.material.code
+    keys = {(s["rule"], _window_key(ids, s["index"], s["rule"])) for s in signals}
+    already = {
+        (row.rule, row.window_key) for row in session.scalars(
+            select(SpcSignal).where(SpcSignal.spec_id == spec.id,
+                                    SpcSignal.window_key.in_({k for _, k in keys})))
+    }
+
+    raised: list[dict] = []
+    for signal in signals:
+        if since_id is not None and ids[signal["index"]] < since_id:
+            continue
+        key = _window_key(ids, signal["index"], signal["rule"])
+        if (signal["rule"], key) in already:
+            continue
+        already.add((signal["rule"], key))
+        check = checks[signal["index"]]
+        span = RULE_WINDOW.get(signal["rule"], 1)
+        window = checks[max(0, signal["index"] - span + 1):signal["index"] + 1]
+        row = SpcSignal(
+            spec_id=spec.id, rule=signal["rule"], window_key=key, check_id=check.id,
+            value=signal["value"], what=signal["what"],
+            window={**control, "n": len(values),
+                    "points": [{"value": c.value, "ts": c.ts.isoformat(), "check": c.id} for c in window]})
+        session.add(row)
+
+        nc = _hold_for(session, spec)
+        if nc is None:
+            nc = quality.open_nc(
+                session,
+                description=_description(material, spec, signal, control, len(values)),
+                severity="major" if signal["rule"] == 1 else "minor",
+                work_order_code=_order_code(session, check),
+                actor=actor,
+                evidence={
+                    "source": "spc", "rule": signal["rule"], "what": signal["what"],
+                    "material": material, "characteristic": spec.characteristic,
+                    "unit": spec.unit, "value": signal["value"],
+                    "equipment": _equipment_code(session, check),
+                    "window": row.window,
+                },
+            )
+        session.flush()
+        row.nonconformance_id = nc.id
+        raised.append({"rule": signal["rule"], "what": signal["what"], "value": signal["value"],
+                       "material": material, "characteristic": spec.characteristic,
+                       "nonconformance": nc.code, "equipment": _equipment_code(session, check),
+                       "window_key": key})
+    return raised
+
+
+def _hold_for(session: Session, spec: QualitySpec) -> NonConformance | None:
+    """The hold this characteristic already has open, if any.
+
+    An excursion that lasts twenty readings is one thing that went wrong, not
+    twenty, and a process going out of control trips several of the four rules
+    on the way. While the non-conformance is still unresolved, a further
+    signal joins it - the signal rows carry every rule that fired - rather
+    than opening another. Once somebody has dispositioned it, the next signal
+    is a new finding.
+    """
+    previous = session.scalars(
+        select(SpcSignal).where(SpcSignal.spec_id == spec.id,
+                                SpcSignal.nonconformance_id.is_not(None))
+        .order_by(SpcSignal.id.desc()).limit(1)).first()
+    if previous is None:
+        return None
+    nc = session.get(NonConformance, previous.nonconformance_id)
+    if nc is None or nc.status in (NcStatus.DISPOSITIONED, NcStatus.CLOSED):
+        return None
+    return nc
+
+
+def _order_code(session: Session, check: QualityCheck) -> str | None:
+    if not check.work_order_id:
+        return None
+    return session.scalar(select(WorkOrder.code).where(WorkOrder.id == check.work_order_id))
+
+
+def _equipment_code(session: Session, check: QualityCheck) -> str | None:
+    """The station that took the reading, or None. Never derived: a station
+    this MES did not record is unknown, and unknown is not a guess."""
+    if not check.equipment_id:
+        return None
+    return session.scalar(select(Equipment.code).where(Equipment.id == check.equipment_id))

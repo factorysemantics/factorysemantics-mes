@@ -35,3 +35,4 @@ Declined ideas stay, so nobody re-proposes them without new facts.
 | [0024](0024-a-nonconformance-has-a-life.md) | A non-conformance is worked through review and a disposition, and cannot be closed without one | 2026-09-14 |
 | [0025](0025-performance-is-measured-not-capped.md) | OEE performance is measured against the rating, and never capped at 1.0 | 2026-09-14, amended by 0026 |
 | [0026](0026-counts-that-outrun-the-run-time.md) | Counted work that will not fit inside the run time names the disagreement, not a culprit | 2026-09-14 |
+| [0027](0027-an-spc-signal-raises-a-hold.md) | An SPC signal raises a quality hold, and an inspected characteristic with a specification is a check | 2026-09-14 |
