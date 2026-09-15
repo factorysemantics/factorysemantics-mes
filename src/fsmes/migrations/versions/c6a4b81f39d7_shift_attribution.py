@@ -1,7 +1,7 @@
 """Every row the floor writes says which shift it fell in.
 
 Revision ID: c6a4b81f39d7
-Revises: b1f4c73a9e08
+Revises: a9c4e17b3d60
 Create Date: 2026-09-14
 
 Two nullable columns — `shift_code` and `shift_day` — on the four tables that
@@ -30,7 +30,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "c6a4b81f39d7"
-down_revision: str | None = "b1f4c73a9e08"
+down_revision: str | None = "a9c4e17b3d60"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
