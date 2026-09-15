@@ -208,6 +208,26 @@ def test_a_plant_that_has_not_said_what_its_shifts_are_gets_no_shift_on_its_rows
     assert "no shift patterns" in analysis.shifts(session)["note"]
 
 
+def test_a_plant_whose_every_shift_belongs_to_one_line_is_told_that_and_not_something_else(session, zone):
+    """Two different facts, and they need different answers. "No shift
+    patterns" sends somebody to enter master data they already have."""
+    zone("UTC")
+    calendar.create_pattern(session, code="L1DAY", name="Line 1 day",
+                            starts=time(6, 0), ends=time(14, 0), days="1111111",
+                            equipment_code="MIX01")
+    session.flush()
+
+    offered = analysis.shifts(session)
+
+    assert offered["shifts_total"] == 0
+    assert "belongs to one line" in offered["note"]
+    assert "MIX01" in offered["note"]
+    # The machine's own roster still attributes that machine's rows.
+    mixer = _machine(session, "MIX01")
+    assert calendar.shift_for(session, _at(ZoneInfo("UTC"), date(2026, 9, 10), 9),
+                              mixer.id).code == "L1DAY"
+
+
 # --------------------------------------------------------- windowing by shift
 
 

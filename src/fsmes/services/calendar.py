@@ -294,10 +294,26 @@ def occurrences(session: Session, start: datetime, end: datetime,
     return found
 
 
-def _no_patterns_sentence() -> str:
-    return ("this plant has no shift patterns, so nothing can be windowed by "
-            "shift - define them in master data (a plant pack's shifts.json, "
-            "or `fsmes` master data) before asking for one")
+def nothing_to_window(session: Session, equipment_id: int | None) -> str:
+    """Why there is no shift to ask for. Two different facts, said apart.
+
+    A plant with no patterns at all has not told this MES what its shifts are.
+    A plant whose every pattern belongs to a line has told it, but nothing
+    site-wide, and a window meant to cover the whole screen cannot be built
+    from one line's roster. Saying "no shift patterns" to the second plant
+    would send somebody to re-enter master data they already have.
+    """
+    every = list(session.scalars(
+        select(ShiftPattern).where(ShiftPattern.active.is_(True))))
+    if not every:
+        return ("this plant has no shift patterns, so nothing can be windowed by "
+                "shift - define them in master data (a plant pack's shifts.json, "
+                "or `fsmes` master data) before asking for one")
+    lines = sorted({p.equipment.code for p in every if p.equipment})
+    scope = f"machine {equipment_id}" if equipment_id else "the whole site"
+    return (f"every shift pattern here belongs to one line ({', '.join(lines)}), "
+            f"and none covers {scope} - a shift window covers a whole screen, so "
+            "it needs a site-wide pattern; add one, or ask for a span of hours")
 
 
 def resolve_shift(session: Session, spec: str, equipment_id: int | None = None,
@@ -323,7 +339,7 @@ def resolve_shift(session: Session, spec: str, equipment_id: int | None = None,
     zone = identity.clock().tz
     known = patterns(session, equipment_id)
     if not known:
-        raise Invalid(_no_patterns_sentence())
+        raise Invalid(nothing_to_window(session, equipment_id))
 
     if spec == "current":
         shift = shift_for(session, moment, equipment_id, zone=zone)

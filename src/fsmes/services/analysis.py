@@ -613,11 +613,12 @@ def shifts(db: Session, days: int = 7) -> dict:
     now = utcnow()
     known = calendar_service.patterns(db)
     if not known:
+        # Says which of the two reasons applies - no patterns at all, or none
+        # that covers the whole site - because they need different answers.
         return {"timezone": the_clock.name, "timezone_defaulted": the_clock.defaulted,
                 "days": days, "current": None, "previous": None,
                 "shifts": [], "shifts_total": 0,
-                "note": ("this plant has no shift patterns, so nothing can be "
-                         "windowed by shift yet")}
+                "note": calendar_service.nothing_to_window(db, None)}
 
     found = calendar_service.occurrences(db, now - timedelta(days=days), now)
     current = calendar_service.shift_for(db, now)
