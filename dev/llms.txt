@@ -68,6 +68,7 @@
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0023-the-fleet-console-observes/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0024-a-nonconformance-has-a-life/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0025-performance-is-measured-not-capped/)
+- [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0026-counts-that-outrun-the-run-time/)
 - [Develop — Decisions — Template](https://docs.factorysemantics.com/dev/decisions/TEMPLATE/)
 - [Agents](https://docs.factorysemantics.com/dev/agents/)
 - [Agents — How-to — connect an MCP client](https://docs.factorysemantics.com/dev/agents/connect-mcp-client/)
