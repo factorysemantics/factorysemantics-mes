@@ -20,14 +20,20 @@ def test_consume_decrements_lot_and_blocks_overdraw(session, released_order):
         execution.consume(session, order_code="WO-1", lot_code="LOT-SUGAR-001", quantity=9999)
 
 
-def test_opc_counts_drive_order_to_completion(session, released_order):
-    # Machine counters arrive as deltas; ops auto-start and auto-complete.
+def test_opc_counts_drive_the_order_but_a_person_finishes_it(session, released_order):
+    # Machine counters arrive as deltas and auto-start a pending operation.
+    # They never finish one: an order that has made its number is routinely
+    # still running, so completion is an act (decision 0029).
     for _ in range(4):
         execution.report(session, equipment_code="MIX01", good=1, source=ProductionSource.OPC, actor="opc-agent")
     execution.report(session, equipment_code="PACK01", good=4, source=ProductionSource.OPC, actor="opc-agent")
 
-    assert released_order.status is OrderStatus.COMPLETED
+    assert released_order.status is OrderStatus.RUNNING
     assert released_order.good_qty == 4
+
+    for op in sorted(released_order.operations, key=lambda o: o.seq):
+        workorders.complete_operation(session, "WO-1", op.seq, actor="SUP")
+    assert released_order.status is OrderStatus.COMPLETED
 
 
 def test_opc_counts_without_an_active_order_return_no_operation_but_are_kept(session):
@@ -48,6 +54,8 @@ def test_genealogy_traces_consumed_and_produced(session, released_order):
     execution.consume(session, order_code="WO-1", lot_code="LOT-SUGAR-001", quantity=2, actor="test")
     execution.report(session, equipment_code="MIX01", good=4, source=ProductionSource.OPC)
     execution.report(session, equipment_code="PACK01", good=4, source=ProductionSource.OPC)
+    for op in sorted(released_order.operations, key=lambda o: o.seq):
+        workorders.complete_operation(session, "WO-1", op.seq, actor="test")
 
     trace = execution.genealogy(session, "WO-1")
     assert trace["consumed"][0]["lot"] == "LOT-SUGAR-001"

@@ -3,6 +3,11 @@
 Operations are copied from the material's routing at creation. Completing the
 last operation completes the order, which books the finished-good lot and
 queues the production confirmation for the ERP.
+
+Nothing here completes itself. A machine counting to the ordered quantity does
+not finish the step it counted against: an order that has made its number is
+routinely still running, and the units it goes on to make belong to it. See
+decision 0029.
 """
 
 from datetime import datetime

@@ -29,6 +29,13 @@ def _run_order(session, code="WO-CT-1", qty=10.0):
     return wo
 
 
+def _finish(session, code: str, *seqs: int) -> None:
+    """Finish the named steps. Counting to the ordered quantity does not do it:
+    an operation stays open until somebody completes it (decision 0029)."""
+    for seq in seqs:
+        workorders.complete_operation(session, code, seq, actor="test")
+
+
 def test_completing_an_operation_queues_a_typed_confirmation_with_cost_center_and_consumption(session):
     wo = _run_order(session)
     first = sorted(wo.operations, key=lambda o: o.seq)[0]
@@ -58,6 +65,7 @@ def test_finishing_the_order_queues_one_completion_and_keys_are_idempotent(sessi
     wo = _run_order(session, "WO-CT-2", 3)
     execution.report(session, equipment_code="MIX01", good=3, source=ProductionSource.OPC)
     execution.report(session, equipment_code="PACK01", good=3, source=ProductionSource.OPC)
+    _finish(session, wo.code, 10, 20)
     kinds = [r.kind for r in session.scalars(select(ErpMessage).where(ErpMessage.direction == MessageDirection.OUT))]
     assert kinds.count("operation_confirmation") == 2 and kinds.count("order_completion") == 1
     again = erp.enqueue_confirmation(session, wo)
@@ -89,6 +97,7 @@ class FailingAdapter:
 def test_a_failing_delivery_backs_off_then_dies_then_can_be_revived(session, scope):
     _run_order(session, "WO-CT-3", 2)
     execution.report(session, equipment_code="MIX01", good=2, source=ProductionSource.OPC)
+    _finish(session, "WO-CT-3", 10)
     message = session.scalar(select(ErpMessage).where(ErpMessage.direction == MessageDirection.OUT))
 
     adapter = FailingAdapter(fail_times=99)
@@ -147,6 +156,7 @@ def test_a_refused_confirmation_dies_at_once_instead_of_retrying_for_an_hour(ses
     """
     _run_order(session, "WO-CT-4", 2)
     execution.report(session, equipment_code="MIX01", good=2, source=ProductionSource.OPC)
+    _finish(session, "WO-CT-4", 10)
     message = session.scalar(select(ErpMessage).where(ErpMessage.direction == MessageDirection.OUT))
 
     cycle(RefusingAdapter(fail_times=0), scope)
@@ -185,6 +195,7 @@ def test_the_mock_erp_receives_both_kinds_through_the_rest_adapter(session, scop
     workorders.release(session, "WO-CT-4", "test")
     execution.report(session, equipment_code="MIX01", good=2, source=ProductionSource.OPC)
     execution.report(session, equipment_code="PACK01", good=2, source=ProductionSource.OPC)
+    _finish(session, "WO-CT-4", 10, 20)
     cycle(adapter, scope)
     kinds = [c["kind"] for c in mock_erp.CONFIRMATIONS]
     assert kinds.count("operation_confirmation") == 2 and kinds.count("order_completion") == 1
@@ -196,6 +207,7 @@ def test_the_mock_erp_receives_both_kinds_through_the_rest_adapter(session, scop
 def test_the_outbox_is_visible_and_retry_is_gated(session, sign_in):
     _run_order(session, "WO-CT-5", 1)
     execution.report(session, equipment_code="MIX01", good=1, source=ProductionSource.OPC)
+    _finish(session, "WO-CT-5", 10)
     sup = sign_in("SUP-ERP", role="supervisor")
     out = sup.get("/erp/outbox").json()
     assert out["counts"]["pending"] >= 1 and out["recent"][0]["kind"] == "operation_confirmation"
@@ -223,5 +235,6 @@ def test_equipment_cost_center_reaches_the_confirmation_from_the_cell_override(s
     machine.cost_center = "CC-CELL"
     session.flush()
     execution.report(session, equipment_code=machine.code, good=1, source=ProductionSource.OPC)
+    _finish(session, wo.code, first.seq)
     row = session.scalar(select(ErpMessage).where(ErpMessage.message_key == f"{wo.code}:op{first.seq}"))
     assert row.payload["cost_center"] == "CC-CELL"

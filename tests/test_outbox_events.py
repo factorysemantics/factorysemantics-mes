@@ -252,4 +252,6 @@ def _order_through_one_operation(session, code: str) -> None:
     workorders.create(session, code=code, material_code="FG-COLA", quantity=3, actor="test")
     workorders.release(session, code, actor="test")
     execution.report(session, equipment_code="MIX01", good=3, source=ProductionSource.OPC)
+    # The count reaching the quantity does not finish the step (decision 0029).
+    workorders.complete_operation(session, code, 10, actor="test")
     session.flush()

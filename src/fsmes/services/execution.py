@@ -1,8 +1,13 @@
 """Production execution: quantity bookings, lot consumption, genealogy.
 
 Machine-counted quantities (source=opc) get MES behavior for free: they
-auto-start a pending operation and auto-complete it when the order quantity
-is reached — the machine drives, the MES keeps the books.
+auto-start a pending operation — the machine drives, the MES keeps the books.
+
+They do not finish one. An order's quantity is what the plant was asked for,
+not a gate on the floor, and a line that keeps running past it is making real
+units against a real order. So booking continues past the ordered quantity and
+the order says how far past it ran; completing an operation is an act — a
+person on the floor, or the ERP. See decision 0029.
 """
 
 from datetime import datetime
@@ -146,10 +151,13 @@ def report(
     Address it either explicitly (order_code [+ seq]) or by machine
     (equipment_code) — the latter is how OPC counter deltas arrive.
 
-    A counter delta may carry more than one unit, so a booking can straddle
-    the ordered quantity: fourteen booked, a delta of two, sixteen good
-    against an order for fifteen. All sixteen are booked. The machine made
-    them, and the order says so through `WorkOrder.over_qty`.
+    Booking does not stop at the ordered quantity and never has to straddle
+    it: fourteen booked, a delta of two, sixteen good against an order for
+    fifteen, and the line may go on to two thousand past it. Every unit is
+    booked to the operation that made it, and the order says how far past it
+    ran through `WorkOrder.over_qty`. The operation stays open until somebody
+    completes it, because reaching a quantity is not the same fact as being
+    finished (decision 0029).
 
     A machine count arriving when no operation is open is recorded as
     *unassigned production* — a log row against the equipment with no order
@@ -230,8 +238,6 @@ def report(
             after={"seq": op.seq, "good": good, "scrap": scrap,
                    "source": source.value, "source_system": source_system},
         )
-    if source in _COUNTED_ELSEWHERE and op.good_qty >= wo.quantity:
-        workorders.complete_operation(session, wo.code, op.seq, actor=actor)
     return op
 
 

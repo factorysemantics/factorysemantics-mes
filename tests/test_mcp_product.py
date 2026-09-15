@@ -334,6 +334,8 @@ def test_the_agent_reads_a_certificate_and_issuing_is_a_supervisors_act(wired, s
     workorders.release(session, wo.code, "test")
     execution.report(session, equipment_code="MIX01", good=2, source=ProductionSource.OPC)
     execution.report(session, equipment_code="PACK01", good=2, source=ProductionSource.OPC)
+    for op in sorted(wo.operations, key=lambda o: o.seq):
+        workorders.complete_operation(session, wo.code, op.seq, actor="test")
     session.flush()
     cert = mcp_server.certificate("testplant", "WO-COA-T")
     assert cert["revision"] == 1 and "Certificate of analysis" in cert["body"]
