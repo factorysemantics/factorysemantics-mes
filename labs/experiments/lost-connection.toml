@@ -25,9 +25,17 @@
 # database and its own ports.
 
 name = "lost-connection"
-note = """Nobody was watching for four minutes, and then for one. What to look
-at first: no station may show a breakdown inside a disconnect window, and no
-screen may keep showing the state a machine was in when the link died."""
+note = """Nobody was watching for four minutes, and then for three. What to
+look at first: no station may show a breakdown inside a disconnect window, and
+no screen may keep showing the state a machine was in when the link died.
+
+Then look at the booking table, because it carries a finding this run was not
+written to look for. The agent's counter baseline is rebuilt with the
+connection, so the units the line counted while nobody was watching book
+nothing: every station comes out a few hundred below what the line made. It is
+not double-counting and it is not invention - it is a silent shortfall, and it
+is a second question, written up in decision 0030 under what that record does
+not solve."""
 
 packs = ["../multiplant/bottling"]
 

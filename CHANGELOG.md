@@ -99,6 +99,22 @@ goes under Honesty with a migration line, so plant people can find it.
   to its first recorded state, so a machine whose agent has never reached its
   server reports a window that is wholly unknown instead of an empty one.
 
+- **Known and named, not fixed here: units a machine counted during an outage
+  are not booked.** The agent books production from the *increase* of a
+  cumulative counter and its memory of the last value lives with the
+  connection, so the first reading after a reconnect starts a fresh baseline
+  and whatever the counter climbed while nobody was watching books nothing.
+  Not new — it has been true of every reconnect since the agent was written —
+  but the lab can see it now: with two scripted outages totalling seven minutes
+  of line time, the line counted about 520 units per station inside them and the
+  MES booked 306 to 337 fewer than the line made, on every station. Nothing is
+  invented and nothing is double-counted; the shortfall is real and silent.
+  Settling it is a second decision — those units happened, so decision 0019
+  says book them, and nothing can say when inside the gap they were made or
+  which order they belong to — so it is written down in decision 0030 under
+  what that record does not solve, and in
+  `docs/operate/opc-disconnections.md`, rather than quietly chosen.
+
 - **A breakdown the lab scripted inside a scripted outage scores unknown, not
   missed.** The MES was blind for those minutes by the script's own doing, and
   scoring it as recall 0 is the same false accusation the scorer already

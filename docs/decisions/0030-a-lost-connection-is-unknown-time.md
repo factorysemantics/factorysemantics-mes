@@ -105,12 +105,35 @@ for, and the total. It is a statement about what this deployment can
 currently see, not a number the plant produced, which is what keeps it on
 the side of the public endpoints that decision 0023 draws.
 
-**Known and not solved here:** an agent that is killed outright writes
-nothing, so its machines' intervals stay open and their last state stands
-until something else closes it. Closing that needs a heartbeat the API can
-read and time out on its own, which is a bigger change than this one and is
-written down in `docs/operate/opc-disconnections.md` rather than pretended
-away.
+**Known and not solved here, and both are written down in
+`docs/operate/opc-disconnections.md` rather than pretended away.**
+
+*An agent that is killed outright writes nothing*, so its machines' intervals
+stay open and their last state stands until something else closes it. Closing
+that needs a heartbeat the API can read and time out on its own, which is a
+bigger change than this one.
+
+*Units the machine counted during the outage are not booked.* The agent's
+counter baseline lives on the handler, and the handler is rebuilt per
+connection, so the first reading after a reconnect starts a new baseline and
+the delta spanning the gap books nothing. That is the right rule for the case
+it was written for — a counter that *fell* is a PLC reset and the units around
+it are unknowable — and it is the wrong one here, because a cumulative counter
+that went **up** across the gap is the machine telling us what it made. The
+first run of `labs/experiments/lost-connection.toml` measured it: the line
+counted about 520 units per station inside two scripted outages and the MES
+booked 306 to 337 fewer than the line made, on every station.
+
+This decision does not settle that, on purpose, because it is a second
+decision and not a smaller one. Those units happened, so decision 0019 —
+count everything the machine counted — says book them; but nothing can say
+*when* inside the gap they were made, and on a line whose order changed during
+the outage nothing can say which order they belong to. Whether they are booked
+against the order open at reconnect, recorded as unassigned production (which
+this MES already has a place for), or left where they are with the shortfall
+stated, is a question for its own record. What must not happen in the meantime
+is the shortfall being invisible: the lab's booking measurement reports it per
+station, against the range the line actually made.
 
 ## Consequences
 

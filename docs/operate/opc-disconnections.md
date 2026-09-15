@@ -112,6 +112,26 @@ session is alive, so the watchdog is satisfied; only a heartbeat tag or a
 publish-rate expectation would catch it, and both belong with the change
 above.
 
+**Units the machine counted during the outage are not booked.** This one is
+worth knowing before you read a shift total. The agent books production from
+the *increase* of a cumulative counter, and its memory of the last value lives
+with the connection — so the first reading after a reconnect starts a fresh
+baseline, and whatever the counter climbed while nobody was watching books
+nothing. Measured: in a scripted run with two outages totalling seven minutes
+of line time, the line counted about 520 units per station inside them and the
+MES booked 306 to 337 fewer than the line made, on every station.
+
+Nothing is invented and nothing is double-counted, which is the rule that
+outranks the others, but the shortfall is real and it is silent on the shift
+screen. It is not settled here because it is a second question and not a
+smaller one: those units happened, so
+[decision 0019](../decisions/0019-count-everything-the-machine-counted.md)
+says book them — and nothing can say *when* inside the gap they were made, nor
+which order they belong to if the line changed order during it. Until there is
+a record that settles it, the honest reading of a shift that contained an
+outage is: the unknown share on the OEE answer says how long nobody was
+watching, and the units counted in that time are not in the total.
+
 ## See also
 
 - [Decision 0030 — a lost connection is a dimension of its own](../decisions/0030-a-lost-connection-is-unknown-time.md)
