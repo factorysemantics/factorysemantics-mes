@@ -12,6 +12,19 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Honesty
 
+- **An order no longer finishes itself when the count reaches its quantity.**
+  Reaching the ordered quantity and being finished were treated as the same
+  fact; on a floor they are not. An operation now stays open until somebody
+  completes it — a person on `POST /workorders/{code}/operations/{seq}/complete`
+  or the orders screen, or the ERP — and every unit the machine counts until
+  then is booked to the order that made it. **Migration:** a plant that relied
+  on an order closing itself now needs someone to close it, because the ERP
+  order completion, the finished-goods lot and the certificate of analysis are
+  all issued on completion. Where two orders are released on one routing,
+  completing the first is also what moves that machine onto the second. The
+  certificate now records the person who finished the order as its approver,
+  where it used to say `system`. Decision record [0028](docs/decisions/0028-an-order-does-not-finish-itself.md).
+
 - **An SPC signal now does something, and a station's inspection now reaches
   the chart.** Two halves of one gap. `GET /quality/spc/{material}/{characteristic}`
   had run four Western Electric rules since the chart was written and returned
@@ -222,6 +235,22 @@ goes under Honesty with a migration line, so plant people can find it.
   the sentence still holds: ten of the twenty-three modules ship tools, nine
   of the twenty-three are the kernel, and a pack that switches a module off
   takes its tools with it.
+- **An over-run is reported as the distance the line actually ran past the
+  order.** `labs/experiments/over-run.toml` ran the bottling line for an
+  uninterrupted hour against an order for 4,000, with the line publishing that
+  order the whole time. The line made 6,104 under it. The MES booked 4,003,
+  called the over-run **3**, and kept **15,351 counts** across the six stations
+  as production with no order open — while the order was open throughout.
+  Nothing was lost and nothing was invented, but the number a plant reads was
+  wrong by three orders of magnitude. The cause was that the booking which
+  brought an operation to the ordered quantity also finished it, after which
+  the machine had no open operation. Booking now continues past the quantity to
+  the order that made the units, so `over_qty` is the whole over-run — on
+  `GET /workorders/{code}`, on the orders screen, in the ERP order completion
+  and in the B2MML confirmation. Units genuinely counted with no order open are
+  still unassigned production, listed with their total (decision 0019), and the
+  orders screen now shows that total beside the orders instead of leaving it on
+  the machine page.
 
 - **Two ephemeral runs on one machine no longer choose the same port.** A
   scored run probed for a free port by binding one and closing the socket

@@ -30,9 +30,12 @@ steps:
 4. The agent loads the order code into the machines; the line runs at four
    times real time; every few seconds the console shows good and scrap
    quantities per operation, straight from machine counters.
-5. The order completes; the MES books the finished lot with its genealogy and
-   confirms quantities to the ERP. The console ends with the OEE over the
-   actual production window.
+5. The line makes its number and keeps going, so the operator finishes the
+   order — reaching a quantity is not the same fact as being finished, and
+   until somebody says so every unit the machines count is still booked to
+   this order. On that act the MES books the finished lot with its genealogy
+   and confirms quantities to the ERP, over-run and all. The console ends with
+   the OEE over the actual production window.
 
 While it runs, open <http://127.0.0.1:8000/dashboard> and sign in as `ADMIN`
 / `admin` (a lab default; the log tells you so). The screens are the same

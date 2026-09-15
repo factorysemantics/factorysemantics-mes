@@ -35,6 +35,11 @@
     <a class="kpi kpi-action" id="card-yield" href="/dashboard/analysis"
        title="Open the analysis screen">
       <span class="kpi-label">Yield</span><span id="kpi-yield" class="kpi-value">—</span></a>
+    <!-- Beside the orders, because the alternative is a screen that shows what
+         every order made and stays silent about units no order owns. -->
+    <div class="kpi" id="card-no-order"
+         title="Units a machine counted with no order open to book them against">
+      <span class="kpi-label">No order</span><span id="kpi-no-order" class="kpi-value">—</span></div>
   </section>
 
   <main class="orders-layout">
@@ -116,7 +121,8 @@
         <table id="order-list" data-assist="order-list">
           <thead><tr>
             <th>Order</th><th>Material</th><th>Status</th><th>Due</th><th>Progress</th>
-            <th class="num">Qty</th><th class="num">Good</th><th class="num">Scrap</th>
+            <th class="num">Ordered</th><th class="num">Booked</th><th class="num">Scrap</th>
+            <th class="num" title="How far past the ordered quantity the line ran">Over-run</th>
           </tr></thead>
           <tbody></tbody>
         </table>
@@ -137,7 +143,9 @@
       <div id="detail" class="hidden">
         <div class="detail-head">
           <div><span class="kpi-label">Material</span><strong id="d-material">—</strong></div>
-          <div><span class="kpi-label">Quantity</span><strong id="d-qty">—</strong></div>
+          <div><span class="kpi-label">Ordered</span><strong id="d-qty">—</strong></div>
+          <div><span class="kpi-label">Booked</span><strong id="d-good">—</strong></div>
+          <div><span class="kpi-label">Over-run</span><strong id="d-over">—</strong></div>
           <div><span class="kpi-label">Status</span><strong id="d-status">—</strong></div>
           <div><span class="kpi-label">Yield</span><strong id="d-yield">—</strong></div>
           <div><span class="kpi-label">Plan says</span><strong id="d-promise" class="muted">—</strong></div>
@@ -161,7 +169,8 @@
         <div class="table-wrap">
           <table id="ops">
             <thead><tr><th>Seq</th><th>Operation</th><th>Machine</th><th>Status</th>
-              <th class="num">Good</th><th class="num">Scrap</th><th class="num">Yield</th></tr></thead>
+              <th class="num">Good</th><th class="num">Scrap</th><th class="num">Yield</th>
+              <th></th></tr></thead>
             <tbody></tbody>
           </table>
         </div>

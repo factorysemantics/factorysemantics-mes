@@ -51,6 +51,10 @@
 .yield-warn { color: var(--idle); }
 .yield-bad  { color: var(--down); }
 
+/* An over-run is not a failure and not a success - it is a number somebody
+   has to look at, which is what the setup colour is for everywhere else. */
+.over-run { color: var(--setup); }
+
 /* A supervisor's first question is never "show me everything" - it is "my
    material, due this week", so the controls that answer it sit above the list
    rather than behind a menu. */

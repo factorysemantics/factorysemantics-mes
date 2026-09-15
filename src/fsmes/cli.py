@@ -1240,6 +1240,20 @@ async def _demo(settings: Settings, duration: int) -> str | None:
                 typer.echo(f"      {ops}")
                 if status == "completed":
                     break
+                # The line has made the number, and it has not stopped: the
+                # counters keep coming and the MES keeps booking them to this
+                # order, which is what makes an over-run the true one
+                # (decision 0028). Finishing the order is SCOTT's act, and
+                # here he does it as soon as the last step has its quantity.
+                made = [op for op in order["operations"]
+                        if op["good_qty"] >= order["quantity"] and op["status"] != "done"]
+                if made and made[-1]["seq"] == order["operations"][-1]["seq"]:
+                    typer.echo("      SCOTT finishes the order - the line made its number; "
+                               "reaching a quantity is not the same fact as being finished")
+                    for op in made:
+                        (await http.post(
+                            f"{api_url}/workorders/{code}/operations/{op['seq']}/complete",
+                            headers=operator)).raise_for_status()
 
             if status != "completed":
                 typer.echo(f"      Order still {status} after {duration}s - leaving it running; "

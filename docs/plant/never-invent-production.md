@@ -11,6 +11,10 @@ Most ways an MES invents production are small and reasonable-looking:
 
 - **Booking the order quantity when the order completes.** The line made
   what the line made; the order says what was wanted.
+- **Stopping the books at the order quantity.** The same fault with the sign
+  reversed: the line kept running, the MES stopped counting it against the
+  order, and the over-run a plant reads is three where the line ran two
+  thousand past.
 - **Treating a counter that dropped to zero as negative production**, or
   worse, as a huge positive delta when it wraps.
 - **Filling a gap.** The agent was down for twenty minutes; the machine was
@@ -32,6 +36,11 @@ Most ways an MES invents production are small and reasonable-looking:
 4. **Unknown is a valid answer; zero is not.** A KPI that cannot be computed
    honestly returns `null` with a reason.
 5. **Unlabelled data is reported as unlabelled.**
+6. **An order's quantity is not a gate.** A quantity is what the plant was
+   asked for. A line that has made its number and not been stopped is still
+   making units against that order, so booking continues past the quantity
+   and the order reports how far past it ran. Finishing an order is an act —
+   a person, or the ERP — never a number being reached.
 
 ## How it is tested
 
@@ -44,6 +53,8 @@ of promises. Some of them, by name (2026-09-07):
 - `test_unlabelled_downtime_is_named_not_hidden`
 - `test_counters_that_disagree_with_the_route_are_reported_not_clamped`
 - `test_the_recording_keeps_the_counter_reset_that_the_scenario_stages`
+- `test_reaching_the_ordered_quantity_does_not_finish_the_order`
+- `test_a_line_that_makes_half_again_the_order_reports_an_over_run_of_half`
 - `test_unknown_scores_are_counted_separately_never_averaged_in`
 
 And the scoring harness: `fsmes score <plant>` replays a scripted hour with
@@ -62,5 +73,7 @@ an agent that stays up — never a default in the code.
 ## See also
 
 - [Reading OEE](reading-oee.md)
-- Decision record [0004](../decisions/0004-never-invent-production.md)
+- Decision records [0004](../decisions/0004-never-invent-production.md),
+  [0019](../decisions/0019-count-everything-the-machine-counted.md) and
+  [0028](../decisions/0028-an-order-does-not-finish-itself.md)
 - The house rules in [CONTRIBUTING](https://github.com/factorysemantics/factorysemantics-mes/blob/main/CONTRIBUTING.md)

@@ -18,6 +18,7 @@ let hasMore = false;
 let offset = 0;
 let filterStatus = [];
 let summary = null;
+let noOrder = null;
 let filterText = "";
 let filterMaterial = "";
 let dueAfter = "";
@@ -42,6 +43,18 @@ function yieldCell(value) {
   if (value >= 0.98) return { text: pct, cls: "yield-good" };
   if (value >= 0.90) return { text: pct, cls: "yield-warn" };
   return { text: pct, cls: "yield-bad" };
+}
+
+/* How far past the order the line ran. A dash rather than a zero when the
+   order has made nothing yet: not-yet-run and ran-exactly-to-quantity are
+   different facts. */
+function overCell(order) {
+  const over = order.over_qty || 0;
+  if (!over) return el("td", "num muted", (order.good_qty || 0) > 0 ? "0" : "—");
+  const pct = order.quantity ? ` (+${((over / order.quantity) * 100).toFixed(0)}%)` : "";
+  const cell = el("td", "num over-run", fmt.qty(over) + pct);
+  cell.title = `${fmt.qty(order.good_qty)} booked against ${fmt.qty(order.quantity)} ordered`;
+  return cell;
 }
 
 function statusPill(status) {
@@ -106,6 +119,9 @@ function renderList() {
     row.appendChild(el("td", "num", fmt.qty(o.quantity)));
     row.appendChild(el("td", "num", fmt.qty(o.good_qty)));
     row.appendChild(el("td", "num", fmt.qty(o.scrap_qty)));
+    // An order runs until somebody finishes it, so this is the whole distance
+    // the line ran past what was asked for, not a rounding on the last delta.
+    row.appendChild(overCell(o));
 
     row.addEventListener("click", () => { selected = o.code; renderList(); loadDetail(); });
     body.appendChild(row);
@@ -138,6 +154,32 @@ function renderTiles() {
   const cell = yieldCell(summary ? summary.yield : null);
   $("#kpi-yield").textContent = cell.text;
   $("#kpi-yield").className = `kpi-value ${cell.cls}`;
+
+  renderNoOrder();
+}
+
+/* Units counted with no order open to book them against. Unknown when the
+   MES could not be asked - not zero, which would read as "none". */
+function renderNoOrder() {
+  const value = $("#kpi-no-order");
+  const card = $("#card-no-order");
+  if (!value) return;
+  if (!noOrder) {
+    value.textContent = "—";
+    value.className = "kpi-value muted";
+    card.title = "The MES was not asked what it counted with no order open, "
+      + "so this is unknown rather than none.";
+    return;
+  }
+  const good = noOrder.good_total || 0;
+  const scrap = noOrder.scrap_total || 0;
+  value.textContent = (good + scrap).toLocaleString();
+  value.className = "kpi-value" + (good + scrap > 0 ? " over-run" : " muted");
+  card.title = noOrder.total
+    ? `${good.toLocaleString()} good / ${scrap.toLocaleString()} scrap counted `
+      + `with no order open to book them against, in `
+      + `${noOrder.total.toLocaleString()} bookings`
+    : "Every unit this plant counted is booked to an order.";
 }
 
 /* ---------- filters ---------- */
@@ -323,6 +365,27 @@ function renderActions(order) {
   }
 }
 
+/* Finishing a step is a person's act: a machine counting to the ordered
+   quantity does not do it, because a line that has made its number is
+   routinely still running (decision 0027). This is where that person says so.
+   Until the step has started there is nothing to finish, and a step already
+   done says so instead of offering the button again. */
+function finishCell(order, op) {
+  const cell = el("td", "num");
+  if (op.status === "done") return cell;
+  if (op.status !== "running" || !FS.can("production.book")) return cell;
+  const over = (op.good_qty || 0) - (order.quantity || 0);
+  const button = actionButton("Finish step", "ghost", () =>
+    api(`/workorders/${order.code}/operations/${op.seq}/complete`, { method: "POST" })
+      .then(() => FS.toast(`${order.code} step ${op.seq}: finished`)));
+  button.title = over > 0
+    ? `This step has made ${fmt.qty(op.good_qty)} against ${fmt.qty(order.quantity)} `
+      + `ordered - ${fmt.qty(over)} past it. Finishing it stops the booking here.`
+    : "Finish this step. Everything counted until then books to this order.";
+  cell.appendChild(button);
+  return cell;
+}
+
 function wireHold() {
   $("#hold-cancel").addEventListener("click", () =>
     $("#hold-pop").classList.add("hidden"));
@@ -359,6 +422,10 @@ async function loadDetail() {
   $("#detail-code").textContent = order.code;
   $("#d-material").textContent = order.material;
   $("#d-qty").textContent = fmt.qty(order.quantity);
+  $("#d-good").textContent = fmt.qty(order.good_qty);
+  const over = order.over_qty || 0;
+  $("#d-over").textContent = over ? fmt.qty(over) : ((order.good_qty || 0) > 0 ? "0" : "—");
+  $("#d-over").className = over ? "over-run" : "muted";
   $("#d-status").textContent = order.status.replace("_", " ");
   const y = yieldCell(yieldOf(order.good_qty, order.scrap_qty));
   $("#d-yield").textContent = y.text;
@@ -388,6 +455,7 @@ async function loadDetail() {
     row.appendChild(el("td", "num", fmt.qty(op.scrap_qty)));
     const cell = yieldCell(yieldOf(op.good_qty, op.scrap_qty));
     row.appendChild(el("td", `num ${cell.cls}`, cell.text));
+    row.appendChild(finishCell(order, op));
     ops.appendChild(row);
   }
 
@@ -496,11 +564,13 @@ async function refresh() {
     if (filterMaterial) query.set("material", filterMaterial);
     if (dueAfter) query.set("due_after", dueAfter);
     if (dueBefore) query.set("due_before", `${dueBefore}T23:59:59`);
-    const [paged, totals] = await Promise.all([
+    const [paged, totals, unassigned] = await Promise.all([
       api(`/workorders?${query}`),
       api("/workorders/summary").catch(() => null),
+      api("/execution/unassigned?limit=1").catch(() => null),
     ]);
     summary = totals;
+    noOrder = unassigned;
     orders = paged.items;
     total = paged.total;
     hasMore = paged.has_more;
@@ -510,7 +580,7 @@ async function refresh() {
     }
     renderList();
     window.__fsmesPageData = {
-      orders, total,
+      orders, total, noOrder,
       filters: { filterStatus, filterText, filterMaterial, dueAfter, dueBefore, offset },
     };
     if (selected) await loadDetail();
