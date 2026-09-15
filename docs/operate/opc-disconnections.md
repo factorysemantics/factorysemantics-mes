@@ -7,7 +7,7 @@ see any of it.
 
 This page is what this MES does about that, and — more usefully — what it
 refuses to do. The decision behind it is
-[0028](../decisions/0028-a-lost-connection-is-unknown-time.md).
+[0030](../decisions/0030-a-lost-connection-is-unknown-time.md).
 
 ## The two wrong answers
 
@@ -114,7 +114,7 @@ above.
 
 ## See also
 
-- [Decision 0028 — a lost connection is a dimension of its own](../decisions/0028-a-lost-connection-is-unknown-time.md)
+- [Decision 0030 — a lost connection is a dimension of its own](../decisions/0030-a-lost-connection-is-unknown-time.md)
 - [Read-only OPC UA commissioning](opc-readonly.md)
 - [How to read OEE](../plant/reading-oee.md)
 - [Experiments in the lab](../develop/experiments.md) — `labs/experiments/lost-connection.toml` scripts an outage and measures what was said about it

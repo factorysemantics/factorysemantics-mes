@@ -218,7 +218,7 @@ def score_run(
             # scripted inside a scripted outage is the MES being blind, not
             # the MES being wrong, and scoring it as recall 0 is the same
             # false accusation this scorer already refuses to make for a
-            # window it did not sample fast enough. Decision 0028.
+            # window it did not sample fast enough. Decision 0030.
             unseen = sum(max(0.0, min(event.end_s, b) - max(event.start_s, a))
                          for a, b in blind)
             blinded = unseen > 0

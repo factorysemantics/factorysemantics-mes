@@ -64,7 +64,7 @@ class EquipmentConnectionChange(BaseModel):
     the event that closes that hole: after a `disconnected`, the last state
     this machine published stands for nothing until a `connected` arrives.
 
-    Decision 0028.
+    Decision 0030.
     """
 
     kind: Literal["equipment_connection_change"] = "equipment_connection_change"

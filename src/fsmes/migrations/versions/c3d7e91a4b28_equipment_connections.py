@@ -2,7 +2,7 @@
 
 The connection is a second interval history beside equipment_states, not a
 fifth state inside it. A machine can be broken and reachable, or fine and
-unreachable. See decision 0028.
+unreachable. See decision 0030.
 
 Revision ID: c3d7e91a4b28
 Revises: a9c4e17b3d60

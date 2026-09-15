@@ -1,6 +1,6 @@
 """Whether this MES can see a machine, recorded apart from what the machine is doing.
 
-Decision 0028. Two facts, two histories: `equipment_states` says what the
+Decision 0030. Two facts, two histories: `equipment_states` says what the
 machine was doing, `equipment_connections` says whether anything could still
 see it. A machine can be broken and reachable, or fine and unreachable, and a
 plant that has to pick one column for both has thrown the useful half away.

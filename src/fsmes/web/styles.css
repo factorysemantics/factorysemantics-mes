@@ -219,7 +219,7 @@ main {
 .machine.setup   { border-left-color: var(--setup); }
 /* Nobody is watching this machine. Not red (that would be a breakdown it may
    not be having) and not green: the same grey the rest of the product uses
-   for unknown - decision 0028. */
+   for unknown - decision 0030. */
 .machine.disconnected { border-left-color: var(--disconnected); }
 
 .machine-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }

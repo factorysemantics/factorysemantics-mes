@@ -256,7 +256,7 @@ class Settings(BaseSettings):
     # counted in publish intervals. Three is about a second and a half on a
     # real line - long enough not to add traffic, short enough that the gap
     # between "the link died" and "the MES noticed" stays small and is
-    # reported rather than guessed (decision 0028).
+    # reported rather than guessed (decision 0030).
     #
     # It is a *positive* check, not an inference from silence: OPC UA
     # publishes on change, so a machine standing idle sends nothing for an

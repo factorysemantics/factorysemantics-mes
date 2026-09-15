@@ -55,7 +55,7 @@ class EquipmentState(ShiftStamped, Base):
 
 class ConnectionStateName(enum.StrEnum):
     """Whether this MES can currently see the machine. Two values, and they
-    are not production states — see decision 0028."""
+    are not production states — see decision 0030."""
 
     CONNECTED = "connected"
     DISCONNECTED = "disconnected"

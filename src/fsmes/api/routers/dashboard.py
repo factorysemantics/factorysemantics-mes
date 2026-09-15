@@ -229,7 +229,7 @@ def _build_summary(db: Session, oee_hours: float, line: str | None = None,
                 "reason": state.reason if state else None,
                 "since": state.started_at if state else None,
                 # A second fact, never folded into the first: a machine can
-                # be down and reachable, or fine and unreachable (0028).
+                # be down and reachable, or fine and unreachable (0030).
                 "connection": connection_service.summary(connections.get(eq.id)),
                 # The machine's process value under its own name. Not always a
                 # temperature: a washer reports WashTemp, a filler FillWeight, a

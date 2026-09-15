@@ -269,7 +269,7 @@ function renderMachines(machines, envelope) {
 function machineCard(m) {
   // A machine the MES cannot see has no state to show. The card says so
   // instead of showing the last one it heard, which would be a claim about
-  // a machine nobody is watching (decision 0028).
+  // a machine nobody is watching (decision 0030).
   const shown = FS.connection.stateClass(m);
   const card = el("div", `machine ${shown}`);
   const head = el("div", "machine-head");

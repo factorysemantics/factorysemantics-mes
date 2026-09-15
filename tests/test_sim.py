@@ -409,7 +409,7 @@ def _with_a_disconnect(truth, start_s, end_s):
 def test_a_breakdown_inside_a_scripted_outage_is_unknown_not_missed(truth):
     """The MES was blind for those minutes by the script's own doing. Scoring
     it as recall 0 is the same false accusation this scorer refuses to make
-    about a stop shorter than its own sample. Decision 0028."""
+    about a stop shorter than its own sample. Decision 0030."""
     blind = _with_a_disconnect(truth, 2600, 3000)
     card = score_run(blind, _timeline([("MILL01", "running", 2700, 2880)]), T0, SPEED)
     assert card["faults"][0]["detected"] is None

@@ -291,7 +291,7 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
     seconds = state_seconds(session, ids, asked, end)
     # The same rule applied to holes in the middle of the window rather than
     # at its start: seconds the MES could not see this machine are not
-    # downtime either, and they leave the denominator (decision 0028).
+    # downtime either, and they leave the denominator (decision 0030).
     unknown = connection_service.unknown_seconds(session, ids, asked, end)
     # Production is counted from each machine's own clamped start. The usual
     # case - every machine observed for the whole window - is one grouped

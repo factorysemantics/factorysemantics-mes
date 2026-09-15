@@ -51,7 +51,7 @@ class ScriptedEvent:
         """The OPC endpoint went away. A fault in the *observer*, not in the
         plant: the line ran on and the machines were fine, so scoring it as a
         stop of any kind - planned, idle or breakdown - would be a third way
-        of writing down something that did not happen. Decision 0028."""
+        of writing down something that did not happen. Decision 0030."""
         return self.type == "disconnect"
 
     @property

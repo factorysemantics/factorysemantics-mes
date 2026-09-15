@@ -1,6 +1,6 @@
 """A lost connection to the machine layer, and what every screen says about it.
 
-Decision 0028. The question these pin is not "does the MES notice" - it is
+Decision 0030. The question these pin is not "does the MES notice" - it is
 what the MES *claims* about the minutes it could not see. A plant loses a
 connection weekly, and the two ways to get this wrong are symmetrical: read
 the gap as a breakdown and invent a fault, or read it as the last state and

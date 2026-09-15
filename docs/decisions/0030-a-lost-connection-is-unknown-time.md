@@ -1,4 +1,4 @@
-# 0028 — A lost connection is a dimension of its own, and the gap it leaves is unknown time
+# 0030 — A lost connection is a dimension of its own, and the gap it leaves is unknown time
 
 - **Status:** accepted
 - **Date:** 2026-09-14

@@ -113,7 +113,7 @@ def equipment_connection_changed(session: Session, *, equipment: Equipment,
                                  opened: EquipmentConnection,
                                  closed: EquipmentConnection | None,
                                  actor: str, settings: Settings | None = None) -> ErpMessage | None:
-    """The MES gained or lost its view of a machine. Decision 0028.
+    """The MES gained or lost its view of a machine. Decision 0030.
 
     Written in the same transaction as the connection interval, like a state
     change, so the namespace can never disagree with the history about when

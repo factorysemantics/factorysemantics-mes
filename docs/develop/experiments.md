@@ -420,7 +420,7 @@ The measurement this exists for, and the only one that **has** to be read from
 during the run. By the time the hour is over the plant has reconnected and
 every screen says so; the question is what they said while the link was down.
 
-It is [decision 0028](../decisions/0028-a-lost-connection-is-unknown-time.md)
+It is [decision 0030](../decisions/0030-a-lost-connection-is-unknown-time.md)
 put to a plant that is really losing a real socket. Per scripted outage:
 
 * **Did the machines read as disconnected?** Not down, not idle, and not the

@@ -194,7 +194,7 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
     by_machine = equipment_service.state_seconds(db, ids, start, end)
     made = equipment_service.production_sums(db, ids, start, end)
     # Seconds the MES could not see each machine. Out of availability's
-    # denominator and stated as a share beside it - decision 0028.
+    # denominator and stated as a share beside it - decision 0030.
     unknown_by_machine = connection_service.unknown_seconds(db, ids, start, end)
 
     stations = []
@@ -369,7 +369,7 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float = 8.0
     # The gaps: stretches where the MES could not see the machine at all. They
     # are drawn as their own intervals rather than left as white space,
     # because a hole in a Gantt reads as "nothing happened" and this one means
-    # "nobody was looking" (decision 0028).
+    # "nobody was looking" (decision 0030).
     gaps = connection_service.intervals(db, [u.id for u in units], start, end)
     for unit in units:
         # Columns, not objects: a dozen machines over eight busy hours is

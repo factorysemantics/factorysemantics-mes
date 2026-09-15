@@ -77,7 +77,7 @@ goes under Honesty with a migration line, so plant people can find it.
   was `running` when the cable was pulled read as running for as long as the
   link was down, that invented run time went into availability's numerator,
   and `maintenance.runtime_hours` accrued against a machine nobody could see.
-  A connection is now a dimension of its own (decision 0028), recorded in the
+  A connection is now a dimension of its own (decision 0030), recorded in the
   new `equipment_connections` table with the same interval shape the state
   history has. Recording a disconnection **closes the machine's open state
   interval** at the last moment there was evidence and opens nothing in its
