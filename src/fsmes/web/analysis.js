@@ -52,8 +52,8 @@ function renderOee(data) {
       // not capped (see `fsmes.services.oee`), and a station that out-ran its
       // rating has a performance loss below zero — a segment with no width to
       // draw and no side of the axis to sit on. So the bar stops pretending:
-      // one full segment, the true figure in the score, and the master-data
-      // finding in words under the row. Squeezing the losses in beside a
+      // one full segment, the true figure in the score, and the disagreement
+      // in words under the row. Squeezing the losses in beside a
       // hundred per cent is what made the first draft of this read as though
       // a station with an OEE of 171 % had lost time it had not.
       const whole = document.createElement("i");
@@ -92,13 +92,14 @@ function renderOee(data) {
       (s.performance_note ? `\nPerformance: ${s.performance_note}` : "");
 
     row.append(who, bar, score);
-    // A station that beat its rating is a master-data finding, and it is the
-    // one case worth a mark on the row rather than only a tooltip: the number
-    // it replaces used to be a silent 1.0.
+    // Counted work that will not fit inside the run time is worth a mark on
+    // the row rather than only a tooltip: the number it replaces used to be a
+    // silent 1.0. The mark names the disagreement, not a culprit — the MES
+    // cannot tell whether the rating is slow or the run time is short.
     if (s.performance_note && s.performance !== null && s.performance > 1) {
       const flag = document.createElement("div");
-      flag.className = "rated-slow";
-      flag.textContent = `P ${pct(s.performance)} — rating slower than the machine`;
+      flag.className = "counts-outrun";
+      flag.textContent = `P ${pct(s.performance)} — counted work outruns the run time`;
       flag.title = s.performance_note;
       row.appendChild(flag);
     }

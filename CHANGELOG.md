@@ -110,6 +110,43 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Honesty
 
+- **A performance figure over 100 % no longer blames the master data.** Taking
+  the `min(1.0, …)` cap off performance earlier the same day (see *0.2.0 →
+  Honesty*, decision
+  [0025](https://factorysemantics.github.io/factorysemantics-mes/decisions/0025-performance-is-measured-not-capped/))
+  was right; the sentence printed beside the uncapped figure was not. It read
+  *the rating is slower than the machine*, and the lab caught it out within
+  hours: Northgate's Deburr reported **826 units and 1,878 line-seconds of run
+  time** at a rated 2.4 s a unit — 1,982 seconds of work inside 1,878 seconds
+  of running — while the script that made the data rated it at the same 2.4 s
+  and fitted **831 units inside 1,996 running seconds**. The rating was right
+  to a tenth of a percent. The MES's run time was short, because the machine
+  changed state every 2.7 seconds and the agent saw it about every 15 — and no
+  timestamp recovers that, which 0026 records having tried and measured.
+
+  `performance > 1.0` is the same inequality as *the counted work will not fit
+  inside the run time*, and it has at least three causes the MES cannot tell
+  apart. So the note now states the disagreement and both of its numbers, and
+  says the MES does not know which of them is wrong. The value is unchanged
+  and still uncapped. Decision
+  [0026](https://factorysemantics.github.io/factorysemantics-mes/decisions/0026-counts-that-outrun-the-run-time/).
+
+  **Migration.** Anything matching on the old sentence — *"rating is slower
+  than the machine"* — will stop matching; `performance_note` is prose for a
+  person, and the value to test is `performance > 1`. On the analysis screen
+  the row's mark reads *counted work outruns the run time*, and its CSS class
+  is `.counts-outrun` where it was `.rated-slow`.
+
+- **The MES says how much of its production it counted outside run time.** New
+  on every OEE answer, per machine: `counted_outside_run_time`, the units —
+  good and scrap together — booked at an instant the MES's own state history
+  did not have that machine running. It is the one candidate cause of the
+  disagreement above that the MES holds evidence for, and it is what a counter
+  catching up after a stop looks like. **Nothing is moved and nothing is
+  dropped because of it**: those units stay in `good_qty`, `scrap_qty`,
+  quality and the performance numerator (house rule 1). They are named, and
+  that is all.
+
 - **A detection lag smaller than the sampling interval is printed as *within
   resolution*, not as a signed number.** A buffer sweep reported a breakdown
   detected one second *before* it was scripted, at a speed whose sampling

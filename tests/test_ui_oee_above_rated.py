@@ -14,8 +14,10 @@ What the bar must do, and what it must not:
   beside a full bar makes the row read as though time was lost that was not.
 * The score prints the true figure, over 100 % and all. Trimming it there
   would put the cap back one layer out.
-* The row says, in words, that the rating is slower than the machine. That is
-  the finding a plant acts on; the number alone reads like a miracle.
+* The row says, in words, that the counted work will not fit inside the run
+  time. That is the finding a plant acts on; the number alone reads like a
+  miracle. It must not name a culprit: the MES cannot tell a rating slower
+  than the machine from run time it failed to see.
 
 Same shape as `test_ui_nav.py`: a seeded plant on a loopback port of the
 operating system's choosing, driven by Chromium, touching nothing anyone else
@@ -159,11 +161,13 @@ def test_the_station_that_beat_its_rating_prints_the_true_figure(page):
     assert int(score.rstrip("%")) > 100, f"the score reads {score}, which is the cap again"
 
 
-def test_the_row_says_the_rating_is_slower_than_the_machine(page):
-    """The number alone reads like a miracle. The sentence is the finding."""
-    note = _row(page).locator(".rated-slow")
+def test_the_row_says_the_counted_work_will_not_fit_inside_the_run_time(page):
+    """The number alone reads like a miracle. The sentence is the finding —
+    and it names the disagreement, not a culprit."""
+    note = _row(page).locator(".counts-outrun")
     assert note.is_visible()
-    assert "rating slower than the machine" in note.inner_text()
+    assert "counted work outruns the run time" in note.inner_text()
+    assert "rating slower than the machine" not in note.inner_text()
 
 
 def test_the_bar_draws_no_losses_it_cannot_lay_out(page):
@@ -185,5 +189,5 @@ def test_the_bar_draws_no_losses_it_cannot_lay_out(page):
 def test_a_station_inside_its_rating_still_draws_the_whole_waterfall(page):
     """The change is for the case that could not arise before, and only that
     case: PACK01 is unrated in this plant, and every other row is untouched."""
-    others = page.locator(f'.oee-row:not(:has(.code:text-is("{MACHINE}"))) .rated-slow')
+    others = page.locator(f'.oee-row:not(:has(.code:text-is("{MACHINE}"))) .counts-outrun')
     assert others.count() == 0

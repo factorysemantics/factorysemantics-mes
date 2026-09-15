@@ -145,12 +145,13 @@ def test_a_station_slower_than_its_rating_reports_below_one(session, line):
     assert station["loss"]["performance_units"] == pytest.approx(150, abs=1)
 
 
-def test_a_station_faster_than_its_rating_says_so_instead_of_reporting_one(session, line):
+def test_a_station_whose_counts_outrun_its_run_time_says_so_instead_of_reporting_one(session, line):
     """Until 2026-09-14 this reported exactly 1.0, and the lab measured what
     that costs: performance read 1.0 on nine stations across two plants while
-    the script said 0.943 to 0.9994. A machine that beats its rated cycle is a
-    master-data finding — the rating is slower than the machine — and the
-    number now says so instead of being capped away."""
+    the script said 0.943 to 0.9994. The number is not capped away any more.
+
+    What it must not do is pick a culprit. Counted work that will not fit
+    inside the run time says exactly that, and names both numbers."""
     _state(session, "MIX01", EquipmentStateName.RUNNING, minutes_ago=40, minutes=30)
     _book(session, "MIX01", good=900, minutes_ago=20)  # twice the rated rate
 
@@ -158,11 +159,50 @@ def test_a_station_faster_than_its_rating_says_so_instead_of_reporting_one(sessi
         s for s in analysis.oee_breakdown(session, line_code=line, hours=8)["stations"] if s["code"] == "MIX01"
     )
     assert station["performance"] == pytest.approx(2.0, rel=0.02)
-    assert "rating is slower than the machine" in station["performance_note"]
+    note = station["performance_note"]
+    assert "counted work will not fit inside the run time" in note
+    assert "900 units" in note and "3600 s of work" in note and "1800 s of running" in note
+    assert "cannot tell which" in note
     # The loss is signed: it made 450 units more than its rating allows for.
     assert station["loss"]["performance_units"] == pytest.approx(-450, abs=1)
     # And the OEE that follows from it is above 1 rather than quietly trimmed.
     assert station["oee"] > 1.0
+
+
+def test_units_counted_while_the_station_was_not_running_are_named_not_netted_off(session, line):
+    """The lab's Northgate Deburr reported 826 units and 1,878 line-seconds of
+    run time at a rated 2.4 s a unit, and the MES blamed the master data. The
+    rating was right to a tenth of a percent; the run time was short. The one
+    piece of evidence the MES actually holds is how much of the production it
+    booked at an instant its own state history did not have the machine
+    running, so it reports that — and moves nothing, because a count outside
+    run time is still a unit the plant made (house rule 1)."""
+    _state(session, "MIX01", EquipmentStateName.RUNNING, minutes_ago=40, minutes=30)
+    _book(session, "MIX01", good=400, minutes_ago=20)  # inside the running interval
+    _book(session, "MIX01", good=500, minutes_ago=5)   # after it ended
+
+    station = next(
+        s for s in analysis.oee_breakdown(session, line_code=line, hours=8)["stations"] if s["code"] == "MIX01"
+    )
+    assert station["good_qty"] == 900, "nothing is dropped and nothing is moved"
+    assert station["counted_outside_run_time"] == 500
+    assert station["performance"] == pytest.approx(2.0, rel=0.02), "performance still prices every unit"
+    assert "500 of those units were counted while the MES did not have this machine running" \
+        in station["performance_note"]
+
+
+def test_a_station_whose_counts_fit_inside_its_run_time_is_left_alone(session, line):
+    """The disagreement is named only when there is one. A station running
+    slower than its rating has nothing to explain, and counting every unit
+    inside run time is the ordinary case, not a finding."""
+    _state(session, "MIX01", EquipmentStateName.RUNNING, minutes_ago=40, minutes=30)
+    _book(session, "MIX01", good=300, minutes_ago=20)
+
+    station = next(
+        s for s in analysis.oee_breakdown(session, line_code=line, hours=8)["stations"] if s["code"] == "MIX01"
+    )
+    assert station["counted_outside_run_time"] == 0
+    assert station["performance_note"] is None
 
 
 def test_a_station_with_no_rated_cycle_reports_unknown_and_says_why(session, line):
