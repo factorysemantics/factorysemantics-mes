@@ -27,6 +27,7 @@ import threading
 from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from mcp.server.mcpserver import MCPServer
@@ -445,20 +446,44 @@ def set_machine_state(plant: str, equipment: str, state: str,
                   f"set {equipment} to {state}" + (f" ({reason})" if reason else ""))
 
 
+def _window_query(hours: float, shift: str | None) -> str:
+    """Either a trailing span of hours or a named shift, never both."""
+    if shift:
+        return f"shift={quote(shift, safe='/')}"
+    return f"hours={hours}"
+
+
 @mcp.tool()
-def downtime(plant: str, hours: float = 8.0) -> dict:
-    """Downtime pareto over the window: which reasons cost what, and how much
-    is unlabelled - reported honestly rather than hidden."""
+def shifts(plant: str, days: int = 7) -> dict:
+    """Which shifts this plant has run lately, which one is running now, and on
+    whose clock. The keys here are what `shift` takes on the other tools."""
     return {"plant": plant,
-            "downtime": _call(plant, "GET", f"/analysis/downtime?hours={hours}")}
+            "shifts": _call(plant, "GET", f"/analysis/shifts?days={days}")}
+
+
+@mcp.tool()
+def downtime(plant: str, hours: float = 8.0, shift: str | None = None) -> dict:
+    """Downtime pareto over the window: which reasons cost what, and how much
+    is unlabelled - reported honestly rather than hidden.
+
+    `shift` windows it on the plant's own clock instead of a trailing span of
+    hours: `current`, `previous`, or a day and a code such as
+    `2026-09-14/NIGHT`. It overrides `hours`. Use it whenever the question is
+    about a shift, because "the last eight hours" is not a shift."""
+    return {"plant": plant,
+            "downtime": _call(plant, "GET",
+                              f"/analysis/downtime?{_window_query(hours, shift)}")}
 
 
 @mcp.tool()
 def tag_trend(plant: str, equipment: str, tag: str | None = None,
-              hours: float = 1.0) -> dict:
+              hours: float = 1.0, shift: str | None = None) -> dict:
     """A machine's process value over time - the signal that drifts before a
-    failure. Omit tag for the machine's primary analog."""
-    path = f"/analysis/tag/{equipment}?hours={hours}"
+    failure. Omit tag for the machine's primary analog.
+
+    `shift` windows it on the plant's own clock and overrides `hours`:
+    `current`, `previous`, or `2026-09-14/NIGHT`."""
+    path = f"/analysis/tag/{equipment}?{_window_query(hours, shift)}"
     if tag:
         path += f"&tag={tag}"
     return {"plant": plant, "trend": _call(plant, "GET", path)}

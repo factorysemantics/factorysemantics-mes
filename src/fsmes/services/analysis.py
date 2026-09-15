@@ -18,6 +18,18 @@ component that cannot be computed is null, never zero, and unlabelled downtime
 is reported as unlabelled rather than folded into a catch-all that looks
 explained. And the window never reaches back before the MES started watching,
 because time we have no record of is not downtime.
+
+TWO KINDS OF WINDOW. `hours=` is a trailing span - the last eight hours,
+wherever they fall. `shift=` is a wall-clock window on the plant's own clock:
+`current`, `previous`, or a day and a code such as `2026-09-14/NIGHT`. A shift
+is the unit a plant is actually run in, and the one a supervisor is measured
+on, so every view here takes either. They are not mixed: a request that names
+a shift gets that shift, and `hours` is ignored rather than quietly averaged in.
+
+A shift still in progress is clipped to now. Reporting the whole rostered eight
+hours of a shift three hours old would count five hours the plant has not lived
+through yet as time it was not running, and would say the shift was 37 %
+available when it has been running throughout.
 """
 
 from datetime import datetime, timedelta
@@ -25,6 +37,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from fsmes import identity
 from fsmes.db import utcnow
 from fsmes.domain import (
     Equipment,
@@ -36,6 +49,7 @@ from fsmes.domain import (
 )
 from fsmes.kernel.tags import STRUCTURAL_TAGS
 from fsmes.services import NotFound, masterdata
+from fsmes.services import calendar as calendar_service
 from fsmes.services import equipment as equipment_service
 from fsmes.services import line as line_service
 from fsmes.services import oee as oee_rules
@@ -87,10 +101,26 @@ def lines(db: Session) -> list[dict]:
     return out
 
 
-def _window(db: Session, units: list[Equipment], hours: float) -> tuple[datetime, datetime]:
+def _shift(db: Session, shift: str | None) -> calendar_service.Shift | None:
+    """Resolve a `shift=` request, once, before any query runs.
+
+    Site-wide patterns only. A shift window is the window the whole screen is
+    drawn in - the OEE panel, the Gantt and the pareto share one axis - and a
+    per-line roster would give each of them a different one.
+    """
+    return calendar_service.resolve_shift(db, shift) if shift else None
+
+
+def _window(db: Session, units: list[Equipment], hours: float,
+            shift: calendar_service.Shift | None = None) -> tuple[datetime, datetime]:
     """The reporting window, clamped to when the MES first saw this line."""
     end = utcnow()
-    start = end - timedelta(hours=hours)
+    if shift is not None:
+        # A shift in progress ends now, not at the hour it is rostered to
+        # finish: the rest of it has not happened.
+        start, end = shift.starts_at, min(shift.ends_at, end)
+    else:
+        start = end - timedelta(hours=hours)
     first_seen = db.scalar(
         select(func.min(EquipmentState.started_at)).where(
             EquipmentState.equipment_id.in_([u.id for u in units])
@@ -98,7 +128,39 @@ def _window(db: Session, units: list[Equipment], hours: float) -> tuple[datetime
     )
     if first_seen is None:
         return end, end
-    return (max(start, first_seen), end)
+    start = max(start, first_seen)
+    if end <= start:
+        # A shift that ended before this line was ever watched, or that has
+        # not started yet. Zero width, and every panel reports unknown rather
+        # than zero for anything it cannot divide.
+        return end, end
+    return start, end
+
+
+def _window_json(start: datetime, end: datetime, hours: float,
+                 shift: calendar_service.Shift | None) -> dict:
+    """What every panel says about the window it drew.
+
+    `hours` is always what was realised, `requested_hours` what was asked for,
+    and `clamped` is true only when the MES had not been watching that long.
+    A shift adds itself, so a screen can name the window rather than describe
+    it as a span, and says whether it is still running.
+    """
+    now = utcnow()
+    # Never negative: a named shift that has not started yet is an empty
+    # window, not a window of minus eight hours.
+    realised = max(0.0, (end - start).total_seconds() / 3600)
+    asked = hours if shift is None else (min(shift.ends_at, now) - shift.starts_at).total_seconds() / 3600
+    window = {
+        "hours": round(realised, 4),
+        "requested_hours": round(asked, 4),
+        "start": start,
+        "end": end,
+        "clamped": round(realised, 4) < asked - 0.001,
+    }
+    if shift is not None:
+        window["shift"] = shift.as_json() | {"in_progress": shift.ends_at > now}
+    return window
 
 
 def _overlap(state: EquipmentState, start: datetime, end: datetime) -> float:
@@ -107,7 +169,8 @@ def _overlap(state: EquipmentState, start: datetime, end: datetime) -> float:
     return max(0.0, (hi - lo).total_seconds())
 
 
-def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0) -> dict:
+def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
+                  shift: str | None = None) -> dict:
     """OEE per station with every loss named, plus the line rollup.
 
     The losses are the point. "OEE 62%" tells an operator nothing; "you lost 19
@@ -116,7 +179,8 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0)
     for availability, units for performance and quality.
     """
     centre, units = _line_and_units(db, line_code)
-    start, end = _window(db, units, hours)
+    the_shift = _shift(db, shift)
+    start, end = _window(db, units, hours, the_shift)
     window_seconds = (end - start).total_seconds()
 
     # Summed in the database, once for the whole line: loading every state
@@ -194,14 +258,9 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0)
 
     return {
         "line": {"code": centre.code, "name": centre.name},
-        "window": {
-            "hours": round(window_seconds / 3600, 4),
-            "requested_hours": hours,
-            "start": start,
-            "end": end,
-            # True when the MES simply has not been watching for as long as asked.
-            "clamped": round(window_seconds / 3600, 4) < hours - 0.001,
-        },
+        # `clamped` is true when the MES simply has not been watching for as
+        # long as was asked for.
+        "window": _window_json(start, end, hours, the_shift),
         "stations": stations,
         "line_oee": _round(min(rated)) if rated else None,
         "constraint": worst["code"] if worst else None,
@@ -248,13 +307,14 @@ def _merge_short(intervals: list[dict], floor_seconds: float) -> list[dict]:
 
 def state_timeline(db: Session, line_code: str | None = None, hours: float = 8.0,
                    pixels: int = 1200, equipment: list[str] | None = None,
-                   limit: int = 12) -> dict:
+                   limit: int = 12, shift: str | None = None) -> dict:
     """Every state interval per machine — the shift drawn as a Gantt.
 
     This is the view that makes a line legible: starvation walking downstream
     from a breakdown is obvious as a picture and nearly invisible as a table.
     """
     centre, units = _line_and_units(db, line_code)
+    the_shift = _shift(db, shift)
 
     # A Gantt of sixty machines is not a chart anybody reads, and sending it
     # cost 3.2 MB per screen load. Scope it: named machines if the caller
@@ -275,7 +335,7 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float = 8.0
         ]
         all_units = units
     units = units[:max(1, limit)]
-    start, end = _window(db, units, hours)
+    start, end = _window(db, units, hours, the_shift)
 
     rows = []
     for unit in units:
@@ -284,7 +344,8 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float = 8.0
         # this chart's cost.
         states = db.execute(
             select(EquipmentState.state, EquipmentState.reason, EquipmentState.reason_source,
-                   EquipmentState.started_at, EquipmentState.ended_at)
+                   EquipmentState.started_at, EquipmentState.ended_at,
+                   EquipmentState.shift_code)
             .where(
                 EquipmentState.equipment_id == unit.id,
                 EquipmentState.started_at < end,
@@ -299,6 +360,9 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float = 8.0
                         # Null means this MES named it. The interval is
                         # always its own observation either way.
                         "reason_source": reason_source,
+                        # The shift the interval began in. Null is *not
+                        # attributed*, not "no shift" - see the calendar.
+                        "shift": shift_code,
                         # Clipped to the window so the client can lay out
                         # directly without re-deriving what is on screen.
                         "start": max(started_at, start),
@@ -307,17 +371,18 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float = 8.0
                                                    - max(started_at, start)).total_seconds()), 1),
                         "open": ended_at is None,
                     }
-                    for state, reason, reason_source, started_at, ended_at in states
+                    for state, reason, reason_source, started_at, ended_at, shift_code in states
         ]
-        # One pixel of an `hours`-wide chart, so the floor scales with the
-        # window the caller asked for rather than being a magic number.
-        floor_seconds = (hours * 3600.0) / max(pixels, 1)
+        # One pixel of the chart as drawn, so the floor scales with the window
+        # rather than being a magic number. A shift window is as wide as the
+        # shift has run, which is what the axis will show.
+        floor_seconds = (((end - start).total_seconds() if the_shift else hours * 3600.0)
+                         / max(pixels, 1))
         rows.append({"code": unit.code, "name": unit.name,
                      "intervals": _merge_short(drawn, floor_seconds)})
     return {
         "line": {"code": centre.code, "name": centre.name},
-        "window": {"start": start, "end": end,
-                   "hours": round((end - start).total_seconds() / 3600, 4)},
+        "window": _window_json(start, end, hours, the_shift),
         "machines": rows,
         # Say what is not on the chart, rather than letting a partial picture
         # look like the whole line.
@@ -327,7 +392,8 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float = 8.0
     }
 
 
-def downtime_pareto(db: Session, line_code: str | None = None, hours: float = 8.0) -> dict:
+def downtime_pareto(db: Session, line_code: str | None = None, hours: float = 8.0,
+                    shift: str | None = None) -> dict:
     """Downtime grouped by reason, worst first, with a running cumulative share.
 
     Unlabelled downtime is reported under its own name rather than hidden in an
@@ -341,7 +407,8 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float = 8.
     audited. `here` is this MES's own; the rest are named by supplier.
     """
     centre, units = _line_and_units(db, line_code)
-    start, end = _window(db, units, hours)
+    the_shift = _shift(db, shift)
+    start, end = _window(db, units, hours, the_shift)
     ids = [unit.id for unit in units]
     by_id = {unit.id: unit.code for unit in units}
 
@@ -384,7 +451,7 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float = 8.
 
     return {
         "line": {"code": centre.code, "name": centre.name},
-        "window": {"start": start, "end": end, "hours": round((end - start).total_seconds() / 3600, 4)},
+        "window": _window_json(start, end, hours, the_shift),
         "total_seconds": round(total, 1),
         "reasons": ordered,
         "unlabelled_share": next((b["share"] for b in ordered if b["reason"] == UNLABELLED), 0.0),
@@ -392,7 +459,8 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float = 8.
 
 
 def tag_trend(
-    db: Session, equipment_code: str, tag: str | None = None, hours: float = 8.0, buckets: int = 240
+    db: Session, equipment_code: str, tag: str | None = None, hours: float = 8.0,
+    buckets: int = 240, shift: str | None = None
 ) -> dict:
     """One machine's process value over the window, averaged into buckets.
 
@@ -406,8 +474,13 @@ def tag_trend(
     only surface in the deployment that matters.
     """
     unit = masterdata.get_equipment(db, equipment_code)
+    the_shift = _shift(db, shift)
     end = utcnow()
-    start = end - timedelta(hours=hours)
+    if the_shift is not None:
+        start, end = the_shift.starts_at, min(the_shift.ends_at, end)
+        start = min(start, end)
+    else:
+        start = end - timedelta(hours=hours)
 
     if tag is None:
         # The machine's process value. Ask the tag map first: it names the
@@ -440,7 +513,8 @@ def tag_trend(
                 .limit(1)
             )
         if tag is None:
-            return {"equipment": equipment_code, "tag": None, "points": [], "window": {"start": start, "end": end}}
+            return {"equipment": equipment_code, "tag": None, "points": [],
+                    "window": _window_json(start, end, hours, the_shift)}
     elif "." not in tag:
         tag = f"{equipment_code}.{tag}"
 
@@ -486,17 +560,19 @@ def tag_trend(
     return {
         "equipment": equipment_code,
         "tag": tag.split(".", 1)[-1],
-        "window": {"start": start, "end": end, "hours": hours},
+        "window": _window_json(start, end, hours, the_shift),
         "points": points,
     }
 
 
-def production_trend(db: Session, line_code: str | None = None, hours: float = 8.0, buckets: int = 60) -> dict:
+def production_trend(db: Session, line_code: str | None = None, hours: float = 8.0,
+                     buckets: int = 60, shift: str | None = None) -> dict:
     """Good and scrap over time for the whole line, bucketed."""
     centre, units = _line_and_units(db, line_code)
+    the_shift = _shift(db, shift)
     ids = [unit.id for unit in units]
     # Same clamp as the OEE panel, so every chart on the page shares one axis.
-    start, end = _window(db, units, hours)
+    start, end = _window(db, units, hours, the_shift)
     span = max((end - start).total_seconds(), 1.0)
     width = span / max(buckets, 1)
     rows = db.execute(
@@ -513,12 +589,52 @@ def production_trend(db: Session, line_code: str | None = None, hours: float = 8
 
     return {
         "line": {"code": centre.code, "name": centre.name},
-        "window": {"start": start, "end": end, "hours": hours},
+        # The window as drawn, not as asked for: this chart shares the OEE
+        # panel's axis, and the two saying different numbers of hours about
+        # one axis is how a reader is misled about what they are looking at.
+        "window": _window_json(start, end, hours, the_shift),
         "bucket_seconds": round(width, 1),
         "points": [
             {"t": start + timedelta(seconds=(b + 0.5) * width), "good": good, "scrap": scrap}
             for b, (good, scrap) in sorted(grouped.items())
         ],
+    }
+
+
+def shifts(db: Session, days: int = 7) -> dict:
+    """The shifts a screen can offer, newest first, and which one is running.
+
+    Every list states its total, and this one states two things a picker has
+    to say out loud: the clock these times are read on, and whether anybody
+    chose that clock. A shift boundary drawn in the browser's zone on a plant
+    five hours away is the bug `fsmes.identity` exists to stop.
+    """
+    the_clock = identity.clock()
+    now = utcnow()
+    known = calendar_service.patterns(db)
+    if not known:
+        return {"timezone": the_clock.name, "timezone_defaulted": the_clock.defaulted,
+                "days": days, "current": None, "previous": None,
+                "shifts": [], "shifts_total": 0,
+                "note": ("this plant has no shift patterns, so nothing can be "
+                         "windowed by shift yet")}
+
+    found = calendar_service.occurrences(db, now - timedelta(days=days), now)
+    current = calendar_service.shift_for(db, now)
+    previous = next((s for s in reversed(found)
+                     if s.ends_at <= (current.starts_at if current else now)), None)
+    return {
+        "timezone": the_clock.name,
+        "timezone_defaulted": the_clock.defaulted,
+        "days": days,
+        "current": current.key() if current else None,
+        "previous": previous.key() if previous else None,
+        "shifts": [s.as_json() | {"in_progress": s.ends_at > now}
+                   for s in reversed(found)],
+        "shifts_total": len(found),
+        "note": None if current else (
+            "the plant is not in a shift at the moment, so `shift=current` has "
+            "no answer"),
     }
 
 
@@ -531,6 +647,7 @@ __all__ = [
     "lines",
     "oee_breakdown",
     "production_trend",
+    "shifts",
     "state_timeline",
     "tag_trend",
 ]

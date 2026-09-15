@@ -12,7 +12,31 @@
 const $ = (s) => document.querySelector(s);
 const NS = "http://www.w3.org/2000/svg";
 
-let state = { line: null, hours: 8, machine: null };
+let state = { line: null, hours: 8, shift: null, machine: null };
+
+/* The window, in the one place that builds it. Either a trailing span of
+   hours or a named shift on the plant's clock — never both, because a screen
+   that said "night shift" while showing the last eight hours would be worse
+   than an error. */
+function query() {
+  const q = new URLSearchParams();
+  if (state.shift) q.set("shift", state.shift);
+  else q.set("hours", String(state.hours));
+  if (state.line) q.set("line", state.line);
+  return "?" + q.toString();
+}
+
+/* Keep the picks in the address bar so a screen can be handed to somebody
+   else and come back the same. */
+function remember() {
+  const url = new URL(window.location);
+  const p = url.searchParams;
+  if (state.line) p.set("line", state.line); else p.delete("line");
+  if (state.shift) { p.set("shift", state.shift); p.delete("hours"); }
+  else { p.set("hours", String(state.hours)); p.delete("shift"); }
+  if (state.machine) p.set("machine", state.machine); else p.delete("machine");
+  history.replaceState(null, "", url);
+}
 
 const api = (path) => FS.api(path);
 const { utc, duration, svg, add, empty, timeTicks } = FS.kit;
@@ -212,15 +236,16 @@ async function load() {
     if (dot) dot.className = "dot" + (ok ? "" : " bad");
     if (text) text.textContent = ok ? "live" : "reconnecting…";
   };
-  const query = `?hours=${state.hours}` + (state.line ? `&line=${encodeURIComponent(state.line)}` : "");
+  const q = query();
   const banner = $("#banner");
   banner.classList.add("hidden");
+  remember();
 
   const [oee, timeline, downtime, production] = await Promise.all([
-    api(`/analysis/oee${query}`),
-    api(`/analysis/timeline${query}`),
-    api(`/analysis/downtime${query}`),
-    api(`/analysis/production${query}`),
+    api(`/analysis/oee${q}`),
+    api(`/analysis/timeline${q}`),
+    api(`/analysis/downtime${q}`),
+    api(`/analysis/production${q}`),
   ]);
 
   $("#kpi-oee").textContent = pct(oee.line_oee);
@@ -241,11 +266,18 @@ async function load() {
       `that is how long the MES has been watching this line. Time before that is not downtime.`;
     banner.classList.remove("hidden");
   }
-  // The OEE window read on the plant's clock. The window itself is a
-  // trailing span of hours and has no wall-clock boundary in it; what the
-  // zone decides is only how a reader sees the two ends of it.
-  $("#window-note").textContent =
-    `${FS.fmt.stamp(oee.window.start)} → ${FS.fmt.clock(oee.window.end)}`;
+  // The window read on the plant's clock. A span of hours has no wall-clock
+  // boundary in it and the zone only decides how a reader sees its two ends;
+  // a shift window is a boundary, drawn where the plant's own clock puts it,
+  // so it says which shift it is and how much of it has run.
+  const shift = oee.window.shift;
+  $("#window-note").textContent = shift
+    ? `${shift.code} ${shift.day} · ${FS.fmt.stamp(oee.window.start)} → ` +
+      `${FS.fmt.clock(oee.window.end)}` +
+      (shift.in_progress
+        ? ` · ${oee.window.hours.toFixed(2)} h of ${shift.nominal_hours} h so far`
+        : ` · ${shift.nominal_hours} h`)
+    : `${FS.fmt.stamp(oee.window.start)} → ${FS.fmt.clock(oee.window.end)}`;
 
   renderOee(oee);
   renderTimeline(timeline);
@@ -256,9 +288,42 @@ async function load() {
   const codes = oee.stations.map((s) => s.code);
   if (!codes.includes(state.machine)) state.machine = oee.constraint || codes[0] || null;
   picker.replaceChildren(...codes.map((code) => new Option(code, code, false, code === state.machine)));
-  if (state.machine) renderTag(await api(`/analysis/tag/${encodeURIComponent(state.machine)}${query}`));
+  if (state.machine) renderTag(await api(`/analysis/tag/${encodeURIComponent(state.machine)}${q}`));
   else empty($("#tag"), "No machines on this line.");
   flip(true);
+}
+
+/* The shift picker. Only the shifts the plant really has are offered: a
+   screen that offered "this shift" on a plant that has told the MES nothing
+   about its shifts would be offering a window nobody can compute. */
+async function fillShifts(wanted) {
+  const select = $("#shift");
+  const zone = $("#shift-zone");
+  const data = await api("/analysis/shifts").catch(() => null);
+  const options = [new Option("by hours", "")];
+  if (data && data.shifts_total) {
+    if (data.current) options.push(new Option("this shift", "current"));
+    if (data.previous) options.push(new Option("last shift", "previous"));
+    for (const s of data.shifts) {
+      options.push(new Option(`${s.code} · ${s.day}${s.in_progress ? " (running)" : ""}`, s.key));
+    }
+  }
+  select.replaceChildren(...options);
+  select.disabled = !(data && data.shifts_total);
+  // Which clock those boundaries are drawn on, and whether anybody chose it.
+  // A shift boundary read in the browser's zone on a plant five hours away is
+  // the whole reason `MES_PLANT_TIMEZONE` exists.
+  zone.textContent = !data
+    ? ""
+    : data.shifts_total
+      ? `on ${data.timezone || "this machine's own clock"}` +
+        (data.timezone_defaulted ? " (defaulted — nobody set MES_PLANT_TIMEZONE)" : "")
+      : (data.note || "");
+  if (wanted && [...select.options].some((o) => o.value === wanted)) {
+    state.shift = wanted;
+    select.value = wanted;
+  }
+  $("#hours").disabled = Boolean(state.shift);
 }
 
 async function boot() {
@@ -268,16 +333,35 @@ async function boot() {
   select.replaceChildren(
     ...lines.map((l) => new Option(`${l.code} — ${l.name} (${l.stations})`, l.code))
   );
-  const wanted = new URL(window.location).searchParams.get("line");
+  const params = new URL(window.location).searchParams;
+  const wanted = params.get("line");
   state.line = lines.some((l) => l.code === wanted) ? wanted : (lines.length ? lines[0].code : null);
   if (state.line) select.value = state.line;
 
+  const askedHours = parseFloat(params.get("hours"));
+  if (Number.isFinite(askedHours) && askedHours > 0) {
+    state.hours = askedHours;
+    const hoursSelect = $("#hours");
+    if ([...hoursSelect.options].some((o) => parseFloat(o.value) === askedHours)) {
+      hoursSelect.value = String(askedHours);
+    }
+  }
+  state.machine = params.get("machine") || null;
+  await fillShifts(params.get("shift"));
+
   select.onchange = () => { state.line = select.value; load().catch(fail); };
   $("#hours").onchange = (e) => { state.hours = parseFloat(e.target.value); load().catch(fail); };
+  $("#shift").onchange = (e) => {
+    state.shift = e.target.value || null;
+    // The two windows are alternatives, and the disabled picker says so
+    // rather than leaving a stale "8 hours" sitting beside "night shift".
+    $("#hours").disabled = Boolean(state.shift);
+    load().catch(fail);
+  };
   $("#tag-machine").onchange = async (e) => {
     state.machine = e.target.value;
-    const query = `?hours=${state.hours}` + (state.line ? `&line=${encodeURIComponent(state.line)}` : "");
-    renderTag(await api(`/analysis/tag/${encodeURIComponent(state.machine)}${query}`));
+    remember();
+    renderTag(await api(`/analysis/tag/${encodeURIComponent(state.machine)}${query()}`));
   };
   $("#refresh").onclick = () => load().catch(fail);
   // Re-lay-out the SVGs when the window changes width; they are sized in pixels.
