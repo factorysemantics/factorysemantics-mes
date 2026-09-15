@@ -159,6 +159,7 @@ nav:
           - decisions/0027-an-spc-signal-raises-a-hold.md
           - decisions/0028-which-shift-a-minute-belongs-to.md
           - decisions/0028-an-order-does-not-finish-itself.md
+          - decisions/0029-an-order-does-not-finish-itself.md
           - Template: decisions/TEMPLATE.md
   - Agents:
       - agents/index.md

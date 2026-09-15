@@ -371,7 +371,7 @@ function renderActions(order) {
 
 /* Finishing a step is a person's act: a machine counting to the ordered
    quantity does not do it, because a line that has made its number is
-   routinely still running (decision 0027). This is where that person says so.
+   routinely still running (decision 0029). This is where that person says so.
    Until the step has started there is nothing to finish, and a step already
    done says so instead of offering the button again. */
 function finishCell(order, op) {

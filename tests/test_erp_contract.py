@@ -31,7 +31,7 @@ def _run_order(session, code="WO-CT-1", qty=10.0):
 
 def _finish(session, code: str, *seqs: int) -> None:
     """Finish the named steps. Counting to the ordered quantity does not do it:
-    an operation stays open until somebody completes it (decision 0028)."""
+    an operation stays open until somebody completes it (decision 0029)."""
     for seq in seqs:
         workorders.complete_operation(session, code, seq, actor="test")
 

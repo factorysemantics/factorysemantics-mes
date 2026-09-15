@@ -75,5 +75,5 @@ an agent that stays up — never a default in the code.
 - [Reading OEE](reading-oee.md)
 - Decision records [0004](../decisions/0004-never-invent-production.md),
   [0019](../decisions/0019-count-everything-the-machine-counted.md) and
-  [0028](../decisions/0028-an-order-does-not-finish-itself.md)
+  [0029](../decisions/0029-an-order-does-not-finish-itself.md)
 - The house rules in [CONTRIBUTING](https://github.com/factorysemantics/factorysemantics-mes/blob/main/CONTRIBUTING.md)

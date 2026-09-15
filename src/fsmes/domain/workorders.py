@@ -79,7 +79,7 @@ class WorkOrder(Base):
         this is the number that says so out loud instead of leaving a reader
         of the screen to notice that 16/15 is not a typo. It is the true
         over-run because booking does not stop at the quantity and the order
-        does not finish itself there (decision 0028).
+        does not finish itself there (decision 0029).
         """
         return max(self.good_qty - self.quantity, 0.0)
 

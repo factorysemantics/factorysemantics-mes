@@ -23,7 +23,7 @@ goes under Honesty with a migration line, so plant people can find it.
   all issued on completion. Where two orders are released on one routing,
   completing the first is also what moves that machine onto the second. The
   certificate now records the person who finished the order as its approver,
-  where it used to say `system`. Decision record [0028](docs/decisions/0028-an-order-does-not-finish-itself.md).
+  where it used to say `system`. Decision record [0029](docs/decisions/0029-an-order-does-not-finish-itself.md).
 
 - **An SPC signal now does something, and a station's inspection now reaches
   the chart.** Two halves of one gap. `GET /quality/spc/{material}/{characteristic}`

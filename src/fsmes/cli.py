@@ -1243,7 +1243,7 @@ async def _demo(settings: Settings, duration: int) -> str | None:
                 # The line has made the number and it has not stopped: the
                 # counters keep coming and the MES keeps booking them to this
                 # order, which is what makes an over-run the true one
-                # (decision 0028). Finishing the order is SCOTT's act, and
+                # (decision 0029). Finishing the order is SCOTT's act, and
                 # here he does it once the last step has the ordered quantity
                 # - every step, not only the ones that have reached it, since
                 # what he is finishing is the order.

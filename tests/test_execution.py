@@ -23,7 +23,7 @@ def test_consume_decrements_lot_and_blocks_overdraw(session, released_order):
 def test_opc_counts_drive_the_order_but_a_person_finishes_it(session, released_order):
     # Machine counters arrive as deltas and auto-start a pending operation.
     # They never finish one: an order that has made its number is routinely
-    # still running, so completion is an act (decision 0027).
+    # still running, so completion is an act (decision 0029).
     for _ in range(4):
         execution.report(session, equipment_code="MIX01", good=1, source=ProductionSource.OPC, actor="opc-agent")
     execution.report(session, equipment_code="PACK01", good=4, source=ProductionSource.OPC, actor="opc-agent")

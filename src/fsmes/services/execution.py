@@ -7,7 +7,7 @@ They do not finish one. An order's quantity is what the plant was asked for,
 not a gate on the floor, and a line that keeps running past it is making real
 units against a real order. So booking continues past the ordered quantity and
 the order says how far past it ran; completing an operation is an act — a
-person on the floor, or the ERP. See decision 0028.
+person on the floor, or the ERP. See decision 0029.
 """
 
 from datetime import datetime
@@ -157,7 +157,7 @@ def report(
     booked to the operation that made it, and the order says how far past it
     ran through `WorkOrder.over_qty`. The operation stays open until somebody
     completes it, because reaching a quantity is not the same fact as being
-    finished (decision 0028).
+    finished (decision 0029).
 
     A machine count arriving when no operation is open is recorded as
     *unassigned production* — a log row against the equipment with no order
