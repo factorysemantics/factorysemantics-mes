@@ -51,9 +51,9 @@ function yieldCell(value) {
 function overCell(order) {
   const over = order.over_qty || 0;
   if (!over) return el("td", "num muted", (order.good_qty || 0) > 0 ? "0" : "—");
-  const pct = order.quantity ? ` (+${((over / order.quantity) * 100).toFixed(0)}%)` : "";
-  const cell = el("td", "num over-run", fmt.qty(over) + pct);
-  cell.title = `${fmt.qty(order.good_qty)} booked against ${fmt.qty(order.quantity)} ordered`;
+  const cell = el("td", "num over-run", fmt.qty(over));
+  const pct = order.quantity ? ` - ${((over / order.quantity) * 100).toFixed(0)}% past it` : "";
+  cell.title = `${fmt.qty(order.good_qty)} booked against ${fmt.qty(order.quantity)} ordered${pct}`;
   return cell;
 }
 
@@ -106,14 +106,18 @@ function renderList() {
     row.appendChild(st);
     row.appendChild(dueCell(o.due_date, o.status));
 
-    const done = Math.min(1, (o.good_qty || 0) / (o.quantity || 1));
+    // The bar is clamped because a bar cannot be longer than its track. The
+    // number beside it is not: an order at 153% of its quantity says 153%,
+    // where it used to say 100% and leave the over-run to another column.
+    const made = (o.good_qty || 0) / (o.quantity || 1);
     const prog = el("td");
     const bar = el("div", "progress");
     const fill = el("div", "bar");
-    fill.style.width = (done * 100).toFixed(0) + "%";
+    fill.style.width = (Math.min(1, made) * 100).toFixed(0) + "%";
     bar.appendChild(fill);
     prog.appendChild(bar);
-    prog.appendChild(el("span", "muted small", (done * 100).toFixed(0) + "%"));
+    prog.appendChild(el("span", made > 1 ? "small over-run" : "muted small",
+                        (made * 100).toFixed(0) + "%"));
     row.appendChild(prog);
 
     row.appendChild(el("td", "num", fmt.qty(o.quantity)));
