@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from fsmes.db import utcnow
 from fsmes.domain import Equipment, EquipmentLevel, EquipmentState, EquipmentStateName, ProductionLog
-from fsmes.services import audit, masterdata, outbox
+from fsmes.services import audit, calendar, masterdata, outbox
 from fsmes.services import oee as oee_rules
 
 # Below this much observed runtime history, OEE components are reported as
@@ -35,6 +35,11 @@ def set_state(
     if current is not None:
         current.ended_at = now
     new = EquipmentState(equipment_id=equipment.id, state=state, reason=reason, started_at=now)
+    # The shift the interval began in. It is not re-stamped when the interval
+    # closes: an interval that ran past a boundary belongs, as a record, to
+    # the shift it started in, and per-shift reporting clips its seconds to
+    # the window so the time itself still lands on both shifts.
+    calendar.attribute(session, new, now, equipment.id)
     session.add(new)
     session.flush()
     audit.record(

@@ -9,7 +9,7 @@ from sqlalchemy import ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from fsmes.db import Base, utcnow
-from fsmes.domain.common import str_enum
+from fsmes.domain.common import ShiftStamped, str_enum
 from fsmes.domain.masterdata import Equipment
 
 
@@ -20,7 +20,7 @@ class EquipmentStateName(enum.StrEnum):
     SETUP = "setup"
 
 
-class EquipmentState(Base):
+class EquipmentState(ShiftStamped, Base):
     """One contiguous stretch in a state. The open interval (ended_at IS NULL)
     is the equipment's current state."""
 
@@ -44,5 +44,10 @@ class EquipmentState(Base):
     reason_source: Mapped[str | None] = mapped_column(String(80))
     started_at: Mapped[datetime] = mapped_column(default=utcnow)
     ended_at: Mapped[datetime | None]
+    # `shift_code`/`shift_day` (ShiftStamped) are the shift the interval
+    # *began* in. An interval that runs past a shift boundary is not split
+    # here - it is one thing the machine did - and per-shift reporting clips
+    # it to the window instead, so its seconds land on both shifts in the
+    # proportion the machine actually spent there.
 
     equipment: Mapped[Equipment] = relationship()

@@ -33,6 +33,30 @@ goes under Honesty with a migration line, so plant people can find it.
   and changes no data. Decision record
   [0027](docs/decisions/0027-an-spc-signal-raises-a-hold.md).
 
+- **Every production booking, state interval, check and non-conformance now
+  says which shift it fell in, and analysis can be asked for one.** Until now
+  the calendar could say whether the plant was *meant to be working* and
+  nothing more: no row carried a shift and `/analysis/*` was windowed only in
+  hours, so the one question a supervisor asks — how did my shift go — could
+  only be answered by picking a number of hours and hoping it lined up with
+  the boundary. Three rules decide it, each with a test and each capable of
+  moving a number ([decision 0028](docs/decisions/0028-which-shift-a-minute-belongs-to.md)):
+  a shift is half-open, so a unit counted at 22:00:00 belongs to the shift
+  that began and to only one shift; a shift that crosses midnight belongs to
+  the plant-local day it *started*, so Friday night is Friday's at two on
+  Saturday morning; and an instant no pattern covers is **not attributed**
+  rather than filed under the nearest shift. A state interval that runs past a
+  boundary keeps the shift it began in — it is one thing the machine did — and
+  the *reporting* splits instead, clipping it to each shift's own two ends. A
+  shift still running is clipped to now, never to the hour it is rostered to
+  end, because the rest of it has not happened. **Migration:** two nullable
+  columns (`shift_code`, `shift_day`) on `production_logs`,
+  `equipment_states`, `quality_checks` and `non_conformances`, backfilled from
+  the shift patterns **as they stand at upgrade time** — this product keeps no
+  history of shift patterns, so a plant that moved a boundary will see older
+  rows attributed to the current pattern, and rows no pattern covers stay
+  null. `docs/plant/shifts.md` says what to do about that.
+
 - **Every number a lab run stores about the MES's OEE says which clock it is
   on.** A run at 20x stored the MES's performance as `19.77` under the plain
   name `performance` while the difference printed beside it had been computed
@@ -50,6 +74,18 @@ goes under Honesty with a migration line, so plant people can find it.
   `performance_as_reported` if it is quoting the MES.
 
 ### Added
+
+- **`shift=` on every analysis endpoint, and a shift selector on the Analysis
+  screen.** `current`, `previous`, or a day and a code such as
+  `2026-09-14/NIGHT`, read on the plant's own clock — beside the existing
+  `hours=`, never mixed with it. A shift that names nothing (the plant is
+  between shifts, the code is not a pattern, the pattern does not run that
+  day) is a `400` with one sentence rather than a quiet fall-back to eight
+  hours. `GET /analysis/shifts` lists what a picker can offer, which shift is
+  running, the total, and which clock the boundaries are drawn on and whether
+  anybody chose it. The screen keeps line, window, shift and machine in the
+  address bar. The MCP tools `downtime` and `tag_trend` take the same `shift`
+  argument and a new `shifts` tool lists them.
 
 - **A lab run can ask what `fsmes fleet console` made of its plants.** The
   console's promise is decision 0023's — a plant that did not answer is
@@ -174,6 +210,18 @@ goes under Honesty with a migration line, so plant people can find it.
   hour, and about two thousand units more than the order asked for.
 
 ### Fixed
+
+- **The production trend reports the window it drew, not the window it was
+  asked for.** It shares the OEE panel's axis, and the two saying different
+  numbers of hours about one axis is how a reader is misled about what they
+  are comparing. The state Gantt's merge floor now scales with the window as
+  drawn, for the same reason.
+
+- **The README and the docs front page said 85 MCP tools; the product
+  registers 89.** Counted from the two servers' own registries. The rest of
+  the sentence still holds: ten of the twenty-three modules ship tools, nine
+  of the twenty-three are the kernel, and a pack that switches a module off
+  takes its tools with it.
 
 - **Two ephemeral runs on one machine no longer choose the same port.** A
   scored run probed for a free port by binding one and closing the socket

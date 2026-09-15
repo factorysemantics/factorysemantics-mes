@@ -9,7 +9,7 @@ from sqlalchemy import JSON, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from fsmes.db import Base, utcnow
-from fsmes.domain.common import str_enum
+from fsmes.domain.common import ShiftStamped, str_enum
 from fsmes.domain.masterdata import Material
 
 
@@ -34,7 +34,7 @@ class CheckResult(enum.StrEnum):
     FAIL = "fail"
 
 
-class QualityCheck(Base):
+class QualityCheck(ShiftStamped, Base):
     __tablename__ = "quality_checks"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -90,7 +90,7 @@ class NcDisposition(enum.StrEnum):
     RETURN = "return"
 
 
-class NonConformance(Base):
+class NonConformance(ShiftStamped, Base):
     __tablename__ = "non_conformances"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -101,6 +101,11 @@ class NonConformance(Base):
     lot_id: Mapped[int | None] = mapped_column(ForeignKey("material_lots.id"))
     status: Mapped[NcStatus] = mapped_column(str_enum(NcStatus), default=NcStatus.OPEN)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    # `shift_code`/`shift_day` (ShiftStamped) are the shift it was *raised*
+    # in. A non-conformance is reviewed, dispositioned and closed on other
+    # days by other people; those steps carry their own timestamps above and
+    # no shift of their own, because the shift that matters for a per-shift
+    # quality report is the one the problem was found on.
     closed_at: Mapped[datetime | None]
 
     # Who, at each step. A step nobody took is null rather than the system's

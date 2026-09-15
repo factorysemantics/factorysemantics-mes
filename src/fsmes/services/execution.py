@@ -10,6 +10,7 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from fsmes.db import utcnow
 from fsmes.domain import (
     Equipment,
     LotConsumption,
@@ -22,7 +23,7 @@ from fsmes.domain import (
     WorkOrder,
     WorkOrderOperation,
 )
-from fsmes.services import Conflict, Invalid, NotFound, audit, masterdata, workorders
+from fsmes.services import Conflict, Invalid, NotFound, audit, calendar, masterdata, workorders
 
 # Counts this MES did not type in itself. Both keep units the MES has no
 # order for rather than refusing them, and both may start and finish an
@@ -202,18 +203,21 @@ def report(
 
     op.good_qty += good
     op.scrap_qty += scrap
-    session.add(
-        ProductionLog(
-            work_order_id=wo.id,
-            operation_id=op.id,
-            equipment_id=op.equipment_id,
-            good_qty=good,
-            scrap_qty=scrap,
-            source=source,
-            source_system=source_system,
-            **({"ts": ts} if ts is not None else {}),
-        )
+    booking = ProductionLog(
+        work_order_id=wo.id,
+        operation_id=op.id,
+        equipment_id=op.equipment_id,
+        good_qty=good,
+        scrap_qty=scrap,
+        source=source,
+        source_system=source_system,
+        **({"ts": ts} if ts is not None else {}),
     )
+    # The shift these units were *counted* in, from the booking's own instant
+    # - which is `ts` when another system supplied one, so a count replayed
+    # from last night lands on last night's shift rather than on this one.
+    calendar.attribute(session, booking, ts or utcnow(), op.equipment_id)
+    session.add(booking)
     # A machine counting is not an event worth an audit row per delta; a
     # person typing, or another system telling us, is.
     if source is not ProductionSource.OPC:
@@ -259,6 +263,7 @@ def record_unassigned(session: Session, *, equipment: Equipment,
         source_system=source_system,
         **({"ts": ts} if ts is not None else {}),
     )
+    calendar.attribute(session, row, ts or utcnow(), equipment.id)
     session.add(row)
     session.flush()
     return row

@@ -9,7 +9,7 @@ from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from fsmes.db import Base, utcnow
-from fsmes.domain.common import str_enum
+from fsmes.domain.common import ShiftStamped, str_enum
 from fsmes.domain.masterdata import Material
 from fsmes.domain.workorders import WorkOrderOperation
 
@@ -69,7 +69,7 @@ class ProductionSource(enum.StrEnum):
     EXTERNAL = "external"
 
 
-class ProductionLog(Base):
+class ProductionLog(ShiftStamped, Base):
     """Every quantity booking, whether typed by an operator or counted by a machine.
 
     `work_order_id` is nullable, and that is the whole point of this table
