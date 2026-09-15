@@ -145,6 +145,10 @@
          <lastmod>2026-09-15</lastmod>
     </url>
     <url>
+         <loc>https://docs.factorysemantics.com/dev/decisions/0027-an-spc-signal-raises-a-hold/</loc>
+         <lastmod>2026-09-15</lastmod>
+    </url>
+    <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/TEMPLATE/</loc>
          <lastmod>2026-09-15</lastmod>
     </url>
@@ -398,6 +402,10 @@
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/plant/never-invent-production/</loc>
+         <lastmod>2026-09-15</lastmod>
+    </url>
+    <url>
+         <loc>https://docs.factorysemantics.com/dev/plant/quality-signals/</loc>
          <lastmod>2026-09-15</lastmod>
     </url>
     <url>

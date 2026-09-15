@@ -10,6 +10,7 @@
 - [Plant — How-to — connect to Kepware — For IT](https://docs.factorysemantics.com/dev/onboarding/GUIDE-IT/)
 - [Plant — How-to — connect to Kepware — For Engineering](https://docs.factorysemantics.com/dev/onboarding/GUIDE-ENGINEERING/)
 - [Plant — How-to — read OEE](https://docs.factorysemantics.com/dev/plant/reading-oee/)
+- [Plant — Explanation — when a control chart notices something](https://docs.factorysemantics.com/dev/plant/quality-signals/)
 - [Plant — Explanation — never invent production](https://docs.factorysemantics.com/dev/plant/never-invent-production/)
 - [Operate](https://docs.factorysemantics.com/dev/operate/)
 - [Operate — Tutorial — beside your existing MES](https://docs.factorysemantics.com/dev/operate/first-plant/)

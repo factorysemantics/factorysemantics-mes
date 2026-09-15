@@ -697,6 +697,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../plant/quality-signals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — when a control chart notices something
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../plant/never-invent-production/" class="md-nav__link">
         
   
@@ -1719,6 +1747,17 @@
     <span class="md-ellipsis">
       
         Why these two are worth a measurement of their own
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a-quality-excursion-with-a-process-cause" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A quality excursion with a process cause
       
     </span>
   </a>
@@ -3315,6 +3354,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#a-quality-excursion-with-a-process-cause" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A quality excursion with a process cause
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3634,6 +3684,28 @@ downtime invents a breakdown that never happened and reports an availability
 figure that is wrong in the direction nobody checks — it looks <em>worse</em>, so it
 is believed. It is the changeover fault from the other side, and
 <code>labs/experiments/starved-and-blocked.toml</code> is the starter that looks for it.</p>
+<h3 id="a-quality-excursion-with-a-process-cause">A quality excursion with a process cause<a class="headerlink" href="#a-quality-excursion-with-a-process-cause" title="Permanent link">&para;</a></h3>
+<p>The washer runs three degrees hot; scrap climbs, and downstream the filler
+underweights every bottle by nine grams — warm, wet bottles fill short — with
+no alarm of its own. The failed fill-weight checks land on the filler and the
+cause is at the washer, which is the whole difficulty of the thing.</p>
+<p>Since the control chart's rules are judged when a reading is recorded
+(decision <a href="../../decisions/0027-an-spc-signal-raises-a-hold/">0027</a>), a run now
+shows the hold being raised while the line is still running the thing that
+caused it: look for <code>spc signal</code> in the log, with the rule and the NC it
+raised. <code>labs/experiments/scrap-burst.toml</code> is the starter, and it runs at 2× — much
+slower than the others — for a reason it states. What sets how fast readings
+reach the chart is not the floor's cadence but how often the MES stores a new
+value for the tag the floor is reading, and a control chart draws no limits
+until it has twelve of them. At 20× half an hour of line time is nine
+readings and a run in which nothing could fire however wrong the line went.
+The cost is a quarter of an hour of wall clock: the other starters ask what
+the MES counted, and counting is quick; this one asks about a judgement over a
+series.</p>
+<p>The distance worth measuring — from the first underweight bottle to the moment
+the hold exists — is not measured yet: <code>quality</code> is a planned measurement, not
+a built one. The starter exists first so the measurement has a run to be built
+against.</p>
 <h2 id="what-a-run-writes">What a run writes<a class="headerlink" href="#what-a-run-writes" title="Permanent link">&para;</a></h2>
 <p>One directory per run, under <code>lab-results/</code> unless <code>--results</code> says otherwise:</p>
 <table>
@@ -4068,6 +4140,10 @@ recomputed; the numbers are the ones the run measured.</p>
 <tr>
 <td><code>labs/experiments/starved-and-blocked.toml</code></td>
 <td>twenty minutes in which nothing breaks and nothing is made: the empties run out, then the palletiser stops taking cases — and how long each took to reach a screen</td>
+</tr>
+<tr>
+<td><code>labs/experiments/scrap-burst.toml</code></td>
+<td>half an hour at 2× in which the washer runs hot, the filler underweights, and the control chart raises the hold</td>
 </tr>
 </tbody>
 </table>
