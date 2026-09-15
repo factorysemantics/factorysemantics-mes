@@ -8,7 +8,12 @@ from fsmes.domain.calendar import (
     ShiftPattern,
 )
 from fsmes.domain.documents import Document, DocumentStatus
-from fsmes.domain.equipment import EquipmentState, EquipmentStateName
+from fsmes.domain.equipment import (
+    ConnectionStateName,
+    EquipmentConnection,
+    EquipmentState,
+    EquipmentStateName,
+)
 from fsmes.domain.execution import (
     LotConsumption,
     LotStatus,
@@ -73,9 +78,11 @@ __all__ = [
     "Calibration",
     "CalibrationResult",
     "CheckResult",
+    "ConnectionStateName",
     "Document",
     "DocumentStatus",
     "Equipment",
+    "EquipmentConnection",
     "EquipmentLevel",
     "EquipmentState",
     "EquipmentStateName",

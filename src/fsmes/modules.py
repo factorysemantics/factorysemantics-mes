@@ -184,7 +184,8 @@ REGISTRY: tuple[Module, ...] = (
                  "from the URL; the page is the same file for every machine."),
         ),
         tools=("fsmes.mcp.equipment",),
-        tables=("equipment", "equipment_states", "tag_values", "uns_publications"),
+        tables=("equipment", "equipment_connections", "equipment_states", "tag_values",
+                "uns_publications"),
     ),
     Module(
         name="dashboard",

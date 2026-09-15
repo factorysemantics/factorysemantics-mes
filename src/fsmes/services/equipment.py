@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from fsmes.db import utcnow
 from fsmes.domain import Equipment, EquipmentLevel, EquipmentState, EquipmentStateName, ProductionLog
 from fsmes.services import audit, calendar, masterdata, outbox
+from fsmes.services import connection as connection_service
 from fsmes.services import oee as oee_rules
 
 # Below this much observed runtime history, OEE components are reported as
@@ -276,6 +277,10 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
     # machine: time we have no record of is not downtime.
     starts = {m.id: (end if seen.get(m.id) is None else max(asked, seen[m.id])) for m in machines}
     seconds = state_seconds(session, ids, asked, end)
+    # The same rule applied to holes in the middle of the window rather than
+    # at its start: seconds the MES could not see this machine are not
+    # downtime either, and they leave the denominator (decision 0028).
+    unknown = connection_service.unknown_seconds(session, ids, asked, end)
     # Production is counted from each machine's own clamped start. The usual
     # case - every machine observed for the whole window - is one grouped
     # query. Machines the MES met partway through the window are grouped by
@@ -301,6 +306,10 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
     for m in machines:
         start = starts[m.id]
         window_seconds = (end - start).total_seconds()
+        # Clipped to this machine's own clamped window: a disconnection that
+        # started before the MES first saw the machine is not inside it.
+        unknown_seconds = min(unknown.get(m.id, 0.0), window_seconds)
+        observed_seconds = max(0.0, window_seconds - unknown_seconds)
         by_state = seconds.get(m.id, {})
         runtime = by_state.get(EquipmentStateName.RUNNING.value, 0.0)
         downtime = by_state.get(EquipmentStateName.DOWN.value, 0.0)
@@ -308,7 +317,9 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
         total = good + scrap
 
         # Too little observed time to divide by: say "unknown", never "zero".
-        availability = runtime / window_seconds if window_seconds >= _MIN_WINDOW_SECONDS else None
+        # The denominator is time the MES was *watching*, not time that passed.
+        availability = (runtime / observed_seconds
+                        if observed_seconds >= _MIN_WINDOW_SECONDS else None)
         # Never capped, and the note is the sentence the screen puts beside it
         # — see `fsmes.services.oee`.
         performance, performance_note = oee_rules.performance(
@@ -322,6 +333,14 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
         out[m.code] = {
             "equipment": m.code,
             "window_hours": round(window_seconds / 3600, 4),  # effective, after clamping
+            # How much of that window nobody was watching, and what share of
+            # it that is. Beside the figure, never folded into it: 92 %
+            # availability over forty observed minutes of an eight-hour
+            # window is not the same claim as 92 % over the shift.
+            "observed_hours": round(observed_seconds / 3600, 4),
+            "unknown_seconds": round(unknown_seconds, 1),
+            "unknown_share": (round(unknown_seconds / window_seconds, 4)
+                              if window_seconds > 0 else None),
             "availability": round(availability, 4) if availability is not None else None,
             "performance": round(performance, 4) if performance is not None else None,
             "performance_note": performance_note,

@@ -28,7 +28,7 @@ from asyncua import Client
 from fsmes import shadow
 from fsmes.config import Settings
 from fsmes.db import session_scope
-from fsmes.domain import ProductionSource, TagValue
+from fsmes.domain import ConnectionStateName, ProductionSource, TagValue
 from fsmes.integrations.opc.security import apply_security, explain_connection_error
 from fsmes.integrations.opc.tag_map import MachineMap, load_manifest, load_tag_map
 from fsmes.kernel.tags import COUNTER_TAGS, INSPECTION_PREFIX, INSPECTION_TAGS, SEMANTIC_TAGS
@@ -42,10 +42,17 @@ from fsmes.services import (
     triggers,
     workorders,
 )
+from fsmes.services import (
+    connection as connection_service,
+)
 
 log = structlog.get_logger("opc.agent")
 
 _ORDER_SYNC_SECONDS = 2.0
+
+# The floor under the health watchdog. A check more often than once a second
+# buys nothing a plant can act on and costs a round trip every time.
+MIN_HEALTH_SECONDS = 1.0
 
 
 # How much slower process-value history is sampled than the semantic tags,
@@ -716,13 +723,102 @@ def inspection_specs(manifest: dict, machines: list[MachineMap]) -> dict[str, di
     return out
 
 
+class _Link:
+    """What this agent can currently see, and when it last had proof of it.
+
+    The agent is the only thing that knows its link died, and it is the only
+    thing that can say so before the MES's own numbers start inventing. So it
+    writes two facts down: that the machines on this endpoint are connected
+    (when the subscription goes live) and that they are not (when it goes
+    away, for any reason, including this process shutting down cleanly).
+
+    `seen` is the last moment there was *positive* evidence - a successful
+    health check. It becomes the disconnection's `started_at`, while the
+    moment the watchdog noticed becomes its `detected_at`. Those are
+    different times and the seconds between them are genuinely unknown, so
+    both are recorded rather than one being made up from the other.
+
+    The in-memory `state` is what keeps a server that has been down for an
+    hour from writing a row every three seconds: only a change is written.
+    """
+
+    def __init__(self, codes: list[str], endpoint: str) -> None:
+        self.codes = codes
+        self.endpoint = endpoint
+        self.seen: datetime | None = None
+        self.state: ConnectionStateName | None = None
+
+    def _now(self) -> datetime:
+        return datetime.now(UTC).replace(tzinfo=None)
+
+    def proof(self) -> None:
+        """The link answered just now."""
+        self.seen = self._now()
+
+    def _write(self, state: ConnectionStateName, reason: str | None) -> None:
+        detected = self._now()
+        at = self.seen if state is ConnectionStateName.DISCONNECTED else detected
+        with session_scope() as session:
+            for code in self.codes:
+                connection_service.set_connection(
+                    session, equipment_code=code, state=state,
+                    at=at or detected, detected_at=detected,
+                    reason=reason, source=self.endpoint, actor="opc-agent")
+        self.state = state
+
+    def connected(self) -> None:
+        self.proof()
+        if self.state is ConnectionStateName.CONNECTED:
+            return
+        self._write(ConnectionStateName.CONNECTED, None)
+
+    def disconnected(self, reason: str) -> None:
+        if self.state is ConnectionStateName.DISCONNECTED:
+            return
+        self._write(ConnectionStateName.DISCONNECTED, reason)
+        log.warning("machines are disconnected", endpoint=self.endpoint,
+                    machines=len(self.codes), since=self.seen.isoformat() if self.seen else None,
+                    reason=reason)
+
+
+def health_seconds(settings: Settings) -> float:
+    """How often to ask the server whether the session is alive. Config, not
+    code: the plant sets its publish interval and how many of them to wait."""
+    periods = max(1, int(settings.opc_health_periods))
+    return max(MIN_HEALTH_SECONDS, settings.opc_publish_ms * periods / 1000.0)
+
+
+async def _health_watchdog(client: Client, link: _Link, every: float) -> None:
+    """Ask the server whether the session is still there, and stop the
+    connection when it is not.
+
+    A positive check, deliberately. The obvious alternative - "no data change
+    for N publish intervals" - is wrong on a real line, because OPC UA
+    notifies on change and a machine standing idle correctly sends nothing for
+    an hour. Inferring an outage from that invents one, which is the same
+    fault as missing a real one, in the other direction.
+
+    Raising is the point: it breaks out of `async with client`, which is the
+    one path that both drains the handler and records the disconnection.
+    """
+    while True:
+        await asyncio.sleep(every)
+        await client.check_connection()
+        link.proof()
+
+
 async def run(settings: Settings) -> None:
     manifest = load_manifest(settings.replay_dir)
     machines = load_tag_map(settings.tag_map_file, manifest)
     inspections = inspection_specs(manifest, machines)
     if inspections:
         log.info("inspection groups mapped", stations=sorted(inspections))
+    # What this endpoint's machines can currently be seen through, carried
+    # across reconnects so only a *change* is ever written down.
+    link = _Link([m.equipment for m in machines], settings.opc_endpoint)
+    every = health_seconds(settings)
     while True:
+        reason = "the agent stopped watching this endpoint"
         try:
             client = Client(settings.opc_endpoint)
             await apply_security(client, settings)
@@ -770,25 +866,63 @@ async def run(settings: Settings) -> None:
                                else sorted(order_nodes) or "none (read-only source)"),
                     shadow=shadow.enabled(),
                 )
+                # The machines on this endpoint are being watched, from now.
+                # Written after the subscription is live for the same reason
+                # `_record_connection` is: a socket we merely dialled is not a
+                # plant we can see.
+                await asyncio.to_thread(link.connected)
                 writer = asyncio.create_task(_adjustment_loop(node_info, machines, manifest))
+                # Without this a read-only source (a replay, a historian, a
+                # server this MES may not write to) holds a dead subscription
+                # for ever: the server can go away and the agent will sit
+                # there with every machine's last state still open and still
+                # accruing run time nobody watched.
+                watchdog = asyncio.create_task(_health_watchdog(client, link, every))
+                held = [watchdog]
+                if order_nodes:
+                    held.append(asyncio.create_task(_order_code_loop(order_nodes)))
                 try:
-                    if not order_nodes:
-                        # Nothing to command — just hold the subscription open.
-                        await asyncio.Future()
-                    await _order_code_loop(order_nodes)
+                    # Whichever stops first ends the connection: a watchdog
+                    # that could not reach the server, or an order write that
+                    # failed on the same dead socket.
+                    done, pending = await asyncio.wait(held, return_when=asyncio.FIRST_EXCEPTION)
+                    for task in pending:
+                        task.cancel()
+                    for task in done:
+                        task.result()
                 finally:
                     writer.cancel()
+                    for task in held:
+                        task.cancel()
+                    for task in held:
+                        with contextlib.suppress(asyncio.CancelledError, Exception):
+                            await task
                     # The handler is rebuilt per connection, so this is the
                     # last chance to book what it received.
                     await handler.stop("connection closing")
         except (TimeoutError, OSError) as exc:
+            reason = f"the OPC server did not answer: {exc}"
             log.warning("OPC connection lost, retrying in 3s", error=str(exc))
             await asyncio.sleep(3)
         except Exception as exc:
             # A rejected certificate or refused login looks like a hang
             # otherwise; say what actually needs doing, then keep retrying.
-            log.warning("OPC connection failed, retrying in 3s", error=explain_connection_error(exc))
+            reason = explain_connection_error(exc)
+            log.warning("OPC connection failed, retrying in 3s", error=reason)
             await asyncio.sleep(3)
+        finally:
+            # Every way out of the block above is a way of not being able to
+            # see the plant any more, including this task being cancelled
+            # because the process is shutting down. The machines are recorded
+            # as disconnected before the loop tries again, so nothing between
+            # here and the next subscription reads as observed time.
+            #
+            # Called on the loop's own thread rather than through
+            # `to_thread`, because an `await` inside a `finally` that is
+            # running *because* this task was cancelled raises before it does
+            # anything, and the shutdown case is exactly the one this has to
+            # survive. It is one short transaction, and only on a change.
+            link.disconnected(reason)
 
 
 # ------------------------------------------------------------- write-back

@@ -252,6 +252,19 @@ class Settings(BaseSettings):
     # missing what it was never sampled fast enough to catch.
     opc_publish_ms: int = 500
 
+    # How often the agent asks the server whether the session is still alive,
+    # counted in publish intervals. Three is about a second and a half on a
+    # real line - long enough not to add traffic, short enough that the gap
+    # between "the link died" and "the MES noticed" stays small and is
+    # reported rather than guessed (decision 0028).
+    #
+    # It is a *positive* check, not an inference from silence: OPC UA
+    # publishes on change, so a machine standing idle sends nothing for an
+    # hour and is perfectly connected. Anything below one second is treated
+    # as one second; a plant that needs it faster than that has a different
+    # problem.
+    opc_health_periods: int = 3
+
     # Tag history is evidence: kept this many days, then pruned hourly by the
     # API process in batches. Zero keeps everything. Bookings, states, checks
     # and the audit trail are never pruned.
