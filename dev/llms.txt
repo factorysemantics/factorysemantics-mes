@@ -73,6 +73,7 @@
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0026-counts-that-outrun-the-run-time/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0027-an-spc-signal-raises-a-hold/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0028-which-shift-a-minute-belongs-to/)
+- [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0029-an-order-does-not-finish-itself/)
 - [Develop — Decisions — Template](https://docs.factorysemantics.com/dev/decisions/TEMPLATE/)
 - [Agents](https://docs.factorysemantics.com/dev/agents/)
 - [Agents — How-to — connect an MCP client](https://docs.factorysemantics.com/dev/agents/connect-mcp-client/)

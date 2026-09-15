@@ -2730,6 +2730,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0029-an-order-does-not-finish-itself/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0029 — An order does not finish itself at its quantity; the over-run it reports is the true one
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -3300,6 +3328,10 @@ report downstream is fiction with a confident face.</p>
 <ul>
 <li><strong>Booking the order quantity when the order completes.</strong> The line made
   what the line made; the order says what was wanted.</li>
+<li><strong>Stopping the books at the order quantity.</strong> The same fault with the sign
+  reversed: the line kept running, the MES stopped counting it against the
+  order, and the over-run a plant reads is three where the line ran two
+  thousand past.</li>
 <li><strong>Treating a counter that dropped to zero as negative production</strong>, or
   worse, as a huge positive delta when it wraps.</li>
 <li><strong>Filling a gap.</strong> The agent was down for twenty minutes; the machine was
@@ -3321,6 +3353,11 @@ report downstream is fiction with a confident face.</p>
 <li><strong>Unknown is a valid answer; zero is not.</strong> A KPI that cannot be computed
    honestly returns <code>null</code> with a reason.</li>
 <li><strong>Unlabelled data is reported as unlabelled.</strong></li>
+<li><strong>An order's quantity is not a gate.</strong> A quantity is what the plant was
+   asked for. A line that has made its number and not been stopped is still
+   making units against that order, so booking continues past the quantity
+   and the order reports how far past it ran. Finishing an order is an act —
+   a person, or the ERP — never a number being reached.</li>
 </ol>
 <h2 id="how-it-is-tested">How it is tested<a class="headerlink" href="#how-it-is-tested" title="Permanent link">&para;</a></h2>
 <p>Tests are named after the behaviour they pin, so the suite reads as a list
@@ -3332,6 +3369,8 @@ of promises. Some of them, by name (2026-09-07):</p>
 <li><code>test_unlabelled_downtime_is_named_not_hidden</code></li>
 <li><code>test_counters_that_disagree_with_the_route_are_reported_not_clamped</code></li>
 <li><code>test_the_recording_keeps_the_counter_reset_that_the_scenario_stages</code></li>
+<li><code>test_reaching_the_ordered_quantity_does_not_finish_the_order</code></li>
+<li><code>test_a_line_that_makes_half_again_the_order_reports_an_over_run_of_half</code></li>
 <li><code>test_unknown_scores_are_counted_separately_never_averaged_in</code></li>
 </ul>
 <p>And the scoring harness: <code>fsmes score &lt;plant&gt;</code> replays a scripted hour with
@@ -3347,7 +3386,9 @@ an agent that stays up — never a default in the code.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../reading-oee/">Reading OEE</a></li>
-<li>Decision record <a href="../../decisions/0004-never-invent-production/">0004</a></li>
+<li>Decision records <a href="../../decisions/0004-never-invent-production/">0004</a>,
+  <a href="../../decisions/0019-count-everything-the-machine-counted/">0019</a> and
+  <a href="../../decisions/0029-an-order-does-not-finish-itself/">0029</a></li>
 <li>The house rules in <a href="https://github.com/factorysemantics/factorysemantics-mes/blob/main/CONTRIBUTING.md">CONTRIBUTING</a></li>
 </ul>
 

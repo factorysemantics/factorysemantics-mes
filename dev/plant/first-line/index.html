@@ -2741,6 +2741,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0029-an-order-does-not-finish-itself/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0029 — An order does not finish itself at its quantity; the over-run it reports is the true one
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -3335,9 +3363,12 @@ steps:</p>
 <li>The agent loads the order code into the machines; the line runs at four
    times real time; every few seconds the console shows good and scrap
    quantities per operation, straight from machine counters.</li>
-<li>The order completes; the MES books the finished lot with its genealogy and
-   confirms quantities to the ERP. The console ends with the OEE over the
-   actual production window.</li>
+<li>The line makes its number and keeps going, so the operator finishes the
+   order — reaching a quantity is not the same fact as being finished, and
+   until somebody says so every unit the machines count is still booked to
+   this order. On that act the MES books the finished lot with its genealogy
+   and confirms quantities to the ERP, over-run and all. The console ends with
+   the OEE over the actual production window.</li>
 </ol>
 <p>While it runs, open <a href="http://127.0.0.1:8000/dashboard">http://127.0.0.1:8000/dashboard</a> and sign in as <code>ADMIN</code>
 / <code>admin</code> (a lab default; the log tells you so). The screens are the same

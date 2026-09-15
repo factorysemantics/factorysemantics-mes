@@ -10,31 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://docs.factorysemantics.com/dev/decisions/">
+        <link rel="canonical" href="https://docs.factorysemantics.com/dev/decisions/0029-an-order-does-not-finish-itself/">
       
       
-        <link rel="prev" href="../design/m8-packs-and-fleet/">
+        <link rel="prev" href="../0028-which-shift-a-minute-belongs-to/">
       
       
-        <link rel="next" href="0001-apache-2-with-dco/">
+        <link rel="next" href="../TEMPLATE/">
       
       
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.7">
     
     
       
-        <title>Decisions - FactorySemantics MES</title>
+        <title>0029 — An order does not finish itself at its quantity; the over-run it reports is the true one - FactorySemantics MES</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -53,9 +53,9 @@
       
     
     
-      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#decisions" class="md-skip">
+        <a href="#0029-an-order-does-not-finish-itself-at-its-quantity-the-over-run-it-reports-is-the-true-one" class="md-skip">
           Skip to content
         </a>
       
@@ -98,7 +98,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="FactorySemantics MES" class="md-header__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+    <a href="../.." title="FactorySemantics MES" class="md-header__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Decisions
+              0029 — An order does not finish itself at its quantity; the over-run it reports is the true one
             
           </span>
         </div>
@@ -231,7 +231,7 @@
   
   
     <li class="md-tabs__item">
-      <a href=".." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -252,7 +252,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../plant/" class="md-tabs__link">
+        <a href="../../plant/" class="md-tabs__link">
           
   
   
@@ -272,7 +272,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../operate/" class="md-tabs__link">
+        <a href="../../operate/" class="md-tabs__link">
           
   
   
@@ -294,7 +294,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../develop/" class="md-tabs__link">
+        <a href="../../develop/" class="md-tabs__link">
           
   
   
@@ -314,7 +314,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../agents/" class="md-tabs__link">
+        <a href="../../agents/" class="md-tabs__link">
           
   
   
@@ -334,7 +334,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../releases/" class="md-tabs__link">
+        <a href="../../releases/" class="md-tabs__link">
           
   
   
@@ -354,7 +354,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../LANDSCAPE/" class="md-tabs__link">
+        <a href="../../LANDSCAPE/" class="md-tabs__link">
           
   
   
@@ -388,7 +388,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="FactorySemantics MES" class="md-nav__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+    <a href="../.." title="FactorySemantics MES" class="md-nav__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -418,7 +418,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -497,7 +497,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../plant/" class="md-nav__link">
+      <a href="../../plant/" class="md-nav__link">
         
   
   
@@ -525,7 +525,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../plant/first-line/" class="md-nav__link">
+      <a href="../../plant/first-line/" class="md-nav__link">
         
   
   
@@ -605,7 +605,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../onboarding/GUIDE-IT/" class="md-nav__link">
+      <a href="../../onboarding/GUIDE-IT/" class="md-nav__link">
         
   
   
@@ -633,7 +633,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../onboarding/GUIDE-ENGINEERING/" class="md-nav__link">
+      <a href="../../onboarding/GUIDE-ENGINEERING/" class="md-nav__link">
         
   
   
@@ -669,7 +669,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../plant/reading-oee/" class="md-nav__link">
+      <a href="../../plant/reading-oee/" class="md-nav__link">
         
   
   
@@ -697,7 +697,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../plant/quality-signals/" class="md-nav__link">
+      <a href="../../plant/quality-signals/" class="md-nav__link">
         
   
   
@@ -725,7 +725,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../plant/shifts/" class="md-nav__link">
+      <a href="../../plant/shifts/" class="md-nav__link">
         
   
   
@@ -753,7 +753,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../plant/never-invent-production/" class="md-nav__link">
+      <a href="../../plant/never-invent-production/" class="md-nav__link">
         
   
   
@@ -840,7 +840,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/" class="md-nav__link">
+      <a href="../../operate/" class="md-nav__link">
         
   
   
@@ -868,7 +868,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/first-plant/" class="md-nav__link">
+      <a href="../../operate/first-plant/" class="md-nav__link">
         
   
   
@@ -896,7 +896,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/deploy/" class="md-nav__link">
+      <a href="../../operate/deploy/" class="md-nav__link">
         
   
   
@@ -924,7 +924,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/opc-readonly/" class="md-nav__link">
+      <a href="../../operate/opc-readonly/" class="md-nav__link">
         
   
   
@@ -952,7 +952,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/packs/" class="md-nav__link">
+      <a href="../../operate/packs/" class="md-nav__link">
         
   
   
@@ -980,7 +980,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/registry/" class="md-nav__link">
+      <a href="../../operate/registry/" class="md-nav__link">
         
   
   
@@ -1008,7 +1008,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/fleet/" class="md-nav__link">
+      <a href="../../operate/fleet/" class="md-nav__link">
         
   
   
@@ -1036,7 +1036,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/modules/" class="md-nav__link">
+      <a href="../../operate/modules/" class="md-nav__link">
         
   
   
@@ -1064,7 +1064,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/shadow-mode/" class="md-nav__link">
+      <a href="../../operate/shadow-mode/" class="md-nav__link">
         
   
   
@@ -1092,7 +1092,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/shadow-scorecard/" class="md-nav__link">
+      <a href="../../operate/shadow-scorecard/" class="md-nav__link">
         
   
   
@@ -1120,7 +1120,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/erpnext/" class="md-nav__link">
+      <a href="../../operate/erpnext/" class="md-nav__link">
         
   
   
@@ -1148,7 +1148,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/uns/" class="md-nav__link">
+      <a href="../../operate/uns/" class="md-nav__link">
         
   
   
@@ -1176,7 +1176,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/backup/" class="md-nav__link">
+      <a href="../../operate/backup/" class="md-nav__link">
         
   
   
@@ -1204,7 +1204,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/tls/" class="md-nav__link">
+      <a href="../../operate/tls/" class="md-nav__link">
         
   
   
@@ -1232,7 +1232,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/upgrade/" class="md-nav__link">
+      <a href="../../operate/upgrade/" class="md-nav__link">
         
   
   
@@ -1260,7 +1260,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/confirmation-files/" class="md-nav__link">
+      <a href="../../operate/confirmation-files/" class="md-nav__link">
         
   
   
@@ -1288,7 +1288,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/erp-confirmations/" class="md-nav__link">
+      <a href="../../reference/erp-confirmations/" class="md-nav__link">
         
   
   
@@ -1316,7 +1316,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/inbound/" class="md-nav__link">
+      <a href="../../operate/inbound/" class="md-nav__link">
         
   
   
@@ -1344,7 +1344,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/settings/" class="md-nav__link">
+      <a href="../../reference/settings/" class="md-nav__link">
         
   
   
@@ -1372,7 +1372,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/cli/" class="md-nav__link">
+      <a href="../../reference/cli/" class="md-nav__link">
         
   
   
@@ -1400,7 +1400,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/api/" class="md-nav__link">
+      <a href="../../reference/api/" class="md-nav__link">
         
   
   
@@ -1428,7 +1428,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/first-week/" class="md-nav__link">
+      <a href="../../operate/first-week/" class="md-nav__link">
         
   
   
@@ -1456,7 +1456,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/compatibility/" class="md-nav__link">
+      <a href="../../operate/compatibility/" class="md-nav__link">
         
   
   
@@ -1484,7 +1484,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../operate/security/" class="md-nav__link">
+      <a href="../../operate/security/" class="md-nav__link">
         
   
   
@@ -1576,7 +1576,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../develop/" class="md-nav__link">
+      <a href="../../develop/" class="md-nav__link">
         
   
   
@@ -1604,7 +1604,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ARCHITECTURE/" class="md-nav__link">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
         
   
   
@@ -1632,7 +1632,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../develop/your-first-module/" class="md-nav__link">
+      <a href="../../develop/your-first-module/" class="md-nav__link">
         
   
   
@@ -1660,7 +1660,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../develop/erp-connectors/" class="md-nav__link">
+      <a href="../../develop/erp-connectors/" class="md-nav__link">
         
   
   
@@ -1688,7 +1688,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../develop/experiments/" class="md-nav__link">
+      <a href="../../develop/experiments/" class="md-nav__link">
         
   
   
@@ -1716,7 +1716,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../design/STYLE/" class="md-nav__link">
+      <a href="../../design/STYLE/" class="md-nav__link">
         
   
   
@@ -1744,7 +1744,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../design/m8-packs-and-fleet/" class="md-nav__link">
+      <a href="../../design/m8-packs-and-fleet/" class="md-nav__link">
         
   
   
@@ -1826,19 +1826,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -1854,7 +1845,6 @@
   
 
       </a>
-      
     </li>
   
 
@@ -1867,7 +1857,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0001-apache-2-with-dco/" class="md-nav__link">
+      <a href="../0001-apache-2-with-dco/" class="md-nav__link">
         
   
   
@@ -1895,7 +1885,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0002-kernel-and-modules/" class="md-nav__link">
+      <a href="../0002-kernel-and-modules/" class="md-nav__link">
         
   
   
@@ -1923,7 +1913,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0003-one-mcp-server/" class="md-nav__link">
+      <a href="../0003-one-mcp-server/" class="md-nav__link">
         
   
   
@@ -1951,7 +1941,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0004-never-invent-production/" class="md-nav__link">
+      <a href="../0004-never-invent-production/" class="md-nav__link">
         
   
   
@@ -1979,7 +1969,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0005-plain-html-no-build-step/" class="md-nav__link">
+      <a href="../0005-plain-html-no-build-step/" class="md-nav__link">
         
   
   
@@ -2007,7 +1997,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
+      <a href="../0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
         
   
   
@@ -2035,7 +2025,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0007-fresh-public-history/" class="md-nav__link">
+      <a href="../0007-fresh-public-history/" class="md-nav__link">
         
   
   
@@ -2063,7 +2053,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0008-erp-connectors-are-modules/" class="md-nav__link">
+      <a href="../0008-erp-connectors-are-modules/" class="md-nav__link">
         
   
   
@@ -2091,7 +2081,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0009-organisation-not-personal-account/" class="md-nav__link">
+      <a href="../0009-organisation-not-personal-account/" class="md-nav__link">
         
   
   
@@ -2119,7 +2109,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0010-github-discussions-only/" class="md-nav__link">
+      <a href="../0010-github-discussions-only/" class="md-nav__link">
         
   
   
@@ -2147,7 +2137,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0011-mkdocs-material-generated-reference/" class="md-nav__link">
+      <a href="../0011-mkdocs-material-generated-reference/" class="md-nav__link">
         
   
   
@@ -2175,7 +2165,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0012-contributor-covenant-3/" class="md-nav__link">
+      <a href="../0012-contributor-covenant-3/" class="md-nav__link">
         
   
   
@@ -2203,7 +2193,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0013-governance-is-one-page/" class="md-nav__link">
+      <a href="../0013-governance-is-one-page/" class="md-nav__link">
         
   
   
@@ -2231,7 +2221,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0014-first-public-version-is-0-1-0/" class="md-nav__link">
+      <a href="../0014-first-public-version-is-0-1-0/" class="md-nav__link">
         
   
   
@@ -2259,7 +2249,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0015-mcp-registry-name/" class="md-nav__link">
+      <a href="../0015-mcp-registry-name/" class="md-nav__link">
         
   
   
@@ -2287,7 +2277,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0016-no-trademark-registration/" class="md-nav__link">
+      <a href="../0016-no-trademark-registration/" class="md-nav__link">
         
   
   
@@ -2315,7 +2305,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
+      <a href="../0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
         
   
   
@@ -2343,7 +2333,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
+      <a href="../0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
         
   
   
@@ -2371,7 +2361,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0019-count-everything-the-machine-counted/" class="md-nav__link">
+      <a href="../0019-count-everything-the-machine-counted/" class="md-nav__link">
         
   
   
@@ -2399,7 +2389,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
+      <a href="../0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
         
   
   
@@ -2427,7 +2417,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0021-one-database-per-plant/" class="md-nav__link">
+      <a href="../0021-one-database-per-plant/" class="md-nav__link">
         
   
   
@@ -2455,7 +2445,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0022-what-a-plant-pack-may-contain/" class="md-nav__link">
+      <a href="../0022-what-a-plant-pack-may-contain/" class="md-nav__link">
         
   
   
@@ -2483,7 +2473,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0023-the-fleet-console-observes/" class="md-nav__link">
+      <a href="../0023-the-fleet-console-observes/" class="md-nav__link">
         
   
   
@@ -2511,7 +2501,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0024-a-nonconformance-has-a-life/" class="md-nav__link">
+      <a href="../0024-a-nonconformance-has-a-life/" class="md-nav__link">
         
   
   
@@ -2539,7 +2529,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0025-performance-is-measured-not-capped/" class="md-nav__link">
+      <a href="../0025-performance-is-measured-not-capped/" class="md-nav__link">
         
   
   
@@ -2567,7 +2557,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0026-counts-that-outrun-the-run-time/" class="md-nav__link">
+      <a href="../0026-counts-that-outrun-the-run-time/" class="md-nav__link">
         
   
   
@@ -2595,7 +2585,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0027-an-spc-signal-raises-a-hold/" class="md-nav__link">
+      <a href="../0027-an-spc-signal-raises-a-hold/" class="md-nav__link">
         
   
   
@@ -2623,7 +2613,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0028-which-shift-a-minute-belongs-to/" class="md-nav__link">
+      <a href="../0028-which-shift-a-minute-belongs-to/" class="md-nav__link">
         
   
   
@@ -2648,10 +2638,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="0029-an-order-does-not-finish-itself/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0029 — An order does not finish itself at its quantity; the over-run it reports is the true one
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -2667,6 +2684,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options-considered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options considered
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#house-rules-touched" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        House rules touched
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2679,7 +2771,7 @@
   
   
     <li class="md-nav__item">
-      <a href="TEMPLATE/" class="md-nav__link">
+      <a href="../TEMPLATE/" class="md-nav__link">
         
   
   
@@ -2774,7 +2866,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../agents/" class="md-nav__link">
+      <a href="../../agents/" class="md-nav__link">
         
   
   
@@ -2802,7 +2894,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../agents/connect-mcp-client/" class="md-nav__link">
+      <a href="../../agents/connect-mcp-client/" class="md-nav__link">
         
   
   
@@ -2830,7 +2922,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/tools/" class="md-nav__link">
+      <a href="../../reference/tools/" class="md-nav__link">
         
   
   
@@ -2858,7 +2950,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../agents/write-discipline/" class="md-nav__link">
+      <a href="../../agents/write-discipline/" class="md-nav__link">
         
   
   
@@ -2886,7 +2978,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../agents/evals/" class="md-nav__link">
+      <a href="../../agents/evals/" class="md-nav__link">
         
   
   
@@ -2973,7 +3065,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../releases/" class="md-nav__link">
+      <a href="../../releases/" class="md-nav__link">
         
   
   
@@ -3001,7 +3093,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../releases/0.2.0/" class="md-nav__link">
+      <a href="../../releases/0.2.0/" class="md-nav__link">
         
   
   
@@ -3088,7 +3180,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../LANDSCAPE/" class="md-nav__link">
+      <a href="../../LANDSCAPE/" class="md-nav__link">
         
   
   
@@ -3116,7 +3208,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../history/private-era/" class="md-nav__link">
+      <a href="../../history/private-era/" class="md-nav__link">
         
   
   
@@ -3164,6 +3256,69 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options-considered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options considered
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#house-rules-touched" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        House rules touched
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -3179,7 +3334,7 @@
 
 
   
-    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/decisions/index.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/decisions/0029-an-order-does-not-finish-itself.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3187,169 +3342,112 @@
   
 
 
-<h1 id="decisions">Decisions<a class="headerlink" href="#decisions" title="Permanent link">&para;</a></h1>
-<p>Why things are the way they are, one page each, with the options that lost.
-A record marked <em>proposed</em> is a recommendation nobody has accepted yet; it
-says what would change, not what has.
-A design change starts as an <em>Ideas</em> discussion using the
-<a href="TEMPLATE/">template</a>; the accepted or declined outcome lands here.
-Declined ideas stay, so nobody re-proposes them without new facts.</p>
+<h1 id="0029-an-order-does-not-finish-itself-at-its-quantity-the-over-run-it-reports-is-the-true-one">0029 — An order does not finish itself at its quantity; the over-run it reports is the true one<a class="headerlink" href="#0029-an-order-does-not-finish-itself-at-its-quantity-the-over-run-it-reports-is-the-true-one" title="Permanent link">&para;</a></h1>
+<ul>
+<li><strong>Status:</strong> accepted</li>
+<li><strong>Date:</strong> 2026-09-14</li>
+<li><strong>Deciders:</strong> @kalwei</li>
+</ul>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p><code>labs/experiments/over-run.toml</code> runs the bottling line for an uninterrupted
+hour against <code>WO-ACME-4711</code>, an order for 4,000, with the line publishing the
+order it is running the whole time. The line made <strong>6,104</strong> under that order.
+The MES booked <strong>4,003</strong> against it, reported an over-run of <strong>3</strong>, and kept
+<strong>15,351 counts</strong> across the six stations as production with no order open.</p>
+<p>Nothing was lost and nothing was invented — per-station booking was inside the
+replay's band at all six machines — but the plant reads an over-run of 3 where
+the line ran 2,104 past. Decision 0019 made 16-against-15 visible; this is the
+same rule failing at scale.</p>
+<p>The cause is one line in <code>execution.report</code>: a machine-counted booking that
+brought an operation to the ordered quantity completed that operation, which
+completed the order when it was the last one. After that the equipment has no
+open operation, so every further count became unassigned production — correct
+under 0019, and yet the wrong answer, because an order really was open. The
+order's own figures stopped at its quantity while the line kept going.</p>
+<p>Underneath it is an assumption worth naming: that reaching the ordered quantity
+and being finished are the same fact. On a floor they are not. A quantity is
+what the plant was asked for. The line stops when somebody stops it, when the
+material runs out, or at a changeover — and an order that has made its number
+is routinely still running.</p>
+<h2 id="options-considered">Options considered<a class="headerlink" href="#options-considered" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>#</th>
-<th>Decision</th>
-<th>Date</th>
+<th>Option</th>
+<th>For</th>
+<th>Against</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><a href="0001-apache-2-with-dco/">0001</a></td>
-<td>Apache-2.0 with the DCO, not copyleft, not a CLA</td>
-<td>2026-08-28</td>
+<td>The order does not complete at its quantity; booking continues and <code>over_qty</code> grows</td>
+<td>the over-run is the true figure, and the units stay attached to the order that made them</td>
+<td>an order now needs somebody to finish it, and one left open reports no completion to the ERP</td>
 </tr>
 <tr>
-<td><a href="0002-kernel-and-modules/">0002</a></td>
-<td>A kernel plus modules that register through entry points</td>
-<td>2026-08-28</td>
+<td>Keep completing at quantity, and roll the surplus into the completed order afterwards</td>
+<td>the ERP still gets a tidy completion the moment the number is reached</td>
+<td>a completed order whose numbers keep moving is a record that cannot be trusted at any moment, and the confirmation has already been sent</td>
 </tr>
 <tr>
-<td><a href="0003-one-mcp-server/">0003</a></td>
-<td>One product MCP server with per-area tool files</td>
-<td>2026-09-02</td>
+<td>Keep completing at quantity, and count the rest as unassigned production</td>
+<td>what is there today; no code changes</td>
+<td>it is the finding: the plant reads 3 where the line ran 2,104 past, and 15,351 units sit with no order beside an order that was open</td>
 </tr>
 <tr>
-<td><a href="0004-never-invent-production/">0004</a></td>
-<td>Never invent production: the counter discipline</td>
-<td>2026-08-31</td>
-</tr>
-<tr>
-<td><a href="0005-plain-html-no-build-step/">0005</a></td>
-<td>Plain HTML, CSS and JS for the operator UI, no build step</td>
-<td>2026-08-28</td>
-</tr>
-<tr>
-<td><a href="0006-sqlite-laptop-postgresql-plant/">0006</a></td>
-<td>SQLite on a laptop, PostgreSQL in a plant, no historian product</td>
-<td>2026-08-28</td>
-</tr>
-<tr>
-<td><a href="0007-fresh-public-history/">0007</a></td>
-<td>The public repository starts from a clean first commit</td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0008-erp-connectors-are-modules/">0008</a></td>
-<td>ERP connectors are modules inside the package</td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0009-organisation-not-personal-account/">0009</a></td>
-<td>The project lives in a GitHub organisation named <code>factorysemantics</code></td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0010-github-discussions-only/">0010</a></td>
-<td>GitHub Discussions is the only community venue</td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0011-mkdocs-material-generated-reference/">0011</a></td>
-<td>MkDocs Material, with the developer reference generated from the code</td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0012-contributor-covenant-3/">0012</a></td>
-<td>Contributor Covenant 3.0 as the code of conduct</td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0013-governance-is-one-page/">0013</a></td>
-<td>Governance is one page: one maintainer, proposals in public</td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0014-first-public-version-is-0-1-0/">0014</a></td>
-<td>The first public version is 0.1.0, gated on a readiness checklist</td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0015-mcp-registry-name/">0015</a></td>
-<td>The MCP server is registered as <code>com.factorysemantics/mes</code></td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0016-no-trademark-registration/">0016</a></td>
-<td>No trademark registration for the name</td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0017-one-public-demo-gated-and-bounded/">0017</a></td>
-<td>One public demo, gated by an emailed link and bounded by limits</td>
-<td>2026-09-07</td>
-</tr>
-<tr>
-<td><a href="0018-public-on-2026-09-08-and-the-pre-tag-check/">0018</a></td>
-<td>Public on 2026-09-08, and a release check that runs the built wheel</td>
-<td>2026-09-08</td>
-</tr>
-<tr>
-<td><a href="0019-count-everything-the-machine-counted/">0019</a></td>
-<td>Count everything the machine counted: over-runs are booked, surplus is unassigned production</td>
-<td>2026-09-09</td>
-</tr>
-<tr>
-<td><a href="0020-what-supported-means-for-an-erp-connector/">0020</a></td>
-<td>What "supported" means for an ERP connector, and what it is called before that</td>
-<td>2026-09-10</td>
-</tr>
-<tr>
-<td><a href="0021-one-database-per-plant/">0021</a></td>
-<td>A fleet is many databases, and site scoping is identity, not partitioning</td>
-<td>2026-09-10, accepted 2026-09-13</td>
-</tr>
-<tr>
-<td><a href="0022-what-a-plant-pack-may-contain/">0022</a></td>
-<td>A plant pack is data, carries no code and no secrets, and cannot change what a number means</td>
-<td>2026-09-10, accepted 2026-09-13</td>
-</tr>
-<tr>
-<td><a href="0023-the-fleet-console-observes/">0023</a></td>
-<td><em>Proposed</em> — the console manages only the plants it owns, observes every other plant, and silence is unknown</td>
-<td>2026-09-10, revised 2026-09-13</td>
-</tr>
-<tr>
-<td><a href="0024-a-nonconformance-has-a-life/">0024</a></td>
-<td>A non-conformance is worked through review and a disposition, and cannot be closed without one</td>
-<td>2026-09-14</td>
-</tr>
-<tr>
-<td><a href="0025-performance-is-measured-not-capped/">0025</a></td>
-<td>OEE performance is measured against the rating, and never capped at 1.0</td>
-<td>2026-09-14, amended by 0026</td>
-</tr>
-<tr>
-<td><a href="0026-counts-that-outrun-the-run-time/">0026</a></td>
-<td>Counted work that will not fit inside the run time names the disagreement, not a culprit</td>
-<td>2026-09-14</td>
-</tr>
-<tr>
-<td><a href="0027-an-spc-signal-raises-a-hold/">0027</a></td>
-<td>An SPC signal raises a quality hold, and an inspected characteristic with a specification is a check</td>
-<td>2026-09-14</td>
-</tr>
-<tr>
-<td><a href="0028-which-shift-a-minute-belongs-to/">0028</a></td>
-<td>A shift is half-open, belongs to the day it started, and covers nothing it does not roster</td>
-<td>2026-09-14</td>
-</tr>
-<tr>
-<td><a href="0029-an-order-does-not-finish-itself/">0029</a></td>
-<td>An order does not finish itself at its quantity; the over-run it reports is the true one</td>
-<td>2026-09-14</td>
+<td>Complete at quantity but reopen the operation on the next count</td>
+<td>the loop closes on its own and the over-run is still counted</td>
+<td>a completion that un-happens, and an ERP confirmation sent for a number that then changed</td>
 </tr>
 </tbody>
 </table>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p><strong>An operation does not complete itself on reaching the ordered quantity.</strong>
+Completing an operation is an act: a person on the floor
+(<code>POST /workorders/{code}/operations/{seq}/complete</code>), or the ERP. Until then
+the operation stays open and every unit the machine counts is booked to it.</p>
+<p><strong>Units made past the quantity are booked to the order that made them</strong>, and
+the order reports how far past it ran as <code>over_qty</code> — on
+<code>GET /workorders/{code}</code>, on the orders screen, in the ERP order completion and
+in the B2MML confirmation. That figure is now the whole over-run rather than
+whatever one coalesced delta happened to carry across the line.</p>
+<p><strong>Which order they are booked to is read, never guessed.</strong> The evidence is,
+in order: the order the line itself publishes, where the tag map carries a
+<code>line.publishes_order</code> block (#60); otherwise the released or running order
+whose routing puts an operation on that machine. Where there is no such order,
+nothing changes — the units are unassigned production under 0019, listed with
+their total and never rolled into an order.</p>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<p>Easier: the over-run a plant reads is the over-run the line ran. Units made
+past a quantity stay attached to the order that made them instead of arriving
+in a list with the units a machine made between orders, which are a different
+fact with a different fix.</p>
+<p>Harder, and the real cost of this: <strong>an order now stays open until somebody
+closes it.</strong> The ERP order completion, the finished-goods lot and the
+certificate of analysis are all issued on completion, so an order nobody
+finishes confirms nothing. Where a machine has two released orders on the same
+routing, completing the first is also what moves the machine onto the second —
+previously the quantity did that by itself. <code>fsmes demo</code> therefore completes
+its own operations, as the person it is standing in for would.</p>
+<p>Not done here: the OPC agent does not yet subscribe to the line's own
+<code>publishes_order</code> tag, so today's evidence is the released order on the
+routing. The tag map has carried the block since #60 and the lab reads it; the
+agent reading it for booking is the next step, and until it does, a plant with
+two orders released on one routing is still choosing by priority rather than by
+what the line said. That is an inference, and it is named here so it is not
+mistaken for a fact.</p>
+<p>To revisit: whether an order should be <em>allowed</em> to run indefinitely past its
+quantity, or whether there is a point at which the MES should ask. An ERPNext
+order has an over-production allowance and refuses a confirmation beyond it
+(see <code>tests/test_erpnext_live.py</code>); this MES states the over-run and lets the
+ERP judge. That is the right split today. If a plant wants the line warned at
+120 % it is config, not code.</p>
+<h2 id="house-rules-touched">House rules touched<a class="headerlink" href="#house-rules-touched" title="Permanent link">&para;</a></h2>
+<p>Rules 1 and 2. Never invent production: the order a unit is booked to is read
+from the line or from the one released order on the routing, never inferred
+from what recently closed. Unknown is a valid answer: where no order is open
+the units stay unassigned, named and totalled, rather than being swept into
+the order that happened to be there last.</p>
 
 
 
@@ -3387,7 +3485,7 @@ Declined ideas stay, so nobody re-proposes them without new facts.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../design/m8-packs-and-fleet/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Design — M8 packs and fleet">
+          <a href="../0028-which-shift-a-minute-belongs-to/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 0028 — A shift is half-open, belongs to the day it started, and covers nothing it does not roster">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -3397,20 +3495,20 @@ Declined ideas stay, so nobody re-proposes them without new facts.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Design — M8 packs and fleet
+                0028 — A shift is half-open, belongs to the day it started, and covers nothing it does not roster
               </div>
             </div>
           </a>
         
         
           
-          <a href="0001-apache-2-with-dco/" class="md-footer__link md-footer__link--next" aria-label="Next: 0001 — Apache-2.0 with the DCO, not copyleft, not a CLA">
+          <a href="../TEMPLATE/" class="md-footer__link md-footer__link--next" aria-label="Next: Template">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                0001 — Apache-2.0 with the DCO, not copyleft, not a CLA
+                Template
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -3478,10 +3576,10 @@ Declined ideas stay, so nobody re-proposes them without new facts.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "content.tabs.link", "content.code.copy", "content.action.edit", "search.suggest", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "content.tabs.link", "content.code.copy", "content.action.edit", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
