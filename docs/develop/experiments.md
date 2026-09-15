@@ -106,11 +106,15 @@ Since the control chart's rules are judged when a reading is recorded
 (decision [0026](../decisions/0026-an-spc-signal-raises-a-hold.md)), a run now
 shows the hold being raised while the line is still running the thing that
 caused it: look for `spc signal` in the log, with the rule and the NC it
-raised. `labs/experiments/scrap-burst.toml` is the starter, and it runs at 10×
-for a reason it states — the floor records one check every eight seconds of
-wall clock, and a control chart draws no limits until it has twelve readings,
-so a short run at 20× is one in which nothing could fire however wrong the
-line went.
+raised. `labs/experiments/scrap-burst.toml` is the starter, and it runs at 2× — much
+slower than the others — for a reason it states. What sets how fast readings
+reach the chart is not the floor's cadence but how often the MES stores a new
+value for the tag the floor is reading, and a control chart draws no limits
+until it has twelve of them. At 20× half an hour of line time is nine
+readings and a run in which nothing could fire however wrong the line went.
+The cost is a quarter of an hour of wall clock: the other starters ask what
+the MES counted, and counting is quick; this one asks about a judgement over a
+series.
 
 The distance worth measuring — from the first underweight bottle to the moment
 the hold exists — is not measured yet: `quality` is a planned measurement, not
@@ -527,7 +531,7 @@ To hand a run over, copy the directory. That is the whole procedure.
 | `labs/experiments/one-line-bad-hour.toml` | the six-station bottling line playing the six classic faults in an hour at 20× |
 | `labs/experiments/two-plants-two-zones.toml` | Kansas City and Northgate, different products, clocks, modules and words, one after another at 30× — and what a fleet console made of the pair |
 | `labs/experiments/starved-and-blocked.toml` | twenty minutes in which nothing breaks and nothing is made: the empties run out, then the palletiser stops taking cases — and how long each took to reach a screen |
-| `labs/experiments/scrap-burst.toml` | forty minutes at 10× in which the washer runs hot, the filler underweights, and the control chart raises the hold |
+| `labs/experiments/scrap-burst.toml` | half an hour at 2× in which the washer runs hot, the filler underweights, and the control chart raises the hold |
 
 Both run in CI on every pull request, which is what stops the instrument
 rotting between the times anybody uses it. CI also proves the feedback loop

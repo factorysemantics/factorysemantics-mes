@@ -53,6 +53,20 @@ worried about until a moment ago.
 Fewer than twelve readings raises nothing, and the chart says why. Control
 limits computed from six points move with every reading.
 
+## One thing to watch in how you collect readings
+
+An individuals chart estimates the process's variation from the difference
+between *consecutive* readings. So a reading written down twice — the same
+number recorded again because nothing has been re-measured — is not a second
+measurement, and it drags that estimate toward zero. Do it often enough and
+the control limits close in on the centre line until ordinary noise reads as
+a point beyond three sigma, and the MES will raise a hold about it.
+
+The same thing in a different guise is a gauge too coarse for the tolerance it
+is judging: `fsmes` will tell you about that one directly — the gauge register
+applies the rule of ten, with four as the floor, and says when *the control
+chart is charting the instrument*. See `GET /quality/gauges/{code}/resolution`.
+
 ## Making something else happen
 
 What a plant does next is the plant's decision, so it is configuration, not

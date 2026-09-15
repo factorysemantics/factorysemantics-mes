@@ -22,9 +22,9 @@
 # it is read off the log and the screens. The plan exists first so that the
 # measurement, when it is built, has a run to be built against.
 #
-# About four minutes: one plant, forty minutes of line time at 10x, plus the
-# seeding and the drain. The plant is ephemeral, on loopback, with its own
-# database and its own ports.
+# About a quarter of an hour: one plant, thirty minutes of line time at 2x,
+# plus the seeding and the drain. The plant is ephemeral, on loopback, with
+# its own database and its own ports.
 
 name = "scrap-burst"
 note = """A quality excursion with a process cause. What to look at first: the
@@ -34,14 +34,25 @@ failed fill weights land on the filler."""
 
 packs = ["../multiplant/bottling"]
 
-# Forty minutes at 10x rather than twenty at 20x, and the reason is the point
-# of the run: the floor records a check every eight seconds of wall clock, and
-# a control chart draws no limits at all until it has twelve readings. Twenty
-# minutes at 20x is sixty seconds of wall clock and seven readings - a run in
-# which nothing could fire however wrong the line went.
-duration = 2400
+# Thirty minutes of line time at 2x, and both numbers are the point of the
+# run rather than a preference. A control chart draws no limits at all until
+# it has twelve readings, and wants a good many more than that from a process
+# that was behaving before the limits mean anything. What sets how fast those
+# readings arrive is not the floor's cadence - it asks far more often than
+# that - but how often the MES stores a new value for the tag the floor is
+# reading, which is every ten publish intervals. At 2x that is roughly one new
+# reading every ten seconds of line time, so half an hour is something like
+# ninety readings with the excursion a third of the way in. At 20x, which the
+# other starters use, the same half hour is nine readings and a run in which
+# nothing could fire however wrong the line went.
+#
+# The cost is that this one takes about a quarter of an hour of wall clock.
+# That is the trade this experiment is making: the others are about what the
+# MES *counted*, and counting is quick; this one is about a judgement over a
+# series, and a series takes as long as it takes.
+duration = 1800
 seed     = 42
-speed    = 10
+speed    = 2
 
 measure = ["booking", "downtime", "oee"]
 
@@ -49,5 +60,5 @@ measure = ["booking", "downtime", "oee"]
 events = [
   # Long enough before the burst that the chart has its limits from a process
   # that was behaving, which is the only way the limits mean anything.
-  { type = "scrap_burst", station = "Washer", scrap_pct = 10.0, analog_offset = 3.0, start = 1200, end = 1800, effects = [{ station = "Refill", analog = "FillWeight", offset = -9.0 }] },
+  { type = "scrap_burst", station = "Washer", scrap_pct = 10.0, analog_offset = 3.0, start = 600, end = 1500, effects = [{ station = "Refill", analog = "FillWeight", offset = -9.0 }] },
 ]

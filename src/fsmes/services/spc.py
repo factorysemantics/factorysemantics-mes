@@ -331,18 +331,23 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
     if not signals:
         return []
 
+    # Only the firings on a reading just written; the rest are about readings
+    # that were judged when they arrived.
+    if since_id is not None:
+        signals = [s for s in signals if ids[s["index"]] >= since_id]
+        if not signals:
+            return []
+
     material = spec.material.code
-    keys = {(s["rule"], _window_key(ids, s["index"], s["rule"])) for s in signals}
+    keys = {_window_key(ids, s["index"], s["rule"]) for s in signals}
     already = {
         (row.rule, row.window_key) for row in session.scalars(
             select(SpcSignal).where(SpcSignal.spec_id == spec.id,
-                                    SpcSignal.window_key.in_({k for _, k in keys})))
+                                    SpcSignal.window_key.in_(keys)))
     }
 
     raised: list[dict] = []
     for signal in signals:
-        if since_id is not None and ids[signal["index"]] < since_id:
-            continue
         key = _window_key(ids, signal["index"], signal["rule"])
         if (signal["rule"], key) in already:
             continue
