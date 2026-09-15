@@ -926,12 +926,19 @@ async def run(settings: Settings) -> None:
             # as disconnected before the loop tries again, so nothing between
             # here and the next subscription reads as observed time.
             #
-            # Called on the loop's own thread rather than through
-            # `to_thread`, because an `await` inside a `finally` that is
-            # running *because* this task was cancelled raises before it does
-            # anything, and the shutdown case is exactly the one this has to
-            # survive. It is one short transaction, and only on a change.
-            link.disconnected(reason)
+            # Off the loop, like every other database call here. `fsmes demo`
+            # runs the agent and the API on one event loop over one SQLite
+            # file: a synchronous write here stalled uvicorn for as long as
+            # the write waited for its lock, and the demo failed with a read
+            # timeout against its own API and `database is locked` behind it.
+            try:
+                await asyncio.to_thread(link.disconnected, reason)
+            except asyncio.CancelledError:
+                # Shutting down. The await cannot finish, but the write does
+                # not need the loop - and this is the one case where losing it
+                # would leave every machine's last state standing for ever.
+                link.disconnected(reason)
+                raise
 
 
 # ------------------------------------------------------------- write-back
