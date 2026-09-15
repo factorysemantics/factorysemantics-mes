@@ -21,7 +21,13 @@ from sqlalchemy import case, func, literal, or_, select
 from sqlalchemy.orm import Session
 
 from fsmes.db import utcnow
-from fsmes.domain import ConnectionStateName, EquipmentConnection, EquipmentState
+from fsmes.domain import (
+    ConnectionStateName,
+    Equipment,
+    EquipmentConnection,
+    EquipmentLevel,
+    EquipmentState,
+)
 from fsmes.services import audit, masterdata, outbox
 
 
@@ -237,8 +243,6 @@ def intervals(session: Session, equipment_ids: list[int], start: datetime,
 def watching(session: Session) -> dict:
     """How much of this plant the MES can currently see. Every list states its
     total, including this one: connected + disconnected + unknown = machines."""
-    from fsmes.domain import Equipment, EquipmentLevel
-
     ids = list(session.scalars(
         select(Equipment.id).where(Equipment.level == EquipmentLevel.WORK_UNIT)))
     open_rows = open_connections(session, ids)

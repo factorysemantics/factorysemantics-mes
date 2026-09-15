@@ -354,3 +354,18 @@ def test_coming_back_closes_the_outage_rather_than_starting_a_third_interval(ses
     assert len(rows) == 3
     assert rows[1].ended_at is not None, "the outage was left open after the link came back"
     assert rows[2].state is ConnectionStateName.CONNECTED and rows[2].ended_at is None
+
+
+def test_a_tag_map_naming_a_machine_the_plant_does_not_have_does_not_stop_the_rest(
+        session, scope, monkeypatch):
+    """One unmapped code must not put the agent in a reconnect loop that never
+    subscribes to anything, and must not cost the other machines their row."""
+    from fsmes.integrations.opc import agent as opc_agent
+
+    monkeypatch.setattr(opc_agent, "session_scope", scope)
+    link = opc_agent._Link(["NOSUCH01", "MIX01"], "opc.tcp://127.0.0.1:4840/x")
+    link.connected()
+
+    codes = {row.equipment.code for row in session.query(EquipmentConnection)}
+    assert codes == {"MIX01"}
+    assert link.state is ConnectionStateName.CONNECTED

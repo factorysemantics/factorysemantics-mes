@@ -760,10 +760,19 @@ class _Link:
         at = self.seen if state is ConnectionStateName.DISCONNECTED else detected
         with session_scope() as session:
             for code in self.codes:
-                connection_service.set_connection(
-                    session, equipment_code=code, state=state,
-                    at=at or detected, detected_at=detected,
-                    reason=reason, source=self.endpoint, actor="opc-agent")
+                try:
+                    connection_service.set_connection(
+                        session, equipment_code=code, state=state,
+                        at=at or detected, detected_at=detected,
+                        reason=reason, source=self.endpoint, actor="opc-agent")
+                except Exception:
+                    # A tag map naming a machine this plant's master data does
+                    # not have. Said once per transition and stepped over: one
+                    # unmapped code must not stop the other twenty-six being
+                    # recorded, and it must not put the agent in a reconnect
+                    # loop that never subscribes to anything.
+                    log.exception("could not record the connection for a machine",
+                                  equipment=code, endpoint=self.endpoint)
         self.state = state
 
     def connected(self) -> None:
