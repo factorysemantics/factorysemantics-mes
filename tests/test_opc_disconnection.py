@@ -253,9 +253,7 @@ def test_the_floor_tile_carries_the_connection_beside_the_state(session, client)
     equipment.set_state(session, equipment_code="MIX01", state=EquipmentStateName.RUNNING)
     _disconnect(session, minutes_ago=2, for_minutes=None)
 
-    summary = client.get("/dashboard/summary").json()
-    machines = summary["machines"]["items"] if isinstance(summary["machines"], dict) \
-        else summary["machines"]
+    machines = client.get("/dashboard/summary").json()["machines"]
     mine = next(m for m in machines if m["code"] == "MIX01")
     assert mine["connection"]["state"] == "disconnected"
     assert mine["connection"]["since"] is not None
@@ -369,3 +367,20 @@ def test_a_tag_map_naming_a_machine_the_plant_does_not_have_does_not_stop_the_re
     codes = {row.equipment.code for row in session.query(EquipmentConnection)}
     assert codes == {"MIX01"}
     assert link.state is ConnectionStateName.CONNECTED
+
+
+def test_a_machine_going_dark_reaches_the_floor_without_waiting_for_the_cache(session, client):
+    """The floor's cache is keyed on the plant's own version. A disconnection
+    *closes* a state interval rather than opening one, so the stamp that
+    watches for new states does not move — and an operator watching a machine
+    go dark on the line and not on the screen has been shown something false."""
+    equipment.set_state(session, equipment_code="MIX01", state=EquipmentStateName.RUNNING)
+    before = client.get("/dashboard/summary").json()["machines"]
+    assert next(m for m in before if m["code"] == "MIX01")["state"] == "running"
+
+    _disconnect(session, minutes_ago=0, for_minutes=None)
+
+    after = client.get("/dashboard/summary").json()["machines"]
+    mine = next(m for m in after if m["code"] == "MIX01")
+    assert mine["connection"]["state"] == "disconnected"
+    assert mine["state"] == "unknown"

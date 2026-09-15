@@ -16,6 +16,7 @@ from fsmes.api.deps import DbDep
 from fsmes.domain import (
     AuditLog,
     Equipment,
+    EquipmentConnection,
     EquipmentLevel,
     EquipmentState,
     EquipmentStateName,
@@ -68,6 +69,11 @@ def _plant_version(db: Session) -> tuple:
         db.scalar(select(func.max(EquipmentState.id))),
         db.scalar(select(func.max(ProductionLog.id))),
         db.scalar(select(func.max(WorkOrder.id))),
+        # A machine going dark closes its state interval rather than opening
+        # one, so max(EquipmentState.id) does not move and the floor would
+        # have gone on showing it as it was for the life of the cache entry.
+        # Same argument as the one above, and the same cost.
+        db.scalar(select(func.max(EquipmentConnection.id))),
     )
 
 
