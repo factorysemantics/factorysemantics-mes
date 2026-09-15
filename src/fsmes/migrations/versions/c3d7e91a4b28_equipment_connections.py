@@ -5,7 +5,7 @@ fifth state inside it. A machine can be broken and reachable, or fine and
 unreachable. See decision 0030.
 
 Revision ID: c3d7e91a4b28
-Revises: a9c4e17b3d60
+Revises: c6a4b81f39d7
 Create Date: 2026-09-14 19:20:00
 
 """
@@ -15,7 +15,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "c3d7e91a4b28"
-down_revision: str | None = "a9c4e17b3d60"
+down_revision: str | None = "c6a4b81f39d7"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
