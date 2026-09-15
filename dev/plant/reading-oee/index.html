@@ -770,10 +770,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#stale-is-not-stopped" class="md-nav__link">
+  <a href="#stale-is-not-stopped-and-unseen-is-neither" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Stale is not stopped
+        Stale is not stopped, and unseen is neither
       
     </span>
   </a>
@@ -1064,6 +1064,34 @@
     
   
     How-to — read-only OPC UA commissioning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/opc-disconnections/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — losing sight of a machine
   
 
     
@@ -2791,6 +2819,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0030-a-lost-connection-is-unknown-time/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0030 — A lost connection is a dimension of its own, and the gap it leaves is unknown time
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -3316,10 +3372,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#stale-is-not-stopped" class="md-nav__link">
+  <a href="#stale-is-not-stopped-and-unseen-is-neither" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Stale is not stopped
+        Stale is not stopped, and unseen is neither
       
     </span>
   </a>
@@ -3471,11 +3527,48 @@ arithmetic and the options that lost.</p>
 performance never means extra units were invented — that rule is house rule 1
 and lives in <a href="../never-invent-production/">never invent production</a>. It means
 two of the MES's numbers do not agree, and it says so rather than choosing one.</p>
-<h2 id="stale-is-not-stopped">Stale is not stopped<a class="headerlink" href="#stale-is-not-stopped" title="Permanent link">&para;</a></h2>
+<h2 id="stale-is-not-stopped-and-unseen-is-neither">Stale is not stopped, and unseen is neither<a class="headerlink" href="#stale-is-not-stopped-and-unseen-is-neither" title="Permanent link">&para;</a></h2>
 <p>A machine whose tags stopped changing is <strong>stale</strong>, not down. Stale means
 the MES stopped hearing, which is a different fact from the machine
-stopping. Downtime is only booked from a state tag that says so; stale time
-is reported as stale and excluded from availability with a reason.</p>
+stopping. Downtime is only booked from a state tag that says so.</p>
+<p>A machine the MES cannot <strong>reach</strong> is a third thing again, and since
+2026-09-14 it is recorded as one. For the minutes the connection is gone the
+machine has no state at all — not <code>down</code>, which would invent a breakdown, and
+not the state it was last seen in, which would invent availability. Those
+seconds leave availability's <strong>denominator</strong> rather than its numerator, and
+every OEE answer says how many of them there were:</p>
+<table>
+<thead>
+<tr>
+<th>Figure</th>
+<th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>runtime_seconds</code></td>
+<td>seconds the MES saw the machine running</td>
+</tr>
+<tr>
+<td><code>observed_seconds</code></td>
+<td>seconds the MES could see the machine at all</td>
+</tr>
+<tr>
+<td><code>unknown_seconds</code></td>
+<td>seconds inside the window that nobody was watching</td>
+</tr>
+<tr>
+<td><code>unknown_share</code></td>
+<td>that, as a share of the window</td>
+</tr>
+</tbody>
+</table>
+<p>So 92 % availability over forty observed minutes of an eight-hour window is
+still 92 %, and the object carrying it says the other seven hours and twenty
+minutes were unknown. Read both. A shift whose <code>unknown_share</code> is a third is
+not a shift to make a decision from, however good its OEE looks.</p>
+<p><a href="../../operate/opc-disconnections/">Losing sight of a machine</a> is the whole
+story, including the one case this does not cover.</p>
 <h2 id="unlabelled-is-reported-as-unlabelled">Unlabelled is reported as unlabelled<a class="headerlink" href="#unlabelled-is-reported-as-unlabelled" title="Permanent link">&para;</a></h2>
 <p>A downtime pareto that files unlabelled stops under "other" convinces a
 plant it has data it does not have. Here the unlabelled bar is named
@@ -3487,7 +3580,8 @@ it moves up the list.</p>
 <li>Fill the rated cycle time for every machine in the worksheet.</li>
 <li>Give every machine a scrap counter, or accept that quality is unknown.</li>
 <li>Keep the agent running: the window it was not watching cannot be
-   reconstructed later, by design.</li>
+   reconstructed later, by design. <code>/health</code> says how many machines this
+   plant can currently see, which is the thing to alert on.</li>
 </ol>
 <p>A rated cycle time that is wrong does not make grey; it makes a performance
 figure over 100 % with a note beside it. Both are worth a walk to the
@@ -3495,6 +3589,7 @@ machine, and only one of them looks like a problem at first glance.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../never-invent-production/">Never invent production</a></li>
+<li><a href="../../operate/opc-disconnections/">Losing sight of a machine</a></li>
 <li><a href="../../onboarding/GUIDE-ENGINEERING/">Engineering guide — the worksheet</a></li>
 <li>Decision record <a href="../../decisions/0004-never-invent-production/">0004</a></li>
 <li>Decision record <a href="../../decisions/0025-performance-is-measured-not-capped/">0025</a></li>

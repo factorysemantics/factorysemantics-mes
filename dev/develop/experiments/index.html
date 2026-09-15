@@ -952,6 +952,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operate/opc-disconnections/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — losing sight of a machine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operate/packs/" class="md-nav__link">
         
   
@@ -1792,6 +1820,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#disconnect-names-no-station-because-it-belongs-to-no-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        disconnect names no station, because it belongs to no machine
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1869,6 +1908,17 @@
     <span class="md-ellipsis">
       
         console — did the fleet console count the plants the run actually had?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connection-what-did-the-mes-say-about-the-minutes-it-could-not-see" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        connection — what did the MES say about the minutes it could not see?
       
     </span>
   </a>
@@ -2941,6 +2991,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0030-a-lost-connection-is-unknown-time/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0030 — A lost connection is a dimension of its own, and the gap it leaves is unknown time
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -3477,6 +3555,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#disconnect-names-no-station-because-it-belongs-to-no-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        disconnect names no station, because it belongs to no machine
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3554,6 +3643,17 @@
     <span class="md-ellipsis">
       
         console — did the fleet console count the plants the run actually had?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connection-what-did-the-mes-say-about-the-minutes-it-could-not-see" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        connection — what did the MES say about the minutes it could not see?
       
     </span>
   </a>
@@ -3782,6 +3882,10 @@ before a directory is made, with the list printed:</p>
 <td><code>block</code></td>
 <td>nowhere to put it: the machine is willing and downstream is full</td>
 </tr>
+<tr>
+<td><code>disconnect</code></td>
+<td>the OPC endpoint closes: the line runs on and the MES cannot see it</td>
+</tr>
 </tbody>
 </table>
 <p><code>starve</code> and <code>block</code> script the <strong>cause</strong>, not the symptom, and the rest of
@@ -3818,6 +3922,18 @@ series.</p>
 the hold exists — is not measured yet: <code>quality</code> is a planned measurement, not
 a built one. The starter exists first so the measurement has a run to be built
 against.</p>
+<h3 id="disconnect-names-no-station-because-it-belongs-to-no-machine"><code>disconnect</code> names no station, because it belongs to no machine<a class="headerlink" href="#disconnect-names-no-station-because-it-belongs-to-no-machine" title="Permanent link">&para;</a></h3>
+<p>A <code>disconnect</code> is a fault in the <strong>observer</strong>, not in the plant. The replay
+stops its OPC server outright for the window and starts it again afterwards;
+the machines keep running, the counters keep counting, and the generated
+tables are byte-for-byte what they would have been. What changes is that
+nothing is there to read them, which is exactly what a switch losing power
+costs a plant.</p>
+<p>So it takes no <code>station</code> — asking which machine the network outage happened to
+has no answer — and it can be scripted over a <code>down</code> on purpose, which is the
+sharpest case there is: a real breakdown the MES genuinely could not see. A
+fault inside a scripted outage is scored <strong>unknown</strong>, never missed;
+<code>labs/experiments/lost-connection.toml</code> is the starter that uses it.</p>
 <h2 id="what-a-run-writes">What a run writes<a class="headerlink" href="#what-a-run-writes" title="Permanent link">&para;</a></h2>
 <p>One directory per run, under <code>lab-results/</code> unless <code>--results</code> says otherwise:</p>
 <table>
@@ -4117,6 +4233,44 @@ as calling a changeover downtime, at fleet scale.</p>
 <p><em>What it cannot tell you.</em> Whether a console would still be right about a plant
 that is up but wedged, or about twelve plants rather than two. The phases are
 the ones this run happened to live through.</p>
+<h3 id="connection-what-did-the-mes-say-about-the-minutes-it-could-not-see"><code>connection</code> — what did the MES say about the minutes it could not see?<a class="headerlink" href="#connection-what-did-the-mes-say-about-the-minutes-it-could-not-see" title="Permanent link">&para;</a></h3>
+<p>The measurement this exists for, and the only one that <strong>has</strong> to be read from
+during the run. By the time the hour is over the plant has reconnected and
+every screen says so; the question is what they said while the link was down.</p>
+<p>It is <a href="../../decisions/0030-a-lost-connection-is-unknown-time/">decision 0030</a>
+put to a plant that is really losing a real socket. Per scripted outage:</p>
+<ul>
+<li><strong>Did the machines read as disconnected?</strong> Not down, not idle, and not the
+  state they were in when the link died.</li>
+<li><strong>Did any single look disagree with itself?</strong> The plant saying it cannot see
+  a machine, while a screen in the same instant says what that machine is
+  doing. Per look and not across the window — the looks before the agent's
+  health check came round are legitimately still showing the last state it
+  heard, and counting those would report the detection lag as a lie.</li>
+<li><strong>Did <code>/health</code> say how many machines were dark?</strong> The number a monitor
+  reads.</li>
+<li><strong>Did the window come back as unknown time?</strong> Read off the OEE answer at the
+  end, which is where a plant's numbers actually come from.</li>
+</ul>
+<p>Two resolutions bound it, and both are printed rather than assumed. The
+<strong>polling interval</strong> is the same one <code>latency</code> states. The <strong>agent's own
+health check</strong> is the new one: it asks its server whether the session is alive
+every <code>opc_health_periods</code> publish intervals, so an outage shorter than a
+couple of those, restated on the line's clock, could not have been seen by
+anything. Such a window is reported as <em>unknown</em> with the arithmetic beside
+it, never as missed.</p>
+<p><em>What it cannot tell you.</em> Whether a real OPC server fails the way a stopped
+one does. A socket that closes is one failure mode; a server that accepts
+connections and answers nothing, a certificate that expires mid-session, a
+switch that drops half the packets are others, and none of them is scripted
+here yet.</p>
+<p><em>The direction of the difference matters.</em> The MES almost always records
+<strong>more</strong> unknown time than was scripted, because it takes up to one health
+check to notice the link has gone and up to one retry to find it back. That
+overhang is honest — it is the MES saying it does not know, when it does not
+know. <strong>Less</strong> unknown time than was scripted is the fault: the MES
+accounting for minutes it could not see. The report names which of the two it
+found rather than printing a difference the reader has to interpret.</p>
 <h3 id="not-measured-yet">Not measured yet<a class="headerlink" href="#not-measured-yet" title="Permanent link">&para;</a></h3>
 <p><code>quality</code> and <code>agent-eval</code> are named in the design and are not built. A plan
 that asks for one is <strong>refused by name</strong>: silently dropping a measurement is how

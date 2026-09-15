@@ -157,6 +157,10 @@
          <lastmod>2026-09-15</lastmod>
     </url>
     <url>
+         <loc>https://docs.factorysemantics.com/dev/decisions/0030-a-lost-connection-is-unknown-time/</loc>
+         <lastmod>2026-09-15</lastmod>
+    </url>
+    <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/TEMPLATE/</loc>
          <lastmod>2026-09-15</lastmod>
     </url>
@@ -362,6 +366,10 @@
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/modules/</loc>
+         <lastmod>2026-09-15</lastmod>
+    </url>
+    <url>
+         <loc>https://docs.factorysemantics.com/dev/operate/opc-disconnections/</loc>
          <lastmod>2026-09-15</lastmod>
     </url>
     <url>

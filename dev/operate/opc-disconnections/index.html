@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://docs.factorysemantics.com/dev/decisions/0015-mcp-registry-name/">
+        <link rel="canonical" href="https://docs.factorysemantics.com/dev/operate/opc-disconnections/">
       
       
-        <link rel="prev" href="../0014-first-public-version-is-0-1-0/">
+        <link rel="prev" href="../opc-readonly/">
       
       
-        <link rel="next" href="../0016-no-trademark-registration/">
+        <link rel="next" href="../packs/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>0015 — The MCP server is registered as com.factorysemantics/mes - FactorySemantics MES</title>
+        <title>Explanation — losing sight of a machine - FactorySemantics MES</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#0015-the-mcp-server-is-registered-as-comfactorysemanticsmes" class="md-skip">
+        <a href="#explanation-what-happens-when-the-mes-loses-sight-of-a-machine" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              0015 — The MCP server is registered as com.factorysemantics/mes
+              Explanation — losing sight of a machine
             
           </span>
         </div>
@@ -268,11 +268,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../operate/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -288,12 +290,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../../develop/" class="md-tabs__link">
           
   
@@ -785,26 +785,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -822,7 +827,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -840,7 +845,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -868,7 +873,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/first-plant/" class="md-nav__link">
+      <a href="../first-plant/" class="md-nav__link">
         
   
   
@@ -896,7 +901,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/deploy/" class="md-nav__link">
+      <a href="../deploy/" class="md-nav__link">
         
   
   
@@ -924,7 +929,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/opc-readonly/" class="md-nav__link">
+      <a href="../opc-readonly/" class="md-nav__link">
         
   
   
@@ -949,10 +954,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../operate/opc-disconnections/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — losing sight of a machine
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -968,6 +1000,92 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-two-wrong-answers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The two wrong answers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-does-instead" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it does instead
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-is-detected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it is detected
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-you-will-see" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What you will see
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-this-does-not-solve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this does not solve
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -980,7 +1098,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/packs/" class="md-nav__link">
+      <a href="../packs/" class="md-nav__link">
         
   
   
@@ -1008,7 +1126,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/registry/" class="md-nav__link">
+      <a href="../registry/" class="md-nav__link">
         
   
   
@@ -1036,7 +1154,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/fleet/" class="md-nav__link">
+      <a href="../fleet/" class="md-nav__link">
         
   
   
@@ -1064,7 +1182,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/modules/" class="md-nav__link">
+      <a href="../modules/" class="md-nav__link">
         
   
   
@@ -1092,7 +1210,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/shadow-mode/" class="md-nav__link">
+      <a href="../shadow-mode/" class="md-nav__link">
         
   
   
@@ -1120,7 +1238,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/shadow-scorecard/" class="md-nav__link">
+      <a href="../shadow-scorecard/" class="md-nav__link">
         
   
   
@@ -1148,7 +1266,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/erpnext/" class="md-nav__link">
+      <a href="../erpnext/" class="md-nav__link">
         
   
   
@@ -1176,7 +1294,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/uns/" class="md-nav__link">
+      <a href="../uns/" class="md-nav__link">
         
   
   
@@ -1204,7 +1322,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/backup/" class="md-nav__link">
+      <a href="../backup/" class="md-nav__link">
         
   
   
@@ -1232,7 +1350,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/tls/" class="md-nav__link">
+      <a href="../tls/" class="md-nav__link">
         
   
   
@@ -1260,7 +1378,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/upgrade/" class="md-nav__link">
+      <a href="../upgrade/" class="md-nav__link">
         
   
   
@@ -1288,7 +1406,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/confirmation-files/" class="md-nav__link">
+      <a href="../confirmation-files/" class="md-nav__link">
         
   
   
@@ -1344,7 +1462,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/inbound/" class="md-nav__link">
+      <a href="../inbound/" class="md-nav__link">
         
   
   
@@ -1456,7 +1574,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/first-week/" class="md-nav__link">
+      <a href="../first-week/" class="md-nav__link">
         
   
   
@@ -1484,7 +1602,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/compatibility/" class="md-nav__link">
+      <a href="../compatibility/" class="md-nav__link">
         
   
   
@@ -1512,7 +1630,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operate/security/" class="md-nav__link">
+      <a href="../security/" class="md-nav__link">
         
   
   
@@ -1544,31 +1662,26 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
             
   
   
@@ -1586,7 +1699,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1797,31 +1910,26 @@
                 
   
   
-    
   
   
-  
     
     
     
     
       
       
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_8" >
         
           
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_8" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_4_8" id="__nav_4_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4_8" id="__nav_4_8_label" tabindex="0">
             
   
   
@@ -1839,7 +1947,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_8_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_8_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_8">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1857,7 +1965,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../decisions/" class="md-nav__link">
         
   
   
@@ -1885,7 +1993,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0001-apache-2-with-dco/" class="md-nav__link">
+      <a href="../../decisions/0001-apache-2-with-dco/" class="md-nav__link">
         
   
   
@@ -1913,7 +2021,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0002-kernel-and-modules/" class="md-nav__link">
+      <a href="../../decisions/0002-kernel-and-modules/" class="md-nav__link">
         
   
   
@@ -1941,7 +2049,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0003-one-mcp-server/" class="md-nav__link">
+      <a href="../../decisions/0003-one-mcp-server/" class="md-nav__link">
         
   
   
@@ -1969,7 +2077,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0004-never-invent-production/" class="md-nav__link">
+      <a href="../../decisions/0004-never-invent-production/" class="md-nav__link">
         
   
   
@@ -1997,7 +2105,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0005-plain-html-no-build-step/" class="md-nav__link">
+      <a href="../../decisions/0005-plain-html-no-build-step/" class="md-nav__link">
         
   
   
@@ -2025,7 +2133,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
+      <a href="../../decisions/0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
         
   
   
@@ -2053,7 +2161,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0007-fresh-public-history/" class="md-nav__link">
+      <a href="../../decisions/0007-fresh-public-history/" class="md-nav__link">
         
   
   
@@ -2081,7 +2189,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0008-erp-connectors-are-modules/" class="md-nav__link">
+      <a href="../../decisions/0008-erp-connectors-are-modules/" class="md-nav__link">
         
   
   
@@ -2109,7 +2217,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0009-organisation-not-personal-account/" class="md-nav__link">
+      <a href="../../decisions/0009-organisation-not-personal-account/" class="md-nav__link">
         
   
   
@@ -2137,7 +2245,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0010-github-discussions-only/" class="md-nav__link">
+      <a href="../../decisions/0010-github-discussions-only/" class="md-nav__link">
         
   
   
@@ -2165,7 +2273,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0011-mkdocs-material-generated-reference/" class="md-nav__link">
+      <a href="../../decisions/0011-mkdocs-material-generated-reference/" class="md-nav__link">
         
   
   
@@ -2193,7 +2301,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0012-contributor-covenant-3/" class="md-nav__link">
+      <a href="../../decisions/0012-contributor-covenant-3/" class="md-nav__link">
         
   
   
@@ -2221,7 +2329,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0013-governance-is-one-page/" class="md-nav__link">
+      <a href="../../decisions/0013-governance-is-one-page/" class="md-nav__link">
         
   
   
@@ -2249,7 +2357,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0014-first-public-version-is-0-1-0/" class="md-nav__link">
+      <a href="../../decisions/0014-first-public-version-is-0-1-0/" class="md-nav__link">
         
   
   
@@ -2274,37 +2382,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    0015 — The MCP server is registered as com.factorysemantics/mes
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../decisions/0015-mcp-registry-name/" class="md-nav__link">
         
   
   
@@ -2320,81 +2401,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Context
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#options-considered" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Options considered
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Decision
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Consequences
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#house-rules-touched" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        House rules touched
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2407,7 +2413,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0016-no-trademark-registration/" class="md-nav__link">
+      <a href="../../decisions/0016-no-trademark-registration/" class="md-nav__link">
         
   
   
@@ -2435,7 +2441,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
+      <a href="../../decisions/0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
         
   
   
@@ -2463,7 +2469,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
+      <a href="../../decisions/0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
         
   
   
@@ -2491,7 +2497,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0019-count-everything-the-machine-counted/" class="md-nav__link">
+      <a href="../../decisions/0019-count-everything-the-machine-counted/" class="md-nav__link">
         
   
   
@@ -2519,7 +2525,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
+      <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
         
   
   
@@ -2547,7 +2553,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0021-one-database-per-plant/" class="md-nav__link">
+      <a href="../../decisions/0021-one-database-per-plant/" class="md-nav__link">
         
   
   
@@ -2575,7 +2581,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0022-what-a-plant-pack-may-contain/" class="md-nav__link">
+      <a href="../../decisions/0022-what-a-plant-pack-may-contain/" class="md-nav__link">
         
   
   
@@ -2603,7 +2609,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0023-the-fleet-console-observes/" class="md-nav__link">
+      <a href="../../decisions/0023-the-fleet-console-observes/" class="md-nav__link">
         
   
   
@@ -2631,7 +2637,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0024-a-nonconformance-has-a-life/" class="md-nav__link">
+      <a href="../../decisions/0024-a-nonconformance-has-a-life/" class="md-nav__link">
         
   
   
@@ -2659,7 +2665,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0025-performance-is-measured-not-capped/" class="md-nav__link">
+      <a href="../../decisions/0025-performance-is-measured-not-capped/" class="md-nav__link">
         
   
   
@@ -2687,7 +2693,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0026-counts-that-outrun-the-run-time/" class="md-nav__link">
+      <a href="../../decisions/0026-counts-that-outrun-the-run-time/" class="md-nav__link">
         
   
   
@@ -2715,7 +2721,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0027-an-spc-signal-raises-a-hold/" class="md-nav__link">
+      <a href="../../decisions/0027-an-spc-signal-raises-a-hold/" class="md-nav__link">
         
   
   
@@ -2743,7 +2749,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0028-which-shift-a-minute-belongs-to/" class="md-nav__link">
+      <a href="../../decisions/0028-which-shift-a-minute-belongs-to/" class="md-nav__link">
         
   
   
@@ -2771,7 +2777,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0029-an-order-does-not-finish-itself/" class="md-nav__link">
+      <a href="../../decisions/0029-an-order-does-not-finish-itself/" class="md-nav__link">
         
   
   
@@ -2799,7 +2805,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0030-a-lost-connection-is-unknown-time/" class="md-nav__link">
+      <a href="../../decisions/0030-a-lost-connection-is-unknown-time/" class="md-nav__link">
         
   
   
@@ -2827,7 +2833,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../TEMPLATE/" class="md-nav__link">
+      <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
   
@@ -3319,10 +3325,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
+  <a href="#the-two-wrong-answers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Context
+        The two wrong answers
       
     </span>
   </a>
@@ -3330,10 +3336,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#options-considered" class="md-nav__link">
+  <a href="#what-it-does-instead" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Options considered
+        What it does instead
       
     </span>
   </a>
@@ -3341,10 +3347,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
+  <a href="#how-it-is-detected" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Decision
+        How it is detected
       
     </span>
   </a>
@@ -3352,10 +3358,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
+  <a href="#what-you-will-see" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Consequences
+        What you will see
       
     </span>
   </a>
@@ -3363,10 +3369,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#house-rules-touched" class="md-nav__link">
+  <a href="#what-this-does-not-solve" class="md-nav__link">
     <span class="md-ellipsis">
       
-        House rules touched
+        What this does not solve
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
       
     </span>
   </a>
@@ -3390,7 +3407,7 @@
 
 
   
-    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/decisions/0015-mcp-registry-name.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/operate/opc-disconnections.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3398,47 +3415,151 @@
   
 
 
-<h1 id="0015-the-mcp-server-is-registered-as-comfactorysemanticsmes">0015 — The MCP server is registered as <code>com.factorysemantics/mes</code><a class="headerlink" href="#0015-the-mcp-server-is-registered-as-comfactorysemanticsmes" title="Permanent link">&para;</a></h1>
-<ul>
-<li><strong>Status:</strong> accepted</li>
-<li><strong>Date:</strong> 2026-09-06</li>
-<li><strong>Deciders:</strong> @kalwei</li>
-</ul>
-<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>The official MCP registry has been the only official listing since the curated server list was retired on 2026-04-14. Its API has been frozen at v0.1 since 2025-10-24. Names there are reverse-DNS and verified against their namespace: the GitHub form is proved by logging in, the domain form by one DNS TXT record. A bare <code>factorysemantics/mes</code> is not a name the registry accepts.</p>
-<h2 id="options-considered">Options considered<a class="headerlink" href="#options-considered" title="Permanent link">&para;</a></h2>
+<h1 id="explanation-what-happens-when-the-mes-loses-sight-of-a-machine">Explanation — what happens when the MES loses sight of a machine<a class="headerlink" href="#explanation-what-happens-when-the-mes-loses-sight-of-a-machine" title="Permanent link">&para;</a></h1>
+<p>A plant loses its connection to the machine layer most weeks. A switch
+reboots, a certificate expires, an engineer unplugs the wrong port, a PLC is
+swapped. The line does not stop. The machines are fine. The MES just cannot
+see any of it.</p>
+<p>This page is what this MES does about that, and — more usefully — what it
+refuses to do. The decision behind it is
+<a href="../../decisions/0030-a-lost-connection-is-unknown-time/">0030</a>.</p>
+<h2 id="the-two-wrong-answers">The two wrong answers<a class="headerlink" href="#the-two-wrong-answers" title="Permanent link">&para;</a></h2>
+<p>They are symmetrical, and both survive for years because the number still
+looks plausible.</p>
+<p><strong>Read the gap as a stop.</strong> The machine goes into <code>down</code> for the length of
+the outage. Now the plant has a breakdown that never happened, on a machine
+that was running the whole time, and somebody walks out to look at it.</p>
+<p><strong>Read it as the last state we heard.</strong> The machine stays <code>running</code> — or
+<code>down</code>, or whatever it was — until the link comes back. Now the plant has
+availability nobody was watching. This is the worse of the two, because it
+reads <em>better</em>, so it is believed. It is also what this MES did before
+2026-09-14: the agent logged the dropped connection and slept, the open
+state interval stayed open, and the invented run time went straight into
+availability's numerator and the machine's maintenance hours.</p>
+<h2 id="what-it-does-instead">What it does instead<a class="headerlink" href="#what-it-does-instead" title="Permanent link">&para;</a></h2>
+<p><strong>The connection is its own history.</strong> <code>equipment_connections</code> holds one row
+per contiguous stretch of being able — or unable — to see a machine, the same
+shape <code>equipment_states</code> has. A machine can be <em>down and reachable</em> or <em>fine
+and unreachable</em>, and a plant that has to pick one column for both has thrown
+away the more useful half.</p>
+<p><strong>The state history stops where the evidence stops.</strong> When the agent records
+a disconnection it closes the machine's open state interval at the last
+moment there was evidence, and opens nothing in its place. For the length of
+the outage the machine has <strong>no state</strong>, so every screen and every API
+answers <code>unknown</code> — the word they already use for a machine they have no
+interval for. Nothing carries on accruing: not run time, not downtime, not
+maintenance hours.</p>
+<p><strong>Two timestamps, because the difference is real.</strong> Each interval carries
+<code>started_at</code> — the last moment there was positive evidence of the link — and
+<code>detected_at</code>, when the agent noticed. The server may have gone at either end
+of the seconds between them, so both are recorded and neither is averaged
+into the other.</p>
+<p><strong>Unknown time leaves the denominator.</strong> Availability is run time ÷
+<em>observed</em> time, where observed time is the window less the seconds this
+machine was disconnected inside it. Every OEE answer carries
+<code>unknown_seconds</code> and <code>unknown_share</code> beside the figure, so 92 % availability
+over forty observed minutes of an eight-hour window cannot be read as though
+it covered the shift. The downtime pareto states the unknown share of its
+window for the same reason the unlabelled bucket exists.</p>
+<p><strong>A disconnection is never a downtime reason.</strong> It is not a bucket in the
+pareto, it does not book, it does not label a stop, and it never reaches an
+ERP confirmation as a stop.</p>
+<h2 id="how-it-is-detected">How it is detected<a class="headerlink" href="#how-it-is-detected" title="Permanent link">&para;</a></h2>
+<p>Positively. The agent asks the server whether the session is still alive every
+<code>opc_health_periods</code> publish intervals — three by default, so about a second
+and a half on a real line, and never faster than once a second. Losing the
+client session is the other trigger.</p>
+<p><strong>Silence from a tag is not a trigger</strong>, and this is worth being clear about
+because it is the obvious thing to do and it is wrong. OPC UA notifies on
+<em>change</em>. A machine standing idle correctly sends nothing for an hour.
+Inferring an outage from that invents one, which is the same fault as missing
+a real one, in the other direction. When a plant's server publishes a real
+heartbeat tag, per-equipment staleness becomes a positive signal and this MES
+should use it; not before.</p>
+<h2 id="what-you-will-see">What you will see<a class="headerlink" href="#what-you-will-see" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Option</th>
-<th>For</th>
-<th>Against</th>
+<th>Where</th>
+<th>What it says</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>com.factorysemantics/mes</code></td>
-<td>matches the product and the documentation domain; survives a GitHub rename; the DNS record is a two-minute edit the publisher CLI prints for you</td>
-<td>needs control of the domain, and a namespace change later would be a new listing</td>
+<td>Floor tiles, line view</td>
+<td>the machine's tile in the grey the product uses for unknown, with a dashed edge, and a strip saying <code>no connection since 09:12 — the OPC server did not answer</code></td>
 </tr>
 <tr>
-<td><code>io.github.factorysemantics/mes</code></td>
-<td>proved by a GitHub login, nothing else to set up</td>
-<td>ties the name to an account host; a rename of the organisation orphans it</td>
+<td>Machine page</td>
+<td>the same, in place of the state pill and its "since" line</td>
 </tr>
 <tr>
-<td>Do not list</td>
-<td>nothing to do</td>
-<td>the registry is where a developer searching "manufacturing", "OPC UA" or "MES" looks first, and sub-registries pull from it</td>
+<td>State timeline</td>
+<td>the outage drawn as its own interval, rather than as white space — a hole in a Gantt reads as <em>nothing happened</em>, and this one means <em>nobody was looking</em></td>
+</tr>
+<tr>
+<td><code>GET /equipment/connections</code></td>
+<td>every machine, its connection, since when and why, with the total stated</td>
+</tr>
+<tr>
+<td><code>GET /health</code></td>
+<td>a <code>watching</code> block: machines, connected, disconnected, and how many have no connection fact at all</td>
+</tr>
+<tr>
+<td>Fleet console</td>
+<td>a <strong>Watching</strong> column, so a plant that is up and blind to nine machines cannot hide behind the light that says it is up</td>
+</tr>
+<tr>
+<td>The namespace</td>
+<td>an <code>equipment_connection_change</code> event, so a subscriber knows when the last state it heard stopped meaning anything</td>
 </tr>
 </tbody>
 </table>
-<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
-<p>One listing, <code>com.factorysemantics/mes</code>, verified through the domain, for the product's own MCP server. The simulation server is not listed separately — it exists to test the product and must never be near a real plant (0003); the description mentions it and nothing more. The listing is published after the package exists on the package index, because the registry entry names the package. The description leads with what is unusual rather than with the tool count: reads are free, writes are idempotent and take <code>dry_run</code>, every action carries the human it acts on behalf of, and the tool surface is filtered by what the account may do.</p>
-<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
-<p>Easy: one listing feeds every client store that pulls from the registry. Hard: the name is now a thing that must stay true — the domain, the organisation and the namespace are one string, so renaming any of them is a decision, not a rename.</p>
-<h2 id="house-rules-touched">House rules touched<a class="headerlink" href="#house-rules-touched" title="Permanent link">&para;</a></h2>
-<p>Rule 3 in spirit: the listing advertises the write discipline rather than the tool count, because the discipline is what makes the tools safe to hand an agent.</p>
+<p><code>unknown</code> in that list is not a failure to answer. It means nothing has ever
+reported a connection for that machine — a machine fed by hand, or over MQTT,
+or one whose agent has never run. Calling it <em>connected</em> would be a claim
+nobody made.</p>
+<h2 id="what-this-does-not-solve">What this does not solve<a class="headerlink" href="#what-this-does-not-solve" title="Permanent link">&para;</a></h2>
+<p><strong>An agent that is killed outright writes nothing.</strong> <code>kill -9</code>, a power cut
+on the box the agent runs on, a container evicted: no disconnection is
+recorded, so those machines' state intervals stay open and their last state
+stands until something closes it. That is the old behaviour, still present in
+that one case.</p>
+<p>Closing it needs a heartbeat the API can read and time out on its own — the
+agent saying "I am still here" often enough that the API can decide it is
+not. That is a bigger change than this one and it is not made. Until it is,
+the practical answer is the one every plant already uses: watch the agent
+process, and alert on <code>/health</code> saying the plant can see fewer machines than
+it has.</p>
+<p><strong>A server that answers but says nothing</strong> is not detected either. The
+session is alive, so the watchdog is satisfied; only a heartbeat tag or a
+publish-rate expectation would catch it, and both belong with the change
+above.</p>
+<p><strong>Units the machine counted during the outage are not booked.</strong> This one is
+worth knowing before you read a shift total. The agent books production from
+the <em>increase</em> of a cumulative counter, and its memory of the last value lives
+with the connection — so the first reading after a reconnect starts a fresh
+baseline, and whatever the counter climbed while nobody was watching books
+nothing. Measured: in a scripted run with two outages totalling seven minutes
+of line time, the line counted about 520 units per station inside them and the
+MES booked 306 to 337 fewer than the line made, on every station.</p>
+<p>Nothing is invented and nothing is double-counted, which is the rule that
+outranks the others, but the shortfall is real and it is silent on the shift
+screen. It is not settled here because it is a second question and not a
+smaller one: those units happened, so
+<a href="../../decisions/0019-count-everything-the-machine-counted/">decision 0019</a>
+says book them — and nothing can say <em>when</em> inside the gap they were made, nor
+which order they belong to if the line changed order during it. Until there is
+a record that settles it, the honest reading of a shift that contained an
+outage is: the unknown share on the OEE answer says how long nobody was
+watching, and the units counted in that time are not in the total.</p>
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../decisions/0030-a-lost-connection-is-unknown-time/">Decision 0030 — a lost connection is a dimension of its own</a></li>
+<li><a href="../opc-readonly/">Read-only OPC UA commissioning</a></li>
+<li><a href="../../plant/reading-oee/">How to read OEE</a></li>
+<li><a href="../../develop/experiments/">Experiments in the lab</a> — <code>labs/experiments/lost-connection.toml</code> scripts an outage and measures what was said about it</li>
+</ul>
 
 
 
@@ -3476,7 +3597,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../0014-first-public-version-is-0-1-0/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 0014 — The first public version is 0.1.0, cut only when a readiness checklist is green">
+          <a href="../opc-readonly/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How-to — read-only OPC UA commissioning">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -3486,20 +3607,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                0014 — The first public version is 0.1.0, cut only when a readiness checklist is green
+                How-to — read-only OPC UA commissioning
               </div>
             </div>
           </a>
         
         
           
-          <a href="../0016-no-trademark-registration/" class="md-footer__link md-footer__link--next" aria-label="Next: 0016 — No trademark registration for the name">
+          <a href="../packs/" class="md-footer__link md-footer__link--next" aria-label="Next: Reference — plant packs">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                0016 — No trademark registration for the name
+                Reference — plant packs
               </div>
             </div>
             <div class="md-footer__button md-icon">
