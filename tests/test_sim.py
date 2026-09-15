@@ -394,3 +394,48 @@ def test_a_components_log_is_read_with_its_rotated_files_oldest_first(tmp_path):
     names = [p.name for p in log_files(tmp_path / "opc-agent.jsonl")]
     assert names == ["opc-agent.jsonl.2", "opc-agent.jsonl.1", "opc-agent.jsonl"]
     assert [r["n"] for r in _json_lines(tmp_path / "opc-agent.jsonl")] == [1, 2, 3]
+
+
+# ----------------------------------------------- a fault nobody could see
+
+def _with_a_disconnect(truth, start_s, end_s):
+    """The same hour with the OPC endpoint closed over a window."""
+    from fsmes.sim.truth import ScriptedEvent
+
+    return {**truth, "events": [*truth["events"],
+                                ScriptedEvent(type="disconnect", start_s=start_s, end_s=end_s)]}
+
+
+def test_a_breakdown_inside_a_scripted_outage_is_unknown_not_missed(truth):
+    """The MES was blind for those minutes by the script's own doing. Scoring
+    it as recall 0 is the same false accusation this scorer refuses to make
+    about a stop shorter than its own sample. Decision 0027."""
+    blind = _with_a_disconnect(truth, 2600, 3000)
+    card = score_run(blind, _timeline([("MILL01", "running", 2700, 2880)]), T0, SPEED)
+    assert card["faults"][0]["detected"] is None
+    assert card["faults"][0]["inside_a_disconnect"] is True
+    assert card["faults"][0]["unseen_sim_seconds"] > 0
+    assert card["metrics"]["breakdown_recall"] is None, "a blind window must not make a recall"
+
+
+def test_a_breakdown_outside_every_outage_is_still_scored(truth):
+    """The rule is narrow on purpose: an outage somewhere else in the hour
+    does not excuse a fault the MES could see and did not record."""
+    blind = _with_a_disconnect(truth, 100, 400)
+    card = score_run(blind, _timeline([("MILL01", "running", 2700, 2880)]), T0, SPEED)
+    assert card["faults"][0]["detected"] is False
+    assert card["faults"][0]["inside_a_disconnect"] is False
+
+
+def test_a_scripted_outage_is_carried_on_the_card_and_scored_as_nothing(truth):
+    """Nothing happened to the line, so there is no MES answer to be right or
+    wrong about. The windows are carried so the lab can read them."""
+    blind = _with_a_disconnect(truth, 600, 900)
+    card = score_run(blind, _timeline([("MILL01", "down", 2700, 2880)]), T0, SPEED)
+    assert card["disconnects"] == [{
+        "event": "disconnect",
+        "window_sim_s": [600, 900],
+        "scripted_seconds": round(300 / SPEED, 1),
+        "window_wall": [_at(600), _at(900)],
+    }]
+    assert all("disconnect" not in str(check.get("event")) for check in card["planned_stops"])

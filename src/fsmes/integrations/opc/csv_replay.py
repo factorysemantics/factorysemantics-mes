@@ -51,6 +51,52 @@ LINE_TABLE = "Line"
 # How often a replay that has fallen behind says so again.
 BEHIND_REPORT_SECONDS = 5.0
 
+
+class Endpoint:
+    """The server socket, and the scripted windows in which it is not there.
+
+    A `disconnect` event in a scenario closes the endpoint outright rather
+    than faking one: the OPC server stops, the agent's socket dies, and the
+    agent takes the same path it takes when a switch reboots at a real plant.
+    Nothing about the line changes - the machines keep running and the tables
+    keep saying what they always said - which is the whole point. What the
+    experiment asks is what the MES *claims* about the minutes it could not
+    see, and a simulated outage the agent could still read through would
+    answer a different question.
+
+    The address space survives a stop and a start, so the tags come back as
+    the same nodes at the same node ids; only the connection is lost.
+    """
+
+    def __init__(self, server, windows: list[dict]) -> None:
+        self.server = server
+        self.windows = [(int(w["start"]), int(w["end"])) for w in windows
+                        if int(w["end"]) > int(w["start"])]
+        self.closed = False
+
+    def scripted(self, tick: int) -> bool:
+        """Is the endpoint meant to be shut at this line second? The replay
+        loops, so the window is read against the position in the pass, which
+        is what makes a disconnect repeat exactly like every other event."""
+        if not self.windows:
+            return False
+        return any(start <= tick < end for start, end in self.windows)
+
+    async def follow(self, tick: int) -> None:
+        """Open or close the socket to match the script, and say so."""
+        want_closed = self.scripted(tick)
+        if want_closed == self.closed:
+            return
+        if want_closed:
+            await self.server.stop()
+            self.closed = True
+            log.warning("replay closed its endpoint", line_second=tick,
+                        note="the line runs on; nothing can read it")
+        else:
+            await self.server.start()
+            self.closed = False
+            log.info("replay reopened its endpoint", line_second=tick)
+
 class Setpoint:
     """A live value the plant is *told*, and the reading that chases it.
 
@@ -443,6 +489,9 @@ async def run(settings: Settings, directory: Path | None = None, speed: float | 
     # constant must still take 60 *simulated* seconds, not 60 wall ones.
     server, replays, line_rows, line_nodes, inspectors = await build_server(
         settings, machines, directory, period_s=1.0)
+    endpoint = Endpoint(server, load_manifest(directory).get("disconnects") or [])
+    if endpoint.windows:
+        log.info("replay will close its endpoint", windows=endpoint.windows)
     log.info(
         "replay online",
         endpoint=settings.opc_endpoint,
@@ -488,6 +537,12 @@ async def run(settings: Settings, directory: Path | None = None, speed: float | 
                         worst_seconds=round(worst, 2),
                         tick=tick,
                     )
+
+            # Before the writes: at the first tick of a scripted window the
+            # server goes away, and the values written while it is away are
+            # written into an address space nobody is connected to - exactly
+            # what a plant does while its network is down.
+            await endpoint.follow(tick % len(replays[0].rows) if replays else tick)
 
             for machine in replays:
                 await machine.write_row(tick)

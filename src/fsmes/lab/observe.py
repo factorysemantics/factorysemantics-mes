@@ -45,7 +45,8 @@ SURFACES = {
     "/equipment/states": "the operations screen's own feed: what each machine is doing now",
     "/line/events": "the line view's feed: station status, and the units booked since the "
                     "last look",
-    "/health": "what the plant says about itself",
+    "/health": "what the plant says about itself, including how much of itself it can see",
+    "/equipment/connections": "whether the MES can still see each machine, and since when",
 }
 
 #: Surfaces that cannot answer *when did the MES notice* however often they are
@@ -83,6 +84,14 @@ class Look:
     #: look is catching up rather than current. Nothing is lost - the feed
     #: resumes from the last row it gave - but a reader is entitled to know.
     truncated: bool = False
+    #: equipment code -> connected | disconnected | unknown, at this look.
+    #: A machine the MES cannot see has no state at all, so it simply stops
+    #: appearing in `states`; this is the surface that says why, and it is the
+    #: only one that can tell "nobody is watching" from "nothing is happening".
+    connections: dict[str, str] = field(default_factory=dict)
+    #: What `/health` said the plant could see of itself: machines, connected,
+    #: disconnected, and how many it has no connection fact for.
+    watching: dict = field(default_factory=dict)
     #: Route -> why it did not answer.
     refused: dict[str, str] = field(default_factory=dict)
 
@@ -90,6 +99,7 @@ class Look:
         return {"line_second": round(self.line_second, 1), "at": self.at,
                 "states": self.states, "line_states": self.line_states,
                 "booked_good": self.booked_good, "booked_scrap": self.booked_scrap,
+                "connections": self.connections, "watching": self.watching,
                 "truncated": self.truncated, "refused": self.refused}
 
 
@@ -145,7 +155,15 @@ class Watch:
             look.line_states = {str(row.get("code")): str(row.get("state"))
                                 for row in said.get("stations") or [] if row.get("code")}
 
-        self._ask(base, token, "/health", look)
+        said = self._ask(base, token, "/health", look)
+        if isinstance(said, dict):
+            look.watching = said.get("watching") or {}
+
+        said = self._ask(base, token, "/equipment/connections", look)
+        if isinstance(said, dict):
+            look.connections = {str(row.get("equipment")): str(row.get("state"))
+                                for row in said.get("machines") or [] if row.get("equipment")}
+
         self.looks.append(look)
         if self._on_look is not None:
             # Same rule as the hook that calls this: whatever the run wants to

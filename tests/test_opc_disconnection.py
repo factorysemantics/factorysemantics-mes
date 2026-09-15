@@ -283,3 +283,74 @@ def test_the_connection_change_reaches_the_namespace(session):
                    and m.payload["connection"] == "disconnected")
     assert payload["equipment"] == "MIX01"
     assert payload["detected_at"] >= payload["started_at"]
+
+
+# -------------------------------------------------------------- the agent's link
+
+def test_the_watchdog_asks_the_server_rather_than_inferring_from_silence():
+    """OPC UA publishes on change: a machine standing idle correctly sends
+    nothing for an hour. Inferring an outage from that invents one, which is
+    the same fault as missing a real one, in the other direction."""
+    import asyncio
+
+    from fsmes.integrations.opc import agent as opc_agent
+
+    class _Server:
+        def __init__(self):
+            self.asked = 0
+
+        async def check_connection(self):
+            self.asked += 1
+            if self.asked >= 3:
+                raise OSError("connection refused")
+
+    server = _Server()
+    link = opc_agent._Link([], "opc.tcp://127.0.0.1:4840/x")
+    with pytest.raises(OSError):
+        asyncio.run(opc_agent._health_watchdog(server, link, 0.001))
+    assert server.asked == 3, "the watchdog stopped asking, or never started"
+    assert link.seen is not None, "a successful check is the evidence the link was alive"
+
+
+def test_how_often_the_watchdog_asks_is_config_and_never_faster_than_a_second():
+    from fsmes.config import Settings
+    from fsmes.integrations.opc.agent import health_seconds
+
+    assert health_seconds(Settings(opc_publish_ms=500, opc_health_periods=3)) == 1.5
+    assert health_seconds(Settings(opc_publish_ms=2000, opc_health_periods=2)) == 4.0
+    # A plant that asks for it faster than a second gets a second: a check per
+    # 50 ms buys nothing anybody can act on and costs a round trip each time.
+    assert health_seconds(Settings(opc_publish_ms=50, opc_health_periods=1)) == 1.0
+
+
+def test_the_link_writes_one_interval_however_long_the_server_stays_away(session, scope, monkeypatch):
+    """The agent retries every three seconds. A row per retry would be a
+    thousand intervals for an outage nobody fixed over a weekend."""
+    from fsmes.integrations.opc import agent as opc_agent
+
+    monkeypatch.setattr(opc_agent, "session_scope", scope)
+    link = opc_agent._Link(["MIX01"], "opc.tcp://127.0.0.1:4840/x")
+    link.connected()
+    for _ in range(5):
+        link.disconnected("the OPC server did not answer")
+
+    rows = session.query(EquipmentConnection).order_by(EquipmentConnection.id).all()
+    assert [r.state for r in rows] == [ConnectionStateName.CONNECTED,
+                                       ConnectionStateName.DISCONNECTED]
+    assert rows[1].source == "opc.tcp://127.0.0.1:4840/x"
+
+
+def test_coming_back_closes_the_outage_rather_than_starting_a_third_interval(session, scope,
+                                                                             monkeypatch):
+    from fsmes.integrations.opc import agent as opc_agent
+
+    monkeypatch.setattr(opc_agent, "session_scope", scope)
+    link = opc_agent._Link(["MIX01"], "opc.tcp://127.0.0.1:4840/x")
+    link.connected()
+    link.disconnected("the OPC server did not answer")
+    link.connected()
+
+    rows = session.query(EquipmentConnection).order_by(EquipmentConnection.id).all()
+    assert len(rows) == 3
+    assert rows[1].ended_at is not None, "the outage was left open after the link came back"
+    assert rows[2].state is ConnectionStateName.CONNECTED and rows[2].ended_at is None

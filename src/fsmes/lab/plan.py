@@ -61,6 +61,7 @@ MEASUREMENTS = {
     "oee": "availability, performance and quality per station against the script",
     "latency": "how long after the line each screen said it, watched while the hour played",
     "console": "what `fsmes fleet console` counted at each phase of the run",
+    "connection": "what every screen said about the minutes the MES could not see the line",
 }
 
 #: Named in the design and not built yet. A plan that asks for one of these is

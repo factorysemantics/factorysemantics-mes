@@ -81,8 +81,14 @@ def test_an_observer_that_raises_does_not_end_the_run(monkeypatch):
 # ---------------------------------------------------------- the watcher
 
 
-def _plant(states, booked=(), cursor=7):
-    """A function shaped like the runner's reader, answering for one plant."""
+def _plant(states, booked=(), cursor=7, connections=None):
+    """A function shaped like the runner's reader, answering for one plant.
+
+    `connections` is what the plant says it can see; the default is a plant
+    that can see every machine it has a state for.
+    """
+    connections = connections if connections is not None else {
+        code: "connected" for code in states}
 
     def get(base, path, token):
         if path == "/equipment/states":
@@ -94,7 +100,15 @@ def _plant(states, booked=(), cursor=7):
                                  for code, state in states.items()],
                     "units": [{"equipment": "PACK01", "good": g, "scrap": 0} for g in booked]}
         if path == "/health":
-            return {"status": "ok"}
+            return {"status": "ok", "watching": {
+                "machines": len(connections),
+                "connected": sum(1 for v in connections.values() if v == "connected"),
+                "disconnected": sum(1 for v in connections.values() if v == "disconnected"),
+                "unknown": sum(1 for v in connections.values() if v == "unknown")}}
+        if path == "/equipment/connections":
+            return {"machines": [{"equipment": code, "state": state}
+                                 for code, state in connections.items()],
+                    "machines_total": len(connections)}
         raise AssertionError(f"the watcher asked for {path}, which is not one of its surfaces")
 
     return get
@@ -109,6 +123,21 @@ def test_a_look_writes_down_what_each_screen_was_showing_and_when():
     assert look.states == {"CUT01": "down", "PACK01": "running"}
     assert look.line_states == {"CUT01": "down", "PACK01": "running"}
     assert look.refused == {}
+
+
+def test_a_look_records_whether_the_mes_could_still_see_each_machine():
+    """A machine the MES cannot see has no state, so it stops appearing in the
+    operations feed altogether. This is the surface that says why, and the only
+    one that can tell "nobody is watching" from "nothing is happening"."""
+    watch = observe_mod.Watch(get=_plant(
+        {"PACK01": "running"},
+        connections={"CUT01": "disconnected", "PACK01": "connected"}))
+    watch("http://x", "t", 300.0)
+
+    look = watch.looks[0]
+    assert look.connections == {"CUT01": "disconnected", "PACK01": "connected"}
+    assert look.watching["disconnected"] == 1
+    assert look.watching["machines"] == 2
 
 
 def test_the_line_views_count_is_a_running_total_the_watcher_keeps():

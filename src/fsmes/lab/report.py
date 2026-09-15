@@ -435,6 +435,78 @@ silence.</p>
 """
 
 
+def _connection(conn: dict) -> str:
+    """What the screens said about the minutes the MES could not see the line."""
+    watched = conn["watched"]
+    rows = []
+    for outage in conn["outages"]:
+        start, end = outage["window_sim_s"]
+        verdict = outage.get("verdict") or "unknown"
+        bad = verdict in ("nothing read as disconnected",
+                          "a machine kept claiming a state through the outage")
+        if verdict == "unknown":
+            said = f"<td class='wide unknown'>{esc(outage.get('unknown_because') or 'unknown')}</td>"
+        else:
+            said = f"<td class='wide {'bad' if bad else ''}'>{esc(verdict)}</td>"
+        claiming = ", ".join(outage.get("machines_still_claiming_a_state") or []) or "—"
+        rows.append(
+            f"<tr><td>{num(start)} to {num(end)} s</td>"
+            f"<td>{num(outage.get('scripted_line_seconds'), 0, ' s')}</td>"
+            f"<td>{num(outage.get('looks_inside'))}</td>"
+            f"<td>{esc(', '.join(outage.get('machines_read_disconnected') or []) or '—')}</td>"
+            f"<td>{num(outage.get('health_said_disconnected_at_worst'))}</td>"
+            f"<td class='{'bad' if claiming != '—' else ''}'>{esc(claiming)}</td>"
+            + said + "</tr>")
+
+    after = conn["after_the_run"]
+    def cell(value, digits=0, suffix=""):
+        """A figure, or the word unknown — never a zero standing in for one."""
+        if value is None:
+            return "<td class='unknown'>unknown</td>"
+        return f"<td>{num(value, digits, suffix)}</td>"
+
+    numbers = "".join(
+        f"<tr><td>{esc(row['station'])}</td><td class='mono'>{esc(row['equipment'] or '—')}</td>"
+        + cell(row["unknown_line_seconds"], 0, " s")
+        + cell(row["availability"], 3) + "</tr>"
+        for row in after["stations"])
+
+    return f"""
+<h2 id="connection">What did the MES say about the minutes it could not see?</h2>
+<p>{esc(conn['question'])} The endpoint was closed outright for each window below — the line ran on,
+the machines were fine, and nothing could read them. Two ways to get this wrong, and they are
+symmetrical: read the gap as a breakdown and the plant has a fault that never happened; read it as
+the last state and the plant has availability nobody watched.</p>
+<div class="tiles">
+{_tile("outages scripted", num(conn['scripted_outages']),
+       f"{num(conn['scripted_line_seconds'], 0, ' s')} of line time in total")}
+{_tile("looks", num(watched['looks']), "while the hour played")}
+{_tile("shortest outage the agent could see", num(watched['shortest_outage_the_agent_could_see'], 0, " s"),
+       f"of line time — its health check runs every "
+       f"{num(watched['agent_health_interval_line_seconds'], 0, ' s')} at this speed")}
+{_tile("unknown time recorded", num(after['unknown_line_seconds_total'], 0, " s"),
+       f"against {num(after['unknown_line_seconds_expected'], 0, ' s')} of machine-time scripted")}
+</div>
+<div class="scroll"><table>
+<thead><tr><th>Window</th><th>Scripted</th><th>Looks inside</th><th>Read disconnected</th>
+<th>/health said</th><th>Still claiming a state</th><th>Verdict</th></tr></thead>
+<tbody>{"".join(rows) or _empty(7, "The script closed the endpoint at no point in this run.")}</tbody>
+</table></div>
+<h3>And afterwards, in the numbers</h3>
+<p class="{'bad' if (after.get('difference_line_seconds') or 0) < 0 else ''}">The MES recorded
+{num(after['unknown_line_seconds_total'], 0, ' s')} of unknown machine-time against
+{num(after['unknown_line_seconds_expected'], 0, ' s')} scripted —
+{esc(after.get('difference_says') or '')}.</p>
+<p>{esc(after['note'])} Availability is run time over <em>observed</em> time, so a station whose
+window had a hole in it reports the hole rather than counting it as time the machine spent not
+running.</p>
+<div class="scroll"><table>
+<thead><tr><th>Station</th><th>Machine</th><th>Unknown</th><th>Availability</th></tr></thead>
+<tbody>{numbers or _empty(4, "No station answered.")}</tbody>
+</table></div>
+"""
+
+
 def _empty(columns: int, says: str) -> str:
     return f'<tr><td colspan="{columns}" class="empty">{esc(says)}</td></tr>'
 
@@ -714,6 +786,9 @@ def _plant(plant: dict, said: list[dict] | None = None) -> str:
     if plant["measurements"].get("oee"):
         parts.append(_oee(plant["measurements"]["oee"]))
         parts.append(_said(groups.get("oee"), "the shift analysis screen"))
+    if plant["measurements"].get("connection"):
+        parts.append(_connection(plant["measurements"]["connection"]))
+        parts.append(_said(groups.get("connection"), "the floor screen"))
     # A note about a measurement this run did not take still has to be read.
     orphaned = [row for key, rows in groups.items() if key
                 and not plant["measurements"].get(key) for row in rows]

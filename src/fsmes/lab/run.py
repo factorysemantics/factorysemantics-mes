@@ -178,6 +178,13 @@ def measure_plant(plan: Plan, built: builder.Built, card: dict, echo=print,
     if "oee" in plan.measure:
         out["measurements"]["oee"] = measure.oee(
             truth, recorded.get("oee") or {}, mapping, plan.speed, reason)
+    if "connection" in plan.measure:
+        # Read from the watch, not from the plant at the end: by then the link
+        # is back and every screen says so. What they said while it was down
+        # only exists in the looks.
+        out["measurements"]["connection"] = measure.connection(
+            card, {**(card.get("observed_during_run") or {}), **(watched or {})},
+            recorded.get("oee") or {}, mapping, plan.speed, reason)
     out["truth"] = truth.as_json()
     return out
 
@@ -255,8 +262,10 @@ def run(plan_path: Path, results_root: Path | None = None, root: Path | None = N
             # neither latency nor the console should not pay for looks nobody
             # reads. The console needs one because a plant's address is not
             # known until it is up, and a look is the first thing that has it.
+            # `connection` is here for the same reason `latency` is: the
+            # thing it measures only exists while the hour is playing.
             watcher = (observe.Watch(on_look=_telling(console, built.name))
-                       if {"latency", "console"} & set(plan.measure) else None)
+                       if {"latency", "console", "connection"} & set(plan.measure) else None)
             card = scored_run(built.name, built.cfg, where, plan.speed,
                               line_json=built.line_json, echo=echo,
                               keep_evidence=keep_evidence,

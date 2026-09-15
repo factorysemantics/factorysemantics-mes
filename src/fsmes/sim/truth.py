@@ -47,6 +47,14 @@ class ScriptedEvent:
         return self.type == "down"
 
     @property
+    def is_disconnect(self) -> bool:
+        """The OPC endpoint went away. A fault in the *observer*, not in the
+        plant: the line ran on and the machines were fine, so scoring it as a
+        stop of any kind - planned, idle or breakdown - would be a third way
+        of writing down something that did not happen. Decision 0027."""
+        return self.type == "disconnect"
+
+    @property
     def is_idle(self) -> bool:
         """Starved or blocked: making nothing, and nothing is wrong with it.
 
