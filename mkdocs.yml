@@ -91,6 +91,7 @@ nav:
           - For Engineering: onboarding/GUIDE-ENGINEERING.md
       - How-to — read OEE: plant/reading-oee.md
       - Explanation — when a control chart notices something: plant/quality-signals.md
+      - Reference — shifts: plant/shifts.md
       - Explanation — never invent production: plant/never-invent-production.md
   - Operate:
       - operate/index.md
@@ -155,6 +156,8 @@ nav:
           - decisions/0024-a-nonconformance-has-a-life.md
           - decisions/0025-performance-is-measured-not-capped.md
           - decisions/0026-counts-that-outrun-the-run-time.md
+          - decisions/0027-an-spc-signal-raises-a-hold.md
+          - decisions/0028-which-shift-a-minute-belongs-to.md
           - Template: decisions/TEMPLATE.md
   - Agents:
       - agents/index.md

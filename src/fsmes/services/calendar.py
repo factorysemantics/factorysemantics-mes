@@ -14,7 +14,7 @@ day shift start at one in the morning and nobody could see why.
 
 WHICH SHIFT. `shift_for` answers it for one instant and `occurrences` lays the
 shifts out over a span, both in the plant's own clock. Three rules hold, and
-`docs/decisions/0026` says why:
+`docs/decisions/0028` says why:
 
 * A shift is **half-open**, `[starts, ends)`. A unit counted at the second the
   night shift begins belongs to the night shift, and to only one shift.

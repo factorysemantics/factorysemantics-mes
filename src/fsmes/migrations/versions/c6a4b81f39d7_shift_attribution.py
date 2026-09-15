@@ -7,7 +7,7 @@ Create Date: 2026-09-14
 Two nullable columns — `shift_code` and `shift_day` — on the four tables that
 record something happening on the floor: `production_logs`, `equipment_states`,
 `quality_checks` and `non_conformances`. New rows are attributed as they are
-written. See docs/decisions/0026.
+written. See docs/decisions/0028.
 
 THE BACKFILL, AND WHAT IT ASSUMES. Rows that already exist are attributed from
 the shift patterns **as they stand today**, read on this plant's clock
