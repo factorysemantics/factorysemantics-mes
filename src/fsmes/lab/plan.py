@@ -30,6 +30,12 @@ The shape, in full:
     chat   = true
     claude = false
 
+    # How often the run looks at the plant while the hour plays, in WALL
+    # seconds. It is the resolution of every latency figure, and it is also
+    # requests competing with the agent for one machine.
+    [watch]
+    every = 1.0
+
     # A plant whose pack carries no master data needs something to seed it -
     # the scale labs, whose master data is generated rather than written.
     # A pack may never name a script (decision 0022); a lab plan is not a
@@ -53,19 +59,26 @@ MEASUREMENTS = {
     "booking": "units booked against units the line made, per station and in total",
     "downtime": "scripted stops detected and how late, and planned stops kept out of downtime",
     "oee": "availability, performance and quality per station against the script",
+    "latency": "how long after the line each screen said it, watched while the hour played",
+    "console": "what `fsmes fleet console` counted at each phase of the run",
 }
 
 #: Named in the design and not built yet. A plan that asks for one of these is
 #: refused by name rather than ignored: silently dropping a measurement is how
 #: a report comes to say less than its plan asked for without anybody noticing.
 PLANNED = {
-    "latency": "how long an event took to reach /health, the screens and the namespace",
-    "console": "`fsmes fleet console` counting plants, answers and unknowns",
     "quality": "a scrap burst tripping an SPC rule and holding the lot",
     "agent-eval": "the agent evaluation over the run, with its cost stated",
 }
 
 DEFAULT_MEASUREMENTS = ("booking", "downtime", "oee")
+
+#: How often a run looks at the plant while the hour plays, in wall seconds,
+#: when a plan does not choose. Wall rather than line seconds because it is the
+#: cost that matters - these are HTTP requests competing with the agent for the
+#: same machine - and a plan that wants a sharper figure asks for it and pays
+#: for it in the run's own honesty about whether the harness kept up.
+DEFAULT_WATCH_EVERY_S = 1.0
 
 #: Replay speed when the plan does not choose one. Slow enough that the
 #: overlap band `measure.booking` has to state stays small - see the page.
@@ -93,6 +106,7 @@ class Plan:
     note: str = ""
     feedback_chat: bool = True
     feedback_claude: bool = False
+    watch_every_s: float = DEFAULT_WATCH_EVERY_S
 
     @property
     def directory(self) -> Path:
@@ -191,6 +205,23 @@ def read_plan(path: Path) -> Plan:
         if key in feedback and not isinstance(feedback[key], bool):
             raise PlanError(f"{path}: `[feedback] {key}` is true or false.")
 
+    watch = _table(raw, "watch", str(path))
+    for key in watch:
+        if key != "every":
+            raise PlanError(
+                f"{path}: `[watch] {key}` is not a setting. A plan chooses `every` - how often, "
+                f"in wall seconds, the run looks at the plant while the hour plays.")
+    every = watch.get("every", DEFAULT_WATCH_EVERY_S)
+    if not isinstance(every, (int, float)) or isinstance(every, bool) or every <= 0:
+        raise PlanError(f"{path}: `[watch] every` is a positive number of wall seconds.")
+    if "latency" in measure and float(every) * float(speed) > 120:
+        raise PlanError(
+            f"{path}: `latency` is asked for and the run would look every {every:g}s of wall "
+            f"clock, which at {speed:g}x is {float(every) * float(speed):.0f}s of line time. "
+            f"Every lag it could measure would be smaller than its own resolution, so every "
+            f"figure would read `within resolution` and the measurement would say nothing. "
+            f"Look more often, or replay more slowly.")
+
     init_raw = _table(raw, "init", str(path))
     init: dict[str, Path] = {}
     for plant, body in init_raw.items():
@@ -217,6 +248,7 @@ def read_plan(path: Path) -> Plan:
         note=str(raw.get("note") or ""),
         feedback_chat=bool(feedback.get("chat", True)),
         feedback_claude=bool(feedback.get("claude", False)),
+        watch_every_s=float(every),
     )
 
 

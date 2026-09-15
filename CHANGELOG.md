@@ -30,6 +30,24 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **A lab run can ask what `fsmes fleet console` made of its plants.** The
+  console's promise is decision 0023's — a plant that did not answer is
+  *unknown*, never healthy and never down — and nothing tested it against
+  plants that really start and really stop, because a console needs several
+  plants and a lab run has always had exactly one at a time. Which turns out to
+  be the fixture: the lab runs its plants one after another, so during a
+  several-plant experiment exactly one is answering and the rest are not. A run
+  that asks for `console` starts a real one on a claimed port, over its own
+  empty fleet file so it can never pick up plants somebody already has running,
+  tells it each plant's address the moment that plant comes up, and asks
+  `/fleet.json` at each phase. Two numbers come out: how many phases its count
+  of answering plants matched the truth, and how many stopped plants it read as
+  anything other than unknown — a defect at any value above zero, and the same
+  fault as calling a changeover downtime, at fleet scale.
+  `labs/experiments/two-plants-two-zones.toml` now asks for it, so CI proves
+  it. On this machine, twelve phases, the count right at all twelve, and no
+  stopped plant ever called anything but unknown.
+
 - **A lab run names a station whose own counts and own run time do not agree.**
   Northgate's Deburr on 2026-09-14 reported 826 units and 1,878 line seconds of
   run time for a machine the MES itself rates at 2.4 s a unit — 1,982 seconds
@@ -41,6 +59,34 @@ goes under Honesty with a migration line, so plant people can find it.
   ordinary differences, and it is the one finding on the page that survives any
   argument about the truth. What the report still will not do is say which of
   the two numbers is the wrong one.
+
+- **A scored run can be watched while it plays, and the lab measures how long
+  the screens took.** `fsmes.sim.runner.scored_run` grew an `observe` hook,
+  called with the base URL, a token and **the line second the run is at** every
+  interval of wall clock while the scripted hour plays. The line second is
+  passed in because only the runner knows when the replay's first tick was. The
+  post-run `collect` hook is unchanged, and a run with no observer is the same
+  sleep it always was. An observer that raises does not end the run: losing the
+  hour because one HTTP call came back badly would be the harness throwing away
+  the evidence it exists to collect.
+
+  On top of it, a new measurement: **`latency`** — for every scripted event,
+  how long after the line did each screen say it. The operations feed and the
+  line view are asked separately, because two screens showing one machine two
+  different states at one instant is a finding nothing else would catch.
+  `/health` is asked too and answers nothing about any machine, which the
+  report says rather than leaving the route out. A lag smaller than the polling
+  interval prints as *within resolution*; an event no look caught is *unknown*
+  with which of the reasons it was, never a zero or a maximum standing in for
+  silence. A plan whose interval is too coarse for the speed it asks for is
+  refused with the arithmetic. Beside the events, how far behind the line's own
+  count the line view ran — the machine the line ends at, in units, because
+  turning a backlog into seconds needs a rate and a line that is starved,
+  blocked or down has not got one. The raw looks are kept in
+  `watched/<plant>.json` whatever the measurement made of them.
+  `labs/experiments/starved-and-blocked.toml` now asks for it.
+
+### Added
 
 - **A tag map can say where the line publishes the order it is running.** Many
   line-control PLCs publish the current order on a line-level register rather
