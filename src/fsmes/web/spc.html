@@ -64,8 +64,12 @@
     </section>
     <section class="panel">
       <h2>Rules that fired <span id="signal-count" class="muted"></span></h2>
+      <p class="muted small">A rule is judged when a reading is recorded, not when this page is opened,
+        and the first firing of an excursion raises a quality hold carrying the rule and its readings.
+        Later firings of the same excursion join that hold rather than opening another — what a plant
+        does next is a person's act, or a trigger the plant configures on <code>spc.signal</code>.</p>
       <div class="table-wrap"><table id="signals">
-        <thead><tr><th>Rule</th><th>Where</th><th>What it means</th></tr></thead>
+        <thead><tr><th>Rule</th><th>Where</th><th>What it means</th><th>What it raised</th></tr></thead>
         <tbody></tbody>
       </table></div>
     </section>

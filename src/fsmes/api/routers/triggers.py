@@ -28,12 +28,19 @@ class TriggerIn(BaseModel):
 
 @router.get("/catalog")
 def catalog() -> dict:
-    """The actions a trigger may take, and the conditions it may watch for.
-    Adding one is product code with tests, never a plant-specific script."""
+    """The actions a trigger may take, the conditions it may watch for, and
+    the tags the MES raises itself.
+
+    Adding one is product code with tests, never a plant-specific script.
+    `event_tags` are not on any PLC: `spc.signal` is raised by the MES when a
+    control-chart rule fires, so a plant can say what should happen next
+    without that decision being written into this code.
+    """
     from fsmes.domain import TriggerCondition
 
     return {"actions": triggers.ACTION_HELP,
-            "conditions": [c.value for c in TriggerCondition]}
+            "conditions": [c.value for c in TriggerCondition],
+            "event_tags": triggers.EVENT_TAGS}
 
 
 @router.get("")

@@ -90,6 +90,7 @@ nav:
           - For IT: onboarding/GUIDE-IT.md
           - For Engineering: onboarding/GUIDE-ENGINEERING.md
       - How-to — read OEE: plant/reading-oee.md
+      - Explanation — when a control chart notices something: plant/quality-signals.md
       - Explanation — never invent production: plant/never-invent-production.md
   - Operate:
       - operate/index.md

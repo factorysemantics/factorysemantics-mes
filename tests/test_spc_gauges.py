@@ -128,7 +128,7 @@ def test_a_failed_calibration_names_what_it_invalidated(session):
     gauge = gauges.register(session, code="G4", name="Scale")
     session.flush()
     for value in (11.0, 11.1, 10.9):
-        check, _ = quality.record_check(session, material_code="FG-COLA",
+        check, _nc, _signals = quality.record_check(session, material_code="FG-COLA",
                                         characteristic="brix", value=value,
                                         actor="test")
         check.gauge_id = gauge.id

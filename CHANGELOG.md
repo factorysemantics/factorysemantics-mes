@@ -12,6 +12,27 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Honesty
 
+- **An SPC signal now does something, and a station's inspection now reaches
+  the chart.** Two halves of one gap. `GET /quality/spc/{material}/{characteristic}`
+  had run four Western Electric rules since the chart was written and returned
+  them as `signals` — and nothing read them: no hold, no non-conformance, no
+  trigger. The rules fired for whoever happened to have the screen open, and at
+  two in the morning that is nobody. Underneath it the readings mostly were not
+  there to fire on: the station inspection path (`InspSeq`/`InspPass`/`Insp_*`)
+  wrote a `UnitInspection` per unit and never a `QualityCheck`, which is the
+  only table the chart reads, so a scrap burst produced a wall of scrapped units
+  and a perfectly flat control chart. Now: the rules are evaluated when a check
+  is recorded, a firing is recorded as an `SpcSignal` with the chart as it stood
+  (centre, sigma, the ±3σ limits, the readings of its window), and the first
+  signal of an excursion raises a non-conformance carrying that evidence. It
+  raises nothing else — it does not hold a lot, stop a line or write to a
+  machine. The chart endpoint is unchanged and now says, per signal, which hold
+  it raised. **Migration:** `fsmes.services.quality.record_check` returns three
+  things, not two — the check, the non-conformance and the signals; `a9c4e17b3d60`
+  adds `spc_signals`, `non_conformances.evidence` and `quality_checks.equipment_id`
+  and changes no data. Decision record
+  [0027](docs/decisions/0027-an-spc-signal-raises-a-hold.md).
+
 - **Every number a lab run stores about the MES's OEE says which clock it is
   on.** A run at 20x stored the MES's performance as `19.77` under the plain
   name `performance` while the difference printed beside it had been computed
@@ -47,6 +68,34 @@ goes under Honesty with a migration line, so plant people can find it.
   `labs/experiments/two-plants-two-zones.toml` now asks for it, so CI proves
   it. On this machine, twelve phases, the count right at all twelve, and no
   stopped plant ever called anything but unknown.
+
+- **A plant can say what an SPC signal should set off, without that being a code
+  change.** The trigger catalogue gains `spc.signal`: a tag no PLC publishes,
+  raised by the MES on the station whose reading tripped a rule, carrying the
+  rule number as its value. A plant that wants rule 1 to set a moulder down, or
+  to raise corrective maintenance, drafts a trigger on it and approves it the
+  usual way. What the *product* does on a signal — raise the hold — is not
+  configurable; what happens next is nothing but the plant's business. A signal
+  on a reading with no station recorded reaches no trigger and says so, because
+  firing a trigger on a machine the MES is guessing at is worse than not firing
+  one.
+
+- **An inspected characteristic the plant has written a specification for
+  becomes a quality check.** A station event's `Insp_<Name>` reading is judged
+  in or out of spec by that specification and recorded, so the chart and the
+  station card see it. One with no specification stays an inspection and is
+  counted and named in the ingest's `uncharted` list rather than dropped in
+  silence. Which characteristics are charted is therefore the plant's
+  configuration — which is also what keeps this from putting a row in
+  `quality_checks` for every attribute of every unit at line rate. Such a
+  reading opens no non-conformance of its own: the station already judged the
+  unit, and what raises the hold is the signal. A reading a *person* records
+  still opens one when it is out of spec, as it always has.
+
+- **A quality check can say which station took it.** `quality_checks.equipment_id`,
+  null for a reading a person took with a gauge — *not recorded*, not "no
+  machine". Nothing derives it from the order's route, which would name a
+  machine nobody stood at.
 
 - **A lab run names a station whose own counts and own run time do not agree.**
   Northgate's Deburr on 2026-09-14 reported 826 units and 1,878 line seconds of

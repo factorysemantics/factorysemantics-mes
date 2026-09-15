@@ -403,9 +403,26 @@ function wireQuality() {
       const out = await api("/quality/checks", { method: "POST", body: {
         material: qMaterial, characteristic, value: Number(raw),
         order: op ? op.order : null,
+        // The person is standing at this machine. Recording where a reading
+        // was taken is the only honest way for anything downstream to say so.
+        equipment: machine,
       }});
       $("#q-value").value = "";
       const raised = $("#q-raised");
+      const signal = (out.spc || [])[0];
+      if (signal) {
+        // In spec and still a finding: the chart judged the series, not the
+        // reading. Saying only "in spec" here would be the truth and not the
+        // whole of it.
+        toast(`SPC rule ${signal.rule} — ${signal.nonconformance} raised.`, "bad");
+        raised.textContent = `${fmt.qty(out.value)} is ${out.result === "fail" ? "out of spec" : "in spec"}, `
+                           + `but the control chart fired rule ${signal.rule}: ${signal.what}. `
+                           + `Non-conformance ${signal.nonconformance} was raised; a supervisor decides `
+                           + `what happens to the material on the Quality screen.`;
+        raised.classList.remove("hidden");
+        await renderRecent();
+        return;
+      }
       if (out.non_conformance) {
         // The MES raising one is the system working. Say which one it is, by
         // code, so the supervisor can find it on the Quality screen.

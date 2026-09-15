@@ -32,7 +32,16 @@ from fsmes.domain import ProductionSource, TagValue
 from fsmes.integrations.opc.security import apply_security, explain_connection_error
 from fsmes.integrations.opc.tag_map import MachineMap, load_manifest, load_tag_map
 from fsmes.kernel.tags import COUNTER_TAGS, INSPECTION_PREFIX, INSPECTION_TAGS, SEMANTIC_TAGS
-from fsmes.services import audit, equipment, execution, masterdata, serialization, triggers, workorders
+from fsmes.services import (
+    audit,
+    equipment,
+    execution,
+    masterdata,
+    serialization,
+    spc,
+    triggers,
+    workorders,
+)
 
 log = structlog.get_logger("opc.agent")
 
@@ -177,7 +186,8 @@ class _Handler:
         # Containers whose members were not all there yet: (serial, members, tries left).
         self._deferred: list[tuple[str, list[str], int]] = []
         self._orders: dict[str, tuple[float, str | None]] = {}
-        self.inspection_stats = {"events": 0, "partial": 0, "units": 0, "duplicates": 0, "unknown_members": 0}
+        self.inspection_stats = {"events": 0, "partial": 0, "units": 0, "duplicates": 0,
+                                 "unknown_members": 0, "checks": 0, "signals": 0}
 
     async def datachange_notification(self, node, value, _data) -> None:
         spec, tag = self.node_info[node]
@@ -231,7 +241,11 @@ class _Handler:
             "ts": observed or datetime.now(UTC).replace(tzinfo=None),
             "serial": str(values.get("InspSerial") or ""),
             "material": info.get("material", ""), "passed": mask == 0, "fail_mask": mask,
-            "values": [values.get(f"{INSPECTION_PREFIX}{a}") for a in attrs], "partial": partial,
+            "values": [values.get(f"{INSPECTION_PREFIX}{a}") for a in attrs],
+            # What each of those numbers is. Without the names a reading is a
+            # number in a list, and nothing downstream can match it to a
+            # specification.
+            "attributes": attrs, "partial": partial,
         }
         if info["kind"] == "wrap" and info.get("plate") and members:
             event["plate"] = {"serial": members[-1], "material": info["plate"]["material"]}
@@ -280,6 +294,8 @@ class _Handler:
         self.inspection_stats["events"] += len(events)
         for k in ("units", "duplicates"):
             self.inspection_stats[k] += out[k]
+        self.inspection_stats["checks"] += out.get("checks", 0)
+        self._signals(out.get("signals") or [])
         if out["unknown_members"]:
             # Not counted as unknown yet: the pieces may be in the next
             # transaction. The containers of this one are retried.
@@ -289,6 +305,25 @@ class _Handler:
                     members.append(e["plate"]["serial"])
                 if members:
                     self._deferred.append((e["serial"], members, MEMBER_RETRIES))
+
+    def _signals(self, signals: list[dict]) -> None:
+        """SPC signals the new readings tripped, offered to the triggers.
+
+        The hold is already raised - the quality service did that on the write.
+        This is the other half: a plant that wants a rule to stop the line or
+        raise maintenance configures a trigger on the `spc.signal` tag, and it
+        is fed here with the rule number as the value. A signal on a reading
+        whose station this MES did not record reaches no trigger, and says so
+        rather than naming a machine it is guessing at.
+        """
+        self.inspection_stats["signals"] += len(signals)
+        for signal in signals:
+            log.warning("spc.signal", rule=signal.get("rule"), what=signal.get("what"),
+                        material=signal.get("material"), characteristic=signal.get("characteristic"),
+                        nonconformance=signal.get("nonconformance"), equipment=signal.get("equipment"))
+            if self.evaluator is None or not signal.get("equipment"):
+                continue
+            self.evaluator.observe(signal["equipment"], spc.SIGNAL_TAG, float(signal["rule"]))
 
     def _retry_members(self) -> None:
         """Containers whose members were not all found when they were
@@ -374,7 +409,8 @@ class _Handler:
             st["reported"] = time.monotonic()
             log.info("inspection ingestion", events=st["events"], units=st["units"], partial=st["partial"],
                      duplicates=st["duplicates"], unknown_members=st["unknown_members"],
-                     batches=st["batches"], batch_max=st["batch_max"], taken_max=st["taken_max"],
+                     checks=st["checks"], signals=st["signals"], batches=st["batches"],
+                     batch_max=st["batch_max"], taken_max=st["taken_max"],
                      ingest_mean_ms=round(1000 * st["ingest_s"] / st["batches"], 1),
                      ingest_max_ms=round(1000 * st["ingest_max_s"], 1), pending_groups=len(self._groups),
                      backlog_events=len(self._events), deferred_containers=len(self._deferred))

@@ -111,7 +111,7 @@ async function load() {
   const body = $("#signals tbody");
   body.replaceChildren();
   if (!data.signals.length) {
-    const tr = el("tr"); const td = el("td", "muted", data.control ? "No rule fired. The process is in control." : "—"); td.colSpan = 3; tr.append(td); body.append(tr);
+    const tr = el("tr"); const td = el("td", "muted", data.control ? "No rule fired. The process is in control." : "—"); td.colSpan = 4; tr.append(td); body.append(tr);
   }
   for (const s of data.signals) {
     const tr = el("tr");
@@ -119,6 +119,17 @@ async function load() {
     const where = s.points || s.indexes || (s.index !== undefined ? [s.index] : []);
     tr.append(el("td", "muted small", where.length ? `reading ${where.map((i) => i + 1).join(", ")}` : (s.at !== undefined ? `reading ${s.at + 1}` : "")));
     tr.append(el("td", null, s.description || s.meaning || s.what || JSON.stringify(s)));
+    // What it set off. A chart that says a rule fired and stops there leaves
+    // the reader wondering whether anybody was told.
+    const acted = el("td");
+    if (s.nonconformance) {
+      const link = el("a", "obj", s.nonconformance);
+      link.href = `/dashboard/quality?n_q=${encodeURIComponent(s.nonconformance)}&n_status=`;
+      acted.append("held — ", link);
+    } else {
+      acted.append(el("span", "muted small", "no hold of its own"));
+    }
+    tr.append(acted);
     body.append(tr);
   }
   $("#signal-count").textContent = `— ${data.signals.length}`;

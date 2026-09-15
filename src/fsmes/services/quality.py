@@ -60,8 +60,17 @@ def record_check(
     characteristic: str,
     value: float,
     work_order_code: str | None = None,
+    equipment_code: str | None = None,
     actor: str = "system",
-) -> tuple[QualityCheck, NonConformance | None]:
+) -> tuple[QualityCheck, NonConformance | None, list[dict]]:
+    """One reading, judged against the specification, and what it set off.
+
+    Three things come back: the check, the non-conformance the reading opened
+    if it was out of spec, and the SPC signals recording it caused. The rules
+    run here, on the write, not only when somebody opens the chart - a
+    control chart that only computes on demand tells whoever happened to
+    look, which is nobody at two in the morning. See decision record 0027.
+    """
     material = masterdata.get_material(session, material_code)
     spec = session.scalar(
         select(QualitySpec).where(QualitySpec.material_id == material.id, QualitySpec.characteristic == characteristic)
@@ -73,9 +82,11 @@ def record_check(
         spec.max_value is None or value <= spec.max_value
     )
     wo = workorders.get(session, work_order_code) if work_order_code else None
+    station = masterdata.get_equipment(session, equipment_code) if equipment_code else None
     check = QualityCheck(
         spec=spec,
         work_order_id=wo.id if wo else None,
+        equipment_id=station.id if station else None,
         value=value,
         result=CheckResult.PASS if in_spec else CheckResult.FAIL,
         checked_by=actor,
@@ -102,7 +113,11 @@ def record_check(
             work_order_code=work_order_code,
             actor=actor,
         )
-    return check, nc
+    # The rules see this reading now, while the line is still running it.
+    from fsmes.services import spc as spc_service
+
+    signals = spc_service.evaluate(session, spec, since_id=check.id)
+    return check, nc, signals
 
 
 def open_nc(
@@ -112,10 +127,18 @@ def open_nc(
     severity: str = "minor",
     work_order_code: str | None = None,
     actor: str = "system",
+    evidence: dict | None = None,
 ) -> NonConformance:
+    """Raise one. `evidence` is what the MES saw, when the MES raised it itself.
+
+    A record opened by a rule rather than by a person has to carry the reason
+    it was opened, or a supervisor is being asked to take the machine's word
+    for it. A person raising one writes the description; their evidence stays
+    null rather than invented.
+    """
     wo = workorders.get(session, work_order_code) if work_order_code else None
     nc = NonConformance(code="NC-PENDING", description=description[:400], severity=severity,
-                        work_order_id=wo.id if wo else None, raised_by=actor)
+                        work_order_id=wo.id if wo else None, raised_by=actor, evidence=evidence)
     session.add(nc)
     session.flush()
     nc.code = f"NC-{nc.id:05d}"
@@ -125,7 +148,8 @@ def open_nc(
         action="nonconformance.opened",
         entity_type="nonconformance",
         entity_id=nc.code,
-        after={"description": nc.description, "severity": severity},
+        after={"description": nc.description, "severity": severity,
+               "raised_by_rule": (evidence or {}).get("rule")},
     )
     return nc
 

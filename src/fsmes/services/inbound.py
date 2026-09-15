@@ -167,7 +167,7 @@ def record_quality_result(session: Session, result: QualityResult) -> Outcome:
 
     order_code, material_code = _what_was_measured(session, result)
     try:
-        check, nc = quality.record_check(
+        check, nc, _signals = quality.record_check(
             session,
             material_code=material_code,
             characteristic=result.characteristic,

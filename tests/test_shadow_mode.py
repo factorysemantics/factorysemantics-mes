@@ -268,8 +268,8 @@ def test_a_quality_check_is_still_recorded_in_shadow_mode(session, shadow_on):
     from fsmes.domain import NcStatus
     from fsmes.services import quality
 
-    check, nc = quality.record_check(session, material_code="FG-COLA",
-                                     characteristic="brix", value=13.0, actor="ines")
+    check, nc, _signals = quality.record_check(
+        session, material_code="FG-COLA", characteristic="brix", value=13.0, actor="ines")
     assert check.result.value == "fail"
     assert nc is not None and nc.status is NcStatus.OPEN
 
@@ -279,6 +279,25 @@ def test_a_quality_check_is_still_recorded_in_shadow_mode(session, shadow_on):
                            reason="the incumbent MES scrapped it", actor="marek")
     quality.close_nc(session, nc.code, actor="marek")
     assert nc.status is NcStatus.CLOSED and nc.disposition.value == "scrap"
+
+
+def test_an_spc_signal_still_raises_its_hold_in_shadow_mode(session, shadow_on):
+    """A control-chart rule firing is this MES reading a plant somebody else
+    is running. The hold it raises is a row in this database and a sentence on
+    this MES's screen; it stops no line out there. No register entry covers
+    it, because no part of it reaches past this database - what a plant does
+    *next* is a trigger, and every trigger action that could act on the plant
+    is already in the register in its own right.
+    """
+    from fsmes.services import quality
+
+    for value in [11.0 + (i % 3 - 1) * 0.02 for i in range(30)]:
+        quality.record_check(session, material_code="FG-COLA", characteristic="brix",
+                             value=value, actor="ines")
+    _check, _nc, signals = quality.record_check(session, material_code="FG-COLA",
+                                                characteristic="brix", value=11.9, actor="ines")
+    assert [s["rule"] for s in signals] == [1]
+    assert signals[0]["nonconformance"].startswith("NC-")
 
 
 def test_the_local_model_still_answers_in_shadow_mode(shadow_on):

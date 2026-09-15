@@ -26,8 +26,12 @@ from sqlalchemy import func, insert, select, update
 from sqlalchemy.orm import Session
 
 from fsmes.domain import (
+    CheckResult,
     LotConsumption,
+    Material,
     MaterialLot,
+    QualityCheck,
+    QualitySpec,
     SerialSequence,
     SerialUnit,
     UnitComponent,
@@ -623,13 +627,24 @@ def ingest_inspections(session: Session, events: list[dict], actor: str = "opc-a
     "passed": bool, "fail_mask": int, "values": [floats],
     "members": [serials] (stack, wrap, pallet), "plate": {"serial", "material"} (wrap)}.
 
+    Each event also carries `attributes`: the names, in the order of `values`,
+    of what the station measured. A measured characteristic that the plant has
+    written a specification for becomes a `QualityCheck` as well as an
+    inspection, so the chart and the station card can see it; one with no
+    specification stays an inspection and is named in `uncharted`. Which is
+    which is the plant's configuration, not this code's guess - see decision
+    record 0027.
+
     Returns counts: units created, inspections recorded, members packed,
     duplicates skipped (a serial the plant already holds - a replayed event),
-    and members the plant had never seen (a stack claiming a piece no marker
-    reported - recorded as a finding, the stack still created).
+    members the plant had never seen (a stack claiming a piece no marker
+    reported - recorded as a finding, the stack still created), the quality
+    checks written, the measured characteristics no specification covers, and
+    the SPC signals the new readings tripped.
     """
     if not events:
-        return {"units": 0, "inspections": 0, "packed": 0, "duplicates": 0, "unknown_members": 0}
+        return {"units": 0, "inspections": 0, "packed": 0, "duplicates": 0, "unknown_members": 0,
+                "checks": 0, "uncharted": [], "signals": []}
 
     materials = masterdata.material_codes(session)
     material_id = {code: mid for mid, code in materials.items()}
@@ -695,6 +710,9 @@ def ingest_inspections(session: Session, events: list[dict], actor: str = "opc-a
     for chunk in _chunks(inspections, 1000):
         session.execute(insert(UnitInspection), chunk)
 
+    # 3b. The measured characteristics the plant has a specification for.
+    checks, uncharted, signals = _checks_from_inspections(session, events, id_of, eq, order, actor)
+
     # 4. Containment: members (and a wrap's plate) move under their container.
     packed = 0
     unknown = 0
@@ -720,9 +738,85 @@ def ingest_inspections(session: Session, events: list[dict], actor: str = "opc-a
                  entity_id=events[0]["serial"],
                  after={"events": len(events), "units": len(rows), "packed": packed,
                         "duplicates": duplicates, "unknown_members": unknown,
+                        "checks": checks, "uncharted": uncharted, "signals": len(signals),
                         "stations": sorted({e["equipment"] for e in events})})
     return {"units": len(rows), "inspections": len(inspections), "packed": packed,
-            "duplicates": duplicates, "unknown_members": unknown}
+            "duplicates": duplicates, "unknown_members": unknown,
+            "checks": checks, "uncharted": uncharted, "signals": signals}
+
+
+def _checks_from_inspections(session: Session, events: list[dict], id_of: dict[str, int],
+                             eq, order, actor: str) -> tuple[int, list[str], list[dict]]:
+    """A station's readings become quality checks, where a specification says
+    what good is.
+
+    A vision station judges every unit; the plant chooses which of the things
+    it measures are *charted* by writing a specification for them. Without
+    that choice this would put a row in `quality_checks` for every attribute
+    of every unit at line rate, and a control chart nobody asked for is not a
+    kindness.
+
+    No per-reading non-conformance. The station already judged the unit and
+    the unit is already scrapped or good; opening a record per bad piece on a
+    machine inspecting ten a second is noise a supervisor learns to scroll
+    past. What raises a hold is the SPC signal, once per excursion - decision
+    record 0027.
+    """
+    wanted: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    uncharted: set[str] = set()
+    for e in events:
+        uid = id_of.get(e["serial"])
+        if uid is None:
+            continue
+        names = list(e.get("attributes") or [])
+        values = list(e.get("values") or [])
+        for name, value in zip(names, values, strict=False):
+            if value is None or isinstance(value, bool) or not isinstance(value, (int, float)):
+                continue
+            wanted[(e["material"], name)].append(
+                {"value": float(value), "ts": e["ts"], "equipment": e["equipment"], "order": e.get("order")})
+    if not wanted:
+        return 0, [], []
+
+    specs = {}
+    for (material, characteristic) in wanted:
+        if (material, characteristic) in specs:
+            continue
+        specs[(material, characteristic)] = session.scalar(
+            select(QualitySpec).join(Material, QualitySpec.material_id == Material.id)
+            .where(Material.code == material, QualitySpec.characteristic == characteristic))
+
+    rows: list[dict] = []
+    touched: list[QualitySpec] = []
+    for key, readings in wanted.items():
+        spec = specs[key]
+        if spec is None:
+            uncharted.add(f"{key[0]}/{key[1]}")
+            continue
+        touched.append(spec)
+        for reading in readings:
+            in_spec = ((spec.min_value is None or reading["value"] >= spec.min_value)
+                       and (spec.max_value is None or reading["value"] <= spec.max_value))
+            rows.append({"spec_id": spec.id, "work_order_id": order(reading["order"]),
+                         "equipment_id": eq(reading["equipment"]), "value": reading["value"],
+                         "result": CheckResult.PASS if in_spec else CheckResult.FAIL,
+                         "checked_by": actor, "ts": reading["ts"]})
+    if not rows:
+        return 0, sorted(uncharted), []
+    rows.sort(key=lambda r: r["ts"])
+    # The id the first of these readings gets, so the rules can tell a window
+    # that ends on a new reading from one that only moved because of it.
+    first_new = (session.scalar(select(func.max(QualityCheck.id))) or 0) + 1
+    for chunk in _chunks(rows, 1000):
+        session.execute(insert(QualityCheck), chunk)
+    session.flush()
+
+    from fsmes.services import spc as spc_service
+
+    signals: list[dict] = []
+    for spec in touched:
+        signals.extend(spc_service.evaluate(session, spec, since_id=first_new, actor="spc"))
+    return len(rows), sorted(uncharted), signals
 
 
 def attach_members(session: Session, parent_serial: str, members: list[str]) -> int:

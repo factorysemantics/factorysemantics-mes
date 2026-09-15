@@ -194,7 +194,8 @@ def test_an_inspection_batch_becomes_units_inspections_and_containment(session):
                "fail_mask": 0 if i != 3 else 0b0100, "values": [1.0, 2.0, 3.0, 4.0]}
               for i in range(1, 5)]
     out = serialization.ingest_inspections(session, pieces)
-    assert out == {"units": 4, "inspections": 4, "packed": 0, "duplicates": 0, "unknown_members": 0}
+    assert out == {"units": 4, "inspections": 4, "packed": 0, "duplicates": 0, "unknown_members": 0,
+                   "checks": 0, "uncharted": [], "signals": []}
     assert serialization.get(session, "F-000000003").status.value == "scrapped"
     assert session.scalar(select(func.count(UnitInspection.id))) == 4
     rec = session.scalar(select(UnitInspection).where(UnitInspection.seq == 3))

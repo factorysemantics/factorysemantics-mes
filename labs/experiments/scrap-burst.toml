@@ -1,0 +1,64 @@
+# A scrap burst, and how long it takes anybody to be told.
+#
+# The washer runs three degrees hot. Scrap climbs, and downstream the filler
+# underweights every bottle by nine grams - warm, wet bottles fill short -
+# with no alarm of its own. The fill-weight checks the floor records go out of
+# spec, the control chart's first rule fires on the write, and a quality hold
+# is raised naming the rule and the readings it judged.
+#
+#     fsmes lab run labs/experiments/scrap-burst.toml
+#
+# What to look at, in this order:
+#
+#   1. The run's log, for `spc signal` - the rule, and the NC-xxxxx it raised.
+#   2. /dashboard/spc for FG-BOTTLE fill_weight: the chart, the rules that
+#      fired, and what each of them raised.
+#   3. /dashboard/quality: the hold, with its rule, its station and the
+#      control limits it was judged against on the record.
+#
+# The distance worth knowing is between the first underweight bottle and the
+# moment that hold exists. This plan does not measure it yet - `quality` is a
+# planned measurement, not a built one (`fsmes lab measurements`), so for now
+# it is read off the log and the screens. The plan exists first so that the
+# measurement, when it is built, has a run to be built against.
+#
+# About a quarter of an hour: one plant, thirty minutes of line time at 2x,
+# plus the seeding and the drain. The plant is ephemeral, on loopback, with
+# its own database and its own ports.
+
+name = "scrap-burst"
+note = """A quality excursion with a process cause. What to look at first: the
+hold the control chart raised, and whether its rule and its readings tell you
+anything the failed checks beside it did not. The cause is the washer; the
+failed fill weights land on the filler."""
+
+packs = ["../multiplant/bottling"]
+
+# Thirty minutes of line time at 2x, and both numbers are the point of the
+# run rather than a preference. A control chart draws no limits at all until
+# it has twelve readings, and wants a good many more than that from a process
+# that was behaving before the limits mean anything. What sets how fast those
+# readings arrive is not the floor's cadence - it asks far more often than
+# that - but how often the MES stores a new value for the tag the floor is
+# reading, which is every ten publish intervals. At 2x that is roughly one new
+# reading every ten seconds of line time, so half an hour is something like
+# ninety readings with the excursion a third of the way in. At 20x, which the
+# other starters use, the same half hour is nine readings and a run in which
+# nothing could fire however wrong the line went.
+#
+# The cost is that this one takes about a quarter of an hour of wall clock.
+# That is the trade this experiment is making: the others are about what the
+# MES *counted*, and counting is quick; this one is about a judgement over a
+# series, and a series takes as long as it takes.
+duration = 1800
+seed     = 42
+speed    = 2
+
+measure = ["booking", "downtime", "oee"]
+
+[scenario.bottling]
+events = [
+  # Long enough before the burst that the chart has its limits from a process
+  # that was behaving, which is the only way the limits mean anything.
+  { type = "scrap_burst", station = "Washer", scrap_pct = 10.0, analog_offset = 3.0, start = 600, end = 1500, effects = [{ station = "Refill", analog = "FillWeight", offset = -9.0 }] },
+]

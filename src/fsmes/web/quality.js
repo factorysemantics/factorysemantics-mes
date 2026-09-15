@@ -573,6 +573,25 @@ function drawNcs() {
     if (nc.closed_at) detail.append(` · closed ${stamp(nc.closed_at)}`);
     body.appendChild(detail);
 
+    // What the MES saw, when the MES raised it. The first question a
+    // supervisor asks a machine-raised record is *why do you think so*.
+    const why = nc.evidence;
+    if (why && why.source === "spc") {
+      const line = el("div", "muted small");
+      line.append(`SPC rule ${why.rule} — ${why.what}`);
+      if (why.material && why.characteristic) {
+        const chart = el("a", "obj", `${why.material} ${why.characteristic}`);
+        chart.href = `/dashboard/spc?spec=${encodeURIComponent(why.material)}|${encodeURIComponent(why.characteristic)}`;
+        line.append(" on ", chart);
+      }
+      if (why.equipment) line.append(" at ", FS.link("machine", why.equipment));
+      const w = why.window || {};
+      if (w.centre !== undefined) {
+        line.append(` · centre ${w.centre}, ±3σ [${w.lower}, ${w.upper}] from ${w.n} readings`);
+      }
+      body.appendChild(line);
+    }
+
     if (nc.disposition) {
       const decided = el("div", "muted small");
       decided.append(`disposition: ${DISPOSITIONS[nc.disposition] || nc.disposition}`);
