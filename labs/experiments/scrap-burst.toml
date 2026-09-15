@@ -1,0 +1,53 @@
+# A scrap burst, and how long it takes anybody to be told.
+#
+# The washer runs three degrees hot. Scrap climbs, and downstream the filler
+# underweights every bottle by nine grams - warm, wet bottles fill short -
+# with no alarm of its own. The fill-weight checks the floor records go out of
+# spec, the control chart's first rule fires on the write, and a quality hold
+# is raised naming the rule and the readings it judged.
+#
+#     fsmes lab run labs/experiments/scrap-burst.toml
+#
+# What to look at, in this order:
+#
+#   1. The run's log, for `spc signal` - the rule, and the NC-xxxxx it raised.
+#   2. /dashboard/spc for FG-BOTTLE fill_weight: the chart, the rules that
+#      fired, and what each of them raised.
+#   3. /dashboard/quality: the hold, with its rule, its station and the
+#      control limits it was judged against on the record.
+#
+# The distance worth knowing is between the first underweight bottle and the
+# moment that hold exists. This plan does not measure it yet - `quality` is a
+# planned measurement, not a built one (`fsmes lab measurements`), so for now
+# it is read off the log and the screens. The plan exists first so that the
+# measurement, when it is built, has a run to be built against.
+#
+# About four minutes: one plant, forty minutes of line time at 10x, plus the
+# seeding and the drain. The plant is ephemeral, on loopback, with its own
+# database and its own ports.
+
+name = "scrap-burst"
+note = """A quality excursion with a process cause. What to look at first: the
+hold the control chart raised, and whether its rule and its readings tell you
+anything the failed checks beside it did not. The cause is the washer; the
+failed fill weights land on the filler."""
+
+packs = ["../multiplant/bottling"]
+
+# Forty minutes at 10x rather than twenty at 20x, and the reason is the point
+# of the run: the floor records a check every eight seconds of wall clock, and
+# a control chart draws no limits at all until it has twelve readings. Twenty
+# minutes at 20x is sixty seconds of wall clock and seven readings - a run in
+# which nothing could fire however wrong the line went.
+duration = 2400
+seed     = 42
+speed    = 10
+
+measure = ["booking", "downtime", "oee"]
+
+[scenario.bottling]
+events = [
+  # Long enough before the burst that the chart has its limits from a process
+  # that was behaving, which is the only way the limits mean anything.
+  { type = "scrap_burst", station = "Washer", scrap_pct = 10.0, analog_offset = 3.0, start = 1200, end = 1800, effects = [{ station = "Refill", analog = "FillWeight", offset = -9.0 }] },
+]

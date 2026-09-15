@@ -79,8 +79,16 @@ class Floor:
 
     # ---------------------------------------------------------- inspections
 
-    async def _measured_value(self, spec: dict, machines: list[dict]) -> float | None:
-        """What the line actually made, if any machine reports this characteristic."""
+    async def _measured_value(self, spec: dict, machines: list[dict]) -> tuple[float | None, str | None]:
+        """What the line actually made, and where - if any machine reports this
+        characteristic.
+
+        The station comes back with the number because the MES records where a
+        reading was taken. An operator who walks to the filler with a scale has
+        stood at the filler, and a check that does not say so leaves everything
+        downstream - the control chart's signal, and any trigger on it - with
+        no machine to name.
+        """
         want = _slug(spec["characteristic"])
         for machine in machines:
             analog = (machine.get("analog") or {}).get("name")
@@ -88,11 +96,11 @@ class Floor:
                 try:
                     trend = await self.get(f"/analysis/tag/{machine['code']}", hours=0.2)
                 except httpx.HTTPError:
-                    return None
+                    return None, None
                 points = [p for p in trend.get("points", []) if p.get("mean") is not None]
                 if points:
-                    return float(points[-1]["mean"])
-        return None
+                    return float(points[-1]["mean"]), machine["code"]
+        return None, None
 
     def _plausible_value(self, spec: dict) -> float:
         """No matching tag: sample around the spec, mostly inside it.
@@ -117,22 +125,31 @@ class Floor:
         chosen = specs if every_spec else [self.rng.choice(specs)]
         active = [o for o in orders if o.get("status") in ACTIVE_STATUSES]
         for spec in chosen:
-            value = await self._measured_value(spec, machines)
+            value, station = await self._measured_value(spec, machines)
             if value is None:
-                value = self._plausible_value(spec)
+                value, station = self._plausible_value(spec), None
             same = [o for o in active if o.get("material") == spec["material"]]
             order = self.rng.choice(same or active)["code"] if (same or active) else None
             body = {"material": spec["material"], "characteristic": spec["characteristic"],
                     "value": round(value, 3)}
             if order:
                 body["order"] = order
+            if station:
+                body["equipment"] = station
             try:
                 r = await self.client.post("/quality/checks", json=body)
                 r.raise_for_status()
                 out = r.json()
                 log.info("inspected", characteristic=spec["characteristic"],
                          value=round(value, 3), result=out.get("result"),
-                         order=order)
+                         order=order, equipment=station)
+                # A control-chart rule fired on the write. Logged where a
+                # person watching the run will see it, with the hold it raised.
+                for signal in out.get("spc") or []:
+                    log.warning("spc signal", rule=signal.get("rule"), what=signal.get("what"),
+                                characteristic=spec["characteristic"],
+                                nonconformance=signal.get("nonconformance"),
+                                equipment=signal.get("equipment"))
             except httpx.HTTPStatusError as exc:
                 log.warning("inspection refused", status=exc.response.status_code,
                             detail=exc.response.text[:160])
