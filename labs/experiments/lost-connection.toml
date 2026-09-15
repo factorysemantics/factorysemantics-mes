@@ -43,7 +43,14 @@ speed    = 20
 # claim that matters afterwards is an availability figure with a hole in it
 # that says how big the hole was; `downtime` because the thing that must NOT
 # happen is the gap turning up in the pareto as a breakdown.
-measure = ["connection", "downtime", "oee"]
+#
+# `booking` is here for a question the others cannot ask. The counters keep
+# counting while nobody is watching them, and they are cumulative, so the
+# agent's first reading after the link comes back is a delta that spans the
+# whole outage. Nothing should be lost - and *not losing* it is the claim,
+# because the alternative is a plant that quietly under-books every network
+# blip it has.
+measure = ["booking", "connection", "downtime", "oee"]
 
 # A disconnect names no station: the endpoint carries the whole line, which is
 # what a switch losing power actually costs. The Washer's breakdown is inside
