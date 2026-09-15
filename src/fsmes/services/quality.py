@@ -18,7 +18,7 @@ from fsmes.domain import (
     QualityCheck,
     QualitySpec,
 )
-from fsmes.services import Conflict, NotFound, audit, masterdata, workorders
+from fsmes.services import Conflict, NotFound, audit, calendar, masterdata, workorders
 
 
 def create_spec(
@@ -83,6 +83,7 @@ def record_check(
     )
     wo = workorders.get(session, work_order_code) if work_order_code else None
     station = masterdata.get_equipment(session, equipment_code) if equipment_code else None
+    now = utcnow()
     check = QualityCheck(
         spec=spec,
         work_order_id=wo.id if wo else None,
@@ -90,7 +91,13 @@ def record_check(
         value=value,
         result=CheckResult.PASS if in_spec else CheckResult.FAIL,
         checked_by=actor,
+        ts=now,
     )
+    # Written from the same instant the row carries, so the shift on the
+    # record and the timestamp on it can never disagree. Against the station's
+    # own roster when the check names a station, because a line running its
+    # own shifts measures its checks on those; site-wide otherwise.
+    calendar.attribute(session, check, now, station.id if station else None)
     session.add(check)
     session.flush()
     audit.record(
@@ -137,8 +144,15 @@ def open_nc(
     null rather than invented.
     """
     wo = workorders.get(session, work_order_code) if work_order_code else None
+    now = utcnow()
     nc = NonConformance(code="NC-PENDING", description=description[:400], severity=severity,
-                        work_order_id=wo.id if wo else None, raised_by=actor, evidence=evidence)
+                        work_order_id=wo.id if wo else None, raised_by=actor,
+                        evidence=evidence, created_at=now)
+    # The shift it was raised in. Review, disposition and close happen on
+    # other shifts and other days; those steps keep their own timestamps and
+    # no shift, because the question a per-shift quality report asks is which
+    # shift found the problem.
+    calendar.attribute(session, nc, now)
     session.add(nc)
     session.flush()
     nc.code = f"NC-{nc.id:05d}"

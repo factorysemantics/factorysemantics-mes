@@ -252,6 +252,7 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
         TriggerKind,
         WorkOrder,
     )
+    from fsmes.services import calendar as calendar_service
     from fsmes.services import workorders
 
     data = read(directory)
@@ -387,4 +388,7 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
             # the column's own meaning for null - not a missing value.
             equipment=equipment.get(row["equipment"]) if row.get("equipment") else None))
         count("shifts", made=True)
+        # A session that has already asked which shifts exist must not keep
+        # the answer it got before this pack was loaded.
+        session.info.pop(calendar_service._PATTERN_CACHE, None)
     return receipt
