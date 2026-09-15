@@ -390,3 +390,28 @@ def test_the_connections_list_is_not_public(session, anon):
     """It names every machine in the plant. `/health` carries the counts, and
     the counts are the part a monitor needs without an account."""
     assert anon.get("/equipment/connections").status_code in (401, 403)
+
+
+def test_health_counts_in_the_database_rather_than_a_row_per_machine(session, client):
+    """`/health` is the endpoint a console, a monitor and a lab watch all poll.
+    Two aggregates, whatever the plant's size — pulling an id per machine to
+    count them in Python is how a health check becomes the thing that needs
+    watching."""
+    from sqlalchemy import event
+
+    statements: list[str] = []
+
+    def record(conn, cursor, statement, parameters, context, executemany):
+        statements.append(statement)
+
+    bind = session.get_bind()
+    event.listen(bind, "before_cursor_execute", record)
+    try:
+        watching = connection.watching(session)
+    finally:
+        event.remove(bind, "before_cursor_execute", record)
+
+    assert watching["machines"] >= 1
+    selects = [s for s in statements if s.lstrip().upper().startswith("SELECT")]
+    assert len(selects) == 2, f"asked the database {len(selects)} times: {selects}"
+    assert all("count" in s.lower() for s in selects), "a row per machine came back"

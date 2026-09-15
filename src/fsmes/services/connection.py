@@ -242,19 +242,32 @@ def intervals(session: Session, equipment_ids: list[int], start: datetime,
 
 def watching(session: Session) -> dict:
     """How much of this plant the MES can currently see. Every list states its
-    total, including this one: connected + disconnected + unknown = machines."""
-    ids = list(session.scalars(
-        select(Equipment.id).where(Equipment.level == EquipmentLevel.WORK_UNIT)))
-    open_rows = open_connections(session, ids)
-    disconnected = sum(1 for row in open_rows.values()
-                       if row.state is ConnectionStateName.DISCONNECTED)
-    connected = sum(1 for row in open_rows.values()
-                    if row.state is ConnectionStateName.CONNECTED)
+    total, including this one: connected + disconnected + unknown = machines.
+
+    Counted in the database, in two aggregates, because this rides on
+    `/health` - the one endpoint a console, a monitor and a lab watch all poll.
+    Pulling an id per machine to count them in Python is a thousand rows a
+    second on a plant with a thousand machines, on the cheapest endpoint there
+    is, which is how a health check becomes the thing that needs watching.
+    """
+    machines = session.scalar(
+        select(func.count()).select_from(Equipment)
+        .where(Equipment.level == EquipmentLevel.WORK_UNIT)) or 0
+    rows = session.execute(
+        select(EquipmentConnection.state, func.count())
+        .join(Equipment, Equipment.id == EquipmentConnection.equipment_id)
+        .where(EquipmentConnection.ended_at.is_(None),
+               Equipment.level == EquipmentLevel.WORK_UNIT)
+        .group_by(EquipmentConnection.state)
+    ).all()
+    counts = {str(getattr(state, "value", state)): int(count) for state, count in rows}
+    connected = counts.get(ConnectionStateName.CONNECTED.value, 0)
+    disconnected = counts.get(ConnectionStateName.DISCONNECTED.value, 0)
     return {
-        "machines": len(ids),
+        "machines": machines,
         "connected": connected,
         "disconnected": disconnected,
         # Not a fault and not zero: nothing has ever reported a connection for
         # these, so this plant cannot say whether it can see them.
-        "unknown": len(ids) - connected - disconnected,
+        "unknown": max(0, machines - connected - disconnected),
     }
