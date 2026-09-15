@@ -425,7 +425,7 @@
   /* ---------- the connection, shared ----------
      Whether the MES can still see a machine is a second fact beside what the
      machine is doing, and every screen that shows a state has to show it
-     (decision 0027). One helper, so the five screens cannot drift apart on
+     (decision 0028). One helper, so the five screens cannot drift apart on
      what "disconnected" looks like.
 
      `unknown` here means nothing has ever reported a connection for this

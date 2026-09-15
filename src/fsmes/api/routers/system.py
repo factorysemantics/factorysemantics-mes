@@ -36,7 +36,7 @@ def health(db: DbDep) -> dict:
             # decision 0023 draws. A monitor that knows a plant is up and does
             # not know it has been blind to nine machines since Tuesday will
             # read its silence as everything being fine - the same argument
-            # `shadow` rides on health for (decision 0027).
+            # `shadow` rides on health for (decision 0028).
             "watching": connection_service.watching(db),
             # Not part of `summary()`: the id is between this plant and the
             # installation that created it, and has no business in the

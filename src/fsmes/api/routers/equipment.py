@@ -30,7 +30,7 @@ def connections(db: DbDep) -> dict:
 
     Separate from `/states` because it is a separate fact: a machine can be
     down and reachable, or fine and unreachable, and a screen that has to
-    pick one of those has lost the more useful half (decision 0027).
+    pick one of those has lost the more useful half (decision 0028).
 
     Every machine appears, including the ones nothing has ever reported a
     connection for - they are `unknown`, which is not the same as connected

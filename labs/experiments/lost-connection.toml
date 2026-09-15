@@ -15,7 +15,7 @@
 # The honest answer is neither. For those minutes the MES has no state for the
 # machine at all, the connection history says since when and why, and every
 # window that overlaps the gap says how much of itself was unknown. Decision
-# 0027, and the first thing an incumbent MES's operators will test when this
+# 0028, and the first thing an incumbent MES's operators will test when this
 # one is stood up beside it in shadow mode.
 #
 #     fsmes lab run labs/experiments/lost-connection.toml
