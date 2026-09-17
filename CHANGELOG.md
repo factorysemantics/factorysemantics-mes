@@ -176,6 +176,24 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **TypeSafe answered the Jev survey's six questions, and the answers are
+  written down with their date.** The six questions in
+  [`docs/ai/JEV.md`](docs/ai/JEV.md) were put to TypeSafe and answered in
+  writing to the maintainer on 2026-09-17; the answers now sit under each
+  question, and the operational half of them is a row on
+  [the compatibility table](docs/operate/compatibility.md) in that table's own
+  voice — hosted API only, United States only, a version is pinnable with no
+  fixed retirement window, 250,000 tokens per second and 1,200 requests per
+  minute with no availability commitment, and zero data retention on the
+  enterprise tier only. The survey's preconditions carry what that costs:
+  every state class above `catalogue` in proposed decision
+  [0032](docs/decisions/0032-a-hosted-judgment-and-the-shadow.md) is gated on
+  the enterprise tier or on a plant accepting retention with no stated period,
+  and hosted-only means an air-gapped line or a site running in shadow beside
+  an incumbent cannot use it at any tier. These are the vendor's statements,
+  dated; nothing here was measured by this project and nothing is switched on.
+  Documentation only.
+
 - **A second, typed pass over every scored run's log, recorded beside the
   first and never in its place.** The pass that reads simulated run logs
   hands 12 KB of log tail to a local model and scrapes a JSON array out of
