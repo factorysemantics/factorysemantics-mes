@@ -316,14 +316,74 @@ def test_only_the_labelled_pairs_reach_a_plot():
 # --------------------------------------------------------------- the cost
 
 def test_the_cost_is_estimated_before_anything_is_asked(records):
-    """What a pass will cost is printed first, in the right order of
-    magnitude, from the set itself rather than afterwards from the bill."""
+    """What a pass will cost is printed first, from the set itself rather than
+    afterwards from the bill."""
     cost = calibration.estimate(records)
     assert cost["calls"] == len(records)
     assert cost["questions_per_call"] == 1
     assert cost["state_characters"] == sum(r["state_characters"] for r in records)
     assert cost["estimated_input_tokens"] > 0
-    assert cost["estimated_input_tokens"] < cost["state_characters"]
+    assert cost["how"]
+
+
+def test_with_no_pass_of_this_view_stored_the_estimate_says_it_is_a_stated_figure(
+        records):
+    """An estimate a reader cannot tell from a measurement is worse than no
+    estimate. With nothing of this view stored, the printed sentence says the
+    figure is the stated one and names the view it had nothing for."""
+    cost = calibration.estimate(records)
+    assert cost["measured"] is False
+    assert cost["characters_per_token"] == calibration.FALLBACK_CHARACTERS_PER_TOKEN
+    assert "not a measurement" in cost["how"]
+    assert calibration.measured_characters_per_token(None, "stopped-not-why") is None
+
+
+def test_an_estimate_is_never_lower_per_character_than_the_last_pass_paid(records):
+    """The first estimator here said 3.8 characters to a token, and the first
+    real pass of the labelled set was billed about four times what it had
+    printed. An estimate measured from a stored pass is that pass's own rate
+    per character of state, rounded up, so it can come in under the bill only
+    if the next pass is dearer per character than the last one was."""
+    stored = calibration.ask(records, transport=Service(), settings=with_a_key())
+    billed = stored["usage"]["input_tokens"]
+    characters_asked = sum(a["state_characters"] for a in stored["answers"])
+
+    measured = calibration.measured_characters_per_token(
+        stored, calibration.state_view_of(records))
+    assert measured["calls"] == len(records)
+    assert measured["input_tokens"] == billed
+
+    cost = calibration.estimate(records, measured=measured)
+    assert cost["measured"] is True
+    assert cost["estimated_input_tokens"] >= billed
+    assert (cost["estimated_input_tokens"] / cost["state_characters"]
+            >= billed / characters_asked)
+    assert "measured from" in cost["how"]
+
+
+def test_the_other_state_view_is_never_measured_from(records):
+    """The two views ask over different state - the default one withholds the
+    word that names the reason - so what the full view was billed says nothing
+    about what the default view will be. Measuring across them would be a
+    number from the wrong question."""
+    stored = calibration.ask(records[:3], transport=Service(), settings=with_a_key())
+    assert calibration.state_view_of(records) != "full"
+    assert calibration.measured_characters_per_token(stored, "full") is None
+
+
+def test_a_call_nobody_was_billed_for_is_left_out_of_the_rate(records):
+    """Unknown is not zero here either. A call the service reported no usage
+    for is left out of both sums rather than counted as nought tokens, which
+    would make every later estimate cheaper than the truth."""
+    class Quiet(Service):
+        def ask(self, **kwargs):
+            reply = super().ask(**kwargs)
+            reply["usage"] = {"input_tokens": None, "output_tokens": None}
+            return reply
+
+    stored = calibration.ask(records[:2], transport=Quiet(), settings=with_a_key())
+    assert calibration.measured_characters_per_token(
+        stored, calibration.state_view_of(records)) is None
 
 
 def test_usage_the_service_did_not_report_is_counted_as_unreported(records):
