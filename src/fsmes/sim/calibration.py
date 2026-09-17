@@ -532,8 +532,8 @@ def reliability_svg(bins: dict, *, title: str) -> str:
 
     error = bins["expected_calibration_error"]
     out.append(f'<text x="{left}" y="{bottom + 46}" fill="{_INK}">'
-               f'stated confidence (bin midpoints; the count in each bin is '
-               f'under the axis)</text>')
+               f'stated confidence, at bin midpoints; each bin\'s count is '
+               f'under the axis</text>')
     out.append(f'<text x="{left}" y="{bottom + 62}" fill="{_INK}">'
                f'expected calibration error: '
                f'{"not measurable - no samples" if error is None else f"{error:.4f}"}'
