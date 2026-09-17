@@ -30,11 +30,11 @@ import urllib.request
 from pathlib import Path
 
 from fsmes.integrations.jev import (
-    JevUnavailable,
     Noul,
     QuestionSet,
     Score,
     from_settings,
+    reason,
 )
 
 OLLAMA = "http://127.0.0.1:11434"
@@ -252,21 +252,26 @@ def judge(card: dict, log: str, *, transport=None, settings=None) -> dict:
         return not_asked(why)
 
     try:
-        answers = client.ask(JEV_QUESTIONS, log)
-    except (JevUnavailable, RuntimeError, ValueError, OSError) as exc:
+        judgment = client.ask(JEV_QUESTIONS, log)
+    except Exception as exc:  # a judgment may not cost the run
         # A judgment nobody could get is not a finding, and it is not a
-        # crash in a nightly job either.
-        return not_asked(str(exc))
+        # crash in a nightly job either. Every exception, not a list of the
+        # ones anybody thought of: on 2026-09-17 an `AttributeError` from a
+        # client that could not be built killed a scored run's triage, and
+        # decision 0031 says a judgment may not cost the thing it judges.
+        return not_asked(reason(exc))
 
+    answers = judgment.answers
     by_name = {a.question: a for a in answers}
-    score = by_name.pop(JEV_QUESTIONS.score.name, None)
+    score = by_name.get(JEV_QUESTIONS.score.name)
     record = {
         "asked": True,
         "note": "asked and answered",
         "state_class": JEV_QUESTIONS.state_class,
         "battery": JEV_QUESTIONS.name,
         "model_asked_for": client.model,
-        "model": score.model if score else next(iter(answers)).model,
+        "model": judgment.model,
+        "usage": judgment.usage,
         "conditions": [a.as_record() for a in answers
                        if a.question != JEV_QUESTIONS.score.name],
         "worst_problem": score.as_record() if score else None,

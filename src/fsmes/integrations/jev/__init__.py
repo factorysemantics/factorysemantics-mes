@@ -24,25 +24,39 @@ answer an agent gave.
 from fsmes.integrations.jev.client import (
     Answer,
     JevClient,
-    JevUnavailable,
+    Judgment,
     Noul,
     QuestionSet,
     Score,
     available,
     from_settings,
 )
-from fsmes.integrations.jev.transport import NO_SDK, JevTransport, SdkTransport
+from fsmes.integrations.jev.transport import (
+    KEY_SETTING,
+    NO_SDK,
+    JevTransport,
+    JevUnavailable,
+    SdkTransport,
+    list_models,
+    reason,
+    resolve_version,
+)
 
 __all__ = [
+    "KEY_SETTING",
     "NO_SDK",
     "Answer",
     "JevClient",
     "JevTransport",
     "JevUnavailable",
+    "Judgment",
     "Noul",
     "QuestionSet",
     "Score",
     "SdkTransport",
     "available",
     "from_settings",
+    "list_models",
+    "reason",
+    "resolve_version",
 ]

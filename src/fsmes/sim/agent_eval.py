@@ -34,10 +34,10 @@ import httpx
 
 from fsmes import plant as plants
 from fsmes.integrations.jev import (
-    JevUnavailable,
     Noul,
     QuestionSet,
     from_settings,
+    reason,
 )
 
 STORE = Path.home() / ".local" / "share" / "fsmes" / "agent-evals.jsonl"
@@ -305,20 +305,23 @@ def judge(question: str, truth: set[str], distractors: set[str], answer: str,
         return not_asked(why)
 
     try:
-        answers = client.ask(JEV_QUESTIONS, state_of(question, truth, distractors, answer))
-    except (JevUnavailable, RuntimeError, ValueError, OSError) as exc:
+        judgment = client.ask(JEV_QUESTIONS, state_of(question, truth, distractors, answer))
+    except Exception as exc:  # a judgment may not cost the eval
         # A judgment nobody could get is not a finding, and it is not a
-        # crash in the middle of an eval run either.
-        return not_asked(str(exc))
+        # crash in the middle of an eval run either. Every exception, not a
+        # list of the ones anybody thought of: decision 0031 says a judgment
+        # may not cost the thing it judges, and on 2026-09-17 one did.
+        return not_asked(reason(exc))
 
-    got = answers[0]
+    got = judgment.answers[0]
     return {
         "asked": True,
         "note": "asked and answered",
         "state_class": JEV_QUESTIONS.state_class,
         "battery": JEV_QUESTIONS.name,
         "model_asked_for": client.model,
-        "model": got.model,
+        "model": judgment.model,
+        "usage": judgment.usage,
         "answer": got.as_record(),
         # Said in the record and not only in a docstring, because the record
         # is what a person reads in six weeks.

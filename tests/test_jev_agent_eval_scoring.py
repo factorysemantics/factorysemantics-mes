@@ -32,7 +32,7 @@ class Service:
     """A judgment service that answers from a script and remembers what it
     was asked."""
 
-    def __init__(self, probability: float = 0.93, model: str = "jev-1.12",
+    def __init__(self, probability: float = 0.93, model: str = "jev-1.13.0",
                  request_id: str = "req-0007", raises: Exception | None = None,
                  answer_nothing: bool = False):
         self.probability = probability
@@ -122,8 +122,8 @@ def test_the_judgment_is_recorded_with_its_probability_version_and_time():
     answer = record["answer"]
     assert answer["probability"] == 0.93
     assert answer["confidence"] == 0.77
-    assert record["model"] == "jev-1.12" and record["model_asked_for"] == "jev-1.12"
-    assert answer["model"] == "jev-1.12" and answer["request_id"] == "req-0007"
+    assert record["model"] == "jev-1.13.0" and record["model_asked_for"] == "jev-1.13.0"
+    assert answer["model"] == "jev-1.13.0" and answer["request_id"] == "req-0007"
     assert answer["asked_at"].startswith("20") and answer["question_sha256"]
     assert record["thresholds"].startswith("none")
     assert record["state_class"] == "observation"
@@ -198,7 +198,7 @@ def test_the_trend_stays_on_the_check_and_the_judgment_is_drawn_beside_it(api):
     assert both["by_scenario"] == deterministic["by_scenario"]
     assert both["judgment"]["asked"] == len(rows)
     assert both["judgment"]["mean_probability"] == 0.01
-    assert both["judgment"]["models"] == ["jev-1.12"]
+    assert both["judgment"]["models"] == ["jev-1.13.0"]
     assert deterministic["judgment"]["asked"] == 0
 
 
@@ -208,7 +208,7 @@ def test_the_report_keeps_the_two_means_apart_so_a_plot_can_be_drawn_later():
     mean where it failed, which is the beginning of the calibration plot a
     threshold would need."""
     def row(passed: bool, probability: float | None, asked: bool = True) -> dict:
-        jev = ({"asked": True, "model": "jev-1.12",
+        jev = ({"asked": True, "model": "jev-1.13.0",
                 "answer": {"probability": probability}}
                if asked else {"asked": False, "note": "not asked (no key)"})
         return {"scenario": "alarming", "agent": "scripted", "pass": passed, "jev": jev}

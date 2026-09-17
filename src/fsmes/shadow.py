@@ -285,7 +285,10 @@ REGISTER: tuple[Outbound, ...] = (
     ),
     Outbound(
         name="llm.jev",
-        where="fsmes.integrations.jev.transport:SdkTransport.ask",
+        # The module, not one method: the battery, the model listing and the
+        # one call that learns which version answers all leave from here, and
+        # every one of them asks this entry first.
+        where="fsmes.integrations.jev.transport",
         reaches="a hosted judgment API over the internet",
         verdict="refused",
         note="the typed-judgment model, asked fixed yes/no and scored "
