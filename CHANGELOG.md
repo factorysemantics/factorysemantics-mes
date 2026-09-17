@@ -139,6 +139,18 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **The Jev survey, and two proposed decisions about what a judgment may
+  touch.** [`docs/ai/JEV.md`](docs/ai/JEV.md) is a survey of where a typed
+  judgment model could sit in this project — twelve candidates in the build
+  loop, sixteen in the product, and the ones to refuse — written so each can
+  be taken or refused on its own. Decision records
+  [0031](docs/decisions/0031-a-judgment-is-a-proposal.md) (a judgment is a
+  proposal: it never touches a graded number or a gate) and
+  [0032](docs/decisions/0032-a-hosted-judgment-and-the-shadow.md) (a hosted
+  judgment is an outbound path, classified by the state it sends) are both
+  **proposed**, not accepted. Documentation only: nothing here is built and
+  nothing is switched on.
+
 - **`shift=` on every analysis endpoint, and a shift selector on the Analysis
   screen.** `current`, `previous`, or a day and a code such as
   `2026-09-14/NIGHT`, read on the plant's own clock — beside the existing
