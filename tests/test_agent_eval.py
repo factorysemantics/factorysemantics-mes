@@ -77,3 +77,38 @@ def test_a_scripted_agent_is_scored_and_kept(api, session, tmp_path):
     s = agent_eval.summary(kept)
     assert s["runs"] == len(kept) and 0 < s["pass_rate"] < 1
     assert s["by_scenario"]["alarming"] == 1.0
+
+
+def test_a_distractor_named_only_as_an_english_word_is_not_a_wrong_answer():
+    """The defect the Jev survey describes, as a test.
+
+    Scoring used to upper-case the answer before matching an upper-case
+    character class, which made the class inert and turned every English
+    word into a candidate machine code. An agent that named the right
+    machine in a sentence that mentions a distractor as a plain word was
+    scored zero for a machine it had not named.
+    """
+    judged = agent_eval.score("DRW01. The drawing area itself is fine.",
+                              {"DRW01"}, {"DRAWING", "ANN01"})
+    assert judged["pass"] is True
+    assert judged["hit"] == ["DRW01"] and judged["wrong"] == []
+
+
+def test_a_code_that_is_also_a_word_counts_only_when_written_as_a_code():
+    assert agent_eval.score("DRAWING", {"DRAWING"}, set())["pass"] is True
+    assert agent_eval.score("the drawing looked fine", {"DRAWING"}, set())["pass"] is False
+    # A code carrying a digit or a separator cannot be an English word, so
+    # it is still read in whatever case the agent wrote it.
+    assert agent_eval.score("fg-pack1", {"FG-PACK1"}, set())["pass"] is True
+
+
+def test_a_code_is_named_only_as_a_whole_token():
+    assert agent_eval.score("MIX011", {"MIX01"}, set())["pass"] is False
+    judged = agent_eval.score("MIX01-A", {"MIX01"}, {"MIX01-A"})
+    assert judged["hit"] == [] and judged["wrong"] == ["MIX01-A"]
+
+
+def test_none_is_the_answer_vocabulary_and_is_read_in_any_case():
+    assert agent_eval.score("none", {"NONE"}, {"MIX01"})["pass"] is True
+    assert agent_eval.score("None of the machines are alarming.",
+                            {"NONE"}, {"MIX01"})["pass"] is True

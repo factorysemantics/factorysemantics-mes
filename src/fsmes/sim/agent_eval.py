@@ -156,16 +156,55 @@ def scenario(scenario_id: str) -> Scenario:
 
 # ---------------------------------------------------------------- scoring
 
+#: The answer vocabulary's word for "no machine fits the question right now".
+#: It is not a machine code, and `_others` can never put it among the
+#: distractors, so it is read in whatever case the agent wrote it.
+NO_ANSWER = "NONE"
+
+#: A code carrying one of these cannot be mistaken for an English word.
+_NOT_A_WORD = re.compile(r"[0-9_-]")
+
+
+def names(answer: str, code: str) -> bool:
+    """Does this reply name this code?
+
+    Reading an answer means asking that of each code we already care about -
+    the expected ones and the distractors - rather than harvesting every
+    token in the reply and hoping the wanted ones fall out of it.
+
+    Two rules. A code is named when the answer writes it as a **whole
+    token**: `MIX01` is not named by `MIX011`. And case is ignored only for
+    a code carrying a digit, a hyphen or an underscore, because `mix01` and
+    `fg-pack1` can be nothing but codes; a code made only of letters -
+    `DRAWING`, `FINEWIRE` - is an ordinary English word in lowercase, so it
+    counts only where the reply writes it in capitals, which is how the
+    plant writes it and how the question asks for it.
+
+    That second rule is the fix for a real defect. This was
+    `re.findall(r"[A-Z][A-Z0-9_-]{1,}", answer.upper())`, and upper-casing
+    the answer before matching an upper-case character class made the class
+    inert: every word of two letters or more became a candidate code. An
+    agent that named the right machine in a sentence mentioning a distractor
+    as a plain word - "DRW01; the drawing area itself is fine" - was scored
+    zero for naming a machine it had not named.
+    """
+    if not code:
+        return False
+    flags = re.IGNORECASE if (code.upper() == NO_ANSWER or _NOT_A_WORD.search(code)) else 0
+    edge = "[A-Za-z0-9_-]"
+    return re.search(rf"(?<!{edge}){re.escape(code)}(?!{edge})", answer, flags) is not None
+
+
 def score(answer: str, truth: set[str], distractors: set[str]) -> dict:
     """1.0 when every expected code is named and no wrong one is; partial
     credit for the fraction of expected codes named, minus nothing - a wrong
     code named alongside the right ones is reported, and fails the scenario,
     because an agent that lists every machine to be safe has not answered."""
-    tokens = set(re.findall(r"[A-Z][A-Z0-9_-]{1,}", answer.upper()))
-    hit = truth & tokens
-    wrong = distractors & tokens
-    if truth == {"NONE"}:
-        correct = "NONE" in tokens and not wrong
+    named = {code for code in (truth | distractors) if names(answer, code)}
+    hit = truth & named
+    wrong = distractors & named
+    if truth == {NO_ANSWER}:
+        correct = names(answer, NO_ANSWER) and not wrong
         return {"score": 1.0 if correct else 0.0, "hit": sorted(hit), "wrong": sorted(wrong), "pass": correct}
     fraction = len(hit) / len(truth) if truth else 0.0
     passed = fraction == 1.0 and not wrong

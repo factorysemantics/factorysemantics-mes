@@ -12,6 +12,25 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Honesty
 
+- **The agent evals stopped counting English words as machine codes.** Scoring
+  an agent's answer read the reply with
+  `re.findall(r"[A-Z][A-Z0-9_-]{1,}", answer.upper())` — the answer was
+  upper-cased before an upper-case character class was matched against it, so
+  the class was inert and every word of two letters or more became a candidate
+  machine code. An agent that named the right machine in a sentence that
+  mentions a distractor as a plain word ("DRW01; the drawing area itself is
+  fine") was scored zero for a machine it had not named, and an answer that
+  only used a code-shaped word ("the drawing looked fine") passed for a machine
+  it had not named either. Scoring now asks, of each code the scenario already
+  cares about, whether the reply names it as a whole token: case is ignored for
+  a code carrying a digit, a hyphen or an underscore, and a code made only of
+  letters counts only where the reply writes it in capitals. `NONE`, the answer
+  vocabulary rather than a code, is read in any case. **Migration:** the pass
+  rate in `~/.local/share/fsmes/agent-evals.jsonl` means something different
+  before and after this change, in both directions; results kept before it are
+  not comparable with results kept after it. Nothing outside the eval store
+  reads these numbers.
+
 - **An order no longer finishes itself when the count reaches its quantity.**
   Reaching the ordered quantity and being finished were treated as the same
   fact; on a floor they are not. An operation now stays open until somebody
