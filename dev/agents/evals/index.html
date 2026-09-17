@@ -3043,6 +3043,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#how-an-answer-is-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How an answer is read
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3326,6 +3337,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#how-an-answer-is-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How an answer is read
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3380,6 +3402,31 @@ already is.</p>
 <p>Results accumulate in a local JSONL store. The washer story
 (<code>tests/test_washer_story.py</code>) is the causal eval: a cross-station effect
 the agent must explain from alarm history and states, not guess.</p>
+<h2 id="how-an-answer-is-read">How an answer is read<a class="headerlink" href="#how-an-answer-is-read" title="Permanent link">&para;</a></h2>
+<p>An answer is read twice, and both readings are kept on the same row.</p>
+<p><strong>The check</strong> is a rule about tokens: does the reply name every expected
+machine code and none of the distractors. A code is named when the reply
+writes it as a whole token — <code>MIX01</code> is not named by <code>MIX011</code> — and case is
+ignored only for a code carrying a digit, a hyphen or an underscore, since
+<code>mix01</code> can be nothing but a code. A code made only of letters, like
+<code>DRAWING</code>, is an ordinary English word in lowercase, so it counts only where
+the reply writes it in capitals. <code>NONE</code> is the answer vocabulary rather than
+a code and is read in any case. <strong>This is the number the trend is drawn
+from.</strong></p>
+<p><strong>The judgment</strong> asks a hosted judgment model one typed question about the
+same reply — does it name exactly the expected codes and no distractor — and
+records the probability that comes back, with the model version as served
+and the time. It is a second opinion recorded beside the check, never in
+place of it: it gates nothing, it has no threshold, and it is off unless
+<code>MES_JEV_API_KEY</code> is set, which is what every installation of this package
+has. With no key the row says <code>not asked (no MES_JEV_API_KEY in this
+environment)</code> and the eval behaves exactly as it did before. See
+<a href="../../ai/JUDGMENT-IN-THE-BUILD-LOOP/">the judgment model in the build loop</a>.</p>
+<p><code>fsmes agent-eval --summary</code> prints both, labelled: the pass rate from the
+check, and beside it how many results were judged out of how many kept, the
+mean probability, and — separately — that mean where the check passed and
+where it failed. Those last two are the beginning of the calibration plot
+any threshold would need, and until it exists there is no threshold.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../reference/tools/">Tools reference</a></li>
