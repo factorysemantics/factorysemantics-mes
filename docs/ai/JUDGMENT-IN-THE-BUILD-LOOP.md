@@ -5,8 +5,10 @@ No plant sends anything anywhere because of what is described here. No
 screen, no API route, no agent tool and no plant data path asks a judgment
 model anything, and shadow mode refuses the call outright.
 
-The survey this comes from is `docs/ai/JEV.md`, and the two decisions it
-rests on are `0031` — a judgment is a proposal — and `0032` — a hosted
+The survey this comes from is [JEV.md](JEV.md), and the two decisions it
+rests on are [0031](../decisions/0031-a-judgment-is-a-proposal.md) — a
+judgment is a proposal — and
+[0032](../decisions/0032-a-hosted-judgment-and-the-shadow.md) — a hosted
 judgment is an outbound path, classified by the state it sends. Both are
 proposed rather than accepted. This page is step 1 of the survey's own
 phasing: the cheapest possible place to find out whether a typed judgment
@@ -58,7 +60,8 @@ name.
 
 - **It decides nothing.** `worst`, the two columns the results store trends,
   the night brief's selection and everything `autoloop.py` reads come from
-  the open pass alone, exactly as before. A judgment is a proposal (0031).
+  the open pass alone, exactly as before. A judgment is a proposal
+  ([0031](../decisions/0031-a-judgment-is-a-proposal.md)).
 - **It has no threshold.** A probability is recorded and read by a person.
   Turning one into a verdict needs a calibration plot drawn on this
   project's own runs; that plot does not exist, so there is no line, and the
@@ -99,8 +102,8 @@ whatever state a question carries goes off the box to answer it, and a plant
 lending us its data to watch did not agree to that. Refused twice over: no
 client is built, and one built some other way refuses at the call.
 
-Decision 0032 asks for one register entry per class of state rather than one
-per integration. That is the shape the product's own questions will need,
+[Decision 0032](../decisions/0032-a-hosted-judgment-and-the-shadow.md) asks
+for one register entry per class of state rather than one per integration. That is the shape the product's own questions will need,
 and it is not built here: the build loop has one caller, one class of state,
 and one verdict. The question set does declare its class in code
 (`observation`), so the classification is already a property of the question

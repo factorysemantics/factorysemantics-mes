@@ -10,25 +10,6 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
-### Added
-
-- **A second, typed pass over every scored run's log, recorded beside the
-  first and never in its place.** The pass that reads simulated run logs
-  hands 12 KB of log tail to a local model and scrapes a JSON array out of
-  the reply, so an unparseable reply and a clean run have been
-  indistinguishable: both record *no findings*. A hosted judgment model is
-  now asked a fixed battery of six typed questions about the same log —
-  five conditions and one severity — where there is nothing to parse. Both
-  passes run, both are recorded, and a comparison line per run says where
-  they agreed. The typed pass decides nothing: `worst`, the columns the
-  results store trends and everything the nightly loop reads still come from
-  the open pass alone, and no question carries a threshold. Development only
-  — no plant path asks it anything, the client is an optional extra
-  (`factorysemantics-mes[jev]`), the outbound register carries it as
-  `llm.jev`, **refused** in shadow mode, and with no `MES_JEV_API_KEY` set
-  (the normal case) the run is triaged exactly as it was before and the
-  record says it was not asked. `docs/ai/JUDGMENT-IN-THE-BUILD-LOOP.md`.
-
 ### Honesty
 
 - **An order no longer finishes itself when the count reaches its quantity.**
@@ -157,6 +138,28 @@ goes under Honesty with a migration line, so plant people can find it.
   `performance_as_reported` if it is quoting the MES.
 
 ### Added
+
+- **A second, typed pass over every scored run's log, recorded beside the
+  first and never in its place.** The pass that reads simulated run logs
+  hands 12 KB of log tail to a local model and scrapes a JSON array out of
+  the reply, so an unparseable reply and a clean run have been
+  indistinguishable: both record *no findings*. A hosted judgment model is
+  now asked a fixed battery of six typed questions about the same log —
+  five conditions and one severity — where there is nothing to parse. Both
+  passes run, both are recorded, and a comparison line per run says where
+  they agreed. The typed pass decides nothing: `worst`, the columns the
+  results store trends and everything the nightly loop reads still come from
+  the open pass alone, and no question carries a threshold. Development only
+  — no plant path asks it anything, the client is an optional extra
+  (`factorysemantics-mes[jev]`), the outbound register carries it as
+  `llm.jev`, **refused** in shadow mode, and with no `MES_JEV_API_KEY` set
+  (the normal case) the run is triaged exactly as it was before and the
+  record says it was not asked. Step 1 of the phasing in
+  [`docs/ai/JEV.md`](docs/ai/JEV.md), under decisions
+  [0031](docs/decisions/0031-a-judgment-is-a-proposal.md) and
+  [0032](docs/decisions/0032-a-hosted-judgment-and-the-shadow.md);
+  the page is
+  [`docs/ai/JUDGMENT-IN-THE-BUILD-LOOP.md`](docs/ai/JUDGMENT-IN-THE-BUILD-LOOP.md).
 
 - **The Jev survey, and two proposed decisions about what a judgment may
   touch.** [`docs/ai/JEV.md`](docs/ai/JEV.md) is a survey of where a typed
