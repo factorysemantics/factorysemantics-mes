@@ -72,6 +72,13 @@ agent = ["anthropic>=1.2", "mcp>=2"]
 # reason as the rest: a plant that does not speak MQTT should not carry an
 # MQTT library, and the core install must stay as thin as it can.
 mqtt = ["aiomqtt>=2.3"]
+# The hosted judgment model's client, used by the development build loop's
+# run-log triage and by nothing in the product. Optional for the strongest
+# version of the same reason: a plant PC must not carry the client for a
+# service it is never allowed to call, and shadow mode refuses that call
+# outright. Nothing needs this extra - every caller keeps the answer it
+# computes without one.
+jev = ["typesafe-sdk>=0.1"]
 docs = [
     "mkdocs-material>=9.6",
     "mkdocstrings[python]>=0.27",

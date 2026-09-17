@@ -255,6 +255,30 @@ def test_this_plants_numbers_do_not_leave_the_box(shadow_on, monkeypatch):
     assert design.claude_available() is False
 
 
+def test_no_judgment_question_is_asked_about_a_plant_being_watched(shadow_on, monkeypatch):
+    """The judgment model decides nothing and writes nothing anywhere. It is
+    refused for the other reason: whatever state a question carries goes off
+    the box to answer it, and a plant lending us its data to watch did not
+    agree to that."""
+    from fsmes.integrations import jev
+
+    monkeypatch.setenv("MES_JEV_API_KEY", "a-key-that-is-set")
+    get_settings.cache_clear()
+
+    ok, why = jev.available()
+    assert ok is False and "shadow mode" in why
+
+    client, why = jev.from_settings()
+    assert client is None and "shadow mode" in why
+
+    # And a transport built some other way still refuses at the call, before
+    # it can reach for the SDK or the network.
+    transport = jev.SdkTransport("a-key-that-is-set")
+    with pytest.raises(shadow.ShadowRefused):
+        transport.ask(state="a log", questions=[{"name": "q", "kind": "noul", "text": "?"}],
+                      model="jev-1.12")
+
+
 def test_a_quality_check_is_still_recorded_in_shadow_mode(session, shadow_on):
     """A shadow plant inspects. The reading, the verdict against this MES's own
     specification and the non-conformance it raises are this MES's observations
@@ -390,6 +414,7 @@ PROVED_BY = {
     "cli.demo_wait": "test_the_demo_refuses_to_run_a_fake_plant_next_to_a_real_one",
     "llm.cloud_agent": "test_this_plants_numbers_do_not_leave_the_box",
     "llm.cloud_design": "test_this_plants_numbers_do_not_leave_the_box",
+    "llm.jev": "test_no_judgment_question_is_asked_about_a_plant_being_watched",
 }
 
 
@@ -424,6 +449,7 @@ PRIMITIVES = {
     "a mail server": r"\bsmtplib\.",
     "a socket": r"\bsocket\.(?:socket|create_connection)\s*\(",
     "a model provider": r"\banthropic\.\w+\s*\(|\.messages\.create\s*\(",
+    "a hosted judgment model": r"\btypesafe_sdk\.\w+\s*\(",
 }
 
 #: Call sites the scan finds that are not outbound reach, and why. Keep it

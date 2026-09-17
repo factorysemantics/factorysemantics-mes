@@ -91,7 +91,7 @@ class Outbound:
 #: `allowed`    — it runs, because nothing about the plant leaves this box
 #:                by it, and nothing outside this MES changes.
 #:
-#: **34 entries.** The count is stated because a register that quietly loses
+#: **35 entries.** The count is stated because a register that quietly loses
 #: a row is worse than no register, and `tests/test_shadow_mode.py` scans the
 #: source for outbound primitives and fails on any call site not covered by
 #: an entry here.
@@ -282,6 +282,21 @@ REGISTER: tuple[Outbound, ...] = (
         note="the design chat, a development tool. Refused for the same "
              "reason, and it falls back to the local model as it already "
              "does when there is no key",
+    ),
+    Outbound(
+        name="llm.jev",
+        where="fsmes.integrations.jev.transport:SdkTransport.ask",
+        reaches="a hosted judgment API over the internet",
+        verdict="refused",
+        note="the typed-judgment model, asked fixed yes/no and scored "
+             "questions and answering with probabilities. It writes nothing "
+             "anywhere and decides nothing - but whatever state a question "
+             "carries goes off the box to answer it, which is the same "
+             "reason the cloud brain above is refused. Today the only "
+             "caller is the development build loop, whose state is a "
+             "simulated plant's own log; no product path asks it anything. "
+             "Refused twice over in shadow mode: no client is built, and "
+             "one built some other way refuses at the call",
     ),
     Outbound(
         name="llm.local_assistant",
