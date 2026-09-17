@@ -71,6 +71,11 @@ where the work happens, and log the reason:
   plant, but it carries your plant's numbers off the box. In shadow mode it
   is refused and says why; the local model on the same machine still
   answers.
+- **The judgment model.** A hosted model that answers fixed, typed questions
+  with probabilities and writes nothing anywhere. It is used by this
+  project's own development build loop and by no part of the product, and in
+  shadow mode it is refused for the same reason as the cloud brain: whatever
+  state a question carries goes off the box to answer it.
 - **`fsmes demo`.** It runs a simulated line and a mock ERP in the same
   process, around every other gate. It refuses.
 
