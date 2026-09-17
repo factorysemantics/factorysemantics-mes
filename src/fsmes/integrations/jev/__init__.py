@@ -23,6 +23,7 @@ answer an agent gave.
 
 from fsmes.integrations.jev.client import (
     Answer,
+    Choice,
     JevClient,
     Judgment,
     Noul,
@@ -46,6 +47,7 @@ __all__ = [
     "KEY_SETTING",
     "NO_SDK",
     "Answer",
+    "Choice",
     "JevClient",
     "JevTransport",
     "JevUnavailable",

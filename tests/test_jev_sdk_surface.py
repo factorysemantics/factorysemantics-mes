@@ -127,6 +127,63 @@ def test_the_answer_is_read_back_onto_the_record_the_run_keeps():
     assert record["thresholds"] == "none: a probability is recorded, not a verdict"
 
 
+def test_a_choice_is_sent_as_the_sdk_s_own_choice_and_read_back_by_option():
+    """The P1 question's shape, against the real client.
+
+    A choice is the one question kind whose options are not ordered, which
+    is why its criteria go as a mapping keyed by the option's own name and
+    why the answer comes back naming an option rather than a number. Both
+    halves are pinned here, so a change in either fails a test rather than a
+    calibration.
+    """
+    from fsmes.sim import calibration, labelled
+
+    seen: dict = {}
+    options = list(labelled.REASON_NAMES)
+    answer = {"type": "choice", "choice": "breakdown", "confidence": 0.74,
+              "probabilities": {name: 0.01 for name in options}}
+    answer["probabilities"]["breakdown"] = 0.66
+    transport = jev.SdkTransport(
+        KEY, http_transport=a_service({"stop_reason": answer}, seen=seen))
+
+    stored = calibration.ask(
+        [{"id": "x", "label": "breakdown", "scripted": True, "observable": True,
+          "state_view": "stopped-not-why", "state_sha256": "0" * 16,
+          "state_characters": 4, "state": "rows"}],
+        transport=transport, settings=with_a_key())
+
+    asked = seen["body"]["questions"]["stop_reason"]
+    assert asked["type"] == "choice"
+    assert list(asked["criteria"]) == options
+    assert all(asked["criteria"][name] for name in options)
+    assert asked["instructions"] == calibration.P1.text_of("stop_reason")
+
+    got = stored["answers"][0]["answer"]
+    assert got["level"] == "breakdown"
+    assert got["probability"] == 0.66
+    assert got["confidence"] == 0.74
+    assert got["expected_score"] is None, "the options have no order to fall between"
+    assert got["probabilities"]["micro_stop"] == 0.01
+
+
+def test_a_choice_that_answers_with_an_option_nobody_offered_is_refused():
+    """A label outside the vocabulary would arrive in a confusion matrix as a
+    column the set has no truth for."""
+    from fsmes.sim import calibration
+
+    answer = {"type": "choice", "choice": "sabotage", "confidence": 0.9,
+              "probabilities": {"sabotage": 0.9}}
+    transport = jev.SdkTransport(KEY, http_transport=a_service({"stop_reason": answer}))
+
+    stored = calibration.ask(
+        [{"id": "x", "label": "breakdown", "scripted": True, "observable": True,
+          "state_view": "stopped-not-why", "state_sha256": "0" * 16,
+          "state_characters": 4, "state": "rows"}],
+        transport=transport, settings=with_a_key())
+    assert stored["answers"][0]["asked"] is False
+    assert "not one of the 7 option(s)" in stored["answers"][0]["note"]
+
+
 def test_an_answer_of_the_wrong_kind_is_not_read_as_an_answer():
     """A score where a condition was asked would otherwise arrive as `None`
     and read as a quiet no."""
