@@ -796,14 +796,52 @@ benchmarks, and none of them are about manufacturing.
 2. **A calibration plot, not a threshold.** TypeSafe's documentation says to
    plot confidence against accuracy on your own data and pick thresholds from
    it. Until that plot exists for a given question, that question has no
-   threshold, and "0.8 seemed reasonable" is not one.
+   threshold, and "0.8 seemed reasonable" is not one. **Answered in writing to
+   the maintainer, 2026-09-17:** how `confidence` is computed is not
+   published, and the number will drift across model versions — TypeSafe
+   describes it as a probability distribution rather than a stable formula.
+   That settles this item rather than softening it. A number whose
+   computation is unpublished and whose behaviour moves with the version can
+   only be calibrated against this project's own labelled data, which is what
+   this item already asked for; no threshold may be taken from the vendor at
+   any confidence. D1 stores the probability with every answer for exactly
+   this purpose, so the plot has its inputs from the first run.
 3. **The model pinned, not `-latest`.** A judgment stored against
    `jev-latest` cannot be reproduced. Pin the served version, store it with
-   every answer, and treat a version change as a re-validation.
-4. **A written answer on retention.** No retention period, rate limit or SLA
-   is published. Those are three questions to send TypeSafe before any
-   `production`-class question is switched on at any plant, and the answers
-   belong in `docs/operate/compatibility.md` with the date they were given.
+   every answer, and treat a version change as a re-validation. **Answered in
+   writing to the maintainer, 2026-09-17:** a version can be pinned, and
+   there is no fixed forced-retirement window. So the mechanism this item
+   needs exists — D1 pins `jev-1.12` and stores the version the API says it
+   served with each answer — and the absence of a retirement window cuts both
+   ways: nothing forces a re-validation on a date, and nothing promises a
+   pinned version will still be served next quarter. A pinned version that
+   stops answering is a case the code has to survive, not a case to be warned
+   about in advance.
+4. **A written answer on retention.** **Answered in writing to the
+   maintainer, 2026-09-17,** and the answer has a price on it. Zero data
+   retention exists, on the enterprise tier only; no retention period for any
+   other tier was given. Rate limits are 250,000 tokens per second and 1,200
+   requests per minute, with no availability commitment beyond them. The
+   answers are dated on
+   [the compatibility table](../operate/compatibility.md), which is where a
+   plant will look for them.
+
+    What it changes: every class above `catalogue` in decision
+    [0032](../decisions/0032-a-hosted-judgment-and-the-shadow.md) —
+    `configuration`, `observation`, `production` — is now gated on the
+    enterprise tier or on that plant's written acceptance that its request
+    bodies are retained for a period nobody has stated. That is a commercial
+    gate on a technical decision, and it is a real one: it means the cheapest
+    way to try a `production`-class question is not available at any price
+    short of the top tier. `catalogue` is unaffected, because text that ships
+    in the wheel is identical at every plant and its retention costs nothing.
+
+    The deployment answer is the harder half. Hosted API only, no
+    on-premises, VPC or edge option now or planned, and no public EU region —
+    United States only. Air-gapped lines and sites running in shadow beside
+    an incumbent cannot use this at all, at any tier, which is what the
+    survey predicted and is now a fact with a date rather than a guess. Those
+    are the plants with the strongest case for it.
 5. **The deterministic fallback tested as the normal case.** Every consumer
    keeps what it does today, and the test suite exercises the no-key,
    no-network, refused-by-class path as the default rather than as an edge.
@@ -845,16 +883,57 @@ question until step 0 has written answers.
 
 # Questions to put to TypeSafe in writing
 
+**Answered.** All six were put to TypeSafe and answered in writing to the
+maintainer on 2026-09-17. The answers are recorded under each question below,
+and the operational half of them is a row on
+[the compatibility table](../operate/compatibility.md). Nothing here was
+measured by this project; these are the vendor's own statements, dated.
+
 1. What is the retention period for request bodies, and is there a
    zero-retention or no-log option?
+
+    **Answer, in writing to the maintainer, 2026-09-17.** Zero data retention
+    is available, and only on the enterprise tier. No retention period for the
+    other tiers was given. So the option exists and it is priced: see
+    precondition 4 above for what that gates.
+
 2. What are the rate limits, and is there an availability commitment?
+
+    **Answer, in writing to the maintainer, 2026-09-17.** 250,000 tokens per
+    second and 1,200 requests per minute. No availability commitment beyond
+    those limits was given, so there is no SLA to hold to and every consumer
+    keeps its deterministic path.
+
 3. Is there any on-premises, VPC or edge deployment now or planned? Without
    one, the plants with the strongest case for this — air-gapped lines, sites
    running in shadow beside an incumbent — cannot use it at all.
+
+    **Answer, in writing to the maintainer, 2026-09-17.** Hosted API only.
+    No on-premises, VPC or edge option now or planned. The consequence is the
+    one the question predicted and it is unchanged by anything else here.
+
 4. Is a version such as `jev-1.12` pinnable and for how long is it served?
+
+    **Answer, in writing to the maintainer, 2026-09-17.** Yes, a version can
+    be pinned, with no fixed forced-retirement window. No commitment on how
+    long a pinned version is served follows from that, so a version
+    disappearing stays a case the code has to survive.
+
 5. How is `confidence` computed, and is the computation stable across model
    versions?
+
+    **Answer, in writing to the maintainer, 2026-09-17.** The computation is
+    not published, and the number will drift across model versions.
+    TypeSafe's own framing is that it is a probability distribution rather
+    than a stable formula. That is the answer this page assumed: see
+    precondition 2 above.
+
 6. Is there an EU region, and what is the current subprocessor list?
+
+    **Answer, in writing to the maintainer, 2026-09-17.** No public EU region;
+    hosted in the United States only. No subprocessor list was given, so that
+    half of the question is still open and a plant that needs one has to ask
+    for it itself.
 
 # If the answer turns out to be no
 
