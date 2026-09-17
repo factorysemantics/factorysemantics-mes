@@ -39,7 +39,7 @@ fixed battery of questions:
 | a component stopped reporting | condition | a probability |
 | an exception was logged and swallowed | condition | a probability |
 | a deadlock | condition | a probability |
-| how serious the worst problem is | severity, on `none · low · medium · high` | a level, with the probability of each |
+| how serious the worst problem is | severity, on `none · low · medium · high` | a number that can fall between two levels, the probability of each, and a confidence |
 
 **Six questions. That is the whole battery**, and it is fixed, which is
 exactly its weakness: a failure nobody wrote a question for is invisible to
@@ -58,7 +58,25 @@ version **as served**, the provider's request id, a fingerprint of the exact
 wording the question was asked in, and the time. The wording is part of a
 question's identity — re-word it and last month's answers are answers to a
 different question — so the fingerprint is stored rather than trusted to a
-name.
+name. The severity keeps the whole distribution: the expected score the
+service returned, which can fall between two levels, the probability of each
+level, and the level carrying the most probability — which is a reading of the
+answer and not a threshold. The call's token usage is stored once per record,
+`null` where the service reported none.
+
+### What a failed judgment looks like in a run card
+
+`asked: false`, and a `note` that reads `not asked (…)` — the reason in the
+brackets, and nothing else changed anywhere in the run. A service that did not
+answer, a client that could not be built, a key the service refused, an answer
+of the wrong shape, an SDK that moved under us: all of them are that sentence,
+and the class of the failure is named in it, because a service being down and
+this code being wrong are different facts. **No failure of any of this reaches
+the run.** It was the other way round once — on 2026-09-17 the first real call
+raised an `AttributeError` from a client that could not be built, and it killed
+the scoring of a run that had already succeeded. `not asked (…)` is the only
+thing a judgment may ever do to the thing it judges (decision 0031), and there
+are tests that fail if it can do anything else.
 
 ## The second thing it is asked
 
@@ -113,12 +131,23 @@ Four settings, and the only one without a working default is the key.
 | Setting | Default | What it is |
 |---|---|---|
 | `MES_JEV_API_KEY` | empty | The key. Read from the environment or the settings file, the same way `MES_ERPNEXT_API_SECRET` is. Never in this repository, never printed: `repr`, the log and the run record all say only whether one is set. |
-| `MES_JEV_MODEL` | `jev-1.12` | The pinned version. A moving alias — anything ending in `latest` — is refused before anything is asked, because an answer stored against one cannot be read again. The version that actually answered is stored with every answer, so a change shows up as a change. |
+| `MES_JEV_MODEL` | `jev-1.13.0` | The pinned version. A moving alias — anything ending in `latest` — is refused before anything is asked, because an answer stored against one cannot be read again. The version that actually answered is stored with every answer, so a change shows up as a change. |
 | `MES_JEV_BASE_URL` | empty | Empty uses the client's own endpoint. Set it to point a build that may not egress at something it may reach. |
 | `MES_JEV_TIMEOUT_SECONDS` | `5.0` | One attempt. The client's own default is ten seconds with two retries, which is a thirty-second worst case in front of a service whose median is about 100 ms. |
 
 The client is an optional extra: `pip install 'factorysemantics-mes[jev]'`.
 The core install does not carry it, and nothing needs it.
+
+**Which version to pin is learned by asking, not by listing.** On 2026-09-17
+the service's own model list offered `jev-latest` and `jev-preview` and nothing
+else — no numbered version at all — while a call made as `jev-latest` came back
+naming `jev-1.13.0`, which is then accepted as a pin by name. So what is listed
+and what can be pinned are two different facts. `fsmes jev models` prints the
+list with its total; `fsmes jev models --resolve` spends one call on a one-line
+synthetic state to learn the concrete name, and says what moving the pin would
+mean. One call, made because somebody asked for it: moving a pin is a
+re-validation, and answers either side of it are answers from different
+versions.
 
 **With no key — the normal case, and what every installation of this package
 has — the run is triaged exactly as it was before**, and the record says

@@ -28,6 +28,40 @@ goes under Honesty with a migration line, so plant people can find it.
   exactly as it did**, and the row says `not asked (no MES_JEV_API_KEY in this
   environment)` rather than nothing. No test opens a network connection.
 
+- **`fsmes jev models`** lists the model versions the judgment service serves,
+  and with `--resolve` spends one deliberate call learning which concrete
+  version a moving alias answers as, so a pin can be moved on purpose. It is a
+  build-loop command: nothing in a plant runs it, and shadow mode refuses it.
+
+### Fixed
+
+- **No failure of the judgment model can cost a run its scoring.** The first
+  real call to the service, on 2026-09-17, raised `AttributeError: module
+  'typesafe_sdk' has no attribute 'TypeSafe'` — the transport had been written
+  from the survey's description of the SDK rather than from the SDK — and that
+  error killed the triage *and the scoring* of a simulated run that had already
+  finished. Two fixes:
+  - The transport is written against `typesafe-sdk` as installed:
+    `TypeSafeClient`, `system_one`, `Noul` and `Score` questions keyed by name,
+    and a response carrying the served model version, the token usage and one
+    answer per question. A test drives that real client through a mock HTTP
+    transport — no network, no key — so a change in its shape fails a test
+    instead of a run. That test skips where the optional `[jev]` extra is not
+    installed, and says so.
+  - **Every** exception raised while building or using the client is recorded
+    as `not asked (<class>: <what it said>)` on the run and goes no further:
+    not the list of failures somebody thought of, all of them. A judgment
+    gates nothing and may cost nothing (decision 0031). A key the service
+    refuses says so and names the setting, never the key itself.
+- **`MES_JEV_MODEL` now defaults to a version that is served.** `jev-1.12` was
+  the survey's example and is not served; asked for, it answered nothing. The
+  default is `jev-1.13.0`, which the service answered as on 2026-09-17 and
+  accepts as a pin by name. Its own model list offers only moving aliases,
+  which this MES still refuses as a pin, so the way to learn the name of the
+  version to pin is to ask — which is what `fsmes jev models --resolve` does.
+  A score answer now also keeps the expected score the service returns, which
+  can fall between two levels, beside the level carrying the most probability.
+
 ### Honesty
 
 - **The agent evals stopped counting English words as machine codes.** Scoring
