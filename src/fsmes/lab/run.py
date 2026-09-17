@@ -157,6 +157,9 @@ def measure_plant(plan: Plan, built: builder.Built, card: dict, echo=print,
         "pipeline": card.get("pipeline"),
         "verdict_withheld": reason,
         "triage": card.get("triage"),
+        # The second, typed pass over the same log. Recorded beside the
+        # first; no measurement on this page is computed from it.
+        "jev": card.get("jev"),
         "views_refused": recorded.get("refused") or {},
         "measurements": {},
     }

@@ -798,7 +798,31 @@ def _plant(plant: dict, said: list[dict] | None = None) -> str:
     if findings:
         parts.append("<h3>What nobody asserted</h3><ul>" + "".join(
             f"<li>{esc(f.get('says') or f)}</li>" for f in findings) + "</ul>")
+    parts.append(_two_passes(plant))
     return "\n".join(parts)
+
+
+def _two_passes(plant: dict) -> str:
+    """One line saying where the two log-reading passes agreed about this run.
+
+    Both read the same log: one asked a local model an open question, one
+    asked a hosted model a fixed battery of typed questions. Neither decides
+    anything here - no measurement above is computed from either - so this is
+    a line of evidence about the two passes, printed so that after a few
+    weeks of runs there is something to read.
+    """
+    jev = plant.get("jev") or {}
+    if not jev:
+        return ""
+    comparison = jev.get("comparison") or {}
+    line = comparison.get("line")
+    if not line:
+        return ("<h3>Two passes over the log</h3><p class=\"conditions\">"
+                f"{esc(jev.get('note') or 'the typed battery was not asked')}.</p>")
+    return ("<h3>Two passes over the log</h3>"
+            f"<p class=\"conditions\">{esc(line)} "
+            "Neither pass feeds a number on this page; they are recorded to be "
+            "compared.</p>")
 
 
 def render(scores: dict, directory: Path, said: list[dict] | None = None) -> str:
