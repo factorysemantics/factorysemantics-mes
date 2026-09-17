@@ -292,9 +292,10 @@ REGISTER: tuple[Outbound, ...] = (
              "questions and answering with probabilities. It writes nothing "
              "anywhere and decides nothing - but whatever state a question "
              "carries goes off the box to answer it, which is the same "
-             "reason the cloud brain above is refused. Today the only "
-             "caller is the development build loop, whose state is a "
-             "simulated plant's own log; no product path asks it anything. "
+             "reason the cloud brain above is refused. Today its only "
+             "callers are both in the development build loop: a scored "
+             "run's own log, and one question about an agent's answer in "
+             "the agent evals. No product path asks it anything. "
              "Refused twice over in shadow mode: no client is built, and "
              "one built some other way refuses at the call",
     ),
