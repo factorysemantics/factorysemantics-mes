@@ -10,6 +10,24 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+### Added
+
+- **A typed judgment beside the agent evals' own check.** Every agent-eval
+  answer is now read twice and both readings are kept on the same row: the
+  deterministic check, which is still the only thing the pass rate is
+  drawn from, and one typed question to a hosted judgment model — does this
+  reply name exactly the expected codes and no distractor — recorded with its
+  probability, the model version as served, the request id and the time. It is
+  the second caller of the `[jev]` client added for the run-log triage, on the
+  same `MES_JEV_API_KEY`, the same pinned `MES_JEV_MODEL`, the same outbound
+  register entry (`llm.jev`, refused in shadow mode). It gates nothing
+  (decision 0031), and it has no threshold: `fsmes agent-eval --summary` prints
+  the mean probability where the check passed and where it failed rather than
+  an agreement rate, because a threshold needs a calibration plot this project
+  does not have yet. **With no key — the normal case — every eval behaves
+  exactly as it did**, and the row says `not asked (no MES_JEV_API_KEY in this
+  environment)` rather than nothing. No test opens a network connection.
+
 ### Honesty
 
 - **The agent evals stopped counting English words as machine codes.** Scoring

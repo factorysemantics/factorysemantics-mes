@@ -15,8 +15,10 @@ and it never runs inside a gate. That is decision 0031.
 What leaves the box is one hosted call over the internet, which is why
 `fsmes.shadow.REGISTER` carries `llm.jev` as refused: a plant lending us its
 data to watch did not agree to that, and this path has no business being
-open while it watches. Today the only caller is the build loop's run-log
-triage, whose state is a simulated plant's own log.
+open while it watches. Today its only callers are both in the build loop:
+the run-log triage, whose state is a simulated plant's own log, and the
+agent evals' scoring, whose state is one question about that plant and the
+answer an agent gave.
 """
 
 from fsmes.integrations.jev.client import (

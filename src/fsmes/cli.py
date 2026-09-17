@@ -2511,11 +2511,25 @@ def agent_eval_cmd(
         rows = agent_eval.recent(limit=500)
         s = agent_eval.summary(rows)
         rate = "—" if s["pass_rate"] is None else f"{s['pass_rate']:.0%}"
-        typer.echo(f"{s['runs']} kept result(s); pass rate {rate}")
+        typer.echo(f"{s['runs']} kept result(s); pass rate {rate} (the check)")
         for sid, rate in sorted(s["by_scenario"].items()):
             typer.echo(f"  {sid:<18} {rate:.0%}")
         for name, rate in sorted(s["by_agent"].items()):
             typer.echo(f"  agent {name:<12} {rate:.0%}")
+        # Beside the pass rate, labelled, and reading nothing into it: the
+        # trend above is the deterministic one and this decides nothing.
+        j = s["judgment"]
+        if not j["asked"]:
+            typer.echo(f"  judgment           not asked on any of {j['of']} kept result(s)")
+        else:
+            mean = "—" if j["mean_probability"] is None else f"{j['mean_probability']:.2f}"
+            typer.echo(f"  judgment           asked on {j['asked']} of {j['of']}; mean "
+                       f"probability the answer was exactly right {mean}"
+                       + (f" ({', '.join(j['models'])})" if j["models"] else ""))
+            for label, key in (("where the check passed", "mean_probability_where_the_check_passed"),
+                               ("where the check failed", "mean_probability_where_the_check_failed")):
+                value = j[key]
+                typer.echo(f"    {label:<24} {'—' if value is None else f'{value:.2f}'}")
         return
 
     with agent_eval.plant_client(plant) as client:

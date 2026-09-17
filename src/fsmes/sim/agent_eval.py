@@ -10,6 +10,13 @@ agents" becomes a trend the way honesty already is.
 
 Truth is computed through the same public API the agent uses (the dogfood
 rule): if the API cannot answer a question, the scenario cannot exist.
+
+Two things read each answer, and both are kept. The first is a rule about
+tokens: does the reply name every expected code and no distractor. The
+second, further down this file, asks a hosted judgment model the same
+question as one typed question and records the probability it answers with.
+The trend is drawn from the first. The second is drawn beside it, labelled,
+gates nothing, and is off unless somebody sets a key.
 """
 
 from __future__ import annotations
@@ -26,6 +33,12 @@ from pathlib import Path
 import httpx
 
 from fsmes import plant as plants
+from fsmes.integrations.jev import (
+    JevUnavailable,
+    Noul,
+    QuestionSet,
+    from_settings,
+)
 
 STORE = Path.home() / ".local" / "share" / "fsmes" / "agent-evals.jsonl"
 AGENT_USER = "AGENT"
@@ -212,6 +225,115 @@ def score(answer: str, truth: set[str], distractors: set[str]) -> dict:
             "wrong": sorted(wrong), "pass": passed}
 
 
+# ------------------------------------------------ the judgment beside it
+#
+# The check above is a rule about tokens, and a rule about tokens is partly a
+# measure of how an agent chose to format its reply. So a hosted judgment
+# model is asked one typed question about the same reply - does it name
+# exactly the expected codes and no distractor - and the probability it
+# answers with is recorded beside the pass or fail, never in place of it.
+#
+# The trend this file exists to produce stays on the deterministic value.
+# The judgment is drawn beside it, labelled, and decides nothing: decision
+# 0031. It is off unless somebody sets a key, which is every installation.
+#
+# No threshold, so no boolean. The survey's own condition for one is a
+# calibration plot drawn on this project's data, and that plot does not
+# exist yet. What `summary()` reports instead - the mean probability where
+# the check passed, and where it failed - is the beginning of that plot.
+
+#: One question per answer. That is the whole battery, said out loud
+#: because a fixed battery's total is the measure of what it cannot see.
+JEV_QUESTIONS = QuestionSet(
+    name="agent-eval-answer",
+    # What the state is, not where it came from. The reply, the question and
+    # the expected codes are a reading of a plant at a moment - observation
+    # shaped, even though the plant the build loop asks about is simulated.
+    state_class="observation",
+    nouls=(
+        Noul("answered_exactly",
+             "The agent's reply names every machine code in the expected "
+             "answer and names none of the codes listed as distractors. A "
+             "reply that names the right codes in a sentence is still a "
+             "reply that names them; a reply that mentions a distractor as "
+             "an ordinary English word rather than as the code has not named "
+             "it; a reply that hedges between two codes has not named "
+             "either."),
+    ),
+)
+
+
+def state_of(question: str, truth: set[str], distractors: set[str], answer: str) -> str:
+    """What is sent: the question, both code lists with their totals, the reply.
+
+    Nothing else about the plant goes with it, and in the build loop the
+    plant is a simulated one.
+    """
+    expected = ", ".join(sorted(truth))
+    others = ", ".join(sorted(distractors))
+    return (
+        "An agent was asked one question about a manufacturing plant and "
+        "could answer only through that plant's own tools. Below are the "
+        "question, the answer that was right at the moment of asking, the "
+        "codes that would be wrong, and what the agent replied.\n\n"
+        f"Question: {question}\n\n"
+        f"Expected answer, {len(truth)} code(s) in total: {expected}\n\n"
+        f"Distractors, {len(distractors)} code(s) in total, none of which may "
+        f"be named: {others or '(none listed)'}\n\n"
+        f"The agent's reply:\n{answer.strip()}\n"
+    )
+
+
+def judge(question: str, truth: set[str], distractors: set[str], answer: str,
+          *, transport=None, settings=None) -> dict:
+    """Ask the one question about one reply, and record what came back.
+
+    Never raises and never changes the score beside it. Every way of not
+    being asked - no key, shadow mode, no SDK, an empty reply, no answer -
+    is recorded as a sentence saying which, because "not asked" and "the
+    model thought the answer was wrong" are two different facts.
+    """
+    def not_asked(why: str) -> dict:
+        return {"asked": False, "note": f"not asked ({why})"}
+
+    if not (answer or "").strip():
+        # Nothing to judge, and the check beside it already scored it zero.
+        return not_asked("the agent replied with nothing")
+
+    client, why = from_settings(settings, transport=transport)
+    if client is None:
+        return not_asked(why)
+
+    try:
+        answers = client.ask(JEV_QUESTIONS, state_of(question, truth, distractors, answer))
+    except (JevUnavailable, RuntimeError, ValueError, OSError) as exc:
+        # A judgment nobody could get is not a finding, and it is not a
+        # crash in the middle of an eval run either.
+        return not_asked(str(exc))
+
+    got = answers[0]
+    return {
+        "asked": True,
+        "note": "asked and answered",
+        "state_class": JEV_QUESTIONS.state_class,
+        "battery": JEV_QUESTIONS.name,
+        "model_asked_for": client.model,
+        "model": got.model,
+        "answer": got.as_record(),
+        # Said in the record and not only in a docstring, because the record
+        # is what a person reads in six weeks.
+        "thresholds": "none: a probability is recorded, not a verdict",
+    }
+
+
+def probability_of(row: dict) -> float | None:
+    """The judgment's probability for one kept result, or None if not asked."""
+    jev = row.get("jev") or {}
+    if not jev.get("asked"):
+        return None
+    return (jev.get("answer") or {}).get("probability")
+
+
 # ----------------------------------------------------------------- agents
 
 def claude_agent(prompt: str, *, mcp_url: str = MCP_URL, max_turns: int = 12,
@@ -251,8 +373,14 @@ def plant_client(name: str, root: Path | None = None) -> httpx.Client:
 
 
 def run(plant: str, *, api: Api, agent: Callable[[str], str], scenarios: list[Scenario] | None = None,
-        agent_name: str = "claude", store: Path | None = STORE, echo=print) -> list[dict]:
-    """Ask every scenario, score every answer, keep every result."""
+        agent_name: str = "claude", store: Path | None = STORE, echo=print,
+        jev_transport=None, settings=None) -> list[dict]:
+    """Ask every scenario, score every answer, keep every result.
+
+    `jev_transport` and `settings` are how a test hands in a judgment
+    service. Left alone, the judgment is asked only where a key is set, and
+    the whole run behaves as it did before it existed.
+    """
     results = []
     for s in scenarios or SCENARIOS:
         truth = s.truth(api)
@@ -267,15 +395,22 @@ def run(plant: str, *, api: Api, agent: Callable[[str], str], scenarios: list[Sc
         except Exception as exc:  # a failed agent is a scored zero, not a crash
             answer, error = "", str(exc)[:400]
         judged = score(answer, truth, distractors)
+        asked = s.question.format(plant=plant)
         row = {
             "at": started.isoformat(), "plant": plant, "scenario": s.id, "agent": agent_name,
-            "question": s.question.format(plant=plant), "truth": sorted(truth),
+            "question": asked, "truth": sorted(truth),
             "answer": answer.strip()[:400], "error": error, **judged,
+            # Beside the pass or fail above, never in place of it.
+            "jev": judge(asked, truth, distractors, answer,
+                         transport=jev_transport, settings=settings),
             "seconds": round((datetime.now(UTC) - started).total_seconds(), 1),
         }
         results.append(row)
+        probability = probability_of(row)
         echo(f"  {s.id:<16} {'PASS' if row['pass'] else 'fail':<5} truth={sorted(truth)} "
-             f"answer={row['answer'][:60]!r}" + (f" error={error}" if error else ""))
+             f"answer={row['answer'][:60]!r}"
+             + (f" judgment={probability}" if probability is not None else "")
+             + (f" error={error}" if error else ""))
         if store is not None:
             store.parent.mkdir(parents=True, exist_ok=True)
             with store.open("a", encoding="utf-8") as fh:
@@ -302,4 +437,41 @@ def summary(rows: list[dict]) -> dict:
         agents.setdefault(str(r.get("agent", "?")), []).append(r)
     by_agent = {k: round(sum(1 for r in v if r["pass"]) / len(v), 3) for k, v in agents.items()}
     return {"runs": len(rows), "pass_rate": round(sum(1 for r in rows if r["pass"]) / len(rows), 3) if rows else None,
-            "by_scenario": per, "by_agent": by_agent}
+            "by_scenario": per, "by_agent": by_agent,
+            "judgment": judgment_summary(rows)}
+
+
+def _mean(values: list[float]) -> float | None:
+    return round(sum(values) / len(values), 3) if values else None
+
+
+def judgment_summary(rows: list[dict]) -> dict:
+    """The judgment's side of the report, kept apart from the pass rate.
+
+    Two means rather than one, because the interesting question is not what
+    the model thinks on average but whether it thinks the same thing the
+    check does. Where the check passed and where it failed, side by side, is
+    the beginning of the calibration plot that a threshold would need - and
+    until that plot exists there is no threshold here and no boolean.
+
+    `asked` is stated against `of` because a mean over three answers and a
+    mean over three hundred are not the same number, and a reader who does
+    not know which is which cannot tell.
+    """
+    asked = [r for r in rows if (r.get("jev") or {}).get("asked")]
+    probabilities = [p for p in (probability_of(r) for r in asked) if p is not None]
+    when_passed = [p for r in asked
+                   if (p := probability_of(r)) is not None and r.get("pass")]
+    when_failed = [p for r in asked
+                   if (p := probability_of(r)) is not None and not r.get("pass")]
+    models = sorted({str((r.get("jev") or {}).get("model") or "") for r in asked} - {""})
+    return {
+        "asked": len(asked),
+        "of": len(rows),
+        "models": models,
+        "mean_probability": _mean(probabilities),
+        "mean_probability_where_the_check_passed": _mean(when_passed),
+        "mean_probability_where_the_check_failed": _mean(when_failed),
+        "note": "a second opinion recorded beside the pass rate; it gates nothing, "
+                "and there is no threshold to turn a probability into a verdict",
+    }
