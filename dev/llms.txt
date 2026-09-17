@@ -76,6 +76,8 @@
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0028-which-shift-a-minute-belongs-to/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0029-an-order-does-not-finish-itself/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0030-a-lost-connection-is-unknown-time/)
+- [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0031-a-judgment-is-a-proposal/)
+- [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0032-a-hosted-judgment-and-the-shadow/)
 - [Develop — Decisions — Template](https://docs.factorysemantics.com/dev/decisions/TEMPLATE/)
 - [Agents](https://docs.factorysemantics.com/dev/agents/)
 - [Agents — How-to — connect an MCP client](https://docs.factorysemantics.com/dev/agents/connect-mcp-client/)

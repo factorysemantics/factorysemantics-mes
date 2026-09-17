@@ -1,0 +1,4315 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="An open-source, modular, agent-native Manufacturing Execution System.">
+      
+      
+      
+        <link rel="canonical" href="https://docs.factorysemantics.com/dev/ai/JEV/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Jev in this project - FactorySemantics MES</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="deep-orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#jev-in-this-project" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="FactorySemantics MES" class="md-header__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            FactorySemantics MES
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Jev in this project
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="deep-orange"  aria-label="Dark"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="deep-orange"  aria-label="Light"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/factorysemantics/factorysemantics-mes" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    factorysemantics/factorysemantics-mes
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../plant/" class="md-tabs__link">
+          
+  
+  
+  Plant
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../operate/" class="md-tabs__link">
+          
+  
+  
+  Operate
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../develop/" class="md-tabs__link">
+          
+  
+  
+  Develop
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../agents/" class="md-tabs__link">
+          
+  
+  
+  Agents
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../releases/" class="md-tabs__link">
+          
+  
+  
+  Releases
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../LANDSCAPE/" class="md-tabs__link">
+          
+  
+  
+  History
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="FactorySemantics MES" class="md-nav__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    FactorySemantics MES
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/factorysemantics/factorysemantics-mes" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    factorysemantics/factorysemantics-mes
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plant
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plant
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/first-line/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — your first line
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_3" id="__nav_2_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — connect to Kepware
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-to — connect to Kepware
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../onboarding/GUIDE-IT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    For IT
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../onboarding/GUIDE-ENGINEERING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    For Engineering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/reading-oee/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — read OEE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/quality-signals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — when a control chart notices something
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/shifts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — shifts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plant/never-invent-production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — never invent production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operate
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Operate
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/first-plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — beside your existing MES
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/deploy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — deploy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/opc-readonly/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — read-only OPC UA commissioning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/opc-disconnections/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — losing sight of a machine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/packs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — plant packs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/registry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — plants from a fleet file
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the fleet this installation owns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — switch a module off
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/shadow-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — running beside an existing MES
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/shadow-scorecard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the shadow scorecard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/erpnext/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the ERPNext connector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/uns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the unified namespace (MQTT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/backup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — backup and restore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/tls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — TLS in front of the API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — upgrading between versions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/confirmation-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — the confirmation handoff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/erp-confirmations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — the ERP confirmation contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/inbound/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — inbound events from other systems
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — REST API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/first-week/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — the first week
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operate/security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Develop
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Develop
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Develop
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/your-first-module/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — your first module
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/erp-connectors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — writing an ERP connector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../develop/experiments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — experiments in the lab
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/STYLE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Style
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design/m8-packs-and-fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — M8 packs and fleet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_8" id="__nav_4_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0001-apache-2-with-dco/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0001 — Apache-2.0 with the DCO, not copyleft, not a CLA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0002-kernel-and-modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0002 — A kernel plus modules that register through entry points
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0003-one-mcp-server/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0003 — One product MCP server with per-area tool files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0004-never-invent-production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0004 — Never invent production: the counter discipline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0005-plain-html-no-build-step/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0005 — Plain HTML, CSS and JS for the operator UI, no build step
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0006 — SQLite on a laptop, PostgreSQL in a plant, no historian product
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0007-fresh-public-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0007 — The public repository starts from a clean first commit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0008-erp-connectors-are-modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0008 — ERP connectors are modules inside the package
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0009-organisation-not-personal-account/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0009 — The project lives in a GitHub organisation named factorysemantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0010-github-discussions-only/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0010 — GitHub Discussions is the only community venue
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0011-mkdocs-material-generated-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0011 — MkDocs Material, with the developer reference generated from the code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0012-contributor-covenant-3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0012 — Contributor Covenant 3.0 as the code of conduct
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0013-governance-is-one-page/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0013 — Governance is one page: one maintainer, proposals in public, and what happens if he stops
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0014-first-public-version-is-0-1-0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0014 — The first public version is 0.1.0, cut only when a readiness checklist is green
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0015-mcp-registry-name/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0015 — The MCP server is registered as com.factorysemantics/mes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0016-no-trademark-registration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0016 — No trademark registration for the name
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0017 — One public demo, hosted by the maintainer, gated by an emailed link and bounded by limits
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0018 — Public on 2026-09-08, and a release check that runs the built wheel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0019-count-everything-the-machine-counted/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0019 — Count everything the machine counted: over-runs are booked, surplus is unassigned production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0020 — What "supported" means for an ERP connector, and what it is called before that
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0021-one-database-per-plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0021 — A fleet is many databases, and site scoping is identity, not partitioning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0022-what-a-plant-pack-may-contain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0022 — A plant pack is data, carries no code and no secrets, and cannot change what a number means
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0023-the-fleet-console-observes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0023 — The console manages only the plants it owns, observes every other plant, and silence is unknown
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0024-a-nonconformance-has-a-life/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0024 — A non-conformance is worked through review and a disposition, and cannot be closed without one
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0025-performance-is-measured-not-capped/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0025 — OEE performance is measured against the rating, and never capped at 1.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0026-counts-that-outrun-the-run-time/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0026 — Counted work that will not fit inside the run time names the disagreement, not a culprit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0027-an-spc-signal-raises-a-hold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0027 — An SPC signal raises a quality hold, and an inspected characteristic with a specification is a check
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0028-which-shift-a-minute-belongs-to/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0028 — A shift is half-open, belongs to the day it started, and covers nothing it does not roster
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0029-an-order-does-not-finish-itself/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0029 — An order does not finish itself at its quantity; the over-run it reports is the true one
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0030-a-lost-connection-is-unknown-time/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0030 — A lost connection is a dimension of its own, and the gap it leaves is unknown time
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0031-a-judgment-is-a-proposal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0031 — A judgment is a proposal: what a probability may touch, and what it may never touch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0032-a-hosted-judgment-and-the-shadow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0032 — A hosted judgment is an outbound path, classified by the state it sends
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/TEMPLATE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Template
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Agents
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/connect-mcp-client/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — connect an MCP client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/write-discipline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — the write discipline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/evals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — evals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Releases
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/0.2.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.2.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    History
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    History
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../LANDSCAPE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Landscape
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../history/private-era/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The private era
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-jev-is-in-this-projects-words" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Jev is, in this project's words
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-jev-cannot-do-and-which-ideas-that-kills" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Jev cannot do, and which ideas that kills
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-would-cost-here" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it would cost here
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/ai/JEV.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="jev-in-this-project">Jev in this project<a class="headerlink" href="#jev-in-this-project" title="Permanent link">&para;</a></h1>
+<p><strong>Status: analysis, 2026-09-17. Nothing here is built and nothing here is
+decided.</strong> Two decisions are proposed alongside it —
+<a href="../../decisions/0031-a-judgment-is-a-proposal/">0031</a>, what a probability may
+touch, and <a href="../../decisions/0032-a-hosted-judgment-and-the-shadow/">0032</a>, what
+leaves the box — and this page is the survey they rest on. The open question
+it exists to answer is the one that has not been settled: whether a typed
+judgment model belongs <strong>in the product</strong>, <strong>in the development of the
+project</strong>, in both, or in neither. It is written so that each candidate can be
+taken or refused on its own, and so that refusing all of them is a defensible
+outcome that leaves a record of why.</p>
+<h2 id="what-jev-is-in-this-projects-words">What Jev is, in this project's words<a class="headerlink" href="#what-jev-is-in-this-projects-words" title="Permanent link">&para;</a></h2>
+<p>TypeSafe published Jev on 2026-09-16. It is a <em>System One</em> model: you send
+application state and a map of named, typed questions, and it returns typed
+answers with probabilities. It writes nothing, reasons out loud about nothing,
+and cannot be asked an open question.</p>
+<p>Three primitives, and the whole surface:</p>
+<table>
+<thead>
+<tr>
+<th>Primitive</th>
+<th>Returns</th>
+<th>The shape of question it answers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Choice</code></td>
+<td>the chosen option, a probability distribution over every option, and a confidence</td>
+<td>which of these named things is it — up to 255 options</td>
+</tr>
+<tr>
+<td><code>Noul</code></td>
+<td>one probability, 0 to 1</td>
+<td>does this condition hold</td>
+</tr>
+<tr>
+<td><code>Score</code></td>
+<td>a probability-weighted position on ordered, described levels, plus the distribution and a confidence</td>
+<td>how far along a described dimension — 2 to 10 levels</td>
+</tr>
+</tbody>
+</table>
+<p>The published numbers: about 100 ms median, $0.042 per million input tokens
+with output free, a combined budget of roughly 32,000 tokens for state and
+questions together, and no documented cap on the number of questions in one
+request. Questions over the same state are evaluated in parallel and cannot
+see each other's answers, which is why TypeSafe's own measurement puts 13
+batched questions at 12x cheaper and 10x faster than 13 calls with identical
+answers.</p>
+<p>The reason it is worth a page here rather than a line in the backlog is that
+this codebase is already written in its idiom. <code>src/fsmes/services/oee.py</code>
+enumerates three candidate explanations for counted work that will not fit
+inside the run time and declines to pick one — decision
+<a href="../../decisions/0026-counts-that-outrun-the-run-time/">0026</a> is that refusal,
+ratified. <code>src/fsmes/services/analysis.py</code> files every stop with no reason
+into <code>UNLABELLED</code> and reports the share.
+<code>src/fsmes/integrations/opc/tag_map.py</code> raises on a PLC state code it was not
+given rather than call it idle, because "silently calling it 'idle' would
+quietly corrupt every availability figure". Over and over, the source writes
+out the options and then honourably refuses to choose. A <code>Choice</code> is precisely
+an answer to a question of that form, with the refusal preserved as a
+distribution rather than thrown away.</p>
+<h2 id="what-jev-cannot-do-and-which-ideas-that-kills">What Jev cannot do, and which ideas that kills<a class="headerlink" href="#what-jev-cannot-do-and-which-ideas-that-kills" title="Permanent link">&para;</a></h2>
+<p>Worth stating before the catalogue, because four of the obvious ideas die here.</p>
+<ul>
+<li><strong>It selects; it does not extract.</strong> Values must already exist as options.
+  Anything that needs a number, a date, an id or free text pulled out of a
+  string needs code or an LLM to produce the candidates first, with Jev used
+  as the verifier. TypeSafe's own extraction cookbook is built that way.</li>
+<li><strong>Text and JSON only.</strong> No images. So the standing wish in
+  <code>CONTRIBUTING.md</code> house rule 6 — that a rendered chart gets checked by
+  looking at it — is not answered by this model. What <em>can</em> be judged is the
+  structured state behind the chart, which is a different and weaker claim.</li>
+<li><strong>It is not deterministic.</strong> TypeSafe's consistency cookbooks report a
+  per-question probability standard deviation near 0.01 and label flips on 2
+  of 8 questions across repeated identical calls, before thresholding. This
+  repository's CI gate is a deterministic simulated plant on two operating
+  systems and two Python versions. Those two facts do not go in the same
+  process.</li>
+<li><strong>Confidence is not accuracy.</strong> It is a statistic over the answer's own
+  distribution, and TypeSafe does not publish the formula. In their worked
+  classification example, answers above 0.9 confidence were right 90 % of the
+  time — which is a useful separation and a poor licence.</li>
+<li><strong>There is no on-premises option.</strong> Hosted, US-only, as of 2026-09-17. See
+  the egress section.</li>
+</ul>
+<h2 id="what-it-would-cost-here">What it would cost here<a class="headerlink" href="#what-it-would-cost-here" title="Permanent link">&para;</a></h2>
+<p>Input tokens are the entire bill and the state is re-sent on every call, so
+cost is set by how often a question is asked and how much state it needs, and
+by nothing else. Rounded, at the published $0.042 per million:</p>
+<table>
+<thead>
+<tr>
+<th>Workload</th>
+<th>Calls</th>
+<th>State per call</th>
+<th>Per day</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Scored-run log triage, every run</td>
+<td>~24</td>
+<td>~3,000 tokens (the 12 KB log tail already sent to qwen)</td>
+<td>under a cent</td>
+</tr>
+<tr>
+<td>Downtime reason proposals, a busy line</td>
+<td>~200 stops</td>
+<td>~2,000 tokens</td>
+<td>about 2 cents</td>
+</tr>
+<tr>
+<td>Assistant guide routing</td>
+<td>~500 questions</td>
+<td>~1,500 tokens</td>
+<td>about 3 cents</td>
+</tr>
+<tr>
+<td>Nightly rollup, design triage, sweeps</td>
+<td>tens</td>
+<td>small</td>
+<td>rounding error</td>
+</tr>
+<tr>
+<td><strong>Per-unit inspection judgment, cutlery plant</strong></td>
+<td><strong>10,000,000 pieces</strong></td>
+<td>~500 tokens</td>
+<td><strong>about $210</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The last row is the useful one: it is the only candidate in this document that
+cost alone refuses, and it refuses it decisively. Everything else is inside the
+existing $10 a month cloud cap in <a href="../BUDGET/">BUDGET.md</a> with room to spare,
+which means cost is not an argument for or against any of the rest — the
+arguments are all about correctness and consent.</p>
+<p>The dependency is not free even where the calls are. The SDK is
+<code>typesafe-sdk</code>, Python 3.10+, built on <code>msgspec</code> structs and an <code>httpx2</code>
+client, where this codebase is pydantic and <code>httpx</code>. That is an adapter at the
+boundary and two more trees in the lock file, and by README
+principle 5 — runs anywhere — it belongs in an optional extra,
+<code>fsmes[judgment]</code> alongside <code>fsmes[agent]</code>, and never in the base install a
+plant PC gets. The SDK's
+defaults also need overriding rather than inheriting: a 10-second default
+timeout with two retries is a 30-second worst case in front of a service whose
+median is 100 ms, which on an operator screen at 06:00 is an outage.</p>
+<hr />
+<h1 id="part-one-the-build-loop">Part one — the build loop<a class="headerlink" href="#part-one-the-build-loop" title="Permanent link">&para;</a></h1>
+<p>Everything in this part sends <strong>synthetic or repo-internal state</strong>: a
+deterministic simulated plant, run logs, scorecards, baselines, backlog notes,
+Scott's own design chat. No customer's data is involved, so the consent
+question that dominates part two does not arise at all, and the only real
+constraints are decision 0031's rule that nothing runs inside the gate, and
+the flat fact that every one of these is currently answered either by a
+threshold somebody tuned or by a human reading output. One exception is marked
+where it occurs.</p>
+<h3 id="d1-run-log-triage-which-today-is-an-llm-and-a-regex">D1 · Run-log triage, which today is an LLM and a regex<a class="headerlink" href="#d1-run-log-triage-which-today-is-an-llm-and-a-regex" title="Permanent link">&para;</a></h3>
+<p><strong>Today.</strong> <code>src/fsmes/sim/triage.py</code> hands about 12 KB of log tail to
+<code>qwen3:8b</code> and asks for a JSON array of findings; <code>_parse_findings</code> scrapes
+<code>[...]</code> out of whatever the model wrapped it in, and an unparseable reply is
+recorded as <em>no findings</em>. The run's <code>worst</code> field is then <code>max()</code>
+over severity strings the model chose itself.
+<strong>The judgment.</strong> A fixed battery of <code>Noul</code>s per run — retry storm, counter
+went backwards, a component stopped reporting, silent exception, deadlock —
+plus one <code>Score</code> for run health on the <code>high | medium | low</code> ladder already in
+the code. The battery is the schema, so there is nothing to parse.
+<strong>If it's wrong.</strong> Feeds <code>sim/autoloop.py</code> and the night brief, bounded by
+<code>MAX_BUILDS = 3</code>. A false finding costs one night's build slot.
+<strong>For.</strong> This is the only place in the build loop where free text from a model
+is already load-bearing, and its failure mode is silent: a parse error and a
+clean run are indistinguishable today. Typed answers delete
+<code>_parse_findings</code>, the "no findings" ambiguity and the string ladder in one
+change, and the state is the most obviously safe input in the repository.
+<strong>Against.</strong> The battery is fixed, so a novel failure nobody wrote a question
+for goes unseen — where an open prompt can at least be surprising. The honest
+mitigation is to keep one open-ended qwen pass beside the battery and compare
+what each finds for a few weeks.
+<strong>Verdict.</strong> The cheapest true win in the document. Start here, keep the
+qwen pass running beside it, and let the comparison be the evidence.</p>
+<h3 id="d2-whether-a-scored-event-was-scoreable-at-all">D2 · Whether a scored event was scoreable at all<a class="headerlink" href="#d2-whether-a-scored-event-was-scoreable-at-all" title="Permanent link">&para;</a></h3>
+<p><strong>Today.</strong> <code>src/fsmes/sim/score.py</code> decides with <code>SAMPLES_TO_RESOLVE = 2</code> and a
+<code>late</code> heuristic whether a missed event counts against the MES. The comments
+record that decision being wrong twice, each time discovered by a person
+reading the output; <code>sim/runner.py</code>'s <code>withhold_verdict</code> blanks every
+headline metric on one trigger.
+<strong>The judgment.</strong> A <code>Choice</code> over <code>{ MES was blind, MES was late, harness
+behind its own sample, inside a scripted disconnect, event too brief to
+resolve, genuine miss }</code>, with a distribution, replacing a cascade of booleans
+that collapses to one answer.
+<strong>If it's wrong.</strong> It corrupts the number the entire harness exists to
+produce. The highest blast radius in this part.
+<strong>For.</strong> House rule 2 is straining hardest here. "Unknown" in the scorer is
+currently a binary produced by thresholds, when the thing it wants to express
+is a probability — and this is the one place in the project where a calibrated
+number could gate what a raw instrument reading cannot. Every other figure in
+the apparatus is downstream of it.
+<strong>Against.</strong> Decision 0031 says a judgment may not touch a graded number, and
+scoreability <em>is</em> the graded number's gate. Taken literally that rules this
+out, and the literal reading is right: the harness is the instrument that
+would otherwise be measuring TypeSafe.
+<strong>Verdict.</strong> Build it as a second opinion recorded beside the existing
+thresholds, never in place of them, and compare the two over many scored hours.
+If the judgment and the thresholds disagree and the judgment is right, that is
+the evidence that earns a later argument. It is not an argument to start with.</p>
+<h3 id="d3-agent-eval-scoring-which-is-a-regex-over-uppercase-tokens">D3 · Agent-eval scoring, which is a regex over uppercase tokens<a class="headerlink" href="#d3-agent-eval-scoring-which-is-a-regex-over-uppercase-tokens" title="Permanent link">&para;</a></h3>
+<p><strong>Today.</strong> <code>src/fsmes/sim/agent_eval.py</code> decides pass or fail with
+<code>re.findall(r"[A-Z][A-Z0-9_-]{1,}", answer.upper())</code> — and because the string
+is upper-cased first, the character class is inert and any uppercase token
+counts. An agent that names the right machine in a sentence containing a
+distractor scores zero.
+<strong>The judgment.</strong> One <code>Noul</code>: does this reply name exactly the truth set and
+no distractor.
+<strong>If it's wrong.</strong> It misleads the "is the MES getting more usable by agents"
+trend. Gates nothing.
+<strong>For.</strong> The measurement is currently partly a measure of answer formatting,
+which makes the trend it feeds hard to read. Each run is already a paid Claude
+session, so a fraction of a cent per answer is not the objection. Small,
+self-contained, obviously better.
+<strong>Against.</strong> It replaces a broken deterministic check with a good
+non-deterministic one, so the trend line gains a noise floor of its own. Worth
+recording the probability, not just the boolean, so the noise is visible.
+<strong>Verdict.</strong> Yes, if anything in this part ships. Lowest risk of the lot.</p>
+<h3 id="d4-style-drift-triage-on-ui-baselines">D4 · Style-drift triage on UI baselines<a class="headerlink" href="#d4-style-drift-triage-on-ui-baselines" title="Permanent link">&para;</a></h3>
+<p><strong>Today.</strong> <code>src/fsmes/sim/ui_check.py</code> files every computed-style delta on a
+watched component as a backlog note with <code>status: inbox</code> — "ui-check never
+judges - it only reports". <code>WATCHED</code> has been pruned by hand twice because
+runtime data leaked into snapshots and filed false findings.
+<strong>The judgment.</strong> A <code>Choice</code> per drift over <code>{ deliberate restyle — accept,
+regression, runtime data and not a style fact }</code>, given the delta, the route,
+the theme and <code>docs/design/STYLE.md</code>.
+<strong>If it's wrong.</strong> A false "deliberate — accept" hides a real regression
+behind an accepted baseline, and the night agent may auto-merge UI-scoped
+changes, so this one has a path to <code>main</code>.
+<strong>For.</strong> The third class — runtime data mistaken for a style fact — is exactly
+what the two manual prunings were, and it is a semantic distinction a diff
+cannot make.
+<strong>Against.</strong> The auto-merge path means a wrong accept is durable. Should
+propose a status, never write <code>accepted</code>.
+<strong>Verdict.</strong> Worth it as a ranking that decides which notes a person reads
+first. Not worth it as a status.</p>
+<h3 id="d5-judging-a-screen-without-looking-at-it">D5 · Judging a screen without looking at it<a class="headerlink" href="#d5-judging-a-screen-without-looking-at-it" title="Permanent link">&para;</a></h3>
+<p><strong>Today.</strong> Screenshots "are captured and kept as evidence beside the run, but
+they are NOT diffed for pass/fail", because the plants are alive and every
+screenshot differs. House rule 6 — charts get checked by looking at them — is
+enforced by one person's eyes.
+<strong>The judgment.</strong> Not the picture: Jev takes no images. But the state behind
+it can be interrogated — a <code>Noul</code> for "this KPI strip shows a number outside
+the range the API returned", another for "this table is empty when the
+endpoint returned rows", another for "this axis range makes the comparison
+misleading" — assembled from the page's fetched JSON and the DOM text the
+crawler already has.
+<strong>If it's wrong.</strong> Misleads a human. Gates nothing.
+<strong>For.</strong> It converts part of house rule 6 from a discipline into a check,
+which nothing else in the repository does. And the local GPU has no second
+slot for a vision model, so a structured check is the only one available.
+<strong>Against.</strong> It answers a weaker question than the rule asks. A chart can be
+convincing, wrong, and perfectly consistent with the JSON behind it — bad axis
+choices and misleading encodings survive this check. Claiming rule 6 is
+covered would be worse than leaving it uncovered.
+<strong>Verdict.</strong> Useful, and must be named for what it is: a consistency check
+between a screen and its own API, not a look at the chart.</p>
+<h3 id="d6-design-chat-triage-which-is-a-whole-session-per-batch">D6 · Design-chat triage, which is a whole session per batch<a class="headerlink" href="#d6-design-chat-triage-which-is-a-whole-session-per-batch" title="Permanent link">&para;</a></h3>
+<p><strong>Today.</strong> <code>src/fsmes/services/design_triage.py</code> records
+<code>TRIAGE_MODEL = "claude-code-triage"</code> — a verdict is "written by a Claude Code
+session, not by a model the server called". The skill requires reading
+<code>ARCHITECTURE.md</code>, <code>ROADMAP.md</code>, <code>src/fsmes/domain/</code> and the screen source
+before picking one of seven statuses.
+<strong>The judgment.</strong> A <code>Choice</code> over the existing <code>STATUSES</code>, plus the two
+<code>Noul</code>s the contract actually turns on — does this need a schema change, does
+this contradict a ratified decision — plus a <code>Score</code> for "clear what right
+looks like without asking Scott".
+<strong>If it's wrong.</strong> Misroutes an idea to <code>rejected</code>, or wastes a night's build
+budget. Every verdict lands back in the conversation that produced it, so it
+is reviewable.
+<strong>For.</strong> This is the closest thing in the repository to the thing Scott
+actually asked for out loud: queue the ideas and have the hard ones surface.
+Used as a pre-rank rather than a decision, it means a session reads the
+ambiguous ones and rubber-stamps nothing.
+<strong>Against.</strong> The statuses turn on whether an idea contradicts a <em>ratified
+decision</em>, which means the state has to include the decisions — thirty-two of
+them now — and that is a real chunk of the 32,000-token budget. Judging
+against a summary of a decision is not judging against the decision.
+<strong>Verdict.</strong> Strong candidate, as a pre-rank feeding the existing session.
+Never as the verdict; <code>TRIAGE_MODEL</code> should keep saying who decided.</p>
+<h3 id="d7-night-shift-build-selection">D7 · Night-shift build selection<a class="headerlink" href="#d7-night-shift-build-selection" title="Permanent link">&para;</a></h3>
+<p><strong>Today.</strong> <code>src/fsmes/sim/autoloop.py</code> assembles the brief deterministically —
+"deliberately all machinery and no judgment" — and a headless session picks
+"the three clearest wins" under a prose contract.
+<strong>The judgment.</strong> A <code>Score</code> per brief item for how clear a win it is, and one
+hard <code>Noul</code>: does this item touch the data schema, the API contract,
+<code>src/fsmes/sim/</code>, auth or capabilities — which is the contract's
+non-negotiable bound.
+<strong>If it's wrong.</strong> A false "does not touch the schema" lets the night agent
+build against a bound it was meant to respect. Partly contained by the merge
+path filter.
+<strong>For.</strong> It gives an unattended prose judgment a number that can be logged,
+thresholded and reviewed the next morning. Right now the bound exists only in
+a skill file.
+<strong>Against.</strong> A bound enforced by a probability is not a bound. The correct
+implementation of that <code>Noul</code> is a path filter in code, and the honest reading
+of this candidate is that finding it is an argument for writing the filter,
+not for asking a model.
+<strong>Verdict.</strong> Take the <code>Score</code>. Refuse the <code>Noul</code> and write the path check
+instead.</p>
+<h3 id="d8-semantic-checks-fsmes-pack-check-cannot-make">D8 · Semantic checks <code>fsmes pack check</code> cannot make<a class="headerlink" href="#d8-semantic-checks-fsmes-pack-check-cannot-make" title="Permanent link">&para;</a></h3>
+<p><strong>Today.</strong> <code>src/fsmes/pack/masterdata.py</code> is "structure only. Whether
+<code>RT-BRACKET</code> names a routing that makes sense for this plant is the plant's
+question", and <code>check.py</code> reports four things as <code>Unknown</code> by design.
+<strong>The judgment.</strong> One <code>Noul</code> per semantic assertion a validator cannot reach —
+an operation order that is physically impossible, <code>ideal_cycle_seconds</code> that
+disagree with the tag map (the exact condition the module's own comment says
+makes OEE performance meaningless), a shift pattern that does not cover the
+line, a BOM quantity an order of magnitude out — surfaced as a new tier
+between <code>Problem</code> and <code>Unknown</code>: a probable problem.
+<strong>If it's wrong.</strong> A false positive that refuses a pack blocks a plant coming
+up, which is why it must be advisory only — a shape the existing <code>Unknown</code>
+type already models.
+<strong>For.</strong> This is the artefact a controls engineer drafts on site, and the
+failures it cannot catch are the ones that make every downstream number
+meaningless while looking fine.
+<strong>Against.</strong> <strong>This is the one candidate in this part whose state may be a
+customer's.</strong> A lab pack is synthetic; a real plant's <code>masterdata/</code> is that
+plant's configuration, and decision 0032 classifies it accordingly. It also
+runs in <code>fsmes pack check</code>, which decision 0031 names as a gate.
+<strong>Verdict.</strong> Build the tier, gate it behind an explicit flag and outside
+<code>check</code>'s exit status, and keep it off for any pack that is not a lab's.</p>
+<h3 id="d9-lab-review-where-a-blocklist-stands-in-for-judgment">D9 · Lab review, where a blocklist stands in for judgment<a class="headerlink" href="#d9-lab-review-where-a-blocklist-stands-in-for-judgment" title="Permanent link">&para;</a></h3>
+<p><strong>Today.</strong> <code>src/fsmes/lab/review.py</code> asks the local model for an eight-word
+cluster heading and drops any title containing one of fifteen <code>FORBIDDEN</code>
+words, because "a model asked for a label will happily offer a verdict". The
+only ranking <code>findings.md</code> has is clusters-seen-in-most-runs-first.
+<strong>The judgment.</strong> A <code>Score</code> per cluster: how strongly do these rows look like
+one mechanism rather than a coincidence. An ordering is not a verdict about
+which side is right, so the module's own rule survives — and the tests that
+pin it should be read before assuming so.
+<strong>If it's wrong.</strong> Misleads a human reading <code>findings.md</code>. The lowest-stakes
+item in this document.
+<strong>For.</strong> It replaces a keyword blocklist, which is a poor proxy for the thing
+it is protecting, with a number that does not name a culprit.
+<strong>Against.</strong> Very low value. Cluster ordering is not where the time goes.
+<strong>Verdict.</strong> Fine. Last.</p>
+<h3 id="d10-what-the-nightly-rollup-decides-is-worth-surfacing">D10 · What the nightly rollup decides is worth surfacing<a class="headerlink" href="#d10-what-the-nightly-rollup-decides-is-worth-surfacing" title="Permanent link">&para;</a></h3>
+<p><strong>Today.</strong> <code>src/fsmes/sim/rollup.py</code> computes everything and asks qwen for at
+most six sentences. But <em>what counts as a change</em> is three hardcoded
+thresholds — <code>abs(delta) &gt;= 0.01</code>, <code>&gt; was * 1.25</code>.
+<strong>The judgment.</strong> Jev cannot write the note. It can replace the constants: a
+<code>Score</code> per plant for "worth opening this morning", given today's numbers, the
+prior window and the triage findings.
+<strong>If it's wrong.</strong> A missed item is a missed morning read, recoverable that
+night.
+<strong>For.</strong> Three magic constants currently decide what Scott sees at 05:30, and
+they were chosen without data.
+<strong>Against.</strong> A tuned threshold with a known failure mode may be better than an
+untuned probability with an unknown one. Worth a month of logging both before
+switching.
+<strong>Verdict.</strong> Worth doing after D1, because the triage findings it would
+consume get better first.</p>
+<h3 id="d11-difference-significance-bands-in-the-lab">D11 · Difference-significance bands in the lab<a class="headerlink" href="#d11-difference-significance-bands-in-the-lab" title="Permanent link">&para;</a></h3>
+<p><strong>Today.</strong> <code>src/fsmes/lab/measure.py</code> uses <code>WINDOW_TOLERANCE</code> and
+<code>SAMPLES_TO_SEE</code> to decide whether a MES-versus-truth disagreement is reported
+at all: "a difference inside a band the run itself cannot vouch for is not in
+here".
+<strong>The judgment.</strong> A <code>Noul</code>: is this difference explained by the stated band —
+carrying the run's own overlap and window facts, which a fixed share cannot.
+<strong>If it's wrong.</strong> Corrupts <code>findings.md</code> in both directions: suppresses a
+real difference, or cries wolf.
+<strong>For.</strong> The band is honest and blunt; the facts that would sharpen it are
+already computed and thrown away.
+<strong>Against.</strong> This is measurement, and measurement wants arithmetic. If the
+overlap and window facts can sharpen the band, they can sharpen it in code.
+<strong>Verdict.</strong> Refuse, and write the arithmetic. A good example of a seam that
+<em>looks</em> like a judgment and is not one.</p>
+<h3 id="d12-sweeps-whose-output-nobody-interprets">D12 · Sweeps, whose output nobody interprets<a class="headerlink" href="#d12-sweeps-whose-output-nobody-interprets" title="Permanent link">&para;</a></h3>
+<p><strong>Today.</strong> <code>src/fsmes/sim/sweep.py</code> exists because "a sweep says which
+conditions it stops being honest under — which is the question that tells you
+what to build next". The command writes a comparison JSON and prints it;
+finding the cliff is a human read of N scorecards.
+<strong>The judgment.</strong> A <code>Noul</code> per variant for "honest at this setting" — a
+monotone curve a probability can express and a pass/fail cannot — and a
+<code>Choice</code> over the variants for where honesty breaks.
+<strong>If it's wrong.</strong> Misleads what gets built next. Gates nothing.
+<strong>For.</strong> The sweep's stated purpose has no automated consumer at all today.
+<strong>Against.</strong> The cliff is visible in the numbers if anything plots them, and a
+chart is cheaper than an integration.
+<strong>Verdict.</strong> Plot it first. Revisit if the plot is genuinely ambiguous.</p>
+<hr />
+<h1 id="part-two-the-product">Part two — the product<a class="headerlink" href="#part-two-the-product" title="Permanent link">&para;</a></h1>
+<p>Every candidate here sends a plant's data, so each one carries a state class
+from decision <a href="../../decisions/0032-a-hosted-judgment-and-the-shadow/">0032</a>:
+<strong>catalogue</strong> (product text, identical everywhere), <strong>configuration</strong> (what
+this plant is), <strong>observation</strong> (what the line did), <strong>production</strong> (counts,
+orders, measurements, and anything a person typed). Shadow mode allows
+<code>catalogue</code> and refuses the rest; <code>production</code> is off by default everywhere.
+That ordering, not the interest of the idea, is what decides how early a
+candidate can be reached.</p>
+<p>They are ranked by the same test: how much the refusal costs today, against
+how little a wrong answer costs.</p>
+<h3 id="p1-a-proposed-reason-for-a-stop-nobody-labelled-the-flagship">P1 · A proposed reason for a stop nobody labelled — the flagship<a class="headerlink" href="#p1-a-proposed-reason-for-a-stop-nobody-labelled-the-flagship" title="Permanent link">&para;</a></h3>
+<p><strong>Class: observation.</strong>
+<strong>Today.</strong> <code>src/fsmes/services/analysis.py</code> files a DOWN interval whose
+<code>reason</code> is null into the <code>unlabelled</code> bucket and reports
+<code>unlabelled_share</code>. <code>services/equipment.py</code>'s <code>label_stop</code> only ever writes a
+label another system supplied and refuses to create an interval. On a line
+with OPC UA and no downtime terminal, every stop is unlabelled, forever.
+<strong>The judgment.</strong> A <code>Choice</code> over the reason vocabulary <em>this plant has
+already used</em> — the distinct labels on its own history, not a taxonomy the
+product invented — with an explicit <code>none of these</code> option, given the decoded
+alarm word, the state and its duration, the neighbouring machines' states, the
+operation running, and the plant's own past (reason, alarm bits, duration)
+triples. Plus a <code>Noul</code> for "this is the same event as the upstream machine's
+stop", which is what turns twelve rows into one cause.
+<strong>If it's wrong.</strong> Under decision 0031, nothing: the proposal is a new row
+with its own source, <code>EquipmentState.reason</code> stays null, <code>unlabelled_share</code>
+reports exactly what it reports today, and the pareto is unmoved until a
+person accepts. A wrong proposal costs a supervisor one glance.
+<strong>For.</strong> House rule 3 is the most honest rule in the project and also the one
+that helps a plant least — it refuses to lie and then offers nothing. This is
+the seam where "unlabelled" could become "probably a blocked infeed, and here
+is the alarm bit that says so, and you decide". The options are the plant's
+own words, so the model is not being asked to know manufacturing — it is being
+asked to match this week's stop against last month's labelled ones, which is
+the kind of narrow judgment the primitive is for. Cost is around two cents a
+day on a busy line.
+<strong>Against.</strong> The reason vocabulary only exists if the plant has already
+labelled stops, so the plant that needs this most — OPC UA and no terminal —
+is the plant where the <code>Choice</code> has nothing to choose from. That is a real
+cold-start problem and the answer is probably the ISO 22400 / incumbent
+categories as a starting vocabulary a plant edits, which is a plant pack
+question and therefore house rule 4, not a model question. Separately, a
+proposal a supervisor accepts a hundred times a shift becomes a booking by
+fatigue; the accept path must be one row at a time, with no bulk accept, and
+that is a UI decision as much as an architectural one.
+<strong>Verdict.</strong> The strongest product candidate, and the one worth building
+first — <em>after</em> the vocabulary question is answered, and with the scoring
+harness as the evaluation set, because the simulated plants script their own
+breakdowns and therefore know the true reason for every stop. That is an
+unusually good position to be in: the accuracy number can be produced before
+any plant is asked for anything.</p>
+<h3 id="p2-which-of-the-three-explanations-applies-where-the-code-already-lists-them">P2 · Which of the three explanations applies, where the code already lists them<a class="headerlink" href="#p2-which-of-the-three-explanations-applies-where-the-code-already-lists-them" title="Permanent link">&para;</a></h3>
+<p><strong>Class: observation</strong> (cycle-time master data and counts, no order codes).
+<strong>Today.</strong> <code>src/fsmes/services/oee.py</code> holds <code>COUNTS_OUTRUN_RUN_TIME</code> and
+<code>COUNTED_OUTSIDE</code> and names only the cause it has evidence for; decision 0026
+is the ratified refusal to name a culprit.
+<strong>The judgment.</strong> A <code>Choice</code> over <code>{ rating too slow, run time undersampled,
+units counted outside the run time }</code> with a distribution, given the rating,
+the counted units, the observed run time, the OPC publish interval, the
+machine's state-change frequency and the unknown seconds.
+<strong>If it's wrong.</strong> Display only, if it stays in <code>performance_note</code>.
+<strong>For.</strong> This is the purest fit in the repository. The options are already
+enumerated in the source, in English, as a tuple. The distribution <em>is</em> the
+honest answer the decision wanted and could not express: not a culprit, a
+weighting. And on a shadow-mode plant the OPC publish interval is exactly the
+kind of thing nobody looks at until it has been wrong for a month.
+<strong>Against.</strong> Small prize. It changes a sentence on a screen. And decision 0026
+deliberately chose to name the disagreement rather than a cause, so this
+reopens a settled call — which is fine if the distribution is presented as a
+weighting rather than as an answer, and not fine if it reads as one.
+<strong>Verdict.</strong> Build it as the demonstration case. Cheap, low-stakes, and it
+shows the pattern — enumerated refusal becomes a distribution — in the place
+where the project has already written the options down and can therefore
+check the answers.</p>
+<h3 id="p3-how-serious-an-excursion-is">P3 · How serious an excursion is<a class="headerlink" href="#p3-how-serious-an-excursion-is" title="Permanent link">&para;</a></h3>
+<p><strong>Class: production</strong> (measurements, material codes, quantity at risk).
+<strong>Today.</strong> <code>src/fsmes/services/spc.py</code> sets
+<code>severity="major" if signal["rule"] == 1 else "minor"</code>, and
+<code>services/quality.py</code> defaults to <code>minor</code>. Nothing looks at the size of the
+excursion, the material, or how many units are at risk.
+<strong>The judgment.</strong> A <code>Score</code> on described levels — minor, major, critical — over
+the window blob the code already stores, the spec limits, the quantity at
+risk, whether serialisation is in play, and the open NC history for that spec.
+<strong>If it's wrong.</strong> It is a stored field on <code>non_conformances</code> that reaches a
+customer's certificate through <code>services/coa.py</code>, so a wrong severity is a
+wrong document, not just a wrong sort order.
+<strong>For.</strong> The primitive is an exact match for the thing severity is: an ordered
+ladder of described situations. A two-branch map on rule number is not a
+severity model, and everyone using it knows that.
+<strong>Against.</strong> It reaches a CoA, and it is <code>production</code> class, so it is off by
+default at every plant and refused in shadow mode. Also worth asking whether
+the honest fix is arithmetic: severity as a function of the excursion in sigma
+and the units at risk is a formula a quality engineer can argue with, and a
+probability is not.
+<strong>Verdict.</strong> Try the formula first. If the formula needs the material's
+history and the spec's context to be right, that is when the <code>Score</code> earns
+its place.</p>
+<h3 id="p4-which-guide-the-assistant-should-show-and-whether-to-show-one-at-all">P4 · Which guide the assistant should show, and whether to show one at all<a class="headerlink" href="#p4-which-guide-the-assistant-should-show-and-whether-to-show-one-at-all" title="Permanent link">&para;</a></h3>
+<p><strong>Class: catalogue.</strong>
+<strong>Today.</strong> <code>src/fsmes/services/assistant.py</code> decides show-versus-answer with a
+hand-written regex alternation of English phrasings, and picks a guide with
+<code>_lexical_match</code> — "crude on purpose: overlapping words", a two-word set
+intersection — when Ollama is down. The docstring records that qwen3:8b was
+tried as the gate and kept routing wrongly, which is why the hard regex gate
+exists.
+<strong>The judgment.</strong> A <code>Noul</code> for "this person wants to be walked through a task
+rather than told an answer", and a <code>Choice</code> over the visible guide catalogue.
+Typed output deletes the id-parsing entirely.
+<strong>If it's wrong.</strong> Display only: a wrong guide is closed by the reader.
+<strong>For.</strong> <strong>This is the only product candidate that is <code>catalogue</code> class</strong>, and
+therefore the only one reachable on a shadow-mode plant. The state is the
+question plus guide titles and their <code>when</code> lines — product text that ships in
+the wheel. It replaces two hand-written heuristics with one call, and the
+distribution is what would let the hard regex gate relax rather than grow
+another phrasing every month.
+<strong>Against.</strong> The question text is an operator's free text and could name an
+order or a machine, which means the class is only <code>catalogue</code> if the code
+proves it — the question goes in the state verbatim, so a strict reading makes
+this <code>production</code> the moment somebody types "why did WO-100235 stop". That is
+either a redaction step with its own failure modes, or an honest
+reclassification. Do not hand-wave it.
+<strong>Verdict.</strong> The best first product build <em>if</em> the free-text problem is
+answered honestly. If it cannot be, this becomes a mid-ranked <code>production</code>
+candidate and P2 goes first.</p>
+<h3 id="p5-whether-the-assistants-facts-actually-contain-the-answer">P5 · Whether the assistant's facts actually contain the answer<a class="headerlink" href="#p5-whether-the-assistants-facts-actually-contain-the-answer" title="Permanent link">&para;</a></h3>
+<p><strong>Class: production</strong> (the facts blob is live plant state).
+<strong>Today.</strong> <code>services/assistant.py</code> hands a facts blob to qwen with "Never
+invent a number" in the prompt and takes up to four sentences back.
+<strong>The judgment.</strong> Not the prose — Jev writes nothing. The two guardrails: a
+<code>Noul</code> for "the supplied facts contain the answer to this question", which
+drives an honest refusal instead of a confabulation, and a <code>Noul</code> for "this
+answer restates only numbers present in the facts", run on the reply before it
+reaches the screen.
+<strong>If it's wrong.</strong> A false pass lets through the exact failure the prompt is
+fighting. A false fail shows a refusal where an answer was available.
+<strong>For.</strong> A hallucinated number on a floor screen is the worst failure mode in
+the product, and it is currently prevented by a sentence in a prompt.
+TypeSafe's citation-check and cascade cookbooks are both this shape, and the
+second <code>Noul</code> is the one that matters: verifying an answer against the facts
+it came from is a narrow, checkable judgment.
+<strong>Against.</strong> It puts a cloud call in front of an operator screen, on a path
+that is <code>production</code> class and refused in shadow mode — so on the sites where
+this matters most the guardrail is absent and the local model answers
+unguarded, which is worse than not having built it. The deterministic version
+of the second check is to extract the numbers from the reply and assert each
+appears in the facts, which is regex work and needs no model.
+<strong>Verdict.</strong> Write the deterministic number check. Keep the first <code>Noul</code> on
+the list for later; it is the one code cannot do.</p>
+<h3 id="p6-alarm-bits-the-manifest-never-named">P6 · Alarm bits the manifest never named<a class="headerlink" href="#p6-alarm-bits-the-manifest-never-named" title="Permanent link">&para;</a></h3>
+<p><strong>Class: configuration.</strong>
+<strong>Today.</strong> <code>services/tags.py</code> surfaces an unnamed alarm bit as the literal
+string <code>bit 7</code>, deliberately — a bit the manifest forgot is still an alarm —
+and it reaches the alarms screen and the history uninterpreted.
+<strong>The judgment.</strong> A <code>Noul</code> per candidate meaning, or a <code>Choice</code> over the
+labelled stops the bit co-occurs with — which makes this the evidence supply
+for P1 rather than a feature of its own.
+<strong>If it's wrong.</strong> Display only.
+<strong>For.</strong> Pairs directly with the flagship: the alarm word is the best evidence
+for a stop's reason, and a third of it is currently unreadable.
+<strong>Against.</strong> A bit's meaning is in a manual on a shelf, not in the data. This
+infers a name from correlation, which is a plausible guess and not a fact, and
+naming it on a screen makes it look like documentation.
+<strong>Verdict.</strong> Do it as an input to P1, not as a label on a screen.</p>
+<h3 id="p7-which-tag-is-a-machines-primary-process-value">P7 · Which tag is a machine's primary process value<a class="headerlink" href="#p7-which-tag-is-a-machines-primary-process-value" title="Permanent link">&para;</a></h3>
+<p><strong>Class: configuration.</strong>
+<strong>Today.</strong> <code>services/analysis.py</code> falls back to "whatever this machine
+published most recently that is not on a hand-maintained list of eight
+structural names". <code>kernel/tags.py</code> records that the list lagged and the screen
+charted <code>ReadyBit</code>.
+<strong>The judgment.</strong> A <code>Choice</code> over the machine's published tag names, using the
+manifest's kind, unit, min, max and nominal, plus per-tag sample statistics —
+with a confidence floor below which it asks an engineer instead.
+<strong>If it's wrong.</strong> Which trend a screen draws.
+<strong>For.</strong> The hand-maintained exclusion list is house rule 4 inverted:
+plant-specific knowledge living in the product's source. A judgment, or a tag
+map entry, both move it out.
+<strong>Against.</strong> The tag map is the right home for this and already exists. The
+model's job is to <em>draft</em> the entry at commissioning, not to answer at request
+time — which turns this into P9's shape.
+<strong>Verdict.</strong> Merge into P9. Nothing should be inferred per request that a
+commissioning engineer could have declared once.</p>
+<h3 id="p8-drafting-the-mapping-from-an-incumbents-export">P8 · Drafting the mapping from an incumbent's export<a class="headerlink" href="#p8-drafting-the-mapping-from-an-incumbents-export" title="Permanent link">&para;</a></h3>
+<p><strong>Class: production</strong>, but at commissioning time and reviewed before use.
+<strong>Today.</strong> <code>integrations/erp/incumbent.py</code> needs a human to write four
+dictionaries translating another system's column headings and codes into this
+MES's, and <code>integrations/inbound/folder.py</code> the same for stream mappings.
+<strong>The judgment.</strong> A <code>Choice</code> per column — which canonical field is this
+heading — and per code, over this MES's own order and equipment codes, given
+the header row, a sample of values and the documented meaning of each
+canonical column.
+<strong>If it's wrong.</strong> Nothing at runtime. The output is a config file a person
+edits and <code>fsmes pack check</code> validates before it touches a plant.
+<strong>For. This is the best risk-adjusted candidate in the product half.</strong> It is
+the only one whose output is reviewed by a human before it can affect anything,
+it runs once per plant rather than continuously, and it attacks the work that
+actually makes a first plant slow — sitting with somebody else's CSV export
+working out what <code>QTY_CONF</code> means. Shadow mode is not even engaged: this
+happens before the shadow starts.
+<strong>Against.</strong> It sends a sample of a plant's real export, which is order codes
+and quantities, so it is <code>production</code> class and needs the plant's consent —
+obtained once, at commissioning, in a conversation that is happening anyway.
+And a mapping that is 90 % right may be worse than a blank sheet if the
+reviewer trusts it.
+<strong>Verdict.</strong> Build this second, after P2. Present it as a draft with the
+distribution shown per column, so the reviewer's attention goes to the
+uncertain ones.</p>
+<h3 id="p9-drafting-a-tag-map-for-a-plc-nobody-documented">P9 · Drafting a tag map for a PLC nobody documented<a class="headerlink" href="#p9-drafting-a-tag-map-for-a-plc-nobody-documented" title="Permanent link">&para;</a></h3>
+<p><strong>Class: configuration</strong>, at commissioning, reviewed before use.
+<strong>Today.</strong> <code>integrations/opc/tag_map.py</code> raises on a state code it was not
+given, because "silently calling it 'idle' would quietly corrupt every
+availability figure".
+<strong>The judgment.</strong> A <code>Choice</code> over <code>EquipmentStateName</code> per unmapped code, and
+a <code>Choice</code> per tag name for its role in the map — proposed into a draft tag
+map, never applied.
+<strong>If it's wrong.</strong> Nothing, if it stays a draft. Everything, if it is applied:
+a wrong state mapping corrupts availability silently, which is the failure the
+raise exists to prevent.
+<strong>For.</strong> Commissioning a tag map is the longest pole in standing a plant up,
+and the raise — correct as it is — is the thing a controls engineer hits at
+17:30 on day one. A draft map with a distribution per entry is a better
+starting point than a blank file and a <code>KeyError</code>.
+<strong>Against.</strong> The gap between "draft" and "applied" is one commit, and this is
+the one place where a mistake corrupts every number downstream without
+announcing itself. It needs the draft to be structurally incapable of being
+loaded — a separate file, a different extension, a refusal to read it — not a
+comment asking people to check.
+<strong>Verdict.</strong> Worth it, with the draft made unloadable by construction. Absorbs
+P7.</p>
+<h3 id="p10-which-of-this-mess-gauges-the-supplier-meant">P10 · Which of this MES's gauges the supplier meant<a class="headerlink" href="#p10-which-of-this-mess-gauges-the-supplier-meant" title="Permanent link">&para;</a></h3>
+<p><strong>Class: production.</strong>
+<strong>Today.</strong> <code>services/inbound.py</code> records that a reading came from a gauge this
+MES does not know and says it "is untraceable here", then stops. Nothing
+attempts a match.
+<strong>The judgment.</strong> A <code>Choice</code> over the registered gauges — code, name, kind,
+location — for the supplier's unknown code, with a <code>none of these</code> option.
+<strong>If it's wrong.</strong> It sets <code>QualityCheck.gauge_id</code>, which is what
+<code>services/gauges.py</code> walks on a failed calibration. A wrong match widens or
+narrows a recall.
+<strong>For.</strong> An untraceable reading is a real gap, and instrument-code matching
+across two systems is exactly the entity-alignment problem the primitive
+handles well.
+<strong>Against.</strong> Recall scope is not a place for a probability. The right answer is
+a gauge alias table in the plant pack — house rule 4 again — and a proposal
+that drafts <em>that</em> table, reviewed once, rather than a match made per reading.
+<strong>Verdict.</strong> Reshape as a draft alias table at commissioning. Refuse at
+runtime.</p>
+<h3 id="p11-maintenance-findings-which-are-typed-and-never-read">P11 · Maintenance findings, which are typed and never read<a class="headerlink" href="#p11-maintenance-findings-which-are-typed-and-never-read" title="Permanent link">&para;</a></h3>
+<p><strong>Class: production</strong> (free text a named person wrote).
+<strong>Today.</strong> <code>services/maintenance.py</code> stores what a fitter typed and surfaces it
+in an <code>ILIKE</code> substring search. Nothing derives a failure mode, a recurrence
+or a plan change from it.
+<strong>The judgment.</strong> A <code>Choice</code> over a failure-mode vocabulary; a <code>Noul</code> for
+"this repeats the last job on this machine"; a <code>Score</code> for how strongly the
+finding argues the plan interval is wrong.
+<strong>If it's wrong.</strong> Display and planning advice, unless it retunes an interval,
+which must stay a proposal.
+<strong>For.</strong> It is the largest body of free text in the product and it is
+write-only. Recurrence detection in particular is something a substring search
+cannot do and a person cannot do across a year.
+<strong>Against.</strong> It is one person's words about their own work, going to a US
+service with no published retention period, and "we send what the fitters type
+to a third party" is a sentence a works manager will react to. The vocabulary
+also has to come from somewhere, and inventing one in the product is house
+rule 4 inverted.
+<strong>Verdict.</strong> Genuinely valuable, genuinely the most sensitive. Park until the
+retention question has a written answer.</p>
+<h3 id="p12-a-disposition-recommendation-and-an-audit-of-the-reason-given">P12 · A disposition recommendation, and an audit of the reason given<a class="headerlink" href="#p12-a-disposition-recommendation-and-an-audit-of-the-reason-given" title="Permanent link">&para;</a></h3>
+<p><strong>Class: production.</strong>
+<strong>Today.</strong> <code>services/quality.py</code> requires a person to pick a disposition and
+type a reason; <code>disposition_reason</code> is stored and never read by any code.
+Decision 0024 is what gives a non-conformance its life.
+<strong>The judgment.</strong> A <code>Choice</code> over <code>NcDisposition</code> as a recommendation a
+supervisor confirms. Separately — and more interestingly — a <code>Noul</code> over the
+typed reason: does this reason justify the disposition chosen. That is an
+audit signal for <code>use_as_is</code> concessions, which are exactly what somebody has
+to defend a year later.
+<strong>If it's wrong.</strong> The recommendation touches scrap-versus-rework, a material
+action. The audit signal touches a compliance report.
+<strong>For.</strong> The second half is the better idea and nobody has proposed it: a
+field that is mandatory, stored, and unread is a control that does not exist.
+<strong>Against.</strong> A model reviewing a supervisor's justification is a surveillance
+feature wearing an audit badge, and how it lands depends entirely on who sees
+the number. It needs a decision about that before it needs an implementation.
+<strong>Verdict.</strong> The recommendation: no, decision 0024 put a person there on
+purpose. The reason audit: worth a discussion that is about people, not
+architecture.</p>
+<h3 id="p13-the-spc-verdict-which-is-a-cliff-at-cpk-133">P13 · The SPC verdict, which is a cliff at Cpk 1.33<a class="headerlink" href="#p13-the-spc-verdict-which-is-a-cliff-at-cpk-133" title="Permanent link">&para;</a></h3>
+<p><strong>Class: production.</strong>
+<strong>Today.</strong> <code>services/spc.py</code> branches at <code>cpk &gt;= 1.33</code> and <code>cpk &gt;= 1.0</code>, so
+1.329 and 1.331 read as different worlds.
+<strong>The judgment.</strong> A <code>Score</code> on the ordered levels the code already writes out
+— capable, marginal, stable but not capable, out of control — weighted by the
+distribution, with confidence reflecting <code>n</code>.
+<strong>If it's wrong.</strong> It is the sentence a quality engineer quotes, and it reaches
+the pallet certificate.
+<strong>For.</strong> A step function over a noisy estimate is a known bad instrument, and
+the levels are already described in the source.
+<strong>Against.</strong> Cpk 1.33 is not an arbitrary constant — it is the number the
+customer's own quality agreement names. Softening an industry threshold into a
+probability is not honesty, it is a different claim, and a quality engineer
+will say so. The honest fix is a confidence interval on Cpk from <code>n</code>, which is
+arithmetic.
+<strong>Verdict.</strong> Refuse. Compute the interval.</p>
+<h3 id="p14-whether-the-process-followed-a-write">P14 · Whether the process followed a write<a class="headerlink" href="#p14-whether-the-process-followed-a-write" title="Permanent link">&para;</a></h3>
+<p><strong>Class: observation.</strong>
+<strong>Today.</strong> <code>services/adjustments.py</code> decides followed-or-not with
+<code>FOLLOWED_FRACTION = 0.5</code> — travelled over distance — justified by a
+first-order-lag rule of thumb.
+<strong>The judgment.</strong> A <code>Noul</code>: did the process move because of this write, given
+the full trace across the verification window, the tag's documented lag, and
+whether the machine changed state mid-window.
+<strong>If it's wrong.</strong> Sets VERIFIED versus FAILED and writes an audit row. A
+false FAILED raises a finding against a good write.
+<strong>For.</strong> The confidence <em>is</em> the useful output here, and a boolean from one
+ratio discards the trace it was computed from.
+<strong>Against.</strong> This sits on the only path in the product that reaches a PLC.
+Decision 0031 permits it — verification is not the write — but a probability in
+the audit trail of a setpoint change invites the question of what the number
+meant, and the answer has to be a stored distribution, not a verdict.
+<strong>Verdict.</strong> Defensible, and last on the product list. Nothing near the PLC
+path should be the place a new dependency is proven.</p>
+<h3 id="p15-how-much-to-believe-a-promised-finish-date">P15 · How much to believe a promised finish date<a class="headerlink" href="#p15-how-much-to-believe-a-promised-finish-date" title="Permanent link">&para;</a></h3>
+<p><strong>Class: production.</strong>
+<strong>Today.</strong> <code>services/scheduling.py</code> falls back to
+<code>DEFAULT_CYCLE_SECONDS = 3.0</code>, sequences by <code>priority, code</code>, and flags
+<code>uses_default_cycle</code> as a crude binary — after a <code>getattr</code> typo once sized
+every slot in every schedule at the fallback.
+<strong>The judgment.</strong> A <code>Score</code> for how confident the promised finish is, given the
+routing's setup and run seconds, the machine's rating, staging shortages, open
+maintenance orders and the schedule's own history.
+<strong>If it's wrong.</strong> Advisory by design — the module's own docstring says an MES
+that refuses production because it disagrees with a plan is one people route
+around.
+<strong>For.</strong> A promise with a stated confidence is more useful than a promise, and
+the inputs are all already computed.
+<strong>Against.</strong> Finite-capacity scheduling has sixty years of literature and the
+answer is arithmetic over known quantities, not semantic judgment. There is
+nothing here a model knows that the data does not say.
+<strong>Verdict.</strong> Refuse. Fix the binary flag into a computed band.</p>
+<h3 id="p16-the-rest-briefly">P16 · The rest, briefly<a class="headerlink" href="#p16-the-rest-briefly" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Candidate</th>
+<th>Class</th>
+<th>Judgment</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Work-instruction draft pre-approval — <code>services/drafting.py</code> writes prose a person must approve</td>
+<td>production</td>
+<td><code>Noul</code>: does this draft use only the supplied facts and invent no tolerance</td>
+<td><strong>Yes, eventually.</strong> It is the one guardrail on text a model wrote that reaches a procedure, and "invents no tolerance" is not checkable in code</td>
+</tr>
+<tr>
+<td>Maintenance <em>due soon</em> — <code>services/maintenance.py</code> uses <code>0.8 &lt;= fraction &lt; 1.0</code></td>
+<td>observation</td>
+<td><code>Score</code> on described urgency, using runtime, alarms and prior findings</td>
+<td>Worth it only after P11 gives it findings to read</td>
+</tr>
+<tr>
+<td>Tag staleness — <code>services/tags.py</code>, <code>STALE_AFTER_SECONDS = 60.0</code> against a change-driven set</td>
+<td>configuration</td>
+<td><code>Noul</code>: has this tag actually stopped arriving</td>
+<td>Refuse. Change-driven versus periodic is declarable in the tag map</td>
+</tr>
+<tr>
+<td>Inbound booleans — <code>integrations/inbound/folder.py</code> has literal true/false word sets</td>
+<td>production</td>
+<td><code>Noul</code>: does this cell mean pass</td>
+<td>Refuse at runtime; fold into P8's draft mapping</td>
+</tr>
+<tr>
+<td>Order hold reason — <code>services/workorders.py</code> requires free text nothing reads</td>
+<td>production</td>
+<td><code>Choice</code> over hold categories</td>
+<td>Low value; the categories belong in the pack</td>
+</tr>
+<tr>
+<td>Uncharted inspection attributes — <code>services/serialization.py</code> names them and drops them</td>
+<td>production</td>
+<td><code>Noul</code>: is this attribute worth a specification, from the pass rate conditioned on its values</td>
+<td>Yes, <strong>on aggregates only</strong> — see the refusals</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="part-three-the-ones-to-refuse-and-why-the-refusal-matters">Part three — the ones to refuse, and why the refusal matters<a class="headerlink" href="#part-three-the-ones-to-refuse-and-why-the-refusal-matters" title="Permanent link">&para;</a></h1>
+<p>These are the uses that would save the most work. Writing down why each is
+refused is the point of this section, so that taking one later requires new
+facts rather than new enthusiasm.</p>
+<p><strong>Which order made these units.</strong> <code>src/fsmes/services/execution.py</code> takes the
+first non-DONE operation on a machine by <code>priority, id</code>, and
+<code>services/assistant.py</code> admits in prose that with two orders queued the
+default is a guess. A <code>Choice</code> over the candidate operations would be better
+than the sort — and it would be a booked number computed from a probability,
+which is decision <a href="../../decisions/0004-never-invent-production/">0004</a>
+reversed and decision 0031 broken. The honest fix is the one the tag map
+already supports: a <code>publishes_order</code> tag, so the machine says which order it
+is running. Where the PLC cannot say, the answer is
+<code>record_unassigned</code>, which is what it does now.</p>
+<p><strong>Assigning orphan production.</strong> <code>unassigned_production</code> in the same module
+lists rows with no order and has no assignment path in the runtime; they wait
+for a person forever. A ranked proposal is admissible under 0031 and a bulk
+accept is not — and at any real volume a proposal with an accept-all button
+<em>is</em> a bulk accept. If this is built, it is one row at a time, the
+distribution is on the screen, and the person's name goes in the audit spine.
+Anything else is booking production from a model and calling it a
+confirmation.</p>
+<p><strong>Which order a supplier's measurement belongs to.</strong> <code>services/inbound.py</code>
+refuses when nothing is open on a station: it "is unknown and is not guessed".
+A <code>Choice</code> would turn the refusal into a proposal — but the consequence is a
+row on <code>quality_checks</code> that can open a non-conformance and trip SPC, which is
+a plant action by a chain of three steps. Refuse for the same reason as the
+first, and note that the supplier naming the order in its own payload is the
+fix and is a boundary-format question.</p>
+<p><strong>A judgment as a gate on a setpoint write.</strong> <code>services/adjustments.py</code> has
+three guards and a person is the second. A judgment <em>beside</em> the human is P14
+and is admissible. A judgment that raises the ceiling — that lets an
+adjustment through on confidence — is the one thing in this document that could
+hurt somebody, and no accuracy number should be accepted as an argument for
+it.</p>
+<p><strong>Anything per unit.</strong> <code>services/serialization.py</code> handles a plant serialising
+ten million pieces a day. A judgment per unit is about $210 a day at the
+published price, a cloud round trip in the line's critical path, and a US
+service holding a piece-level record of another company's output. Judgments
+over serialised production are aggregate-only: over a shift's distribution, a
+pallet, a <code>fail_mask</code> pattern — never over a piece.</p>
+<hr />
+<h1 id="what-would-have-to-be-true-before-any-of-this-ships">What would have to be true before any of this ships<a class="headerlink" href="#what-would-have-to-be-true-before-any-of-this-ships" title="Permanent link">&para;</a></h1>
+<p>The project's own standard is the one to apply, and it is higher than the
+industry's: <strong>nothing on a page in this repository is a number from a real
+plant unless it says so.</strong> A judgment model arrives with somebody else's
+benchmarks, and none of them are about manufacturing.</p>
+<ol>
+<li><strong>An accuracy number produced here.</strong> The simulated plants script their own
+   breakdowns, changeovers, counter resets and micro-stops as named regression
+   tests, which means for P1 the true reason of every stop is already known.
+   That is an evaluation set most people integrating this model will not have.
+   Build the labelled set from the scripted hours first, and publish the
+   confusion matrix in this repository.</li>
+<li><strong>A calibration plot, not a threshold.</strong> TypeSafe's documentation says to
+   plot confidence against accuracy on your own data and pick thresholds from
+   it. Until that plot exists for a given question, that question has no
+   threshold, and "0.8 seemed reasonable" is not one.</li>
+<li><strong>The model pinned, not <code>-latest</code>.</strong> A judgment stored against
+   <code>jev-latest</code> cannot be reproduced. Pin the served version, store it with
+   every answer, and treat a version change as a re-validation.</li>
+<li><strong>A written answer on retention.</strong> No retention period, rate limit or SLA
+   is published. Those are three questions to send TypeSafe before any
+   <code>production</code>-class question is switched on at any plant, and the answers
+   belong in <code>docs/operate/compatibility.md</code> with the date they were given.</li>
+<li><strong>The deterministic fallback tested as the normal case.</strong> Every consumer
+   keeps what it does today, and the test suite exercises the no-key,
+   no-network, refused-by-class path as the default rather than as an edge.</li>
+<li><strong><code>fsmes shadow</code> prints it.</strong> A plant should be able to ask what would
+   leave and get a list, per class, from the software rather than from a
+   person.</li>
+</ol>
+<h1 id="a-phasing-that-commits-nothing">A phasing that commits nothing<a class="headerlink" href="#a-phasing-that-commits-nothing" title="Permanent link">&para;</a></h1>
+<p>Each step is independently abandonable, and each produces evidence rather than
+a feature.</p>
+<p><strong>Step 0 — no code.</strong> Send TypeSafe the retention, rate-limit and SLA
+questions. Settle the P1 cold-start vocabulary question, which is a plant pack
+question and does not involve the model at all. Decide whether the assistant's
+question text can honestly be <code>catalogue</code> class.</p>
+<p><strong>Step 1 — the build loop only.</strong> D1 run-log triage, beside the existing qwen
+pass, with both recorded. D3 agent-eval scoring. No plant data, no shadow
+question, no product surface. If Jev is unimpressive here, stop: this is the
+cheapest possible place to find that out.</p>
+<p><strong>Step 2 — the labelled set.</strong> Build the P1 evaluation set out of the scripted
+hours and measure. Publish the number whatever it is. This is the step that
+decides the product half, and it needs no plant and no customer.</p>
+<p><strong>Step 3 — the demonstration case in the product.</strong> P2, the three
+explanations. <code>observation</code> class, display only, a distribution presented as a
+weighting. It exercises the whole mechanism — the module, the extra, the
+register entry, the state class, the stored provenance, the fallback — against
+the lowest-stakes consequence in the product.</p>
+<p><strong>Step 4 — the two that pay.</strong> P8, the incumbent mapping draft, and P1, the
+downtime proposal, in that order, because P8's output is reviewed by a person
+before it can matter and P1's needs step 2's number to justify itself.</p>
+<p><strong>Not scheduled.</strong> Everything in part three, and every <code>production</code>-class
+question until step 0 has written answers.</p>
+<h1 id="questions-to-put-to-typesafe-in-writing">Questions to put to TypeSafe in writing<a class="headerlink" href="#questions-to-put-to-typesafe-in-writing" title="Permanent link">&para;</a></h1>
+<ol>
+<li>What is the retention period for request bodies, and is there a
+   zero-retention or no-log option?</li>
+<li>What are the rate limits, and is there an availability commitment?</li>
+<li>Is there any on-premises, VPC or edge deployment now or planned? Without
+   one, the plants with the strongest case for this — air-gapped lines, sites
+   running in shadow beside an incumbent — cannot use it at all.</li>
+<li>Is a version such as <code>jev-1.12</code> pinnable and for how long is it served?</li>
+<li>How is <code>confidence</code> computed, and is the computation stable across model
+   versions?</li>
+<li>Is there an EU region, and what is the current subprocessor list?</li>
+</ol>
+<h1 id="if-the-answer-turns-out-to-be-no">If the answer turns out to be no<a class="headerlink" href="#if-the-answer-turns-out-to-be-no" title="Permanent link">&para;</a></h1>
+<p>It is a defensible outcome and worth stating plainly, because half of this
+document argues for arithmetic over inference. Several seams that look like
+judgments are measurements wearing a costume — the SPC cliff wants a
+confidence interval, the scheduling promise wants a computed band, the lab's
+significance bands want the facts they already discard, the night-shift bound
+wants a path filter. Finding that out is worth the survey on its own.</p>
+<p>What would remain true even then: this codebase enumerates its refusals in
+source, in English, more than any other project of its size, and those
+enumerations are a design asset. Whether they are eventually resolved by a
+hosted model, by something that runs on the box, or by a plant's own
+accumulated labels, the work of writing down <em>what the options are and what
+evidence would decide between them</em> is the part that does not go stale. That
+work is done now, and it is this page.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Apache-2.0. Every number on this site comes from a simulated plant unless it says otherwise.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/factorysemantics/factorysemantics-mes" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://factorysemantics.com" target="_blank" rel="noopener" title="factorysemantics.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M351.9 280H161c2.9 64.5 17.2 123.9 37.5 167.4 11.4 24.5 23.7 41.8 35.1 52.4 11.2 10.5 18.9 12.2 22.9 12.2s11.7-1.7 22.9-12.2c11.4-10.6 23.7-28 35.1-52.4 20.3-43.5 34.6-102.9 37.5-167.4zm-191-48h190.9c-2.8-64.5-17.1-123.9-37.4-167.4-11.4-24.4-23.7-41.8-35.1-52.4C268.1 1.7 260.4 0 256.4 0s-11.7 1.7-22.9 12.2c-11.4 10.6-23.7 28-35.1 52.4-20.3 43.5-34.6 102.9-37.5 167.4m-48 0c3.5-85.6 25.6-165.1 57.9-217.3C78.7 47.3 10.9 131.2 1.5 232zM1.5 280c9.4 100.8 77.2 184.7 169.3 217.3-32.3-52.2-54.4-131.7-57.9-217.3zm398.4 0c-3.5 85.6-25.6 165.1-57.9 217.3 92.1-32.7 159.9-116.5 169.3-217.3zm111.4-48C501.9 131.2 434.1 47.3 342 14.7c32.3 52.2 54.4 131.7 57.9 217.3z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "content.tabs.link", "content.code.copy", "content.action.edit", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

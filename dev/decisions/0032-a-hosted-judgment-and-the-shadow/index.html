@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://docs.factorysemantics.com/dev/operate/deploy/">
+        <link rel="canonical" href="https://docs.factorysemantics.com/dev/decisions/0032-a-hosted-judgment-and-the-shadow/">
       
       
-        <link rel="prev" href="../first-plant/">
+        <link rel="prev" href="../0031-a-judgment-is-a-proposal/">
       
       
-        <link rel="next" href="../opc-readonly/">
+        <link rel="next" href="../TEMPLATE/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Tutorial — deploy - FactorySemantics MES</title>
+        <title>0032 — A hosted judgment is an outbound path, classified by the state it sends - FactorySemantics MES</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#deploy" class="md-skip">
+        <a href="#0032-a-hosted-judgment-is-an-outbound-path-classified-by-the-state-it-sends" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Tutorial — deploy
+              0032 — A hosted judgment is an outbound path, classified by the state it sends
             
           </span>
         </div>
@@ -268,13 +268,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../operate/" class="md-tabs__link">
           
   
   
@@ -290,10 +288,12 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
+      <li class="md-tabs__item md-tabs__item--active">
         <a href="../../develop/" class="md-tabs__link">
           
   
@@ -785,31 +785,26 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
             
   
   
@@ -827,7 +822,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -845,7 +840,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../operate/" class="md-nav__link">
         
   
   
@@ -873,7 +868,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../first-plant/" class="md-nav__link">
+      <a href="../../operate/first-plant/" class="md-nav__link">
         
   
   
@@ -898,37 +893,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Tutorial — deploy
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../operate/deploy/" class="md-nav__link">
         
   
   
@@ -944,70 +912,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#compose" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Compose
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#systemd-test-and-promoted-environments-on-one-host" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        systemd: test and promoted environments on one host
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verify" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verify
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        See also
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1020,7 +924,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../opc-readonly/" class="md-nav__link">
+      <a href="../../operate/opc-readonly/" class="md-nav__link">
         
   
   
@@ -1048,7 +952,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../opc-disconnections/" class="md-nav__link">
+      <a href="../../operate/opc-disconnections/" class="md-nav__link">
         
   
   
@@ -1076,7 +980,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../packs/" class="md-nav__link">
+      <a href="../../operate/packs/" class="md-nav__link">
         
   
   
@@ -1104,7 +1008,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../registry/" class="md-nav__link">
+      <a href="../../operate/registry/" class="md-nav__link">
         
   
   
@@ -1132,7 +1036,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../fleet/" class="md-nav__link">
+      <a href="../../operate/fleet/" class="md-nav__link">
         
   
   
@@ -1160,7 +1064,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../modules/" class="md-nav__link">
+      <a href="../../operate/modules/" class="md-nav__link">
         
   
   
@@ -1188,7 +1092,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../shadow-mode/" class="md-nav__link">
+      <a href="../../operate/shadow-mode/" class="md-nav__link">
         
   
   
@@ -1216,7 +1120,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../shadow-scorecard/" class="md-nav__link">
+      <a href="../../operate/shadow-scorecard/" class="md-nav__link">
         
   
   
@@ -1244,7 +1148,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../erpnext/" class="md-nav__link">
+      <a href="../../operate/erpnext/" class="md-nav__link">
         
   
   
@@ -1272,7 +1176,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../uns/" class="md-nav__link">
+      <a href="../../operate/uns/" class="md-nav__link">
         
   
   
@@ -1300,7 +1204,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../backup/" class="md-nav__link">
+      <a href="../../operate/backup/" class="md-nav__link">
         
   
   
@@ -1328,7 +1232,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tls/" class="md-nav__link">
+      <a href="../../operate/tls/" class="md-nav__link">
         
   
   
@@ -1356,7 +1260,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../upgrade/" class="md-nav__link">
+      <a href="../../operate/upgrade/" class="md-nav__link">
         
   
   
@@ -1384,7 +1288,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../confirmation-files/" class="md-nav__link">
+      <a href="../../operate/confirmation-files/" class="md-nav__link">
         
   
   
@@ -1440,7 +1344,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../inbound/" class="md-nav__link">
+      <a href="../../operate/inbound/" class="md-nav__link">
         
   
   
@@ -1552,7 +1456,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../first-week/" class="md-nav__link">
+      <a href="../../operate/first-week/" class="md-nav__link">
         
   
   
@@ -1580,7 +1484,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../compatibility/" class="md-nav__link">
+      <a href="../../operate/compatibility/" class="md-nav__link">
         
   
   
@@ -1608,7 +1512,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../security/" class="md-nav__link">
+      <a href="../../operate/security/" class="md-nav__link">
         
   
   
@@ -1640,26 +1544,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
             
   
   
@@ -1677,7 +1586,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1888,26 +1797,31 @@
                 
   
   
+    
   
   
+  
     
     
     
     
       
       
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_8" >
         
           
-          <label class="md-nav__link" for="__nav_4_8" id="__nav_4_8_label" tabindex="0">
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_8" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_8" id="__nav_4_8_label" tabindex="">
             
   
   
@@ -1925,7 +1839,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_8_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_8_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4_8">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1943,7 +1857,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -1971,7 +1885,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0001-apache-2-with-dco/" class="md-nav__link">
+      <a href="../0001-apache-2-with-dco/" class="md-nav__link">
         
   
   
@@ -1999,7 +1913,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0002-kernel-and-modules/" class="md-nav__link">
+      <a href="../0002-kernel-and-modules/" class="md-nav__link">
         
   
   
@@ -2027,7 +1941,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0003-one-mcp-server/" class="md-nav__link">
+      <a href="../0003-one-mcp-server/" class="md-nav__link">
         
   
   
@@ -2055,7 +1969,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0004-never-invent-production/" class="md-nav__link">
+      <a href="../0004-never-invent-production/" class="md-nav__link">
         
   
   
@@ -2083,7 +1997,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0005-plain-html-no-build-step/" class="md-nav__link">
+      <a href="../0005-plain-html-no-build-step/" class="md-nav__link">
         
   
   
@@ -2111,7 +2025,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
+      <a href="../0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
         
   
   
@@ -2139,7 +2053,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0007-fresh-public-history/" class="md-nav__link">
+      <a href="../0007-fresh-public-history/" class="md-nav__link">
         
   
   
@@ -2167,7 +2081,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0008-erp-connectors-are-modules/" class="md-nav__link">
+      <a href="../0008-erp-connectors-are-modules/" class="md-nav__link">
         
   
   
@@ -2195,7 +2109,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0009-organisation-not-personal-account/" class="md-nav__link">
+      <a href="../0009-organisation-not-personal-account/" class="md-nav__link">
         
   
   
@@ -2223,7 +2137,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0010-github-discussions-only/" class="md-nav__link">
+      <a href="../0010-github-discussions-only/" class="md-nav__link">
         
   
   
@@ -2251,7 +2165,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0011-mkdocs-material-generated-reference/" class="md-nav__link">
+      <a href="../0011-mkdocs-material-generated-reference/" class="md-nav__link">
         
   
   
@@ -2279,7 +2193,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0012-contributor-covenant-3/" class="md-nav__link">
+      <a href="../0012-contributor-covenant-3/" class="md-nav__link">
         
   
   
@@ -2307,7 +2221,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0013-governance-is-one-page/" class="md-nav__link">
+      <a href="../0013-governance-is-one-page/" class="md-nav__link">
         
   
   
@@ -2335,7 +2249,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0014-first-public-version-is-0-1-0/" class="md-nav__link">
+      <a href="../0014-first-public-version-is-0-1-0/" class="md-nav__link">
         
   
   
@@ -2363,7 +2277,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0015-mcp-registry-name/" class="md-nav__link">
+      <a href="../0015-mcp-registry-name/" class="md-nav__link">
         
   
   
@@ -2391,7 +2305,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0016-no-trademark-registration/" class="md-nav__link">
+      <a href="../0016-no-trademark-registration/" class="md-nav__link">
         
   
   
@@ -2419,7 +2333,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
+      <a href="../0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
         
   
   
@@ -2447,7 +2361,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
+      <a href="../0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
         
   
   
@@ -2475,7 +2389,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0019-count-everything-the-machine-counted/" class="md-nav__link">
+      <a href="../0019-count-everything-the-machine-counted/" class="md-nav__link">
         
   
   
@@ -2503,7 +2417,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
+      <a href="../0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
         
   
   
@@ -2531,7 +2445,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0021-one-database-per-plant/" class="md-nav__link">
+      <a href="../0021-one-database-per-plant/" class="md-nav__link">
         
   
   
@@ -2559,7 +2473,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0022-what-a-plant-pack-may-contain/" class="md-nav__link">
+      <a href="../0022-what-a-plant-pack-may-contain/" class="md-nav__link">
         
   
   
@@ -2587,7 +2501,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0023-the-fleet-console-observes/" class="md-nav__link">
+      <a href="../0023-the-fleet-console-observes/" class="md-nav__link">
         
   
   
@@ -2615,7 +2529,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0024-a-nonconformance-has-a-life/" class="md-nav__link">
+      <a href="../0024-a-nonconformance-has-a-life/" class="md-nav__link">
         
   
   
@@ -2643,7 +2557,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0025-performance-is-measured-not-capped/" class="md-nav__link">
+      <a href="../0025-performance-is-measured-not-capped/" class="md-nav__link">
         
   
   
@@ -2671,7 +2585,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0026-counts-that-outrun-the-run-time/" class="md-nav__link">
+      <a href="../0026-counts-that-outrun-the-run-time/" class="md-nav__link">
         
   
   
@@ -2699,7 +2613,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0027-an-spc-signal-raises-a-hold/" class="md-nav__link">
+      <a href="../0027-an-spc-signal-raises-a-hold/" class="md-nav__link">
         
   
   
@@ -2727,7 +2641,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0028-which-shift-a-minute-belongs-to/" class="md-nav__link">
+      <a href="../0028-which-shift-a-minute-belongs-to/" class="md-nav__link">
         
   
   
@@ -2755,7 +2669,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0029-an-order-does-not-finish-itself/" class="md-nav__link">
+      <a href="../0029-an-order-does-not-finish-itself/" class="md-nav__link">
         
   
   
@@ -2783,7 +2697,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0030-a-lost-connection-is-unknown-time/" class="md-nav__link">
+      <a href="../0030-a-lost-connection-is-unknown-time/" class="md-nav__link">
         
   
   
@@ -2811,7 +2725,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0031-a-judgment-is-a-proposal/" class="md-nav__link">
+      <a href="../0031-a-judgment-is-a-proposal/" class="md-nav__link">
         
   
   
@@ -2836,10 +2750,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../decisions/0032-a-hosted-judgment-and-the-shadow/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0032 — A hosted judgment is an outbound path, classified by the state it sends
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -2855,6 +2796,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options-considered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options considered
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#house-rules-touched" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        House rules touched
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2867,7 +2883,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/TEMPLATE/" class="md-nav__link">
+      <a href="../TEMPLATE/" class="md-nav__link">
         
   
   
@@ -3359,10 +3375,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#compose" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Compose
+        Context
       
     </span>
   </a>
@@ -3370,10 +3386,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#systemd-test-and-promoted-environments-on-one-host" class="md-nav__link">
+  <a href="#options-considered" class="md-nav__link">
     <span class="md-ellipsis">
       
-        systemd: test and promoted environments on one host
+        Options considered
       
     </span>
   </a>
@@ -3381,10 +3397,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#verify" class="md-nav__link">
+  <a href="#decision" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Verify
+        Decision
       
     </span>
   </a>
@@ -3392,10 +3408,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
+  <a href="#consequences" class="md-nav__link">
     <span class="md-ellipsis">
       
-        See also
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#house-rules-touched" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        House rules touched
       
     </span>
   </a>
@@ -3419,7 +3446,7 @@
 
 
   
-    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/operate/deploy.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/decisions/0032-a-hosted-judgment-and-the-shadow.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3427,107 +3454,123 @@
   
 
 
-<h1 id="deploy">Deploy<a class="headerlink" href="#deploy" title="Permanent link">&para;</a></h1>
-<p><em>Tutorial. Two ways: Docker Compose for a trial on one box, systemd units for a host that runs test and promoted environments side by side.</em></p>
-<div class="admonition warning">
-<p class="admonition-title">Not hardened for the public internet</p>
-<p>The MES is designed to sit on a plant network behind a firewall. Put a
-reverse proxy with TLS in front of it, set the passwords, and do not
-expose the MCP servers. See <a href="../security/">security</a>.</p>
-</div>
-<h2 id="compose">Compose<a class="headerlink" href="#compose" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/factorysemantics/factorysemantics-mes.git
-<span class="nb">cd</span><span class="w"> </span>factorysemantics-mes
-<span class="nv">MES_SECRET_KEY</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span><span class="k">)</span><span class="s2">"</span><span class="w"> </span><span class="nv">MES_ADMIN_PASSWORD</span><span class="o">=</span><span class="s1">'choose-one'</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>docker/docker-compose.yml<span class="w"> </span>up<span class="w"> </span>--build
-</code></pre></div>
-<p>That starts PostgreSQL, a one-shot migration and seed job, the API behind
-nginx on <a href="http://localhost:8000">http://localhost:8000</a>, the simulated OPC UA server, the OPC agent,
-the mock ERP on port 8001 and the ERP sync worker. <code>--scale api=3</code> adds API
-replicas; migrations run once in their own container so replicas never race.</p>
-<p>To leave twin mode, point <code>MES_OPC_ENDPOINT</code> at your server and
-<code>MES_TAG_MAP_FILE</code> at the tag map the worksheet produced, and set
-<code>MES_ERP_MODE</code> to <code>erpnext</code>, <code>file</code>, or <code>off</code>.</p>
-<p>The image is <code>ghcr.io/factorysemantics/fsmes</code> (amd64 and arm64), signed with
-cosign and shipped with an SBOM from each release. It is pushed only after
-the same approval that publishes the package to PyPI, in the same run — so a
-tag in the registry means that version was released, not that a build of it
-happened to succeed. Pin the version tag rather than <code>latest</code> on anything you
-care about; <code>latest</code> moves with each release.</p>
-<h2 id="systemd-test-and-promoted-environments-on-one-host">systemd: test and promoted environments on one host<a class="headerlink" href="#systemd-test-and-promoted-environments-on-one-host" title="Permanent link">&para;</a></h2>
-<p>Two environments run from the same code on the same host; the only
-difference is a registry file outside the checkout. The unit files and a
-promote script are in <code>deploy/</code>.</p>
+<h1 id="0032-a-hosted-judgment-is-an-outbound-path-classified-by-the-state-it-sends">0032 — A hosted judgment is an outbound path, classified by the state it sends<a class="headerlink" href="#0032-a-hosted-judgment-is-an-outbound-path-classified-by-the-state-it-sends" title="Permanent link">&para;</a></h1>
+<ul>
+<li><strong>Status:</strong> proposed</li>
+<li><strong>Date:</strong> 2026-09-17</li>
+<li><strong>Deciders:</strong> maintainer</li>
+</ul>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>Jev is a hosted API and only a hosted API. As of 2026-09-17 TypeSafe's
+documentation describes no on-premises deployment, no VPC option, no
+downloadable weights and no offline mode; the service is documented as hosted
+in the United States, the privacy policy states that inputs are not used to
+train models, and no retention period and no rate limits are published. Those
+last three are questions to put to TypeSafe in writing, not gaps to assume
+around.</p>
+<p><code>src/fsmes/shadow.py</code> holds <code>REGISTER</code>, an enumerated list of every outbound
+path this software has, each an <code>Outbound(name, where, reaches, verdict,
+note)</code>; <code>tests/test_shadow_mode.py</code> scans the source and fails on an outbound
+call site that is not in it. So a Jev client cannot be added quietly. The
+precedent is <code>llm.cloud_agent</code>, verdict <code>refused</code>, whose note is the sentence
+this decision has to answer: it "carries this plant's numbers off the box, and
+a plant lending us its data to watch did not agree to that."</p>
+<p>Shadow mode is not a side feature. 0.2.0 exists so a first real plant can run
+this beside the MES already in charge, and the whole proposition of that is
+that nothing leaves. Meanwhile the strongest <em>cheap</em> uses of a judgment model
+in this repository send no plant data at all: the assistant's guide catalogue
+is text that ships in the wheel, and the build loop's state is a simulated
+plant.</p>
+<p>Treating "does it reach TypeSafe" as one question therefore throws away the
+distinction that matters. What leaves the box is not a property of the
+integration; it is a property of each question.</p>
+<h2 id="options-considered">Options considered<a class="headerlink" href="#options-considered" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th></th>
-<th>test</th>
-<th>promoted</th>
+<th>Option</th>
+<th>For</th>
+<th>Against</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Checkout</td>
-<td>your working clone on <code>main</code></td>
-<td>a second clone pinned to a release tag</td>
+<td><strong>Classify the state each question sends, and let shadow mode refuse by class</strong></td>
+<td>the honest answer: a question over the product's own guide titles is not the same act as a question over last night's counts; makes the refusal reviewable question by question; the class is declarable in code and testable</td>
+<td>a new concept in the codebase, and a wrong classification is a quiet leak rather than a loud one — so the classification has to be in the test suite, not the docstring</td>
 </tr>
 <tr>
-<td>Fleet file</td>
-<td><code>labs/multiplant/fleet.toml</code> in the repo</td>
-<td><code>~/.config/fsmes/prod/fleet.toml</code>, mode 600, listing packs beside it</td>
+<td>One <code>refused</code> entry, matching <code>llm.cloud_agent</code></td>
+<td>one line, precedent already set, nothing to explain to a plant</td>
+<td>refuses the assistant's guide routing, which sends a question and a catalogue of product text — and refuses it for a reason that is not true of it</td>
 </tr>
 <tr>
-<td>Accounts</td>
-<td>lab accounts, lab passwords</td>
-<td>the registry's <code>accounts</code>, passwords from <code>~/.config/fsmes/prod/env</code></td>
+<td>Allowed, opt-in per plant, one setting</td>
+<td>the plant decides, which is the honest locus</td>
+<td>seventy-one settings already exist and this one would be the one nobody reads carefully; a single switch cannot distinguish a tag name from a customer's order book</td>
 </tr>
 <tr>
-<td>Units</td>
-<td><code>fsmes-plant@&lt;name&gt;</code></td>
-<td><code>fsmes-prod-plant@&lt;name&gt;</code></td>
-</tr>
-<tr>
-<td>Changes</td>
-<td>every merge</td>
-<td><code>deploy/promote.sh &lt;tag&gt;</code> only</td>
+<td>Dev loop only; never reachable from a plant installation</td>
+<td>no plant consent question ever arises; the build loop's state is synthetic</td>
+<td>leaves the product seams unbuilt, and does not actually answer the question — a maintainer's laptop running a lab pack is a plant installation</td>
 </tr>
 </tbody>
 </table>
-<p>First-time setup:</p>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/factorysemantics/factorysemantics-mes.git<span class="w"> </span>~/Projects/fsmes-prod
-mkdir<span class="w"> </span>-p<span class="w"> </span>~/.config/fsmes/prod<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>chmod<span class="w"> </span><span class="m">700</span><span class="w"> </span>~/.config/fsmes/prod
-<span class="c1"># write fleet.toml, the packs it lists and env (see the fleet how-to); chmod 600 the file and the env</span>
-cp<span class="w"> </span>~/Projects/fsmes-prod/deploy/fsmes-prod-plant@.service<span class="w"> </span>~/.config/systemd/user/
-systemctl<span class="w"> </span>--user<span class="w"> </span>daemon-reload
-~/Projects/fsmes-prod/deploy/promote.sh<span class="w"> </span>v0.1.0
-systemctl<span class="w"> </span>--user<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>--now<span class="w"> </span>fsmes-prod-plant@&lt;name&gt;
-</code></pre></div>
-<p><code>promote.sh</code> refuses a tag that is not on the remote it promotes from
-(<code>FSMES_PROMOTE_REMOTE</code>, default <code>public</code>), stops every plant, backs each one
-up — a SQLite file copied with its write-ahead log, a PostgreSQL database
-dumped with <code>pg_dump -Fc</code> — and only then checks out the tag, applies each
-pack and starts. It then asks each plant itself: <code>/health</code> must call itself
-by the name the fleet knows it by and <code>/pack</code> must say its schema is at head.
-Any failure after the checkout puts the previous tag, the previous venv and
-the backups that run made back. A plant whose database it cannot copy refuses
-the whole promote, and a password variable that is not set refuses it rather
-than creating an account with an empty password. <code>deploy/README.md</code> is the
-full list; <code>fsmes fleet plan</code> shows what a promote would act on.</p>
-<h2 id="verify">Verify<a class="headerlink" href="#verify" title="Permanent link">&para;</a></h2>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p>Every judgment question declares the class of state it sends, and shadow mode
+refuses by class rather than by integration. Four classes, from the outside in:</p>
 <ul>
-<li><code>curl http://127.0.0.1:&lt;port&gt;/health</code> answers.</li>
-<li>The log has <strong>no</strong> <code>well-known credentials in use</code> warning.</li>
-<li><code>fsmes plant all status</code> (with <code>FSMES_PLANT_REGISTRY</code> set) lists every
-  plant as alive.</li>
+<li><strong>catalogue</strong> — text that ships in the wheel and is identical at every
+  plant: guide titles, status vocabularies, the canonical column names of a
+  boundary format, the descriptions of a question's own options.</li>
+<li><strong>configuration</strong> — what this plant is: machine codes, tag names, routing
+  and material codes, its reason vocabulary, shift patterns. Identifies the
+  plant; says nothing about what it made.</li>
+<li><strong>observation</strong> — what the line did: states and durations, alarm bits,
+  process values, cycle times.</li>
+<li><strong>production</strong> — counts, order codes, quantities, yields, measurements
+  against a specification, and anything a person typed: findings, rationales,
+  dispositions, names.</li>
 </ul>
-<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="../packs/">Plant packs</a></li>
-<li><a href="../registry/">Plants from a fleet file</a></li>
-<li><a href="../../reference/settings/">Settings reference</a></li>
-<li><a href="../security/">Security</a></li>
-</ul>
+<p><code>catalogue</code> is allowed in shadow mode. <code>configuration</code>, <code>observation</code> and
+<code>production</code> are refused in shadow mode, and outside shadow mode each is off
+until the plant turns that class on. <code>production</code> additionally carries a
+person's words and another party's commercial facts, so it stays off by
+default at every plant, shadow or not, and turning it on is a decision the
+plant records rather than a setting a commissioning engineer flips.</p>
+<p>The register gets one entry per class, not one for the integration, so
+<code>fsmes shadow</code> prints what would and would not leave in the same vocabulary a
+plant asks the question in. The class of a question is a property of the
+question object in code; a test asserts that every registered question
+declares one and that no question's assembled state reaches outside its class.</p>
+<p>An air-gapped or refusing installation is not a degraded one. The client is
+constructed with an injected transport and a configurable base URL, so a build
+that may not egress can be shown not to, and every consumer keeps the
+deterministic behaviour it has today as its fallback. Nothing in the product
+may require a judgment to answer.</p>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<p>Easy: saying yes to the cheap, obviously safe uses — guide routing, the build
+loop — without reopening the question for the ones that carry a plant's
+numbers. Easy: the conversation with a plant, because the answer to "what
+would you send?" is a list, per class, that <code>fsmes shadow</code> prints.</p>
+<p>Hard: four classes is three more than one, and classifying a question wrongly
+is the failure this creates. The mitigation is the test, and the test is only
+as good as the state assembly it inspects, so state for a judgment must be
+assembled in one place per question rather than passed through.</p>
+<p>Harder: this decision does not make Jev available to the plants that most need
+it. A site that will not send <code>observation</code> gets no downtime proposals, and a
+site with no internet gets nothing at all. If that turns out to be most sites,
+the right answer is not to relax a class — it is that a hosted judgment model
+is the wrong shape for this product and the seams should wait for something
+that runs on the box.</p>
+<p>Revisit when: TypeSafe answers the retention, rate-limit and SLA questions in
+writing; or when an on-premises or VPC option exists; or when the first real
+plant says which classes it would allow.</p>
+<h2 id="house-rules-touched">House rules touched<a class="headerlink" href="#house-rules-touched" title="Permanent link">&para;</a></h2>
+<p>Rule 4 — config, not code, at plant boundaries: which classes a plant permits
+is the plant's configuration, and belongs in its pack rather than in a
+constant. Rule 2 is why a refused class must produce <em>unknown</em> and the
+deterministic fallback, never a blank that reads like an answer.</p>
 
 
 
@@ -3565,7 +3608,7 @@ full list; <code>fsmes fleet plan</code> shows what a promote would act on.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../first-plant/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Tutorial — beside your existing MES">
+          <a href="../0031-a-judgment-is-a-proposal/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 0031 — A judgment is a proposal: what a probability may touch, and what it may never touch">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -3575,20 +3618,20 @@ full list; <code>fsmes fleet plan</code> shows what a promote would act on.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Tutorial — beside your existing MES
+                0031 — A judgment is a proposal: what a probability may touch, and what it may never touch
               </div>
             </div>
           </a>
         
         
           
-          <a href="../opc-readonly/" class="md-footer__link md-footer__link--next" aria-label="Next: How-to — read-only OPC UA commissioning">
+          <a href="../TEMPLATE/" class="md-footer__link md-footer__link--next" aria-label="Next: Template">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                How-to — read-only OPC UA commissioning
+                Template
               </div>
             </div>
             <div class="md-footer__button md-icon">
