@@ -2772,6 +2772,89 @@ def lab_review(
                f"{len(collected['unknowns'])} unknown(s), {len(collected['notes'])} note(s)")
 
 
+jev_app = typer.Typer(
+    help="The judgment model used in the build loop: which versions are served, "
+         "and which one to pin.",
+)
+app.add_typer(jev_app, name="jev")
+
+
+@jev_app.command("models")
+def jev_models(
+    resolve: bool = typer.Option(
+        False, "--resolve",
+        help="Also ask a moving alias one throwaway question, and print the "
+             "concrete version that answered. Costs one call."),
+    alias: str = typer.Option("jev-latest", "--alias",
+                              help="The moving alias to ask when --resolve is given."),
+) -> None:
+    """What the judgment service serves, and what to pin `MES_JEV_MODEL` to.
+
+    Two different facts, which is why `--resolve` exists. On 2026-09-17 the
+    service's own list offered only moving aliases - and this MES refuses a
+    moving alias as a pin, because a judgment stored against one cannot be
+    read again - while a call made as `jev-latest` answered as `jev-1.13.0`,
+    which is then accepted as a pin by name. So the way to learn the name of
+    the version to pin is to ask a question, and asking one costs a call.
+    That call is made only when you ask for it.
+
+    Nothing else in this MES calls the service from a command line. The
+    build loop asks its questions where it already runs, and shadow mode
+    refuses all of it.
+    """
+    from fsmes.integrations import jev
+
+    settings = get_settings()
+    ok, why = jev.available(settings)
+    if not ok:
+        typer.echo(f"NOT OK  {why}")
+        raise typer.Exit(1)
+
+    typer.echo(f"Key: set ({jev.KEY_SETTING}).  Pinned: MES_JEV_MODEL={settings.jev_model}")
+    try:
+        listed = jev.list_models(settings.jev_api_key,
+                                 base_url=settings.jev_base_url,
+                                 timeout=settings.jev_timeout_seconds)
+    except jev.JevUnavailable as exc:
+        typer.echo(f"NOT OK  {exc}")
+        raise typer.Exit(1) from exc
+
+    typer.echo(f"{len(listed)} model(s) in total, as the service lists them:")
+    for model in listed:
+        moving = "  (moving: this MES refuses it as a pin)" if model["name"].endswith("latest") else ""
+        typer.echo(f"  {model['name']:<16} {model['release_date'] or 'no release date'}"
+                   f"  {model['description']}{moving}")
+    if not any(m["name"] == settings.jev_model for m in listed):
+        typer.echo(f"  The pinned {settings.jev_model} is not in that list. That is not by "
+                   f"itself wrong: on 2026-09-17 the served version was pinnable by name "
+                   f"and absent from the list. --resolve says what answers today.")
+
+    if not resolve:
+        typer.echo("Pass --resolve to spend one call learning which concrete version "
+                   f"{alias} answers as.")
+        return
+
+    try:
+        resolved = jev.resolve_version(settings.jev_api_key, alias=alias,
+                                       base_url=settings.jev_base_url,
+                                       timeout=settings.jev_timeout_seconds)
+    except jev.JevUnavailable as exc:
+        typer.echo(f"NOT OK  {exc}")
+        raise typer.Exit(1) from exc
+
+    usage = resolved["usage"]
+    typer.echo(f"{alias} answered as {resolved['served']}"
+               f" ({usage.get('input_tokens')} token(s) in, {usage.get('output_tokens')} out;"
+               f" request {resolved['request_id'] or 'unknown'})")
+    if resolved["served"] == settings.jev_model:
+        typer.echo("That is what is pinned. Nothing to change.")
+    else:
+        typer.echo(f"Pinned is {settings.jev_model}. Moving the pin is a re-validation: "
+                   f"answers either side of it are answers from different versions. "
+                   f"Set MES_JEV_MODEL={resolved['served']} deliberately, and say so where "
+                   f"the results are read.")
+
+
 def run() -> None:
     """The console script.
 
