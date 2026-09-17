@@ -293,9 +293,14 @@ class Settings(BaseSettings):
     # Pinned, never `-latest`: a judgment stored against a moving version
     # cannot be reproduced, and the version actually served is stored with
     # every answer so a change shows up as a change rather than as noise.
-    # `jev-1.12` is the version the survey names as served and pinnable; a
-    # later pin is a setting change and a re-validation, not a default.
-    jev_model: str = "jev-1.12"
+    # `jev-1.13.0` is what the service answered as on 2026-09-17, measured by
+    # asking: its own model list offers only `jev-latest` and `jev-preview`,
+    # and a call made as `jev-latest` came back naming `jev-1.13.0`, which is
+    # then accepted as a pin by name. (`jev-1.12` was the survey's example
+    # and is not served.) `fsmes jev models --resolve` makes that one call
+    # again, so moving this pin is a setting change and a re-validation
+    # somebody asked for, not something that happens by itself.
+    jev_model: str = "jev-1.13.0"
     # Empty means the client's own endpoint. Set it to point a build that
     # may not egress at something it may reach, which is how a refusing
     # installation can be shown to be refusing.

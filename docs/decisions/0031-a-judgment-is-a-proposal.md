@@ -63,7 +63,7 @@ proposed downtime reason is a new row with its own source, and
 so `unlabelled_share` still reports what it reports today.
 
 **It carries its provenance and its numbers.** Every stored judgment keeps the
-model version as served (`jev-1.12`, not `jev-latest`), the request id, the
+model version as served (`jev-1.13.0`, not `jev-latest`), the request id, the
 full `probabilities` map, the confidence where the primitive returns one, and
 the identity of the question that was asked. A proposal a person accepts
 becomes that person's decision in the audit spine, attributed to them, with

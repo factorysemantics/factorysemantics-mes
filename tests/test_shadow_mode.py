@@ -276,7 +276,7 @@ def test_no_judgment_question_is_asked_about_a_plant_being_watched(shadow_on, mo
     transport = jev.SdkTransport("a-key-that-is-set")
     with pytest.raises(shadow.ShadowRefused):
         transport.ask(state="a log", questions=[{"name": "q", "kind": "noul", "text": "?"}],
-                      model="jev-1.12")
+                      model="jev-1.13.0")
 
 
 def test_a_quality_check_is_still_recorded_in_shadow_mode(session, shadow_on):

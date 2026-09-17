@@ -49,7 +49,7 @@ class Service:
     was asked. The interface is one method, which is the whole point of the
     transport being an interface."""
 
-    def __init__(self, answers: dict, model: str = "jev-1.12",
+    def __init__(self, answers: dict, model: str = "jev-1.13.0",
                  request_id: str = "req-0001", raises: Exception | None = None,
                  drop: str | None = None):
         self.answers = answers
@@ -145,13 +145,13 @@ def test_every_answer_carries_the_version_that_answered_and_the_words_asked():
     """A judgment stored against no version cannot be read again, and a
     question re-worded is a different question - so the served version and
     the fingerprint of the exact wording are part of every answer."""
-    service = Service(a_full_battery(), model="jev-1.12", request_id="req-42")
+    service = Service(a_full_battery(), model="jev-1.13.0", request_id="req-42")
     record = triage.judge(CARD, LOG, transport=service, settings=with_a_key())
 
     assert record["asked"] is True
-    assert record["model"] == "jev-1.12"
+    assert record["model"] == "jev-1.13.0"
     for answer in record["conditions"] + [record["worst_problem"]]:
-        assert answer["model"] == "jev-1.12"
+        assert answer["model"] == "jev-1.13.0"
         assert answer["request_id"] == "req-42"
         assert answer["asked_at"]
         wording = triage.JEV_QUESTIONS.text_of(answer["question"])
@@ -161,12 +161,12 @@ def test_every_answer_carries_the_version_that_answered_and_the_words_asked():
 def test_the_version_that_answered_is_recorded_even_when_it_is_not_the_one_pinned():
     """A pinned version can be retired. Storing the version asked for and
     calling it the one that answered would make that invisible."""
-    service = Service(a_full_battery(), model="jev-1.13")
+    service = Service(a_full_battery(), model="jev-2.0.0")
     record = triage.judge(CARD, LOG, transport=service, settings=with_a_key())
 
-    assert record["model_asked_for"] == "jev-1.12"
-    assert record["model"] == "jev-1.13"
-    assert all(a["model"] == "jev-1.13" for a in record["conditions"])
+    assert record["model_asked_for"] == "jev-1.13.0"
+    assert record["model"] == "jev-2.0.0"
+    assert all(a["model"] == "jev-2.0.0" for a in record["conditions"])
 
 
 def test_a_moving_version_is_refused_before_anything_is_asked():
