@@ -1,0 +1,28 @@
+{
+  "_what": "A four-station bench line, written for one job: to be small enough to commit and to script one of everything the labelled set has a word for.",
+  "_why": "The set's fixture has to be a recorded run, not a hand-typed table, or it pins the shape of the file instead of the behaviour of the code. Four hundred seconds, four stations, and a scripted breakdown, changeover, micro-stop run, counter reset and disconnect - so every branch of the labelling has one example and nothing is left to a run nobody in this repository can reproduce.",
+  "_states": "State column values: 0 stopped, 1 running, 2 starved, 3 blocked, 4 down, 5 changeover.",
+  "channel": "BenchLine",
+  "dsn": "LineSimCSV",
+  "seed": 7,
+  "duration_s": 400,
+  "orders": [8801, 8802],
+  "buffers": {"capacity": 12, "initial": 6},
+  "stations": [
+    {"name": "Press", "rate_per_min": 60, "scrap_pct": 0.5,
+     "analogs": [{"name": "RamPressure", "base": 180.0, "noise": 2.0, "unit": "bar"}]},
+    {"name": "Weld", "rate_per_min": 58, "scrap_pct": 0.4,
+     "analogs": [{"name": "WeldCurrent", "base": 95.0, "noise": 1.5, "unit": "A"}]},
+    {"name": "Trim", "rate_per_min": 57, "scrap_pct": 0.3,
+     "analogs": [{"name": "BladeWear", "base": 12.0, "noise": 0.6, "unit": "%"}]},
+    {"name": "Pack", "rate_per_min": 55, "scrap_pct": 0.2,
+     "analogs": [{"name": "CaseCount", "base": 4.0, "noise": 0.2, "unit": ""}]}
+  ],
+  "events": [
+    {"type": "down", "station": "Weld", "start": 100, "end": 160},
+    {"type": "micro_stops", "station": "Trim", "every_s": [60, 80], "duration_s": [8, 14]},
+    {"type": "changeover", "start": 240, "end": 280},
+    {"type": "counter_reset", "station": "Press", "at": 200},
+    {"type": "disconnect", "start": 335, "end": 395}
+  ]
+}

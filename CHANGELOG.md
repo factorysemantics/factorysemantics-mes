@@ -12,6 +12,32 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **A labelled set and the two figures a threshold would need.** The
+  simulated plants script their own breakdowns, changeovers, counter resets
+  and micro-stops, so the true reason for every stop in a recorded run is
+  already written down. `fsmes jev labelled-set` turns recorded runs into
+  one record per window — the window, the machine, the reason it actually
+  had, the state the MES could see around it and what the run's own
+  scorecard said — including control windows the machine ran straight
+  through, so a reason being invented is visible. `fsmes jev ask` asks one
+  typed **choice** over that vocabulary, once per window, printing what the
+  pass will cost before it asks anything and refusing above 300 calls
+  without `--yes`. `fsmes jev calibrate` draws the confusion matrix, the
+  calibration bins, the expected calibration error and a reliability plot,
+  and pairs the run-log battery's six conditions with what the scripted hour
+  says — marking the four it cannot decide as unlabelled rather than
+  guessing. **No threshold is chosen anywhere**: where a bin earns it, the
+  report names the bin with its count and leaves the decision to a person
+  (decision 0031). The window withholds the machine's raw state word by
+  default, because the label is read off it and a question whose answer is
+  printed in its own evidence measures nothing; `--state-view full` keeps
+  it, so the difference is itself measurable. Seconds the MES had no
+  connection for are cut out of the window and said to be missing rather
+  than filled in (decision 0030). `docs/ai/JEV-CALIBRATION.md` is the page;
+  its *Numbers* section is empty because no pass has been recorded yet.
+  **With no key — the normal case — nothing is asked and the file says so.**
+  No test opens a network connection.
+
 - **A typed judgment beside the agent evals' own check.** Every agent-eval
   answer is now read twice and both readings are kept on the same row: the
   deterministic check, which is still the only thing the pass rate is

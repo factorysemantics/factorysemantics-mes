@@ -28,11 +28,13 @@ already had.
 The SDK surface below was read from `typesafe-sdk 0.6.0` as installed, not
 from a description of it: `TypeSafeClient(api_key=..., model=..., retry=...,
 timeout=..., base_url=...)`, `client.system_one(state=..., questions={name:
-question})` with `Noul`/`Score` question objects, and a `SystemOneResponse`
-carrying `model`, `usage` and `answers` keyed by the names asked. The test
-that pins it (`tests/test_jev_transport_surface.py`) drives the real client
-through a mock HTTP transport, so a change in that shape fails a test
-instead of a run.
+question})` with `Noul`/`Score`/`Choice` question objects, and a
+`SystemOneResponse` carrying `model`, `usage` and `answers` keyed by the
+names asked. A `Choice` takes `criteria` as a mapping of option name to its
+description and answers with `choice`, `confidence` and `probabilities`
+keyed by option name. The test that pins it
+(`tests/test_jev_sdk_surface.py`) drives the real client through a mock HTTP
+transport, so a change in that shape fails a test instead of a run.
 """
 
 from __future__ import annotations
@@ -74,15 +76,15 @@ class JevTransport(Protocol):
         """Answers for one batch of questions about one state, or raise.
 
         `questions` is this package's own shape, not the SDK's - one dict
-        per question with `name`, `kind` (`noul` or `score`), `text` and,
-        for a score, its ordered `levels`. The answer is this package's own
-        shape too::
+        per question with `name`, `kind` (`noul`, `score` or `choice`),
+        `text` and, for a score, its ordered `levels`, or for a choice, its
+        unordered `options`. The answer is this package's own shape too::
 
             {"model": "<the version actually served>",
              "request_id": "<the provider's id, or ''>",
              "usage": {"input_tokens": int|None, "output_tokens": int|None},
              "answers": {"<name>": {"probability": 0.0..1.0,
-                                    "level": "<for a score>",
+                                    "level": "<for a score or a choice>",
                                     "expected_score": <for a score>,
                                     "confidence": 0.0..1.0 or None,
                                     "probabilities": {...} or None}}}
@@ -234,6 +236,14 @@ def _as_sdk_question(sdk, question: dict):
     kind = question["kind"]
     if kind == "noul":
         return sdk.Noul(instructions=question["text"])
+    if kind == "choice":
+        # The SDK calls the options `criteria` too, as a mapping rather than
+        # an ordered list: unordered is the whole difference between this and
+        # a score, and the answer comes back keyed by the option's own name.
+        return sdk.Choice(
+            instructions=question["text"],
+            criteria={name: description for name, description in question["options"]},
+        )
     if kind == "score":
         return sdk.Score(
             instructions=question["text"],
@@ -273,6 +283,28 @@ def _one_answer(question: dict, answer) -> dict:
                 f"as {type(answer).__name__}")
         return {"probability": _as_float(answer.noul), "level": None,
                 "expected_score": None, "confidence": None, "probabilities": None}
+    if kind == "choice":
+        if not hasattr(answer, "choice"):
+            raise JevUnavailable(
+                f"{question['name']!r} was asked as a choice and came back "
+                f"as {type(answer).__name__}")
+        options = [str(name) for name, _ in question["options"]]
+        probabilities = {str(name): _as_float(p)
+                         for name, p in (getattr(answer, "probabilities", None) or {}).items()
+                         if str(name) in options}
+        chosen = str(answer.choice)
+        if chosen not in options:
+            # An option nobody offered is not an answer to the question that
+            # was asked. Better a recorded "not asked" than a label that is
+            # not in the vocabulary quietly entering a confusion matrix.
+            raise JevUnavailable(
+                f"{question['name']!r} came back as {chosen!r}, which is not "
+                f"one of the {len(options)} option(s) it was asked with")
+        return {"probability": probabilities.get(chosen),
+                "level": chosen,
+                "expected_score": None,
+                "confidence": _as_float(getattr(answer, "confidence", None)),
+                "probabilities": probabilities or None}
     if kind == "score":
         if not hasattr(answer, "score"):
             raise JevUnavailable(

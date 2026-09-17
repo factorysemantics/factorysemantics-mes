@@ -1,0 +1,39 @@
+{
+  "_what": "One scored run of the bench line, trimmed to what `fsmes jev calibrate` reads: the experiment's name and each plant's recorded judgment. The probabilities are this fixture's own numbers, not anything a service returned.",
+  "experiment": "bench-line",
+  "product_version": "0.0.0-fixture",
+  "plants_total": 1,
+  "plants_run": 1,
+  "plants": [
+    {
+      "plant": "bench",
+      "line_json": "line/bench.json",
+      "seed": 7,
+      "duration_line_seconds": 400,
+      "jev": {
+        "asked": true,
+        "note": "asked and answered",
+        "state_class": "observation",
+        "battery": "run-log-triage",
+        "model_asked_for": "jev-1.13.0",
+        "model": "jev-1.13.0",
+        "usage": {"input_tokens": 4200, "output_tokens": 96},
+        "conditions": [
+          {"question": "retry_storm", "probability": 0.07, "level": null,
+           "model": "jev-1.13.0"},
+          {"question": "counter_went_backwards", "probability": 0.55, "level": null,
+           "model": "jev-1.13.0"},
+          {"question": "component_stopped_reporting", "probability": 0.48, "level": null,
+           "model": "jev-1.13.0"},
+          {"question": "silent_exception", "probability": 0.05, "level": null,
+           "model": "jev-1.13.0"},
+          {"question": "deadlock", "probability": 0.04, "level": null,
+           "model": "jev-1.13.0"}
+        ],
+        "worst_problem": {"question": "worst_problem", "probability": 0.6,
+                          "level": "medium", "model": "jev-1.13.0"},
+        "thresholds": "none: a probability is recorded, not a verdict"
+      }
+    }
+  ]
+}

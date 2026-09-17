@@ -117,7 +117,11 @@ means are the beginning of the plot a threshold would need.
 - **It has no threshold.** A probability is recorded and read by a person.
   Turning one into a verdict needs a calibration plot drawn on this
   project's own runs; that plot does not exist, so there is no line, and the
-  record says so where a reader will see it.
+  record says so where a reader will see it. The tooling that would draw it
+  is step 2, on [its own page](JEV-CALIBRATION.md) — a labelled set built
+  from the scripted hours, a confusion matrix and a calibration plot. It
+  chooses no threshold either; it is what would let a person choose one in
+  the open. No pass has been recorded yet.
 - **It never runs inside a gate.** Not in CI, not in `fsmes pack check`, not
   in any test that can fail. The test suite's default path is the one where
   no key is set; the asked path is exercised through a transport the tests

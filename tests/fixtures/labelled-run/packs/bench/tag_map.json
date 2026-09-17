@@ -1,0 +1,14 @@
+{
+  "_comment": "The bench line's four machines, as this MES codes them. Same shape as a real pack's tag map; only the machines are read by the labelled set.",
+  "line": {"code": "BENCH", "name": "Bench line"},
+  "machines": [
+    {"equipment": "PRS01", "object": "Press", "cycle_seconds": 1.0, "analog": "RamPressure", "order_tag": null,
+     "state_map": {"0": "idle", "1": "running", "2": "idle", "3": "idle", "4": "down", "5": "setup"}},
+    {"equipment": "WLD01", "object": "Weld", "cycle_seconds": 1.03, "analog": "WeldCurrent", "order_tag": null,
+     "state_map": {"0": "idle", "1": "running", "2": "idle", "3": "idle", "4": "down", "5": "setup"}},
+    {"equipment": "TRM01", "object": "Trim", "cycle_seconds": 1.05, "analog": "BladeWear", "order_tag": null,
+     "state_map": {"0": "idle", "1": "running", "2": "idle", "3": "idle", "4": "down", "5": "setup"}},
+    {"equipment": "PCK01", "object": "Pack", "cycle_seconds": 1.09, "analog": "CaseCount", "order_tag": null,
+     "state_map": {"0": "idle", "1": "running", "2": "idle", "3": "idle", "4": "down", "5": "setup"}}
+  ]
+}

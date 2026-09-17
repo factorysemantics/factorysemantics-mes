@@ -5,10 +5,13 @@ name, the exact words it is asked in, and - because decision 0032 says so -
 the class of state it sends, so what would leave the box is a property of
 the question and can be read off the code rather than guessed from it.
 
-Two kinds, which is all this model has that this package uses:
+Three kinds, which is all this model has:
 
 * `Noul` - the probability that one named condition holds.
 * `Score` - a position on ordered, described levels.
+* `Choice` - one named option out of several that are not ordered, with a
+  probability on every option. "Why did this machine stop" is that shape:
+  starved and blocked and broken are not more and less of one thing.
 
 **No question here has a threshold, and nothing here turns a probability
 into a verdict.** The survey's own condition for one is a calibration plot
@@ -77,6 +80,33 @@ class Score:
 
 
 @dataclass(frozen=True)
+class Choice:
+    """One option out of several that are not ordered, and a probability on each.
+
+    Unlike a `Score`, the options have no order: there is no sense in which
+    `blocked` is more than `starved`. So nothing here has an expected value,
+    and the answer is the option the model put most of its probability on,
+    with the whole distribution kept beside it.
+
+    Every option is described, including the one that means "none of these".
+    An undescribed option is answered against whatever the words happen to
+    suggest, which is the ambiguity typed questions exist to remove.
+    """
+
+    name: str
+    text: str
+    options: tuple[tuple[str, str], ...]
+
+    def as_question(self) -> dict:
+        return {"name": self.name, "kind": "choice", "text": self.text,
+                "options": [list(option) for option in self.options]}
+
+    @property
+    def option_names(self) -> tuple[str, ...]:
+        return tuple(name for name, _ in self.options)
+
+
+@dataclass(frozen=True)
 class QuestionSet:
     """One battery, asked in one request over one piece of state.
 
@@ -89,17 +119,19 @@ class QuestionSet:
 
     name: str
     state_class: str
-    nouls: tuple[Noul, ...]
+    nouls: tuple[Noul, ...] = ()
+    choices: tuple[Choice, ...] = ()
     score: Score | None = None
 
     def as_questions(self) -> list[dict]:
         asked = [n.as_question() for n in self.nouls]
+        asked.extend(c.as_question() for c in self.choices)
         if self.score is not None:
             asked.append(self.score.as_question())
         return asked
 
     def text_of(self, name: str) -> str:
-        for question in (*self.nouls, self.score):
+        for question in (*self.nouls, *self.choices, self.score):
             if question is not None and question.name == name:
                 return question.text
         raise KeyError(name)
@@ -111,10 +143,16 @@ class Answer:
 
     question: str
     question_sha256: str
+    #: For a condition: the probability it holds. For a score or a choice:
+    #: the probability on whichever level or option came out highest, with
+    #: the whole distribution kept in `probabilities` beside it.
     probability: float | None
+    #: The level a score fell on, or the option a choice selected. `None`
+    #: for a condition, which has neither.
     level: str | None
     #: For a score: where the answer fell on the ordered levels, which can be
-    #: between two of them. `None` for a condition, which has no levels.
+    #: between two of them. `None` for a condition and for a choice, whose
+    #: options have no order for an answer to fall between.
     expected_score: float | None
     confidence: float | None
     probabilities: dict | None

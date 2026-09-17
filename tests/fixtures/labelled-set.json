@@ -1,0 +1,625 @@
+{
+ "_what": "The labelled set that `tests/fixtures/labelled-run` must go on producing. Written by `tests/test_jev_labelled_set.py`, which rebuilds the set and compares it with this file, so a change in the labelling or in the generator fails a test instead of quietly changing what a calibration was measured against. The state text is kept in full for one window - the breakdown on WLD01 - so a person can read what a question is asked over; every other window keeps its sha256 and its length, which is what catches a drift.",
+ "vocabulary": [
+  [
+   "breakdown",
+   "The machine broke down. It was willing to run, something failed, and it made nothing until it was fixed."
+  ],
+  [
+   "changeover",
+   "The line was changing over from one product to the next. A planned stop: nothing is wrong and nobody is being called out."
+  ],
+  [
+   "micro_stop",
+   "A short stop of the kind that happens many times an hour - a jam, a misfeed, a reset - cleared in seconds by whoever was standing there. Nothing is broken and nothing needs reporting."
+  ],
+  [
+   "starved",
+   "Nothing arrived for it to work on. The machine was willing and there was nothing wrong with it; the shortage was upstream."
+  ],
+  [
+   "blocked",
+   "There was nowhere to put what it made. The machine was willing and there was nothing wrong with it; the hold-up was downstream."
+  ],
+  [
+   "counter_reset",
+   "The machine's counters went back to zero without the machine stopping - a controller restart or a shift reset, not a production event at all."
+  ],
+  [
+   "none",
+   "The machine did not stop in this window. It ran throughout and there is no reason to give."
+  ]
+ ],
+ "settings": {},
+ "runs": [
+  {
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plants": [
+    "bench"
+   ],
+   "plants_total": 1,
+   "stops": 17,
+   "controls": 3,
+   "notes": []
+  }
+ ],
+ "runs_total": 1,
+ "totals": {
+  "records": 20,
+  "by_label": {
+   "breakdown": 1,
+   "changeover": 4,
+   "micro_stop": 3,
+   "starved": 5,
+   "blocked": 3,
+   "counter_reset": 1,
+   "none": 3
+  },
+  "scripted": 9,
+  "not_scripted": 11,
+  "observable": 16,
+  "unobservable": 4,
+  "with_a_recorded_mes_verdict": 5,
+  "state_characters": {
+   "smallest": 3272,
+   "median": 4322,
+   "largest": 5431,
+   "total": 86798
+  }
+ },
+ "records": [
+  {
+   "id": "labelled-run/bench/PCK01/117",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Pack",
+   "equipment": "PCK01",
+   "window_sim_s": [
+    117,
+    162
+   ],
+   "seconds": 45,
+   "label": "starved",
+   "label_says": "nobody scripted this one: the line's own buffers produced it",
+   "scripted": false,
+   "observable": true,
+   "unseen_seconds": 0,
+   "state_view": "stopped-not-why",
+   "state_rows": 83,
+   "state_characters": 4239,
+   "state_thinned": true,
+   "state_sha256": "62595c0a60f868e8",
+   "mes_verdict": null,
+   "mes_verdict_says": "the scorecard names no scripted event in this window, which is what it does for a stop nobody scripted"
+  },
+  {
+   "id": "labelled-run/bench/PCK01/205",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Pack",
+   "equipment": "PCK01",
+   "window_sim_s": [
+    205,
+    216
+   ],
+   "seconds": 11,
+   "label": "starved",
+   "label_says": "nobody scripted this one: the line's own buffers produced it",
+   "scripted": false,
+   "observable": true,
+   "unseen_seconds": 0,
+   "state_view": "stopped-not-why",
+   "state_rows": 66,
+   "state_characters": 3615,
+   "state_thinned": true,
+   "state_sha256": "87eb9f5477459872",
+   "mes_verdict": null,
+   "mes_verdict_says": "the scorecard names no scripted event in this window, which is what it does for a stop nobody scripted"
+  },
+  {
+   "id": "labelled-run/bench/PCK01/240",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Pack",
+   "equipment": "PCK01",
+   "window_sim_s": [
+    240,
+    280
+   ],
+   "seconds": 40,
+   "label": "changeover",
+   "label_says": "the run scripted `changeover` for the whole line from 240s to 280s",
+   "scripted": true,
+   "observable": true,
+   "unseen_seconds": 0,
+   "state_view": "stopped-not-why",
+   "state_rows": 81,
+   "state_characters": 4340,
+   "state_thinned": true,
+   "state_sha256": "1c3ef04a0b81b918",
+   "mes_verdict": {
+    "event": "changeover",
+    "equipment": null,
+    "window_sim_s": [
+     240,
+     280
+    ],
+    "scripted_seconds": 40.0,
+    "misclassified_as_downtime": false,
+    "kind": "planned_stops"
+   },
+   "mes_verdict_says": "the scorecard's planned_stops[0] covers this window"
+  },
+  {
+   "id": "labelled-run/bench/PCK01/280",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Pack",
+   "equipment": "PCK01",
+   "window_sim_s": [
+    280,
+    340
+   ],
+   "seconds": 60,
+   "label": "none",
+   "label_says": "the machine ran through this window; it is here as a control, so the set can show a reason being invented",
+   "scripted": false,
+   "observable": true,
+   "unseen_seconds": 5,
+   "state_view": "stopped-not-why",
+   "state_rows": 91,
+   "state_characters": 3619,
+   "state_thinned": true,
+   "state_sha256": "6cae9447e84aed92",
+   "mes_verdict": null,
+   "mes_verdict_says": "the scorecard names no scripted event in this window, which is what it does for a stop nobody scripted"
+  },
+  {
+   "id": "labelled-run/bench/PCK01/344",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Pack",
+   "equipment": "PCK01",
+   "window_sim_s": [
+    344,
+    349
+   ],
+   "seconds": 5,
+   "label": "starved",
+   "label_says": "nobody scripted this one: the line's own buffers produced it",
+   "scripted": false,
+   "observable": false,
+   "unseen_seconds": 5,
+   "state_view": "stopped-not-why",
+   "state_rows": 116,
+   "state_characters": 3272,
+   "state_thinned": false,
+   "state_sha256": "c8b5d2ce2df6e2eb",
+   "mes_verdict": null,
+   "mes_verdict_says": "the scorecard names no scripted event in this window, which is what it does for a stop nobody scripted"
+  },
+  {
+   "id": "labelled-run/bench/PRS01/104",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Press",
+   "equipment": "PRS01",
+   "window_sim_s": [
+    104,
+    160
+   ],
+   "seconds": 56,
+   "label": "blocked",
+   "label_says": "nobody scripted this one: the line's own buffers produced it",
+   "scripted": false,
+   "observable": true,
+   "unseen_seconds": 0,
+   "state_view": "stopped-not-why",
+   "state_rows": 89,
+   "state_characters": 4580,
+   "state_thinned": true,
+   "state_sha256": "c4a9e06be360fa77",
+   "mes_verdict": null,
+   "mes_verdict_says": "the scorecard names no scripted event in this window, which is what it does for a stop nobody scripted"
+  },
+  {
+   "id": "labelled-run/bench/PRS01/169",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Press",
+   "equipment": "PRS01",
+   "window_sim_s": [
+    169,
+    229
+   ],
+   "seconds": 60,
+   "label": "counter_reset",
+   "label_says": "the run scripted `counter_reset` for Press at 200s",
+   "scripted": true,
+   "observable": true,
+   "unseen_seconds": 0,
+   "state_view": "stopped-not-why",
+   "state_rows": 91,
+   "state_characters": 4648,
+   "state_thinned": true,
+   "state_sha256": "100041bfcebe6fa1",
+   "mes_verdict": null,
+   "mes_verdict_says": "the scorecard names no scripted event in this window, which is what it does for a stop nobody scripted"
+  },
+  {
+   "id": "labelled-run/bench/PRS01/240",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Press",
+   "equipment": "PRS01",
+   "window_sim_s": [
+    240,
+    280
+   ],
+   "seconds": 40,
+   "label": "changeover",
+   "label_says": "the run scripted `changeover` for the whole line from 240s to 280s",
+   "scripted": true,
+   "observable": true,
+   "unseen_seconds": 0,
+   "state_view": "stopped-not-why",
+   "state_rows": 81,
+   "state_characters": 4297,
+   "state_thinned": true,
+   "state_sha256": "11c9411fc13c443d",
+   "mes_verdict": {
+    "event": "changeover",
+    "equipment": null,
+    "window_sim_s": [
+     240,
+     280
+    ],
+    "scripted_seconds": 40.0,
+    "misclassified_as_downtime": false,
+    "kind": "planned_stops"
+   },
+   "mes_verdict_says": "the scorecard's planned_stops[0] covers this window"
+  },
+  {
+   "id": "labelled-run/bench/PRS01/340",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Press",
+   "equipment": "PRS01",
+   "window_sim_s": [
+    340,
+    348
+   ],
+   "seconds": 8,
+   "label": "blocked",
+   "label_says": "nobody scripted this one: the line's own buffers produced it",
+   "scripted": false,
+   "observable": false,
+   "unseen_seconds": 8,
+   "state_view": "stopped-not-why",
+   "state_rows": 120,
+   "state_characters": 3408,
+   "state_thinned": false,
+   "state_sha256": "0eb644529fed7e5f",
+   "mes_verdict": null,
+   "mes_verdict_says": "the scorecard names no scripted event in this window, which is what it does for a stop nobody scripted"
+  },
+  {
+   "id": "labelled-run/bench/TRM01/108",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Trim",
+   "equipment": "TRM01",
+   "window_sim_s": [
+    108,
+    130
+   ],
+   "seconds": 22,
+   "label": "starved",
+   "label_says": "nobody scripted this one: the line's own buffers produced it",
+   "scripted": false,
+   "observable": true,
+   "unseen_seconds": 0,
+   "state_view": "stopped-not-why",
+   "state_rows": 72,
+   "state_characters": 4400,
+   "state_thinned": true,
+   "state_sha256": "81333f5ba79b0fec",
+   "mes_verdict": null,
+   "mes_verdict_says": "the scorecard names no scripted event in this window, which is what it does for a stop nobody scripted"
+  },
+  {
+   "id": "labelled-run/bench/TRM01/130",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Trim",
+   "equipment": "TRM01",
+   "window_sim_s": [
+    130,
+    139
+   ],
+   "seconds": 9,
+   "label": "micro_stop",
+   "label_says": "the run scripted micro-stops for this machine; their windows are rolled from the seed",
+   "scripted": true,
+   "observable": true,
+   "unseen_seconds": 0,
+   "state_view": "stopped-not-why",
+   "state_rows": 65,
+   "state_characters": 4114,
+   "state_thinned": true,
+   "state_sha256": "fe3225224efdc9a7",
+   "mes_verdict": null,
+   "mes_verdict_says": "the scorecard names no scripted event in this window, which is what it does for a stop nobody scripted"
+  },
+  {
+   "id": "labelled-run/bench/TRM01/139",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Trim",
+   "equipment": "TRM01",
+   "window_sim_s": [
+    139,
+    161
+   ],
+   "seconds": 22,
+   "label": "starved",
+   "label_says": "nobody scripted this one: the line's own buffers produced it",
+   "scripted": false,
+   "observable": true,
+   "unseen_seconds": 0,
+   "state_view": "stopped-not-why",
+   "state_rows": 72,
+   "state_characters": 4471,
+   "state_thinned": true,
+   "state_sha256": "0086169fcb4a8925",
+   "mes_verdict": null,
+   "mes_verdict_says": "the scorecard names no scripted event in this window, which is what it does for a stop nobody scripted"
+  },
+  {
+   "id": "labelled-run/bench/TRM01/202",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Trim",
+   "equipment": "TRM01",
+   "window_sim_s": [
+    202,
+    215
+   ],
+   "seconds": 13,
+   "label": "micro_stop",
+   "label_says": "the run scripted micro-stops for this machine; their windows are rolled from the seed",
+   "scripted": true,
+   "observable": true,
+   "unseen_seconds": 0,
+   "state_view": "stopped-not-why",
+   "state_rows": 67,
+   "state_characters": 4294,
+   "state_thinned": true,
+   "state_sha256": "49ce434e356b72db",
+   "mes_verdict": null,
+   "mes_verdict_says": "the scorecard names no scripted event in this window, which is what it does for a stop nobody scripted"
+  },
+  {
+   "id": "labelled-run/bench/TRM01/240",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Trim",
+   "equipment": "TRM01",
+   "window_sim_s": [
+    240,
+    280
+   ],
+   "seconds": 40,
+   "label": "changeover",
+   "label_says": "the run scripted `changeover` for the whole line from 240s to 280s",
+   "scripted": true,
+   "observable": true,
+   "unseen_seconds": 0,
+   "state_view": "stopped-not-why",
+   "state_rows": 81,
+   "state_characters": 5186,
+   "state_thinned": true,
+   "state_sha256": "3c8fe42b4b088351",
+   "mes_verdict": {
+    "event": "changeover",
+    "equipment": null,
+    "window_sim_s": [
+     240,
+     280
+    ],
+    "scripted_seconds": 40.0,
+    "misclassified_as_downtime": false,
+    "kind": "planned_stops"
+   },
+   "mes_verdict_says": "the scorecard's planned_stops[0] covers this window"
+  },
+  {
+   "id": "labelled-run/bench/TRM01/280",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Trim",
+   "equipment": "TRM01",
+   "window_sim_s": [
+    280,
+    340
+   ],
+   "seconds": 60,
+   "label": "none",
+   "label_says": "the machine ran through this window; it is here as a control, so the set can show a reason being invented",
+   "scripted": false,
+   "observable": true,
+   "unseen_seconds": 5,
+   "state_view": "stopped-not-why",
+   "state_rows": 91,
+   "state_characters": 4322,
+   "state_thinned": true,
+   "state_sha256": "ba118e4d77db6035",
+   "mes_verdict": null,
+   "mes_verdict_says": "the scorecard names no scripted event in this window, which is what it does for a stop nobody scripted"
+  },
+  {
+   "id": "labelled-run/bench/TRM01/340",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Trim",
+   "equipment": "TRM01",
+   "window_sim_s": [
+    340,
+    348
+   ],
+   "seconds": 8,
+   "label": "micro_stop",
+   "label_says": "the run scripted micro-stops for this machine; their windows are rolled from the seed",
+   "scripted": true,
+   "observable": false,
+   "unseen_seconds": 8,
+   "state_view": "stopped-not-why",
+   "state_rows": 120,
+   "state_characters": 4035,
+   "state_thinned": false,
+   "state_sha256": "b2c2448e5d9ece02",
+   "mes_verdict": null,
+   "mes_verdict_says": "the scorecard names no scripted event in this window, which is what it does for a stop nobody scripted"
+  },
+  {
+   "id": "labelled-run/bench/WLD01/100",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Weld",
+   "equipment": "WLD01",
+   "window_sim_s": [
+    100,
+    160
+   ],
+   "seconds": 60,
+   "label": "breakdown",
+   "label_says": "the run scripted `down` for Weld from 100s to 160s",
+   "scripted": true,
+   "observable": true,
+   "unseen_seconds": 0,
+   "state_view": "stopped-not-why",
+   "state_rows": 91,
+   "state_characters": 5346,
+   "state_thinned": true,
+   "state_sha256": "5d77fe2ccc769f8a",
+   "state": "A window from one hour of the bench plant, recorded by the `bench-line` experiment of this MES's simulator.\nThe machine is WLD01 (Weld), number 2 of 4 on its line, counted from the start of the line.\nThe window is line seconds 40 to 220; one row per line second.\nWLD01 was not running from 100s to 160s (60 seconds).\n`Running` is 1 while the machine was making something and 0 while it was not. This machine layer does not publish a reason; the other tags are as the machine sent them.\nThe rows below are thinned to about 120: every nth second, with the first and the last kept.\n1 gap(s) in total where the MES had no connection and therefore no state at all.\n\nWLD01 - the machine this window is about\nTSec,Running,GoodCount,ScrapCount,TotalCount,AlarmWord,CycleTimeMs,RunMinutes,ReadyBit,WeldCurrent\n40,1,39,0,39,0,1040,0.68,1,94.99\n42,1,41,0,41,0,1013,0.72,1,94.2\n44,1,43,0,43,0,1055,0.75,1,96.87\n46,1,45,0,45,0,1049,0.78,1,94.64\n48,1,47,0,47,0,1028,0.82,1,96.76\n50,1,49,0,49,0,1066,0.85,1,95.85\n52,1,51,0,51,0,1033,0.88,1,95.76\n54,1,53,0,53,0,1033,0.92,1,96.12\n56,1,55,0,55,0,1031,0.95,1,93.04\n58,1,57,0,57,0,1038,0.98,1,95.06\n60,1,58,0,58,0,1046,1.02,1,93.08\n62,1,60,0,60,0,1042,1.05,1,94.55\n64,1,62,0,62,0,1035,1.08,1,95.39\n66,1,64,0,64,0,1030,1.12,1,96.42\n68,1,66,0,66,0,1031,1.15,1,98.09\n70,1,68,0,68,0,1043,1.18,1,95.03\n72,1,70,0,70,0,1028,1.22,1,96.31\n74,1,72,0,72,0,1016,1.25,1,95.53\n76,1,74,0,74,0,1036,1.28,1,98.23\n78,1,76,0,76,0,1042,1.32,1,95.25\n80,1,78,0,78,0,1059,1.35,1,95.04\n82,1,80,0,80,0,1018,1.38,1,95.31\n84,1,82,0,82,0,1007,1.42,1,94.69\n86,1,84,0,84,0,1037,1.45,1,95.93\n88,1,86,0,86,0,1054,1.48,1,93.37\n90,1,87,0,87,0,1035,1.52,1,95.11\n92,1,89,0,89,0,1052,1.55,1,93.73\n94,1,91,0,91,0,1039,1.58,1,94.85\n96,1,93,0,93,0,1017,1.62,1,95.44\n98,1,95,0,95,0,1006,1.65,1,94.04\n100,0,96,0,96,1,0,1.67,0,96.84\n102,0,96,0,96,1,0,1.67,0,95.55\n104,0,96,0,96,1,0,1.67,0,95.84\n106,0,96,0,96,1,0,1.67,0,95.1\n108,0,96,0,96,1,0,1.67,0,94.53\n110,0,96,0,96,1,0,1.67,0,95.16\n112,0,96,0,96,1,0,1.67,0,93.9\n114,0,96,0,96,1,0,1.67,0,95.74\n116,0,96,0,96,1,0,1.67,0,96.13\n118,0,96,0,96,1,0,1.67,0,95.68\n120,0,96,0,96,1,0,1.67,0,96.48\n122,0,96,0,96,1,0,1.67,0,93.79\n124,0,96,0,96,1,0,1.67,0,95.32\n126,0,96,0,96,1,0,1.67,0,93.75\n128,0,96,0,96,1,0,1.67,0,95.0\n130,0,96,0,96,1,0,1.67,0,93.53\n132,0,96,0,96,1,0,1.67,0,95.71\n134,0,96,0,96,1,0,1.67,0,93.19\n136,0,96,0,96,1,0,1.67,0,95.06\n138,0,96,0,96,1,0,1.67,0,93.63\n140,0,96,0,96,1,0,1.67,0,93.96\n142,0,96,0,96,1,0,1.67,0,93.88\n144,0,96,0,96,1,0,1.67,0,95.68\n146,0,96,0,96,1,0,1.67,0,94.84\n148,0,96,0,96,1,0,1.67,0,95.04\n150,0,96,0,96,1,0,1.67,0,95.31\n152,0,96,0,96,1,0,1.67,0,95.23\n154,0,96,0,96,1,0,1.67,0,95.23\n156,0,96,0,96,1,0,1.67,0,95.44\n158,0,96,0,96,1,0,1.67,0,94.92\n160,1,97,0,97,0,1016,1.68,1,96.37\n162,1,99,0,99,0,1072,1.72,1,92.95\n164,1,101,0,101,0,1052,1.75,1,94.76\n166,1,103,0,103,0,1021,1.78,1,93.41\n168,1,105,0,105,0,1044,1.82,1,93.05\n170,1,107,0,107,0,1027,1.85,1,94.69\n172,1,109,0,109,0,1032,1.88,1,94.95\n174,1,111,0,111,0,1026,1.92,1,97.47\n176,1,113,0,113,0,1050,1.95,1,94.87\n178,1,115,0,115,0,1019,1.98,1,94.26\n180,1,116,0,116,0,1020,2.02,1,93.64\n182,1,118,0,118,0,1037,2.05,1,96.63\n184,1,120,0,120,0,1022,2.08,1,94.4\n186,1,122,0,122,0,1035,2.12,1,96.91\n188,1,124,0,124,0,1046,2.15,1,96.97\n190,1,126,0,126,0,1066,2.18,1,97.95\n192,1,128,0,128,0,1030,2.22,1,95.27\n194,1,130,0,130,0,1026,2.25,1,92.36\n196,1,132,0,132,0,1018,2.28,1,94.92\n198,1,134,0,134,0,1036,2.32,1,95.68\n200,1,136,0,136,0,1046,2.35,1,93.37\n202,1,138,0,138,0,997,2.38,1,94.59\n204,1,140,0,140,0,1055,2.42,1,92.93\n206,1,142,0,142,0,1014,2.45,1,91.89\n208,1,144,0,144,0,1022,2.48,1,93.5\n210,1,145,0,145,0,1032,2.52,1,94.88\n212,1,147,0,147,0,1022,2.55,1,95.2\n214,0,147,0,147,0,0,2.55,1,94.27\n216,1,149,0,149,0,1035,2.58,1,91.15\n218,1,151,0,151,0,1031,2.62,1,94.44\n219,1,152,0,152,0,1028,2.63,1,93.39\n\nPRS01 - the machine before it on the line\nTSec,Running,GoodCount,ScrapCount\n40,1,40,1\n43,1,43,1\n46,1,45,2\n49,1,48,2\n52,1,51,2\n55,1,54,2\n58,1,57,2\n61,1,60,2\n64,1,63,2\n67,1,66,2\n70,1,69,2\n73,1,72,2\n76,1,75,2\n79,1,78,2\n82,1,81,2\n85,1,84,2\n88,1,87,2\n91,1,90,2\n94,1,93,2\n97,1,96,2\n100,1,99,2\n103,1,102,2\n106,0,102,2\n109,0,102,2\n112,0,102,2\n115,0,102,2\n118,0,102,2\n121,0,102,2\n124,0,102,2\n127,0,102,2\n130,0,102,2\n133,0,102,2\n136,0,102,2\n139,0,102,2\n142,0,102,2\n145,0,102,2\n148,0,102,2\n151,0,102,2\n154,0,102,2\n157,0,102,2\n160,1,103,2\n163,1,106,2\n166,1,109,2\n169,1,112,2\n172,1,115,2\n175,1,118,2\n178,1,121,2\n181,1,123,2\n184,1,126,2\n187,1,129,2\n190,1,132,2\n193,1,135,2\n196,1,138,2\n199,1,141,2\n202,1,2,0\n205,1,5,0\n208,1,8,0\n211,1,10,0\n214,0,11,0\n217,1,13,1\n219,1,15,1\n\nTRM01 - the machine after it on the line\nTSec,Running,GoodCount,ScrapCount\n40,1,38,0\n43,1,41,0\n46,1,44,0\n49,1,47,0\n52,1,50,0\n55,1,52,1\n58,1,55,1\n61,1,57,1\n64,1,60,1\n67,1,63,1\n70,1,66,1\n73,1,69,1\n76,1,72,1\n79,1,74,1\n82,1,77,1\n85,1,80,1\n88,1,83,1\n91,1,86,1\n94,1,89,1\n97,1,92,1\n100,1,94,1\n103,1,97,1\n106,1,100,1\n109,0,101,1\n112,0,101,1\n115,0,101,1\n118,0,101,1\n121,0,101,1\n124,0,101,1\n127,0,101,1\n130,0,101,1\n133,0,101,1\n136,0,101,1\n139,0,101,1\n142,0,101,1\n145,0,101,1\n148,0,101,1\n151,0,101,1\n154,0,101,1\n157,0,101,1\n160,0,101,1\n163,1,104,1\n166,1,107,1\n169,1,110,1\n172,1,112,1\n175,1,115,1\n178,1,118,1\n181,1,121,1\n184,1,124,1\n187,1,127,1\n190,1,130,1\n193,1,132,1\n196,1,135,1\n199,1,138,1\n202,0,140,1\n205,0,140,1\n208,0,140,1\n211,0,140,1\n214,0,140,1\n217,1,143,1\n219,1,145,1\n",
+   "mes_verdict": {
+    "event": "down",
+    "equipment": "WLD01",
+    "window_sim_s": [
+     100,
+     160
+    ],
+    "scripted_seconds": 60.0,
+    "observed": true,
+    "resolvable_at_this_speed": true,
+    "kind": "faults"
+   },
+   "mes_verdict_says": "the scorecard's faults[0] covers this window"
+  },
+  {
+   "id": "labelled-run/bench/WLD01/169",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Weld",
+   "equipment": "WLD01",
+   "window_sim_s": [
+    169,
+    229
+   ],
+   "seconds": 60,
+   "label": "none",
+   "label_says": "the machine ran through this window; it is here as a control, so the set can show a reason being invented",
+   "scripted": false,
+   "observable": true,
+   "unseen_seconds": 0,
+   "state_view": "stopped-not-why",
+   "state_rows": 91,
+   "state_characters": 5431,
+   "state_thinned": true,
+   "state_sha256": "1f0a4887969609c2",
+   "mes_verdict": null,
+   "mes_verdict_says": "the scorecard names no scripted event in this window, which is what it does for a stop nobody scripted"
+  },
+  {
+   "id": "labelled-run/bench/WLD01/240",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Weld",
+   "equipment": "WLD01",
+   "window_sim_s": [
+    240,
+    280
+   ],
+   "seconds": 40,
+   "label": "changeover",
+   "label_says": "the run scripted `changeover` for the whole line from 240s to 280s",
+   "scripted": true,
+   "observable": true,
+   "unseen_seconds": 0,
+   "state_view": "stopped-not-why",
+   "state_rows": 81,
+   "state_characters": 5171,
+   "state_thinned": true,
+   "state_sha256": "59ffc60e1d343efb",
+   "mes_verdict": {
+    "event": "changeover",
+    "equipment": null,
+    "window_sim_s": [
+     240,
+     280
+    ],
+    "scripted_seconds": 40.0,
+    "misclassified_as_downtime": false,
+    "kind": "planned_stops"
+   },
+   "mes_verdict_says": "the scorecard's planned_stops[0] covers this window"
+  },
+  {
+   "id": "labelled-run/bench/WLD01/340",
+   "results": "labelled-run",
+   "experiment": "bench-line",
+   "plant": "bench",
+   "station": "Weld",
+   "equipment": "WLD01",
+   "window_sim_s": [
+    340,
+    348
+   ],
+   "seconds": 8,
+   "label": "blocked",
+   "label_says": "nobody scripted this one: the line's own buffers produced it",
+   "scripted": false,
+   "observable": false,
+   "unseen_seconds": 8,
+   "state_view": "stopped-not-why",
+   "state_rows": 120,
+   "state_characters": 4010,
+   "state_thinned": false,
+   "state_sha256": "973e315f47c504b4",
+   "mes_verdict": null,
+   "mes_verdict_says": "the scorecard names no scripted event in this window, which is what it does for a stop nobody scripted"
+  }
+ ]
+}
