@@ -22,6 +22,12 @@ from fsmes.config import Settings, get_settings
 from fsmes.fleet.console import PORT as CONSOLE_PORT
 from fsmes.logging import setup_logging
 
+# The labelled set's own defaults, from the module that states them rather
+# than typed a second time here: a Typer default is read at import time, and
+# two spellings of one number is how the console ended up inside the
+# simulator's port range.
+from fsmes.sim import labelled
+
 app = typer.Typer(
     name="fsmes",
     help="FactorySemantics MES — modular, agent-native manufacturing execution.",
@@ -2774,7 +2780,7 @@ def lab_review(
 
 jev_app = typer.Typer(
     help="The judgment model used in the build loop: which versions are served, "
-         "and which one to pin.",
+         "which one to pin, and how well it does on this project's own runs.",
 )
 app.add_typer(jev_app, name="jev")
 
@@ -2853,6 +2859,216 @@ def jev_models(
                    f"answers either side of it are answers from different versions. "
                    f"Set MES_JEV_MODEL={resolved['served']} deliberately, and say so where "
                    f"the results are read.")
+
+
+@jev_app.command("labelled-set")
+def jev_labelled_set(
+    results: list[Path] = typer.Option(
+        ..., "--results", "-r", exists=True, file_okay=False,
+        help="A lab results directory to read. Repeat for several."),
+    out: Path = typer.Option(..., "--out", "-o",
+                             help="Where to write the set, as JSON."),
+    window_seconds: int = typer.Option(
+        labelled.DEFAULT_WINDOW_SECONDS, "--window-seconds",
+        help="How much line either side of the stop goes into the window."),
+    minimum_seconds: int = typer.Option(
+        labelled.DEFAULT_MINIMUM_SECONDS, "--minimum-seconds",
+        help="Stops shorter than this are the line's buffers breathing, not a "
+             "question anybody would ask. Below five seconds nothing in the "
+             "truth can be named."),
+    maximum_rows: int = typer.Option(
+        labelled.DEFAULT_MAXIMUM_ROWS, "--maximum-rows",
+        help="Above this many rows the window is thinned, keeping the first "
+             "and the last, and says that it was."),
+    controls: int = typer.Option(
+        labelled.DEFAULT_CONTROLS_PER_MACHINE, "--controls",
+        help="Windows per machine in which it never stopped, so the set can "
+             "show a reason being invented. 0 for none."),
+    state_view: str = typer.Option(
+        labelled.STATE_VIEWS[0], "--state-view",
+        help="`stopped-not-why` replaces the machine's state word with a plain "
+             "running bit, which is what most machine layers publish. `full` "
+             "keeps the state word, which names the reason outright."),
+) -> None:
+    """Turn recorded runs into a labelled set of stops. Asks nothing.
+
+    The simulated plants script their own breakdowns, changeovers and
+    micro-stops, so the true reason for every stop is already written down.
+    This reads the scripted hour beside the tag history and emits one record
+    per stop: the window, the machine, the reason it actually had, the state
+    the MES could see around it, and what the run's own scorecard said.
+
+    No key, no network and no plant: it reads files somebody else recorded.
+    """
+    import json
+
+    built = labelled.build_many(
+        list(results), window_seconds=window_seconds,
+        minimum_seconds=minimum_seconds, maximum_rows=maximum_rows,
+        controls=controls, state_view=state_view)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(built, indent=1) + "\n", encoding="utf-8")
+
+    totals = built["totals"]
+    typer.echo(f"{out}")
+    typer.echo(f"  {totals['records']} window(s) in total from "
+               f"{built['runs_total']} run(s), view {state_view}")
+    for name, count in totals["by_label"].items():
+        typer.echo(f"    {name:<14} {count}")
+    typer.echo(f"  {totals['scripted']} named by a scripted event, "
+               f"{totals['not_scripted']} produced by the line's own buffers")
+    typer.echo(f"  {totals['observable']} the MES could see, "
+               f"{totals['unobservable']} entirely inside a disconnect")
+    sizes = totals["state_characters"]
+    typer.echo(f"  state per window: {sizes['smallest']} to {sizes['largest']} "
+               f"characters, median {sizes['median']}")
+    for run in built["runs"]:
+        for note in run["notes"]:
+            typer.echo(f"  {run['results']}: {note}")
+
+
+@jev_app.command("ask")
+def jev_ask(
+    labelled_set: Path = typer.Option(
+        ..., "--set", "-s", exists=True, dir_okay=False,
+        help="The set written by `fsmes jev labelled-set`."),
+    out: Path = typer.Option(..., "--out", "-o",
+                             help="Where to write the answers, as JSON."),
+    limit: int = typer.Option(
+        0, "--limit", help="Ask about only the first N windows. 0 for all."),
+    maximum_calls: int = typer.Option(
+        None, "--maximum-calls",
+        help="Refuse without --yes above this many calls."),
+    include_unobservable: bool = typer.Option(
+        False, "--include-unobservable",
+        help="Also ask about windows that happened entirely while the MES had "
+             "no connection. Off: there is nothing for a question to read."),
+    yes: bool = typer.Option(False, "--yes",
+                             help="Go ahead above the call cap."),
+    dry_run: bool = typer.Option(False, "--dry-run",
+                                 help="Print what it would cost and stop."),
+) -> None:
+    """Ask the judgment model why each stop happened, and store the answers.
+
+    One typed choice over the reason vocabulary, one call per window. What it
+    costs is printed before anything is asked, and above the cap it stops and
+    waits to be told to go ahead.
+
+    Needs a key (`MES_JEV_API_KEY`) and the `[jev]` extra. Without one it
+    writes a file saying it was not asked and why, which is a record, not a
+    failure.
+    """
+    import json
+
+    from fsmes.sim import calibration
+
+    built = json.loads(labelled_set.read_text(encoding="utf-8"))
+    records = built["records"]
+    total = len(records)
+    if not include_unobservable:
+        records = [r for r in records if r["observable"]]
+    if limit > 0:
+        records = records[:limit]
+
+    cost = calibration.estimate(records)
+    cap = calibration.DEFAULT_MAXIMUM_CALLS if maximum_calls is None else maximum_calls
+    typer.echo(f"{total} window(s) in the set; {len(records)} to be asked about "
+               f"({total - len(records)} left out by --limit and by being "
+               f"unobservable).")
+    typer.echo(f"  {cost['calls']} call(s), one question each, about "
+               f"{cost['state_characters']} character(s) of state in total.")
+    typer.echo(f"  Roughly {cost['estimated_input_tokens']} input token(s), about "
+               f"{cost['estimated_input_tokens_per_call']} a call. {cost['how']}")
+    if dry_run:
+        typer.echo("--dry-run: nothing was asked.")
+        return
+    if cost["calls"] > cap and not yes:
+        typer.echo(f"That is more than {cap} call(s). Pass --yes to go ahead, or "
+                   f"--limit to ask about fewer.")
+        raise typer.Exit(1)
+
+    answers = calibration.ask(records)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(answers, indent=1) + "\n", encoding="utf-8")
+    typer.echo(f"{out}")
+    typer.echo(f"  {answers['note']}")
+    usage = answers.get("usage") or {}
+    if usage:
+        typer.echo(f"  {usage.get('input_tokens')} input token(s) and "
+                   f"{usage.get('output_tokens')} output reported for "
+                   f"{usage.get('reported_for')} call(s); "
+                   f"{usage.get('not_reported_for')} call(s) reported none.")
+
+
+@jev_app.command("calibrate")
+def jev_calibrate(
+    results: list[Path] = typer.Option(
+        [], "--results", "-r", exists=True, file_okay=False,
+        help="Lab results directories, for D1's recorded answers against the "
+             "scripted truth. Repeat for several."),
+    labelled_set: Path = typer.Option(
+        None, "--set", "-s", exists=True, dir_okay=False,
+        help="The set the answers were asked of."),
+    answers: Path = typer.Option(
+        None, "--answers", "-a", exists=True, dir_okay=False,
+        help="The answers written by `fsmes jev ask`."),
+    out: Path = typer.Option(..., "--out", "-o", file_okay=False,
+                             help="Directory for the report and the figures."),
+) -> None:
+    """Draw the confusion matrix and the calibration plot, and choose nothing.
+
+    Reads answers somebody already stored; asks nothing itself. Writes a
+    self-contained Markdown page whose every number can be checked against
+    the two files it names, and one SVG per calibration plot. Empty bins are
+    printed as empty and never interpolated.
+
+    **No threshold is chosen.** Where a bin is right often enough over enough
+    samples to be worth arguing about, it is named, with its count, for a
+    person to decide in the open. Decision 0031 stands either way.
+    """
+    import json
+
+    from fsmes.sim import calibration
+
+    built = (json.loads(labelled_set.read_text(encoding="utf-8"))
+             if labelled_set else {"totals": calibration.labelled.totals_of([]),
+                                   "runs_total": 0, "records": []})
+    stored = (json.loads(answers.read_text(encoding="utf-8"))
+              if answers else {"answers": [], "answers_total": 0})
+    d1 = calibration.pair_with_truth(list(results))
+
+    samples = calibration.samples_from_p1(stored.get("answers") or [])
+    out.mkdir(parents=True, exist_ok=True)
+    figures = []
+    for name, title, drawn in (
+        ("p1-by-probability.svg",
+         "P1: probability on the chosen reason against how often it was right",
+         calibration.bins_of(samples["probability_on_the_chosen_option"])),
+        ("p1-by-confidence.svg",
+         "P1: stated confidence against how often the reason was right",
+         calibration.bins_of(samples["stated_confidence"])),
+    ):
+        (out / name).write_text(calibration.reliability_svg(drawn, title=title),
+                                encoding="utf-8")
+        figures.append(name)
+    for question, pairs in sorted(calibration.samples_from_d1(
+            d1.get("pairs") or []).items()):
+        name = f"d1-{question.replace('_', '-')}.svg"
+        (out / name).write_text(
+            calibration.reliability_svg(
+                calibration.bins_of(pairs),
+                title=f"D1: {question} against the scripted hours"),
+            encoding="utf-8")
+        figures.append(name)
+
+    page = calibration.report(set_file=built, answers=stored, d1=d1, figures=figures)
+    (out / "calibration.md").write_text(page, encoding="utf-8")
+    (out / "d1-against-truth.json").write_text(json.dumps(d1, indent=1) + "\n",
+                                               encoding="utf-8")
+    typer.echo(f"{out / 'calibration.md'}")
+    typer.echo(f"  {len(figures)} figure(s), {d1['pairs_total']} D1 condition(s) "
+               f"({d1['labelled']} labelled, {d1['unlabelled']} unlabelled)")
+    typer.echo("  No threshold was chosen. Decision 0031: a judgment is a proposal.")
 
 
 def run() -> None:
