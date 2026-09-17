@@ -804,15 +804,17 @@ benchmarks, and none of them are about manufacturing.
    computation is unpublished and whose behaviour moves with the version can
    only be calibrated against this project's own labelled data, which is what
    this item already asked for; no threshold may be taken from the vendor at
-   any confidence. D1 stores the probability with every answer for exactly
-   this purpose, so the plot has its inputs from the first run.
+   any confidence. [D1](JUDGMENT-IN-THE-BUILD-LOOP.md) stores the probability
+   with every answer for exactly this purpose, so the plot has its inputs from
+   the first run.
 3. **The model pinned, not `-latest`.** A judgment stored against
    `jev-latest` cannot be reproduced. Pin the served version, store it with
    every answer, and treat a version change as a re-validation. **Answered in
    writing to the maintainer, 2026-09-17:** a version can be pinned, and
    there is no fixed forced-retirement window. So the mechanism this item
-   needs exists — D1 pins `jev-1.12` and stores the version the API says it
-   served with each answer — and the absence of a retirement window cuts both
+   needs exists — [D1](JUDGMENT-IN-THE-BUILD-LOOP.md) pins `jev-1.12` and
+   stores the version the API says it served with each answer — and the
+   absence of a retirement window cuts both
    ways: nothing forces a re-validation on a date, and nothing promises a
    pinned version will still be served next quarter. A pinned version that
    stops answering is a case the code has to survive, not a case to be warned
