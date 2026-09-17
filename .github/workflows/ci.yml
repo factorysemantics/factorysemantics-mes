@@ -200,6 +200,39 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
+  lockfile:
+    # `uv.lock` has to still describe `pyproject.toml`.
+    #
+    # Nothing else in this file would notice if it stopped. Every job above
+    # installs with `python -m pip install -e ".[...]"`, which reads
+    # `pyproject.toml` and ignores the lock entirely - so a dependency added
+    # to `pyproject.toml` without regenerating the lock is green everywhere
+    # here and broken for everyone who installs from the lock instead
+    # (`deploy/promote.sh`, and anybody running `uv sync`).
+    #
+    # It failed silently, which is the part worth fixing. `uv sync --frozen`
+    # does not error on an extra that is missing from the lock; it installs
+    # the extras it can find and says nothing about the one it cannot. That
+    # is how `[jev]` was declared on 2026-09-17 and then absent from every
+    # `--all-extras` venv made after it, with no red check anywhere.
+    #
+    # `uv lock --check` resolves nothing and downloads nothing: it re-reads
+    # `pyproject.toml` and exits non-zero if the lock does not match it. Runs
+    # in seconds.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      # Pinned the way ruff and the PostgreSQL image are pinned: a green run
+      # has to mean the same tool passed. uv writes a lockfile format version
+      # of its own, so an unpinned uv here could go red on a lock this pin
+      # wrote, or the other way round. Moving the pin is a pull request.
+      - run: python -m pip install --upgrade pip && python -m pip install uv==0.12.7
+      - name: uv.lock matches pyproject.toml
+        run: uv lock --check
+
   audit:
     # Known-vulnerable pins. Advisory until the first public release has
     # shaken it out; then it becomes required.

@@ -57,6 +57,8 @@ That database is emptied between tests, so give it one of its own — and do not
 
 Docs are MkDocs: `pip install -e ".[docs]"` then `mkdocs serve`. `mkdocs build --strict` must pass; a broken link fails the build on purpose.
 
+If you add or change a dependency — a new package, a moved pin, a new extra — run `uv lock` and commit the changed `uv.lock` in the same pull request. CI checks it and goes red on a lock that no longer describes `pyproject.toml`. The installs above read `pyproject.toml` and not the lock, so a stale lock breaks nothing you can see locally; it breaks the people who install from the lock instead.
+
 ## Pull requests
 
 - One change per pull request, with a title a user would understand — squash-merge turns it into the changelog line.
