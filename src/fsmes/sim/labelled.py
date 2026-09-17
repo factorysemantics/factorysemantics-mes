@@ -200,7 +200,7 @@ class Stop:
 
 
 @dataclass
-class _Run:
+class Run:
     """One results directory's worth of what a set is built from."""
 
     name: str
@@ -222,11 +222,13 @@ def _tag_map(results: Path, plant: str) -> Path:
 
 
 def plants_in(results: Path) -> list[str]:
-    """Every plant a results directory recorded, by name, in file order.
+    """Every plant a results directory recorded, by name, in name order.
 
     Read from the replay directories rather than from `scores.json`, because
     a run that was killed part way through still wrote its replay and is
-    still a perfectly good source of labelled stops.
+    still a perfectly good source of labelled stops. Sorted, because a
+    directory listing is not an order and a set that changes with the file
+    system is not a set anything can be measured against twice.
     """
     replay = results / "replay"
     if not replay.is_dir():
@@ -502,14 +504,14 @@ def build(results: Path | str, *, window_seconds: int = DEFAULT_WINDOW_SECONDS,
           maximum_rows: int = DEFAULT_MAXIMUM_ROWS,
           neighbour_rows: int = DEFAULT_NEIGHBOUR_ROWS,
           controls: int = DEFAULT_CONTROLS_PER_MACHINE,
-          state_view: str = STATE_VIEWS[0]) -> tuple[list[Stop], _Run]:
+          state_view: str = STATE_VIEWS[0]) -> tuple[list[Stop], Run]:
     """One results directory, as labelled stops. Reads; runs nothing."""
     if state_view not in STATE_VIEWS:
         raise ValueError(f"unknown state view {state_view!r}; "
                          f"one of {', '.join(STATE_VIEWS)}")
     results = Path(results)
     scores = _read_json(results / "scores.json") if (results / "scores.json").is_file() else {}
-    run = _Run(name=results.name, experiment=str(scores.get("experiment") or results.name))
+    run = Run(name=results.name, experiment=str(scores.get("experiment") or results.name))
 
     stops: list[Stop] = []
     for plant in plants_in(results):

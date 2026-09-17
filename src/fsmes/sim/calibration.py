@@ -266,8 +266,8 @@ def pair_with_truth(directories: list[Path | str]) -> dict:
             continue
         scores = json.loads(scores_path.read_text(encoding="utf-8"))
         scripted = _scripted_types(results)
-        counted = 0
         for plant in scores.get("plants") or []:
+            counted = 0
             record = plant.get("jev") or {}
             if not record.get("asked"):
                 runs.append({"results": results.name, "plant": plant.get("plant"),
