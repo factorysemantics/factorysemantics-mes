@@ -792,7 +792,14 @@ benchmarks, and none of them are about manufacturing.
    tests, which means for P1 the true reason of every stop is already known.
    That is an evaluation set most people integrating this model will not have.
    Build the labelled set from the scripted hours first, and publish the
-   confusion matrix in this repository.
+   confusion matrix in this repository. **Done, 2026-09-17.** The set is
+   built and the matrix is published on
+   [the calibration page](JEV-CALIBRATION.md#numbers): 305 windows from six
+   recorded runs, asked of `jev-1.13.0`, **right on 137 of 305 (0.449)**
+   where the state word naming the reason is withheld and **281 of 305
+   (0.921)** where it is left in. The reports are checked in beside the page.
+   The item is met; what it produced does not support a threshold, and
+   precondition 2 says why.
 2. **A calibration plot, not a threshold.** TypeSafe's documentation says to
    plot confidence against accuracy on your own data and pick thresholds from
    it. Until that plot exists for a given question, that question has no
@@ -806,7 +813,14 @@ benchmarks, and none of them are about manufacturing.
    this item already asked for; no threshold may be taken from the vendor at
    any confidence. [D1](JUDGMENT-IN-THE-BUILD-LOOP.md) stores the probability
    with every answer for exactly this purpose, so the plot has its inputs from
-   the first run.
+   the first run. **The plot exists, 2026-09-17:**
+   [stated confidence against measured accuracy](JEV-CALIBRATION.md#calibration-stated-confidence-against-measured-accuracy),
+   ten bins, counts printed, empty bins left empty. Its answer is a refusal:
+   expected calibration error 0.196 by probability and 0.159 by stated
+   confidence on the default view, and the tool's own sentence is that no bin
+   has ten or more samples at or above it and is right 90% of the time
+   throughout, so no threshold is defensible anywhere on that scale. This
+   item is met and it is met with a no.
 3. **The model pinned, not `-latest`.** A judgment stored against
    `jev-latest` cannot be reproduced. Pin the served version, store it with
    every answer, and treat a version change as a re-validation. **Answered in

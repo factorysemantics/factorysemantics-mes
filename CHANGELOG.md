@@ -12,6 +12,27 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **Step 2's numbers, published as they came out.** The labelled set was
+  asked of the judgment model on 2026-09-17 — six recorded runs, 311 windows,
+  305 asked and 305 answered, `jev-1.13.0` asked for and served — and the
+  result is on `docs/ai/JEV-CALIBRATION.md` with both reports checked in
+  beside it under `docs/ai/calibration/2026-09-17/`. **Right on 137 of 305
+  (0.449)** where the machine's state word, which names the reason, is
+  withheld, and **281 of 305 (0.921)** where it is left in; the gap between
+  the two is the leak, measured. On the default view `changeover` was 0 of 15
+  and every one of them was called a breakdown, `blocked` and `micro_stop`
+  are confused with each other and with `starved`, and proposing `blocked`
+  every time — no model, no state — would have been right 0.462 of the time.
+  Expected calibration error 0.196 by probability and 0.159 by stated
+  confidence, and the tool's own sentence is that no threshold is defensible
+  anywhere on that scale. D1's two decidable conditions do not separate truth
+  from not on 14 labelled pairs, and the highest
+  `component_stopped_reporting` of the seven run records is on a run where
+  nothing was scripted to go silent. **No threshold, no gate and no
+  automatic label follows from any of it**; decisions 0031 and 0032 are
+  unchanged and still *proposed*. Preconditions 1 and 2 in `docs/ai/JEV.md`
+  now point at the evidence: both are met, and the second is met with a no.
+
 - **A labelled set and the two figures a threshold would need.** The
   simulated plants script their own breakdowns, changeovers, counter resets
   and micro-stops, so the true reason for every stop in a recorded run is
@@ -33,8 +54,8 @@ goes under Honesty with a migration line, so plant people can find it.
   printed in its own evidence measures nothing; `--state-view full` keeps
   it, so the difference is itself measurable. Seconds the MES had no
   connection for are cut out of the window and said to be missing rather
-  than filled in (decision 0030). `docs/ai/JEV-CALIBRATION.md` is the page;
-  its *Numbers* section is empty because no pass has been recorded yet.
+  than filled in (decision 0030). `docs/ai/JEV-CALIBRATION.md` is the page,
+  and its *Numbers* section now carries the first pass (below).
   **With no key — the normal case — nothing is asked and the file says so.**
   No test opens a network connection.
 
@@ -60,6 +81,22 @@ goes under Honesty with a migration line, so plant people can find it.
   build-loop command: nothing in a plant runs it, and shadow mode refuses it.
 
 ### Fixed
+
+- **`fsmes jev ask` no longer understates what a pass will cost.** The
+  estimate printed before anything is asked used 3.8 characters to a token,
+  measured from round 5's run-log usage, and the first real pass showed it
+  wrong by about four: 454,339 input tokens printed, 1,725,959 billed. A run
+  log is prose; a window of tag history is digits, commas and short column
+  names. The estimate is now **measured** from the answers of an earlier pass
+  of the same state view where there are any — the `--out` file if it exists,
+  or an answers file named with the new `--measure-from` — using the
+  characters of state and the input tokens each stored call carries, so it
+  comes in under the bill only if the next pass is dearer per character than
+  the last one was. Where there is nothing of that view to measure it uses a
+  stated one character to a token and prints, in as many words, that the
+  figure is not a measurement. A call the service billed no usage for is left
+  out of the rate rather than counted as nought tokens. Both passes of
+  2026-09-17 are now estimated to within their own bill.
 
 - **No failure of the judgment model can cost a run its scoring.** The first
   real call to the service, on 2026-09-17, raised `AttributeError: module
