@@ -276,6 +276,36 @@ class Settings(BaseSettings):
     # tag map. Empty means the single opc_endpoint above.
     opc_endpoints: str = ""
 
+    # --- The judgment model (fsmes.integrations.jev) ----------------------
+    # A hosted model that answers fixed, typed questions about state it is
+    # given and writes no text. Used in the development build loop only: the
+    # run-log triage asks a battery of questions about one simulated run's
+    # log, beside the local model's open-ended pass, and both are recorded.
+    # Nothing in the product asks it anything, and a judgment is a proposal -
+    # it may not be an input to any number the scoring harness grades.
+    #
+    # Off unless a key is set, and refused outright in shadow mode: the
+    # register entry is `llm.jev`. The key is read from the environment or
+    # the settings file the same way MES_ERPNEXT_API_SECRET is, never from
+    # this repository, and it is never printed - `fsmes info` and every
+    # status line say only whether one is set.
+    jev_api_key: str = ""
+    # Pinned, never `-latest`: a judgment stored against a moving version
+    # cannot be reproduced, and the version actually served is stored with
+    # every answer so a change shows up as a change rather than as noise.
+    # `jev-1.12` is the version the survey names as served and pinnable; a
+    # later pin is a setting change and a re-validation, not a default.
+    jev_model: str = "jev-1.12"
+    # Empty means the client's own endpoint. Set it to point a build that
+    # may not egress at something it may reach, which is how a refusing
+    # installation can be shown to be refusing.
+    jev_base_url: str = ""
+    # One attempt, and short. The service's median is about 100 ms; the
+    # client's own default of ten seconds with two retries is a thirty-second
+    # worst case, and a nightly pass that hangs for half a minute has cost
+    # more than the answer is worth. A timeout is recorded as "not asked".
+    jev_timeout_seconds: float = 5.0
+
     # --- Modules ----------------------------------------------------------
     # Which modules this plant serves. Read left to right, comma-separated:
     # `all` is every module, `-<name>` switches one off, `<name>` switches one

@@ -674,11 +674,18 @@ def scored_run(
         if triage_log:
             from fsmes.sim import triage as triage_mod
 
-            card["triage"] = triage_mod.triage(card, triage_mod.read_log(workdir))
+            log_tail = triage_mod.read_log(workdir)
+            card["triage"] = triage_mod.triage(card, log_tail)
             found = card["triage"].get("findings", [])
             if found:
                 echo(f"  triage: {len(found)} finding(s), worst "
                      f"{card['triage'].get('worst')}")
+            # A second opinion on the same log, recorded beside the first and
+            # never in its place: nothing above or below reads it. Normally
+            # there is no key and it records that it was not asked.
+            card["jev"] = triage_mod.judge(card, log_tail)
+            if card["jev"].get("asked"):
+                echo(f"  jev: {(card['jev'].get('comparison') or {}).get('line')}")
 
         return card
 
