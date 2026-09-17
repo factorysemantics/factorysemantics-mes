@@ -161,6 +161,8 @@ nav:
           - decisions/0028-which-shift-a-minute-belongs-to.md
           - decisions/0029-an-order-does-not-finish-itself.md
           - decisions/0030-a-lost-connection-is-unknown-time.md
+          - decisions/0031-a-judgment-is-a-proposal.md
+          - decisions/0032-a-hosted-judgment-and-the-shadow.md
           - Template: decisions/TEMPLATE.md
   - Agents:
       - agents/index.md

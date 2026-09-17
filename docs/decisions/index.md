@@ -39,3 +39,5 @@ Declined ideas stay, so nobody re-proposes them without new facts.
 | [0028](0028-which-shift-a-minute-belongs-to.md) | A shift is half-open, belongs to the day it started, and covers nothing it does not roster | 2026-09-14 |
 | [0029](0029-an-order-does-not-finish-itself.md) | An order does not finish itself at its quantity; the over-run it reports is the true one | 2026-09-14 |
 | [0030](0030-a-lost-connection-is-unknown-time.md) | A lost connection is a dimension of its own, and the gap it leaves is unknown time | 2026-09-14 |
+| [0031](0031-a-judgment-is-a-proposal.md) | *Proposed* — a typed judgment is a proposal: it carries its probabilities, and never touches a graded number or a gate | 2026-09-17 |
+| [0032](0032-a-hosted-judgment-and-the-shadow.md) | *Proposed* — a hosted judgment is an outbound path, classified by the state it sends | 2026-09-17 |
