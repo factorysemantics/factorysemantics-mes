@@ -84,7 +84,12 @@ def test_the_fixture_run_is_still_what_the_generator_writes(tmp_path):
     recorded = sorted(p.name for p in (RUN / "replay" / "bench").iterdir())
     assert sorted(p.name for p in tmp_path.iterdir()) == recorded
     for name in recorded:
-        assert (tmp_path / name).read_bytes() == (RUN / "replay" / "bench" / name).read_bytes(), \
+        # Line by line rather than byte for byte: Windows is a first-class
+        # target here, and on a Windows checkout both the line ending git
+        # hands back and the one `write_text` puts down can be CRLF. What
+        # this test is for is a change in the rows, not in the newlines.
+        assert (tmp_path / name).read_text(encoding="utf-8").splitlines() == \
+            (RUN / "replay" / "bench" / name).read_text(encoding="utf-8").splitlines(), \
             f"{name} is not what the generator writes any more"
 
 
