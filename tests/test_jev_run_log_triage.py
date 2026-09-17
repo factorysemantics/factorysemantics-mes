@@ -91,10 +91,16 @@ def test_with_no_key_nothing_is_asked_and_the_record_says_which(monkeypatch):
     monkeypatch.delenv("MES_JEV_API_KEY", raising=False)
     get_settings.cache_clear()
 
-    record = triage.judge(CARD, LOG, settings=Settings())
+    card = dict(CARD, triage={"findings": [], "worst": None})
+    record = triage.judge(card, LOG, settings=Settings())
 
     assert record["asked"] is False
     assert record["note"] == "not asked (no MES_JEV_API_KEY in this environment)"
+    # And the run still gets its comparison line, saying one pass ran and the
+    # other was not asked - which is a different sentence from the one a run
+    # where both agreed gets.
+    assert "not asked" in record["comparison"]["line"]
+    assert record["comparison"]["agree"] is None
     get_settings.cache_clear()
 
 

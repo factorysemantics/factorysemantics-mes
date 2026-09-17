@@ -29,7 +29,13 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from fsmes.integrations.jev import Noul, QuestionSet, Score
+from fsmes.integrations.jev import (
+    JevUnavailable,
+    Noul,
+    QuestionSet,
+    Score,
+    from_settings,
+)
 
 OLLAMA = "http://127.0.0.1:11434"
 CHAT_MODEL = "qwen3:8b"
@@ -233,21 +239,24 @@ def judge(card: dict, log: str, *, transport=None, settings=None) -> dict:
     is recorded as a sentence saying which, because "nothing here" and "not
     asked" are the two things this whole change exists to keep apart.
     """
-    from fsmes.integrations.jev import JevUnavailable, from_settings
+    def not_asked(why: str) -> dict:
+        record = {"asked": False, "note": f"not asked ({why})"}
+        record["comparison"] = compare(card.get("triage") or {}, record)
+        return record
 
     if not log.strip():
-        return {"asked": False, "note": "not asked (no log kept for this run)"}
+        return not_asked("no log kept for this run")
 
     client, why = from_settings(settings, transport=transport)
     if client is None:
-        return {"asked": False, "note": f"not asked ({why})"}
+        return not_asked(why)
 
     try:
         answers = client.ask(JEV_QUESTIONS, log)
     except (JevUnavailable, RuntimeError, ValueError, OSError) as exc:
         # A judgment nobody could get is not a finding, and it is not a
         # crash in a nightly job either.
-        return {"asked": False, "note": f"not asked ({exc})"}
+        return not_asked(str(exc))
 
     by_name = {a.question: a for a in answers}
     score = by_name.pop(JEV_QUESTIONS.score.name, None)
