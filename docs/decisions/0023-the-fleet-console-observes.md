@@ -1,6 +1,6 @@
 # 0023 — The console manages only the plants it owns, observes every other plant, and silence is unknown
 
-- **Status:** proposed
+- **Status:** accepted (2026-09-17, as amended to what was built)
 - **Date:** 2026-09-10, revised 2026-09-13
 - **Deciders:** @kalwei
 
