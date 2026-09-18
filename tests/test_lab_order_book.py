@@ -26,13 +26,11 @@ from pathlib import Path
 
 import httpx
 import pytest
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
-from sqlalchemy.pool import StaticPool
 
 import fsmes.domain  # noqa: F401  (register all tables)
 from fsmes.api.app import create_app
-from fsmes.api.deps import get_db, get_read_db
 from fsmes.config import get_settings
 from fsmes.db import Base
 from fsmes.domain import AuditLog, OrderStatus, ProductionSource, WorkOrder
@@ -56,10 +54,38 @@ SUPERVISOR_PASSWORD = "supervisor"
 
 
 @pytest.fixture()
-def plant():
-    """One bottling plant, seeded from the shipped pack, in memory."""
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False},
-                           poolclass=StaticPool)
+def plant(tmp_path, monkeypatch):
+    """One bottling plant, seeded from the shipped pack, in a file of its own.
+
+    A **file**, and this plant's own `MES_DATABASE_URL`, rather than the
+    suite's usual in-memory database behind a dependency override. The floor
+    is an HTTP client: its requests are solved in a worker thread and some of
+    what they touch opens its own unit of work, so a test that overrode only
+    the dependencies would be half on this plant and half on whatever database
+    the process last had - which is exactly the kind of state that made a run
+    pass here and fail on a runner. Everything this test builds lives in
+    `tmp_path` and the environment is put back afterwards.
+    """
+    from fsmes.config import get_settings as settings_cache
+    from fsmes.db import get_engine, get_sessionmaker
+
+    url = f"sqlite:///{(tmp_path / 'plant.db').as_posix()}"
+    monkeypatch.setenv("MES_DATABASE_URL", url)
+    monkeypatch.setenv("MES_PLANT_TIMEZONE", "UTC")
+    # Nothing here tests retention, and the hourly pruner opens its own
+    # session in a worker thread against this file.
+    monkeypatch.setenv("MES_TAG_RETENTION_DAYS", "0")
+    # `fsmes pack apply` updates `os.environ` on purpose, so any test in this
+    # suite that applies a pack leaves that plant's modules and vocabulary in
+    # the process for whatever runs next. This plant states its own rather
+    # than inherit half of somebody else's.
+    for leaked in ("MES_MODULES", "MES_WORDS", "MES_PLANT_NAME", "MES_PLANT_LABEL",
+                   "MES_REPLAY_DIR", "MES_SIM_SPEED", "MES_TAG_MAP_FILE"):
+        monkeypatch.delenv(leaked, raising=False)
+    for cache in (settings_cache, get_engine, get_sessionmaker):
+        cache.cache_clear()
+
+    engine = get_engine()
     Base.metadata.create_all(engine)
     session = Session(engine, expire_on_commit=False)
     cycles = {m.equipment: m.cycle_seconds for m in load_tag_map(BOTTLING / "tag_map.json")}
@@ -68,36 +94,41 @@ def plant():
     auth.create_user(session, code=SUPERVISOR, name="Simulated shift supervisor",
                      password=SUPERVISOR_PASSWORD, role="supervisor")
     session.commit()
+
     yield session
+
     session.close()
     engine.dispose()
-
-
-def a_floor(session: Session) -> tuple[Floor, httpx.AsyncClient]:
-    """The simulated supervisor, signed in to that plant over ASGI."""
-    app = create_app()
-
-    def _same_session():
-        yield session
-        session.flush()
-
-    app.dependency_overrides[get_db] = _same_session
-    app.dependency_overrides[get_read_db] = _same_session
-    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
-                              base_url="http://plant")
-    return Floor(get_settings(), client, random.Random(7)), client
+    for cache in (settings_cache, get_engine, get_sessionmaker):
+        cache.cache_clear()
 
 
 def as_the_supervisor(session: Session, work) -> None:
-    """Sign the supervisor in and run one coroutine of theirs against the plant."""
+    """Sign the supervisor in and run one coroutine of theirs against the plant.
+
+    The plant answers over an in-process ASGI transport: the real application,
+    the real routers, the real sign-in, and nothing listening on a port for the
+    test to leave behind.
+    """
 
     async def _go():
-        floor, client = a_floor(session)
-        async with client:
-            await floor.sign_in(SUPERVISOR, SUPERVISOR_PASSWORD)
-            await work(floor)
+        floor = Floor(get_settings(), client, random.Random(7))
+        await floor.sign_in(SUPERVISOR, SUPERVISOR_PASSWORD)
+        await work(floor)
 
-    asyncio.run(_go())
+    session.commit()
+    app = create_app()
+    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
+                               base_url="http://plant")
+
+    async def _run():
+        async with client:
+            await _go()
+
+    asyncio.run(_run())
+    # The plant moved underneath this session; read it again rather than from
+    # the identity map.
+    session.expire_all()
 
 
 async def open_orders(floor: Floor) -> list[dict]:
