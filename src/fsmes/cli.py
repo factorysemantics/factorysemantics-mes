@@ -5,6 +5,7 @@ MES-TWIN. They keep their names; only the executable changed.
 """
 
 import asyncio
+import contextlib
 import os
 import textwrap
 from datetime import datetime
@@ -352,6 +353,24 @@ def run_opc_agent() -> None:
     settings = get_settings()
     setup_logging(settings.log_level, settings.log_dir, "opc-agent")
     asyncio.run(agent.run_all(settings))
+
+
+@app.command("run-log-sink", hidden=True)
+def run_log_sink(path: str, max_bytes: int = 0) -> None:
+    """Write a plant's console log, with a ceiling on it.
+
+    Started by `fsmes fleet start`, which gives the plant's processes this
+    one's stdin to write to. Hidden because nobody runs it by hand: it is
+    the answer to "four processes share one log file, so who rolls it".
+    """
+    import sys
+
+    from fsmes.fleet import logsink
+
+    # A sink that dies must never take the plant with it: a broken pipe or
+    # a full disk ends this process and the plant runs on, logging nowhere.
+    with contextlib.suppress(OSError):
+        logsink.pump(sys.stdin.buffer, Path(path), max_bytes or logsink.MAX_BYTES)
 
 
 @app.command()

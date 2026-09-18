@@ -4,6 +4,7 @@ harness hooks that let a registry carry a scenario's own post-boot script.
 """
 
 import importlib.util
+import io
 import json
 from pathlib import Path
 
@@ -102,6 +103,9 @@ def test_a_registry_post_boot_script_starts_beside_the_plant(tmp_path, monkeypat
 
         def __init__(self, cmd, **kwargs):
             launched.append(list(cmd))
+            # The log sink is started first; everything else writes down
+            # its pipe. `fsmes.fleet.logsink` says why.
+            self.stdin = io.BytesIO()
 
     monkeypatch.setattr(plants.subprocess, "Popen", FakeProc)
     monkeypatch.setattr(plants.time, "sleep", lambda *_: None)
@@ -118,12 +122,12 @@ def test_a_registry_post_boot_script_starts_beside_the_plant(tmp_path, monkeypat
     scripts = [cmd[1] for cmd in launched if cmd[0] != "fsmes"]
     assert scripts == ["labs/x/seed.py"]
     assert [cmd[1] for cmd in launched if cmd[0] == "fsmes"] == [
-        "run-opc-sim", "run-opc-agent", "run-api", "run-operations"]
+        "run-log-sink", "run-opc-sim", "run-opc-agent", "run-api", "run-operations"]
 
     launched.clear()
     del cfg["post_boot"]
     plants.start("x", cfg, tmp_path, echo=lambda *_: None)
-    assert len(launched) == 4, "a plant without one is unchanged"
+    assert len(launched) == 5, "a plant without one is unchanged: the four, behind the log sink"
     plants.environment.cache_clear()
 
 
