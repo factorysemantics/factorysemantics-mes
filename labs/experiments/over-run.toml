@@ -48,6 +48,16 @@ speed    = 20
 # the answer to.
 measure = ["booking"]
 
+# Nobody stops the line, and that now has to be said. Since 2026-09-18 the
+# simulated floor has a shift supervisor who finishes an order once the line
+# has made its quantity and releases the next one in the pack's book - which
+# is what a plant does, and which would end this experiment forty minutes in
+# with a tidy completion and no over-run to look at. This plan is the one
+# place that behaviour is wrong, so this plan turns it off, in writing. The
+# order the line runs past is the pack's `WO-ACME-4711`, for 4,000.
+[floor]
+finish_orders = false
+
 # An empty script, deliberately. The line's own hour has a changeover in it,
 # which would move production onto a second order the MES was never told about
 # and split the very number this plan exists to look at. Nothing goes wrong
@@ -58,4 +68,6 @@ events = []
 # No `[init.bottling]`: since #53 the pack carries its own master data,
 # including `WO-ACME-4711` for 4,000 units, released. That order is the whole
 # subject of this plan, and it arrives with the pack rather than from a script
-# the plan names - which is why the plan does not name one.
+# the plan names - which is why the plan does not name one. The pack now
+# carries nine more orders behind it, all planned and none released; with
+# `finish_orders = false` above, not one of them is touched during this hour.

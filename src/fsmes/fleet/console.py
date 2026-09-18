@@ -119,11 +119,12 @@ class Console:
     time beside it, which is the honest pair.
     """
 
-    def __init__(self, root: Path, *, health=None, pack=None):
+    def __init__(self, root: Path, *, health=None, pack=None, book=None):
         self.root = Path(root)
         # Injected so a test can put real plants behind it without a port.
         self._health = health or observe.health
         self._pack = pack or observe.pack
+        self._book = book or observe.book
         self.last_answered: dict[str, str] = {}
 
     def look(self) -> dict:
@@ -167,6 +168,7 @@ class Console:
         schema = pack_said.get("schema") or {}
         line = pack_said.get("line") or {}
         modules = pack_said.get("modules") or {}
+        book = self._book(plant.base) if answer.answered else None
         return {
             "name": plant.name,
             "label": plant.label or (said or {}).get("label") or "",
@@ -223,6 +225,13 @@ class Console:
             # lets the second one hide behind it (decision 0030). Empty when
             # the plant did not answer, or answered from a build that predates
             # the block - not zero, which would claim it can see everything.
+            # How many orders this plant still has to run. `None` is *it did
+            # not say* - a plant too old to carry the series, or one whose
+            # metrics did not answer - and it is never drawn as an empty book.
+            # A lab plant with one order and nothing behind it was what made
+            # this worth showing: it ran seventy times past that order and
+            # every light on this page was green.
+            "book": book,
             "watching": (said or {}).get("watching") or {},
             "last_answered": self.last_answered.get(plant.name),
         }

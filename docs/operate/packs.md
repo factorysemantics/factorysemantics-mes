@@ -93,6 +93,25 @@ Never this process's own default. Until 2026-09-14 that is exactly what a pack n
 
 Master data is seeded from `masterdata/`, one file per kind: `equipment.json`, `materials.json`, `bom.json`, `routings.json`, `quality_specs.json`, `lots.json`, `work_orders.json`, `maintenance_plans.json`, `shifts.json`. An entry whose code already exists is counted as present and **left alone, never updated** — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which `fsmes fleet list` and the console now show as *answered, but empty*.
 
+### The order book
+
+`work_orders.json` is the plant's **schedule**, not one order to give the counters somewhere to book. Each entry is a code, a material and a quantity; `priority`, `release` and `due_in_hours` are optional.
+
+```json
+[
+  {"code": "WO-ACME-4711", "material": "FG-BOTTLE", "quantity": 4000,  "release": true,  "due_in_hours": 2},
+  {"code": "WO-ACME-4712", "material": "FG-BOTTLE", "quantity": 18000, "release": false, "due_in_hours": 5}
+]
+```
+
+**`due_in_hours` is relative — hours after the pack is applied — and that is not a convenience.** A pack is seeded whenever somebody builds the plant, so an absolute date written into one is in the past the week after it was written, and every order in the book is late before the line has run a minute. `fsmes pack check` refuses anything that is not a positive number.
+
+**Release one, plan the rest.** A line runs one order at a time, and releasing the whole book puts several released orders on one routing — which leaves the MES choosing between them by priority rather than reading which one the line is running ([decision 0029](../decisions/0029-an-order-does-not-finish-itself.md) names that as still inferred).
+
+**Size it against the line.** The slowest station in the pack's own `tag_map.json` sets the rate: 3,600 ÷ its `cycle_seconds` is units an hour. The three lab packs hold more than twenty-four hours of their own line's rated output, and each says its arithmetic in its `masterdata/README.md`. A book of one order is how a lab plant came to report an order 70× over on 2026-09-18 — correctly, and uselessly.
+
+Nothing in the MES releases the next order. On a plant that simulates, `fsmes run-operations` does it as the shift supervisor would; on a real plant it is a person or the ERP.
+
 **It refuses to seed into a database that is not at head.** The migration above normally leaves nothing to say, and this is the assertion that it did. Rows written through the ORM into a half-migrated file leave a database with some of this product's tables and no Alembic stamp — which the migrator then disowns outright, because a schema it cannot identify is one it will not guess at. That happened once, on 2026-09-14, and left a plant no command could take forward.
 
 Rated cycle times are not repeated in the master data: leave `ideal_cycle_seconds` out and it is read from the pack's own tag map. OEE performance is ideal cycle × count ÷ runtime, so a rate that drifted from the line it describes produces a number that means nothing.

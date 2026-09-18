@@ -325,7 +325,10 @@ def test_applying_a_pack_seeds_the_master_data_it_carries(applied):
     said: list[str] = []
     receipt = applier.apply(directory, into=into, echo=said.append)
     assert receipt["seeded"]["equipment"] == {"made": 7, "present": 0}
-    assert receipt["seeded"]["work_orders"] == {"made": 1, "present": 0}
+    # The machining pack's order book: nine orders, one released and the rest
+    # planned behind it (2026-09-18). It was one order until then, which is
+    # what let a lab plant run seventy times past it.
+    assert receipt["seeded"]["work_orders"] == {"made": 9, "present": 0}
     assert receipt["revision"], "the schema was brought to head before anything was written"
 
 

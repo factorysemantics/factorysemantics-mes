@@ -2363,14 +2363,25 @@ def run_operations(
                                       help="Seconds between material issues (MES_OPS_ISSUE_EVERY)."),
     inspect_all: bool = typer.Option(os.environ.get("MES_OPS_INSPECT_ALL", "false").lower() == "true",
                                      help="Record every specification each pass, not one (MES_OPS_INSPECT_ALL)."),
+    finish_orders: bool = typer.Option(
+        os.environ.get("MES_OPS_FINISH_ORDERS", "true").lower() != "false",
+        help="Finish an order once the line has made its quantity, and release the next one "
+             "in the book (MES_OPS_FINISH_ORDERS). Off for a scripted over-run."),
     seed: int = typer.Option(0, help="Deterministic activity."),
 ) -> None:
     """Generate the shop-floor activity a PLC never reports.
 
-    Inspections and material issue, performed through the public API exactly
-    as an operator's browser or an agent would. Without it the quality
+    Inspections, material issue and the shift supervisor's own work - closing
+    non-conformances, finishing an order the line has made the number for,
+    releasing the next order in the book - performed through the public API
+    exactly as an operator's browser or an agent would. Without it the quality
     screens, the non-conformance flow and genealogy are empty pages on top of
-    a working database.
+    a working database, and a line runs one order for as long as the plant is
+    up.
+
+    It never invents an order. Decision 0029 is untouched: the MES still does
+    not finish an order at its quantity. What finishes one here is the
+    simulated shift supervisor, and the audit trail says so.
     """
     import asyncio as _asyncio
 
@@ -2385,6 +2396,7 @@ def run_operations(
         inspect_every, issue_every = inspect_every / speed, issue_every / speed
     _asyncio.run(run_floor(settings, inspect_every=inspect_every,
                            issue_every=issue_every, seed=seed, inspect_all=inspect_all,
+                           finish_orders=finish_orders,
                            password=settings.operator_password))
 
 

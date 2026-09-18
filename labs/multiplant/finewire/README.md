@@ -57,3 +57,18 @@ guard they hold had to learn that a plant can be a pack: `no_tenant_literals`
 reads a pack's `plant.toml` and its master data, and the module-wall tests
 gained a sibling that switches modules off from a pack rather than from an
 environment variable.
+
+## The order book
+
+Invented like everything else here, and sized the same way the other two
+packs are: the slowest station in `tag_map.json` — the wrapper at **3.6 s a
+kilogram**, so **1,000 kg an hour** — against a book that has to hold at
+least a day of it. **Five orders, 26,000 kg**, which is 26 hours. A drawing
+hall runs long orders, so this is one or two a shift rather than the
+bottling line's three or four; `WO-FW-3301` keeps its code, its 8,000 kg and
+its place at the head of the book. One is released and four are planned, due
+9 to 27 hours out.
+
+This plant has never been started and there is no line data for it, so the
+book is here to keep the pack the same shape as the other two rather than to
+be worked.

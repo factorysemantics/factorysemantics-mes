@@ -1,3 +1,7 @@
 [
-  {"code": "WO-FW-3301", "material": "FG-WIRE-15", "quantity": 8000, "priority": 20, "release": true}
+  {"code": "WO-FW-3301", "material": "FG-WIRE-15", "quantity": 8000, "priority": 20, "release": true,  "due_in_hours": 9},
+  {"code": "WO-FW-3302", "material": "FG-WIRE-15", "quantity": 4000, "priority": 20, "release": false, "due_in_hours": 13},
+  {"code": "WO-FW-3303", "material": "FG-WIRE-15", "quantity": 6000, "priority": 20, "release": false, "due_in_hours": 19},
+  {"code": "WO-FW-3304", "material": "FG-WIRE-15", "quantity": 5000, "priority": 20, "release": false, "due_in_hours": 24},
+  {"code": "WO-FW-3305", "material": "FG-WIRE-15", "quantity": 3000, "priority": 20, "release": false, "due_in_hours": 27}
 ]

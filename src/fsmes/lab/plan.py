@@ -30,6 +30,13 @@ The shape, in full:
     chat   = true
     claude = false
 
+    # The simulated shift supervisor. On by default: a plant whose order book
+    # is worked is what a plant looks like. A plan whose subject is a line
+    # running past its order turns it off, in writing, so that the over-run
+    # is scripted rather than an accident of cadence.
+    [floor]
+    finish_orders = false
+
     # How often the run looks at the plant while the hour plays, in WALL
     # seconds. It is the resolution of every latency figure, and it is also
     # requests competing with the agent for one machine.
@@ -107,6 +114,10 @@ class Plan:
     note: str = ""
     feedback_chat: bool = True
     feedback_claude: bool = False
+    #: Does the simulated shift supervisor finish an order the line has made
+    #: the number for, and release the next in the book? True everywhere but
+    #: in a plan whose subject is the over-run itself.
+    floor_finishes_orders: bool = True
     watch_every_s: float = DEFAULT_WATCH_EVERY_S
 
     @property
@@ -206,6 +217,16 @@ def read_plan(path: Path) -> Plan:
         if key in feedback and not isinstance(feedback[key], bool):
             raise PlanError(f"{path}: `[feedback] {key}` is true or false.")
 
+    floor = _table(raw, "floor", str(path))
+    for key in floor:
+        if key != "finish_orders":
+            raise PlanError(
+                f"{path}: `[floor] {key}` is not a setting. A plan chooses `finish_orders` - "
+                "whether the simulated shift supervisor finishes an order once the line has "
+                "made its quantity and releases the next one in the book.")
+    if "finish_orders" in floor and not isinstance(floor["finish_orders"], bool):
+        raise PlanError(f"{path}: `[floor] finish_orders` is true or false.")
+
     watch = _table(raw, "watch", str(path))
     for key in watch:
         if key != "every":
@@ -244,6 +265,7 @@ def read_plan(path: Path) -> Plan:
         duration_s=duration,
         seed=seed,
         overlay={str(k): dict(v) for k, v in overlay.items()},
+        floor_finishes_orders=bool(floor.get("finish_orders", True)),
         scenario=scenario,
         init=init,
         note=str(raw.get("note") or ""),

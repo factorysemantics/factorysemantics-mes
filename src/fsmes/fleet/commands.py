@@ -241,6 +241,9 @@ class Plant:
     pack_said: dict | None = None
     supervisor: str | None = None
     label: str = ""
+    #: How many orders this plant has planned, released and running. `None`
+    #: is *this plant did not say*, which is not an empty book.
+    book_said: dict | None = None
 
     @property
     def state(self) -> str:
@@ -260,15 +263,17 @@ class Plant:
         return "empty" if observe.is_empty(self.pack_said) else "answered"
 
 
-def status(name: str, *, root: Path, echo=print, ask=None) -> Plant:
+def status(name: str, *, root: Path, echo=print, ask=None, ask_book=None) -> Plant:
     """One plant: whether it is owned, whether it answered, and its drift."""
     where = data_dir(root)
+    ask_book = ask_book or observe.book
     ownership = owned.describe(name, data_dir=where, ask=ask)
     entry = ownership.entry
     base = entry.base if entry else ""
     row = Plant(name=name, owned=ownership.owned, reason=ownership.reason, base=base,
                 answered=ownership.answering, said=ownership.said,
                 pack_said=(observe.pack(base).body if ownership.answering else None),
+                book_said=(ask_book(base) if ownership.answering else None),
                 supervisor=(plants.supervisor(root, name) if entry else None),
                 label=str((ownership.said or {}).get("label", "")))
     for line in render(row):
@@ -318,6 +323,16 @@ def render(row: Plant) -> list[str]:
             lines.append("    line       0 machines - answered, but empty")
         else:
             lines.append(f"    line       {line.get('equipment')} machines")
+        book = row.book_said
+        if book is None:
+            lines.append("    book       unknown - this plant did not say what it has to run")
+        elif book.get("open", 0) == 0:
+            lines.append("    book       empty - nothing planned, released or running; what "
+                         "the line counts now is unassigned production")
+        else:
+            lines.append(f"    book       {book.get('open', 0)} orders open - "
+                         f"{book.get('planned', 0)} planned, {book.get('released', 0)} "
+                         f"released, {book.get('running', 0)} running")
         modules = pack_said.get("modules") or {}
         if modules:
             lines.append(f"    modules    {len(modules.get('on', []))} on, "

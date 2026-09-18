@@ -101,6 +101,24 @@ function watchingCell(plant) {
   return node;
 }
 
+/* How many orders this plant still has to run. Three answers and they are
+   different facts: the plant did not say, the book is empty, or here is what
+   is in it. An empty book is not a fault - it is the moment a person needs to
+   see, because from then on what the line counts is unassigned production. */
+function bookCell(plant) {
+  const b = plant.book;
+  if (!plant.answered || !b) return "unknown";
+  if (!b.open) return pill("empty", "unknown");
+  const node = document.createElement("span");
+  node.appendChild(document.createTextNode(b.open + " open"));
+  const why = document.createElement("span");
+  why.className = "why";
+  why.textContent = b.planned + " planned, " + b.released + " released, "
+    + b.running + " running";
+  node.appendChild(why);
+  return node;
+}
+
 function draw(fleet) {
   document.getElementById("totals").textContent = fleet.says;
   document.getElementById("ownership").textContent = fleet.ownership_says;
@@ -158,6 +176,7 @@ function draw(fleet) {
       ? known(plant.schema_revision) + (plant.schema_at_head === false ? " (behind head)" : "")
       : "unknown");
     cell(row, lineCell(plant));
+    cell(row, bookCell(plant));
     cell(row, watchingCell(plant));
     cell(row, modulesCell(plant));
     cell(row, known(plant.last_answered));
