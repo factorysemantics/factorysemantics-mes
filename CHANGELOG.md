@@ -1101,6 +1101,49 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Changed
 
+- **The lab packs carry an order book, and the simulated floor works it.**
+  `labs/multiplant/bottling`, `machining` and `finewire` each ship a schedule
+  rather than a single order: enough released and planned work to cover more
+  than twenty-four hours of that line's own rated output — bottling 10 orders
+  and 151,600 bottles, machining 9 and 27,600 brackets, finewire 5 and
+  26,000 kg — one order released, the rest planned, due dates in sequence.
+  Each pack's `masterdata/README.md` shows the arithmetic. `fsmes
+  run-operations` gains the shift supervisor's half of the job: when the line
+  has made the quantity, `FLOOR-SUP` finishes the order over the API and
+  releases the next one in the book, and the audit row carries their name.
+  **Decision 0029 is unchanged** — the MES still does not finish an order at
+  its quantity; what finishes one is somebody's act, and here that somebody is
+  simulated and says so. The floor no longer invents an order when it runs
+  out of work: an empty book is announced once, and what the line counts from
+  then on is unassigned production with its total, which is the true answer.
+
+  The reason: a bottling lab plant left up for six hours on 2026-09-18
+  reported `WO-ACME-4711` at **285,881 good against an order for 4,000**.
+  Nothing was wrong with the MES; the plant had one order and nobody to
+  release a second.
+
+  **A plant created before this keeps its old book.** `fsmes pack apply` never
+  rewrites an order that already exists, because a pack that rewrote history
+  would be rewriting production. Rebuild the plant — `fsmes fleet create`, or
+  `crew lab-up --fresh` — to get the new one.
+
+- **A pack's `work_orders.json` takes `due_in_hours`.** Hours after the pack
+  is applied, validated as a positive number by `fsmes pack check`. Due dates
+  in a pack have to be relative: a pack is seeded whenever somebody builds the
+  plant, so an absolute date written into one is in the past the week after it
+  was written.
+
+- **An experiment plan takes `[floor] finish_orders`.** Default true.
+  `labs/experiments/over-run.toml` sets it false, because a line running past
+  its order is the whole subject of that hour and a supervisor tidying it away
+  would end the experiment forty minutes in.
+
+- **`fsmes fleet status` and the fleet console show the order book** — how
+  many orders a plant has planned, released and running, read off `/metrics`,
+  which the fleet tooling could already ask without a credential. A plant that
+  did not say is `unknown`, never an empty book: a plant that is up with
+  nothing left to run and a plant nobody could ask are different facts.
+
 - **`GET /quality/specs` answers with the standard list envelope** —
   `{items, total, limit, offset, has_more}` — where it used to answer with a
   bare array, and returns fifty at a time unless asked for more (500 max),

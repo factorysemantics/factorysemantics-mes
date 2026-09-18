@@ -596,3 +596,47 @@ def test_every_measurement_the_plan_format_offers_has_a_function_behind_it():
     # the reader and quietly missing from the report.
     for name in MEASUREMENTS:
         assert callable(getattr(measure, name.replace("-", "_")))
+
+
+# ------------------------------------------------------- the simulated floor
+
+def test_a_plan_leaves_the_supervisor_working_the_order_book_unless_it_says_otherwise(tmp_path):
+    """On by default. A plant whose book is worked - an order finished when the
+    line has made its quantity, the next released - is what a plant looks
+    like, and a run that quietly stopped doing it would be measuring a plant
+    nobody has."""
+    from fsmes.lab.run import floor_env
+
+    _pack(tmp_path / "tiny")
+    plan = read_plan(_plan_file(tmp_path, 'packs = ["tiny"]\n'))
+    assert plan.floor_finishes_orders is True
+    assert floor_env(plan) == {"MES_OPS_FINISH_ORDERS": "true"}
+
+
+def test_a_plan_can_say_that_nobody_finishes_this_runs_order(tmp_path):
+    """`labs/experiments/over-run.toml` is the one that does: a line running
+    past its order is that hour's whole subject, and a supervisor tidying it
+    away forty minutes in would end the experiment."""
+    from fsmes.lab.run import floor_env
+
+    _pack(tmp_path / "tiny")
+    plan = read_plan(_plan_file(tmp_path, 'packs = ["tiny"]\n\n[floor]\nfinish_orders = false\n'))
+    assert plan.floor_finishes_orders is False
+    assert floor_env(plan) == {"MES_OPS_FINISH_ORDERS": "false"}
+
+
+def test_a_setting_the_floor_does_not_have_is_refused_with_the_one_it_does(tmp_path):
+    _pack(tmp_path / "tiny")
+    path = _plan_file(tmp_path, 'packs = ["tiny"]\n\n[floor]\ninspect_every = 4\n')
+    with pytest.raises(PlanError) as exc:
+        read_plan(path)
+    assert "inspect_every" in str(exc.value) and "finish_orders" in str(exc.value)
+
+
+def test_the_over_run_experiment_is_the_one_that_turns_the_supervisor_off():
+    """Read from the shipped plan, not from a fixture. The pack behind it now
+    carries nine more orders; if this plan ever loses the line below, the next
+    run of it completes `WO-ACME-4711` at 4,000 and measures nothing."""
+    plan = read_plan(Path(__file__).resolve().parents[1]
+                     / "labs" / "experiments" / "over-run.toml")
+    assert plan.floor_finishes_orders is False

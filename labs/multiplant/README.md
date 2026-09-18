@@ -63,6 +63,42 @@ than config, running these two together is where it shows:
 | Product | Filled Bottle 500ml | Machined Bracket |
 | Routing | RT-BOTTLE, 6 ops | RT-BRACKET, 3 ops |
 | Quality spec | fill_weight 494–506 g | spindle_temp 50–70 °C |
+| Order book | 10 orders, 151,600 | 9 orders, 27,600 |
+
+## Each plant has an order book, and the floor works it
+
+Each pack carries a **schedule**, not one order: enough released and planned
+work to cover more than twenty-four hours of its own line's rated output, one
+order released and the rest planned, due dates in sequence.
+
+| Plant | Rated by | Book | That is |
+|---|---|---|---|
+| bottling | palletiser, 0.588 s → 6,122/h | 10 orders, 151,600 bottles | 24.8 h |
+| machining | mill, 3.333 s → 1,080/h | 9 orders, 27,600 brackets | 25.6 h |
+| finewire | wrapper, 3.6 s → 1,000 kg/h | 5 orders, 26,000 kg | 26.0 h |
+
+A real hour makes less than the rating — scrap, micro-stops, a changeover — so
+a fresh plant runs **longer** than those figures before its book is empty,
+never less. Each pack's `masterdata/README.md` shows the arithmetic and says
+why the first order keeps its old code and quantity.
+
+`fsmes run-operations` — the simulated floor, started with every plant that
+simulates — now has the supervisor's half of the job as well as the
+operator's. When the line has made the order's quantity, `FLOOR-SUP` finishes
+the order over the API and releases the next one in the book, and the audit
+row carries their name. The MES still does not finish an order by itself
+(decision 0029): reaching a quantity and being finished are different facts,
+and only a person knows the second.
+
+**When the book runs out** the floor says so once and invents nothing. What
+the line counts after that is unassigned production, listed with its total —
+which is the true answer, and the one you can see on `fsmes fleet status` and
+the fleet console, both of which now show how many orders a plant has left.
+
+To reseed a book, build the plant again: `fsmes fleet create` or `crew lab-up
+--fresh`. A plant built before 2026-09-18 keeps the book it was given —
+`fsmes pack apply` never rewrites an order that already exists, because a pack
+that rewrote history would be rewriting production.
 
 ## The third plant disagrees with the format
 

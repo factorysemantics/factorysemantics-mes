@@ -625,3 +625,42 @@ def test_asking_whether_a_plant_is_running_never_signals_it_on_windows(monkeypat
         "checking whether a plant is running signalled it; on Windows signal 0 is "
         "CTRL_C_EVENT and that is a Ctrl-C to its console group")
     assert probed == [os.getpid()]
+
+
+# ------------------------------------------------------------------- the book
+
+
+def a_row(**over) -> commands.Plant:
+    """One answering, owned plant, with whatever this test is about on it."""
+    return commands.Plant(
+        name="bottling", owned=True, reason="this installation created it",
+        base="http://127.0.0.1:8010", answered=True,
+        said={"profile": "bottling", "timezone_says": "UTC", "shadow": False},
+        pack_said={"pack": "bottling", "drifted": False,
+                   "schema": {"revision": "abc", "head": "abc", "at_head": True,
+                              "answered": True},
+                   "line": {"equipment": 6, "answered": True},
+                   "modules": {"on": [], "off": [], "total": 0}},
+        **over)
+
+
+def test_fleet_status_says_how_many_orders_the_plant_has_left_to_run():
+    line = next(x for x in commands.render(
+        a_row(book_said={"planned": 9, "released": 0, "running": 1, "open": 10}))
+        if x.strip().startswith("book"))
+    assert "10 orders open" in line and "9 planned" in line
+
+
+def test_a_plant_with_nothing_left_to_run_is_told_what_that_means():
+    """An empty book is the moment a person needs to see: from here on the
+    line's counts are unassigned production, not an order."""
+    line = next(x for x in commands.render(
+        a_row(book_said={"planned": 0, "released": 0, "running": 0, "open": 0}))
+        if x.strip().startswith("book"))
+    assert "empty" in line and "unassigned production" in line
+
+
+def test_a_plant_that_did_not_say_what_it_has_to_run_is_unknown_and_not_empty():
+    line = next(x for x in commands.render(a_row(book_said=None))
+                if x.strip().startswith("book"))
+    assert "unknown" in line and "empty" not in line

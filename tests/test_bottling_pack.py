@@ -45,7 +45,6 @@ from fsmes.domain import (
 from fsmes.integrations.opc.tag_map import load_tag_map
 from fsmes.pack import masterdata
 from fsmes.seed_kepsim import seed_kepsim_line
-from fsmes.services import workorders
 
 ROOT = Path(__file__).resolve().parents[1]
 PACK = ROOT / "labs" / "multiplant" / "bottling"

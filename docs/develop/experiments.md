@@ -57,6 +57,14 @@ script = "../megafactory/init.py"
 [feedback]
 chat   = true
 claude = false
+
+# The simulated shift supervisor. On everywhere: a plant whose order book is
+# worked — an order finished when the line has made its quantity, the next one
+# released — is what a plant looks like. Turn it off for a plan whose subject
+# is a line running past its order, so the over-run is scripted rather than an
+# accident of cadence. `labs/experiments/over-run.toml` is the one that does.
+[floor]
+finish_orders = false
 ```
 
 `duration`, `seed` and `speed` are the whole of the determinism story: **the

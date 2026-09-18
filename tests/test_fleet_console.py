@@ -162,7 +162,15 @@ def watching(three_plants, session):
             return observe.Answer(base, False, why="did not answer (nothing listening)")
         return observe.Answer(base, True, body=answering[base]["/pack"], status=200)
 
-    return console.Console(root, health=health, pack=pack)
+    def book(base, **_kwargs):
+        # bottling has a book; finewire answers and has nothing left to run.
+        if base not in answering:
+            return None
+        if "8010" in base:
+            return {"planned": 9, "released": 0, "running": 1, "open": 10}
+        return {"planned": 0, "released": 0, "running": 0, "open": 0}
+
+    return console.Console(root, health=health, pack=pack, book=book)
 
 
 # ---------------------------------------------------------- the *done when*
@@ -215,7 +223,8 @@ def test_a_plant_this_installation_never_created_is_shown_as_observed(three_plan
         observed=(ownership.Observed(name="hall2", url="http://10.20.30.41:8050",
                                      about="somebody else's plant"),)))
     watcher = console.Console(root, health=lambda base, **k: observe.Answer(
-        base, False, why="did not answer"), pack=lambda base, **k: observe.Answer(base, False))
+        base, False, why="did not answer"), pack=lambda base, **k: observe.Answer(base, False),
+        book=lambda base, **k: None)
     fleet = {p["name"]: p for p in watcher.look()["plants"]}
     assert fleet["hall2"]["owned"] == "no"
     assert "did not create it" in fleet["hall2"]["ownership"]
@@ -324,7 +333,8 @@ def test_the_console_shows_a_plant_with_no_line_as_empty_rather_than_as_answered
             body={"plant": "bottling", "instance_id": ownership.load(data_dir)
                   .entry("bottling").instance_id}),
         pack=lambda where, **k: observe.Answer(f"{where}/pack", True, status=200,
-                                               body=at_head_and_empty))
+                                               body=at_head_and_empty),
+        book=lambda where, **k: None)
     fleet = watching.look()
     rows = {row["name"]: row for row in fleet["plants"]}
     assert rows["bottling"]["state"] == "empty"
@@ -350,7 +360,8 @@ def test_a_plant_that_could_not_count_its_line_is_not_shown_as_empty(three_plant
             body={"plant": "bottling", "instance_id": ownership.load(data_dir)
                   .entry("bottling").instance_id}),
         pack=lambda where, **k: observe.Answer(f"{where}/pack", True, status=200,
-                                               body=could_not_look))
+                                               body=could_not_look),
+        book=lambda where, **k: None)
     rows = {row["name"]: row for row in watching.look()["plants"]}
     assert rows["bottling"]["state"] == "answered"
     assert rows["bottling"]["line_equipment"] is None
@@ -378,3 +389,60 @@ def test_the_console_has_one_default_port_and_the_cli_uses_it():
     from fsmes import cli
 
     assert cli.CONSOLE_PORT == console.PORT
+
+
+# ------------------------------------------------------------------- the book
+
+
+def test_the_console_says_how_many_orders_a_plant_has_left_to_run(watching):
+    """The column that would have caught 2026-09-18. A plant running one order
+    seventy times over had every other light on this page green."""
+    rows = {row["name"]: row for row in watching.look()["plants"]}
+    assert rows["bottling"]["book"] == {"planned": 9, "released": 0, "running": 1, "open": 10}
+    assert rows["finewire"]["book"]["open"] == 0, "a plant with nothing left to run says so"
+    assert rows["machining"]["book"] is None, (
+        "a plant nobody could ask is not a plant with an empty book")
+
+
+def test_the_order_book_is_read_off_the_metrics_a_plant_already_answers():
+    """Nothing here signs in. The counts come from the Prometheus text, which
+    a plant has answered without a credential since it had metrics at all."""
+    text = (
+        'mes_plant_info{plant="bottling"} 1\n'
+        'mes_work_orders{plant="bottling",status="planned"} 8\n'
+        'mes_work_orders{plant="bottling",status="released"} 1\n'
+        'mes_work_orders{plant="bottling",status="running"} 1\n'
+        'mes_work_orders{plant="bottling",status="completed"} 3\n'
+        'mes_work_orders{plant="bottling",status="cancelled"} 0\n'
+    )
+    counts = _book_from(text)
+    assert counts == {"planned": 8, "released": 1, "running": 1, "open": 10}
+
+
+def test_a_plant_whose_metrics_carry_no_orders_did_not_say_rather_than_said_none():
+    assert _book_from('mes_plant_info{plant="bottling"} 1\n') is None
+
+
+def _book_from(text: str):
+    """`observe.book` against a plant that answered this, and nothing else."""
+
+    class _Answer:
+        status = 200
+
+        def read(self):
+            return text.encode("utf-8")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_exc):
+            return False
+
+    import urllib.request
+
+    real = urllib.request.urlopen
+    urllib.request.urlopen = lambda *a, **k: _Answer()
+    try:
+        return observe.book("http://plant:8010")
+    finally:
+        urllib.request.urlopen = real
