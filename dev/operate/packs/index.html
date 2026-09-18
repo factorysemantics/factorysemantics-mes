@@ -1114,6 +1114,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="fsmes pack apply">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-order-book" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The order book
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -3539,6 +3556,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="fsmes pack apply">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-order-book" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The order book
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -3756,6 +3790,17 @@ Usable, as far as a file can say: 9 file(s) read, nothing refused, 4 thing(s) on
 <p>Never this process's own default. Until 2026-09-14 that is exactly what a pack naming no database got, which is how <code>fsmes fleet create</code> came to migrate and seed a stray <code>./fsmes.db</code> and then record ownership of a plant that had never been created. A database nobody named is not this plant's.</p>
 <p><strong>Pack before database.</strong> A schema migration may need a value the pack now carries, so the pack is applied first — and <code>fsmes pack apply</code> runs the migrations itself, in that order.</p>
 <p>Master data is seeded from <code>masterdata/</code>, one file per kind: <code>equipment.json</code>, <code>materials.json</code>, <code>bom.json</code>, <code>routings.json</code>, <code>quality_specs.json</code>, <code>lots.json</code>, <code>work_orders.json</code>, <code>maintenance_plans.json</code>, <code>shifts.json</code>. An entry whose code already exists is counted as present and <strong>left alone, never updated</strong> — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which <code>fsmes fleet list</code> and the console now show as <em>answered, but empty</em>.</p>
+<h3 id="the-order-book">The order book<a class="headerlink" href="#the-order-book" title="Permanent link">&para;</a></h3>
+<p><code>work_orders.json</code> is the plant's <strong>schedule</strong>, not one order to give the counters somewhere to book. Each entry is a code, a material and a quantity; <code>priority</code>, <code>release</code> and <code>due_in_hours</code> are optional.</p>
+<div class="highlight"><pre><span></span><code><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"WO-ACME-4711"</span><span class="p">,</span><span class="w"> </span><span class="nt">"material"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FG-BOTTLE"</span><span class="p">,</span><span class="w"> </span><span class="nt">"quantity"</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w">  </span><span class="nt">"release"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">  </span><span class="nt">"due_in_hours"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"WO-ACME-4712"</span><span class="p">,</span><span class="w"> </span><span class="nt">"material"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FG-BOTTLE"</span><span class="p">,</span><span class="w"> </span><span class="nt">"quantity"</span><span class="p">:</span><span class="w"> </span><span class="mi">18000</span><span class="p">,</span><span class="w"> </span><span class="nt">"release"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">"due_in_hours"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">}</span>
+<span class="p">]</span>
+</code></pre></div>
+<p><strong><code>due_in_hours</code> is relative — hours after the pack is applied — and that is not a convenience.</strong> A pack is seeded whenever somebody builds the plant, so an absolute date written into one is in the past the week after it was written, and every order in the book is late before the line has run a minute. <code>fsmes pack check</code> refuses anything that is not a positive number.</p>
+<p><strong>Release one, plan the rest.</strong> A line runs one order at a time, and releasing the whole book puts several released orders on one routing — which leaves the MES choosing between them by priority rather than reading which one the line is running (<a href="../../decisions/0029-an-order-does-not-finish-itself/">decision 0029</a> names that as still inferred).</p>
+<p><strong>Size it against the line.</strong> The slowest station in the pack's own <code>tag_map.json</code> sets the rate: 3,600 ÷ its <code>cycle_seconds</code> is units an hour. The three lab packs hold more than twenty-four hours of their own line's rated output, and each says its arithmetic in its <code>masterdata/README.md</code>. A book of one order is how a lab plant came to report an order 70× over on 2026-09-18 — correctly, and uselessly.</p>
+<p>Nothing in the MES releases the next order. On a plant that simulates, <code>fsmes run-operations</code> does it as the shift supervisor would; on a real plant it is a person or the ERP.</p>
 <p><strong>It refuses to seed into a database that is not at head.</strong> The migration above normally leaves nothing to say, and this is the assertion that it did. Rows written through the ORM into a half-migrated file leave a database with some of this product's tables and no Alembic stamp — which the migrator then disowns outright, because a schema it cannot identify is one it will not guess at. That happened once, on 2026-09-14, and left a plant no command could take forward.</p>
 <p>Rated cycle times are not repeated in the master data: leave <code>ideal_cycle_seconds</code> out and it is read from the pack's own tag map. OEE performance is ideal cycle × count ÷ runtime, so a rate that drifted from the line it describes produces a number that means nothing.</p>
 <p>Applying is idempotent. Run it again and it makes nothing twice.</p>

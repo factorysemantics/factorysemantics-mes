@@ -3974,6 +3974,14 @@ travel together.</p>
 <span class="k">[feedback]</span>
 <span class="n">chat</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
 <span class="n">claude</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+
+<span class="c1"># The simulated shift supervisor. On everywhere: a plant whose order book is</span>
+<span class="c1"># worked — an order finished when the line has made its quantity, the next one</span>
+<span class="c1"># released — is what a plant looks like. Turn it off for a plan whose subject</span>
+<span class="c1"># is a line running past its order, so the over-run is scripted rather than an</span>
+<span class="c1"># accident of cadence. `labs/experiments/over-run.toml` is the one that does.</span>
+<span class="k">[floor]</span>
+<span class="n">finish_orders</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 </code></pre></div>
 <p><code>duration</code>, <code>seed</code> and <code>speed</code> are the whole of the determinism story: <strong>the
 same seed twice is the same run</strong>, and the report states the seed it used. A
