@@ -276,6 +276,19 @@ class Settings(BaseSettings):
     # tag map. Empty means the single opc_endpoint above.
     opc_endpoints: str = ""
 
+    # --- The coverage floor (fsmes.services.coverage) ---------------------
+    # How much of a window this MES must have watched before it will report a
+    # KPI for it, as a share between 0 and 1. Pack data, not code: it is
+    # `[oee] coverage_floor` in plant.toml, and this is where it lands.
+    #
+    # **Zero is the default and it means no floor** — every figure prints with
+    # its coverage beside it and nothing is withheld. There is no silent
+    # default floor: a number vanishing off a screen because of a threshold
+    # nobody chose is its own kind of dishonesty. A plant that writes a floor
+    # is asking, deliberately, to be told *unknown* with the ledger attached
+    # rather than shown a figure measured over eleven minutes of a shift.
+    oee_coverage_floor: float = 0.0
+
     # --- The judgment model (fsmes.integrations.jev) ----------------------
     # A hosted model that answers fixed, typed questions about state it is
     # given and writes no text. Used in the development build loop only: the

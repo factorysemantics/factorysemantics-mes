@@ -174,6 +174,15 @@ SCHEMA: tuple[Section, ...] = (
         Key("mqtt_mode", "str", "off or mqtt - whether this plant listens to a broker.",
             "MES_INBOUND_MQTT_MODE"),
     )),
+    Section("oee", "What this plant asks of a KPI before it will report one.", (
+        Key("coverage_floor", "float",
+            "How much of a window this MES must have watched before it reports a "
+            "KPI for it, between 0 and 1. Leave it out and every figure prints "
+            "with its coverage beside it and nothing is withheld; write 0.8 and a "
+            "window this MES saw less than 80% of comes back as unknown, with the "
+            "ledger saying where the rest of it went.",
+            "MES_OEE_COVERAGE_FLOOR"),
+    )),
     Section("floor", "The shop floor's own cadence, for a simulated plant.", (
         Key("inspect_every", "int", "Seconds between recorded quality checks.",
             "MES_OPS_INSPECT_EVERY"),
