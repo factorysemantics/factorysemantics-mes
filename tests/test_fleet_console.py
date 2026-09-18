@@ -52,7 +52,7 @@ def as_that_plant(pack_dir: Path, session, data_dir: Path) -> dict:
     truthfully from one interpreter.
     """
     from fsmes.api.app import create_app
-    from fsmes.api.deps import get_db
+    from fsmes.api.deps import get_db, get_read_db
     from fsmes.config import get_settings
     from fsmes.pack import format as fmt
 
@@ -70,6 +70,7 @@ def as_that_plant(pack_dir: Path, session, data_dir: Path) -> dict:
             session.flush()
 
         app.dependency_overrides[get_db] = _same_session
+        app.dependency_overrides[get_read_db] = _same_session
         with TestClient(app) as client:
             return {"/health": client.get("/health").json(),
                     "/pack": client.get("/pack").json()}

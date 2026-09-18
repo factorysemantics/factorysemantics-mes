@@ -12,7 +12,7 @@ from fastapi import APIRouter, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from fsmes.api.deps import DbDep
+from fsmes.api.deps import ReadDbDep
 from fsmes.domain import (
     AuditLog,
     Equipment,
@@ -79,7 +79,7 @@ def _plant_version(db: Session) -> tuple:
 
 @router.get("/summary")
 def summary(
-    db: DbDep,
+    db: ReadDbDep,
     oee_hours: float = 8.0,
     line: str | None = Query(None, description="Only this line's machines, at any depth beneath it."),
     machine_q: str | None = Query(None, description="Match a machine code or name."),

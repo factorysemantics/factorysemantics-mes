@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from datetime import UTC, datetime
 from functools import lru_cache
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -17,6 +17,13 @@ from fsmes.config import get_settings
 
 class Base(DeclarativeBase):
     """Declarative base for every MES-TWIN table."""
+
+
+#: Execution option that marks a connection as a read-only unit of work. Set by
+#: `read_only_session` and read by the SQLite transaction handler below; it is
+#: never a hint, because the same call that sets it also has the database
+#: refuse writes on that connection.
+READ_ONLY = "fsmes_read_only"
 
 
 def utcnow() -> datetime:
@@ -40,15 +47,18 @@ def _sqlite_transactions(engine: Engine) -> None:
     savepoint per state change, which opens the transaction, and writes inside
     it.
 
-    Every transaction takes the lock, reads included. Telling the two apart
-    would need this module to know, before the first statement, what the
-    caller is going to do — and assuming a transaction would not write is
-    exactly what was wrong before. The cost is that SQLite serialises
-    transactions rather than only writes; SQLite has one writer either way,
-    and a deployment that needs more than that is what PostgreSQL is for. So
-    nothing may hold a transaction open across a network call: see
-    `_adjustment_loop` in the OPC agent, which reads first and closes before
-    it goes to the PLC.
+    Every transaction takes the lock unless the caller has said, in so many
+    words, that this one only reads — `read_only_session`, below. Guessing was
+    never on: assuming a transaction would not write is exactly what was wrong
+    before this handler existed, which is why the read-only path does not ask
+    the caller to promise and then trust them. It makes the database refuse
+    the write.
+
+    The cost of taking the lock is that SQLite serialises transactions rather
+    than only writes; SQLite has one writer either way, and a deployment that
+    needs more than that is what PostgreSQL is for. So nothing may hold a
+    transaction open across a network call: see `_adjustment_loop` in the OPC
+    agent, which reads first and closes before it goes to the PLC.
 
     PostgreSQL needs none of this and gets none of it — this runs only when the
     URL is SQLite.
@@ -70,7 +80,28 @@ def _sqlite_transactions(engine: Engine) -> None:
 
     @event.listens_for(engine, "begin")
     def _sqlite_begin(conn):
+        if conn.get_execution_options().get(READ_ONLY):
+            # A unit of work that cannot write has no reason to hold the one
+            # writer up, and every reason not to: a screen refresh that takes
+            # a second of database work used to make every sign-in behind it
+            # wait that second out, and time out at five.
+            #
+            # `query_only` is what makes the deferred BEGIN safe. A deferred
+            # transaction that writes after all is the refusal this handler
+            # exists to prevent, so the database is told to refuse the write
+            # rather than this module hoping nobody tries. It is set outside
+            # the transaction, and cleared when the connection goes back to
+            # the pool.
+            conn.exec_driver_sql("PRAGMA query_only=ON")
+            conn.exec_driver_sql("BEGIN")
+            return
         conn.exec_driver_sql("BEGIN IMMEDIATE")
+
+    @event.listens_for(engine, "checkin")
+    def _clear_query_only(dbapi_conn, _record):
+        # Connections are pooled, so a read-only unit of work must not hand
+        # the next caller a connection that silently refuses to write.
+        dbapi_conn.execute("PRAGMA query_only=OFF")
 
 
 def make_engine(url: str) -> Engine:
@@ -91,6 +122,46 @@ def get_engine() -> Engine:
 @lru_cache
 def get_sessionmaker() -> sessionmaker[Session]:
     return sessionmaker(bind=get_engine(), expire_on_commit=False)
+
+
+@contextmanager
+def read_only_session() -> Iterator[Session]:
+    """One unit of work that reads, and that the database will not let write.
+
+    WHY THIS EXISTS. On SQLite every transaction takes the single write lock
+    (see `_sqlite_transactions`), reads included. That was fine while reads
+    were milliseconds. On 2026-09-18 a six-machine lab plant with eight hours
+    of history answered `/dashboard/summary` in ten seconds, and for those ten
+    seconds nothing else on that plant could open a transaction: twenty
+    sign-ins in a row timed out at five seconds, and `/equipment/{code}/oee`
+    and `/analysis/oee` returned 500 with `database is locked` raised by
+    `BEGIN IMMEDIATE` itself. A person who cannot sign in reads that as "the
+    MES is down", and says so.
+
+    A read has no business holding the writer up. This gives the reads that
+    never write a transaction that never takes the lock — and rather than
+    trust the caller's word for "never writes", it tells the database to
+    refuse: `PRAGMA query_only` on SQLite, `SET TRANSACTION READ ONLY` on
+    PostgreSQL. A write attempted inside one of these raises where it is
+    written rather than corrupting the promise for everybody else.
+
+    Nothing is committed. A unit of work that cannot write has nothing to
+    commit, and the rollback at the end is bookkeeping, not a failure.
+    """
+    engine = get_engine()
+    connection = engine.connect().execution_options(**{READ_ONLY: True})
+    session = Session(bind=connection, expire_on_commit=False, autoflush=False)
+    try:
+        if engine.dialect.name == "postgresql":
+            # PostgreSQL readers never block a writer, so this buys no speed
+            # there. It buys the same guarantee: a test that proves a screen
+            # cannot write proves it on the database a plant actually runs.
+            session.execute(text("SET TRANSACTION READ ONLY"))
+        yield session
+    finally:
+        session.rollback()
+        session.close()
+        connection.close()
 
 
 @contextmanager

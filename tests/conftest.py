@@ -40,7 +40,7 @@ from sqlalchemy.pool import StaticPool
 
 import fsmes.domain  # noqa: F401  (register all tables)
 from fsmes.api.app import create_app
-from fsmes.api.deps import get_db
+from fsmes.api.deps import get_db, get_read_db
 from fsmes.db import Base
 from fsmes.seed import seed_demo_plant
 from fsmes.services import auth
@@ -130,6 +130,12 @@ def make_client(session):
         session.flush()
 
     app.dependency_overrides[get_db] = _same_session
+    # Read-only endpoints ask for their own unit of work (fsmes.db.
+    # read_only_session), which would open a second connection to the
+    # deployment's database rather than this test's. They get the test
+    # session too; what the read-only path guarantees is proved where it
+    # matters, against a real file database, in test_read_never_waits.py.
+    app.dependency_overrides[get_read_db] = _same_session
     clients = []
 
     def _make() -> TestClient:
