@@ -82,6 +82,14 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Fixed
 
+- **The calibration figures no longer cut their own titles off.** Every line
+  of text in a plot from `fsmes jev calibrate` is now wrapped to the canvas
+  before the canvas is sized, so a long title makes the drawing taller
+  instead of running past the right-hand edge; a word too long to break
+  shrinks instead. The four figures checked in under
+  `docs/ai/calibration/2026-09-17/` are regenerated from the same stored
+  answers, and every number in both reports is unchanged.
+
 - **`fsmes jev ask` no longer understates what a pass will cost.** The
   estimate printed before anything is asked used 3.8 characters to a token,
   measured from round 5's run-log usage, and the first real pass showed it
