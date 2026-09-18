@@ -5,7 +5,7 @@ from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from fsmes.api.deps import SESSION_COOKIE, ActorDep, DbDep, UserDep, require
+from fsmes.api.deps import SESSION_COOKIE, ActorDep, DbDep, ReadDbDep, UserDep, require
 from fsmes.config import get_settings
 from fsmes.domain import Person
 from fsmes.services import auth
@@ -26,7 +26,7 @@ class TokenOut(BaseModel):
 
 
 @router.post("/login")
-def login(body: LoginIn, request: Request, response: Response, db: DbDep) -> TokenOut:
+def login(body: LoginIn, request: Request, response: Response, db: ReadDbDep) -> TokenOut:
     settings = get_settings()
     person = auth.authenticate(db, body.code, body.password)
     token = auth.issue_token(person, settings.secret_key, settings.token_ttl_seconds)

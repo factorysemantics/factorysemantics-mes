@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
-from fsmes.api.deps import ActorDep, DbDep, require
+from fsmes.api.deps import ActorDep, DbDep, ReadDbDep, require
 from fsmes.domain import EquipmentStateName
 from fsmes.services import connection as connection_service
 from fsmes.services import equipment
@@ -65,7 +65,7 @@ def set_state(code: str, body: StateIn, db: DbDep, actor: ActorDep) -> dict:
 
 
 @router.get("/{code}/oee")
-def oee(code: str, db: DbDep, hours: float = 8.0) -> dict:
+def oee(code: str, db: ReadDbDep, hours: float = 8.0) -> dict:
     return equipment.oee(db, equipment_code=code, hours=hours)
 
 

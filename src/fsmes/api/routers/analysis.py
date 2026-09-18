@@ -19,7 +19,7 @@ last eight hours would be worse than an error.
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from fsmes.api.deps import get_db
+from fsmes.api.deps import get_read_db
 from fsmes.services import analysis
 
 router = APIRouter()
@@ -34,7 +34,7 @@ _SHIFT = Query(
 
 
 @router.get("/lines")
-def lines(db: Session = Depends(get_db)) -> list[dict]:
+def lines(db: Session = Depends(get_read_db)) -> list[dict]:
     """Every work centre that has machines on it."""
     return analysis.lines(db)
 
@@ -42,7 +42,7 @@ def lines(db: Session = Depends(get_db)) -> list[dict]:
 @router.get("/shifts")
 def shifts(
     days: int = Query(7, ge=1, le=90, description="How far back to list shifts."),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
 ) -> dict:
     """The shifts a screen can offer, which one is running, and on whose clock."""
     return analysis.shifts(db, days=days)
@@ -50,14 +50,14 @@ def shifts(
 
 @router.get("/oee")
 def oee(line: str | None = _LINE, hours: float = _HOURS, shift: str | None = _SHIFT,
-        db: Session = Depends(get_db)) -> dict:
+        db: Session = Depends(get_read_db)) -> dict:
     """OEE per station with each loss named in units and seconds."""
     return analysis.oee_breakdown(db, line_code=line, hours=hours, shift=shift)
 
 
 @router.get("/timeline")
 def timeline(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     line: str | None = _LINE,
     hours: float = _HOURS,
     shift: str | None = _SHIFT,
@@ -78,7 +78,7 @@ def timeline(
 
 @router.get("/downtime")
 def downtime(line: str | None = _LINE, hours: float = _HOURS, shift: str | None = _SHIFT,
-             db: Session = Depends(get_db)) -> dict:
+             db: Session = Depends(get_read_db)) -> dict:
     """Downtime by reason, worst first. Unlabelled stops are reported as such."""
     return analysis.downtime_pareto(db, line_code=line, hours=hours, shift=shift)
 
@@ -89,7 +89,7 @@ def production(
     hours: float = _HOURS,
     shift: str | None = _SHIFT,
     buckets: int = Query(60, ge=2, le=600),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
 ) -> dict:
     """Good and scrap over time for the whole line."""
     return analysis.production_trend(db, line_code=line, hours=hours, buckets=buckets, shift=shift)
@@ -102,7 +102,7 @@ def tag(
     hours: float = _HOURS,
     shift: str | None = _SHIFT,
     buckets: int = Query(240, ge=2, le=2000),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
 ) -> dict:
     """One machine's process value over the window, with min/max per bucket."""
     return analysis.tag_trend(db, equipment_code, tag=tag, hours=hours, buckets=buckets, shift=shift)

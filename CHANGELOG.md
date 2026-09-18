@@ -117,6 +117,39 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Fixed
 
+- **A floor screen no longer stops people signing in, and it no longer takes
+  ten seconds.** On a six-machine plant with a shift of one-second history,
+  `/dashboard/summary` took **10 s**, `/equipment/{code}/oee` and
+  `/analysis/oee` returned **500** with `database is locked`, and sign-ins
+  hung and timed out at five seconds. Two causes, both fixed.
+
+  `counted_outside_run_time` asked, for every booking, whether *any* running
+  interval contained it — a search that cannot stop early on a booking that
+  was not running, so its cost grew with bookings × history. A state history
+  does not overlap, so the only interval that can contain an instant is the
+  last one starting at or before it; asking for exactly that row gives the
+  same numbers, to the unit. Measured on a copy of a real plant (94,000
+  bookings, 12,000 intervals): that query **8.2 s → 0.07 s**, the summary
+  **8.0 s → 0.20 s**, `/equipment/{code}/oee` **2.0 s → 0.02 s**,
+  `/analysis/oee?hours=1` **1.25 s → 0.05 s**. Two indexes came with it —
+  `production_logs (equipment_id, ts)` and `tag_values (equipment_id, id)`,
+  the second for the machine card's latest reading, which was reading and
+  sorting the whole of a machine's tag history to find its newest row.
+  **The coverage ledger was not the cost**: it was 14 ms of the ten seconds.
+
+  And on SQLite every transaction took the single write lock, reads included,
+  so a slow screen refresh held up everything behind it — including
+  `/auth/login`, which only reads. The endpoints that only read now take a
+  unit of work that begins deferred and that the database will not let write
+  (`PRAGMA query_only`; `SET TRANSACTION READ ONLY` on PostgreSQL), so a read
+  never needs the writer's lock and never queues for it. Everything else
+  still takes the lock up front, deliberately.
+
+  Both are pinned by tests: a generated six-machine plant with eight hours of
+  one-second history that holds `/dashboard/summary` and `/metrics` to a
+  stated budget, and a file-backed plant where a sign-in and both OEE
+  endpoints have to answer while the plant is being written to.
+
 - **The calibration figures no longer cut their own titles off.** Every line
   of text in a plot from `fsmes jev calibrate` is now wrapped to the canvas
   before the canvas is sized, so a long title makes the drawing taller

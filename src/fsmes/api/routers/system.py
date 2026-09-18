@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from fsmes import identity
 from fsmes import shadow as shadow_mode
-from fsmes.api.deps import DbDep, require
+from fsmes.api.deps import DbDep, ReadDbDep, require
 from fsmes.domain import AuditLog, ErpMessage, MessageStatus, OrderStatus, TagValue, WorkOrder
 from fsmes.services import connection as connection_service
 
@@ -15,7 +15,7 @@ router = APIRouter()
 
 
 @router.get("/health")
-def health(db: DbDep) -> dict:
+def health(db: ReadDbDep) -> dict:
     """Alive, which plant this is, and whether it may act on that plant.
 
     `shadow` rides on health because health is the one endpoint everything
@@ -98,7 +98,7 @@ def pack() -> dict:
 
 
 @router.get("/metrics", response_class=PlainTextResponse)
-def metrics(db: DbDep) -> str:
+def metrics(db: ReadDbDep) -> str:
     # Every series carries the plant, because a fleet scrapes several into
     # one Prometheus and a series without it silently becomes the sum of
     # every plant that has the same metric name.

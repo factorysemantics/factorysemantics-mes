@@ -13,7 +13,7 @@ from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from fsmes.config import get_settings
-from fsmes.db import session_scope
+from fsmes.db import read_only_session, session_scope
 from fsmes.services import auth
 
 SESSION_COOKIE = "mes_session"
@@ -24,7 +24,23 @@ def get_db() -> Iterator[Session]:
         yield session
 
 
+def get_read_db() -> Iterator[Session]:
+    """A unit of work for an endpoint that only reads.
+
+    On SQLite this is the difference between a screen refresh and a plant
+    that cannot be signed into while one is computing — see
+    `fsmes.db.read_only_session`. The database refuses writes on it, so an
+    endpoint that starts to write one day fails loudly here rather than
+    quietly taking the write lock back.
+    """
+    with read_only_session() as session:
+        yield session
+
+
 DbDep = Annotated[Session, Depends(get_db)]
+#: For endpoints that read and never write. Same session type; a transaction
+#: that cannot write and does not queue behind the one that can.
+ReadDbDep = Annotated[Session, Depends(get_read_db)]
 
 
 def _token_from(request: Request) -> str | None:

@@ -26,7 +26,7 @@ from pydantic import ValidationError
 
 from fsmes import modules as registry
 from fsmes.api.app import create_app
-from fsmes.api.deps import get_db
+from fsmes.api.deps import get_db, get_read_db
 from fsmes.config import Settings, get_settings
 from fsmes.db import Base
 
@@ -54,6 +54,7 @@ def with_modules(monkeypatch, session):
             session.flush()
 
         app.dependency_overrides[get_db] = _same_session
+        app.dependency_overrides[get_read_db] = _same_session
         client = TestClient(app)
         client.__enter__()
         made.append(client)

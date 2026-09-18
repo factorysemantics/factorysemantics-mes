@@ -113,6 +113,12 @@ of a 108-station plant is 400,000 state intervals and the OEE path is a screen
 refresh. They share one cause precedence and a test holds them to the same
 numbers on the same data.
 
+*Measured, 2026-09-18.* The floor screen on a six-machine plant with a shift
+of one-second history was taking ten seconds, and the ledger was suspected of
+it. Profiled against a copy of that plant, `totals_many()` cost **14 ms** of
+the ten seconds; the cost was elsewhere, in a query older than this decision.
+The grouped queries are doing what this section says they do.
+
 ## Consequences
 
 **Easier.** A plant engineer who disagrees with an availability figure can
