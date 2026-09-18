@@ -5,7 +5,7 @@ from __future__ import annotations
 import enum
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from fsmes.db import Base, utcnow
@@ -94,3 +94,10 @@ class ProductionLog(ShiftStamped, Base):
     # anything this MES saw itself, because there is no other system to name.
     source_system: Mapped[str | None] = mapped_column(String(80))
     ts: Mapped[datetime] = mapped_column(default=utcnow, index=True)
+
+    # Every OEE window asks the same question of this table: one machine's
+    # bookings between two instants. On `equipment_id` alone that is every
+    # booking the machine has ever made, filtered down to the window
+    # afterwards, which on a plant with a month of history is most of the
+    # table to answer a question about eight hours of it.
+    __table_args__ = (Index("ix_production_logs_eq_ts", "equipment_id", "ts"),)

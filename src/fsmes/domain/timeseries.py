@@ -18,6 +18,15 @@ class TagValue(Base):
         # ORDER BY id DESC LIMIT 1 per (machine, tag). Without this the cost
         # of a dashboard grew with the length of history.
         Index("ix_tag_values_equipment_tag_id", "equipment_id", "tag", "id"),
+        # The same question with the tag *not* named: the machine card asks a
+        # plant whose tag map does not declare a process value for "whatever
+        # this machine last published that is not one of the structural tags",
+        # which is ORDER BY id DESC LIMIT 1 per machine. The index above
+        # cannot serve that order across tags, so the database read every row
+        # the machine had ever written and sorted them - 100 ms for six
+        # machines on eight hours of one-second history, growing with the
+        # history and not with the question.
+        Index("ix_tag_values_eq_id", "equipment_id", "id"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
