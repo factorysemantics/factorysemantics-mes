@@ -4225,30 +4225,39 @@ quietly corrected for:</p>
 <li><strong>The windows differ.</strong> The MES measures over the window it was watching; the
   script is exactly <code>duration</code> long. An availability difference smaller than
   that mismatch is not evidence, and the page does not mark it as one.</li>
-<li><strong>The clocks differ, and only performance notices.</strong> Availability and quality
+<li>
+<p><strong>The clocks differ, and only performance notices.</strong> Availability and quality
   are each a ratio of two things measured the same way, so the replay speed
   cancels out of both. Performance does not cancel: its numerator is priced in
   the line's own seconds — the rated cycle somebody wrote down — and its
   denominator is run time the MES measured on the wall clock. Replay an hour at
-  20x and the MES's run time is a twentieth of the line's, so the figure it
-  reports is twenty times the line's. The report's <strong>P MES</strong> column is
-  therefore the MES's own performance put back on the line's clock: its rating,
-  its counts, its run time multiplied by the replay speed. At speed 1 it is the
-  reported figure unchanged. Each station also carries its own band — both
-  sides divide by run time, and the MES drains past the end of the script — and
-  a difference inside that band is not called a finding.</li>
-<li><strong>The rated cycle may differ.</strong> Performance prices units against what the
+  20x and the MES's run time is a twentieth of the line's.</p>
+<p>Since 2026-09-18 <strong>the MES settles this itself</strong> when it is told the speed:
+<code>fsmes fleet start --speed</code> puts <code>MES_SIM_SPEED</code> in the environment of
+every process of that plant, the API included, and the API restates the run
+time on the line's clock before dividing — and says so, on <code>/health</code>, in
+<code>/metrics</code> and in a bar across every screen. The report's <strong>P MES</strong> column
+is the same arithmetic done here, from the MES's own three numbers, which
+is what makes it a check on the MES rather than a repetition of it. Each
+station also carries its own band — both sides divide by run time, and the
+MES drains past the end of the script — and a difference inside that band
+is not called a finding.
+* <strong>The rated cycle may differ.</strong> Performance prices units against what the
   machine could have made, and the MES uses its master data's
   <code>ideal_cycle_seconds</code> while the script uses the line's <code>rate_per_min</code>. Where
   the two disagree the row says <em>not like for like</em> instead of reporting the
-  difference as a fault.</li>
+  difference as a fault.</p>
+</li>
 </ul>
-<p>Neither side caps performance. A figure above 1.0 means the machine beat the
-cycle it was rated at, which is a finding about the rating rather than a score
-above physics — see <a href="../../plant/reading-oee/">reading OEE</a>.</p>
+<p>Neither side caps performance, and neither invents one. Where the MES's counted
+work will not fit inside its run time it reports no performance figure at all,
+and the ratio it would have been sits on <code>performance_ratio</code> — which is what
+this report reads, because above 1.0 there is no reported figure to read. See
+<a href="../../plant/reading-oee/">reading OEE</a>.</p>
 <p><em>Every number says which clock it is on.</em> In <code>scores.json</code> the MES's block has
 no plain <code>performance</code>, <code>oee</code>, <code>runtime_seconds</code> or <code>downtime_seconds</code> at all.
-It has <code>performance_as_reported</code> and <code>performance_line_clock</code>,
+It has <code>performance_as_reported</code>, <code>performance_ratio_as_reported</code> and
+<code>performance_line_clock</code>,
 <code>runtime_wall_seconds</code> and <code>runtime_line_seconds</code>, and so on, and the one the
 difference was computed from is the line-clock one. Availability and quality
 keep their plain names, because they are the two the replay speed cancels out

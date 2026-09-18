@@ -748,10 +748,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#performance-can-read-over-100-and-that-is-the-point" class="md-nav__link">
+  <a href="#performance-is-not-a-share-and-it-is-never-capped" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Performance can read over 100 %, and that is the point
+        Performance is not a share, and it is never capped
       
     </span>
   </a>
@@ -759,10 +759,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#what-over-100-actually-tells-you" class="md-nav__link">
+  <a href="#when-the-counted-work-will-not-fit-inside-the-run-time-there-is-no-figure" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What over 100 % actually tells you
+        When the counted work will not fit inside the run time, there is no figure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-that-disagreement-actually-tells-you" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What that disagreement actually tells you
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-replayed-plant-has-two-clocks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A replayed plant has two clocks
       
     </span>
   </a>
@@ -3490,10 +3512,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#performance-can-read-over-100-and-that-is-the-point" class="md-nav__link">
+  <a href="#performance-is-not-a-share-and-it-is-never-capped" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Performance can read over 100 %, and that is the point
+        Performance is not a share, and it is never capped
       
     </span>
   </a>
@@ -3501,10 +3523,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#what-over-100-actually-tells-you" class="md-nav__link">
+  <a href="#when-the-counted-work-will-not-fit-inside-the-run-time-there-is-no-figure" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What over 100 % actually tells you
+        When the counted work will not fit inside the run time, there is no figure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-that-disagreement-actually-tells-you" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What that disagreement actually tells you
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-replayed-plant-has-two-clocks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A replayed plant has two clocks
       
     </span>
   </a>
@@ -3603,7 +3647,7 @@ That is the grey segment.</p>
 <tr>
 <td>Performance</td>
 <td>counter deltas against the rated cycle time in master data</td>
-<td>the rated cycle time is blank, the machine was not seen running, or nothing was counted</td>
+<td>the rated cycle time is blank, the machine was not seen running, nothing was counted, or the counted work will not fit inside the run time</td>
 </tr>
 <tr>
 <td>Quality</td>
@@ -3614,30 +3658,53 @@ That is the grey segment.</p>
 </table>
 <p>The screen states its data source in a line under the number; a screenshot
 without that line is not a screenshot of this product.</p>
-<h2 id="performance-can-read-over-100-and-that-is-the-point">Performance can read over 100 %, and that is the point<a class="headerlink" href="#performance-can-read-over-100-and-that-is-the-point" title="Permanent link">&para;</a></h2>
+<h2 id="performance-is-not-a-share-and-it-is-never-capped">Performance is not a share, and it is never capped<a class="headerlink" href="#performance-is-not-a-share-and-it-is-never-capped" title="Permanent link">&para;</a></h2>
 <p>Availability and quality are each a share of something the MES watched
 itself, so neither can pass 100 %. <strong>Performance is not a share.</strong> It is</p>
 <div class="highlight"><pre><span></span><code>rated cycle time × units counted ÷ time the machine was seen running
 </code></pre></div>
 <p>and only the second half of that is measured. The first half is a number
 somebody typed into master data.</p>
-<p>That figure is printed, above 100 % and all. It is <strong>not</strong> capped at 100 %. It
-used to be, in both places that computed it, and on 2026-09-14 a lab run
-showed what that cost: nine stations across two simulated plants all reported
-performance of exactly 100 % while the script that generated their data said
-between 94.3 % and 99.9 %. A factor that reads 100 % whatever the line does is
-not a measurement, and the OEE built on it overstates the plant. The OEE that
-follows can pass 100 % for the same reason.</p>
-<h2 id="what-over-100-actually-tells-you">What over 100 % actually tells you<a class="headerlink" href="#what-over-100-actually-tells-you" title="Permanent link">&para;</a></h2>
-<p>Performance over 100 % is the same statement as <strong>the work the MES counted
-will not fit inside the run time the MES recorded</strong>: units × rated cycle came
-out larger than the running seconds. Two of the MES's own numbers disagree,
-and the screen says so in those words. It does <strong>not</strong> tell you which of them
-is wrong, because the MES cannot tell. Three things produce it:</p>
+<p>There is no cap on it and there never will be. There used to be, in both
+places that computed it, and on 2026-09-14 a lab run showed what that cost:
+nine stations across two simulated plants all reported performance of exactly
+100 % while the script that generated their data said between 94.3 % and
+99.9 %. A factor that reads 100 % whatever the line does is not a
+measurement, and the OEE built on it overstates the plant.</p>
+<h2 id="when-the-counted-work-will-not-fit-inside-the-run-time-there-is-no-figure">When the counted work will not fit inside the run time, there is no figure<a class="headerlink" href="#when-the-counted-work-will-not-fit-inside-the-run-time-there-is-no-figure" title="Permanent link">&para;</a></h2>
+<p>Divide those two numbers and you can get an answer above 1.0. That answer is
+the same statement as <strong>the work the MES counted will not fit inside the run
+time the MES recorded</strong>: units × rated cycle came out larger than the running
+seconds. Two of the MES's own numbers disagree.</p>
+<p>Until 2026-09-18 the screen printed that answer as a percentage. It stopped,
+because a percentage on a screen is read as a measurement of the machine and
+this one measures the gap between two records. A plant replaying a recorded
+line overnight showed <strong>performance 881 %</strong> and <strong>OEE 980 %</strong> on its
+dashboard, and the person reading it called it an error; he was right, twice
+over — see <em><a href="#a-replayed-plant-has-two-clocks">two clocks</a></em> below for the
+other half.</p>
+<p>So where the counts outrun the run time, the screen shows:</p>
+<ul>
+<li><strong>no performance figure, and no OEE</strong> — a dash, hatched bar, and the same
+  <em>unknown</em> the rest of the product uses for a number it will not state;</li>
+<li><strong>the sentence</strong>, naming both numbers: how many units at what rated cycle
+  is how many seconds of work, inside how many seconds of running, and that
+  the MES cannot tell which of the two is wrong;</li>
+<li><strong>units counted outside run time</strong>, where there are any (below);</li>
+<li><strong>the ratio itself</strong>, kept in the API answer as <code>performance_ratio</code> and in
+  <code>counts_outrun_run_time</code>. Nothing is thrown away. It is simply not called
+  performance, because it is not a measurement of the machine.</li>
+</ul>
+<p>Neither is it capped at 100 %, which would be the same lie pointing the other
+way: a station reading exactly 1.0 is a station that made exactly what its
+rating allows, and that has to keep meaning what it says.</p>
+<h2 id="what-that-disagreement-actually-tells-you">What that disagreement actually tells you<a class="headerlink" href="#what-that-disagreement-actually-tells-you" title="Permanent link">&para;</a></h2>
+<p>It does <strong>not</strong> tell you which of the two numbers is wrong, because the MES
+cannot tell. Three things produce it:</p>
 <ol>
 <li><strong>The rating is slower than the machine.</strong> Somebody entered a cycle time
    the machine beats, or the counter counts something other than what the
-   rating rates. Fix it in the worksheet and the number comes back down.</li>
+   rating rates. Fix it in the worksheet and the figure comes back.</li>
 <li><strong>The run time is short of what the machine really ran.</strong> State comes from
    a tag the MES samples, and a machine that changes state faster than the
    publish interval is running and stopping in gaps nobody saw. A lab run on
@@ -3651,9 +3718,9 @@ is wrong, because the MES cannot tell. Three things produce it:</p>
    stop books units at an instant the machine was not running.</li>
 </ol>
 <p>The third is the one the MES can measure, so it does: <strong>units counted outside
-run time</strong> is reported beside the figure, and named in the sentence when there
-are any. Those units are not taken out of anything — they are units the plant
-made, they stay in good, scrap, quality and performance (house rule 1). They
+run time</strong> is reported beside the sentence, and named in it when there are
+any. Those units are not taken out of anything — they are units the plant
+made, they stay in good, scrap, quality and in the ratio (house rule 1). They
 are a clue about which of the two numbers to distrust, nothing more.</p>
 <p>Where to start: if <em>units counted outside run time</em> is near zero, suspect the
 rating. If it is a large share of the count, suspect what the MES saw — the
@@ -3663,10 +3730,44 @@ that are right, landing beside a state history that is not. Decision records
 <a href="../../decisions/0025-performance-is-measured-not-capped/">0025</a> and
 <a href="../../decisions/0026-counts-that-outrun-the-run-time/">0026</a> have the
 arithmetic and the options that lost.</p>
-<p><strong>What it is not.</strong> A machine cannot make more than it made. Over 100 %
-performance never means extra units were invented — that rule is house rule 1
-and lives in <a href="../never-invent-production/">never invent production</a>. It means
-two of the MES's numbers do not agree, and it says so rather than choosing one.</p>
+<p><strong>What it is not.</strong> A machine cannot make more than it made. A missing
+performance figure never means extra units were invented — that rule is house
+rule 1 and lives in <a href="../never-invent-production/">never invent production</a>. It
+means two of the MES's numbers do not agree, and it says so rather than
+choosing one.</p>
+<h2 id="a-replayed-plant-has-two-clocks">A replayed plant has two clocks<a class="headerlink" href="#a-replayed-plant-has-two-clocks" title="Permanent link">&para;</a></h2>
+<p>A plant that replays a recorded line faster than it was recorded counts at the
+line's pace and measures every duration on the wall's. Performance is the one
+OEE factor that divides a count by a duration, so at ten times real time it
+comes out ten times too big; availability and quality are ratios of things
+measured the same way, and are unaffected.</p>
+<p>The MES is told the speed rather than guessing it. <code>fsmes fleet start --speed
+10</code> puts <code>MES_SIM_SPEED=10</code> into the environment of every process of that
+plant, the API included, and the API restates the run time on the line's clock
+before it divides. Where it has done so it says so, everywhere a reader can
+be:</p>
+<ul>
+<li>a <strong>Replay 10×</strong> bar across the top of every screen, the way shadow mode
+  puts one there — it is a fact about the installation, not a notification;</li>
+<li><code>replay</code> on <code>/health</code>, which is public, so a fleet console shows the plant
+  as <strong>replay 10×</strong> rather than as <em>live</em>;</li>
+<li><code>mes_replay_factor</code> in <code>/metrics</code>, present only on a plant that is
+  replaying;</li>
+<li><code>clock</code> beside the figures in <code>/analysis/oee</code> and <code>/kpis/oee/{code}</code>.</li>
+</ul>
+<p>Durations stay on the clock the MES measured — <code>runtime_seconds</code> is wall
+seconds — with the factor beside them, so a reader converts rather than
+having numbers silently restated under them.</p>
+<blockquote>
+<p><strong>A plant meant to be looked at runs at 1×.</strong> Above 1× a plant is a test
+harness: its window is an hour of the line in six minutes of yours, its
+shift boundaries are not the line's, and its figures are only readable with
+the factor in hand. Replay fast to test the MES; stand a plant up at 1× to
+look at one.</p>
+</blockquote>
+<p>Restating the run time is not a cap by another name. A replayed plant whose
+counts still will not fit inside its line-clock run time has a real
+disagreement, and it is named exactly as above.</p>
 <h2 id="stale-is-not-stopped-and-unseen-is-neither">Stale is not stopped, and unseen is neither<a class="headerlink" href="#stale-is-not-stopped-and-unseen-is-neither" title="Permanent link">&para;</a></h2>
 <p>A machine whose tags stopped changing is <strong>stale</strong>, not down. Stale means
 the MES stopped hearing, which is a different fact from the machine
@@ -3739,9 +3840,10 @@ it moves up the list.</p>
    reconstructed later, by design. <code>/health</code> says how many machines this
    plant can currently see, which is the thing to alert on.</li>
 </ol>
-<p>A rated cycle time that is wrong does not make grey; it makes a performance
-figure over 100 % with a note beside it. Both are worth a walk to the
-machine, and only one of them looks like a problem at first glance.</p>
+<p>A rated cycle time that is wrong does not make grey either; it makes a machine
+with no performance figure and a sentence saying its counted work will not fit
+inside its run time. Both are worth a walk to the machine, and neither looks
+like a problem at first glance — one of them used to look like a triumph.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../never-invent-production/">Never invent production</a></li>
@@ -3750,6 +3852,7 @@ machine, and only one of them looks like a problem at first glance.</p>
 <li><a href="../../onboarding/GUIDE-ENGINEERING/">Engineering guide — the worksheet</a></li>
 <li>Decision record <a href="../../decisions/0004-never-invent-production/">0004</a></li>
 <li>Decision record <a href="../../decisions/0025-performance-is-measured-not-capped/">0025</a></li>
+<li>Decision record <a href="../../decisions/0026-counts-that-outrun-the-run-time/">0026</a></li>
 <li>Decision record <a href="../../decisions/0033-availability-is-a-share-of-what-was-watched/">0033</a></li>
 </ul>
 
