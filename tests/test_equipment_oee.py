@@ -112,11 +112,15 @@ def test_counts_that_outrun_the_run_time_name_both_numbers_and_neither_culprit(s
     numbers is wrong, so it prints both and says so."""
     _ran_and_made(session, minutes_running=30, units=900)
     result = equipment.oee(session, equipment_code="MIX01", hours=1.0)
-    assert result["performance"] == pytest.approx(2.0, rel=0.02)
+    assert result["performance"] is None, "their ratio measures the disagreement, not the machine"
+    assert result["oee"] is None
+    assert result["counts_outrun_run_time"] is True
+    assert result["performance_ratio"] == pytest.approx(2.0, rel=0.02), "kept, not thrown away"
     note = result["performance_note"]
     assert "counted work will not fit inside the run time" in note
     assert "900 units" in note and "3600 s of work" in note and "1800 s of running" in note
     assert "cannot tell which" in note
+    assert "no performance figure to print" in note
 
 
 def test_units_counted_while_the_machine_was_not_running_are_named_not_netted_off(session):

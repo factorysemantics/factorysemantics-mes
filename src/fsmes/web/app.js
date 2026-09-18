@@ -220,6 +220,15 @@ function render() {
   $("#kpi-machines").textContent = `${plant.machines_running}/${plant.machines_total}`;
   $("#kpi-orders").textContent = plant.active_orders;
   $("#kpi-oee").textContent = pct(plant.oee);
+  // Of how many. A machine drops out of this mean for a stated reason — too
+  // little of the window watched, no rating, nothing counted, or counted work
+  // that will not fit inside its run time — and an average that does not say
+  // how many it covers turns every one of those reasons into silence.
+  const covered = [`mean of ${plant.oee_machines} of ${plant.oee_machines_total}`];
+  if (plant.oee_counts_outrun) {
+    covered.push(`${plant.oee_counts_outrun} counting past its run time`);
+  }
+  $("#kpi-oee-sub").textContent = plant.machines_total ? covered.join(" · ") : "";
   $("#kpi-erp").textContent = plant.erp_pending ? "sending" : "clear";
 
   renderMachines(machines, summary.machines_page);

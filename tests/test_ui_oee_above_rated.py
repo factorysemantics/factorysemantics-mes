@@ -1,23 +1,27 @@
-"""A station that beat its rated cycle, drawn, in a real browser.
+"""A station whose counts will not fit inside its run time, drawn, in a browser.
 
 House rule 6: a rendered chart can be completely convincing and completely
 wrong, so a visualisation is looked at with real data and then pinned with a
-test. This is the pinning half for the one case the OEE waterfall could not
-draw before 2026-09-14, because performance was capped at 1.0 and the case
-could not arise: a machine that out-ran the cycle time its master data rates
-it at.
+test. This is the pinning half for the case the OEE waterfall could not draw
+before 2026-09-14, when performance was capped at 1.0 and the case could not
+arise: a machine that counted more work than its own run time can hold.
 
-What the bar must do, and what it must not:
+Between 2026-09-14 and 2026-09-18 this row printed the ratio — 171 %, and on a
+plant replaying a recorded line at 10x, 980 %. Decision 0026, amended on
+2026-09-18 after exactly that: the ratio is a measurement of two of this MES's
+records disagreeing, not of the machine, so it is kept in the payload under a
+name that says so and no surface prints it as a figure.
 
-* The bar is one full segment, and no losses. A waterfall only adds up while
-  every loss is a loss; here one of them is negative, so drawing the rest
-  beside a full bar makes the row read as though time was lost that was not.
-* The score prints the true figure, over 100 % and all. Trimming it there
-  would put the cap back one layer out.
+What the row must do, and what it must not:
+
+* The bar draws unknown — one segment, no waterfall. A waterfall only adds up
+  while every loss is a loss, and here one of them is negative.
+* The score prints no percentage. Neither the ratio, which is the lie, nor a
+  trimmed 100 %, which puts the cap back one layer out.
 * The row says, in words, that the counted work will not fit inside the run
-  time. That is the finding a plant acts on; the number alone reads like a
-  miracle. It must not name a culprit: the MES cannot tell a rating slower
-  than the machine from run time it failed to see.
+  time, and names both numbers. That is the finding a plant acts on. It must
+  not name a culprit: the MES cannot tell a rating slower than the machine
+  from run time it failed to see.
 
 Same shape as `test_ui_nav.py`: a seeded plant on a loopback port of the
 operating system's choosing, driven by Chromium, touching nothing anyone else
@@ -153,30 +157,39 @@ def _row(page):
     return page.locator(f'.oee-row:has(.code:text-is("{MACHINE}"))')
 
 
-def test_the_station_that_beat_its_rating_prints_the_true_figure(page):
-    """Not 100 %. The cap this replaces is what made nine stations in the lab
-    all read exactly 1.0 while the line they replayed did not."""
-    score = _row(page).locator(".score").inner_text()
-    assert score.endswith("%")
-    assert int(score.rstrip("%")) > 100, f"the score reads {score}, which is the cap again"
+def test_the_station_prints_no_percentage_at_all(page):
+    """Not the ratio, and not a trimmed 100 % either. The cap this replaces is
+    what made nine stations in the lab all read exactly 1.0 while the line
+    they replayed did not; the ratio that replaced it is what printed 980 % on
+    a replayed plant. Neither is a measurement of this machine."""
+    score = _row(page).locator(".score").inner_text().strip()
+    assert not score.endswith("%"), f"the score reads {score}, which is the figure again"
+    assert score in {"—", "-", ""}, f"the score reads {score}"
 
 
 def test_the_row_says_the_counted_work_will_not_fit_inside_the_run_time(page):
-    """The number alone reads like a miracle. The sentence is the finding —
-    and it names the disagreement, not a culprit."""
+    """The dash alone says nothing. The sentence is the finding — and it names
+    the disagreement, not a culprit."""
     note = _row(page).locator(".counts-outrun")
     assert note.is_visible()
-    assert "counted work outruns the run time" in note.inner_text()
-    assert "rating slower than the machine" not in note.inner_text()
+    text = note.inner_text()
+    assert "Counted work outruns the run time" in text
+    assert "no performance figure" in text
+    assert "rating slower than the machine" not in text
+    # Both numbers, in the title the row carries: 900 units of work against
+    # the run time the MES recorded.
+    assert "will not fit inside the run time" in (note.get_attribute("title") or "")
 
 
 def test_the_bar_draws_no_losses_it_cannot_lay_out(page):
     """The first draft drew the loss segments beside a full bar, and a station
     with an OEE of 171 % read as though it had lost a seventh of its time. One
-    segment, the whole bar, and the losses left to the note."""
+    segment, and the losses left to the note."""
     bar = _row(page).locator(".bar")
     segments = bar.locator("i")
     assert segments.count() == 1, f"{segments.count()} segments in a bar that cannot hold a waterfall"
+    assert "b-unknown" in (segments.first.get_attribute("class") or ""), \
+        "a full bar reads as a machine that scored, and this one has no score"
 
     box = bar.bounding_box()
     drawn = page.evaluate(
@@ -184,6 +197,46 @@ def test_the_bar_draws_no_losses_it_cannot_lay_out(page):
         """.reduce((total, i) => total + i.getBoundingClientRect().width, 0)""",
         bar.element_handle())
     assert drawn <= box["width"] + 1, "the segments are wider than the bar they are inside"
+
+
+def test_the_machine_page_draws_the_missing_oee_as_unknown_and_not_as_full_marks(plant, page):
+    """The other screen that shows these bars, and the one where the fix was
+    nearly undone by a stylesheet: the OEE row paints itself green because it
+    is the total, and that rule beat the hatching for unknown. A solid green
+    bar beside a dash reads as a perfect score, which is the same lie in a
+    different font."""
+    machine = page.context.new_page()
+    # The tab, not the URL: the page builds its own tab strip after it knows
+    # who is looking, so the button has to be waited for rather than clicked
+    # at.
+    machine.goto(f"{plant}/dashboard/machine/{MACHINE}#oee", wait_until="load", timeout=30000)
+    machine.wait_for_selector('.tab[data-tab="oee"]', timeout=30000)
+    machine.click('.tab[data-tab="oee"]')
+    machine.wait_for_selector("#oee-bars .bar-row", timeout=30000)
+
+    # Read in one pass, in the page: the screen refreshes itself, and a style
+    # asked for through a handle taken before a re-render is a style read off
+    # a node that is no longer in the document, which answers "" for
+    # everything and looks exactly like a bug in the stylesheet.
+    drawn = machine.evaluate("""() => [...document.querySelectorAll('#oee-bars .bar-row')]
+        .map((row) => {
+          const fill = row.querySelector('.bar > i');
+          return {
+            label: row.firstElementChild.textContent.trim(),
+            num: (row.querySelector('.num') || {}).textContent.trim(),
+            cls: fill ? fill.className : '',
+            paint: fill ? getComputedStyle(fill).backgroundImage : '',
+          };
+        })""")
+    by_label = {row["label"]: row for row in drawn}
+    for label in ("Performance", "OEE"):
+        row = by_label[label]
+        assert row["num"] in {"—", "-", ""}, f"{label} reads {row['num']}"
+        assert "unknown" in row["cls"], f"{label} is drawn as a score"
+        assert "gradient" in row["paint"], f"{label} is a solid bar where there is no figure"
+    said = machine.locator("#oee-bars .counts-outrun")
+    assert "no performance figure" in said.inner_text()
+    machine.close()
 
 
 def test_a_station_inside_its_rating_still_draws_the_whole_waterfall(page):

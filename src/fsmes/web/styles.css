@@ -120,7 +120,11 @@ header {
    Deliberately not a state colour. Running, idle, down and setup mean
    machines; hatched chrome means the software. Nobody should have to work
    out whether an amber bar is about a machine. */
-.shadow-bar {
+.shadow-bar,
+/* A plant replaying a recording faster than real time. The same chrome as
+   shadow mode and for the same reason: both describe the installation rather
+   than the plant, and neither is a state colour a machine could wear. */
+.replay-bar {
   position: sticky;
   top: 0;
   z-index: 11;
@@ -136,7 +140,8 @@ header {
     repeating-linear-gradient(135deg,
       var(--panel-2) 0 10px, var(--panel) 10px 20px);
 }
-.shadow-bar strong { letter-spacing: 0.04em; text-transform: uppercase; font-size: var(--fs-xs); }
+.shadow-bar strong,
+.replay-bar strong { letter-spacing: 0.04em; text-transform: uppercase; font-size: var(--fs-xs); }
 .shadow-bar .shadow-how { margin-left: auto; color: var(--accent); }
 .brand { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
 .brand span { color: var(--accent); }
@@ -183,6 +188,9 @@ header {
 }
 .kpi-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
 .kpi-value { font-size: 28px; font-weight: 650; font-variant-numeric: tabular-nums; }
+/* What the figure above is a figure *of* - how many machines the mean covers,
+   and how many it does not. Small and grey: it is not a second score. */
+.kpi-sub { font-size: 12px; color: var(--muted); }
 
 main {
   display: grid;
@@ -261,6 +269,18 @@ main {
 .bar-row .num { color: var(--text); font-size: 12px; font-family: var(--mono); }
 .bar-row.total .num { font-weight: 700; }
 .bar-row.total > i, .bar-row.total .bar > i { background: var(--running); }
+/* A figure the MES will not state. Unknown is not zero (house rule 2) and it
+   is certainly not full marks: an empty track reads as nought and a solid bar
+   reads as perfect, and the OEE row - which paints itself green as the total -
+   was doing the second one beside a dash. Hatched, full width, and the number
+   beside it is the dash. Drawn the same on every screen that has these bars,
+   which is why it is here and not in one screen's stylesheet. */
+.bar > i.unknown,
+.bar-row.total .bar > i.unknown {
+  background: repeating-linear-gradient(45deg, var(--unknown) 0 6px, transparent 6px 12px);
+  width: 100% !important;
+  opacity: 0.45;
+}
 
 /* How much of the window anybody watched. Deliberately not a fifth OEE bar:
    it is not a component of OEE, it is the statement of how much of the window

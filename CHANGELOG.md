@@ -271,6 +271,45 @@ goes under Honesty with a migration line, so plant people can find it.
   this is short by whatever its log's `failed to book production` lines
   named, and those lines are the only record of it. Decision 0034.
 
+- **A performance or OEE figure above 100 % is no longer printed anywhere.**
+  Where the counted work will not fit inside the run time — which is the same
+  inequality as `performance > 1.0` — the MES now reports **no performance
+  figure and no OEE**, and prints the sentence naming the disagreement and
+  both its numbers on every surface the figure used to reach: the dashboard
+  tile and machine card, the machine page, `/analysis/oee`,
+  `/kpis/oee/{code}`. Nothing is capped and nothing is discarded: the ratio
+  is published as **`performance_ratio`**, with **`counts_outrun_run_time`**
+  beside it, under a name that says what it measures — two of this MES's own
+  records disagreeing, not the machine.
+
+  *Migration.* `performance` and `oee` are `null` on exactly the machines
+  where they used to read above 1.0; read `performance_ratio` if you were
+  consuming the number, and `performance_note` for the sentence. The plant
+  OEE tile is a mean over the machines that have a figure and now says how
+  many that was out of how many there are; `/analysis/oee` gains
+  `stations_rated` and `stations_counts_outrun` for the same reason. Decision
+  0026, amended.
+
+- **A plant replaying a recorded line faster than real time computes its rates
+  on the line's clock, and says that it is doing so.** Such a plant counts at
+  the line's pace and measures every duration on the wall's, so performance —
+  the one OEE factor that divides a count by a duration — came out by the
+  replay factor: a lab plant at `--speed 10` showed performance 881 % and OEE
+  980 %. The API reads the factor from `MES_SIM_SPEED`, which `fsmes fleet
+  start --speed` already puts in the environment of every process of that
+  plant, and restates the run time before dividing. It is declared rather than
+  applied quietly: a **Replay 10×** bar on every screen (the shadow-mode bar's
+  shape and argument), `replay` on `/health`, `mes_replay_factor` in
+  `/metrics`, a **replay** pill on the fleet console, and `clock` beside the
+  figures. Availability and quality are unaffected — they are ratios of things
+  measured the same way — and durations stay on the wall clock, with the
+  factor beside them.
+
+  *Migration.* Nothing changes for a plant that does not set `MES_SIM_SPEED`,
+  which is every real plant: the factor is 1.0 and the conversion is the
+  identity. **A plant meant to be looked at runs at 1×**; above 1× it is a
+  test harness and the screens now say so. Decision 0026, amended.
+
 - **Availability's denominator changed meaning: it is now the time this MES
   watched, all causes together, not the window less the disconnections it
   recorded.** Seconds in a hole in the state history that no disconnection

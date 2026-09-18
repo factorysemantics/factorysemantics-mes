@@ -31,7 +31,7 @@ from fsmes.domain import (
 from fsmes.services import connection as connection_service
 from fsmes.services import equipment as equipment_service
 from fsmes.services import line as line_service
-from fsmes.services import masterdata, workorders
+from fsmes.services import line_clock, masterdata, workorders
 
 router = APIRouter()
 
@@ -303,7 +303,14 @@ def _build_summary(db: Session, oee_hours: float, line: str | None = None,
     # machines must not report a six-machine plant.
     running = sum(1 for eq in scope
                   if eq.id in open_states and open_states[eq.id].state == EquipmentStateName.RUNNING)
+    # The mean is over the machines that have an OEE, and the tile says how
+    # many that was. A machine is missing from it for a stated reason - too
+    # little of the window watched, no rating, nothing counted, or counted
+    # work that will not fit inside its run time - and a plant average that
+    # does not say how many machines are behind it turns every one of those
+    # reasons into silence.
     plant_oee = [oee["oee"] for oee in oees.values() if oee["oee"] is not None]
+    outrun = [code for code, oee in oees.items() if oee.get("counts_outrun_run_time")]
 
     return {
         "plant": {
@@ -321,6 +328,16 @@ def _build_summary(db: Session, oee_hours: float, line: str | None = None,
             "erp_pending": db.scalar(select(ErpMessage.id).where(ErpMessage.status == MessageStatus.PENDING).limit(1))
             is not None,
             "oee": round(sum(plant_oee) / len(plant_oee), 4) if plant_oee else None,
+            # Of how many, out of how many there are.
+            "oee_machines": len(plant_oee),
+            "oee_machines_total": len(scope),
+            # And how many of the missing ones are missing because their
+            # counts outrun their run time, which is the one a reader of a
+            # replayed plant most needs pointed at.
+            "oee_counts_outrun": len(outrun),
+            # Which clock the figures on this screen were computed on. `None`
+            # on a plant whose clock is the line's, which is every real one.
+            "clock": line_clock.summary(),
         },
         "machines": machines,
         # The same envelope every list in this API uses, so a screen can say

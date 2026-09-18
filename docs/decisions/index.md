@@ -34,7 +34,7 @@ Declined ideas stay, so nobody re-proposes them without new facts.
 | [0023](0023-the-fleet-console-observes.md) | *Proposed* — the console manages only the plants it owns, observes every other plant, and silence is unknown | 2026-09-10, revised 2026-09-13 |
 | [0024](0024-a-nonconformance-has-a-life.md) | A non-conformance is worked through review and a disposition, and cannot be closed without one | 2026-09-14 |
 | [0025](0025-performance-is-measured-not-capped.md) | OEE performance is measured against the rating, and never capped at 1.0 | 2026-09-14, amended by 0026 |
-| [0026](0026-counts-that-outrun-the-run-time.md) | Counted work that will not fit inside the run time names the disagreement, not a culprit | 2026-09-14 |
+| [0026](0026-counts-that-outrun-the-run-time.md) | Counted work that will not fit inside the run time names the disagreement, not a culprit — and, since the amendment, prints no figure | 2026-09-14, amended 2026-09-18 |
 | [0027](0027-an-spc-signal-raises-a-hold.md) | An SPC signal raises a quality hold, and an inspected characteristic with a specification is a check | 2026-09-14 |
 | [0028](0028-which-shift-a-minute-belongs-to.md) | A shift is half-open, belongs to the day it started, and covers nothing it does not roster | 2026-09-14 |
 | [0029](0029-an-order-does-not-finish-itself.md) | An order does not finish itself at its quantity; the over-run it reports is the true one | 2026-09-14 |

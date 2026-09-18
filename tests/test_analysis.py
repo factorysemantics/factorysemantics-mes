@@ -148,25 +148,44 @@ def test_a_station_slower_than_its_rating_reports_below_one(session, line):
 def test_a_station_whose_counts_outrun_its_run_time_says_so_instead_of_reporting_one(session, line):
     """Until 2026-09-14 this reported exactly 1.0, and the lab measured what
     that costs: performance read 1.0 on nine stations across two plants while
-    the script said 0.943 to 0.9994. The number is not capped away any more.
+    the script said 0.943 to 0.9994. The cap is not coming back.
 
-    What it must not do is pick a culprit. Counted work that will not fit
-    inside the run time says exactly that, and names both numbers."""
+    What replaces it is not a bigger number either. The counted work and the
+    run time disagree, so the station has a disagreement to name and no
+    performance to print — and it must not pick a culprit, because the MES
+    cannot tell a slow rating from run time it failed to see."""
     _state(session, "MIX01", EquipmentStateName.RUNNING, minutes_ago=40, minutes=30)
     _book(session, "MIX01", good=900, minutes_ago=20)  # twice the rated rate
 
     station = next(
         s for s in analysis.oee_breakdown(session, line_code=line, hours=8)["stations"] if s["code"] == "MIX01"
     )
-    assert station["performance"] == pytest.approx(2.0, rel=0.02)
+    assert station["performance"] is None, "a ratio between two records that disagree is not a figure"
+    assert station["oee"] is None, "and neither is the OEE built on it"
+    assert station["counts_outrun_run_time"] is True
+    # Withheld, not thrown away: the measurement decision 0025 refused to lose
+    # is still here, under a name that says what it measures.
+    assert station["performance_ratio"] == pytest.approx(2.0, rel=0.02)
     note = station["performance_note"]
     assert "counted work will not fit inside the run time" in note
     assert "900 units" in note and "3600 s of work" in note and "1800 s of running" in note
     assert "cannot tell which" in note
+    assert "no performance figure to print" in note
     # The loss is signed: it made 450 units more than its rating allows for.
     assert station["loss"]["performance_units"] == pytest.approx(-450, abs=1)
-    # And the OEE that follows from it is above 1 rather than quietly trimmed.
-    assert station["oee"] > 1.0
+
+
+def test_the_rollup_says_how_many_stations_had_no_figure_and_why(session, line):
+    """A line OEE drawn from the stations that still have one is honest only
+    while the screen can see how many did not."""
+    _state(session, "MIX01", EquipmentStateName.RUNNING, minutes_ago=40, minutes=30)
+    _book(session, "MIX01", good=900, minutes_ago=20)
+
+    breakdown = analysis.oee_breakdown(session, line_code=line, hours=8)
+    assert breakdown["stations_counts_outrun"] == 1
+    assert breakdown["stations_rated"] == len(
+        [s for s in breakdown["stations"] if s["oee"] is not None])
+    assert breakdown["clock"] is None, "this plant's clock is the line's"
 
 
 def test_units_counted_while_the_station_was_not_running_are_named_not_netted_off(session, line):
@@ -186,7 +205,8 @@ def test_units_counted_while_the_station_was_not_running_are_named_not_netted_of
     )
     assert station["good_qty"] == 900, "nothing is dropped and nothing is moved"
     assert station["counted_outside_run_time"] == 500
-    assert station["performance"] == pytest.approx(2.0, rel=0.02), "performance still prices every unit"
+    assert station["performance_ratio"] == pytest.approx(2.0, rel=0.02), \
+        "the ratio still prices every unit"
     assert "500 of those units were counted while the MES did not have this machine running" \
         in station["performance_note"]
 

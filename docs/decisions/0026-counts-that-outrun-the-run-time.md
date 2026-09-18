@@ -1,9 +1,19 @@
 # 0026 — Counted work that will not fit inside the run time names the disagreement, not a culprit
 
-- **Status:** accepted
-- **Date:** 2026-09-14
+- **Status:** accepted, amended 2026-09-18 (below)
+- **Date:** 2026-09-14, amended 2026-09-18
 - **Deciders:** maintainer
 - **Amends:** [0025](0025-performance-is-measured-not-capped.md)
+
+!!! warning "Amended on 2026-09-18 — the figure is withheld"
+
+    Everything below still holds about *what the MES knows* and *what it
+    says*. What changed four days later is what it prints: where the counted
+    work will not fit inside the run time there is now **no performance
+    figure and no OEE**, only the sentence and the numbers behind it. The
+    ratio is kept and published, under a name that says what it measures.
+    See [the amendment](#the-amendment-2026-09-18-the-ratio-is-published-the-figure-is-not)
+    at the end of this record.
 
 ## Context
 
@@ -141,3 +151,78 @@ write down.
   pins that the old accusation is gone. The rejected option above was
   measured the same way, which is the only reason it is in this file rather
   than in the product.
+
+## The amendment, 2026-09-18: the ratio is published, the figure is not
+
+### What happened
+
+A bottling plant stood up overnight in the lab, replaying a recorded line at
+ten times real time. In the morning its dashboard showed **OEE 980 %** and
+**performance 881 %**, and one machine's page showed OEE around 800 %. The
+maintainer's reading of it was one line: *"why are oee and performance
+numbers at 980% and 881%? that's clearly an error."*
+
+He was right, and there were two errors under it.
+
+**The clock.** A replayed plant counts at the line's pace and measures every
+duration on the wall's. Performance is the one OEE factor that divides a count
+by a duration, so at 10x it comes out ten times too big — availability and
+quality are ratios of things measured the same way and were unaffected. The
+MES is *told* the replay speed (`MES_SIM_SPEED`, which `fsmes fleet start
+--speed` puts into the environment of every process of that plant, the API
+included) and now restates the run time on the line's clock before dividing,
+and says everywhere that it did: a **Replay 10×** bar on every screen, `replay`
+on `/health`, `mes_replay_factor` in `/metrics`, a pill on the fleet console,
+`clock` beside the figures. **A plant meant to be looked at runs at 1×**; above
+1× it is a test harness and the screens say so.
+
+**The figure.** The rest of it is this record's own subject. `performance >
+1.0` is the same inequality as *the counted work will not fit inside the run
+time*, and this record already said the MES cannot tell which of its two
+numbers is wrong. It printed the ratio between them anyway, as a percentage,
+on every surface except the analysis waterfall — where [#62] had put the
+sentence and nowhere else. A percentage on a screen is read as a measurement
+of the machine. That one measures the gap between two of the MES's own
+records.
+
+### What changes
+
+Where `cycle × units > runtime` (run time on the line's clock):
+
+- **`performance` is `None`, and so is the `oee` built on it.** The same
+  *unknown* the product already uses for a number it will not state — house
+  rule 2, and the same shape as a figure withheld below a pack's coverage
+  floor.
+- **The sentence is printed on every surface the figure used to reach**, not
+  only on the analysis screen and not only in a tooltip: the dashboard tile
+  and machine card, the machine page, `/analysis/oee`, `/kpis/oee/{code}`.
+  It still names the disagreement, both its numbers and none of the three
+  culprits.
+- **The ratio is kept**, as `performance_ratio`, with `counts_outrun_run_time`
+  beside it. Nothing measured is discarded — that was 0025's objection to
+  reporting *unknown*, and it stands. What the ratio loses is the name
+  `performance`, which is the claim it could not support.
+- **Nothing is capped.** A station reading exactly 1.0 still means a station
+  that made exactly what its rating allows. Capping at 100 % would be the same
+  lie pointing the other way, and 0025 settled that.
+- `/metrics` exports no performance and no OEE series, and now says so in
+  writing: a scrape is read without the sentence beside it by definition.
+
+### Why this is not the option 0025 rejected
+
+0025 rejected "report *unknown* above 1.0" because it throws away a real
+measurement. This does not throw it away: the ratio, both its inputs, the
+units counted outside run time and the run time itself are all in the payload
+and all on the screen. The figure is not a measurement being suppressed; it is
+a name being corrected. A plant that wants the ratio has it, under a name that
+tells it what it has.
+
+### What it costs
+
+A plant that had learned to read performance over 100 % as "look at the
+rating" now reads a dash and a sentence, and has to read the sentence. That is
+the price of the number having been unreadable without it — and of one reader,
+on one morning, reading 980 % and having to ask whether his plant or his MES
+was broken.
+
+[#62]: https://github.com/factorysemantics/factorysemantics-mes/pull/62

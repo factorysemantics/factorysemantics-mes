@@ -232,6 +232,21 @@ ${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`);
       row.append(FS.el("span", null, label), bar, FS.el("span", "num", FS.fmt.pct(value)));
       host.append(row);
     });
+    /* Counted work that will not fit inside the run time leaves Performance
+       and OEE with no figure, and a dash with the reason in a tooltip is a
+       dash nobody reads. The finding goes on the card in one line - the whole
+       sentence is four on a card in a grid, which is a paragraph nobody reads
+       either - and the sentence itself, with both its numbers, is the line's
+       title. Same words as the analysis row, and no percentage in either:
+       the figure this replaced read 881 % on a plant replaying at 10x. */
+    if (oee.counts_outrun_run_time && oee.performance_note) {
+      const units = (oee.good_qty || 0) + (oee.scrap_qty || 0);
+      const said = FS.el("p", "muted small counts-outrun",
+        `Counted work outruns the run time — ${units.toLocaleString()} units against `
+        + `${duration(oee.runtime_seconds)} of running, so there is no performance figure`);
+      said.title = oee.performance_note;
+      host.append(said);
+    }
     host.append(coverageRow(oee));
   }
 

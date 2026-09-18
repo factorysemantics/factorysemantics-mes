@@ -10,6 +10,7 @@ from fsmes import shadow as shadow_mode
 from fsmes.api.deps import DbDep, ReadDbDep, require
 from fsmes.domain import AuditLog, ErpMessage, MessageStatus, OrderStatus, TagValue, WorkOrder
 from fsmes.services import connection as connection_service
+from fsmes.services import line_clock
 
 router = APIRouter()
 
@@ -31,6 +32,15 @@ def health(db: ReadDbDep) -> dict:
     """
     db.execute(text("SELECT 1"))
     return {"status": "ok", "shadow": shadow_mode.enabled(), **identity.summary(),
+            # Which clock this plant is on. `None` on every plant whose clock
+            # is the line's - which is every real one - and a factor with a
+            # sentence on a plant replaying a recording faster than real time.
+            # It rides on health for the reason shadow does: a person or a
+            # console reading a figure from this plant has to be able to find
+            # out that its seconds are not the line's seconds, and the
+            # endpoint everything already asks is the one place that reaches
+            # all of them.
+            "replay": line_clock.summary(),
             # How much of this plant the MES can currently see. A statement
             # about this deployment's own reach, not a number the plant
             # produced, which is what keeps it on the public side of the line
@@ -99,6 +109,18 @@ def pack() -> dict:
 
 @router.get("/metrics", response_class=PlainTextResponse)
 def metrics(db: ReadDbDep) -> str:
+    """What this plant exports to a scraper.
+
+    There is deliberately **no performance and no OEE series here**, and
+    there was none before this file mentioned it. Both are figures this MES
+    withholds whenever it cannot state them honestly - below a pack's
+    coverage floor, or when the counted work will not fit inside the run time
+    - and each withholding comes with a sentence that a gauge has nowhere to
+    put. A number in a scrape is read without its sentence by definition, so
+    the series that exist here are the ones that survive being read alone:
+    counts, ids, coverage, and availability paired with the coverage it was
+    measured over. Adding an OEE gauge is a decision, not a convenience.
+    """
     # Every series carries the plant, because a fleet scrapes several into
     # one Prometheus and a series without it silently becomes the sum of
     # every plant that has the same metric name.
@@ -114,6 +136,16 @@ def metrics(db: ReadDbDep) -> str:
     # says how many were ever written, which is what a rate wants.
     lines.append(f'mes_tag_values_max_id{{plant="{plant}"}} {db.scalar(select(func.max(TagValue.id))) or 0}')
     lines.append(f'mes_audit_entries_max_id{{plant="{plant}"}} {db.scalar(select(func.max(AuditLog.id))) or 0}')
+    # Only on a plant that is replaying faster than real time. A series that
+    # is 1 everywhere teaches a reader nothing; a series that exists at all
+    # says this plant is a test harness, and a panel built on its numbers is
+    # reading the line's hour compressed into minutes of wall clock.
+    replay = line_clock.summary()
+    if replay:
+        lines += ["# HELP mes_replay_factor How many seconds of the recorded line one second of "
+                  "this plant's wall clock is worth. Absent on a plant whose clock is the line's.",
+                  "# TYPE mes_replay_factor gauge",
+                  f'mes_replay_factor{{plant="{plant}"}} {replay["factor"]:g}']
     lines += _coverage_series(db, plant)
     return "\n".join(lines) + "\n"
 
