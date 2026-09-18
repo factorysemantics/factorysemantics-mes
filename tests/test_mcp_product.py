@@ -41,6 +41,8 @@ def wired(make_client, session, monkeypatch):
             s.commit()
 
     monkeypatch.setattr(idempotency, "session_scope", keys_scope)
+    # The lookup is a read and says so, so it has its own scope to point at.
+    monkeypatch.setattr(idempotency, "read_only_session", keys_scope)
     auth.create_user(session, code=mcp_server.AGENT_USER, name="Plant Agent",
                      password=mcp_server.AGENT_PASSWORD, role="agent")
     session.flush()

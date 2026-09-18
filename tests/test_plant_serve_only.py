@@ -1,6 +1,8 @@
 """A registry entry may serve without simulating."""
 from __future__ import annotations
 
+import io
+
 from fsmes import plant as plants
 
 
@@ -12,6 +14,9 @@ def test_a_plant_that_says_simulate_false_starts_the_api_alone(tmp_path, monkeyp
 
     class FakeProc:
         pid = 4242
+        # The log sink is started first and the rest write down its pipe;
+        # see `fsmes.fleet.logsink` for why one process has to own the file.
+        stdin = io.BytesIO()
 
         def poll(self):
             return None
@@ -27,10 +32,12 @@ def test_a_plant_that_says_simulate_false_starts_the_api_alone(tmp_path, monkeyp
     cfg = {"api_port": 9999, "opc_port": 4999, "tag_map": "t.json", "replay_dir": "out", "simulate": False,
            "init": "init.py", "post_boot": "driver.py"}
     plants.start("demo", cfg, tmp_path, echo=lambda *a: None)
-    assert [a[1] for a in launched] == ["run-api"], "the API alone; no replay, agent, floor or driver"
+    assert [a[1] for a in launched] == ["run-log-sink", "run-api"], (
+        "the API alone behind its log sink; no replay, agent, floor or driver")
 
     launched.clear()
     cfg["simulate"] = True
     plants.start("demo", cfg, tmp_path, echo=lambda *a: None)
-    assert [a[1] for a in launched] == ["run-opc-sim", "run-opc-agent", "run-api", "run-operations", "driver.py"]
+    assert [a[1] for a in launched] == ["run-log-sink", "run-opc-sim", "run-opc-agent",
+                                        "run-api", "run-operations", "driver.py"]
     assert plants.simulates({}) is True, "a registry that says nothing simulates, as every plant did before"

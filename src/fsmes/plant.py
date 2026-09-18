@@ -508,9 +508,19 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
     env = plant_env(name, cfg, root, speed)
     mes = fsmes_bin()
     (root / "logs" / name).mkdir(parents=True, exist_ok=True)
+    log_path = root / "logs" / name / "plant.log"
+
+    # THE LOG HAS A CEILING. A plant is a thing that is left running, and a
+    # lab plant filled 1.1 GB in six hours on a box with 22 GB free. One
+    # process owns the file and caps it at 200 MB across four; the plant's
+    # processes write down its pipe. `fsmes.fleet.logsink` says why it has
+    # to be a separate process rather than a rotating handler.
+    #
     # Deliberately not a context manager: this handle is inherited by the
-    # three detached children and must outlive this function.
-    log = open(root / "logs" / name / "plant.log", "ab")  # noqa: SIM115
+    # detached children and must outlive this function.
+    sink = subprocess.Popen([mes, "run-log-sink", str(log_path)], cwd=root, env=env,
+                            stdin=subprocess.PIPE, start_new_session=True)
+    log = sink.stdin
 
     procs = []
     # Order matters: the OPC server must be listening before the agent
@@ -545,9 +555,16 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
                                           stdout=log, stderr=subprocess.STDOUT,
                                           start_new_session=True))
 
-    pid_file(root, name).write_text("\n".join(str(p.pid) for p in procs), encoding="utf-8")
+    # Let go of our own end of the pipe, so the sink sees EOF when the last
+    # of the plant's processes has gone and can finish writing and exit.
+    log.close()
+
+    # The sink is last in the file: `stop` reaches it after the processes
+    # that write to it, which is the order that loses nothing.
+    pids = [p.pid for p in procs] + [sink.pid]
+    pid_file(root, name).write_text("\n".join(str(p) for p in pids), encoding="utf-8")
     echo(f"  {name} started -> {dashboard_url(cfg)} "
-         f"(PIDs {', '.join(str(p.pid) for p in procs)})")
+         f"(PIDs {', '.join(str(p) for p in pids)})")
 
 
 def stop(name: str, cfg: dict, root: Path, echo=print) -> None:

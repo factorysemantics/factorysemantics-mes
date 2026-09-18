@@ -27,7 +27,7 @@ from asyncua import Client
 
 from fsmes import shadow
 from fsmes.config import Settings
-from fsmes.db import session_scope
+from fsmes.db import read_only_session, session_scope
 from fsmes.domain import ConnectionStateName, ProductionSource, TagValue
 from fsmes.integrations.opc.security import apply_security, explain_connection_error
 from fsmes.integrations.opc.tag_map import MachineMap, load_manifest, load_tag_map
@@ -47,6 +47,22 @@ from fsmes.services import (
 )
 
 log = structlog.get_logger("opc.agent")
+
+
+def _failed(event: str, exc: BaseException, **fields) -> None:
+    """One line for a failure: what was being written, for which machine,
+    and what went wrong. The traceback only if somebody asked for it.
+
+    The agent fails at the plant's own rate - once a second when a database
+    is contended - and `log.exception` renders each one as a full traceback
+    with locals and source. On a lab plant that was 282 lines a failure and
+    1.1 GB in six hours. A plant engineer acts on the machine code and the
+    quantities; a developer chasing the stack sets MES_LOG_LEVEL=DEBUG and
+    gets every frame back.
+    """
+    log.error(event, error=f"{type(exc).__name__}: {exc}"[:300], **fields)
+    log.debug(f"{event}: traceback", exc_info=exc, **fields)
+
 
 _ORDER_SYNC_SECONDS = 2.0
 
@@ -105,6 +121,13 @@ GROUP_GRACE_S = 0.25
 GROUP_TIMEOUT_S = 3.0
 # How long a station's current order is trusted before it is looked up again.
 ORDER_CACHE_S = 10.0
+# How often a machine counting with no order open says so. Not every
+# booking: a machine running unassigned at ten bookings a second is 36,000
+# identical lines an hour, and the fact it is reporting - this machine has
+# no order - does not change between them. The line carries how many units
+# went to the unassigned list since the last one, so the summary says more
+# than any of the lines it replaces did.
+UNASSIGNED_REPORT_SECONDS = 60.0
 
 
 def _is_inspection_tag(tag: str) -> bool:
@@ -195,6 +218,9 @@ class _Handler:
         self._orders: dict[str, tuple[float, str | None]] = {}
         self.inspection_stats = {"events": 0, "partial": 0, "units": 0, "duplicates": 0,
                                  "unknown_members": 0, "checks": 0, "signals": 0}
+        # Per machine: when it last said it was counting with no order open,
+        # and what has gone to the unassigned list since.
+        self._unassigned: dict[str, list] = {}
 
     async def datachange_notification(self, node, value, _data) -> None:
         spec, tag = self.node_info[node]
@@ -434,8 +460,8 @@ class _Handler:
             # The DB work runs in a thread so a busy database never blocks
             # the OPC loop; one batch at a time, so order is kept.
             await asyncio.to_thread(self._process, batch)
-        except Exception:
-            log.exception("failed to book a batch of readings", rows=len(batch))
+        except Exception as exc:
+            _failed("failed to book a batch of readings", exc, rows=len(batch))
         stats.busy_s += time.monotonic() - started
         stats.readings += len(batch)
         stats.batches += 1
@@ -472,8 +498,9 @@ class _Handler:
         if history:
             try:
                 self._write_history(history)
-            except Exception:
-                log.exception("failed to write tag history", rows=len(history))
+            except Exception as exc:
+                _failed("failed to write tag history", exc, rows=len(history),
+                        machines=sorted({code for code, _t, _v, _o in history}))
 
     # A batch that fails is tried again before it is given up. The cutlery
     # plant found why: the first batch after subscribing carries every
@@ -493,25 +520,61 @@ class _Handler:
     BOOK_BACKOFF_S = 0.5
 
     def _book_with_retry(self, decisions: list[tuple]) -> bool:
+        """Book a batch, and only then believe what it counted.
+
+        THE BASELINE MOVES LAST. A counter delta is measured against the
+        last value this agent saw, so moving that baseline before the
+        booking commits destroys the units if it does not. Worse, the
+        retry then measured the next delta from the moved baseline, found
+        zero, committed nothing and reported success - so a lock failure
+        did not even leave a trace in the counts.
+
+        Measured on a lab plant on 2026-09-18: seventy `failed to book
+        production` lines in the last 150,000 lines of one plant's log, at
+        eight to ten units each, all of them gone. That is house rule 1
+        read the other way round - a plant that loses production it made
+        is as wrong about its own day as one that invents production it
+        did not.
+
+        So the deltas each attempt measures go in a pending set, and they
+        become the baseline only when the transaction the booking used has
+        committed. A failed attempt leaves the baseline where it was, and
+        because a counter is absolute, the next reading re-measures the
+        whole delta and the units arrive late instead of never.
+        """
         for attempt in range(1, self.BOOK_ATTEMPTS + 1):
+            pending: dict[tuple[str, str], int] = {}
+            started = time.monotonic()
             try:
                 with session_scope() as session:
-                    self._book(session, decisions)
+                    self._book(session, decisions, pending)
+                self.last_counts.update(pending)
                 return True
-            except Exception:
+            except Exception as exc:
+                waited_ms = round(1000 * (time.monotonic() - started))
                 if attempt == self.BOOK_ATTEMPTS:
-                    log.exception("failed to book decisions", rows=len(decisions), attempts=attempt)
+                    _failed("failed to book decisions", exc, rows=len(decisions),
+                            attempts=attempt, waited_ms=waited_ms,
+                            machines=sorted({spec.equipment for spec, _t, _v in decisions}),
+                            units_owed=sum(
+                                v - self.last_counts.get(k, v) for k, v in pending.items()))
                     return False
                 log.warning("booking failed, retrying", rows=len(decisions), attempt=attempt,
+                            waited_ms=waited_ms, error=f"{type(exc).__name__}: {exc}"[:160],
                             wait_s=self.BOOK_BACKOFF_S * 2 ** (attempt - 1))
                 time.sleep(self.BOOK_BACKOFF_S * 2 ** (attempt - 1))
         return False
 
-    def _book(self, session, decisions: list[tuple]) -> None:
+    def _book(self, session, decisions: list[tuple], pending: dict[tuple[str, str], int]) -> None:
         """State changes are booked every one, in order. Counters coalesce
         to their latest value per machine and tag - a delta is value-based,
         so the readings in between would add nothing but sessions - and a
-        machine's good and scrap go down as one booking."""
+        machine's good and scrap go down as one booking.
+
+        `pending` collects the counter values this attempt consumed. The
+        caller promotes them to the baseline once the transaction commits;
+        see `_book_with_retry`.
+        """
         latest: dict[tuple[str, str], int] = {}
         for i, (spec, tag, _value) in enumerate(decisions):
             if tag in COUNTER_TAGS:
@@ -526,12 +589,12 @@ class _Handler:
                         equipment.set_state(
                             session, equipment_code=spec.equipment,
                             state=spec.to_state(value), actor="opc-agent")
-                except Exception:
-                    log.exception("failed to process data change",
-                                  equipment=spec.equipment, tag=tag, value=value)
+                except Exception as exc:
+                    _failed("failed to process data change", exc,
+                            equipment=spec.equipment, tag=tag, value=value)
             elif tag in COUNTER_TAGS and latest.get((spec.equipment, tag)) == i:
                 self._record(session, spec, tag, value)
-                delta = self._counter_delta(spec.equipment, tag, int(value))
+                delta = self._counter_delta(spec.equipment, tag, int(value), pending)
                 if delta:
                     if spec.equipment not in deltas:
                         order.append(spec.equipment)
@@ -546,12 +609,40 @@ class _Handler:
                 if op is None:
                     # Not a drop: execution.report has written the units to
                     # the unassigned production list, where they can be
-                    # counted and argued about. The line stays so the log
-                    # still shows when a machine ran without an order.
-                    log.info("machine counted with no active order; recorded as unassigned production",
-                             equipment=code, **quantities)
-            except Exception:
-                log.exception("failed to book production", equipment=code, **quantities)
+                    # counted and argued about. The log still shows when a
+                    # machine ran without an order - once a minute per
+                    # machine, with the units since, rather than once a
+                    # booking saying the same thing.
+                    self._note_unassigned(code, quantities)
+            except Exception as exc:
+                # This machine's booking failed inside its own savepoint, so
+                # the rest of the batch still commits. Its counter must not
+                # move with them, or the units in `quantities` are gone: drop
+                # them from the pending set and the next reading re-measures
+                # the delta from where this one started.
+                for tag in COUNTER_TAGS:
+                    pending.pop((code, tag), None)
+                _failed("failed to book production", exc, equipment=code,
+                        units_owed=sum(quantities.values()), **quantities)
+
+    def _note_unassigned(self, code: str, quantities: dict) -> None:
+        """Say that a machine is counting with no order open, and how much.
+
+        Once a minute per machine. Every unit is in the unassigned
+        production list either way; what this decides is how often the log
+        repeats a fact that has not changed.
+        """
+        now = time.monotonic()
+        said_at, good, scrap = self._unassigned.get(code, [0.0, 0, 0])
+        good += quantities.get("good", 0)
+        scrap += quantities.get("scrap", 0)
+        if now - said_at >= UNASSIGNED_REPORT_SECONDS:
+            log.info("machine counting with no active order; recorded as unassigned production",
+                     equipment=code, good=good, scrap=scrap,
+                     since_s=None if said_at == 0.0 else round(now - said_at, 1))
+            self._unassigned[code] = [now, 0, 0]
+        else:
+            self._unassigned[code] = [said_at, good, scrap]
 
     def _record(self, session, spec: MachineMap, tag: str, value) -> None:
         """A semantic reading is history too - and it keeps the machine's
@@ -594,25 +685,35 @@ class _Handler:
                     row.ts = observed
                 session.add(row)
 
-    def _counter_delta(self, equipment_code: str, tag: str, value: int) -> int:
+    def _counter_delta(self, equipment_code: str, tag: str, value: int,
+                       pending: dict[tuple[str, str], int]) -> int:
         """The increase of a monotonic machine counter. The one rule that
         outranks all others: never invent production. Stale or duplicate
         readings count for nothing; a counter that fell to near zero is a PLC
         reset and becomes the new baseline (the units around the reset are
-        unknowable, so none are booked)."""
+        unknowable, so none are booked).
+
+        The new baseline goes to `pending`, not to `last_counts`: it is what
+        this attempt *would* leave behind, and it is only true once the
+        booking commits. Readings inside one batch still measure against each
+        other, because `pending` is read first.
+        """
         key = (equipment_code, tag)
-        last = self.last_counts.get(key)
+        last = pending.get(key, self.last_counts.get(key))
         if last is None or value < last // 2:
-            self.last_counts[key] = value
+            pending[key] = value
             return 0
         if value <= last:
             return 0
-        self.last_counts[key] = value
+        pending[key] = value
         return value - last
 
 
 def _desired_order_codes(equipment_codes: list[str]) -> dict[str, str]:
-    with session_scope() as session:
+    # Read-only, and declared: this runs in the adjustment loop, just before
+    # the agent goes to the PLC, and a write lock taken here is a write lock
+    # taken on the way to a network call.
+    with read_only_session() as session:
         return {
             code: (ops[0].order.code if (ops := workorders.dispatch_list(session, code)) else "")
             for code in equipment_codes
@@ -1000,7 +1101,7 @@ async def write_approved_adjustments(nodes: dict, bounds: dict, scope) -> list[s
         except Exception as exc:
             with scope() as session:
                 adjustments.mark_failed(session, rec["code"], f"write failed: {exc}")
-            log.exception("adjustment write failed", code=rec["code"])
+            _failed("adjustment write failed", exc, code=rec["code"])
             continue
         with scope() as session:
             adjustments.mark_written(session, rec["code"], float(rec["value"]))
@@ -1053,8 +1154,8 @@ async def _adjustment_loop(node_info: dict, machines: list[MachineMap], manifest
                         pv_before[rec["code"]] = float(await pv.read_value())
             await write_approved_adjustments(nodes, bounds, session_scope)
             await verify_written_adjustments(nodes, session_scope, pv_before)
-        except Exception:
-            log.exception("adjustment loop failed; continuing")
+        except Exception as exc:
+            _failed("adjustment loop failed; continuing", exc)
         await asyncio.sleep(_ADJUSTMENT_POLL_SECONDS)
 
 

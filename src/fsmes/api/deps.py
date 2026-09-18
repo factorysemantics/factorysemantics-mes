@@ -7,6 +7,7 @@ self-declared header.
 """
 
 from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request
@@ -18,9 +19,47 @@ from fsmes.services import auth
 
 SESSION_COOKIE = "mes_session"
 
+# Methods that only answer a question. A request with one of these gets a
+# session that cannot write even when the route asked for `DbDep`, so on SQLite
+# it never takes the single write lock while it computes. `ReadDbDep` below is
+# the same thing said explicitly by a route; this is the floor under every
+# route that has not said it, because a GET that takes the write lock is a GET
+# that can stop the plant booking, and there are more routes than anyone will
+# remember to move.
+#
+# The method decides, rather than a per-route declaration, because HTTP already
+# says this and a second place to say it is a second place to get it wrong. A
+# GET that writes is then not a slow request but an outright failure — `attempt
+# to write a readonly database` — which is the right answer for a GET that
+# writes.
+READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
-def get_db() -> Iterator[Session]:
-    with session_scope() as session:
+
+def get_db(request: Request) -> Iterator[Session]:
+    if request.method in READ_METHODS:
+        with read_only_session() as session:
+            yield session
+    else:
+        with session_scope() as session:
+            yield session
+
+
+@contextmanager
+def short_read() -> Iterator[Session]:
+    """A read that opens and closes inside the call that makes it.
+
+    Deliberately not a FastAPI dependency. A dependency's session is held
+    until the response has been sent, which is the whole problem this
+    avoids: `/design/chat` spends up to four network calls on a model, and
+    while a request session is open on SQLite, nothing anywhere in the
+    plant can write. The capability gate and the endpoints that call a
+    model read through this instead, so they hold nothing while they wait.
+
+    Callers reach it as `deps.short_read()`, through the module, so the
+    test suite can point it at the session a test is working in — the same
+    reason, and the same place, as its override of `get_db`.
+    """
+    with read_only_session() as session:
         yield session
 
 
@@ -69,14 +108,24 @@ def require(capability: str):
     token carries is resolved to its capabilities from the database on each
     request, so revoking a power takes effect at once rather than at the
     user's next sign-in.
+
+    The gate reads in a session of its own, closed before the endpoint runs,
+    rather than borrowing the request's. Two reasons, both learned the hard
+    way. It is a read, and a read should take no write lock. And it runs
+    first, so on a write endpoint it used to open the request's transaction
+    before the handler had done anything — which on `/design/chat` meant the
+    plant's one write lock was taken and then held across four calls to a
+    model.
     """
 
-    def _check(user: UserDep, db: DbDep) -> dict:
-        role = auth.current_role(db, user)
-        if role is None:
-            raise HTTPException(401, "this account can no longer sign in",
-                                headers={"WWW-Authenticate": "Bearer"})
-        if not auth.can(db, role, capability):
+    def _check(user: UserDep) -> dict:
+        with short_read() as db:
+            role = auth.current_role(db, user)
+            if role is None:
+                raise HTTPException(401, "this account can no longer sign in",
+                                    headers={"WWW-Authenticate": "Bearer"})
+            allowed = auth.can(db, role, capability)
+        if not allowed:
             raise HTTPException(
                 403,
                 f"this action needs the {capability!r} capability, "

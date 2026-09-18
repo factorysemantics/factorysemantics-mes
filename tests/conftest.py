@@ -39,6 +39,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 import fsmes.domain  # noqa: F401  (register all tables)
+from fsmes.api import deps
 from fsmes.api.app import create_app
 from fsmes.api.deps import get_db, get_read_db
 from fsmes.db import Base
@@ -119,23 +120,44 @@ def scope(session):
     return _scope
 
 
-@pytest.fixture()
-def make_client(session):
-    """Build API clients that share the test session. Each call returns its own
-    client, so tests can hold several roles at once without them colliding."""
-    app = create_app()
+def use_the_test_session(app, session, monkeypatch) -> None:
+    """Point every one of the API's database seams at this test's session.
+
+    Three seams, not one, and each of them exists for a reason a test would
+    otherwise trip over.
+
+    `get_db` is the request's own session. `get_read_db` is the unit of work
+    a read-only endpoint asks for (`fsmes.db.read_only_session`), which would
+    otherwise open a second connection to the deployment's database rather
+    than this test's; what the read-only path guarantees is proved where it
+    matters, against a real file database, in `test_read_never_waits.py`.
+    `deps.short_read` is the one the capability gate and the endpoints that
+    call a model read through - deliberately not a FastAPI dependency,
+    because a dependency's session is held until the response has been sent
+    and those endpoints wait on a network in between. A test that points only
+    the first at its own session gets 401s from the gate, which would be
+    looking for this test's accounts in a database that has none.
+    """
 
     def _same_session():
         yield session
         session.flush()
 
+    @contextmanager
+    def _same_session_read():
+        yield session
+
     app.dependency_overrides[get_db] = _same_session
-    # Read-only endpoints ask for their own unit of work (fsmes.db.
-    # read_only_session), which would open a second connection to the
-    # deployment's database rather than this test's. They get the test
-    # session too; what the read-only path guarantees is proved where it
-    # matters, against a real file database, in test_read_never_waits.py.
     app.dependency_overrides[get_read_db] = _same_session
+    monkeypatch.setattr(deps, "short_read", _same_session_read)
+
+
+@pytest.fixture()
+def make_client(session, monkeypatch):
+    """Build API clients that share the test session. Each call returns its own
+    client, so tests can hold several roles at once without them colliding."""
+    app = create_app()
+    use_the_test_session(app, session, monkeypatch)
     clients = []
 
     def _make() -> TestClient:

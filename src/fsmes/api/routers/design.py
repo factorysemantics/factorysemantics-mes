@@ -12,7 +12,8 @@ from pathlib import Path
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from fsmes.api.deps import DbDep, UserDep, require
+from fsmes.api import deps
+from fsmes.api.deps import UserDep, require
 from fsmes.config import get_settings
 from fsmes.services import auth, design
 
@@ -58,12 +59,23 @@ def status(user: UserDep) -> dict:
 
 
 @router.post("/chat", dependencies=[require("audit.read")])
-def chat(body: ChatIn, user: UserDep, db: DbDep) -> dict:
-    """Discuss the screen the person is looking at."""
+def chat(body: ChatIn, user: UserDep) -> dict:
+    """Discuss the screen the person is looking at.
+
+    NO REQUEST SESSION. A request session lives until the response is sent,
+    and on SQLite that is the plant's single write lock. This endpoint then
+    spends up to four network calls inside it - two on-device compressions,
+    a classification, and the frontier model - which on a lab plant meant
+    minutes with nothing in the plant able to book anything, and a screen
+    that answered `Could not reach the design surface: 500` because the
+    design store's own write met the same lock. The one thing it needs from
+    the plant database is read here and the session closed.
+    """
     if not design.enabled():
         return {"error": "The design surface is off. Set MES_DESIGN_CHAT=1 to enable it."}
 
-    role = auth.current_role(db, user) or user["role"]
+    with deps.short_read() as db:
+        role = auth.current_role(db, user) or user["role"]
     settings = get_settings()
 
     # Big payloads get shrunk on-device before they go anywhere. Paying a

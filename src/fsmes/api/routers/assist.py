@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 
+from fsmes.api import deps
 from fsmes.api.deps import DbDep, UserDep
 from fsmes.config import get_settings
 from fsmes.domain import NonConformance, Person, WorkOrder
@@ -81,16 +82,26 @@ def _guide_out(guide: dict) -> dict:
 
 
 @router.post("/ask")
-def ask(body: AskIn, user: UserDep, db: DbDep) -> dict:
+def ask(body: AskIn, user: UserDep) -> dict:
     """Answer, or offer to walk the person through it.
 
     A 'how do I' question returns a guide: real steps against real controls on
     real screens. Anything else is answered from the plant's current state.
-    """
-    role = auth.current_role(db, user) or user["role"]
-    capabilities = auth.capabilities_for(db, role)
 
-    guide = assistant.route(body.question, capabilities, db)
+    NO REQUEST SESSION. This endpoint calls a model, which takes seconds at
+    best, and a request session is held for the whole request - on SQLite
+    that is the plant's single write lock, so nothing else could book a thing
+    while somebody asked the assistant a question. Each thing the model needs
+    is read in its own short session and the session is closed before the
+    call. The same rule as the OPC agent's adjustment loop, applied to a
+    model instead of a PLC.
+    """
+    with deps.short_read() as db:
+        role = auth.current_role(db, user) or user["role"]
+        capabilities = auth.capabilities_for(db, role)
+        guides = assistant.visible_guides(capabilities, db)
+
+    guide = assistant.route(body.question, capabilities, guides=guides)
     if guide:
         return {
             "kind": "guide",
@@ -99,9 +110,11 @@ def ask(body: AskIn, user: UserDep, db: DbDep) -> dict:
                    f"{len(guide['steps'])} steps.",
         }
 
+    with deps.short_read() as db:
+        facts = _facts(db, capabilities)
     return {
         "kind": "answer",
-        "say": assistant.answer(body.question, _facts(db, capabilities), capabilities),
+        "say": assistant.answer(body.question, facts, capabilities),
     }
 
 
@@ -196,11 +209,18 @@ def agent_status(user: UserDep) -> dict:
 
 
 @router.post("/agent")
-def agent_message(body: AgentIn, user: UserDep, db: DbDep) -> dict:
+def agent_message(body: AgentIn, user: UserDep) -> dict:
     """Say what you want. A 'how do I' still gets a guide; anything else goes
-    to the agent, which reads freely and proposes every change."""
-    role, capabilities, name = _who(db, user)
-    guide = assistant.route(body.message, capabilities, db)
+    to the agent, which reads freely and proposes every change.
+
+    Like `/assist/ask`, it holds no request session: the agent's rounds are
+    model calls, and the agent reaches the plant through this plant's own API
+    rather than through a session borrowed from this request.
+    """
+    with deps.short_read() as db:
+        role, capabilities, name = _who(db, user)
+        guides = assistant.visible_guides(capabilities, db)
+    guide = assistant.route(body.message, capabilities, guides=guides)
     if guide:
         return {
             "kind": "guide", "session": body.session,

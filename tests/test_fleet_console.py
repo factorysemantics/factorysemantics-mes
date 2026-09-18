@@ -65,6 +65,8 @@ def as_that_plant(pack_dir: Path, session, data_dir: Path) -> dict:
     try:
         app = create_app()
 
+        # Only /health and /pack, neither of which signs anybody in, so the
+        # request session is the only seam this one needs.
         def _same_session():
             yield session
             session.flush()

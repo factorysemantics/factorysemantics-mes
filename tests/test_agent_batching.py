@@ -123,10 +123,15 @@ def test_counters_coalesce_to_their_latest_value_per_machine(monkeypatch):
             import contextlib
             return contextlib.nullcontext()
 
-    handler._book(Session(), decisions)
+    pending: dict[tuple[str, str], int] = {}
+    handler._book(Session(), decisions, pending)
     assert reports == [{"equipment_code": "WASH01", "source": agent.ProductionSource.OPC,
                         "actor": "opc-agent", "good": 4, "scrap": 1}]
-    assert handler.last_counts[("WASH01", "GoodCount")] == 104
+    # The new baseline is *pending*, not banked: `_book_with_retry` promotes it
+    # once the transaction commits, so a booking that fails leaves the counter
+    # where it was and the next reading re-measures the whole delta.
+    assert pending[("WASH01", "GoodCount")] == 104
+    assert handler.last_counts[("WASH01", "GoodCount")] == 100
 
 
 def test_state_changes_are_booked_every_one_in_order(monkeypatch):
@@ -143,7 +148,8 @@ def test_state_changes_are_booked_every_one_in_order(monkeypatch):
             import contextlib
             return contextlib.nullcontext()
 
-    handler._book(Session(), [(SPEC, "State", 1), (OTHER, "State", 4), (SPEC, "State", 4), (SPEC, "State", 1)])
+    handler._book(Session(), [(SPEC, "State", 1), (OTHER, "State", 4), (SPEC, "State", 4),
+                              (SPEC, "State", 1)], {})
     assert [code for code, _ in states] == ["WASH01", "FILL01", "WASH01", "WASH01"]
 
 
@@ -158,7 +164,8 @@ def test_a_failed_history_write_does_not_stop_the_line(monkeypatch):
 
     monkeypatch.setattr(handler, "_write_history", boom)
     monkeypatch.setattr(agent, "session_scope", lambda: __import__("contextlib").nullcontext(object()))
-    monkeypatch.setattr(handler, "_book", lambda session, decisions: booked.append(len(decisions)))
+    monkeypatch.setattr(handler, "_book",
+                        lambda session, decisions, pending: booked.append(len(decisions)))
     handler._process([(SPEC, "WashTemp", 70.0, None, 0.0), (SPEC, "State", 4, None, 0.0)])   # must not raise
     assert booked == [1], "the State change was booked although the history write failed"
 
@@ -208,7 +215,7 @@ def test_a_batch_that_fails_on_a_locked_database_is_booked_on_retry(monkeypatch)
     handler.BOOK_BACKOFF_S = 0.0
     attempts = []
 
-    def flaky(session, decisions):
+    def flaky(session, decisions, pending):
         attempts.append(len(decisions))
         if len(attempts) < 3:
             raise RuntimeError("database is locked")
@@ -219,7 +226,7 @@ def test_a_batch_that_fails_on_a_locked_database_is_booked_on_retry(monkeypatch)
 
     attempts.clear()
 
-    def always(session, decisions):
+    def always(session, decisions, pending):
         attempts.append(1)
         raise RuntimeError("still locked")
 

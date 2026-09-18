@@ -73,7 +73,8 @@ def test_history_and_decisions_are_booked_in_separate_sessions(monkeypatch):
     one ordered batch, decisions first."""
     handler = opc_agent._Handler({})
     order = []
-    monkeypatch.setattr(handler, "_book", lambda session, decisions: order.append("decisions"))
+    monkeypatch.setattr(handler, "_book",
+                        lambda session, decisions, pending: order.append("decisions"))
     monkeypatch.setattr(handler, "_write_history", lambda rows: order.append("history"))
     monkeypatch.setattr(opc_agent, "session_scope",
                         lambda: __import__("contextlib").nullcontext(object()))

@@ -24,9 +24,9 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
+from conftest import use_the_test_session
 from fsmes import modules as registry
 from fsmes.api.app import create_app
-from fsmes.api.deps import get_db, get_read_db
 from fsmes.config import Settings, get_settings
 from fsmes.db import Base
 
@@ -48,13 +48,7 @@ def with_modules(monkeypatch, session):
         monkeypatch.setenv("MES_MODULES", spec)
         get_settings.cache_clear()
         app = create_app()
-
-        def _same_session():
-            yield session
-            session.flush()
-
-        app.dependency_overrides[get_db] = _same_session
-        app.dependency_overrides[get_read_db] = _same_session
+        use_the_test_session(app, session, monkeypatch)
         client = TestClient(app)
         client.__enter__()
         made.append(client)
