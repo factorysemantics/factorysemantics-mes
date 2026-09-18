@@ -206,19 +206,34 @@ def test_the_machine_page_draws_the_missing_oee_as_unknown_and_not_as_full_marks
     bar beside a dash reads as a perfect score, which is the same lie in a
     different font."""
     machine = page.context.new_page()
-    machine.goto(f"{plant}/dashboard/machine/{MACHINE}", wait_until="load", timeout=30000)
-    machine.click("text=OEE")
-    machine.wait_for_selector("#oee-bars .bar-row", timeout=15000)
+    # The tab, not the URL: the page builds its own tab strip after it knows
+    # who is looking, so the button has to be waited for rather than clicked
+    # at.
+    machine.goto(f"{plant}/dashboard/machine/{MACHINE}#oee", wait_until="load", timeout=30000)
+    machine.wait_for_selector('.tab[data-tab="oee"]', timeout=30000)
+    machine.click('.tab[data-tab="oee"]')
+    machine.wait_for_selector("#oee-bars .bar-row", timeout=30000)
 
-    rows = machine.locator("#oee-bars .bar-row")
+    # Read in one pass, in the page: the screen refreshes itself, and a style
+    # asked for through a handle taken before a re-render is a style read off
+    # a node that is no longer in the document, which answers "" for
+    # everything and looks exactly like a bug in the stylesheet.
+    drawn = machine.evaluate("""() => [...document.querySelectorAll('#oee-bars .bar-row')]
+        .map((row) => {
+          const fill = row.querySelector('.bar > i');
+          return {
+            label: row.firstElementChild.textContent.trim(),
+            num: (row.querySelector('.num') || {}).textContent.trim(),
+            cls: fill ? fill.className : '',
+            paint: fill ? getComputedStyle(fill).backgroundImage : '',
+          };
+        })""")
+    by_label = {row["label"]: row for row in drawn}
     for label in ("Performance", "OEE"):
-        row = rows.filter(has_text=label).first
-        assert row.locator(".num").inner_text().strip() in {"—", "-", ""}
-        fill = row.locator(".bar > i")
-        assert "unknown" in (fill.get_attribute("class") or ""), f"{label} is drawn as a score"
-        painted = machine.evaluate(
-            "(i) => getComputedStyle(i).backgroundImage", fill.element_handle())
-        assert "gradient" in painted, f"{label} is a solid bar where there is no figure"
+        row = by_label[label]
+        assert row["num"] in {"—", "-", ""}, f"{label} reads {row['num']}"
+        assert "unknown" in row["cls"], f"{label} is drawn as a score"
+        assert "gradient" in row["paint"], f"{label} is a solid bar where there is no figure"
     said = machine.locator("#oee-bars .counts-outrun")
     assert "no performance figure" in said.inner_text()
     machine.close()
