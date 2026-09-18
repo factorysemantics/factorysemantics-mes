@@ -150,6 +150,57 @@ goes under Honesty with a migration line, so plant people can find it.
   stated budget, and a file-backed plant where a sign-in and both OEE
   endpoints have to answer while the plant is being written to.
 
+- **A plant on SQLite can book its own production while somebody is looking
+  at it.** The same night as the entry above, from the writers' side. A lab
+  plant running six hours at replay speed 10 logged **18,564** `database is
+  locked`, 825 HTTP 500s and 754 failed shop-floor steps, because a read held
+  the single write lock for as long as it took. The read-only unit of work
+  above is what fixes that; this extends it to **every** request that only
+  answers a question — GET, HEAD and OPTIONS get one whether or not the route
+  asked, and so do the capability gate and the idempotency lookup, because a
+  GET that takes the write lock can stop a plant booking and there are more
+  routes than anyone will remember to move. Measured on a reproduction that
+  runs the agent, three screens and a shop floor against one file database,
+  sixty seconds: 55 lock failures → **0**; 2 of 600 agent batches booked →
+  **600**; a floor that could not sign in → 545 steps, none refused.
+  PostgreSQL is untouched, by design.
+
+- **`MES_SQLITE_BUSY_TIMEOUT_MS`** (default 15,000, was a hard-coded 5,000):
+  how long a write waits for the lock before giving up. Five seconds was
+  chosen when reads took the lock too, so raising it could only make a doomed
+  wait longer. SQLite also runs with `synchronous=NORMAL` in WAL now, which
+  fsyncs at a checkpoint rather than on every one of a plant's ten commits a
+  second. What that costs, plainly: a power cut or kernel panic can lose the
+  last commits that had not reached a checkpoint. It cannot corrupt the
+  database, and a process crash loses nothing.
+
+- **Nothing that calls a model holds the plant's write lock while it waits.**
+  `POST /design/chat` took a request session — which on SQLite is the plant's
+  one write lock, held until the response is sent — and inside it made up to
+  four network calls: two on-device compressions at 90 s each, a
+  classification at 45 s, and a frontier model with no timeout of its own.
+  The symptom was `Could not reach the design surface: 500` on a plant that
+  had stopped being able to book anything. `POST /assist/ask` and
+  `POST /assist/agent` had the same shape. None of the three takes a request
+  session now; each reads what it needs, closes, and only then calls out. A
+  guard test holds every route to it.
+
+- **A plant's log is one line per failure, and has a ceiling.** The lab
+  plant's console log reached 6,348,536 lines and 1.1 GB in six hours — about
+  ten gigabytes a day. Its last 150,000 lines covered two and a half minutes
+  and carried 386 actual log events: one `database is locked` was rendering
+  as a 282-line rich traceback with locals and source excerpts, ten times a
+  second. Failures now say what was being written, for which machine, how
+  long they waited and how many units are owed, in one line; the stack goes
+  to DEBUG. httpx's per-request INFO lines and uvicorn's access lines for the
+  plant calling its own API are silenced — anybody else's request is still
+  logged. A machine counting with no order open says so once a minute with
+  the units since, rather than once a booking. `logs/<plant>/plant.log` from
+  `fsmes fleet start` is capped at 50 MB a file and four files: 200 MB, and
+  no setting can raise it. Measured on the reproduction: 17,381 lines and
+  2.7 MB a minute → **12 lines and 2.5 kB**. A budget test pins 20,000 lines
+  and 4 MB per plant-hour.
+
 - **The calibration figures no longer cut their own titles off.** Every line
   of text in a plot from `fsmes jev calibrate` is now wrapped to the canvas
   before the canvas is sized, so a long title makes the drawing taller
@@ -202,6 +253,23 @@ goes under Honesty with a migration line, so plant people can find it.
   can fall between two levels, beside the level carrying the most probability.
 
 ### Honesty
+
+- **Production a machine counted is no longer lost when the write that books
+  it fails.** The OPC agent measures a counter delta against the last value
+  it saw, and moved that baseline *before* the booking committed — so a
+  failed write took its units with it permanently, and the retry, measuring
+  from the moved baseline, found a delta of zero, committed nothing and
+  reported success. A lock failure left no trace in the counts at all.
+  Measured: seventy `failed to book production` lines at eight to ten units
+  each in the last 150,000 lines of one lab plant's log; in the reproduction,
+  twelve units counted and **zero** booked in sixty seconds. The baseline now
+  moves only when the transaction that used it has committed, so an attempt
+  that fails leaves the counter where it was and the next reading re-measures
+  the whole delta: late, never lost. `failed to book decisions` and `failed
+  to book production` say how many units are owed. **Migration:** none —
+  nothing already recorded changes. A plant that ran under contention before
+  this is short by whatever its log's `failed to book production` lines
+  named, and those lines are the only record of it. Decision 0034.
 
 - **Availability's denominator changed meaning: it is now the time this MES
   watched, all causes together, not the window less the disconnections it

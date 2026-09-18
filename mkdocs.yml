@@ -165,6 +165,7 @@ nav:
           - decisions/0031-a-judgment-is-a-proposal.md
           - decisions/0032-a-hosted-judgment-and-the-shadow.md
           - decisions/0033-availability-is-a-share-of-what-was-watched.md
+          - decisions/0034-a-count-is-owed-until-it-is-booked.md
           - Template: decisions/TEMPLATE.md
   - Agents:
       - agents/index.md

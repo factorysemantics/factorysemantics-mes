@@ -366,6 +366,23 @@ that wherever this plant already keeps secrets.
 Read [backup and restore](backup.md) for the schedule, and for how to prove
 a backup actually restores, which is the only test that counts.
 
+**Two things about SQLite worth knowing, and neither needs you to do
+anything.** SQLite has one writer. A screen reading a KPI no longer stands in
+that queue and no longer makes anybody else stand in it, so a busy dashboard
+cannot stop the plant recording what it made. If a write does have to wait,
+it waits `MES_SQLITE_BUSY_TIMEOUT_MS` — fifteen seconds by default, which
+nothing on a healthy plant reaches. If one ever gives up, the log says so in
+one line naming the machine and how many units are still owed; those units
+are not lost, and they arrive with the next reading from that machine,
+because a machine's counter is absolute. You only need that setting if you
+see the line — and then the number is a symptom rather than the cure, so
+bring the line to a discussion rather than raising it and moving on.
+
+The plant's own log, `logs/<plant>/plant.log`, is capped: 50 MB a file, four
+files kept, 200 MB and no more. A plant left running for a month cannot fill
+the disk with what it said about itself. Set `MES_LOG_LEVEL=DEBUG` when you
+want the whole stack behind a failure; leave it alone the rest of the time.
+
 **If you put this on the plant network** rather than one PC, put TLS in
 front of it: the MES does not terminate TLS itself, and
 [TLS in front of the API](tls.md) has a Caddy config and an nginx config,

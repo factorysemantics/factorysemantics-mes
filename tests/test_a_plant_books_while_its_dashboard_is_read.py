@@ -412,18 +412,25 @@ def test_every_unit_the_plant_counted_after_its_baseline_is_booked(a_plant_on_a_
 
 
 if __name__ == "__main__":  # the reproduction, run for as long as you like
+    import os
     import tempfile
+
+    import structlog
 
     from fsmes import config
     from fsmes import db as db_module
+    from fsmes.integrations.opc import agent as _agent
+    from fsmes.logging import setup_logging
 
     duration = float(sys.argv[1]) if len(sys.argv) > 1 else 60.0
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "plant.db"
-        import os
-
         os.environ["MES_DATABASE_URL"] = f"sqlite:///{path.as_posix()}"
         for cache in (config.get_settings, db_module.get_engine, db_module.get_sessionmaker):
             cache.cache_clear()
+        # Log the way a plant logs, so the console this writes can be counted
+        # with the same grep the steward ran over `logs/bottling/plant.log`.
+        setup_logging("INFO", Path(tmp) / "logs", "harness")
+        _agent.log = structlog.get_logger("opc.agent")
         seed()
         print(run_the_plant(seconds=duration).report())

@@ -148,3 +148,111 @@ def test_postgresql_keeps_its_own_transaction_handling():
     postgres = make_engine("postgresql+psycopg://mes:mes@127.0.0.1:5432/mes")
     assert not {"_sqlite_begin", "_sqlite_pragmas"} & handlers(postgres), (
         "PostgreSQL was given SQLite's transaction handling")
+
+
+def _functions_that_reach_a_model(module_path) -> set[str]:
+    """The names in one service module that end up calling a model.
+
+    Worked out rather than listed: a function reaches a model if it opens a
+    URL itself, or asks an SDK client to create something, or calls another
+    function in the same module that does. A list would be a second place
+    to keep up to date, and the next model call added would not be on it.
+    """
+    import ast
+
+    tree = ast.parse(module_path.read_text(encoding="utf-8"))
+    calls: dict[str, set[str]] = {}
+    direct: set[str] = set()
+    for fn in ast.walk(tree):
+        if not isinstance(fn, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        named = set()
+        for node in ast.walk(fn):
+            if not isinstance(node, ast.Call):
+                continue
+            f = node.func
+            if isinstance(f, ast.Name):
+                named.add(f.id)
+            elif isinstance(f, ast.Attribute):
+                named.add(f.attr)
+        calls[fn.name] = named
+        if {"urlopen"} & named or ("create" in named and "messages" in ast.dump(fn)):
+            direct.add(fn.name)
+
+    reaching = set(direct)
+    changed = True
+    while changed:
+        changed = False
+        for name, named in calls.items():
+            if name not in reaching and named & reaching:
+                reaching.add(name)
+                changed = True
+    return reaching
+
+
+def test_no_route_holds_a_request_session_while_it_waits_on_a_model():
+    """The same rule as the test above, for the shape that slipped past it.
+
+    That one looks for an `await` inside a literal ``with session_scope()``.
+    A FastAPI request session is neither: it arrives as a dependency and
+    lives until the response has been sent, and the calls made inside it
+    are plain blocking ones. `POST /design/chat` had both - a `DbDep` and,
+    inside it, two on-device compressions at 90 s each, a classification at
+    45 s and a frontier model with no timeout of its own. On SQLite that is
+    the plant's single write lock held for minutes, and the symptom was
+    `Could not reach the design surface: 500` on a plant that had stopped
+    being able to book its own production.
+
+    Three service modules talk to a model. A route that takes a request
+    session may not call the functions in them that reach one; it reads what
+    it needs through `deps.short_read`, which closes before the call goes
+    out. Routes that call the *other* functions in those modules - the ones
+    that only read a catalogue - are fine and stay fine.
+    """
+    import ast
+
+    SESSION_DEPS = {"DbDep", "ActorDep"}
+    source_root = pathlib.Path(fsmes.domain.__file__).parent.parent
+    services = source_root / "services"
+    waits: dict[str, set[str]] = {
+        name: _functions_that_reach_a_model(services / f"{name}.py")
+        for name in ("design", "assistant", "agent")
+    }
+    assert all(waits.values()), f"no model calls found at all in {sorted(waits)}; the guard is blind"
+
+    def takes_a_request_session(fn) -> bool:
+        args = fn.args
+        return any(getattr(a.annotation, "id", None) in SESSION_DEPS
+                   for a in [*args.args, *args.posonlyargs, *args.kwonlyargs])
+
+    offenders = []
+    routers = source_root / "api" / "routers"
+    files = sorted(routers.rglob("*.py"))
+    for path in files:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        known = {
+            alias.asname or alias.name: alias.name
+            for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)
+            for alias in node.names
+            if alias.name in waits and (node.module or "").startswith("fsmes.services")
+        }
+        if not known:
+            continue
+        for fn in ast.walk(tree):
+            if not isinstance(fn, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+            if not takes_a_request_session(fn):
+                continue
+            for node in ast.walk(fn):
+                if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                        and isinstance(node.func.value, ast.Name)):
+                    continue
+                module = known.get(node.func.value.id)
+                if module and node.func.attr in waits[module]:
+                    offenders.append(
+                        f"{path.name}:{fn.lineno} {fn.name} -> {module}.{node.func.attr}")
+
+    assert files, "no routers found to check"
+    assert offenders == [], (
+        "a route holds the plant's database session while it waits on a model: "
+        + "; ".join(offenders))
