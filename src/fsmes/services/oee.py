@@ -101,6 +101,20 @@ ON_LINE_CLOCK = (
 )
 
 
+#: How far above 1.0 a ratio may sit and still count as fitting.
+#:
+#: Run time is a sum of measured intervals read back out of a database, not an
+#: exact number: the same half hour comes back as 1800.000004 s or 1799.999997
+#: s depending on how the dialect subtracts two timestamps. A machine that made
+#: exactly what its rating allows would then have a disagreement to name on
+#: some reads and not others, which is a flicker rather than a finding. Every
+#: surface prints four decimal places at most, so anything inside this is
+#: invisible on the screen either way. It is a tolerance on the *clock*, not a
+#: tolerance on the plant: a millionth is six orders of magnitude below the
+#: smallest real disagreement the lab has ever produced.
+TOUCHING = 1e-6
+
+
 @dataclass(frozen=True)
 class Performance:
     """What this MES will say about one machine's performance.
@@ -161,7 +175,7 @@ def performance(
     on_the_line = runtime_seconds * (replay_factor if replay_factor > 0 else 1.0)
     work_seconds = cycle_seconds * units
     ratio = work_seconds / on_the_line
-    if ratio > 1.0:
+    if ratio > 1.0 + TOUCHING:
         note = COUNTS_OUTRUN_RUN_TIME.format(
             units=round(units, 2),
             cycle=round(cycle_seconds, 3),

@@ -967,9 +967,18 @@ def oee(truth: LineTruth, reported: dict, tag_map: dict[str, str], speed: float,
                 "good": said.get("good_qty"),
                 "scrap": said.get("scrap_qty"),
                 "ideal_cycle_seconds": mes_cycle,
-                # As the MES reported them - on the wall clock, which at this
-                # replay speed is not the line's.
+                # As the MES reported them. Since 2026-09-18 the MES computes
+                # performance on the line's clock itself, from the same
+                # `MES_SIM_SPEED` this run was started with, and reports no
+                # figure at all when the counted work will not fit inside the
+                # run time - so this is `None` exactly when
+                # `counts_outrun_run_time` is true, and the ratio behind it is
+                # `performance_ratio`. The restatement below is kept because
+                # it is computed from the MES's own three numbers and can be
+                # checked against them.
                 "performance_as_reported": said.get("performance"),
+                "performance_ratio_as_reported": said.get("performance_ratio"),
+                "counts_outrun_run_time": said.get("counts_outrun_run_time"),
                 "oee_as_reported": said.get("oee"),
                 "runtime_wall_seconds": said.get("runtime_seconds"),
                 "downtime_wall_seconds": said.get("downtime_seconds"),
@@ -992,12 +1001,15 @@ def oee(truth: LineTruth, reported: dict, tag_map: dict[str, str], speed: float,
             },
             "performance_like_for_like": None if said is None else like_for_like,
             "performance_resolution": performance_resolution,
-            # The MES said this machine beat the cycle its master data rates it
-            # at. On a replay that is usually the clocks rather than the plant,
-            # which is what `performance_line_clock` is for.
+            # The MES's own arithmetic says this machine beat the cycle its
+            # master data rates it at. Read from `performance_ratio` rather
+            # than from the reported figure, because above 1.0 there is no
+            # reported figure any more - that is the whole of decision 0026 as
+            # amended. Before 2026-09-18 this was usually the clocks rather
+            # than the plant; the MES now settles the clocks itself.
             "mes_performance_above_rated": (
-                None if said is None or said.get("performance") is None
-                else said["performance"] > 1.0),
+                None if said is None or said.get("performance_ratio") is None
+                else said["performance_ratio"] > 1.0),
             # Stronger, and about the MES alone: on the line's own clock, and
             # at a rating both sides agree on, the MES counted more units than
             # its own recorded run time can hold - while the line, priced the

@@ -279,7 +279,8 @@ def _oee_saying(truth: lab_truth.LineTruth, *, speed: float = 1.0, **per_station
         code = {"Cut": "CUT01", "Pack": "PACK01"}[name]
         stations.append({
             "code": code, "good_qty": station.good, "scrap_qty": station.scrap,
-            "availability": 0.5, "performance": 0.5, "quality": 1.0, "oee": 0.25,
+            "availability": 0.5, "performance": 0.5, "performance_ratio": 0.5,
+            "counts_outrun_run_time": False, "quality": 1.0, "oee": 0.25,
             "runtime_seconds": round(station.running_seconds / speed, 1),
             "downtime_seconds": station.down_seconds,
             "ideal_cycle_seconds": station.ideal_cycle_seconds,
@@ -396,16 +397,21 @@ def test_a_station_that_beat_its_rating_is_reported_above_one_not_capped(tmp_pat
     row says which side said so rather than trimming either."""
     truth = _truth_for(tmp_path)
     cut = truth.stations["Cut"]
+    # What the MES reports when its counts outrun its run time: no figure,
+    # the ratio beside it, and the sentence. Decision 0026 as amended.
     said = _oee_saying(truth, speed=10.0,
-                       Cut={"performance": 14.0,
-                            "performance_note": "rating is slower than the machine",
+                       Cut={"performance": None, "performance_ratio": 14.0,
+                            "counts_outrun_run_time": True, "oee": None,
+                            "performance_note": "counted work will not fit inside the run time",
                             # Twice the units the line made, in the same run time.
                             "good_qty": cut.good * 2})
     out = measure.oee(truth, said, MAPPING, speed=10.0)
     row = next(r for r in out["stations"] if r["station"] == "Cut")
 
     assert row["mes_performance_above_rated"] is True
-    assert row["mes"]["performance_note"] == "rating is slower than the machine"
+    assert row["mes"]["performance_as_reported"] is None, "there is no figure to report"
+    assert row["mes"]["performance_ratio_as_reported"] == 14.0
+    assert row["mes"]["performance_note"] == "counted work will not fit inside the run time"
     assert row["mes"]["performance_line_clock"] > 1.0
     # And the difference is real rather than a floor: it is outside the band.
     assert measure.performance_significant(row) is True
