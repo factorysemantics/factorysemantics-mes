@@ -328,6 +328,12 @@ and its state timeline, with the 3D view as a tab.
 four mistakes that really are yours to fix, and — the useful part — says what
 is worth comparing against the system already in charge and what is not.
 
+Beside every figure is a **coverage** number: how much of that window this
+MES actually watched. On day one it is small and climbing, which is the
+truth. `fsmes oee explain <machine> 8h` prints every second of a window and
+where the unwatched ones went — [how much of the window did the MES
+see](coverage.md).
+
 Run the agent under a supervisor from the first day. The window it was not
 watching is reported as *unknown* and is never reconstructed, by design;
 [deploy](deploy.md) has the systemd units and the Compose file.
@@ -393,3 +399,4 @@ otherwise.
 - [Backup and restore](backup.md) · [TLS in front of the API](tls.md) · [Upgrading](upgrade.md)
 - [Deploy](deploy.md) · [Security](security.md) · [Compatibility](compatibility.md)
 - [Reading OEE](../plant/reading-oee.md) · [Never invent production](../plant/never-invent-production.md)
+- [How much of the window did the MES see](coverage.md)

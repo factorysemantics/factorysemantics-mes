@@ -204,6 +204,7 @@ def check(directory: Path, *, version: str = __version__) -> Report:
     problems += _pack_section(pack, version)
     problems += _sections(pack)
     problems += _identity(pack)
+    problems += _coverage_floor(pack)
     problems += _modules(pack)
     problems += _words(pack)
     files, file_problems, file_unknowns = _files(pack)
@@ -329,6 +330,29 @@ def _identity(pack: fmt.Pack) -> list[Problem]:
             "every shift boundary and every screen read in whatever zone the machine "
             "running the MES happens to be set to.")))
     return out
+
+
+def _coverage_floor(pack: fmt.Pack) -> list[Problem]:
+    """`[oee] coverage_floor` is a share, and the ends of the range are not
+    both allowed.
+
+    Zero is refused rather than read as "no floor": a pack that means no floor
+    leaves the key out, and a plant that typed zero meant something and should
+    be told the key does not do it. One is allowed and is a real answer - a
+    plant that will not report a KPI unless it watched the whole window - but
+    anything above one asks for more of a window than a window has.
+    """
+    value = pack.table("oee").get("coverage_floor")
+    if value is None or isinstance(value, bool):
+        return []  # absent, or already refused by the type check
+    if not isinstance(value, int | float):
+        return []
+    if not 0 < float(value) <= 1:
+        return [Problem("[oee] coverage_floor", (
+            f"is {value}, and it is a share of a window: greater than 0 and at most 1. "
+            "Leave the key out to withhold nothing - that is what no floor means, and "
+            "coverage is printed beside every figure either way."))]
+    return []
 
 
 def _modules(pack: fmt.Pack) -> list[Problem]:

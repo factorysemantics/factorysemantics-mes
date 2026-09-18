@@ -89,7 +89,12 @@ def test_the_metrics_carry_the_plant_so_a_fleet_can_be_scraped_into_one(anon):
     """Without the label, two plants' series have the same name in one
     Prometheus and silently become their sum."""
     body = anon.get("/metrics").text
-    for line in body.strip().splitlines():
+    # HELP and TYPE lines are not series and carry no labels; the coverage
+    # metrics ship them because "this is how much of the window we watched"
+    # is exactly the sentence a dashboard needs and cannot infer.
+    series = [line for line in body.strip().splitlines() if not line.startswith("#")]
+    assert series, "there is more here than comments"
+    for line in series:
         assert 'plant="' in line, f"a series with no plant label: {line}"
 
 

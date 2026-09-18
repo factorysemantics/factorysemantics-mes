@@ -262,6 +262,24 @@ main {
 .bar-row.total .num { font-weight: 700; }
 .bar-row.total > i, .bar-row.total .bar > i { background: var(--running); }
 
+/* How much of the window anybody watched. Deliberately not a fifth OEE bar:
+   it is not a component of OEE, it is the statement of how much of the window
+   the four above were measured over. A dotted rule separates it from them,
+   and its fill is the neutral grey the rest of the product already uses for
+   "we have no record of this", so it is never read as a score. */
+.bar-row.coverage { border-top: 1px dotted var(--track); padding-top: 6px; margin-top: 2px; }
+.bar-row.coverage .bar > i.cover { background: var(--unknown); }
+.bar-row.coverage .bar > i.unknown { background: repeating-linear-gradient(
+  90deg, var(--unknown) 0 3px, transparent 3px 6px); }
+
+/* The ledger: where the unwatched time went. Drawn under the figures, or in
+   place of them when this plant's pack floor withholds them. */
+.ledger { margin-top: 8px; }
+.ledger-causes { list-style: none; margin: 4px 0; padding: 0; display: grid; gap: 2px; }
+.ledger-causes li { display: flex; justify-content: space-between; gap: 8px;
+  font-size: 12px; color: var(--muted); }
+.ledger-causes .num { color: var(--text); font-family: var(--mono); }
+
 /* ---------- Tables ---------- */
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 14px; }

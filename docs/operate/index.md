@@ -14,6 +14,7 @@ page below is linked from it.
 | [Connecting read-only to an OPC UA server you do not own](opc-readonly.md) | how-to — commissioning against a server that already serves another system |
 | [Plant packs](packs.md) | reference — the one directory that says which plant this is |
 | [Plants from a fleet file](registry.md) | how-to — several independent plants, one list |
+| [How much of the window did the MES see](coverage.md) | explanation — the coverage ledger: every second of an OEE window, and the KPI a plant can withhold |
 | [Running beside an existing MES](shadow-mode.md) | how-to — shadow mode: one setting, and this MES can change nothing in the plant |
 | [The ERPNext connector](erpnext.md) | how-to |
 | [The unified namespace (MQTT)](uns.md) | how-to — MES events onto a plant's broker |

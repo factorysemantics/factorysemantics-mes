@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from fsmes.db import utcnow
 from fsmes.domain import Equipment, EquipmentLevel, EquipmentState, EquipmentStateName, ProductionLog
-from fsmes.services import audit, calendar, masterdata, outbox
+from fsmes.services import audit, calendar, coverage, masterdata, outbox
 from fsmes.services import connection as connection_service
 from fsmes.services import oee as oee_rules
 
@@ -279,11 +279,26 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
     "A handful" is three, plus one for each distinct instant at which a
     machine was first observed inside the window - which on a plant that has
     been running longer than the window is none at all.
+
+    TWO WINDOWS, AND THEY ANSWER DIFFERENT QUESTIONS. `window_hours` is how
+    much history this MES actually holds for the machine - the asked-for span
+    clamped to when it started watching - and the run time and the unit counts
+    are read over it. **Coverage is stated against the span that was asked
+    for**, because that is the question a coverage number exists to answer: of
+    the eight hours you asked about, how much did anybody watch? Clamping that
+    denominator too would report 100 % coverage on a machine commissioned ten
+    minutes ago, which is the reading the ledger exists to stop.
     """
     end = utcnow()
     asked = end - timedelta(hours=hours)
     ids = [m.id for m in machines]
     seen = first_seen(session, ids)
+
+    # The account of the asked-for window: every second of it in one
+    # disposition, and every unobserved second with a cause on it.
+    # Availability is derived from this rather than computed beside it.
+    ledgers = coverage.totals_many(session, ids, asked, end, seen)
+    the_floor = coverage.floor()
 
     # The window never reaches back before the MES started observing a
     # machine: time we have no record of is not downtime.
@@ -328,10 +343,12 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
         good, scrap, outside = made.get(m.id, (0.0, 0.0, 0.0))
         total = good + scrap
 
-        # Too little observed time to divide by: say "unknown", never "zero".
-        # The denominator is time the MES was *watching*, not time that passed.
-        availability = (runtime / observed_seconds
-                        if observed_seconds >= _MIN_WINDOW_SECONDS else None)
+        # Derived from the ledger, not computed beside it: run time over the
+        # seconds the ledger says somebody was watching. Too little of that to
+        # divide by means "unknown", never "zero".
+        account = ledgers[m.id]
+        availability = account.availability
+        cover = account.coverage
         # Never capped, and the note is the sentence the screen puts beside it
         # — see `fsmes.services.oee`.
         performance, performance_note = oee_rules.performance(
@@ -342,6 +359,13 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
             if None not in (availability, performance, quality)
             else None
         )
+        # A pack that sets a coverage floor is asking to be told *unknown*
+        # rather than shown a figure built on a window nobody watched. The
+        # ledger stays on the object either way: what is withheld is the
+        # number, never the evidence.
+        coverage_note = coverage.withhold(cover, the_floor)
+        if coverage_note:
+            availability = performance = quality = overall = None
         out[m.code] = {
             "equipment": m.code,
             "window_hours": round(window_seconds / 3600, 4),  # effective, after clamping
@@ -353,6 +377,14 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
             "unknown_seconds": round(unknown_seconds, 1),
             "unknown_share": (round(unknown_seconds / window_seconds, 4)
                               if window_seconds > 0 else None),
+            # How much of the window that was *asked for* this MES saw, and
+            # the account behind it. Always present, beside every figure:
+            # there is no reading of 92 % availability that survives not
+            # knowing it was measured over eleven observed minutes.
+            "coverage": round(cover, 4) if cover is not None else None,
+            "coverage_floor": the_floor,
+            "coverage_note": coverage_note or (None if the_floor else coverage.NO_FLOOR),
+            "ledger": account.as_json(),
             "availability": round(availability, 4) if availability is not None else None,
             "performance": round(performance, 4) if performance is not None else None,
             "performance_note": performance_note,

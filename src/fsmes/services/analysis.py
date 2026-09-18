@@ -48,7 +48,7 @@ from fsmes.domain import (
     TagValue,
 )
 from fsmes.kernel.tags import STRUCTURAL_TAGS
-from fsmes.services import NotFound, masterdata
+from fsmes.services import NotFound, coverage, masterdata
 from fsmes.services import calendar as calendar_service
 from fsmes.services import connection as connection_service
 from fsmes.services import equipment as equipment_service
@@ -141,6 +141,26 @@ def _window(db: Session, units: list[Equipment], hours: float,
     return start, end
 
 
+def _asked_window(hours: float, shift: calendar_service.Shift | None) -> tuple[datetime, datetime]:
+    """The window that was *asked for*, before any clamping to what the MES
+    happens to hold.
+
+    `_window` clamps its start to when this MES started watching, which is the
+    right window to read run time and unit counts over. It is the wrong one to
+    state coverage against: a line commissioned twenty minutes ago would
+    report that the MES saw all of its window, which is true of the clamped
+    window and useless as an answer.
+
+    A shift still running is clipped to now here too - the rest of it has not
+    happened, and counting hours nobody has lived through as unobserved would
+    be its own invention.
+    """
+    now = utcnow()
+    if shift is not None:
+        return shift.starts_at, max(shift.starts_at, min(shift.ends_at, now))
+    return now - timedelta(hours=hours), now
+
+
 def _window_json(start: datetime, end: datetime, hours: float,
                  shift: calendar_service.Shift | None) -> dict:
     """What every panel says about the window it drew.
@@ -196,6 +216,14 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
     # Seconds the MES could not see each machine. Out of availability's
     # denominator and stated as a share beside it - decision 0030.
     unknown_by_machine = connection_service.unknown_seconds(db, ids, start, end)
+    # The coverage ledger, over the window that was *asked for* rather than the
+    # one the MES turned out to have history for. Those are the same window on
+    # a line that has been running all day and very different ones on the
+    # morning a plant stands up, and coverage only means anything against the
+    # first. Availability comes out of this; see `fsmes.services.coverage`.
+    asked_start, asked_end = _asked_window(hours, the_shift)
+    ledgers = coverage.totals_many(db, ids, asked_start, asked_end)
+    the_floor = coverage.floor()
 
     stations = []
     for unit in units:
@@ -208,12 +236,19 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
         total = good + scrap
 
         unknown = min(unknown_by_machine.get(unit.id, 0.0), window_seconds)
-        observed = max(0.0, window_seconds - unknown)
+        # Observed time is the ledger's sum of what was actually watched, not
+        # the window less the disconnections: a hole in the state history that
+        # nothing recorded a disconnection for is time nobody watched either,
+        # and it used to sit in this denominator priced as downtime.
+        observed = ledgers[unit.id].observed_seconds
 
         cycle = unit.ideal_cycle_seconds
-        # Run time over *observed* time. Time nobody watched is not time the
-        # machine spent not running.
-        availability = runtime / observed if observed >= _MIN_WINDOW_SECONDS else None
+        # Run time over *observed* time, and observed time is the ledger's,
+        # not the window's. Time nobody watched is not time the machine spent
+        # not running.
+        account = ledgers[unit.id]
+        availability = account.availability
+        cover = account.coverage
         # Never capped, and the note is the sentence the screen puts beside it
         # — see `fsmes.services.oee`.
         performance, performance_note = oee_rules.performance(cycle, total, runtime, outside)
@@ -221,6 +256,12 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
         overall = (
             availability * performance * quality if None not in (availability, performance, quality) else None
         )
+        # Below this plant's floor, the figures are withheld and the ledger is
+        # printed in their place. The evidence is never withheld, only the
+        # number somebody would otherwise read as covering the shift.
+        coverage_note = coverage.withhold(cover, the_floor)
+        if coverage_note:
+            availability = performance = quality = overall = None
 
         # Losses, in the units their fix is measured in.
         #
@@ -249,6 +290,12 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
                 "unknown_seconds": round(unknown, 1),
                 "observed_seconds": round(observed, 1),
                 "unknown_share": round(unknown / window_seconds, 4) if window_seconds > 0 else None,
+                # How much of the window that was asked for anybody watched,
+                # and the account behind it. Always beside the figures.
+                "coverage": _round(cover),
+                "coverage_floor": the_floor,
+                "coverage_note": coverage_note or (None if the_floor else coverage.NO_FLOOR),
+                "ledger": account.as_json(),
                 "seconds_by_state": {k: round(v, 1) for k, v in seconds.items()},
                 "good_qty": good,
                 "scrap_qty": scrap,
@@ -286,6 +333,17 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
         # The line's blind spots, so a reader of the rollup does not have to
         # add up the stations to find out how much of the window was watched.
         "unknown_seconds": round(sum(s["unknown_seconds"] for s in stations), 1),
+        # The line's own coverage: the seconds anybody watched across every
+        # station, over the seconds there were to watch. Not an average of the
+        # stations' shares - a line of ten machines where one was blind all
+        # shift and nine were watched is 90 % watched, and averaging the
+        # shares would say the same thing only by accident.
+        "coverage": _round(_line_coverage(ledgers.values())),
+        "coverage_floor": the_floor,
+        "stations_withheld": sum(1 for s in stations if s["coverage_note"] and the_floor),
+        "observed_seconds": round(sum(s["observed_seconds"] for s in stations), 1),
+        "not_observed_seconds": round(
+            sum(a.not_observed_seconds for a in ledgers.values()), 1),
         "machines_disconnected_now": sum(
             1 for row in connection_service.open_connections(db, ids).values()
             if row.state.value == "disconnected"),
@@ -295,6 +353,15 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
         "good_qty": produced,
         "scrap_qty": scrapped,
     }
+
+
+def _line_coverage(accounts) -> float | None:
+    """One line's coverage: watched machine-seconds over available ones."""
+    accounts = list(accounts)
+    total = sum(a.window_seconds for a in accounts)
+    if total <= 0:
+        return None
+    return sum(a.observed_seconds for a in accounts) / total
 
 
 def _merge_short(intervals: list[dict], floor_seconds: float) -> list[dict]:
