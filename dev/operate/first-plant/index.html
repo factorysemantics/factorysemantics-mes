@@ -1164,6 +1164,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../coverage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — how much of the window did the MES see
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../packs/" class="md-nav__link">
         
   
@@ -2955,6 +2983,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0033-availability-is-a-share-of-what-was-watched/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0033 — Availability is a share of what was watched, and every figure says how much that was
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -3906,6 +3962,11 @@ and its state timeline, with the 3D view as a tab.</p>
 <a href="../first-week/">What to expect in the first week</a> explains each, lists the
 four mistakes that really are yours to fix, and — the useful part — says what
 is worth comparing against the system already in charge and what is not.</p>
+<p>Beside every figure is a <strong>coverage</strong> number: how much of that window this
+MES actually watched. On day one it is small and climbing, which is the
+truth. <code>fsmes oee explain &lt;machine&gt; 8h</code> prints every second of a window and
+where the unwatched ones went — <a href="../coverage/">how much of the window did the MES
+see</a>.</p>
 <p>Run the agent under a supervisor from the first day. The window it was not
 watching is reported as <em>unknown</em> and is never reconstructed, by design;
 <a href="../deploy/">deploy</a> has the systemd units and the Compose file.</p>
@@ -3957,6 +4018,7 @@ otherwise.</p>
 <li><a href="../backup/">Backup and restore</a> · <a href="../tls/">TLS in front of the API</a> · <a href="../upgrade/">Upgrading</a></li>
 <li><a href="../deploy/">Deploy</a> · <a href="../security/">Security</a> · <a href="../compatibility/">Compatibility</a></li>
 <li><a href="../../plant/reading-oee/">Reading OEE</a> · <a href="../../plant/never-invent-production/">Never invent production</a></li>
+<li><a href="../coverage/">How much of the window did the MES see</a></li>
 </ul>
 
 

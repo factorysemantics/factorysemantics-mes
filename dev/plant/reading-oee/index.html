@@ -1112,6 +1112,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operate/coverage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — how much of the window did the MES see
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operate/packs/" class="md-nav__link">
         
   
@@ -2903,6 +2931,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0033-availability-is-a-share-of-what-was-watched/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0033 — Availability is a share of what was watched, and every figure says how much that was
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -3611,20 +3667,36 @@ every OEE answer says how many of them there were:</p>
 </tr>
 <tr>
 <td><code>unknown_seconds</code></td>
-<td>seconds inside the window that nobody was watching</td>
+<td>seconds inside the window a recorded disconnection covered</td>
 </tr>
 <tr>
 <td><code>unknown_share</code></td>
 <td>that, as a share of the window</td>
 </tr>
+<tr>
+<td><code>coverage</code></td>
+<td><strong>how much of the window anybody watched, all causes together</strong></td>
+</tr>
+<tr>
+<td><code>ledger</code></td>
+<td>every second of the window, in one disposition, with the unwatched ones named</td>
+</tr>
 </tbody>
 </table>
 <p>So 92 % availability over forty observed minutes of an eight-hour window is
-still 92 %, and the object carrying it says the other seven hours and twenty
-minutes were unknown. Read both. A shift whose <code>unknown_share</code> is a third is
-not a shift to make a decision from, however good its OEE looks.</p>
-<p><a href="../../operate/opc-disconnections/">Losing sight of a machine</a> is the whole
-story, including the one case this does not cover.</p>
+still 92 %, and <code>coverage</code> says it was 8 %. Read both. A shift whose coverage
+is two thirds is not a shift to make a decision from, however good its OEE
+looks — and a plant that would rather be told <em>unknown</em> than shown such a
+figure sets a floor in its pack and is.</p>
+<p>Since 2026-09-17 availability is <strong>derived from</strong> that ledger rather than
+computed beside it, so the two can never disagree, and the ledger's seconds
+are checked against the window: one that does not add up is a bug, not a
+rounding difference. <a href="../../operate/coverage/">How much of the window did the MES
+see</a> is the whole story — the four causes, the floor,
+and <code>fsmes oee explain</code>, which prints the ledger as a table you can argue
+with.</p>
+<p><a href="../../operate/opc-disconnections/">Losing sight of a machine</a> is the
+connection half of it, including the one case that does not cover.</p>
 <h2 id="unlabelled-is-reported-as-unlabelled">Unlabelled is reported as unlabelled<a class="headerlink" href="#unlabelled-is-reported-as-unlabelled" title="Permanent link">&para;</a></h2>
 <p>A downtime pareto that files unlabelled stops under "other" convinces a
 plant it has data it does not have. Here the unlabelled bar is named
@@ -3645,10 +3717,12 @@ machine, and only one of them looks like a problem at first glance.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../never-invent-production/">Never invent production</a></li>
+<li><a href="../../operate/coverage/">How much of the window did the MES see</a></li>
 <li><a href="../../operate/opc-disconnections/">Losing sight of a machine</a></li>
 <li><a href="../../onboarding/GUIDE-ENGINEERING/">Engineering guide — the worksheet</a></li>
 <li>Decision record <a href="../../decisions/0004-never-invent-production/">0004</a></li>
 <li>Decision record <a href="../../decisions/0025-performance-is-measured-not-capped/">0025</a></li>
+<li>Decision record <a href="../../decisions/0033-availability-is-a-share-of-what-was-watched/">0033</a></li>
 </ul>
 
 

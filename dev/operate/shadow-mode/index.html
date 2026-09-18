@@ -985,6 +985,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../coverage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — how much of the window did the MES see
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../packs/" class="md-nav__link">
         
   
@@ -2889,6 +2917,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0033-availability-is-a-share-of-what-was-watched/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0033 — Availability is a share of what was watched, and every figure says how much that was
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -3560,6 +3616,16 @@ an OPC UA session and subscribes, so the plant's server has to permit a
 client that reads. Give it its own account with browse and read on the tags
 in your tag map and nothing else; that account is your outer guarantee, and
 shadow mode is the inner one.</p>
+<p><strong>A shadow will often show lower availability than the incumbent, and that
+is not a fault.</strong> This MES divides run time by the part of the window it
+actually watched and states that share as <code>coverage</code>; the system in charge
+almost certainly divides by the window. So on any period where this MES's
+coverage was lower — its agent restarted, a switch rebooted, the session
+dropped — its availability figure is honest about minutes the incumbent's is
+quietly counting. Before you conclude the two systems disagree about the
+plant, read the coverage beside each figure, and run <code>fsmes oee explain</code> on
+the machine and window in question: it prints where the unwatched time went.
+<a href="../coverage/">How much of the window did the MES see</a> is the page.</p>
 <p>It still needs an order feed. It cannot take one from a live ERP, so use
 <a href="#the-file-handoff">the file adapter</a>.</p>
 <p>It still writes files, on purpose. A file changes nothing until something

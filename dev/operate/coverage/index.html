@@ -10,31 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://docs.factorysemantics.com/dev/decisions/">
+        <link rel="canonical" href="https://docs.factorysemantics.com/dev/operate/coverage/">
       
       
-        <link rel="prev" href="../design/m8-packs-and-fleet/">
+        <link rel="prev" href="../opc-disconnections/">
       
       
-        <link rel="next" href="0001-apache-2-with-dco/">
+        <link rel="next" href="../packs/">
       
       
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.7">
     
     
       
-        <title>Decisions - FactorySemantics MES</title>
+        <title>Explanation — how much of the window did the MES see - FactorySemantics MES</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -53,9 +53,9 @@
       
     
     
-      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#decisions" class="md-skip">
+        <a href="#how-much-of-the-window-did-the-mes-see" class="md-skip">
           Skip to content
         </a>
       
@@ -98,7 +98,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="FactorySemantics MES" class="md-header__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+    <a href="../.." title="FactorySemantics MES" class="md-header__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Decisions
+              Explanation — how much of the window did the MES see
             
           </span>
         </div>
@@ -231,7 +231,7 @@
   
   
     <li class="md-tabs__item">
-      <a href=".." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -252,31 +252,11 @@
     
     
       <li class="md-tabs__item">
-        <a href="../plant/" class="md-tabs__link">
+        <a href="../../plant/" class="md-tabs__link">
           
   
   
   Plant
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../operate/" class="md-tabs__link">
-          
-  
-  
-  Operate
 
         </a>
       </li>
@@ -294,7 +274,27 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../develop/" class="md-tabs__link">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  Operate
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../develop/" class="md-tabs__link">
           
   
   
@@ -314,7 +314,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../agents/" class="md-tabs__link">
+        <a href="../../agents/" class="md-tabs__link">
           
   
   
@@ -334,7 +334,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../releases/" class="md-tabs__link">
+        <a href="../../releases/" class="md-tabs__link">
           
   
   
@@ -354,7 +354,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../LANDSCAPE/" class="md-tabs__link">
+        <a href="../../LANDSCAPE/" class="md-tabs__link">
           
   
   
@@ -388,7 +388,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="FactorySemantics MES" class="md-nav__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+    <a href="../.." title="FactorySemantics MES" class="md-nav__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -418,7 +418,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -497,7 +497,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../plant/" class="md-nav__link">
+      <a href="../../plant/" class="md-nav__link">
         
   
   
@@ -525,7 +525,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../plant/first-line/" class="md-nav__link">
+      <a href="../../plant/first-line/" class="md-nav__link">
         
   
   
@@ -605,7 +605,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../onboarding/GUIDE-IT/" class="md-nav__link">
+      <a href="../../onboarding/GUIDE-IT/" class="md-nav__link">
         
   
   
@@ -633,7 +633,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../onboarding/GUIDE-ENGINEERING/" class="md-nav__link">
+      <a href="../../onboarding/GUIDE-ENGINEERING/" class="md-nav__link">
         
   
   
@@ -669,7 +669,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../plant/reading-oee/" class="md-nav__link">
+      <a href="../../plant/reading-oee/" class="md-nav__link">
         
   
   
@@ -697,7 +697,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../plant/quality-signals/" class="md-nav__link">
+      <a href="../../plant/quality-signals/" class="md-nav__link">
         
   
   
@@ -725,7 +725,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../plant/shifts/" class="md-nav__link">
+      <a href="../../plant/shifts/" class="md-nav__link">
         
   
   
@@ -753,7 +753,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../plant/never-invent-production/" class="md-nav__link">
+      <a href="../../plant/never-invent-production/" class="md-nav__link">
         
   
   
@@ -761,6 +761,967 @@
     
   
     Explanation — never invent production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operate
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Operate
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../first-plant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — beside your existing MES
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deploy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial — deploy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../opc-readonly/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — read-only OPC UA commissioning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../opc-disconnections/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — losing sight of a machine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — how much of the window did the MES see
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — how much of the window did the MES see
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-ledger" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The ledger
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The ledger">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-is-derived-and-what-only-carries-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is derived, and what only carries coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-the-unwatched-time-went" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the unwatched time went
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Where the unwatched time went">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-not-the-agent-was-down-and-the-tag-went-stale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why not "the agent was down" and "the tag went stale"
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-precisely-was-the-watched-time-measured" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How precisely was the watched time measured
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-coverage-floor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The coverage floor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-the-ledger" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading the ledger
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#in-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In /metrics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-this-costs-you-and-why-it-is-worth-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this costs you, and why it is worth it
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../packs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — plant packs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../registry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — plants from a fleet file
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the fleet this installation owns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — switch a module off
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shadow-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — running beside an existing MES
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shadow-scorecard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the shadow scorecard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../erpnext/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the ERPNext connector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../uns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the unified namespace (MQTT)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../backup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — backup and restore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — TLS in front of the API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — upgrading between versions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../confirmation-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — the confirmation handoff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/erp-confirmations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — the ERP confirmation contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inbound/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — inbound events from other systems
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — REST API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../first-week/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — the first week
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — security
   
 
     
@@ -801,802 +1762,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Operate
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Operate
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Operate
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/first-plant/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Tutorial — beside your existing MES
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/deploy/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Tutorial — deploy
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/opc-readonly/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    How-to — read-only OPC UA commissioning
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/opc-disconnections/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Explanation — losing sight of a machine
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/coverage/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Explanation — how much of the window did the MES see
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/packs/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Reference — plant packs
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/registry/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    How-to — plants from a fleet file
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/fleet/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    How-to — the fleet this installation owns
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/modules/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    How-to — switch a module off
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/shadow-mode/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    How-to — running beside an existing MES
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/shadow-scorecard/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    How-to — the shadow scorecard
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/erpnext/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    How-to — the ERPNext connector
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/uns/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    How-to — the unified namespace (MQTT)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/backup/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    How-to — backup and restore
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/tls/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    How-to — TLS in front of the API
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/upgrade/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    How-to — upgrading between versions
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/confirmation-files/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Explanation — the confirmation handoff
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../reference/erp-confirmations/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Reference — the ERP confirmation contract
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/inbound/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    How-to — inbound events from other systems
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../reference/settings/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Reference — settings
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../reference/cli/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Reference — CLI
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../reference/api/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Reference — REST API
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/first-week/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Explanation — the first week
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/compatibility/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Explanation — compatibility
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../operate/security/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Explanation — security
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-    
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
             
   
   
@@ -1614,7 +1783,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1632,7 +1801,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../develop/" class="md-nav__link">
+      <a href="../../develop/" class="md-nav__link">
         
   
   
@@ -1660,7 +1829,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ARCHITECTURE/" class="md-nav__link">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
         
   
   
@@ -1688,7 +1857,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../develop/your-first-module/" class="md-nav__link">
+      <a href="../../develop/your-first-module/" class="md-nav__link">
         
   
   
@@ -1716,7 +1885,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../develop/erp-connectors/" class="md-nav__link">
+      <a href="../../develop/erp-connectors/" class="md-nav__link">
         
   
   
@@ -1744,7 +1913,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../develop/experiments/" class="md-nav__link">
+      <a href="../../develop/experiments/" class="md-nav__link">
         
   
   
@@ -1772,7 +1941,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../design/STYLE/" class="md-nav__link">
+      <a href="../../design/STYLE/" class="md-nav__link">
         
   
   
@@ -1800,7 +1969,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../design/m8-packs-and-fleet/" class="md-nav__link">
+      <a href="../../design/m8-packs-and-fleet/" class="md-nav__link">
         
   
   
@@ -1825,31 +1994,26 @@
                 
   
   
-    
   
   
-  
     
     
     
     
       
       
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_8" >
         
           
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_8" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_4_8" id="__nav_4_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4_8" id="__nav_4_8_label" tabindex="0">
             
   
   
@@ -1867,7 +2031,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_8_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_8_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_8">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1882,19 +2046,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../decisions/" class="md-nav__link">
         
   
   
@@ -1910,7 +2065,6 @@
   
 
       </a>
-      
     </li>
   
 
@@ -1923,7 +2077,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0001-apache-2-with-dco/" class="md-nav__link">
+      <a href="../../decisions/0001-apache-2-with-dco/" class="md-nav__link">
         
   
   
@@ -1951,7 +2105,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0002-kernel-and-modules/" class="md-nav__link">
+      <a href="../../decisions/0002-kernel-and-modules/" class="md-nav__link">
         
   
   
@@ -1979,7 +2133,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0003-one-mcp-server/" class="md-nav__link">
+      <a href="../../decisions/0003-one-mcp-server/" class="md-nav__link">
         
   
   
@@ -2007,7 +2161,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0004-never-invent-production/" class="md-nav__link">
+      <a href="../../decisions/0004-never-invent-production/" class="md-nav__link">
         
   
   
@@ -2035,7 +2189,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0005-plain-html-no-build-step/" class="md-nav__link">
+      <a href="../../decisions/0005-plain-html-no-build-step/" class="md-nav__link">
         
   
   
@@ -2063,7 +2217,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
+      <a href="../../decisions/0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
         
   
   
@@ -2091,7 +2245,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0007-fresh-public-history/" class="md-nav__link">
+      <a href="../../decisions/0007-fresh-public-history/" class="md-nav__link">
         
   
   
@@ -2119,7 +2273,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0008-erp-connectors-are-modules/" class="md-nav__link">
+      <a href="../../decisions/0008-erp-connectors-are-modules/" class="md-nav__link">
         
   
   
@@ -2147,7 +2301,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0009-organisation-not-personal-account/" class="md-nav__link">
+      <a href="../../decisions/0009-organisation-not-personal-account/" class="md-nav__link">
         
   
   
@@ -2175,7 +2329,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0010-github-discussions-only/" class="md-nav__link">
+      <a href="../../decisions/0010-github-discussions-only/" class="md-nav__link">
         
   
   
@@ -2203,7 +2357,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0011-mkdocs-material-generated-reference/" class="md-nav__link">
+      <a href="../../decisions/0011-mkdocs-material-generated-reference/" class="md-nav__link">
         
   
   
@@ -2231,7 +2385,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0012-contributor-covenant-3/" class="md-nav__link">
+      <a href="../../decisions/0012-contributor-covenant-3/" class="md-nav__link">
         
   
   
@@ -2259,7 +2413,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0013-governance-is-one-page/" class="md-nav__link">
+      <a href="../../decisions/0013-governance-is-one-page/" class="md-nav__link">
         
   
   
@@ -2287,7 +2441,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0014-first-public-version-is-0-1-0/" class="md-nav__link">
+      <a href="../../decisions/0014-first-public-version-is-0-1-0/" class="md-nav__link">
         
   
   
@@ -2315,7 +2469,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0015-mcp-registry-name/" class="md-nav__link">
+      <a href="../../decisions/0015-mcp-registry-name/" class="md-nav__link">
         
   
   
@@ -2343,7 +2497,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0016-no-trademark-registration/" class="md-nav__link">
+      <a href="../../decisions/0016-no-trademark-registration/" class="md-nav__link">
         
   
   
@@ -2371,7 +2525,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
+      <a href="../../decisions/0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
         
   
   
@@ -2399,7 +2553,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
+      <a href="../../decisions/0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
         
   
   
@@ -2427,7 +2581,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0019-count-everything-the-machine-counted/" class="md-nav__link">
+      <a href="../../decisions/0019-count-everything-the-machine-counted/" class="md-nav__link">
         
   
   
@@ -2455,7 +2609,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
+      <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
         
   
   
@@ -2483,7 +2637,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0021-one-database-per-plant/" class="md-nav__link">
+      <a href="../../decisions/0021-one-database-per-plant/" class="md-nav__link">
         
   
   
@@ -2511,7 +2665,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0022-what-a-plant-pack-may-contain/" class="md-nav__link">
+      <a href="../../decisions/0022-what-a-plant-pack-may-contain/" class="md-nav__link">
         
   
   
@@ -2539,7 +2693,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0023-the-fleet-console-observes/" class="md-nav__link">
+      <a href="../../decisions/0023-the-fleet-console-observes/" class="md-nav__link">
         
   
   
@@ -2567,7 +2721,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0024-a-nonconformance-has-a-life/" class="md-nav__link">
+      <a href="../../decisions/0024-a-nonconformance-has-a-life/" class="md-nav__link">
         
   
   
@@ -2595,7 +2749,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0025-performance-is-measured-not-capped/" class="md-nav__link">
+      <a href="../../decisions/0025-performance-is-measured-not-capped/" class="md-nav__link">
         
   
   
@@ -2623,7 +2777,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0026-counts-that-outrun-the-run-time/" class="md-nav__link">
+      <a href="../../decisions/0026-counts-that-outrun-the-run-time/" class="md-nav__link">
         
   
   
@@ -2651,7 +2805,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0027-an-spc-signal-raises-a-hold/" class="md-nav__link">
+      <a href="../../decisions/0027-an-spc-signal-raises-a-hold/" class="md-nav__link">
         
   
   
@@ -2679,7 +2833,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0028-which-shift-a-minute-belongs-to/" class="md-nav__link">
+      <a href="../../decisions/0028-which-shift-a-minute-belongs-to/" class="md-nav__link">
         
   
   
@@ -2707,7 +2861,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0029-an-order-does-not-finish-itself/" class="md-nav__link">
+      <a href="../../decisions/0029-an-order-does-not-finish-itself/" class="md-nav__link">
         
   
   
@@ -2735,7 +2889,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0030-a-lost-connection-is-unknown-time/" class="md-nav__link">
+      <a href="../../decisions/0030-a-lost-connection-is-unknown-time/" class="md-nav__link">
         
   
   
@@ -2763,7 +2917,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0031-a-judgment-is-a-proposal/" class="md-nav__link">
+      <a href="../../decisions/0031-a-judgment-is-a-proposal/" class="md-nav__link">
         
   
   
@@ -2791,7 +2945,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0032-a-hosted-judgment-and-the-shadow/" class="md-nav__link">
+      <a href="../../decisions/0032-a-hosted-judgment-and-the-shadow/" class="md-nav__link">
         
   
   
@@ -2819,7 +2973,7 @@
   
   
     <li class="md-nav__item">
-      <a href="0033-availability-is-a-share-of-what-was-watched/" class="md-nav__link">
+      <a href="../../decisions/0033-availability-is-a-share-of-what-was-watched/" class="md-nav__link">
         
   
   
@@ -2847,7 +3001,7 @@
   
   
     <li class="md-nav__item">
-      <a href="TEMPLATE/" class="md-nav__link">
+      <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
   
@@ -2942,7 +3096,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../agents/" class="md-nav__link">
+      <a href="../../agents/" class="md-nav__link">
         
   
   
@@ -2970,7 +3124,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../agents/connect-mcp-client/" class="md-nav__link">
+      <a href="../../agents/connect-mcp-client/" class="md-nav__link">
         
   
   
@@ -2998,7 +3152,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/tools/" class="md-nav__link">
+      <a href="../../reference/tools/" class="md-nav__link">
         
   
   
@@ -3026,7 +3180,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../agents/write-discipline/" class="md-nav__link">
+      <a href="../../agents/write-discipline/" class="md-nav__link">
         
   
   
@@ -3054,7 +3208,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../agents/evals/" class="md-nav__link">
+      <a href="../../agents/evals/" class="md-nav__link">
         
   
   
@@ -3141,7 +3295,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../releases/" class="md-nav__link">
+      <a href="../../releases/" class="md-nav__link">
         
   
   
@@ -3169,7 +3323,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../releases/0.2.0/" class="md-nav__link">
+      <a href="../../releases/0.2.0/" class="md-nav__link">
         
   
   
@@ -3256,7 +3410,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../LANDSCAPE/" class="md-nav__link">
+      <a href="../../LANDSCAPE/" class="md-nav__link">
         
   
   
@@ -3284,7 +3438,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../history/private-era/" class="md-nav__link">
+      <a href="../../history/private-era/" class="md-nav__link">
         
   
   
@@ -3332,6 +3486,136 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-ledger" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The ledger
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The ledger">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-is-derived-and-what-only-carries-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is derived, and what only carries coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-the-unwatched-time-went" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the unwatched time went
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Where the unwatched time went">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-not-the-agent-was-down-and-the-tag-went-stale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why not "the agent was down" and "the tag went stale"
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-precisely-was-the-watched-time-measured" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How precisely was the watched time measured
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-coverage-floor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The coverage floor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-the-ledger" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading the ledger
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#in-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In /metrics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-this-costs-you-and-why-it-is-worth-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this costs you, and why it is worth it
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -3347,7 +3631,7 @@
 
 
   
-    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/decisions/index.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/operate/coverage.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3355,189 +3639,226 @@
   
 
 
-<h1 id="decisions">Decisions<a class="headerlink" href="#decisions" title="Permanent link">&para;</a></h1>
-<p>Why things are the way they are, one page each, with the options that lost.
-A record marked <em>proposed</em> is a recommendation nobody has accepted yet; it
-says what would change, not what has.
-A design change starts as an <em>Ideas</em> discussion using the
-<a href="TEMPLATE/">template</a>; the accepted or declined outcome lands here.
-Declined ideas stay, so nobody re-proposes them without new facts.</p>
+<h1 id="how-much-of-the-window-did-the-mes-see">How much of the window did the MES see<a class="headerlink" href="#how-much-of-the-window-did-the-mes-see" title="Permanent link">&para;</a></h1>
+<p><em>Explanation. Why every KPI here carries a second number, what that number
+means, and how to read the ledger behind it.</em></p>
+<p>Every OEE figure has a denominator. Ask most MES products what theirs is and
+the answer is <em>the window</em> — the shift, the last eight hours, the day. That is
+only true if somebody watched the whole window, and on a real plant nobody
+did. The agent was restarted. A switch rebooted. A certificate expired. An
+engineer unplugged the wrong port. The window went on; the watching did not.</p>
+<p>So this MES states two numbers, always, side by side:</p>
 <table>
 <thead>
 <tr>
-<th>#</th>
-<th>Decision</th>
-<th>Date</th>
+<th></th>
+<th>says</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><a href="0001-apache-2-with-dco/">0001</a></td>
-<td>Apache-2.0 with the DCO, not copyleft, not a CLA</td>
-<td>2026-08-28</td>
+<td><strong>Availability</strong></td>
+<td>run time ÷ the part of the window this MES actually watched</td>
 </tr>
 <tr>
-<td><a href="0002-kernel-and-modules/">0002</a></td>
-<td>A kernel plus modules that register through entry points</td>
-<td>2026-08-28</td>
-</tr>
-<tr>
-<td><a href="0003-one-mcp-server/">0003</a></td>
-<td>One product MCP server with per-area tool files</td>
-<td>2026-09-02</td>
-</tr>
-<tr>
-<td><a href="0004-never-invent-production/">0004</a></td>
-<td>Never invent production: the counter discipline</td>
-<td>2026-08-31</td>
-</tr>
-<tr>
-<td><a href="0005-plain-html-no-build-step/">0005</a></td>
-<td>Plain HTML, CSS and JS for the operator UI, no build step</td>
-<td>2026-08-28</td>
-</tr>
-<tr>
-<td><a href="0006-sqlite-laptop-postgresql-plant/">0006</a></td>
-<td>SQLite on a laptop, PostgreSQL in a plant, no historian product</td>
-<td>2026-08-28</td>
-</tr>
-<tr>
-<td><a href="0007-fresh-public-history/">0007</a></td>
-<td>The public repository starts from a clean first commit</td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0008-erp-connectors-are-modules/">0008</a></td>
-<td>ERP connectors are modules inside the package</td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0009-organisation-not-personal-account/">0009</a></td>
-<td>The project lives in a GitHub organisation named <code>factorysemantics</code></td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0010-github-discussions-only/">0010</a></td>
-<td>GitHub Discussions is the only community venue</td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0011-mkdocs-material-generated-reference/">0011</a></td>
-<td>MkDocs Material, with the developer reference generated from the code</td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0012-contributor-covenant-3/">0012</a></td>
-<td>Contributor Covenant 3.0 as the code of conduct</td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0013-governance-is-one-page/">0013</a></td>
-<td>Governance is one page: one maintainer, proposals in public</td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0014-first-public-version-is-0-1-0/">0014</a></td>
-<td>The first public version is 0.1.0, gated on a readiness checklist</td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0015-mcp-registry-name/">0015</a></td>
-<td>The MCP server is registered as <code>com.factorysemantics/mes</code></td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0016-no-trademark-registration/">0016</a></td>
-<td>No trademark registration for the name</td>
-<td>2026-09-06</td>
-</tr>
-<tr>
-<td><a href="0017-one-public-demo-gated-and-bounded/">0017</a></td>
-<td>One public demo, gated by an emailed link and bounded by limits</td>
-<td>2026-09-07</td>
-</tr>
-<tr>
-<td><a href="0018-public-on-2026-09-08-and-the-pre-tag-check/">0018</a></td>
-<td>Public on 2026-09-08, and a release check that runs the built wheel</td>
-<td>2026-09-08</td>
-</tr>
-<tr>
-<td><a href="0019-count-everything-the-machine-counted/">0019</a></td>
-<td>Count everything the machine counted: over-runs are booked, surplus is unassigned production</td>
-<td>2026-09-09</td>
-</tr>
-<tr>
-<td><a href="0020-what-supported-means-for-an-erp-connector/">0020</a></td>
-<td>What "supported" means for an ERP connector, and what it is called before that</td>
-<td>2026-09-10</td>
-</tr>
-<tr>
-<td><a href="0021-one-database-per-plant/">0021</a></td>
-<td>A fleet is many databases, and site scoping is identity, not partitioning</td>
-<td>2026-09-10, accepted 2026-09-13</td>
-</tr>
-<tr>
-<td><a href="0022-what-a-plant-pack-may-contain/">0022</a></td>
-<td>A plant pack is data, carries no code and no secrets, and cannot change what a number means</td>
-<td>2026-09-10, accepted 2026-09-13</td>
-</tr>
-<tr>
-<td><a href="0023-the-fleet-console-observes/">0023</a></td>
-<td><em>Proposed</em> — the console manages only the plants it owns, observes every other plant, and silence is unknown</td>
-<td>2026-09-10, revised 2026-09-13</td>
-</tr>
-<tr>
-<td><a href="0024-a-nonconformance-has-a-life/">0024</a></td>
-<td>A non-conformance is worked through review and a disposition, and cannot be closed without one</td>
-<td>2026-09-14</td>
-</tr>
-<tr>
-<td><a href="0025-performance-is-measured-not-capped/">0025</a></td>
-<td>OEE performance is measured against the rating, and never capped at 1.0</td>
-<td>2026-09-14, amended by 0026</td>
-</tr>
-<tr>
-<td><a href="0026-counts-that-outrun-the-run-time/">0026</a></td>
-<td>Counted work that will not fit inside the run time names the disagreement, not a culprit</td>
-<td>2026-09-14</td>
-</tr>
-<tr>
-<td><a href="0027-an-spc-signal-raises-a-hold/">0027</a></td>
-<td>An SPC signal raises a quality hold, and an inspected characteristic with a specification is a check</td>
-<td>2026-09-14</td>
-</tr>
-<tr>
-<td><a href="0028-which-shift-a-minute-belongs-to/">0028</a></td>
-<td>A shift is half-open, belongs to the day it started, and covers nothing it does not roster</td>
-<td>2026-09-14</td>
-</tr>
-<tr>
-<td><a href="0029-an-order-does-not-finish-itself/">0029</a></td>
-<td>An order does not finish itself at its quantity; the over-run it reports is the true one</td>
-<td>2026-09-14</td>
-</tr>
-<tr>
-<td><a href="0030-a-lost-connection-is-unknown-time/">0030</a></td>
-<td>A lost connection is a dimension of its own, and the gap it leaves is unknown time</td>
-<td>2026-09-14</td>
-</tr>
-<tr>
-<td><a href="0031-a-judgment-is-a-proposal/">0031</a></td>
-<td><em>Proposed</em> — a typed judgment is a proposal: it carries its probabilities, and never touches a graded number or a gate</td>
-<td>2026-09-17</td>
-</tr>
-<tr>
-<td><a href="0032-a-hosted-judgment-and-the-shadow/">0032</a></td>
-<td><em>Proposed</em> — a hosted judgment is an outbound path, classified by the state it sends</td>
-<td>2026-09-17</td>
-</tr>
-<tr>
-<td><a href="0033-availability-is-a-share-of-what-was-watched/">0033</a></td>
-<td>Availability is a share of what was watched, and every figure says how much that was</td>
-<td>2026-09-17</td>
+<td><strong>Coverage</strong></td>
+<td>how much of the window that was</td>
 </tr>
 </tbody>
 </table>
+<p>92 % availability over forty watched minutes of an eight-hour shift is not the
+same claim as 92 % over the shift, and <strong>coverage is the only thing on a
+screen that tells those two apart.</strong></p>
+<h2 id="the-ledger">The ledger<a class="headerlink" href="#the-ledger" title="Permanent link">&para;</a></h2>
+<p>Coverage is not computed on its own. It falls out of a <strong>ledger</strong>: per machine,
+per window, a list of intervals that tile the window <em>exactly</em> — every second
+of it in one interval, no second in two — and each interval carries one
+disposition.</p>
+<table>
+<thead>
+<tr>
+<th>Disposition</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>observed_running</code></td>
+<td>the MES watched the machine and it was running</td>
+</tr>
+<tr>
+<td><code>observed_stopped_labelled</code></td>
+<td>the MES watched it stopped, and somebody said why</td>
+</tr>
+<tr>
+<td><code>observed_stopped_unlabelled</code></td>
+<td>the MES watched it stopped, and nobody has said why yet</td>
+</tr>
+<tr>
+<td><code>not_observed</code></td>
+<td>nobody was watching</td>
+</tr>
+</tbody>
+</table>
+<p>Availability is the first of those over the sum of the three <code>observed_</code> ones.
+Coverage is that sum over the window. Nothing is inferred and nothing is
+filled in: if the MES holds no record of a stretch of time, that stretch is
+<code>not_observed</code> and stays there.</p>
+<p><strong>An OEE window whose seconds do not add up is a bug, not a rounding
+difference.</strong> A test asserts the tiling on every path, and <code>fsmes oee explain</code>
+refuses with a non-zero exit code if the intervals it just printed do not sum
+to the window it printed them for.</p>
+<h3 id="what-is-derived-and-what-only-carries-coverage">What is derived, and what only carries coverage<a class="headerlink" href="#what-is-derived-and-what-only-carries-coverage" title="Permanent link">&para;</a></h3>
+<p><strong>Availability is derived from the ledger</strong>: its numerator and denominator are
+both sums of ledger intervals, so availability and coverage can never
+disagree about the same window.</p>
+<p><strong>Performance and quality keep their own arithmetic</strong> — counted units against
+a rated cycle time, and good against good-plus-scrap — and carry the same
+window's coverage beside them rather than being rebuilt out of it. That is
+stated rather than glossed: a low-coverage window's performance figure is
+built on the run time the ledger measured and on counts booked across the
+whole window, and the honest reading of it is "over the part of this window
+anybody watched". Deriving their inputs from the ledger too is a change of
+its own and has not been done.</p>
+<p>Where a plant sets a floor, all four figures are withheld together. A window
+too thin to state availability for is too thin to state OEE for.</p>
+<h2 id="where-the-unwatched-time-went">Where the unwatched time went<a class="headerlink" href="#where-the-unwatched-time-went" title="Permanent link">&para;</a></h2>
+<p>Every <code>not_observed</code> interval carries a cause.</p>
+<table>
+<thead>
+<tr>
+<th>Cause</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>before_first_sample</code></td>
+<td>earlier than the first state or connection this MES ever recorded for this machine. Not a fault — a machine commissioned this morning has most of an eight-hour window in here — but it is not watched time either</td>
+</tr>
+<tr>
+<td><code>disconnected</code></td>
+<td>a disconnection this MES recorded: it could not see the machine. The sentence whatever noticed it wrote travels with the interval (<a href="../opc-disconnections/">losing sight of a machine</a>)</td>
+</tr>
+<tr>
+<td><code>after_last_sample</code></td>
+<td>later than the last thing this MES recorded, with nothing left open. The machine stopped being reported on and nothing said why</td>
+</tr>
+<tr>
+<td><code>no_state_recorded</code></td>
+<td>inside the watching period, no disconnection recorded, and the state history has a hole anyway. An agent killed outright writes no disconnection on its way down, and this is what that looks like</td>
+</tr>
+</tbody>
+</table>
+<h3 id="why-not-the-agent-was-down-and-the-tag-went-stale">Why not "the agent was down" and "the tag went stale"<a class="headerlink" href="#why-not-the-agent-was-down-and-the-tag-went-stale" title="Permanent link">&para;</a></h3>
+<p>Because this MES cannot tell those apart from what it has written down. A
+disconnection interval holds a sentence somebody's code wrote — <em>the OPC
+server did not answer: timed out</em> — and the endpoint that was being dialled.
+Sorting that free text into a taxonomy would be the MES claiming to know which
+of several things happened when all it holds is that the link was gone. So
+<code>disconnected</code> is one cause and the recorded sentence is printed beside it,
+unaltered, for a person to read.</p>
+<p>The day a plant's OPC server publishes a heartbeat tag, per-machine staleness
+becomes a <em>positive</em> signal rather than an inference (decision 0030 already
+says so, under "to revisit") and this table gains a row with evidence behind
+it. Not before.</p>
+<h2 id="how-precisely-was-the-watched-time-measured">How precisely was the watched time measured<a class="headerlink" href="#how-precisely-was-the-watched-time-measured" title="Permanent link">&para;</a></h2>
+<p>Separate question, and the ledger does not answer it — it states it. Each
+observed interval carries <code>sample_interval_seconds</code>: the cadence this plant's
+machine layer is configured to publish at (<code>MES_OPC_PUBLISH_MS</code>), together
+with a sentence saying that is what the number is.</p>
+<p>It matters because a machine that changes state every three seconds, watched
+on a fifteen-second grid, loses run time to the grid — measured, on a real lab
+run, in <a href="../../decisions/0026-counts-that-outrun-the-run-time/">decision 0026</a>.
+Coverage asks <em>whether</em> time was observed; the sample interval is about <em>how
+precisely</em>. They compose: a future change-driven capture makes the observed
+intervals more precise and does not change the ledger's shape.</p>
+<h2 id="the-coverage-floor">The coverage floor<a class="headerlink" href="#the-coverage-floor" title="Permanent link">&para;</a></h2>
+<p>By default <strong>nothing is withheld</strong>. Every figure prints with its coverage
+beside it and the plant decides what to make of it. There is no default floor,
+because a number vanishing off a screen because of a threshold nobody chose is
+its own kind of dishonesty.</p>
+<p>A plant that would rather be told <em>unknown</em> than shown a figure measured over
+eleven minutes of a shift says so in its pack:</p>
+<div class="highlight"><pre><span></span><code><span class="k">[oee]</span>
+<span class="n">coverage_floor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.8</span>
+</code></pre></div>
+<p>A share, greater than 0 and at most 1; <code>fsmes pack check</code> refuses anything
+else, including <code>0</code> — no floor is the key being absent. With a floor set, a
+window whose coverage is below it comes back as <strong>unknown</strong> — in the API, in
+<code>/metrics</code>, and on the screens, which print the ledger's summary instead of
+drawing a smaller bar. A shorter bar would read as a worse machine, and what
+actually happened is that nobody watched it.</p>
+<p><strong>What is withheld is the figure, never the evidence.</strong> Run time, counts,
+seconds by state and the whole ledger stay on the object.</p>
+<p>The three lab packs (<code>bottling</code>, <code>machining</code>, <code>finewire</code>) set a floor, so the
+behaviour is visible in the fleet. The cutlery demo deliberately does not, so
+the no-floor path is the one the public demo runs.</p>
+<h2 id="reading-the-ledger">Reading the ledger<a class="headerlink" href="#reading-the-ledger" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>fsmes<span class="w"> </span>oee<span class="w"> </span>explain<span class="w"> </span>MIX01<span class="w"> </span>2h
+<span class="go">MIX01 — Mixer 01</span>
+<span class="go">  the last 2h: 2026-09-18 00:30:43 to 2026-09-18 02:30:43 UTC (2h 00m 00s  (7,200.0 s))</span>
+
+<span class="go">      from        to    seconds  disposition / cause</span>
+<span class="go">  00:30:43  00:50:42     1199.5  before_first_sample</span>
+<span class="go">                                   rule: earlier than the first state or connection this MES ever recorded here</span>
+<span class="go">  00:50:42  01:20:42     1800.0  observed_running</span>
+<span class="go">                                   rule: a recorded state interval said running</span>
+<span class="go">  01:20:42  01:30:42      600.0  observed_stopped_labelled</span>
+<span class="go">                                   rule: a recorded state interval said not running, and carried a reason</span>
+<span class="go">                                   said: blade change</span>
+<span class="go">  01:30:42  01:50:42     1200.0  observed_running</span>
+<span class="go">                                   rule: a recorded state interval said running</span>
+<span class="go">  01:50:42  02:05:42      900.0  disconnected</span>
+<span class="go">                                   rule: a recorded disconnection: this MES could not see the machine (decision 0030)</span>
+<span class="go">                                   said: the OPC server did not answer: timed out</span>
+<span class="go">  02:05:42  02:25:42     1200.0  observed_running</span>
+<span class="go">                                   rule: a recorded state interval said running</span>
+<span class="go">  02:25:42  02:30:43      300.5  no_state_recorded</span>
+<span class="go">                                   rule: inside the watching period, no disconnection recorded, and no state interval either</span>
+<span class="go">  7 interval(s)</span>
+<span class="go">  ...</span>
+<span class="go">  observed                       1h 20m 00s  (4,800.0 s)</span>
+<span class="go">  window                         2h 00m 00s  (7,200.0 s)</span>
+<span class="go">  coverage                       66.7%</span>
+<span class="go">  availability (run ÷ observed)  87.5%</span>
+</code></pre></div>
+<p>The window is a span (<code>8h</code>, <code>90m</code>) or a shift (<code>current</code>, <code>previous</code>,
+<code>2026-09-17/NIGHT</code>). Every interval names the <strong>rule</strong> that produced it, on
+purpose: a plant engineer who disagrees with the availability figure should be
+able to see which interval they disagree about, and argue with the rule rather
+than with the number.</p>
+<h2 id="in-metrics">In <code>/metrics</code><a class="headerlink" href="#in-metrics" title="Permanent link">&para;</a></h2>
+<p>Availability and coverage are exported as a pair, per machine, over the last
+eight hours:</p>
+<div class="highlight"><pre><span></span><code>mes_equipment_coverage{plant="kc1",equipment="MIX01"} 0.667
+mes_equipment_availability{plant="kc1",equipment="MIX01"} 0.875
+mes_equipment_not_observed_seconds{plant="kc1",equipment="MIX01",cause="disconnected"} 900.0
+</code></pre></div>
+<p>They ship together so a Grafana panel cannot show one without being able to
+show the other.</p>
+<p><strong>An availability this MES cannot state is absent, not zero</strong> — too little
+watched time, or a window below this plant's floor. Absent is what Prometheus
+already means by unknown; a zero would put a machine nobody watched at the top
+of a worst-performer board. <code>mes_coverage_floor</code> is exported when a floor is
+set, so a panel can draw the bar the plant chose.</p>
+<h2 id="what-this-costs-you-and-why-it-is-worth-it">What this costs you, and why it is worth it<a class="headerlink" href="#what-this-costs-you-and-why-it-is-worth-it" title="Permanent link">&para;</a></h2>
+<p>It makes your numbers lower, and sometimes it makes them disappear. Put this
+MES in <a href="../shadow-mode/">shadow mode</a> beside the system already running the
+plant and it will often report <em>less</em> availability than the incumbent — not
+because it watched a worse plant, but because it is subtracting the minutes it
+could not see and the incumbent is not.</p>
+<p>That is the feature. A number you can trust has to be able to say when it
+cannot.</p>
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../opc-disconnections/">Losing sight of a machine</a> — how a disconnection is
+  recorded, and what it does to the state history.</li>
+<li><a href="../../plant/reading-oee/">Reading OEE</a> — what each segment means.</li>
+<li><a href="../../plant/never-invent-production/">Never invent production</a> — the house
+  rule this page is an application of.</li>
+<li>Decision 0033 — <em>availability is a share of what was watched</em>.</li>
+</ul>
 
 
 
@@ -3575,7 +3896,7 @@ Declined ideas stay, so nobody re-proposes them without new facts.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../design/m8-packs-and-fleet/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Design — M8 packs and fleet">
+          <a href="../opc-disconnections/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Explanation — losing sight of a machine">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -3585,20 +3906,20 @@ Declined ideas stay, so nobody re-proposes them without new facts.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Design — M8 packs and fleet
+                Explanation — losing sight of a machine
               </div>
             </div>
           </a>
         
         
           
-          <a href="0001-apache-2-with-dco/" class="md-footer__link md-footer__link--next" aria-label="Next: 0001 — Apache-2.0 with the DCO, not copyleft, not a CLA">
+          <a href="../packs/" class="md-footer__link md-footer__link--next" aria-label="Next: Reference — plant packs">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                0001 — Apache-2.0 with the DCO, not copyleft, not a CLA
+                Reference — plant packs
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -3666,10 +3987,10 @@ Declined ideas stay, so nobody re-proposes them without new facts.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "content.tabs.link", "content.code.copy", "content.action.edit", "search.suggest", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "content.tabs.link", "content.code.copy", "content.action.edit", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
