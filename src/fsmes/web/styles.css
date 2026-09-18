@@ -269,6 +269,18 @@ main {
 .bar-row .num { color: var(--text); font-size: 12px; font-family: var(--mono); }
 .bar-row.total .num { font-weight: 700; }
 .bar-row.total > i, .bar-row.total .bar > i { background: var(--running); }
+/* A figure the MES will not state. Unknown is not zero (house rule 2) and it
+   is certainly not full marks: an empty track reads as nought and a solid bar
+   reads as perfect, and the OEE row - which paints itself green as the total -
+   was doing the second one beside a dash. Hatched, full width, and the number
+   beside it is the dash. Drawn the same on every screen that has these bars,
+   which is why it is here and not in one screen's stylesheet. */
+.bar > i.unknown,
+.bar-row.total .bar > i.unknown {
+  background: repeating-linear-gradient(45deg, var(--unknown) 0 6px, transparent 6px 12px);
+  width: 100% !important;
+  opacity: 0.45;
+}
 
 /* How much of the window anybody watched. Deliberately not a fifth OEE bar:
    it is not a component of OEE, it is the statement of how much of the window
