@@ -120,7 +120,11 @@ header {
    Deliberately not a state colour. Running, idle, down and setup mean
    machines; hatched chrome means the software. Nobody should have to work
    out whether an amber bar is about a machine. */
-.shadow-bar {
+.shadow-bar,
+/* A plant replaying a recording faster than real time. The same chrome as
+   shadow mode and for the same reason: both describe the installation rather
+   than the plant, and neither is a state colour a machine could wear. */
+.replay-bar {
   position: sticky;
   top: 0;
   z-index: 11;
@@ -136,7 +140,8 @@ header {
     repeating-linear-gradient(135deg,
       var(--panel-2) 0 10px, var(--panel) 10px 20px);
 }
-.shadow-bar strong { letter-spacing: 0.04em; text-transform: uppercase; font-size: var(--fs-xs); }
+.shadow-bar strong,
+.replay-bar strong { letter-spacing: 0.04em; text-transform: uppercase; font-size: var(--fs-xs); }
 .shadow-bar .shadow-how { margin-left: auto; color: var(--accent); }
 .brand { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
 .brand span { color: var(--accent); }
@@ -183,6 +188,9 @@ header {
 }
 .kpi-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
 .kpi-value { font-size: 28px; font-weight: 650; font-variant-numeric: tabular-nums; }
+/* What the figure above is a figure *of* - how many machines the mean covers,
+   and how many it does not. Small and grey: it is not a second score. */
+.kpi-sub { font-size: 12px; color: var(--muted); }
 
 main {
   display: grid;

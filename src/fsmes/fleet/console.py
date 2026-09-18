@@ -192,6 +192,12 @@ class Console:
             "profile": (said or {}).get("profile"),
             "timezone": (said or {}).get("timezone_says"),
             "shadow": (said or {}).get("shadow"),
+            # A plant replaying a recording faster than real time is a test
+            # harness, and that is a fact about the plant rather than a
+            # quality of its answer - so it sits beside `shadow` and is read
+            # the same way. `None` from a plant whose clock is the line's,
+            # and from one that did not answer.
+            "replay": (said or {}).get("replay"),
             "pack": pack_said.get("pack"),
             "pack_applied_at": pack_said.get("applied_at"),
             "product_version": pack_said.get("product_version"),

@@ -144,8 +144,15 @@ function draw(fleet) {
 
     cell(row, known(plant.profile));
     cell(row, known(plant.timezone));
-    cell(row, plant.answered ? pill(plant.shadow ? "shadow" : "live",
-                                    plant.shadow ? "shadow" : "") : "unknown");
+    // A replayed plant is neither "live" nor "shadow": its clock is not the
+    // clock of whoever is reading it, and every rate it reports is on the
+    // line's. Said on the row, because a console is where somebody decides
+    // which plant to open.
+    cell(row, plant.answered
+      ? (plant.replay
+          ? pill(`replay ${plant.replay.factor}x`, "replay")
+          : pill(plant.shadow ? "shadow" : "live", plant.shadow ? "shadow" : ""))
+      : "unknown");
     cell(row, packCell(plant));
     cell(row, plant.answered
       ? known(plant.schema_revision) + (plant.schema_at_head === false ? " (behind head)" : "")

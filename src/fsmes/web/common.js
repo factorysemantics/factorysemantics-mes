@@ -556,9 +556,49 @@
       .catch(() => null);  // a bar that could not load must not break a screen
   };
 
+  /* ---------- a replayed plant ----------
+     The plant is playing a recording back faster than it was recorded, so
+     one second on this screen is several seconds of the line. Every rate the
+     MES reports is computed on the line's clock and every duration beside it
+     is this screen's, and a person reading either has to be able to see that
+     from where they are standing. Same bar, same argument and same absence of
+     a dismiss button as shadow mode: it is a fact about how this plant was
+     started, not a notification.
+
+     Drawn from `/health`, which is public, and after the shadow bar so the
+     two stack rather than cover each other. A plant whose clock is the
+     line's - every real plant - has no `replay` and gets no bar. */
+
+  FS.replayBar = function replayBar() {
+    return fetch("/health")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((state) => {
+        if (!state || !state.replay) return null;
+        const bar = FS.el("div", "replay-bar");
+        bar.id = "replay-bar";
+        bar.setAttribute("role", "status");
+        bar.append(
+          FS.el("strong", null, `Replay ${state.replay.factor}\u00d7`),
+          FS.el("span", null, state.replay.means),
+          FS.el("span", "muted", state.replay.standing_plant),
+        );
+        const shadow = document.getElementById("shadow-bar");
+        const above = shadow ? shadow.offsetHeight : 0;
+        if (shadow) shadow.insertAdjacentElement("afterend", bar);
+        else document.body.insertBefore(bar, document.body.firstChild);
+        bar.style.top = `${above}px`;
+        // The header sticks below both bars, however many of them there are.
+        document.documentElement.style.setProperty(
+          "--shadow-top", `${above + bar.offsetHeight}px`);
+        return state.replay;
+      })
+      .catch(() => null);  // a bar that could not load must not break a screen
+  };
+
   const header = document.querySelector("header[data-nav]");
   if (header) buildHeader(header);
-  FS.shadowBar();
+  // In order: the replay bar measures the shadow bar to sit under it.
+  FS.shadowBar().then(() => FS.replayBar());
 
   /* The plant's identity, fetched once per page and shared. Public, like
      /shadow, and for the same reason: the sign-in screen needs it too.

@@ -74,28 +74,24 @@ function renderOee(data) {
       withheld.className = "b-unknown";
       withheld.title = s.coverage_note;
       bar.appendChild(withheld);
+    } else if (s.counts_outrun_run_time) {
+      // A waterfall only adds up while every loss is a loss, and here one of
+      // them is negative: the station counted more work than its own run time
+      // can hold. Between 2026-09-14 and 2026-09-18 this drew one full
+      // segment and printed the ratio in the score, which is how a plant
+      // replaying at 10x came to show 980 %. There is no figure to draw now —
+      // the disagreement is the finding — so the bar says unknown and the row
+      // says why, in words, underneath.
+      const unknown = document.createElement("i");
+      unknown.className = "b-unknown";
+      unknown.title = s.performance_note;
+      bar.appendChild(unknown);
     } else if (s.oee === null) {
       // Not measurable yet — say so rather than drawing a zero.
       const unknown = document.createElement("i");
       unknown.className = "b-unknown";
       unknown.title = "Not enough observed history to compute OEE";
       bar.appendChild(unknown);
-    } else if (s.performance !== null && s.performance > 1) {
-      // A waterfall only adds up while every loss is a loss. Performance is
-      // not capped (see `fsmes.services.oee`), and a station that out-ran its
-      // rating has a performance loss below zero — a segment with no width to
-      // draw and no side of the axis to sit on. So the bar stops pretending:
-      // one full segment, the true figure in the score, and the disagreement
-      // in words under the row. Squeezing the losses in beside a
-      // hundred per cent is what made the first draft of this read as though
-      // a station with an OEE of 171 % had lost time it had not.
-      const whole = document.createElement("i");
-      whole.className = "b-oee";
-      whole.style.width = "100%";
-      whole.title =
-        `OEE ${pct(s.oee)} — the losses are not drawn while performance is ` +
-        `above rated, because one of them is negative. ${s.performance_note}`;
-      bar.appendChild(whole);
     } else {
       // A waterfall: what survived, then each loss in the order it is taken.
       const perf = s.performance ?? 1;
@@ -139,13 +135,20 @@ function renderOee(data) {
          + s.code + "` prints every second of it.";
     row.appendChild(watched);
     // Counted work that will not fit inside the run time is worth a mark on
-    // the row rather than only a tooltip: the number it replaces used to be a
-    // silent 1.0. The mark names the disagreement, not a culprit — the MES
-    // cannot tell whether the rating is slow or the run time is short.
-    if (s.performance_note && s.performance !== null && s.performance > 1) {
+    // the row rather than only a tooltip: the figure it replaces used to be a
+    // silent 1.0, and then a loud 881 %. The mark names the disagreement, not
+    // a culprit — the MES cannot tell whether the rating is slow or the run
+    // time is short.
+    if (s.counts_outrun_run_time) {
       const flag = document.createElement("div");
       flag.className = "counts-outrun";
-      flag.textContent = `P ${pct(s.performance)} — counted work outruns the run time`;
+      // No percentage here. The figure this used to print was the ratio
+      // between the two numbers named below, and a percentage on a row is
+      // read as a measurement of the machine.
+      flag.textContent =
+        `Counted work outruns the run time — ${num(s.good_qty + s.scrap_qty)} units at `
+        + `${s.ideal_cycle_seconds} s is more work than the run time recorded holds, `
+        + `so there is no performance figure`;
       flag.title = s.performance_note;
       row.appendChild(flag);
     }
@@ -271,7 +274,16 @@ async function load() {
   ]);
 
   $("#kpi-oee").textContent = pct(oee.line_oee);
-  $("#kpi-constraint").textContent = oee.constraint ? `worst: ${oee.constraint}` : "";
+  // The line's figure is drawn from the stations that have one, so the sub
+  // line says how many that was out of how many there are. Every list states
+  // its total, and this is a list of one number.
+  const rated = [`${oee.stations_rated} of ${oee.machines_total} stations`];
+  if (oee.stations_counts_outrun) {
+    rated.push(`${oee.stations_counts_outrun} counting past its run time`);
+  }
+  if (oee.stations_withheld) rated.push(`${oee.stations_withheld} below the coverage floor`);
+  $("#kpi-constraint").textContent =
+    (oee.constraint ? `worst: ${oee.constraint} · ` : "") + rated.join(" · ");
   $("#kpi-good").textContent = num(oee.good_qty);
   $("#kpi-scrap").textContent = num(oee.scrap_qty);
   const made = oee.good_qty + oee.scrap_qty;

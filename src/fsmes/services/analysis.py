@@ -48,12 +48,11 @@ from fsmes.domain import (
     TagValue,
 )
 from fsmes.kernel.tags import STRUCTURAL_TAGS
-from fsmes.services import NotFound, coverage, masterdata
+from fsmes.services import NotFound, coverage, line_clock, masterdata
 from fsmes.services import calendar as calendar_service
 from fsmes.services import connection as connection_service
 from fsmes.services import equipment as equipment_service
 from fsmes.services import line as line_service
-from fsmes.services import line_clock
 from fsmes.services import oee as oee_rules
 
 # Below this much observed history, rates are not reported at all.

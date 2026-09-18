@@ -38,7 +38,10 @@
   <section class="kpis">
     <div class="kpi"><span class="kpi-label">Machines running</span><span id="kpi-machines" class="kpi-value">—</span></div>
     <div class="kpi"><span class="kpi-label">Active orders</span><span id="kpi-orders" class="kpi-value">—</span></div>
-    <div class="kpi"><span class="kpi-label">Plant OEE</span><span id="kpi-oee" class="kpi-value">—</span></div>
+    <!-- The mean is over the machines that have an OEE, and the tile says how
+         many that was: a plant average drawn from four of twenty-four is a
+         different claim from one drawn from twenty-four. -->
+    <div class="kpi"><span class="kpi-label">Plant OEE</span><span id="kpi-oee" class="kpi-value">—</span><span id="kpi-oee-sub" class="kpi-sub"></span></div>
     <div class="kpi"><span class="kpi-label">ERP queue</span><span id="kpi-erp" class="kpi-value">—</span></div>
   </section>
 

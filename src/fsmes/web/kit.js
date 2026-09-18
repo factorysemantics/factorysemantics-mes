@@ -232,6 +232,13 @@ ${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`);
       row.append(FS.el("span", null, label), bar, FS.el("span", "num", FS.fmt.pct(value)));
       host.append(row);
     });
+    /* Counted work that will not fit inside the run time leaves Performance
+       and OEE with no figure, and a dash with the reason in a tooltip is a
+       dash nobody reads. The sentence goes on the card: it is the finding,
+       and the figure it replaced used to read 881 %. */
+    if (oee.counts_outrun_run_time && oee.performance_note) {
+      host.append(FS.el("p", "muted small counts-outrun", oee.performance_note));
+    }
     host.append(coverageRow(oee));
   }
 
