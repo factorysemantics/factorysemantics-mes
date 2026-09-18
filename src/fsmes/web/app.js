@@ -293,20 +293,12 @@ function machineCard(m) {
     meta.append(where);
   }
 
+  // The bars, and the one row that says how much of the window they were
+  // measured over - drawn by the kit so the Floor tile and the machine page
+  // can never say it differently. Below this plant's pack floor the kit draws
+  // the ledger instead of the figures.
   const bars = el("div", "bars");
-  [["Availability", m.oee.availability], ["Performance", m.oee.performance],
-   ["Quality", m.oee.quality], ["OEE", m.oee.oee]].forEach(([label, value], index) => {
-    const row = el("div", `bar-row${index === 3 ? " total" : ""}`);
-    const bar = el("div", "bar");
-    const fill = el("i");
-    // Full bar, true number: performance is not capped, so a machine that beat
-    // its rating shows the real figure with `performance_note` explaining it.
-    fill.style.width = `${Math.min(100, (value || 0) * 100)}%`;
-    bar.append(fill);
-    if (label === "Performance" && m.oee.performance_note) row.title = m.oee.performance_note;
-    row.append(el("span", null, label), bar, el("span", "num", pct(value)));
-    bars.append(row);
-  });
+  FS.kit.oeeBars(bars, m.oee);
 
   card.append(head, meta, bars);
   return card;

@@ -74,6 +74,18 @@ secret_key_env = "FSMES_FINEWIRE_SECRET_KEY"
 tag_map = "tag_map.json"
 masterdata = "masterdata"
 
+[oee]
+# This plant will not report a KPI for a window it watched less than 80% of.
+# It comes back as unknown with the coverage ledger attached instead, and the
+# screen prints the ledger rather than drawing a smaller bar.
+#
+# There is no default floor in the product: a plant that leaves this key out
+# gets every figure with its coverage printed beside it and nothing withheld.
+# The three lab packs set one so the behaviour is visible in the fleet — an
+# agent that goes away for an hour of a shift should be the reason a number
+# disappears, not a reason it quietly goes down.
+coverage_floor = 0.8
+
 [erp]
 # The confirmation-file handoff: what a first real plant gets instead of a
 # live connection.

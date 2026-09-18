@@ -65,7 +65,16 @@ function renderOee(data) {
 
     const bar = document.createElement("div");
     bar.className = "bar";
-    if (s.oee === null) {
+    if (s.coverage_note && s.coverage_floor) {
+      // Below this plant's floor the bar is not drawn smaller — a shorter
+      // waterfall reads as a worse machine, and what actually happened is
+      // that nobody watched it. The row says so and the ledger is printed
+      // under it instead.
+      const withheld = document.createElement("i");
+      withheld.className = "b-unknown";
+      withheld.title = s.coverage_note;
+      bar.appendChild(withheld);
+    } else if (s.oee === null) {
       // Not measurable yet — say so rather than drawing a zero.
       const unknown = document.createElement("i");
       unknown.className = "b-unknown";
@@ -113,9 +122,22 @@ function renderOee(data) {
       `A ${pct(s.availability)} · P ${pct(s.performance)} · Q ${pct(s.quality)}\n` +
       `${num(s.good_qty)} good, ${num(s.scrap_qty)} scrap\n` +
       `running ${duration(s.runtime_seconds)}, down ${duration(s.downtime_seconds)}` +
-      (s.performance_note ? `\nPerformance: ${s.performance_note}` : "");
+      (s.performance_note ? `\nPerformance: ${s.performance_note}` : "") +
+      `\nWatched ${pct(s.coverage)} of the window`;
 
     row.append(who, bar, score);
+    // How much of the window anybody watched, on the row itself and not only
+    // in a tooltip. A waterfall drawn over eleven observed minutes of a shift
+    // is not a smaller waterfall, and nothing else on this row says so.
+    const watched = document.createElement("div");
+    watched.className = "watched" + (s.coverage_note && s.coverage_floor ? " withheld" : "");
+    watched.textContent = s.coverage_note && s.coverage_floor
+      ? `Watched ${pct(s.coverage)} — below this plant's floor, so the figures are unknown`
+      : `Watched ${pct(s.coverage)}`;
+    watched.title = s.coverage_note
+      || "How much of this window the MES actually watched. `fsmes oee explain "
+         + s.code + "` prints every second of it.";
+    row.appendChild(watched);
     // Counted work that will not fit inside the run time is worth a mark on
     // the row rather than only a tooltip: the number it replaces used to be a
     // silent 1.0. The mark names the disagreement, not a culprit — the MES

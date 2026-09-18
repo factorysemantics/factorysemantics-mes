@@ -12,6 +12,41 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **The coverage ledger: every second of an OEE window, accounted for.**
+  Per machine, per window, the MES now keeps a ledger of disjoint intervals
+  that tile the window **exactly** — every second in one disposition
+  (`observed_running`, `observed_stopped_labelled`,
+  `observed_stopped_unlabelled`, `not_observed`) and every unwatched second
+  with a cause on it: `before_first_sample`, `disconnected`,
+  `after_last_sample`, `no_state_recorded`. Availability is *derived from*
+  that ledger rather than computed beside it, and every figure carries
+  **`coverage`** — how much of the window anybody watched — in the API, on
+  the screens and in `/metrics`. An OEE window whose seconds do not add up is
+  a bug, not a rounding difference, and a test says so on both code paths.
+  Decision 0033; the page is *How much of the window did the MES see*.
+
+- **`fsmes oee explain <machine> <window>`** prints that ledger as a table a
+  plant engineer can argue with: every interval, its disposition, its cause,
+  the recorded sentence behind a disconnection, the rule that produced it,
+  and the totals. The window is a span (`8h`, `90m`) or a shift (`current`,
+  `previous`, `2026-09-17/NIGHT`). It exits non-zero rather than print a
+  table that does not balance.
+
+- **A pack may set a coverage floor.** `[oee] coverage_floor` — a share in
+  (0, 1], validated by `fsmes pack check` — makes this plant report a KPI as
+  *unknown*, with the ledger attached, when it watched less of the window
+  than that. **There is no default floor**: a plant that writes nothing gets
+  every figure with its coverage beside it and nothing withheld. What is
+  withheld is the figure, never the evidence. The three lab packs set 0.8;
+  the cutlery demo deliberately sets none.
+
+- **`/metrics` exports availability and coverage as a pair**
+  (`mes_equipment_availability`, `mes_equipment_coverage`,
+  `mes_equipment_not_observed_seconds` by cause, and `mes_coverage_floor`
+  where a pack sets one), so a Grafana panel cannot show one without being
+  able to show the other. An availability this MES cannot state is **absent**,
+  not zero.
+
 - **Step 2's numbers, published as they came out.** The labelled set was
   asked of the judgment model on 2026-09-17 — six recorded runs, 311 windows,
   305 asked and 305 answered, `jev-1.13.0` asked for and served — and the
@@ -134,6 +169,24 @@ goes under Honesty with a migration line, so plant people can find it.
   can fall between two levels, beside the level carrying the most probability.
 
 ### Honesty
+
+- **Availability's denominator changed meaning: it is now the time this MES
+  watched, all causes together, not the window less the disconnections it
+  recorded.** Seconds in a hole in the state history that no disconnection
+  covered — an agent killed outright writes none on its way down — used to
+  sit in that denominator priced as time the machine was not running, and now
+  leave it as `not_observed`.
+
+  *Migration.* Availability figures go **up** on any window where such a hole
+  was large and the machine was running through the watched part of it, and
+  the change is nil where the state history is contiguous — which is most
+  windows on a healthy plant. Read `coverage` beside every figure from now
+  on; a figure without it cannot be read as covering its window. A plant that
+  sets `[oee] coverage_floor` will additionally see KPIs it used to get as
+  numbers come back as *unknown* with the ledger attached; that is the pack
+  asking for it, and removing the key restores the numbers. `window_hours`,
+  `unknown_seconds` and `unknown_share` keep their existing meanings.
+  Decision 0033.
 
 - **The agent evals stopped counting English words as machine codes.** Scoring
   an agent's answer read the reply with

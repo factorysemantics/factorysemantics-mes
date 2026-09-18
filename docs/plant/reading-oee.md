@@ -95,16 +95,27 @@ every OEE answer says how many of them there were:
 |---|---|
 | `runtime_seconds` | seconds the MES saw the machine running |
 | `observed_seconds` | seconds the MES could see the machine at all |
-| `unknown_seconds` | seconds inside the window that nobody was watching |
+| `unknown_seconds` | seconds inside the window a recorded disconnection covered |
 | `unknown_share` | that, as a share of the window |
+| `coverage` | **how much of the window anybody watched, all causes together** |
+| `ledger` | every second of the window, in one disposition, with the unwatched ones named |
 
 So 92 % availability over forty observed minutes of an eight-hour window is
-still 92 %, and the object carrying it says the other seven hours and twenty
-minutes were unknown. Read both. A shift whose `unknown_share` is a third is
-not a shift to make a decision from, however good its OEE looks.
+still 92 %, and `coverage` says it was 8 %. Read both. A shift whose coverage
+is two thirds is not a shift to make a decision from, however good its OEE
+looks — and a plant that would rather be told *unknown* than shown such a
+figure sets a floor in its pack and is.
 
-[Losing sight of a machine](../operate/opc-disconnections.md) is the whole
-story, including the one case this does not cover.
+Since 2026-09-17 availability is **derived from** that ledger rather than
+computed beside it, so the two can never disagree, and the ledger's seconds
+are checked against the window: one that does not add up is a bug, not a
+rounding difference. [How much of the window did the MES
+see](../operate/coverage.md) is the whole story — the four causes, the floor,
+and `fsmes oee explain`, which prints the ledger as a table you can argue
+with.
+
+[Losing sight of a machine](../operate/opc-disconnections.md) is the
+connection half of it, including the one case that does not cover.
 
 ## Unlabelled is reported as unlabelled
 
@@ -129,7 +140,9 @@ machine, and only one of them looks like a problem at first glance.
 ## See also
 
 - [Never invent production](never-invent-production.md)
+- [How much of the window did the MES see](../operate/coverage.md)
 - [Losing sight of a machine](../operate/opc-disconnections.md)
 - [Engineering guide — the worksheet](../onboarding/GUIDE-ENGINEERING.md)
 - Decision record [0004](../decisions/0004-never-invent-production.md)
 - Decision record [0025](../decisions/0025-performance-is-measured-not-capped.md)
+- Decision record [0033](../decisions/0033-availability-is-a-share-of-what-was-watched.md)

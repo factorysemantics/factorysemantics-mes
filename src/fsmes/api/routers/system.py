@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse
 from sqlalchemy import func, select, text
+from sqlalchemy.orm import Session
 
 from fsmes import identity
 from fsmes import shadow as shadow_mode
@@ -113,7 +114,74 @@ def metrics(db: DbDep) -> str:
     # says how many were ever written, which is what a rate wants.
     lines.append(f'mes_tag_values_max_id{{plant="{plant}"}} {db.scalar(select(func.max(TagValue.id))) or 0}')
     lines.append(f'mes_audit_entries_max_id{{plant="{plant}"}} {db.scalar(select(func.max(AuditLog.id))) or 0}')
+    lines += _coverage_series(db, plant)
     return "\n".join(lines) + "\n"
+
+
+#: The window every machine series here is measured over. One shift's worth,
+#: named rather than left for a dashboard to guess at.
+_METRICS_WINDOW_HOURS = 8.0
+
+
+def _coverage_series(db: Session, plant: str) -> list[str]:
+    """Availability and the coverage it was measured over, as a pair.
+
+    **They are exported together on purpose.** An availability series on its
+    own is a number a Grafana panel will render as a gauge over a shift, and
+    nothing on that panel will say it was computed over eleven observed
+    minutes. Exporting the pair means a panel cannot show one without being
+    able to show the other, which is the same rule the screens follow.
+
+    Availability is *absent* rather than zero when this MES cannot say — too
+    little observed time, or a window below this plant's pack floor. Absent is
+    what Prometheus already means by unknown; zero would put a working machine
+    at the top of a worst-performer board.
+
+    Built from `coverage.totals_many`, which is four grouped queries for the
+    whole plant. A scrape is not a screen refresh and must not cost like one.
+    """
+    from datetime import timedelta
+
+    from fsmes.db import utcnow
+    from fsmes.services import coverage
+    from fsmes.services import equipment as equipment_service
+
+    machines = equipment_service.work_units(db)
+    if not machines:
+        return []
+    end = utcnow()
+    accounts = coverage.totals_many(db, [m.id for m in machines],
+                                    end - timedelta(hours=_METRICS_WINDOW_HOURS), end)
+    the_floor = coverage.floor()
+
+    out = [
+        f"# HELP mes_equipment_coverage Share of the last {_METRICS_WINDOW_HOURS:g}h this MES "
+        "actually watched this machine.",
+        "# TYPE mes_equipment_coverage gauge",
+        "# HELP mes_equipment_availability Run time over observed time. Absent when this MES "
+        "cannot say, never zero.",
+        "# TYPE mes_equipment_availability gauge",
+        "# HELP mes_equipment_not_observed_seconds Seconds of the window nobody watched, by cause.",
+        "# TYPE mes_equipment_not_observed_seconds gauge",
+    ]
+    if the_floor is not None:
+        out += ["# HELP mes_coverage_floor The coverage this plant's pack asks for before it "
+                "reports a KPI.",
+                "# TYPE mes_coverage_floor gauge",
+                f'mes_coverage_floor{{plant="{plant}"}} {the_floor:g}']
+    for machine in machines:
+        account = accounts[machine.id]
+        labels = f'plant="{plant}",equipment="{machine.code}"'
+        cover = account.coverage
+        if cover is not None:
+            out.append(f"mes_equipment_coverage{{{labels}}} {cover:.6f}")
+        availability = account.availability
+        if availability is not None and coverage.withhold(cover, the_floor) is None:
+            out.append(f"mes_equipment_availability{{{labels}}} {availability:.6f}")
+        for cause, seconds in account.not_observed_by_cause.items():
+            out.append(f'mes_equipment_not_observed_seconds{{{labels},cause="{cause}"}} '
+                       f"{seconds:.1f}")
+    return out
 
 
 @router.get("/ai", dependencies=[require("audit.read")])

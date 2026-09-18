@@ -91,6 +91,17 @@ client that reads. Give it its own account with browse and read on the tags
 in your tag map and nothing else; that account is your outer guarantee, and
 shadow mode is the inner one.
 
+**A shadow will often show lower availability than the incumbent, and that
+is not a fault.** This MES divides run time by the part of the window it
+actually watched and states that share as `coverage`; the system in charge
+almost certainly divides by the window. So on any period where this MES's
+coverage was lower — its agent restarted, a switch rebooted, the session
+dropped — its availability figure is honest about minutes the incumbent's is
+quietly counting. Before you conclude the two systems disagree about the
+plant, read the coverage beside each figure, and run `fsmes oee explain` on
+the machine and window in question: it prints where the unwatched time went.
+[How much of the window did the MES see](coverage.md) is the page.
+
 It still needs an order feed. It cannot take one from a live ERP, so use
 [the file adapter](#the-file-handoff).
 

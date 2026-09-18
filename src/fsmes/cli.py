@@ -829,6 +829,154 @@ def inbound_sql_watermark(stream: str | None = None, set_to: str = typer.Option(
                "was not read and is not recorded.")
 
 
+oee_app = typer.Typer(help="OEE, and how much of the window it was measured over.")
+app.add_typer(oee_app, name="oee")
+
+
+def _oee_window(session, window: str):
+    """Turn `8h`, `90m`, `current`, `previous` or `2026-09-17/NIGHT` into the
+    two instants a ledger is built between, and the sentence naming it.
+
+    A window a person cannot say out loud is a window nobody audits, so the
+    spellings are the ones the analysis API already takes plus a plain span.
+    """
+    from datetime import timedelta
+
+    from fsmes.db import utcnow
+    from fsmes.services import calendar as calendar_service
+
+    text = (window or "8h").strip()
+    span = text.lower()
+    if span.endswith(("h", "m")) or span.replace(".", "", 1).isdigit():
+        number = span[:-1] if span[-1] in "hm" else span
+        try:
+            amount = float(number)
+        except ValueError as exc:
+            raise typer.BadParameter(
+                f"{window!r} is not a window. Say a span (`8h`, `90m`) or a shift "
+                "(`current`, `previous`, `2026-09-17/NIGHT`).") from exc
+        if amount <= 0:
+            raise typer.BadParameter("a window has to have some time in it.")
+        hours = amount / 60 if span.endswith("m") else amount
+        end = utcnow()
+        return end - timedelta(hours=hours), end, f"the last {text}"
+    shift = calendar_service.resolve_shift(session, text)
+    now = utcnow()
+    return (shift.starts_at, max(shift.starts_at, min(shift.ends_at, now)),
+            f"shift {shift.key()}" + (" (still running)" if shift.ends_at > now else ""))
+
+
+@oee_app.command("explain")
+def oee_explain(
+    equipment: str = typer.Argument(..., help="The machine's code."),
+    window: str = typer.Argument("8h", help="A span (`8h`, `90m`) or a shift "
+                                            "(`current`, `previous`, `2026-09-17/NIGHT`)."),
+    every_interval: bool = typer.Option(False, "--every-interval",
+                                        help="Print every interval, however short. The "
+                                             "default prints the longest fifty and says "
+                                             "how many it did not print."),
+) -> None:
+    """The coverage ledger for one machine, as a table you can argue with.
+
+    Every second of the window, in one disposition, with the rule that put it
+    there and — where nobody was watching — the cause. The totals are at the
+    bottom, and so is the check that they add up to the window: an OEE window
+    whose seconds do not add up is a bug, not a rounding difference.
+
+    Nothing here is recomputed for the table. It is the same ledger the
+    availability figure on the screen is derived from, which is the point: a
+    plant engineer who disagrees with the number can see which interval they
+    disagree about.
+    """
+    from fsmes.db import session_scope
+    from fsmes.services import NotFound, masterdata
+    from fsmes.services import coverage as coverage_service
+
+    with session_scope() as session:
+        try:
+            machine = masterdata.get_equipment(session, equipment)
+        except NotFound as exc:
+            typer.echo(f"NOT OK  {exc}")
+            raise typer.Exit(1) from exc
+        start, end, said = _oee_window(session, window)
+        account = coverage_service.ledger(session, equipment_code=machine.code,
+                                          equipment_id=machine.id, start=start, end=end)
+
+        typer.echo(f"{machine.code} — {machine.name}")
+        typer.echo(f"  {said}: {start:%Y-%m-%d %H:%M:%S} to {end:%Y-%m-%d %H:%M:%S} UTC "
+                   f"({_hms(account.window_seconds)})")
+        typer.echo("")
+
+        shown = account.intervals
+        hidden = 0
+        if not every_interval and len(shown) > 50:
+            longest = sorted(shown, key=lambda i: -i.seconds)[:50]
+            keep = {id(i) for i in longest}
+            hidden = len(shown) - len(longest)
+            shown = tuple(i for i in shown if id(i) in keep)
+
+        typer.echo(f"  {'from':>8}  {'to':>8}  {'seconds':>9}  disposition / cause")
+        for interval in shown:
+            where = interval.cause or interval.disposition
+            typer.echo(f"  {interval.start:%H:%M:%S}  {interval.end:%H:%M:%S}  "
+                       f"{interval.seconds:9.1f}  {where}")
+            typer.echo(f"  {'':>8}  {'':>8}  {'':>9}    rule: {interval.rule}")
+            if interval.detail:
+                typer.echo(f"  {'':>8}  {'':>8}  {'':>9}    said: {interval.detail}")
+        # Every list states its total, including this one.
+        typer.echo(f"  {len(account.intervals)} interval(s)" +
+                   (f", {hidden} shorter one(s) not printed — use --every-interval"
+                    if hidden else ""))
+        typer.echo("")
+
+        for name, seconds in account.seconds_by_disposition.items():
+            if name == coverage_service.NOT_OBSERVED:
+                continue
+            typer.echo(f"  {name:<30} {_hms(seconds)}")
+        typer.echo(f"  {coverage_service.NOT_OBSERVED:<30} {_hms(account.not_observed_seconds)}")
+        for cause, seconds in account.seconds_by_cause.items():
+            typer.echo(f"    {cause:<28} {_hms(seconds)}")
+        typer.echo("")
+
+        total = sum(i.seconds for i in account.intervals)
+        typer.echo(f"  observed                       {_hms(account.observed_seconds)}")
+        typer.echo(f"  window                         {_hms(account.window_seconds)}")
+        coverage_value = account.coverage
+        typer.echo(f"  coverage                       "
+                   f"{'unknown' if coverage_value is None else f'{coverage_value:.1%}'}")
+        availability = account.availability
+        typer.echo(f"  availability (run ÷ observed)  "
+                   f"{'unknown' if availability is None else f'{availability:.1%}'}")
+        if account.sample_interval_source:
+            typer.echo(f"  observed at                    {account.sample_interval_source}")
+
+        the_floor = coverage_service.floor()
+        note = coverage_service.withhold(coverage_value, the_floor)
+        typer.echo("")
+        if note:
+            typer.echo(f"  This plant's pack asks for {the_floor:.0%} coverage, so the screens "
+                       "and the API")
+            typer.echo("  report this window's figures as unknown and print this ledger instead.")
+        elif the_floor:
+            typer.echo(f"  This plant's pack asks for {the_floor:.0%} coverage and this window "
+                       "clears it.")
+        else:
+            typer.echo(f"  {coverage_service.NO_FLOOR.capitalize()}.")
+
+        if abs(total - account.window_seconds) > 0.001 or not account.tiles_exactly():
+            typer.echo("")
+            typer.echo(f"NOT OK  the intervals add up to {total:.3f} s and the window is "
+                       f"{account.window_seconds:.3f} s. An OEE window whose seconds do not "
+                       "add up is a bug; please report it.")
+            raise typer.Exit(1)
+
+
+def _hms(seconds: float) -> str:
+    """Seconds as a plant reads them, with the raw number kept beside it."""
+    whole = round(seconds)
+    return f"{whole // 3600:d}h {whole % 3600 // 60:02d}m {whole % 60:02d}s  ({seconds:,.1f} s)"
+
+
 shadow_app = typer.Typer(help="Running beside the MES in charge, and how well the two agreed.")
 app.add_typer(shadow_app, name="shadow")
 

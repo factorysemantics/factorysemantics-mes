@@ -41,3 +41,4 @@ Declined ideas stay, so nobody re-proposes them without new facts.
 | [0030](0030-a-lost-connection-is-unknown-time.md) | A lost connection is a dimension of its own, and the gap it leaves is unknown time | 2026-09-14 |
 | [0031](0031-a-judgment-is-a-proposal.md) | *Proposed* — a typed judgment is a proposal: it carries its probabilities, and never touches a graded number or a gate | 2026-09-17 |
 | [0032](0032-a-hosted-judgment-and-the-shadow.md) | *Proposed* — a hosted judgment is an outbound path, classified by the state it sends | 2026-09-17 |
+| [0033](0033-availability-is-a-share-of-what-was-watched.md) | Availability is a share of what was watched, and every figure says how much that was | 2026-09-17 |

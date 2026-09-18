@@ -199,9 +199,18 @@ async function loadTimeline() {
 async function loadOee() {
   const oee = await api(`/equipment/${CODE}/oee?hours=${hours()}`);
   kit.oeeBars($("#oee-bars"), oee);
-  $("#oee-window").textContent = `— ${oee.window_hours.toFixed(2)} h observed`;
+  // Two different statements, and the header makes both: how much history
+  // this MES holds for the machine, and how much of the window that was
+  // *asked for* anybody watched. A figure read without the second is a
+  // figure read as though it covered the shift.
+  $("#oee-window").textContent =
+    `— ${oee.window_hours.toFixed(2)} h of history · ${fmt.pct(oee.coverage)} of the window watched`;
   $("#oee-facts").textContent =
     `${fmt.qty(oee.good_qty)} good, ${fmt.qty(oee.scrap_qty)} scrap · running ${kit.duration(oee.runtime_seconds)}, down ${kit.duration(oee.downtime_seconds)}`;
+  // The ledger under the figures, always: where the unwatched time went is
+  // not a detail a reader should have to go to another screen for.
+  $("#oee-ledger").replaceChildren(kit.ledgerSummary(oee));
+  $("#oee-explain-code").textContent = CODE;
 }
 
 /* ---------- maintenance ---------- */

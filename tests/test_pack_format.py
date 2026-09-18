@@ -520,3 +520,43 @@ def test_a_pack_that_cannot_be_read_never_puts_the_parsers_words_on_the_public_e
     assert str(directory) not in reason
     assert "TOML" not in reason and "line" not in reason
 
+
+
+# ------------------------------------------------- the coverage floor
+
+
+def test_a_coverage_floor_is_a_share_of_a_window(pack_dir):
+    """Above one asks for more of a window than a window has."""
+    written(pack_dir, MINIMAL + "\n[oee]\ncoverage_floor = 1.4\n")
+    found = problems(pack_dir)
+    assert any("[oee] coverage_floor" in line and "share of a window" in line for line in found)
+
+
+def test_a_coverage_floor_of_zero_is_refused_rather_than_read_as_no_floor(pack_dir):
+    """A plant that typed zero meant something. No floor is the key being
+    absent, and the sentence says so."""
+    written(pack_dir, MINIMAL + "\n[oee]\ncoverage_floor = 0\n")
+    found = problems(pack_dir)
+    assert any("[oee] coverage_floor" in line and "Leave the key out" in line for line in found)
+
+
+def test_a_pack_that_names_no_floor_checks_clean_and_withholds_nothing(pack_dir):
+    assert problems(pack_dir) == []
+    assert "MES_OEE_COVERAGE_FLOOR" not in fmt.settings(fmt.read(pack_dir))
+
+
+def test_a_coverage_floor_reaches_the_plant_as_a_setting(pack_dir):
+    written(pack_dir, MINIMAL + "\n[oee]\ncoverage_floor = 0.8\n")
+    assert problems(pack_dir) == []
+    assert fmt.settings(fmt.read(pack_dir))["MES_OEE_COVERAGE_FLOOR"] == "0.8"
+
+
+def test_the_three_shipped_packs_set_a_floor_so_the_behaviour_is_visible():
+    """A feature nothing ships with is a feature nobody sees. The lab packs
+    set one; the cutlery demo deliberately does not, so the no-floor path is
+    the one the public demo runs."""
+    root = Path(__file__).resolve().parents[1] / "labs"
+    for name in ("bottling", "machining", "finewire"):
+        pack = fmt.read(root / "multiplant" / name)
+        assert pack.table("oee").get("coverage_floor") == 0.8, name
+    assert "coverage_floor" not in fmt.read(root / "cutlery").table("oee")

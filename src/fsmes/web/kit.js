@@ -160,9 +160,64 @@ ${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`);
     host.appendChild(chart);
   }
 
+  /* ---------- how much of the window anybody watched ----------
+
+     Drawn beside every OEE figure, never instead of one and never folded
+     into one. A plain number and a short bar: 92% availability over forty
+     observed minutes of an eight-hour window is not the same claim as 92%
+     over the shift, and on a screen this row is the only thing that tells
+     the two apart. */
+  function coverageRow(oee) {
+    const row = FS.el("div", "bar-row coverage");
+    const bar = FS.el("div", "bar");
+    const fill = FS.el("i", "cover");
+    const value = oee.coverage;
+    fill.style.width = `${Math.min(100, (value || 0) * 100)}%`;
+    if (value === null || value === undefined) fill.classList.add("unknown");
+    bar.append(fill);
+    row.title = oee.coverage_note
+      || "How much of this window the MES actually watched. Availability is run time over "
+         + "the watched part of it, not over the window.";
+    row.append(FS.el("span", null, "Watched"), bar, FS.el("span", "num", FS.fmt.pct(value)));
+    return row;
+  }
+
+  /* The ledger as a short list: where the unwatched time went. Drawn in place
+     of the figures when this plant's pack floor withholds them. Every list
+     states its total, including this one. */
+  function ledgerSummary(oee) {
+    const box = FS.el("div", "ledger");
+    if (oee.coverage_note) box.append(FS.el("p", "muted small", oee.coverage_note));
+    const ledger = oee.ledger;
+    if (!ledger) return box;
+    const list = FS.el("ul", "ledger-causes");
+    const causes = ledger.seconds_by_cause || {};
+    const names = Object.keys(causes);
+    for (const cause of names) {
+      const li = FS.el("li");
+      li.append(FS.el("span", "cause", cause.replace(/_/g, " ")),
+                FS.el("span", "num", duration(causes[cause])));
+      list.append(li);
+    }
+    if (!names.length) {
+      list.append(FS.el("li", "muted", "nothing — every second of this window was watched"));
+    }
+    box.append(list);
+    box.append(FS.el("p", "muted small",
+      `${duration(ledger.observed_seconds)} watched of ${duration(ledger.window_seconds)}`));
+    return box;
+  }
+
   /* ---------- the OEE bars a machine card draws ---------- */
   function oeeBars(host, oee) {
     host.replaceChildren();
+    // Below this plant's pack floor the figures are withheld and the ledger is
+    // drawn in their place - not a smaller bar, which would read as a
+    // measurement of a machine rather than of how little we saw of it.
+    if (oee.coverage_note && oee.coverage_floor) {
+      host.append(coverageRow(oee), ledgerSummary(oee));
+      return;
+    }
     [["Availability", oee.availability], ["Performance", oee.performance],
      ["Quality", oee.quality], ["OEE", oee.oee]].forEach(([label, value], index) => {
       const row = FS.el("div", `bar-row${index === 3 ? " total" : ""}`);
@@ -177,7 +232,9 @@ ${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`);
       row.append(FS.el("span", null, label), bar, FS.el("span", "num", FS.fmt.pct(value)));
       host.append(row);
     });
+    host.append(coverageRow(oee));
   }
 
-  FS.kit = { utc, duration, age, svg, add, empty, timeTicks, timeline, trend, oeeBars };
+  FS.kit = { utc, duration, age, svg, add, empty, timeTicks, timeline, trend, oeeBars,
+             coverageRow, ledgerSummary };
 })();
