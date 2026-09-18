@@ -80,6 +80,7 @@
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0031-a-judgment-is-a-proposal/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0032-a-hosted-judgment-and-the-shadow/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0033-availability-is-a-share-of-what-was-watched/)
+- [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0034-a-count-is-owed-until-it-is-booked/)
 - [Develop — Decisions — Template](https://docs.factorysemantics.com/dev/decisions/TEMPLATE/)
 - [Agents](https://docs.factorysemantics.com/dev/agents/)
 - [Agents — How-to — connect an MCP client](https://docs.factorysemantics.com/dev/agents/connect-mcp-client/)
