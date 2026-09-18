@@ -281,6 +281,22 @@ def test_health_says_which_clock_this_plant_is_on(session, anon, at_speed):
     assert anon.get("/health").json()["replay"] is None
 
 
+def test_the_speed_a_fleet_is_started_with_reaches_the_process_that_answers_the_screens(tmp_path):
+    """The whole of how the MES knows. `fsmes fleet start --speed 10` starts
+    four processes for a plant and the replay is only one of them; the one
+    that answers `/dashboard` is `run-api`, and it is told the same speed
+    through the same environment. A speed that reached the replay alone would
+    leave the MES dividing the line's counts by the wall's seconds with no way
+    to know it was doing so."""
+    from fsmes import plant as plants
+
+    env = plants.plant_env("bottling", {}, tmp_path, speed=10)
+    assert env["MES_SIM_SPEED"] == "10"
+    # And nothing is set when nobody asked for a speed: a real plant's clock
+    # is the line's, and a default here would be a claim about the plant.
+    assert "MES_SIM_SPEED" not in plants.plant_env("bottling", {}, tmp_path)
+
+
 def test_the_console_carries_the_replay_factor_of_a_plant_that_answered(tmp_path):
     """The fleet console shows no OEE by design (decision 0023), so what it
     owes a reader is the one fact that changes how every figure inside that
