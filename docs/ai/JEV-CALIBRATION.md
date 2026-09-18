@@ -179,10 +179,34 @@ opens a network connection.
 
 ### What a pass costs, before it is spent
 
-`fsmes jev ask` prints the number of calls, the characters of state and a
-rough input-token estimate **before it asks anything**, and refuses above
-300 calls unless you pass `--yes`. `--dry-run` prints the estimate and
-stops. `--limit` asks about fewer.
+`fsmes jev ask` prints the number of calls, the characters of state and an
+input-token estimate **before it asks anything**, and refuses above 300
+calls unless you pass `--yes`. `--dry-run` prints the estimate and stops.
+`--limit` asks about fewer.
+
+The estimate says where its own rate came from, because an estimate a reader
+cannot tell from a measurement is worse than no estimate at all:
+
+- **Measured**, where answers from an earlier pass of the *same state view*
+  are there to read — the `--out` file if it already exists, or any answers
+  file named with `--measure-from`. Every answered record carries the
+  characters of state it was asked over and the input tokens the service
+  billed for it, so the rate is a division rather than a guess. The estimate
+  is that rate per character, rounded up, so it comes in under the bill only
+  if the next pass is dearer per character than the last one was. A call the
+  service billed nothing for is left out of both sums rather than counted as
+  nought tokens.
+- **Stated**, where there is nothing of that view to read: one character to
+  a token, which is roughly how tag-history CSV tokenises. It is printed as
+  a stated figure and says in as many words that it is not a measurement.
+
+The first version of this estimator used 3.8 characters to a token, taken
+from round 5's run-log usage, and [the pass below](#numbers) showed it wrong
+by about four: 454,339 input tokens printed, 1,725,959 billed. A run log is
+prose; a window of tag history is digits, commas and short column names. The
+two passes of 2026-09-17 measured 1.000 and 0.988 characters a token, so
+even the stated figure is about 1% optimistic on the full view, and the
+measured path is the one to cost a pass from.
 
 ## D1's battery against the scripted hours
 
@@ -265,7 +289,237 @@ without a key it writes a record saying it did not.
 
 ## Numbers
 
-**No run has been recorded yet.** The tooling above exists and is tested;
-nothing has been asked of the service with it. When a pass is run, the
-numbers go here — the confusion matrix, the expected calibration error and
-the bin counts — whatever they say.
+Run on **2026-09-17**, over six recorded lab runs from round 5. One pass per
+state view, 305 calls each, through the pinned model: asked for
+`jev-1.13.0`, served `jev-1.13.0`, and the served version stored with every
+answer. The set had **311** windows; **305** were asked about and **305**
+were answered, **0** were not, and **6** were left out because they happened
+entirely inside a disconnect.
+
+Both reports are checked in beside this page exactly as `fsmes jev
+calibrate` wrote them, with their figures:
+
+- [the default view, `stopped-not-why`](calibration/2026-09-17/stopped-not-why/calibration.md)
+- [the full view, `--state-view full`](calibration/2026-09-17/full/calibration.md)
+
+Every number below is in one of those two files, and every number in them
+can be checked against the set and the answers they name. The sets and the
+answers themselves are not checked in — they are about 2 MB each — and
+[Running it](#running-it) is how they are rebuilt.
+
+### The headline, both views
+
+| State view | What the question could see | Right | Asked | Accuracy |
+|---|---|---|---|---|
+| `stopped-not-why` (default) | every tag the machine published, with the state word replaced by a running bit | 137 | 305 | **0.449** |
+| `full` | the same window, with the machine's state word left in | 281 | 305 | **0.921** |
+
+**The gap from 0.449 to 0.921 is the leak, measured.** The two sets are
+built by the same code over the same 305 windows, and the only difference
+between them is the state word — the word that names the reason. With it in
+the state, the answer is read off the code rather than inferred from the
+behaviour.
+
+That has a consequence for who this could ever be for. A plant whose machine
+layer already publishes a reason code does not need a model to tell it why a
+machine stopped: it has the answer, and 0.921 is close to the cost of
+copying it across. **The plant that does not publish one is the case that
+matters — and on this evidence the model is right on fewer than half of
+seven options there.**
+
+### What was right, by the reason it actually had
+
+| Scripted reason | Windows asked | Right, default view | Right, full view |
+|---|---|---|---|
+| `breakdown` | 6 | 6 | 6 |
+| `changeover` | 15 | **0** | 14 |
+| `micro_stop` | 75 | 26 | 67 |
+| `starved` | 29 | 18 | 27 |
+| `blocked` | 141 | 62 | 141 |
+| `counter_reset` | 0 | 0 | 0 |
+| `none` | 39 | 25 | 26 |
+| **total** | **305** | **137** | **281** |
+
+`counter_reset` is empty because none of these six runs scripted one. An
+empty row is a thing this set did not measure, and it stays in the table
+saying so.
+
+### The confusion matrix, default view
+
+Rows are the reason the generator actually scripted; columns are the reason
+the model proposed. A choice proposes an option of its own, so no threshold
+was picked to draw this.
+
+| scripted \ proposed | breakdown | changeover | micro_stop | starved | blocked | counter_reset | none | **total** |
+|---|---|---|---|---|---|---|---|---|
+| breakdown | 6 | 0 | 0 | 0 | 0 | 0 | 0 | **6** |
+| changeover | 15 | 0 | 0 | 0 | 0 | 0 | 0 | **15** |
+| micro_stop | 2 | 0 | 26 | 45 | 1 | 0 | 1 | **75** |
+| starved | 0 | 0 | 10 | 18 | 1 | 0 | 0 | **29** |
+| blocked | 1 | 0 | 66 | 12 | 62 | 0 | 0 | **141** |
+| counter_reset | 0 | 0 | 0 | 0 | 0 | 0 | 0 | **0** |
+| none | 0 | 0 | 6 | 4 | 4 | 0 | 25 | **39** |
+| **total** | **24** | **0** | **108** | **79** | **68** | **0** | **26** | **305** |
+
+Four things in that table, in plain words:
+
+- **`changeover` is 0 of 15, and all 15 were called `breakdown`.** A
+  changeover is a planned stop and never downtime; a breakdown is downtime.
+  On this set the model got the most consequential distinction in the whole
+  vocabulary wrong every single time it was asked.
+- **`blocked` and `micro_stop` are the two largest classes and are confused
+  with each other and with `starved`.** 66 of 141 blocked windows were
+  called micro-stops; 45 of 75 micro-stops were called starved; 12 more
+  blocked windows were called starved. Those three states are the ones the
+  generator distinguishes by the word the default view deliberately
+  withheld, and they are 245 of the 305 windows asked about.
+- **`none` holds up better than the stops.** 25 of 39 control windows — a
+  machine that never stopped — were answered `none`. 14 were given a reason
+  anyway, which is the round-5 failure this set was built to make visible,
+  smaller than it was but still there.
+- **A constant answer would have scored higher.** `blocked` is 141 of the
+  305 windows, so proposing `blocked` every time, with no model and no
+  state, would have been right 0.462 of the time against the model's 0.449.
+  That is not a claim that the model knows nothing — it gets `breakdown` 6
+  of 6 and `none` 25 of 39, which a constant cannot — but on this set, over
+  this vocabulary, its total is under the dullest possible baseline, and
+  that is the number Step 2 asked to be published.
+
+The full view's matrix is in
+[its own report](calibration/2026-09-17/full/calibration.md); its diagonal
+is 281, `blocked` is 141 of 141 and `changeover` is 14 of 15.
+
+### Calibration: stated confidence against measured accuracy
+
+Ten bins, the count printed under every bin, empty bins left empty.
+
+| View | Binned by | Expected calibration error |
+|---|---|---|
+| default | probability on the chosen option | **0.1962** |
+| default | stated confidence | **0.1594** |
+| full | probability on the chosen option | **0.1409** |
+| full | stated confidence | **0.1819** |
+| **4 measurements in total** | | |
+
+Expected calibration error is the average distance between what was stated
+and what was measured, weighted by how many samples fell in each bin. About
+0.16 to 0.20 on the default view means the stated number is out by roughly a
+sixth to a fifth on average — and it is out in one direction: every
+populated bin below is under the diagonal.
+
+![P1 by probability, default view](calibration/2026-09-17/stopped-not-why/p1-by-probability.svg)
+
+On the default view the top bin is the worst place to read this. Binned by
+probability, the 0.9–1.0 bin holds 41 samples and is right 0.732 of the
+time; binned by stated confidence, 35 samples and 0.771. **The tool's own
+sentence, printed under both plots:**
+
+> no bin has 10 or more samples at or above it and is right 90% of the time
+> throughout. On this evidence no threshold is defensible anywhere on the
+> scale.
+
+The full view prints the other sentence — *at or above 0.7 this set was
+right 90% of the time or better, over 230 sample(s). Whether that is a
+threshold is a person's decision, not this tool's* — and that is a sentence
+about a question whose answer was in its own evidence. It is recorded
+because the tool recorded it, not because anything follows from it.
+
+### D1's battery against the scripted hours
+
+Six questions are asked of every run log; two of them have a truth in the
+script. Seven run records came out of the six runs — the two-plants run
+writes one per plant — for **14** labelled pairs. The other 28 are printed
+as unlabelled rather than guessed at.
+
+| Run record | `component_stopped_reporting` | scripted | `counter_went_backwards` | scripted |
+|---|---|---|---|---|
+| 2026-09-17-lost-connection-2 | **0.41** | true | 0.12 | false |
+| 2026-09-17-one-line-bad-hour-2 | 0.34 | false | 0.11 | **true** |
+| 2026-09-17-over-run-2 | 0.34 | false | 0.12 | false |
+| 2026-09-17-scrap-burst | 0.33 | false | 0.14 | false |
+| 2026-09-17-starved-and-blocked | 0.33 | false | 0.12 | false |
+| 2026-09-17-two-plants-two-zones | 0.37 | false | 0.13 | **true** |
+| 2026-09-17-two-plants-two-zones | **0.61** | false | 0.14 | **true** |
+| **7 run records, 14 labelled pairs** | | | | |
+
+Neither question separates truth from not on this evidence, and one of them
+separates it backwards:
+
+- `component_stopped_reporting` was 0.41 on the one run with scripted
+  disconnects and 0.33 to 0.61 on the six with none. **The highest
+  probability of the seven, 0.61, is on a run where nothing was scripted to
+  go silent.** The caveat printed with every pairing applies here and is not
+  an excuse for the ordering: the question says "stopped logging *before the
+  run ended*", and a disconnect that later reconnects only half meets that
+  wording.
+- `counter_went_backwards` was 0.11, 0.13 and 0.14 on the three records with
+  a scripted counter reset and 0.12, 0.12, 0.12 and 0.14 on the four with
+  none. The two ranges are the same range.
+
+Fourteen pairs is a small number and these are probabilities on one run log
+each, not a rate over many. They are recorded, not thresholded, and the
+pairing is checked in as
+[`d1-against-truth.json`](calibration/2026-09-17/stopped-not-why/d1-against-truth.json).
+
+![D1: component_stopped_reporting against the scripted hours](calibration/2026-09-17/stopped-not-why/d1-component-stopped-reporting.svg)
+
+### What it cost
+
+| Pass | Calls | Characters of state | Input tokens billed | Output tokens |
+|---|---|---|---|---|
+| default view | 305 | 1,726,490 | 1,725,959 | 22,829 |
+| full view | 305 | 1,655,816 | 1,676,010 | 22,720 |
+| **both, total** | **610** | **3,382,306** | **3,401,969** | **45,549** |
+
+Every one of the 610 calls came back with its usage; none reported none.
+About 5,600 input tokens a call, against a dry run that had printed about
+1,490 — the estimator was wrong by a factor of about four, and
+[it has been fixed](#what-a-pass-costs-before-it-is-spent) to measure its
+rate from a stored pass of the same view instead.
+
+### What this decides for the product half
+
+Step 2 is the step the survey says decides the product half. On this
+evidence:
+
+- **Nothing here justifies a threshold, a gate, or an automatic label.** The
+  tool says no threshold is defensible anywhere on the default view's scale,
+  and the full view's threshold sentence is about a question that could read
+  its answer off its own evidence. Decision
+  [0031](../decisions/0031-a-judgment-is-a-proposal.md) — a judgment is a
+  proposal — is not merely still defensible; it is the only reading this set
+  supports.
+- **The most that could be justified is P1 as a displayed proposal, with its
+  probability shown, and only after the calibration improves or the question
+  is reshaped.** A proposal that is right 0.449 of the time, shown to an
+  operator beside the tags it was drawn from, costs a glance. The same
+  number written into a downtime record costs the record.
+- **The question may be the thing to change, not the model.** Three of the
+  seven options — `blocked`, `starved`, `micro_stop` — carry 245 of the 305
+  windows and are exactly where the answers go wrong. A question that asked
+  "did something break, was it planned, or was the line simply waiting" over
+  three options is a different measurement, and this set can be re-asked
+  that way for the price of one more pass. That is a thing to try, not a
+  thing that has been shown to work.
+- **The class ladder in decision
+  [0032](../decisions/0032-a-hosted-judgment-and-the-shadow.md) is untouched
+  by this.** 0032 classifies a question by the state it sends, and these
+  numbers are about whether an answer is any good, not about what left the
+  building. Both decisions stay *proposed*, and neither is edited here.
+
+Nothing is scheduled off this page. What happens next is the maintainer's
+call, made with these numbers in front of him.
+
+### What is not here
+
+- **No real plant.** Every number above comes from simulated lines whose
+  reasons are the generator's own input. That is the whole reason an
+  accuracy could be computed at all, and it is also the limit of what the
+  number means.
+- **Six runs, one model version, one day.** `jev-1.13.0` on 2026-09-17.
+  TypeSafe has said `confidence` will drift across versions, so a version
+  change is a re-validation and this page is dated for that reason.
+- **No second opinion.** Each window was asked once. Nothing here measures
+  whether the same window asked twice gets the same answer.
+- **`counter_reset` was never asked about.** The vocabulary carries it; this
+  set has none of it.

@@ -35,6 +35,7 @@ SDK, which is how all of it is tested.
 from __future__ import annotations
 
 import json
+import math
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -65,12 +66,20 @@ P1 = QuestionSet(
     ),
 )
 
-#: Rough tokens per character of state. Not a tokeniser: an estimate printed
-#: before anything is asked, so the cost of a pass is known in the right
-#: order of magnitude before it is spent. Round 5 measured 9,430 input
-#: tokens for 36,000 characters of run log, which is about 3.8 characters a
-#: token; 4 is the round number on the safe side of it.
-CHARACTERS_PER_TOKEN = 3.8
+#: Characters of state to an input token, used only when no stored pass of
+#: the same state view exists to measure from. Not a tokeniser: a stated
+#: figure, printed as a stated figure so nobody reads it as a measurement.
+#:
+#: The first figure here was 3.8, taken from round 5's run-log usage, and the
+#: first real pass of the labelled set showed it wrong by about four: 305
+#: calls estimated at 454,339 input tokens were billed 1,725,959. A run log
+#: is prose; a window of tag history is digits, commas and short column
+#: names, and tokenises near one character a token. The two passes of
+#: 2026-09-17 measured 1.000 (default view) and 0.988 (full view) characters
+#: a token, so 1.0 is the round number at the bottom of what has been seen -
+#: and it is a stated figure, not a promise. The measured path below is the
+#: one that cannot come in under what the last pass of the same view paid.
+FALLBACK_CHARACTERS_PER_TOKEN = 1.0
 
 #: Above this many calls the pass refuses without `--yes`. A few hundred is
 #: the size of one round of experiments; more than that is a decision
@@ -91,19 +100,90 @@ ARGUABLE_ACCURACY = 0.9
 
 # ------------------------------------------------------- what a pass costs
 
-def estimate(records: list[dict]) -> dict:
-    """What asking this set would cost, before anything is asked."""
+def state_view_of(records: list[dict]) -> str | None:
+    """The one state view these records were built with, or None if not one.
+
+    A set is built with a single view, and a cost measured across two of them
+    would be a number from the wrong question. Where the records disagree
+    this says so rather than picking one.
+    """
+    views = {record.get("state_view") for record in records}
+    return views.pop() if len(views) == 1 else None
+
+
+def measured_characters_per_token(answers: dict | None,
+                                  state_view: str | None) -> dict | None:
+    """Characters of state to an input token, from a stored pass of one view.
+
+    Every answered record a pass stores carries the characters of state it was
+    asked over and the input tokens the service reported for it, so this rate
+    is a division rather than a guess. A call the service billed no usage for
+    is left out of both sums: unknown is not nought tokens.
+
+    Returns None when there is nothing of this view to measure, which is the
+    normal case the first time a set is costed.
+    """
+    if not answers or not answers.get("asked") or state_view is None:
+        return None
+    characters = tokens = calls = 0
+    for stored in answers.get("answers") or []:
+        if not stored.get("asked") or stored.get("state_view") != state_view:
+            continue
+        billed = (stored.get("usage") or {}).get("input_tokens")
+        if billed is None or not stored.get("state_characters"):
+            continue
+        characters += stored["state_characters"]
+        tokens += billed
+        calls += 1
+    if not calls or characters <= 0 or tokens <= 0:
+        return None
+    return {"characters_per_token": characters / tokens,
+            "state_characters": characters,
+            "input_tokens": tokens,
+            "calls": calls,
+            "state_view": state_view,
+            "asked_at": answers.get("asked_at")}
+
+
+def estimate(records: list[dict], *, measured: dict | None = None) -> dict:
+    """What asking this set would cost, before anything is asked.
+
+    With `measured` - what `measured_characters_per_token` read off a stored
+    pass of the same state view - the estimate is that pass's own rate per
+    character, rounded up, so it comes in under the bill only if the next
+    pass is dearer per character than the last one was. With nothing to
+    measure it uses `FALLBACK_CHARACTERS_PER_TOKEN` and says so in `how`,
+    because an estimate a reader cannot tell from a measurement is worse than
+    no estimate.
+    """
     characters = sum(record["state_characters"] for record in records)
+    view = state_view_of(records)
+    if measured:
+        per_token = measured["characters_per_token"]
+        how = (f"{per_token:.3f} characters to a token, measured from the "
+               f"{measured['calls']} answered call(s) already stored for the "
+               f"{measured['state_view']} view "
+               f"({measured['state_characters']} character(s) billed as "
+               f"{measured['input_tokens']} input token(s)). Output is a "
+               f"handful of numbers per call and is not estimated here.")
+    else:
+        per_token = FALLBACK_CHARACTERS_PER_TOKEN
+        how = (f"{per_token} character(s) to a token, the stated figure for "
+               f"tag-history CSV and not a measurement: no stored answers for "
+               f"the {view or 'this'} view to measure from. Output is a "
+               f"handful of numbers per call and is not estimated here.")
+    tokens = math.ceil(characters / per_token)
     return {
         "calls": len(records),
         "questions_per_call": len(P1.as_questions()),
         "state_characters": characters,
-        "estimated_input_tokens": int(characters / CHARACTERS_PER_TOKEN),
+        "state_view": view,
+        "characters_per_token": per_token,
+        "measured": bool(measured),
+        "estimated_input_tokens": tokens,
         "estimated_input_tokens_per_call": (
-            int(characters / CHARACTERS_PER_TOKEN / len(records)) if records else 0),
-        "how": (f"{CHARACTERS_PER_TOKEN} characters to a token, measured from "
-                f"round 5's own usage. Output is a handful of numbers per call "
-                f"and is not estimated here."),
+            math.ceil(tokens / len(records)) if records else 0),
+        "how": how,
     }
 
 

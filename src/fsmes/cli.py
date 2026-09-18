@@ -2927,6 +2927,23 @@ def jev_labelled_set(
             typer.echo(f"  {run['results']}: {note}")
 
 
+def _answers_already_stored(path: Path | None) -> dict | None:
+    """An answers file from an earlier pass, or None if there is nothing to read.
+
+    A missing file is the normal case the first time, and an unreadable one is
+    not a reason to refuse to cost a pass - it is a reason to fall back to the
+    stated figure and say so, which is what the caller then prints.
+    """
+    import json
+
+    if path is None or not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
 @jev_app.command("ask")
 def jev_ask(
     labelled_set: Path = typer.Option(
@@ -2947,6 +2964,11 @@ def jev_ask(
                              help="Go ahead above the call cap."),
     dry_run: bool = typer.Option(False, "--dry-run",
                                  help="Print what it would cost and stop."),
+    measure_from: Path = typer.Option(
+        None, "--measure-from", exists=True, dir_okay=False,
+        help="An answers file from an earlier pass to cost this one from. "
+             "Defaults to --out where that already exists. Only calls of the "
+             "same state view are measured."),
 ) -> None:
     """Ask the judgment model why each stop happened, and store the answers.
 
@@ -2970,7 +2992,11 @@ def jev_ask(
     if limit > 0:
         records = records[:limit]
 
-    cost = calibration.estimate(records)
+    view = calibration.state_view_of(records)
+    stored_before = measure_from if measure_from is not None else out
+    measured = calibration.measured_characters_per_token(
+        _answers_already_stored(stored_before), view)
+    cost = calibration.estimate(records, measured=measured)
     cap = calibration.DEFAULT_MAXIMUM_CALLS if maximum_calls is None else maximum_calls
     typer.echo(f"{total} window(s) in the set; {len(records)} to be asked about "
                f"({total - len(records)} left out by --limit and by being "
@@ -2978,7 +3004,8 @@ def jev_ask(
     typer.echo(f"  {cost['calls']} call(s), one question each, about "
                f"{cost['state_characters']} character(s) of state in total.")
     typer.echo(f"  Roughly {cost['estimated_input_tokens']} input token(s), about "
-               f"{cost['estimated_input_tokens_per_call']} a call. {cost['how']}")
+               f"{cost['estimated_input_tokens_per_call']} a call.")
+    typer.echo(f"  {cost['how']}")
     if dry_run:
         typer.echo("--dry-run: nothing was asked.")
         return
