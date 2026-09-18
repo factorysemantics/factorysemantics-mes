@@ -224,3 +224,32 @@ def test_the_write_lock_is_still_taken_for_a_transaction_that_may_write(plant_on
     assert any(s.strip() == "BEGIN" for s in statements), statements
     assert not any(s.startswith("BEGIN IMMEDIATE") for s in statements), statements
     assert db_module.READ_ONLY  # the option the handler reads
+
+
+#: Every endpoint moved onto the read-only unit of work. The rest of the suite
+#: shares one writable session with its clients, so a write that slipped into
+#: one of these would pass there and fail on a plant. Here they run against
+#: the real thing.
+READ_ONLY_ENDPOINTS = (
+    "/health",
+    "/metrics",
+    "/dashboard/summary",
+    "/equipment/MIX01/oee",
+    "/analysis/lines",
+    "/analysis/shifts",
+    "/analysis/oee?hours=1",
+    "/analysis/timeline?hours=1",
+    "/analysis/downtime?hours=1",
+    "/analysis/production?hours=1",
+    "/analysis/tag/MIX01",
+)
+
+
+@pytest.mark.parametrize("path", READ_ONLY_ENDPOINTS)
+def test_an_endpoint_that_says_it_only_reads_only_reads(plant_on_disk, path):
+    """A read-only endpoint that writes is a 500 on a real plant, and nothing
+    in the rest of the suite would see it: those clients share one writable
+    session. These run against a unit of work the database will not let
+    write, so a stray write fails here instead of on a shop floor."""
+    response = _sign_in(plant_on_disk).get(path)
+    assert response.status_code == 200, f"{path}: {response.text[:400]}"
