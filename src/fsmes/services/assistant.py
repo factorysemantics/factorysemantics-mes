@@ -782,9 +782,14 @@ def _lexical_match(question: str, guides: list[dict]) -> dict | None:
     return best if score >= 2 else None
 
 
-def route(question: str, capabilities: set[str], db=None) -> dict | None:
-    """Which guide, if any, answers 'how do I…'."""
-    guides = visible_guides(capabilities, db)
+def route(question: str, capabilities: set[str], db=None, guides=None) -> dict | None:
+    """Which guide, if any, answers 'how do I…'.
+
+    `guides` lets a caller read them first and close its database session
+    before getting here, because what follows is a call to a model and a
+    session held across one holds SQLite's single write lock across it too.
+    """
+    guides = visible_guides(capabilities, db) if guides is None else guides
     if not guides or not wants_showing(question):
         return None
 
