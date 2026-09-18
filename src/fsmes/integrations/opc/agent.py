@@ -27,7 +27,7 @@ from asyncua import Client
 
 from fsmes import shadow
 from fsmes.config import Settings
-from fsmes.db import session_scope
+from fsmes.db import read_only_session, session_scope
 from fsmes.domain import ConnectionStateName, ProductionSource, TagValue
 from fsmes.integrations.opc.security import apply_security, explain_connection_error
 from fsmes.integrations.opc.tag_map import MachineMap, load_manifest, load_tag_map
@@ -493,25 +493,56 @@ class _Handler:
     BOOK_BACKOFF_S = 0.5
 
     def _book_with_retry(self, decisions: list[tuple]) -> bool:
+        """Book a batch, and only then believe what it counted.
+
+        THE BASELINE MOVES LAST. A counter delta is measured against the
+        last value this agent saw, so moving that baseline before the
+        booking commits destroys the units if it does not. Worse, the
+        retry then measured the next delta from the moved baseline, found
+        zero, committed nothing and reported success - so a lock failure
+        did not even leave a trace in the counts.
+
+        Measured on a lab plant on 2026-09-18: seventy `failed to book
+        production` lines in the last 150,000 lines of one plant's log, at
+        eight to ten units each, all of them gone. That is house rule 1
+        read the other way round - a plant that loses production it made
+        is as wrong about its own day as one that invents production it
+        did not.
+
+        So the deltas each attempt measures go in a pending set, and they
+        become the baseline only when the transaction the booking used has
+        committed. A failed attempt leaves the baseline where it was, and
+        because a counter is absolute, the next reading re-measures the
+        whole delta and the units arrive late instead of never.
+        """
         for attempt in range(1, self.BOOK_ATTEMPTS + 1):
+            pending: dict[tuple[str, str], int] = {}
             try:
                 with session_scope() as session:
-                    self._book(session, decisions)
+                    self._book(session, decisions, pending)
+                self.last_counts.update(pending)
                 return True
             except Exception:
                 if attempt == self.BOOK_ATTEMPTS:
-                    log.exception("failed to book decisions", rows=len(decisions), attempts=attempt)
+                    log.exception("failed to book decisions", rows=len(decisions), attempts=attempt,
+                                  units_owed=sum(
+                                      v - self.last_counts.get(k, v) for k, v in pending.items()))
                     return False
                 log.warning("booking failed, retrying", rows=len(decisions), attempt=attempt,
                             wait_s=self.BOOK_BACKOFF_S * 2 ** (attempt - 1))
                 time.sleep(self.BOOK_BACKOFF_S * 2 ** (attempt - 1))
         return False
 
-    def _book(self, session, decisions: list[tuple]) -> None:
+    def _book(self, session, decisions: list[tuple], pending: dict[tuple[str, str], int]) -> None:
         """State changes are booked every one, in order. Counters coalesce
         to their latest value per machine and tag - a delta is value-based,
         so the readings in between would add nothing but sessions - and a
-        machine's good and scrap go down as one booking."""
+        machine's good and scrap go down as one booking.
+
+        `pending` collects the counter values this attempt consumed. The
+        caller promotes them to the baseline once the transaction commits;
+        see `_book_with_retry`.
+        """
         latest: dict[tuple[str, str], int] = {}
         for i, (spec, tag, _value) in enumerate(decisions):
             if tag in COUNTER_TAGS:
@@ -531,7 +562,7 @@ class _Handler:
                                   equipment=spec.equipment, tag=tag, value=value)
             elif tag in COUNTER_TAGS and latest.get((spec.equipment, tag)) == i:
                 self._record(session, spec, tag, value)
-                delta = self._counter_delta(spec.equipment, tag, int(value))
+                delta = self._counter_delta(spec.equipment, tag, int(value), pending)
                 if delta:
                     if spec.equipment not in deltas:
                         order.append(spec.equipment)
@@ -551,6 +582,13 @@ class _Handler:
                     log.info("machine counted with no active order; recorded as unassigned production",
                              equipment=code, **quantities)
             except Exception:
+                # This machine's booking failed inside its own savepoint, so
+                # the rest of the batch still commits. Its counter must not
+                # move with them, or the units in `quantities` are gone: drop
+                # them from the pending set and the next reading re-measures
+                # the delta from where this one started.
+                for tag in COUNTER_TAGS:
+                    pending.pop((code, tag), None)
                 log.exception("failed to book production", equipment=code, **quantities)
 
     def _record(self, session, spec: MachineMap, tag: str, value) -> None:
@@ -594,25 +632,35 @@ class _Handler:
                     row.ts = observed
                 session.add(row)
 
-    def _counter_delta(self, equipment_code: str, tag: str, value: int) -> int:
+    def _counter_delta(self, equipment_code: str, tag: str, value: int,
+                       pending: dict[tuple[str, str], int]) -> int:
         """The increase of a monotonic machine counter. The one rule that
         outranks all others: never invent production. Stale or duplicate
         readings count for nothing; a counter that fell to near zero is a PLC
         reset and becomes the new baseline (the units around the reset are
-        unknowable, so none are booked)."""
+        unknowable, so none are booked).
+
+        The new baseline goes to `pending`, not to `last_counts`: it is what
+        this attempt *would* leave behind, and it is only true once the
+        booking commits. Readings inside one batch still measure against each
+        other, because `pending` is read first.
+        """
         key = (equipment_code, tag)
-        last = self.last_counts.get(key)
+        last = pending.get(key, self.last_counts.get(key))
         if last is None or value < last // 2:
-            self.last_counts[key] = value
+            pending[key] = value
             return 0
         if value <= last:
             return 0
-        self.last_counts[key] = value
+        pending[key] = value
         return value - last
 
 
 def _desired_order_codes(equipment_codes: list[str]) -> dict[str, str]:
-    with session_scope() as session:
+    # Read-only, and declared: this runs in the adjustment loop, just before
+    # the agent goes to the PLC, and a write lock taken here is a write lock
+    # taken on the way to a network call.
+    with read_only_session() as session:
         return {
             code: (ops[0].order.code if (ops := workorders.dispatch_list(session, code)) else "")
             for code in equipment_codes
