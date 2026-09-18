@@ -11,13 +11,13 @@ That is the grey segment.
 | Segment | Source | Becomes *unknown* when |
 |---|---|---|
 | Availability | machine state history from the tag map's state tag | the MES was not subscribed for part of the window (it started later, the connection dropped, the machine went stale) |
-| Performance | counter deltas against the rated cycle time in master data | the rated cycle time is blank, the machine was not seen running, or nothing was counted |
+| Performance | counter deltas against the rated cycle time in master data | the rated cycle time is blank, the machine was not seen running, nothing was counted, or the counted work will not fit inside the run time |
 | Quality | good and scrap counters | there is no scrap counter in the tag map — quality reads *unknown*, not 100 % |
 
 The screen states its data source in a line under the number; a screenshot
 without that line is not a screenshot of this product.
 
-## Performance can read over 100 %, and that is the point
+## Performance is not a share, and it is never capped
 
 Availability and quality are each a share of something the MES watched
 itself, so neither can pass 100 %. **Performance is not a share.** It is
@@ -27,25 +27,52 @@ itself, so neither can pass 100 %. **Performance is not a share.** It is
 and only the second half of that is measured. The first half is a number
 somebody typed into master data.
 
-That figure is printed, above 100 % and all. It is **not** capped at 100 %. It
-used to be, in both places that computed it, and on 2026-09-14 a lab run
-showed what that cost: nine stations across two simulated plants all reported
-performance of exactly 100 % while the script that generated their data said
-between 94.3 % and 99.9 %. A factor that reads 100 % whatever the line does is
-not a measurement, and the OEE built on it overstates the plant. The OEE that
-follows can pass 100 % for the same reason.
+There is no cap on it and there never will be. There used to be, in both
+places that computed it, and on 2026-09-14 a lab run showed what that cost:
+nine stations across two simulated plants all reported performance of exactly
+100 % while the script that generated their data said between 94.3 % and
+99.9 %. A factor that reads 100 % whatever the line does is not a
+measurement, and the OEE built on it overstates the plant.
 
-## What over 100 % actually tells you
+## When the counted work will not fit inside the run time, there is no figure
 
-Performance over 100 % is the same statement as **the work the MES counted
-will not fit inside the run time the MES recorded**: units × rated cycle came
-out larger than the running seconds. Two of the MES's own numbers disagree,
-and the screen says so in those words. It does **not** tell you which of them
-is wrong, because the MES cannot tell. Three things produce it:
+Divide those two numbers and you can get an answer above 1.0. That answer is
+the same statement as **the work the MES counted will not fit inside the run
+time the MES recorded**: units × rated cycle came out larger than the running
+seconds. Two of the MES's own numbers disagree.
+
+Until 2026-09-18 the screen printed that answer as a percentage. It stopped,
+because a percentage on a screen is read as a measurement of the machine and
+this one measures the gap between two records. A plant replaying a recorded
+line overnight showed **performance 881 %** and **OEE 980 %** on its
+dashboard, and the person reading it called it an error; he was right, twice
+over — see *[two clocks](#a-replayed-plant-has-two-clocks)* below for the
+other half.
+
+So where the counts outrun the run time, the screen shows:
+
+- **no performance figure, and no OEE** — a dash, hatched bar, and the same
+  *unknown* the rest of the product uses for a number it will not state;
+- **the sentence**, naming both numbers: how many units at what rated cycle
+  is how many seconds of work, inside how many seconds of running, and that
+  the MES cannot tell which of the two is wrong;
+- **units counted outside run time**, where there are any (below);
+- **the ratio itself**, kept in the API answer as `performance_ratio` and in
+  `counts_outrun_run_time`. Nothing is thrown away. It is simply not called
+  performance, because it is not a measurement of the machine.
+
+Neither is it capped at 100 %, which would be the same lie pointing the other
+way: a station reading exactly 1.0 is a station that made exactly what its
+rating allows, and that has to keep meaning what it says.
+
+## What that disagreement actually tells you
+
+It does **not** tell you which of the two numbers is wrong, because the MES
+cannot tell. Three things produce it:
 
 1. **The rating is slower than the machine.** Somebody entered a cycle time
    the machine beats, or the counter counts something other than what the
-   rating rates. Fix it in the worksheet and the number comes back down.
+   rating rates. Fix it in the worksheet and the figure comes back.
 2. **The run time is short of what the machine really ran.** State comes from
    a tag the MES samples, and a machine that changes state faster than the
    publish interval is running and stopping in gaps nobody saw. A lab run on
@@ -59,9 +86,9 @@ is wrong, because the MES cannot tell. Three things produce it:
    stop books units at an instant the machine was not running.
 
 The third is the one the MES can measure, so it does: **units counted outside
-run time** is reported beside the figure, and named in the sentence when there
-are any. Those units are not taken out of anything — they are units the plant
-made, they stay in good, scrap, quality and performance (house rule 1). They
+run time** is reported beside the sentence, and named in it when there are
+any. Those units are not taken out of anything — they are units the plant
+made, they stay in good, scrap, quality and in the ratio (house rule 1). They
 are a clue about which of the two numbers to distrust, nothing more.
 
 Where to start: if *units counted outside run time* is near zero, suspect the
@@ -73,10 +100,47 @@ that are right, landing beside a state history that is not. Decision records
 [0026](../decisions/0026-counts-that-outrun-the-run-time.md) have the
 arithmetic and the options that lost.
 
-**What it is not.** A machine cannot make more than it made. Over 100 %
-performance never means extra units were invented — that rule is house rule 1
-and lives in [never invent production](never-invent-production.md). It means
-two of the MES's numbers do not agree, and it says so rather than choosing one.
+**What it is not.** A machine cannot make more than it made. A missing
+performance figure never means extra units were invented — that rule is house
+rule 1 and lives in [never invent production](never-invent-production.md). It
+means two of the MES's numbers do not agree, and it says so rather than
+choosing one.
+
+## A replayed plant has two clocks
+
+A plant that replays a recorded line faster than it was recorded counts at the
+line's pace and measures every duration on the wall's. Performance is the one
+OEE factor that divides a count by a duration, so at ten times real time it
+comes out ten times too big; availability and quality are ratios of things
+measured the same way, and are unaffected.
+
+The MES is told the speed rather than guessing it. `fsmes fleet start --speed
+10` puts `MES_SIM_SPEED=10` into the environment of every process of that
+plant, the API included, and the API restates the run time on the line's clock
+before it divides. Where it has done so it says so, everywhere a reader can
+be:
+
+- a **Replay 10×** bar across the top of every screen, the way shadow mode
+  puts one there — it is a fact about the installation, not a notification;
+- `replay` on `/health`, which is public, so a fleet console shows the plant
+  as **replay 10×** rather than as *live*;
+- `mes_replay_factor` in `/metrics`, present only on a plant that is
+  replaying;
+- `clock` beside the figures in `/analysis/oee` and `/kpis/oee/{code}`.
+
+Durations stay on the clock the MES measured — `runtime_seconds` is wall
+seconds — with the factor beside them, so a reader converts rather than
+having numbers silently restated under them.
+
+> **A plant meant to be looked at runs at 1×.** Above 1× a plant is a test
+> harness: its window is an hour of the line in six minutes of yours, its
+> shift boundaries are not the line's, and its figures are only readable with
+> the factor in hand. Replay fast to test the MES; stand a plant up at 1× to
+> look at one.
+
+Restating the run time is not a cap by another name. A replayed plant whose
+counts still will not fit inside its line-clock run time has a real
+disagreement, and it is named exactly as above.
 
 ## Stale is not stopped, and unseen is neither
 
@@ -133,9 +197,10 @@ it moves up the list.
    reconstructed later, by design. `/health` says how many machines this
    plant can currently see, which is the thing to alert on.
 
-A rated cycle time that is wrong does not make grey; it makes a performance
-figure over 100 % with a note beside it. Both are worth a walk to the
-machine, and only one of them looks like a problem at first glance.
+A rated cycle time that is wrong does not make grey either; it makes a machine
+with no performance figure and a sentence saying its counted work will not fit
+inside its run time. Both are worth a walk to the machine, and neither looks
+like a problem at first glance — one of them used to look like a triumph.
 
 ## See also
 
@@ -145,4 +210,5 @@ machine, and only one of them looks like a problem at first glance.
 - [Engineering guide — the worksheet](../onboarding/GUIDE-ENGINEERING.md)
 - Decision record [0004](../decisions/0004-never-invent-production.md)
 - Decision record [0025](../decisions/0025-performance-is-measured-not-capped.md)
+- Decision record [0026](../decisions/0026-counts-that-outrun-the-run-time.md)
 - Decision record [0033](../decisions/0033-availability-is-a-share-of-what-was-watched.md)

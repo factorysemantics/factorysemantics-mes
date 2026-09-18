@@ -66,8 +66,16 @@ note:
       That second sentence was wrong, and the lab caught it within hours.
       `performance > 1.0` is the same inequality as *the counted work will not
       fit inside the run time*, and the master data is only one of its
-      candidate causes. The figure is still uncapped and still reported; the
-      note now states the disagreement instead of naming a culprit.
+      candidate causes. The figure is still uncapped; the note now states the
+      disagreement instead of naming a culprit.
+
+      **Amended again on 2026-09-18**, after a plant replaying a recorded line
+      printed 980 % OEE and the maintainer read it, correctly, as an error:
+      above 1.0 the ratio is no longer *reported as performance* at all. It is
+      still computed, still published as `performance_ratio`, and still never
+      capped — what it loses is the name, because it measures two of the MES's
+      records disagreeing rather than the machine. Nothing measured is
+      discarded, which was this record's objection to reporting *unknown*.
 - **`None`** — there is no honest number, and the note says which of the
   three reasons applies: no rated cycle time in master data, the machine was
   not seen running, or nothing was counted. Never 1.0 and never 0.

@@ -264,26 +264,34 @@ quietly corrected for:
   cancels out of both. Performance does not cancel: its numerator is priced in
   the line's own seconds — the rated cycle somebody wrote down — and its
   denominator is run time the MES measured on the wall clock. Replay an hour at
-  20x and the MES's run time is a twentieth of the line's, so the figure it
-  reports is twenty times the line's. The report's **P MES** column is
-  therefore the MES's own performance put back on the line's clock: its rating,
-  its counts, its run time multiplied by the replay speed. At speed 1 it is the
-  reported figure unchanged. Each station also carries its own band — both
-  sides divide by run time, and the MES drains past the end of the script — and
-  a difference inside that band is not called a finding.
+  20x and the MES's run time is a twentieth of the line's.
+
+    Since 2026-09-18 **the MES settles this itself** when it is told the speed:
+    `fsmes fleet start --speed` puts `MES_SIM_SPEED` in the environment of
+    every process of that plant, the API included, and the API restates the run
+    time on the line's clock before dividing — and says so, on `/health`, in
+    `/metrics` and in a bar across every screen. The report's **P MES** column
+    is the same arithmetic done here, from the MES's own three numbers, which
+    is what makes it a check on the MES rather than a repetition of it. Each
+    station also carries its own band — both sides divide by run time, and the
+    MES drains past the end of the script — and a difference inside that band
+    is not called a finding.
 * **The rated cycle may differ.** Performance prices units against what the
   machine could have made, and the MES uses its master data's
   `ideal_cycle_seconds` while the script uses the line's `rate_per_min`. Where
   the two disagree the row says *not like for like* instead of reporting the
   difference as a fault.
 
-Neither side caps performance. A figure above 1.0 means the machine beat the
-cycle it was rated at, which is a finding about the rating rather than a score
-above physics — see [reading OEE](../plant/reading-oee.md).
+Neither side caps performance, and neither invents one. Where the MES's counted
+work will not fit inside its run time it reports no performance figure at all,
+and the ratio it would have been sits on `performance_ratio` — which is what
+this report reads, because above 1.0 there is no reported figure to read. See
+[reading OEE](../plant/reading-oee.md).
 
 *Every number says which clock it is on.* In `scores.json` the MES's block has
 no plain `performance`, `oee`, `runtime_seconds` or `downtime_seconds` at all.
-It has `performance_as_reported` and `performance_line_clock`,
+It has `performance_as_reported`, `performance_ratio_as_reported` and
+`performance_line_clock`,
 `runtime_wall_seconds` and `runtime_line_seconds`, and so on, and the one the
 difference was computed from is the line-clock one. Availability and quality
 keep their plain names, because they are the two the replay speed cancels out
