@@ -53,6 +53,7 @@ from fsmes.services import calendar as calendar_service
 from fsmes.services import connection as connection_service
 from fsmes.services import equipment as equipment_service
 from fsmes.services import line as line_service
+from fsmes.services import line_clock
 from fsmes.services import oee as oee_rules
 
 # Below this much observed history, rates are not reported at all.
@@ -224,6 +225,10 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
     asked_start, asked_end = _asked_window(hours, the_shift)
     ledgers = coverage.totals_many(db, ids, asked_start, asked_end)
     the_floor = coverage.floor()
+    # How many seconds of the line one second of this MES's clock is worth.
+    # 1.0 everywhere but a replay running faster than real time, where the
+    # counts are the line's and every duration below is the wall's.
+    replay = line_clock.factor()
 
     stations = []
     for unit in units:
@@ -250,8 +255,12 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
         availability = account.availability
         cover = account.coverage
         # Never capped, and the note is the sentence the screen puts beside it
-        # — see `fsmes.services.oee`.
-        performance, performance_note = oee_rules.performance(cycle, total, runtime, outside)
+        # — see `fsmes.services.oee`. There is no figure at all when the
+        # counted work will not fit inside the run time: the ratio is kept on
+        # `performance_ratio` and named, not printed (decision 0026, amended
+        # 2026-09-18).
+        measured = oee_rules.performance(cycle, total, runtime, outside, replay_factor=replay)
+        performance, performance_note = measured.value, measured.note
         quality = good / total if total > 0 else None
         overall = (
             availability * performance * quality if None not in (availability, performance, quality) else None
@@ -271,7 +280,14 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
         # units, and flooring it at zero would hide it exactly the way the old
         # 1.0 cap on `performance` did. The waterfall does not draw a negative
         # segment; it shows the note instead.
-        capable = runtime / cycle if (cycle and runtime > 0) else None
+        # On the line's clock, because the units it is compared with are: at
+        # 10x a machine ran ten line-seconds for every second this MES
+        # watched, and pricing a loss in units means pricing it in the line's
+        # seconds. The durations reported below stay on the wall clock this
+        # MES measured, with `replay_factor` beside them to convert.
+        runtime_line = runtime * replay
+        observed_line = observed * replay
+        capable = runtime_line / cycle if (cycle and runtime > 0) else None
         stations.append(
             {
                 "code": unit.code,
@@ -280,6 +296,13 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
                 "availability": _round(availability),
                 "performance": _round(performance),
                 "performance_note": performance_note,
+                # The arithmetic, kept whether or not it may be printed: ideal
+                # time for the units made over the run time. Above 1.0 it is a
+                # measurement of two of this MES's records disagreeing, which
+                # is why it is not the figure above (decision 0025 kept the
+                # measurement; 0026 as amended stopped calling it performance).
+                "performance_ratio": _round(measured.ratio),
+                "counts_outrun_run_time": measured.outruns_run_time,
                 "quality": _round(quality),
                 "oee": _round(overall),
                 "runtime_seconds": round(runtime, 1),
@@ -309,7 +332,7 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
                     # loss the machine caused, and pricing it as one would
                     # bill a plant for the minutes its network was down.
                     "availability_seconds": round(observed - runtime, 1),
-                    "availability_units": round((observed - runtime) / cycle, 1) if cycle else None,
+                    "availability_units": round((observed_line - runtime_line) / cycle, 1) if cycle else None,
                     # What running slower than rated cost.
                     "performance_units": round(capable - total, 1) if capable is not None else None,
                     "quality_units": scrap,
@@ -341,6 +364,12 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
         "coverage": _round(_line_coverage(ledgers.values())),
         "coverage_floor": the_floor,
         "stations_withheld": sum(1 for s in stations if s["coverage_note"] and the_floor),
+        # And how many have no figure for the other reason: their counts will
+        # not fit inside their run time, so there is a disagreement to name
+        # rather than a performance to print. Stated on the rollup because
+        # `line_oee` and `constraint` are drawn from the stations that still
+        # have one, and a reader is entitled to know how many do not.
+        "stations_counts_outrun": sum(1 for s in stations if s["counts_outrun_run_time"]),
         "observed_seconds": round(sum(s["observed_seconds"] for s in stations), 1),
         "not_observed_seconds": round(
             sum(a.not_observed_seconds for a in ledgers.values()), 1),
@@ -349,9 +378,16 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
             if row.state.value == "disconnected"),
         "machines_total": len(units),
         "line_oee": _round(min(rated)) if rated else None,
+        # Of how many. Every list states its total, this one included: a line
+        # OEE drawn from three of eleven stations is a different claim from
+        # one drawn from eleven.
+        "stations_rated": len(rated),
         "constraint": worst["code"] if worst else None,
         "good_qty": produced,
         "scrap_qty": scrapped,
+        # Which clock the rates above were computed on. `None` on every plant
+        # whose clock is the line's, which is every real one.
+        "clock": line_clock.summary(replay),
     }
 
 

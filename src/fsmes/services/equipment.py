@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from fsmes.db import utcnow
 from fsmes.domain import Equipment, EquipmentLevel, EquipmentState, EquipmentStateName, ProductionLog
-from fsmes.services import audit, calendar, coverage, masterdata, outbox
+from fsmes.services import audit, calendar, coverage, line_clock, masterdata, outbox
 from fsmes.services import connection as connection_service
 from fsmes.services import oee as oee_rules
 
@@ -334,6 +334,10 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
     # Availability is derived from this rather than computed beside it.
     ledgers = coverage.totals_many(session, ids, asked, end, seen)
     the_floor = coverage.floor()
+    # 1.0 for every plant whose clock is the line's. Above that, the counts
+    # come in at the line's pace and every duration here is wall clock — see
+    # `fsmes.services.line_clock`.
+    replay = line_clock.factor()
 
     # The window never reaches back before the MES started observing a
     # machine: time we have no record of is not downtime.
@@ -385,9 +389,12 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
         availability = account.availability
         cover = account.coverage
         # Never capped, and the note is the sentence the screen puts beside it
-        # — see `fsmes.services.oee`.
-        performance, performance_note = oee_rules.performance(
-            m.ideal_cycle_seconds, total, runtime, outside)
+        # — see `fsmes.services.oee`. No figure at all when the counted work
+        # will not fit inside the run time: the ratio is kept beside it and
+        # named, not printed (decision 0026, amended 2026-09-18).
+        measured = oee_rules.performance(
+            m.ideal_cycle_seconds, total, runtime, outside, replay_factor=replay)
+        performance, performance_note = measured.value, measured.note
         quality = good / total if total > 0 else None
         overall = (
             availability * performance * quality
@@ -423,6 +430,11 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
             "availability": round(availability, 4) if availability is not None else None,
             "performance": round(performance, 4) if performance is not None else None,
             "performance_note": performance_note,
+            # The arithmetic, kept whether or not it may be printed. Above 1.0
+            # it measures two of this MES's own records disagreeing, not the
+            # machine, which is why it is not the figure above.
+            "performance_ratio": round(measured.ratio, 4) if measured.ratio is not None else None,
+            "counts_outrun_run_time": measured.outruns_run_time,
             "quality": round(quality, 4) if quality is not None else None,
             "oee": round(overall, 4) if overall is not None else None,
             "good_qty": good,
@@ -431,6 +443,9 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
             "downtime_seconds": round(downtime, 1),
             # Named, never netted off: see `production_sums`.
             "counted_outside_run_time": round(outside, 3),
+            # Which clock the rates above were computed on. `None` on every
+            # plant whose clock is the line's, which is every real one.
+            "clock": line_clock.summary(replay),
         }
     return out
 
