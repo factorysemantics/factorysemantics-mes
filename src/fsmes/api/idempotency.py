@@ -15,7 +15,7 @@ from sqlalchemy import select
 from starlette.concurrency import run_in_threadpool
 
 from fsmes.config import get_settings
-from fsmes.db import session_scope
+from fsmes.db import read_only_session, session_scope
 from fsmes.domain import IdempotencyKey
 from fsmes.services import auth
 
@@ -66,7 +66,9 @@ async def idempotency(request: Request, call_next):
 
 
 def _lookup(actor: str, key: str) -> tuple[int, object] | None:
-    with session_scope() as db:
+    # A read, and said so: it runs before the route's own session and used
+    # to take SQLite's write lock ahead of it for the length of a SELECT.
+    with read_only_session() as db:
         seen = db.scalar(select(IdempotencyKey).where(IdempotencyKey.actor == actor, IdempotencyKey.key == key))
         return (seen.status_code, seen.body) if seen is not None else None
 

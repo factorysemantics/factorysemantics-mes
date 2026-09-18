@@ -54,24 +54,47 @@ def _sqlite_transactions(engine: Engine) -> None:
     the caller to promise and then trust them. It makes the database refuse
     the write.
 
+    WHAT IT COST TO LEARN THAT. Two lab plants ran six hours at replay speed
+    10 on 2026-09-18 and one of them logged **18,564** `database is locked`,
+    825 HTTP 500s and 754 failed shop-floor steps, and could not book its own
+    production. `/dashboard/summary` was spending ten seconds computing a KPI
+    inside its request session, and for those ten seconds nothing in the plant
+    could write anything — not the agent's readings, not the floor's
+    inspections, not a sign-in. A read holding the write lock is how a plant
+    stops being able to record what it made. Both halves of that night are
+    fixed here: PR #80 took the reads off the lock, and PR #81 took the plant's
+    writers, its model endpoints and its log off the consequences.
+
     The cost of taking the lock is that SQLite serialises transactions rather
     than only writes; SQLite has one writer either way, and a deployment that
     needs more than that is what PostgreSQL is for. So nothing may hold a
-    transaction open across a network call: see `_adjustment_loop` in the OPC
-    agent, which reads first and closes before it goes to the PLC.
+    transaction open across a network call, either kind: a write transaction
+    blocks every other writer, and a read transaction blocks WAL checkpoints
+    for as long as it lives. See `_adjustment_loop` in the OPC agent, which
+    reads first and closes before it goes to the PLC, and the two tests in
+    `test_sqlite_write_locks.py` that hold every module and every route to it.
 
     PostgreSQL needs none of this and gets none of it — this runs only when the
     URL is SQLite.
     """
 
+    busy_timeout_ms = get_settings().sqlite_busy_timeout_ms
+
     @event.listens_for(engine, "connect")
     def _sqlite_pragmas(dbapi_conn, _record):
         # busy_timeout first: the pragmas after it, the WAL switch included,
         # can themselves meet a lock another process is holding.
-        dbapi_conn.execute("PRAGMA busy_timeout=5000")
+        dbapi_conn.execute(f"PRAGMA busy_timeout={busy_timeout_ms}")
         dbapi_conn.execute("PRAGMA foreign_keys=ON")
         # WAL lets readers and the one writer work at the same time.
         dbapi_conn.execute("PRAGMA journal_mode=WAL")
+        # In WAL, NORMAL fsyncs at a checkpoint rather than at every commit.
+        # What it costs, said plainly: a power cut or a kernel panic can lose
+        # the last commits that had not reached a checkpoint. It cannot
+        # corrupt the database, and a process crash loses nothing. A plant
+        # booking ten times a second pays for FULL on every one of those
+        # commits, with the write lock held while it waits for the disk.
+        dbapi_conn.execute("PRAGMA synchronous=NORMAL")
         # pysqlite starts transactions on its own, never as IMMEDIATE, and
         # not at all before a plain SELECT or a SAVEPOINT. Hand transaction
         # control to SQLAlchemy so the handler below is the only thing that
@@ -169,7 +192,8 @@ def session_scope() -> Iterator[Session]:
     """One unit of work: commit on success, roll back on any error.
 
     On SQLite it holds the write lock for its whole life, so keep it short and
-    never wrap a network call in one.
+    never wrap a network call in one. If it only reads, say so with
+    `read_only_session` instead and it will hold no write lock at all.
     """
     session = get_sessionmaker()()
     try:

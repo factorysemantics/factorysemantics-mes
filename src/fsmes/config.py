@@ -20,6 +20,21 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///fsmes.db"
 
+    # --- SQLite's one writer ----------------------------------------------
+    # How long a write waits for the lock before it gives up, in
+    # milliseconds. SQLite only; PostgreSQL has its own locking and is not
+    # given this.
+    #
+    # Fifteen seconds, not the five it was. Five was chosen when reads took
+    # the write lock too, so raising it would only have made a doomed wait
+    # longer. Now that a read holds no write lock, the only thing a writer
+    # ever waits for is another writer, and the longest of those on a plant
+    # is the hourly retention prune deleting a batch of tag history. This is
+    # not a number a healthy plant reaches; it is the margin before the MES
+    # decides it cannot record the plant's own production, and that decision
+    # should be slow.
+    sqlite_busy_timeout_ms: int = 15_000
+
     # --- Shadow mode ------------------------------------------------------
     # The MES watches a real plant and can change nothing in it. On: it reads
     # the OPC UA tags and books production exactly as it would in charge, and
