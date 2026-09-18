@@ -15,6 +15,16 @@ Inspections measure what the line actually made. A fill-weight check reads the
 Refill station's recorded FillWeight rather than inventing a number, so a
 quality excursion in the simulated line becomes a failing check and an open
 non-conformance without either side being told about the other.
+
+It also works the order book, because a supervisor does. The MES does not
+finish an order at its quantity and will not start (decision 0029): reaching a
+number and being finished are different facts, and the MES only knows the
+first. The person who knows the second is the shift supervisor, and here that
+person is simulated - so when the line has made the number, `FLOOR-SUP` signs
+in as themselves, completes the order through the API and releases the next
+one in the book. The audit row carries their name. Nothing here invents an
+order: when the book is empty the floor says so, once, and the line's counts
+become unassigned production, which is the true answer (decision 0019).
 """
 
 from __future__ import annotations
@@ -36,6 +46,20 @@ log = structlog.get_logger("operations")
 # fresh one every twenty seconds forever.
 ACTIVE_STATUSES = ("released", "running")
 
+#: Far enough away that an order with no due date sorts after every order that
+#: has one, rather than ahead of all of them the way an empty string would.
+_NO_DUE_DATE = "9999-12-31T23:59:59"
+
+
+def _book_position(order: dict) -> tuple:
+    """Where an order sits in the book: priority, then due date, then code.
+
+    All three, so two orders of the same priority and the same due date still
+    have one answer rather than whichever the database listed first.
+    """
+    return (order.get("priority", 50), order.get("due_date") or _NO_DUE_DATE,
+            order.get("code") or "")
+
 
 def _slug(text: str) -> str:
     """fill_weight and FillWeight are the same characteristic."""
@@ -53,6 +77,10 @@ class Floor:
         # The last value this floor recorded for each characteristic, so it
         # does not write the same reading down twice. See `inspect`.
         self._last_recorded: dict[str, float] = {}
+        # The empty book is said once, not every twenty seconds for a shift.
+        # It is reset the moment an order is released, so a book that is
+        # refilled and empties again says so again.
+        self._said_the_book_is_empty = False
 
     async def sign_in(self, code: str, password: str) -> None:
         r = await self.client.post("/auth/login", json={"code": code, "password": password})
@@ -235,46 +263,120 @@ class Floor:
             log.warning("issue refused", status=exc.response.status_code,
                         detail=exc.response.text[:160])
 
-    # --------------------------------------------------------------- orders
+    # ----------------------------------------------------------- order book
 
-    async def release_work(self, orders: list[dict]) -> None:
-        """Keep work on the floor.
+    async def finish_orders(self, orders: list[dict]) -> int:
+        """Finish every order whose line has made the number. Returns how many.
 
-        A line that finishes its only order and then runs on nothing is a
-        demo, not a plant: material issue has nothing to book against and
-        genealogy stays empty. Real plants have a queue, so when none is
-        active this releases the next one.
+        Decision 0029 stands and is not touched: the MES does not complete an
+        order when its quantity is reached, because a quantity is what the
+        plant was asked for and a line is routinely still running when it has
+        made it. Completing is an act, and this is the act - performed by the
+        simulated shift supervisor, over the same API a person uses, so the
+        audit trail names `FLOOR-SUP` and nobody reading it later can mistake
+        this for the MES closing an order by itself.
+
+        An order whose steps are not all running is left open and said out
+        loud. Starting a step no machine ever counted against, only so the
+        order could be completed, would be putting a run in the record that
+        never happened.
         """
-        active = [o for o in orders if o.get("status") in ACTIVE_STATUSES]
-        if active:
-            return
+        finished = 0
+        for order in orders:
+            quantity = float(order.get("quantity") or 0)
+            if quantity <= 0 or order.get("status") not in ACTIVE_STATUSES:
+                continue
+            if float(order.get("good_qty") or 0) < quantity:
+                continue
+            code = order["code"]
+            running = [op for op in order.get("operations") or []
+                       if op.get("status") == "running"]
+            if not running:
+                continue
+            refused = False
+            for op in running:
+                try:
+                    response = await self.client.post(
+                        f"/workorders/{code}/operations/{op['seq']}/complete")
+                    response.raise_for_status()
+                except httpx.HTTPStatusError as exc:
+                    refused = True
+                    log.warning("could not complete an operation", order=code,
+                                seq=op.get("seq"), status=exc.response.status_code,
+                                detail=exc.response.text[:160])
+            if refused:
+                continue
+            try:
+                after = await self.get(f"/workorders/{code}")
+            except httpx.HTTPError as exc:
+                log.warning("could not read the order back", order=code, error=str(exc)[:160])
+                continue
+            if after.get("status") != "completed":
+                waiting = [op["seq"] for op in after.get("operations") or []
+                           if op.get("status") != "done"]
+                log.warning("order not finished; some steps never ran", order=code,
+                            waiting=waiting, status=after.get("status"))
+                continue
+            finished += 1
+            log.info("finished order", order=code, quantity=quantity,
+                     good=after.get("good_qty"), scrap=after.get("scrap_qty"),
+                     over=after.get("over_qty"), by="the simulated shift supervisor")
+        return finished
 
-        done = [o for o in orders if o.get("code")]
-        material = done[0]["material"] if done else None
-        if not material:
-            return
+    async def release_next(self) -> dict | None:
+        """Release the next order in the book, or say the book is empty - once.
 
-        # Continue the seeded numbering rather than inventing a scheme.
-        numbers = []
-        for o in done:
-            tail = o["code"].rsplit("-", 1)[-1]
-            if tail.isdigit():
-                numbers.append(int(tail))
-        prefix = done[0]["code"].rsplit("-", 1)[0] if done else "WO"
-        code = f"{prefix}-{(max(numbers) + 1) if numbers else 1001}"
-
-        quantity = float(self.rng.choice([1500, 2000, 2500, 4000]))
+        Never invents one. Until 2026-09-18 this made up an order code and a
+        quantity when the floor ran out of work, and the line went on looking
+        busy over a number nobody had asked for. A plant with nothing planned
+        left has nothing planned left: what the line makes after that is
+        unassigned production, listed with its total (decision 0019), and that
+        is the answer a person needs to see rather than a fiction that hides it.
+        """
         try:
-            r = await self.client.post("/workorders", json={
-                "code": code, "material": material, "quantity": quantity,
-                "priority": self.rng.choice([10, 20, 50]),
-            })
-            r.raise_for_status()
-            await self.client.post(f"/workorders/{code}/release")
-            log.info("released order", order=code, material=material, quantity=quantity)
+            page = await self.get("/workorders", status=["planned"], limit=500)
+        except httpx.HTTPError as exc:
+            log.warning("could not read the order book", error=str(exc)[:160])
+            return None
+        book = page["items"]
+        if not book:
+            if not self._said_the_book_is_empty:
+                self._said_the_book_is_empty = True
+                log.warning(
+                    "the order book is empty", planned=0,
+                    note="nothing is planned on this plant; what the line counts from "
+                         "here is unassigned production, not an order")
+            return None
+        nxt = sorted(book, key=_book_position)[0]
+        try:
+            response = await self.client.post(f"/workorders/{nxt['code']}/release")
+            response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            log.warning("release refused", status=exc.response.status_code,
+            log.warning("release refused", order=nxt["code"], status=exc.response.status_code,
                         detail=exc.response.text[:160])
+            return None
+        self._said_the_book_is_empty = False
+        log.info("released the next order in the book", order=nxt["code"],
+                 material=nxt.get("material"), quantity=nxt.get("quantity"),
+                 due=nxt.get("due_date"), remaining_in_book=page["total"] - 1,
+                 by="the simulated shift supervisor")
+        return nxt
+
+    async def work_the_book(self, orders: list[dict], *, finish: bool = True) -> None:
+        """One pass of what a supervisor does with the schedule.
+
+        Finish what the line has made, then put the next order on it. A plant
+        that is idle with orders still planned gets one too - that is the case
+        a pack which releases nothing starts in.
+
+        `finish` is off for a scripted over-run: an experiment whose whole
+        subject is a line running past its order needs nobody stopping it, and
+        it says so in its plan rather than being an accident of cadence.
+        """
+        finished = await self.finish_orders(orders) if finish else 0
+        active = [o for o in orders if o.get("status") in ACTIVE_STATUSES]
+        if finished or not active:
+            await self.release_next()
 
     # ---------------------------------------------------------- supervision
 
@@ -310,17 +412,23 @@ class Floor:
 
 async def run(settings: Settings, *, inspect_every: float = 8.0,
               issue_every: float = 25.0, review_every: float = 90.0,
-              release_every: float = 20.0,
+              supervise_every: float = 20.0,
               seed: int = 0, user: str = "FLOOR-SIM", password: str = "operator",
               supervisor: str = "FLOOR-SUP", supervisor_password: str = "supervisor",
-              inspect_all: bool = False) -> None:
+              inspect_all: bool = False, finish_orders: bool = True) -> None:
     """Generate shop-floor activity until stopped.
 
     Two identities, because the plant has two: the floor (an operator) records
-    checks, issues material and releases work; the shift supervisor closes
-    non-conformances, which an operator may not - segregation of duties the
-    product is right to enforce, and which the simulator must respect rather
-    than be granted around.
+    checks and issues material; the shift supervisor closes non-conformances,
+    finishes an order the line has made the number for and releases the next
+    one in the book. An operator may not close a non-conformance - segregation
+    of duties the product is right to enforce, and which the simulator must
+    respect rather than be granted around - and the order book is the
+    supervisor's for the same reason: the audit trail has to name whoever
+    finished an order, and it has to be true.
+
+    `finish_orders` is False for a scripted over-run, where nobody stopping
+    the line is the whole point.
     """
     base = f"http://{settings.api_host}:{settings.api_port}"
     rng = random.Random(seed)
@@ -345,12 +453,14 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
         except (httpx.HTTPError, KeyError) as exc:
             # A plant initialised before the supervisor account existed: say
             # so, and leave the non-conformances open rather than pretend.
-            log.warning("no supervisor account; non-conformances will stay open",
+            log.warning("no supervisor account; non-conformances will stay open and "
+                        "no order will be finished or released",
                         user=supervisor, error=str(exc)[:120])
             shift = None
 
         log.info("shop floor online", endpoint=base, inspect_every=inspect_every,
-                 issue_every=issue_every)
+                 issue_every=issue_every, supervise_every=supervise_every,
+                 finishes_orders=finish_orders and shift is not None)
 
         async def every(seconds: float, work) -> None:
             while True:
@@ -378,12 +488,16 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
             if shift is not None:
                 await shift.review_nonconformances()
 
-        async def do_release(summary, orders):
-            await floor.release_work(orders)
+        async def do_supervise(summary, orders):
+            # The supervisor's client, not the operator's: what this does -
+            # finishing an order, releasing the next - is a supervisor's act,
+            # and the audit row has to say so.
+            if shift is not None:
+                await shift.work_the_book(orders, finish=finish_orders)
 
         await asyncio.gather(
             every(inspect_every, do_inspect),
             every(issue_every, do_issue),
             every(review_every, do_review),
-            every(release_every, do_release),
+            every(supervise_every, do_supervise),
         )

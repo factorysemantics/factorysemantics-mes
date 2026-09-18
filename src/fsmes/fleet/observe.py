@@ -3,8 +3,9 @@
 Every question this package asks a plant is a `GET`, and every endpoint it
 asks is one a plant already answers without a credential: `/health` says who
 the plant is and whether it is in shadow mode, `/pack` says which pack it
-runs and whether it has drifted. Nothing here signs in, and nothing here
-sends a body.
+runs and whether it has drifted, and `/metrics` is the Prometheus text an
+orchestrator already scrapes - which is where the order book's depth comes
+from. Nothing here signs in, and nothing here sends a body.
 
 That is deliberate and it is the property a reviewer should check first. A
 fleet console is a long-running process on a port, and whatever credential it
@@ -138,3 +139,48 @@ def health(where: str, *, timeout: float = TIMEOUT) -> Answer:
 def pack(where: str, *, timeout: float = TIMEOUT) -> Answer:
     """Which pack this plant runs, and whether it has drifted from it."""
     return ask(where, "/pack", timeout=timeout)
+
+
+#: The counts a book is made of, in the order a person reads them.
+_BOOK_STATUSES = ("planned", "released", "running")
+
+
+def book(where: str, *, timeout: float = TIMEOUT) -> dict | None:
+    """How many orders this plant still has to run, or None if it did not say.
+
+    Read off `/metrics`, which already carries `mes_work_orders` per status
+    and which a plant has answered without a credential since it had metrics
+    at all. Nothing new is exposed by asking: this module could not have
+    reached an authenticated endpoint anyway, and the reason is the console -
+    a long-running process on a port holds no credential here, so there is
+    nothing on it to steal.
+
+    `None` is *did not say* and is never rendered as an empty book. A plant
+    that is up with nothing left to run and a plant that could not be asked
+    are different facts, and the line that made this worth adding - a lab
+    plant running one order seventy times over because nothing released a
+    second - is exactly the kind a merged answer would hide again.
+    """
+    url = f"{where.rstrip('/')}/metrics"
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            if response.status != 200:
+                return None
+            text = response.read().decode("utf-8", "replace")
+    except (urllib.error.URLError, TimeoutError, OSError):
+        return None
+    counts: dict[str, int] = {}
+    for line in text.splitlines():
+        if not line.startswith("mes_work_orders{"):
+            continue
+        labels, _, value = line.partition("} ")
+        for status in _BOOK_STATUSES:
+            if f'status="{status}"' in labels:
+                try:
+                    counts[status] = int(float(value))
+                except ValueError:
+                    return None
+    if not counts:
+        return None
+    counts["open"] = sum(counts.get(status, 0) for status in _BOOK_STATUSES)
+    return counts

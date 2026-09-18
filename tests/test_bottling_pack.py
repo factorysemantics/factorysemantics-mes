@@ -86,14 +86,15 @@ def blank() -> Session:
 
 
 def by_the_product() -> Session:
-    """The line as `fsmes seed-kepsim` builds it, plus the released order the
-    lab's old `init.py` added on top of it."""
+    """The line as `fsmes seed-kepsim` builds it.
+
+    No orders. `seed_kepsim` builds a line, not a schedule, and the order book
+    is the pack's own - since 2026-09-18 ten of them rather than one, which is
+    a fact about how this plant is scheduled and not about whether the two
+    seeders agree on the line. The book has its own tests below.
+    """
     session = blank()
     seed_kepsim_line(session, tag_map=KEPSIM_MAP)
-    session.flush()
-    workorders.create(session, code=ORDER, material_code="FG-BOTTLE", quantity=4000,
-                      priority=10, actor="lab-seed")
-    workorders.release(session, ORDER, actor="lab-seed")
     session.flush()
     return session
 
@@ -133,11 +134,9 @@ def shape(session: Session) -> dict:
     shifts = {s.code: (s.name, s.starts.isoformat(), s.ends.isoformat(), s.days,
                        s.equipment.code if s.equipment else None)
               for s in session.scalars(select(ShiftPattern))}
-    orders = {o.code: (o.material.code, o.quantity, o.priority, o.status.value)
-              for o in session.scalars(select(WorkOrder))}
     return {"equipment": equipment, "materials": materials, "bom": bom,
             "routings": routings, "quality_specs": specs, "lots": lots,
-            "maintenance_plans": plans, "shifts": shifts, "work_orders": orders}
+            "maintenance_plans": plans, "shifts": shifts}
 
 
 def test_the_bottling_pack_builds_the_line_the_products_own_seeder_builds():
@@ -165,6 +164,52 @@ def test_applying_the_bottling_pack_gives_the_plant_six_machines_to_read():
     released = session.scalar(select(WorkOrder).where(WorkOrder.code == ORDER))
     assert released is not None, "counter deltas have no operation to book against"
     assert released.status.value == "released"
+
+
+def test_the_bottling_pack_releases_exactly_one_order_and_plans_the_rest():
+    """A line runs one order at a time, so one is released and the others wait.
+
+    Releasing the whole book would put ten orders on one routing and leave the
+    MES choosing between them by priority - which is the thing decision 0029
+    named as still inferred rather than read.
+    """
+    session, _ = by_the_pack()
+    book = list(session.scalars(select(WorkOrder)))
+    released = [o for o in book if o.status.value == "released"]
+    planned = [o for o in book if o.status.value == "planned"]
+    assert len(book) == len(released) + len(planned), "an order is in neither state"
+    assert [o.code for o in released] == [ORDER]
+    assert len(planned) == 9, f"the book plans {len(planned)} orders behind the released one"
+
+
+def test_the_bottling_book_is_due_in_the_order_it_is_meant_to_be_run():
+    """Every order has a due date, and no two share one.
+
+    The floor releases the next order by priority, then due date, then code.
+    A book whose due dates repeat leaves that choice to the code, and a book
+    with none leaves it to the alphabet.
+    """
+    session, _ = by_the_pack()
+    book = sorted(session.scalars(select(WorkOrder)), key=lambda o: o.code)
+    assert all(o.due_date is not None for o in book), "an order in the book has no due date"
+    dues = [o.due_date for o in book]
+    assert dues == sorted(dues), "the book's due dates do not follow its codes"
+    assert len(set(dues)) == len(dues), "two orders in the book are due at the same moment"
+
+
+def test_the_bottling_book_holds_more_than_a_day_of_this_lines_work():
+    """The point of the whole change. Six hours of a plant on 2026-09-18 left
+    one order 70x over because the book held that one order; the book now
+    holds more than the line can make in twenty-four hours at its rated rate,
+    so a plant nobody watches overnight still has work it was actually given.
+    """
+    session, _ = by_the_pack()
+    ordered = sum(o.quantity for o in session.scalars(select(WorkOrder)))
+    slowest = max(m.cycle_seconds for m in load_tag_map(PACK / "tag_map.json"))
+    an_hour = 3600.0 / slowest
+    assert ordered / an_hour >= 24.0, (
+        f"the book is {ordered:,.0f} units, which this line makes in "
+        f"{ordered / an_hour:.1f}h at its rated {an_hour:,.0f}/h")
 
 
 def test_every_station_takes_its_rated_cycle_time_from_the_tag_map():

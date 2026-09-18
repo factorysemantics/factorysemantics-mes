@@ -1,3 +1,11 @@
 [
-  {"code": "WO-NG-7001", "material": "FG-BRACKET", "quantity": 600, "priority": 10, "release": true}
+  {"code": "WO-NG-7001", "material": "FG-BRACKET", "quantity": 600,  "priority": 10, "release": true,  "due_in_hours": 2},
+  {"code": "WO-NG-7002", "material": "FG-BRACKET", "quantity": 3600, "priority": 10, "release": false, "due_in_hours": 5},
+  {"code": "WO-NG-7003", "material": "FG-BRACKET", "quantity": 2400, "priority": 10, "release": false, "due_in_hours": 8},
+  {"code": "WO-NG-7004", "material": "FG-BRACKET", "quantity": 4800, "priority": 10, "release": false, "due_in_hours": 12},
+  {"code": "WO-NG-7005", "material": "FG-BRACKET", "quantity": 3000, "priority": 10, "release": false, "due_in_hours": 15},
+  {"code": "WO-NG-7006", "material": "FG-BRACKET", "quantity": 3600, "priority": 10, "release": false, "due_in_hours": 18},
+  {"code": "WO-NG-7007", "material": "FG-BRACKET", "quantity": 4200, "priority": 10, "release": false, "due_in_hours": 22},
+  {"code": "WO-NG-7008", "material": "FG-BRACKET", "quantity": 2400, "priority": 10, "release": false, "due_in_hours": 24},
+  {"code": "WO-NG-7009", "material": "FG-BRACKET", "quantity": 3000, "priority": 10, "release": false, "due_in_hours": 27}
 ]

@@ -16,7 +16,7 @@ written by `fsmes pack apply`:
       routings.json            the operations, in order, on named equipment
       quality_specs.json       what a characteristic must measure
       lots.json                material on hand at the start
-      work_orders.json         orders to release, so counters have somewhere to book
+      work_orders.json         the order book: what to make, in what order, what is released
       maintenance_plans.json   the recurring jobs, and what makes each due
       shifts.json              the patterns this plant works
 
@@ -58,7 +58,7 @@ KINDS: dict[str, str] = {
     "routings": "the operations, in order, each on a named machine",
     "quality_specs": "what a characteristic must measure for a material",
     "lots": "material on hand when the plant starts",
-    "work_orders": "orders to create, and whether to release them",
+    "work_orders": "the order book: what to make, in what order, and what is released",
     "maintenance_plans": "the recurring jobs on a machine, and what makes each due",
     "shifts": "the shift patterns this plant works",
 }
@@ -82,7 +82,7 @@ OPTIONAL: dict[str, tuple[str, ...]] = {
     "routings": (),
     "quality_specs": ("unit", "min", "max"),
     "lots": (),
-    "work_orders": ("priority", "release"),
+    "work_orders": ("priority", "release", "due_in_hours"),
     "maintenance_plans": ("instructions", "document_code", "expected_minutes"),
     "shifts": ("days", "equipment"),
 }
@@ -169,6 +169,15 @@ def problems(directory: Path) -> list[str]:
                 if value and value not in known_materials:
                     out.append(f"{kind}.json #{index} names material {value!r}, which "
                                "materials.json does not declare.")
+    for index, row in enumerate(data.rows("work_orders"), start=1):
+        due = row.get("due_in_hours")
+        if due is None:
+            continue
+        if isinstance(due, bool) or not isinstance(due, (int, float)) or due <= 0:
+            out.append(f"work_orders.json #{index} is due in {due!r} hours; `due_in_hours` "
+                       "is a positive number of hours after the pack is applied. A pack is "
+                       "seeded whenever somebody builds the plant, so a due date in one is "
+                       "relative or it is wrong the week after it was written.")
     for index, row in enumerate(data.rows("routings"), start=1):
         for step in row.get("operations") or []:
             if not isinstance(step, dict) or not step.get("equipment"):
@@ -235,8 +244,11 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
     Idempotent by code: an entry whose code already exists is counted as
     present and left alone, never updated.
     """
+    from datetime import timedelta
+
     from sqlalchemy import select
 
+    from fsmes.db import utcnow
     from fsmes.domain import (
         BomItem,
         Equipment,
@@ -352,13 +364,21 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
         # The services below look orders up by code, so the rows above have to
         # be in the session's own view of the database before the first one.
         session.flush()
+    applied_at = utcnow()
     for row in data.rows("work_orders"):
         code = row["code"]
         if session.scalar(select(WorkOrder.id).where(WorkOrder.code == code)):
             count("work_orders", made=False)
             continue
+        # A due date in a pack has to be relative. A pack is seeded whenever
+        # somebody builds the plant, and an absolute date written into a file
+        # is in the past the week after it was written - which is a book
+        # every order of which is late before the line has run a minute.
+        due = row.get("due_in_hours")
         workorders.create(session, code=code, material_code=row["material"],
                           quantity=row["quantity"], priority=row.get("priority", 10),
+                          due_date=(applied_at + timedelta(hours=float(due))
+                                    if due is not None else None),
                           actor="pack-apply")
         if row.get("release", True):
             workorders.release(session, code, actor="pack-apply")

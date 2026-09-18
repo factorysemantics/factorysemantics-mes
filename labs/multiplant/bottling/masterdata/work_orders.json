@@ -1,9 +1,12 @@
 [
-  {
-    "code": "WO-ACME-4711",
-    "material": "FG-BOTTLE",
-    "quantity": 4000,
-    "priority": 10,
-    "release": true
-  }
+  {"code": "WO-ACME-4711", "material": "FG-BOTTLE", "quantity": 4000,  "priority": 10, "release": true,  "due_in_hours": 2},
+  {"code": "WO-ACME-4712", "material": "FG-BOTTLE", "quantity": 18000, "priority": 10, "release": false, "due_in_hours": 5},
+  {"code": "WO-ACME-4713", "material": "FG-BOTTLE", "quantity": 14400, "priority": 10, "release": false, "due_in_hours": 7},
+  {"code": "WO-ACME-4714", "material": "FG-BOTTLE", "quantity": 16800, "priority": 10, "release": false, "due_in_hours": 10},
+  {"code": "WO-ACME-4715", "material": "FG-BOTTLE", "quantity": 12000, "priority": 10, "release": false, "due_in_hours": 12},
+  {"code": "WO-ACME-4716", "material": "FG-BOTTLE", "quantity": 19200, "priority": 10, "release": false, "due_in_hours": 15},
+  {"code": "WO-ACME-4717", "material": "FG-BOTTLE", "quantity": 18000, "priority": 10, "release": false, "due_in_hours": 18},
+  {"code": "WO-ACME-4718", "material": "FG-BOTTLE", "quantity": 15600, "priority": 10, "release": false, "due_in_hours": 21},
+  {"code": "WO-ACME-4719", "material": "FG-BOTTLE", "quantity": 16800, "priority": 10, "release": false, "due_in_hours": 24},
+  {"code": "WO-ACME-4720", "material": "FG-BOTTLE", "quantity": 16800, "priority": 10, "release": false, "due_in_hours": 26}
 ]

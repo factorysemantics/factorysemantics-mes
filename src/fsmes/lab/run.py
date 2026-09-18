@@ -273,7 +273,8 @@ def run(plan_path: Path, results_root: Path | None = None, root: Path | None = N
                               line_json=built.line_json, echo=echo,
                               keep_evidence=keep_evidence,
                               collect=collector(codes, hours),
-                              extra_env=design_env(plan, results.name, built.name),
+                              extra_env={**design_env(plan, results.name, built.name),
+                                         **floor_env(plan)},
                               observe=watcher, observe_every_s=plan.watch_every_s)
             (results / "recorded" / f"{built.name}.json").write_text(
                 json.dumps(card.get("recorded") or {}, indent=2, default=str), encoding="utf-8")
@@ -363,6 +364,17 @@ def design_env(plan: Plan, run_name: str, plant: str) -> dict[str, str]:
         "MES_LAB_RUN": run_name,
         "MES_LAB_PLANT": plant,
     }
+
+
+def floor_env(plan: Plan) -> dict[str, str]:
+    """What tells this run's simulated floor whether to work the order book.
+
+    On unless the plan says otherwise. A plan whose subject is the over-run
+    itself (`labs/experiments/over-run.toml`) turns it off in writing, so the
+    line running past its order is the scenario rather than something nobody
+    got round to.
+    """
+    return {"MES_OPS_FINISH_ORDERS": "true" if plan.floor_finishes_orders else "false"}
 
 
 def export_feedback(results: Path, scores: dict, echo=print) -> list[dict]:
