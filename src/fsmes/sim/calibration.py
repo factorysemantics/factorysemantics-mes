@@ -547,6 +547,70 @@ _INK = "#8a8a8a"
 _CURVE = "#1f77b4"
 _PERFECT = "#b0b0b0"
 
+#: How wide a character is drawn, as a fraction of the font size. There is
+#: no font engine here, so these are averages for a system sans-serif,
+#: rounded up rather than down on purpose: a line broken one word early is
+#: still readable, a line broken one word late is cut off by the canvas.
+_NARROW_CHARS = "iljtfrI.,:;'\"`|!()[]-"
+_WIDE_CHARS = "mwABCDEFGHJKLMNOPQRSTUVWXYZ%@"
+
+
+def _text_width(text: str, size: float) -> float:
+    """An estimate of how wide `text` is when drawn at `size`.
+
+    An estimate, and said to be one: the true width depends on a font this
+    code never sees. It is biased high so that what it is used for - deciding
+    where to break a line - errs towards a drawing that fits.
+    """
+    units = 0.0
+    for character in text:
+        if character == " ":
+            units += 0.30
+        elif character in _NARROW_CHARS:
+            units += 0.36
+        elif character in _WIDE_CHARS:
+            units += 0.74
+        else:
+            units += 0.58
+    return units * size
+
+
+def _wrap(words: list[str], *, size: float, width: float) -> list[str]:
+    lines = [words[0]]
+    for word in words[1:]:
+        candidate = f"{lines[-1]} {word}"
+        if _text_width(candidate, size) <= width:
+            lines[-1] = candidate
+        else:
+            lines.append(word)
+    return lines
+
+
+def _fit_text(text: str, *, size: float, width: float,
+              max_lines: int = 2) -> tuple[list[str], float]:
+    """Break `text` into lines no wider than `width`, and say at what size.
+
+    Wrapping first and shrinking second, because a title on two lines reads
+    as well as one on one line and a shrunken title does not. The size comes
+    down only when a single word is too wide to break, or when the wrap
+    would take more lines than the drawing has room for.
+    """
+    words = text.split()
+    if not words:
+        return [""], size
+    widest = max(_text_width(word, 1.0) for word in words)
+    if widest * size > width:
+        size = width / widest
+    lines = _wrap(words, size=size, width=width)
+    while len(lines) > max_lines and size > 6.0:
+        size = max(6.0, size - 0.5)
+        lines = _wrap(words, size=size, width=width)
+    return lines, size
+
+
+def _number(value: float) -> str:
+    return f"{value:g}"
+
 
 def reliability_svg(bins: dict, *, title: str) -> str:
     """The calibration plot: stated against measured, with every bin's count.
@@ -555,10 +619,35 @@ def reliability_svg(bins: dict, *, title: str) -> str:
     plot is the distance from it. An empty bin is drawn as an empty tick
     with a zero under it - visible, and impossible to mistake for a point on
     the line.
+
+    Every line of text is wrapped to the canvas before the canvas is sized,
+    so a long title makes the drawing taller instead of running off the
+    right-hand edge. House rule 6 is why: a figure whose title is cut in
+    half is a figure nobody read.
     """
-    left, top, size = 70, 46, 320
-    width, height = left + size + 30, top + size + 78
+    left, size = 70, 320
+    width = left + size + 30
+    room = width - left - 8
+    body = 11.0
+
+    title_lines, title_size = _fit_text(title, size=12.0, width=room)
+    head = [(line, title_size) for line in title_lines]
+    head += [(line, body) for line in _fit_text(
+        f'{bins["samples"]} sample(s) in {bins["bins_total"]} bin(s); '
+        f'{bins["empty_bins"]} bin(s) empty', size=body, width=room)[0]]
+
+    top = 20 + 14 * (len(head) - 1) + 12
     bottom = top + size
+
+    error = bins["expected_calibration_error"]
+    foot: list[str] = []
+    for line in ("stated confidence, at bin midpoints; each bin's count is "
+                 "under the axis",
+                 "expected calibration error: "
+                 + ("not measurable - no samples" if error is None
+                    else f"{error:.4f}")):
+        foot.extend(_fit_text(line, size=body, width=room, max_lines=3)[0])
+    height = bottom + 46 + 16 * (len(foot) - 1) + 16
 
     def x(value: float) -> float:
         return left + value * size
@@ -568,17 +657,16 @@ def reliability_svg(bins: dict, *, title: str) -> str:
 
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" '
            f'height="{height}" viewBox="0 0 {width} {height}" '
-           f'font-family="system-ui, sans-serif" font-size="11">',
-           f'<title>{_escape(title)}</title>',
-           f'<text x="{left}" y="20" fill="{_INK}" font-size="12">'
-           f'{_escape(title)}</text>',
-           f'<text x="{left}" y="34" fill="{_INK}">'
-           f'{bins["samples"]} sample(s) in {bins["bins_total"]} bin(s); '
-           f'{bins["empty_bins"]} bin(s) empty</text>',
-           f'<line x1="{x(0)}" y1="{y(0)}" x2="{x(1)}" y2="{y(1)}" '
-           f'stroke="{_PERFECT}" stroke-width="1" stroke-dasharray="4 3"/>',
-           f'<rect x="{left}" y="{top}" width="{size}" height="{size}" '
-           f'fill="none" stroke="{_INK}" stroke-width="1"/>']
+           f'font-family="system-ui, sans-serif" font-size="{_number(body)}">',
+           f'<title>{_escape(title)}</title>']
+    for index, (line, line_size) in enumerate(head):
+        out.append(f'<text x="{left}" y="{20 + 14 * index}" fill="{_INK}" '
+                   f'font-size="{_number(line_size)}">{_escape(line)}</text>')
+    out.extend([
+        f'<line x1="{x(0)}" y1="{y(0)}" x2="{x(1)}" y2="{y(1)}" '
+        f'stroke="{_PERFECT}" stroke-width="1" stroke-dasharray="4 3"/>',
+        f'<rect x="{left}" y="{top}" width="{size}" height="{size}" '
+        f'fill="none" stroke="{_INK}" stroke-width="1"/>'])
 
     for tick in (0.0, 0.25, 0.5, 0.75, 1.0):
         out.append(f'<line x1="{left - 4}" y1="{y(tick)}" x2="{left}" '
@@ -610,14 +698,9 @@ def reliability_svg(bins: dict, *, title: str) -> str:
                         for index, at in enumerate(points))
         out.append(f'<path d="{path}" fill="none" stroke="{_CURVE}" stroke-width="1.5"/>')
 
-    error = bins["expected_calibration_error"]
-    out.append(f'<text x="{left}" y="{bottom + 46}" fill="{_INK}">'
-               f'stated confidence, at bin midpoints; each bin\'s count is '
-               f'under the axis</text>')
-    out.append(f'<text x="{left}" y="{bottom + 62}" fill="{_INK}">'
-               f'expected calibration error: '
-               f'{"not measurable - no samples" if error is None else f"{error:.4f}"}'
-               f'</text>')
+    for index, line in enumerate(foot):
+        out.append(f'<text x="{left}" y="{bottom + 46 + 16 * index}" '
+                   f'fill="{_INK}">{_escape(line)}</text>')
     out.append(f'<text x="14" y="{top + size / 2}" fill="{_INK}" '
                f'transform="rotate(-90 14 {top + size / 2})" '
                f'text-anchor="middle">measured accuracy</text>')

@@ -15,6 +15,7 @@ nothing is asked at all.
 
 import json
 from pathlib import Path
+from xml.etree import ElementTree
 
 import pytest
 
@@ -258,6 +259,96 @@ def test_a_plot_of_nothing_says_it_could_not_be_measured():
     svg = calibration.reliability_svg(calibration.bins_of([]), title="nothing")
     assert "not measurable - no samples" in svg
     assert "0 sample(s) in 10 bin(s); 10 bin(s) empty" in svg
+
+
+#: The four titles `fsmes jev calibrate` writes today, the longest first.
+#: The first one is where this was found: at 12px it was 67 characters on a
+#: 420-wide canvas and the last word, "right", fell off the end of it.
+FIGURE_TITLES = [
+    "P1: probability on the chosen reason against how often it was right",
+    "P1: stated confidence against how often the reason was right",
+    "D1: component_stopped_reporting against the scripted hours",
+    "D1: counter_went_backwards against the scripted hours",
+]
+
+SVG = "{http://www.w3.org/2000/svg}"
+
+
+def _text_past_the_canvas(svg: str) -> list[str]:
+    """Every line of text in the drawing that starts or ends outside it.
+
+    Measured with the drawing's own estimate of how wide a string is, which
+    is the only measure either side of this has - there is no font engine
+    here. So what this pins is the layout: that the estimate is applied to
+    every line, that the anchor is taken into account, and that the canvas
+    is sized from the result. It cannot pin the font metric itself.
+    """
+    root = ElementTree.fromstring(svg)
+    _, _, width, _ = (float(number) for number in root.get("viewBox").split())
+    default = float(root.get("font-size"))
+    past = []
+    for element in root.iter(f"{SVG}text"):
+        if element.get("transform"):
+            continue  # the y-axis label is rotated; its width is the height
+        content = element.text or ""
+        drawn = calibration._text_width(content, float(element.get("font-size", default)))
+        at = float(element.get("x"))
+        anchor = element.get("text-anchor", "start")
+        start = {"start": at, "middle": at - drawn / 2, "end": at - drawn}[anchor]
+        if start < 0 or start + drawn > width:
+            past.append(content)
+    return past
+
+
+@pytest.mark.parametrize("title", FIGURE_TITLES)
+def test_no_figure_this_tool_writes_has_a_line_of_text_past_its_own_canvas(title):
+    for bins in (calibration.bins_of([(0.95, True), (0.95, False), (0.15, False)]),
+                 calibration.bins_of([]),
+                 calibration.bins_of([(number / 100, number % 3 > 0)
+                                      for number in range(1, 100)])):
+        svg = calibration.reliability_svg(bins, title=title)
+        assert _text_past_the_canvas(svg) == []
+
+
+def test_a_title_too_wide_for_the_canvas_is_wrapped_and_keeps_every_word():
+    title = FIGURE_TITLES[0]
+    svg = calibration.reliability_svg(
+        calibration.bins_of([(0.9, True)]), title=title)
+    root = ElementTree.fromstring(svg)
+    drawn = [element.text for element in root.iter(f"{SVG}text")]
+    assert " ".join(drawn[:2]) == title, "the title, whole, over two lines"
+    assert _text_past_the_canvas(svg) == []
+
+
+def test_wrapping_the_title_makes_the_drawing_taller_and_not_the_plot_smaller():
+    """A title that needs a second line must cost canvas, not plot: squeezing
+    the axes to fit the words would change what the figure says."""
+    bins = calibration.bins_of([(0.9, True), (0.2, False)])
+    short = ElementTree.fromstring(calibration.reliability_svg(bins, title="P1"))
+    long = ElementTree.fromstring(
+        calibration.reliability_svg(bins, title=FIGURE_TITLES[0]))
+
+    def box(root):
+        rect = next(root.iter(f"{SVG}rect"))
+        return float(rect.get("width")), float(rect.get("height"))
+
+    def canvas(root):
+        _, _, width, height = (float(n) for n in root.get("viewBox").split())
+        return width, height
+
+    assert box(short) == box(long) == (320.0, 320.0)
+    assert canvas(long)[0] == canvas(short)[0]
+    assert canvas(long)[1] > canvas(short)[1]
+
+
+def test_a_title_that_is_one_long_word_is_shrunk_because_it_cannot_be_wrapped():
+    word = "counter_went_backwards_on_the_filler_while_the_line_was_blocked" * 2
+    svg = calibration.reliability_svg(calibration.bins_of([]), title=word)
+    root = ElementTree.fromstring(svg)
+    first = next(root.iter(f"{SVG}text"))
+    assert first.text == word, "shrunk, not truncated"
+    assert float(first.get("font-size")) < 12
+    assert _text_past_the_canvas(svg) == []
 
 
 # ------------------------------------------- D1's conditions against truth
