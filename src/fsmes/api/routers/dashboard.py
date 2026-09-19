@@ -12,7 +12,8 @@ from fastapi import APIRouter, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from fsmes.api.deps import ReadDbDep
+from fsmes.api.deps import ReadDbDep, UserDep
+from fsmes.db import utcnow
 from fsmes.domain import (
     AuditLog,
     Equipment,
@@ -353,4 +354,104 @@ def _build_summary(db: Session, oee_hours: float, line: str | None = None,
         "orders": orders,
         "audit": audit,
         "non_conformances": open_ncs,
+    }
+
+
+# --------------------------------------------------- what is waiting on you
+
+#: The kinds of waiting item this endpoint can answer for, and the capability
+#: that lets somebody act on each. One entry today: the plant's downtime
+#: vocabulary. Work instructions, triggers, setpoint adjustments and the
+#: design-chat notes are the follow-up - each already has a lifecycle and a
+#: screen of its own, and joining them here is a row in this table plus a
+#: reader, not a new mechanism.
+PENDING_KINDS: dict[str, str] = {
+    "downtime_reason": "process.approve",
+}
+
+
+def _waiting_downtime_reasons(db: Session, limit: int) -> tuple[list[dict], int]:
+    """Every downtime-reason draft waiting on an approver."""
+    from fsmes.services import reasons as reasons_service
+
+    rows, total = reasons_service.drafts(db, limit=limit)
+    now = utcnow()
+    items = [{
+        "kind": "downtime_reason",
+        "code": row.code,
+        "revision": row.revision,
+        "title": row.name,
+        # The dry run's headline for a vocabulary: what this draft would do
+        # to what the plant has already recorded.
+        "headline": (f"retires a code that labels {row.labels_intervals} recorded intervals"
+                     if row.retires else
+                     ("a change to a reason already on the list" if row.revision > 1
+                      else "a new reason for the list")),
+        "drafted_by": row.created_by,
+        "on_behalf_of": row.on_behalf_of,
+        "drafted_at": row.created_at,
+        # How long it has waited. The only column that changes with time, so a
+        # forgotten draft reads as "eleven days" rather than falling off a list.
+        "waiting_seconds": max((now - row.created_at).total_seconds(), 0.0),
+        "approve": f"/equipment/downtime-reasons/{row.code}/approve/{row.revision}",
+    } for row in rows]
+    return items, total
+
+
+_WAITING_READERS = {"downtime_reason": _waiting_downtime_reasons}
+
+
+@router.get("/pending-approvals")
+def pending_approvals(db: ReadDbDep, user: UserDep,
+                      limit: int = Query(20, ge=1, le=100)) -> dict:
+    """What is waiting that *this caller* may act on, counted, with its total.
+
+    The step the three lifecycles in this product were missing. A document
+    draft, a trigger draft and a proposed adjustment each wait on a screen
+    somebody has to know to open, nothing tells anybody, and drafting sits
+    with supervisors and agents while approving sits with administrators - so
+    the proposer and the approver are usually different people and nothing
+    crosses between them.
+
+    The rule this answers to: **a pending item appears on the screen of the
+    role that can act on it, counted, with its total - and on no screen that
+    cannot act on it.** The server decides from the caller's live capabilities
+    rather than the screen hiding what the answer already contained, so a
+    caller who holds no approve capability is told about nothing, and
+    `kinds_total` is zero - which is what the screen reads as *this panel is
+    not for you*.
+
+    Per-caller, so it is deliberately not part of the cached `/summary`: that
+    payload is shared between everyone watching, and this one may not be.
+
+    A draft nobody acts on waits, visibly. It does not expire, it does not go
+    live by itself, and nothing here drops it.
+    """
+    from fsmes.services import auth as auth_service
+
+    role = auth_service.current_role(db, user) or user["role"]
+    held = auth_service.capabilities_for(db, role)
+    mine = [kind for kind, capability in PENDING_KINDS.items() if capability in held]
+
+    items: list[dict] = []
+    total = 0
+    for kind in mine:
+        got, count = _WAITING_READERS[kind](db, limit)
+        items.extend(got)
+        total += count
+    items.sort(key=lambda row: row["waiting_seconds"], reverse=True)
+    return {
+        "items": items[:limit],
+        # The whole queue, not the page. A deep queue that reads short is the
+        # failure this panel exists to end.
+        "total": total,
+        "limit": limit,
+        "offset": 0,
+        "has_more": len(items[:limit]) < total,
+        # Which kinds this caller may act on at all, and how many kinds the
+        # product can answer for. Nothing waiting and nothing possible are
+        # different answers, and the screen says them differently.
+        "kinds": mine,
+        "kinds_total": len(mine),
+        "kinds_known": sorted(PENDING_KINDS),
     }
