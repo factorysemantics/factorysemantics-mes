@@ -1,0 +1,32 @@
+[
+  {
+    "code": "breakdown",
+    "name": "Breakdown",
+    "description": "The machine broke down. It was willing to run, something failed, and it made nothing until it was fixed."
+  },
+  {
+    "code": "changeover",
+    "name": "Changeover",
+    "description": "The line was changing over from one product to the next. A planned stop: nothing is wrong and nobody is being called out."
+  },
+  {
+    "code": "micro_stop",
+    "name": "Micro stop",
+    "description": "A short stop of the kind that happens many times an hour - a jam, a misfeed, a reset - cleared in seconds by whoever was standing there. Nothing is broken and nothing needs reporting."
+  },
+  {
+    "code": "starved",
+    "name": "Starved",
+    "description": "Nothing arrived for it to work on. The machine was willing and there was nothing wrong with it; the shortage was upstream."
+  },
+  {
+    "code": "blocked",
+    "name": "Blocked",
+    "description": "There was nowhere to put what it made. The machine was willing and there was nothing wrong with it; the hold-up was downstream."
+  },
+  {
+    "code": "not_yet_determined",
+    "name": "Not yet determined",
+    "description": "It stopped and nobody knows why yet. A real answer, recorded as one: a stop labelled this way is counted, can be found again and can be re-labelled, which is more than a blank box ever gave anybody."
+  }
+]

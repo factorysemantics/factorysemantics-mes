@@ -1,6 +1,6 @@
 # ACME bottling — master data, as data
 
-The six-station reference line, as the nine files `fsmes pack apply` reads
+The six-station reference line, as the ten files `fsmes pack apply` reads
 and `fsmes pack check` validates offline.
 
 ## Why this exists now, when it deliberately did not before
