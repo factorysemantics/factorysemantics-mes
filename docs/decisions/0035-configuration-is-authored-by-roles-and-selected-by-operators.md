@@ -1,6 +1,6 @@
 # 0035 — Configuration is authored by the role that owns it, and selected by the operator
 
-- **Status:** proposed
+- **Status:** accepted (2026-09-18, by the maintainer, after one revision — the *discovered* step)
 - **Date:** 2026-09-18
 - **Deciders:** maintainer
 

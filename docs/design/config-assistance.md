@@ -6,7 +6,7 @@ three-tier scheme for every setting, an outline of the skill document an
 assistant would read, and one pilot that proves the whole loop on one field.
 It decides nothing: the decision it turns on is
 [0035](../decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators.md),
-and it is **proposed** — the person who accepts it has not read it yet.*
+and it was **accepted** on 2026-09-18 after one revision: the lifecycle had no *discovered* step, and now has.*
 
 ---
 

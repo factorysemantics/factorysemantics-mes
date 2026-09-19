@@ -43,4 +43,4 @@ Declined ideas stay, so nobody re-proposes them without new facts.
 | [0032](0032-a-hosted-judgment-and-the-shadow.md) | *Proposed* — a hosted judgment is an outbound path, classified by the state it sends | 2026-09-17 |
 | [0033](0033-availability-is-a-share-of-what-was-watched.md) | Availability is a share of what was watched, and every figure says how much that was | 2026-09-17 |
 | [0034](0034-a-count-is-owed-until-it-is-booked.md) | A count the machine made is owed until it is booked, and a reading that fails is retried rather than forgotten | 2026-09-18 |
-| [0035](0035-configuration-is-authored-by-roles-and-selected-by-operators.md) | *Proposed* — configuration is authored by the role that owns it, and selected by the operator | 2026-09-18 |
+| [0035](0035-configuration-is-authored-by-roles-and-selected-by-operators.md) | Accepted — configuration is authored by the role that owns it, and selected by the operator | 2026-09-18 |
