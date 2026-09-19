@@ -48,7 +48,7 @@ from fsmes.domain import (
     TagValue,
 )
 from fsmes.kernel.tags import STRUCTURAL_TAGS
-from fsmes.services import NotFound, coverage, line_clock, masterdata
+from fsmes.services import NotFound, coverage, line_clock, masterdata, reasons
 from fsmes.services import calendar as calendar_service
 from fsmes.services import connection as connection_service
 from fsmes.services import equipment as equipment_service
@@ -559,6 +559,16 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float = 8.
     real evidence and is counted the same as one typed here, but the two are
     not the same claim, and a pareto that cannot separate them cannot be
     audited. `here` is this MES's own; the rest are named by supplier.
+
+    **Two totals, stated.** A stop labelled from the plant's approved
+    vocabulary groups on its code; a stop labelled with typed text groups on
+    the text, exactly as it always did. `from_the_list_seconds` and
+    `typed_seconds` say how much of the window came from each, because "how
+    much of this window came from the list" is the number that says whether a
+    vocabulary is being used - and one number alone would let a plant with six
+    codes and a thousand typed sentences look like a plant with six reasons.
+    With `unlabelled_seconds` the three account for every second in
+    `total_seconds`.
     """
     centre, units = _line_and_units(db, line_code)
     the_shift = _shift(db, shift)
@@ -575,17 +585,37 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float = 8.
         )
     ).all()
 
+    # What the approved vocabulary calls each code today. A retired code is not
+    # in here, and the interval that carries it still is - so the bucket falls
+    # back to the code itself rather than losing the stop.
+    vocabulary = reasons.names(db)
+
     buckets: dict[str, dict] = {}
+    from_the_list = typed = 0.0
     for state in states:
         seconds = _overlap(state, start, end)
         if seconds <= 0:
             continue
-        key = state.reason or UNLABELLED
-        bucket = buckets.setdefault(key, {"reason": key, "seconds": 0.0, "events": 0,
+        # By code where there is one, by text where there is not. The two
+        # never merge: a code is a choice from a list somebody approved and a
+        # sentence is not, and folding them would be the same lie as folding
+        # four spellings into one bar.
+        if state.reason_code:
+            key = f"code:{state.reason_code}"
+            label = vocabulary.get(state.reason_code, state.reason_code)
+            from_the_list += seconds
+        else:
+            key = state.reason or UNLABELLED
+            label = key
+            if state.reason:
+                typed += seconds
+        bucket = buckets.setdefault(key, {"reason": label, "code": state.reason_code,
+                                          "from_the_list": bool(state.reason_code),
+                                          "seconds": 0.0, "events": 0,
                                           "machines": {}, "labelled_by": {}})
         bucket["seconds"] += seconds
         bucket["events"] += 1
-        if state.reason:
+        if state.reason or state.reason_code:
             who = state.reason_source or "here"
             bucket["labelled_by"][who] = round(bucket["labelled_by"].get(who, 0.0) + seconds, 1)
         code = by_id[state.equipment_id]
@@ -616,7 +646,16 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float = 8.
         "window": _window_json(start, end, hours, the_shift),
         "total_seconds": round(total, 1),
         "reasons": ordered,
-        "unlabelled_share": next((b["share"] for b in ordered if b["reason"] == UNLABELLED), 0.0),
+        "unlabelled_share": next((b["share"] for b in ordered
+                                  if b["reason"] == UNLABELLED and not b["code"]), 0.0),
+        # Both totals, always, including on a plant with no vocabulary at all -
+        # where the honest answer is that none of the window came from a list,
+        # because there is no list.
+        "from_the_list_seconds": round(from_the_list, 1),
+        "from_the_list_share": round(from_the_list / total, 4) if total else None,
+        "typed_seconds": round(typed, 1),
+        "typed_share": round(typed / total, 4) if total else None,
+        "vocabulary_total": len(vocabulary),
         "unknown_seconds": round(unknown, 1),
         # Machine-seconds unwatched over machine-seconds in the window, so a
         # plant of a hundred machines with one disconnected reads as 1% rather
