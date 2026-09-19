@@ -406,10 +406,15 @@ def test_the_agent_role_runs_production_and_never_approves_or_administers():
     agent = set(caps.BUILTIN_ROLES["agent"]["capabilities"])
     operator = set(caps.BUILTIN_ROLES["operator"]["capabilities"])
     supervisor = set(caps.BUILTIN_ROLES["supervisor"]["capabilities"])
-    assert operator < agent < supervisor | {"documents.write"}
+    # The exceptions are drafting halves, and only drafting halves: an agent
+    # may write down what it thinks, above what a supervisor may, and a person
+    # decides. `process.define` joined them with the plant's downtime
+    # vocabulary - an agent that reads a month of typed reasons and proposes
+    # six codes is the point of that feature, and it never signs them.
+    assert operator < agent < supervisor | {"documents.write", "process.define"}
     for held_by_people_only in ("users.manage", "masterdata.write", "documents.approve",
                                 "orders.close", "quality.close_nc", "maintenance.plan",
-                                "scheduling.plan"):
+                                "scheduling.plan", "process.approve"):
         assert held_by_people_only not in agent, held_by_people_only
 
 

@@ -57,6 +57,7 @@ from fsmes.domain.quality import (
     QualitySpec,
     SpcSignal,
 )
+from fsmes.domain.reasons import DowntimeReason, DowntimeReasonStatus
 from fsmes.domain.scheduling import ScheduledSlot, SlotKind
 from fsmes.domain.serialization import (
     SerialSequence,
@@ -81,6 +82,8 @@ __all__ = [
     "ConnectionStateName",
     "Document",
     "DocumentStatus",
+    "DowntimeReason",
+    "DowntimeReasonStatus",
     "Equipment",
     "EquipmentConnection",
     "EquipmentLevel",
