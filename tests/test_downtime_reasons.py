@@ -128,9 +128,13 @@ def test_a_retired_code_keeps_labelling_the_intervals_it_labelled(session, line)
         EquipmentState.reason_code == "jam_infeed"))
     assert interval is not None and interval.reason == "Jam at the infeed"
     # And the pareto keeps showing it, under the name it had.
-    bars = {b["code"]: b for b in
-            analysis.downtime_pareto(session, line_code=line, hours=8)["reasons"]}
+    out = analysis.downtime_pareto(session, line_code=line, hours=8)
+    bars = {b["code"]: b for b in out["reasons"]}
     assert bars["jam_infeed"]["seconds"] == pytest.approx(600, abs=5)
+    # Under the name it was given when somebody chose it, not a bare code.
+    assert bars["jam_infeed"]["reason"] == "Jam at the infeed"
+    # And it is off the list: nothing on the list, so nothing to choose.
+    assert out["vocabulary_total"] == 0
 
 
 def test_retiring_a_code_that_labels_live_intervals_says_how_many(session, line):

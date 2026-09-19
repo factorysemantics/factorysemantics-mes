@@ -585,10 +585,11 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float = 8.
         )
     ).all()
 
-    # What the approved vocabulary calls each code today. A retired code is not
-    # in here, and the interval that carries it still is - so the bucket falls
-    # back to the code itself rather than losing the stop.
-    vocabulary = reasons.names(db)
+    # What each code is called: every code this plant ever put in force,
+    # retired ones included. A retired code still labels the intervals it
+    # labelled, and the name it carried when somebody chose it is the honest
+    # label for them.
+    vocabulary = reasons.labels(db)
 
     buckets: dict[str, dict] = {}
     from_the_list = typed = 0.0
@@ -655,7 +656,9 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float = 8.
         "from_the_list_share": round(from_the_list / total, 4) if total else None,
         "typed_seconds": round(typed, 1),
         "typed_share": round(typed / total, 4) if total else None,
-        "vocabulary_total": len(vocabulary),
+        # How many reasons are on the list right now - not how many the plant
+        # has ever had, which is what `vocabulary` above counts.
+        "vocabulary_total": len(reasons.catalog(db)),
         "unknown_seconds": round(unknown, 1),
         # Machine-seconds unwatched over machine-seconds in the window, so a
         # plant of a hundred machines with one disconnected reads as 1% rather

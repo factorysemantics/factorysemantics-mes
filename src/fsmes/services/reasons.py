@@ -93,6 +93,21 @@ def names(session: Session) -> dict[str, str]:
     return {row.code: row.name for row in approved(session)}
 
 
+def labels(session: Session) -> dict[str, str]:
+    """`{code: name}` for every code the plant has ever put in force, retired
+    ones included.
+
+    What the analysis reads. A retired code still labels the intervals it
+    labelled, so a pareto that only knew the approved list would print the
+    bare code for them - the name they were given when somebody chose them is
+    the honest label, and it stops changing the moment the code is retired.
+    """
+    rows = session.scalars(
+        select(DowntimeReason).where(DowntimeReason.status.in_(IN_FORCE))
+        .order_by(DowntimeReason.code, DowntimeReason.revision))
+    return {row.code: row.name for row in rows}
+
+
 def drafts(session: Session, limit: int = 50, offset: int = 0
            ) -> tuple[list[DowntimeReason], int]:
     """Every draft waiting on somebody, oldest first, and how many there are.
