@@ -28,6 +28,15 @@ EXCLUDED = {
     # design chat history is a dev tool with no browse screen
     "GET /design/conversations": "dev tool; conversations are read by /design-triage",
     "GET /design/conversations/{conversation_id}": "dev tool; conversations are read by /design-triage",
+    # the plant's downtime vocabulary: the station screen reads the catalogue
+    # and the plant dashboard's panel is how a draft is found and signed
+    "GET /equipment/downtime-reasons/drafts":
+        "the vocabulary's own screen is the follow-up; /dashboard's pending-approvals "
+        "panel reads the cross-kind endpoint instead, so this one is for an agent and "
+        "the API",
+    "POST /equipment/downtime-reasons/{code}/approve/{revision}":
+        "the panel does call it, by the path the server hands each row - which is what "
+        "lets one panel sign several kinds - so the path is never written in a script",
     # system plumbing
     "GET /metrics": "for Prometheus, not a screen",
     "GET /pack": "for the fleet console, which is a page of its own and not a plant's screen",

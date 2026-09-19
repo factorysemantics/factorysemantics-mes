@@ -11,6 +11,7 @@ const REFRESH_MS = 3000;
 const STATES = ["running", "idle", "down", "setup"];
 
 let machine = null;
+let vocabulary = null;     // the plant's approved downtime reasons, or null
 let current = null;        // this machine's current state row
 let queue = [];
 let pendingState = null;   // a state change awaiting its reason
@@ -86,18 +87,52 @@ function requestState(name) {
     // one, because "down: (blank)" is the row nobody can act on.
     pendingState = name;
     $("#down-reason").value = "";
+    const select = $("#down-reason-code");
+    if (select) select.selectedIndex = 0;
+    $("#down-reason-help").textContent = "";
     $("#reason-confirm").disabled = true;
     $("#reason-box").classList.remove("hidden");
-    $("#down-reason").focus();
+    (picking() ? select : $("#down-reason")).focus();
     return;
   }
-  setState(name, null);
+  setState(name, null, null);
 }
 
-async function setState(name, reason) {
+/* Whether this plant names its own stops. The server owns the list; the
+   screen only renders what it is given, which is why the two hardcoded
+   option blocks elsewhere in this product could drift out of step with the
+   enum behind them and this one cannot. */
+function picking() {
+  return !!(vocabulary && vocabulary.total);
+}
+
+async function loadReasons() {
+  try {
+    vocabulary = await api("/equipment/downtime-reasons");
+  } catch (err) {
+    vocabulary = null;   // an unreadable list is not an empty one
+  }
+  const select = $("#down-reason-code");
+  if (!select) return;
+  $("#reason-pick").classList.toggle("hidden", !picking());
+  $("#reason-type").classList.toggle("hidden", picking());
+  if (!picking()) return;
+
+  select.replaceChildren();
+  const placeholder = new Option(`Choose one of ${vocabulary.total}`, "");
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  select.appendChild(placeholder);
+  for (const [code, name] of Object.entries(vocabulary.names)) {
+    select.appendChild(new Option(name, code));
+  }
+}
+
+async function setState(name, reason, reasonCode) {
   try {
     const body = { state: name };
     if (reason) body.reason = reason;
+    if (reasonCode) body.reason_code = reasonCode;
     await api(`/equipment/${machine}/state`, { method: "POST", body });
     toast(`${machine} → ${name}`);
     $("#reason-box").classList.add("hidden");
@@ -111,14 +146,27 @@ function wireReason() {
   $("#down-reason").addEventListener("input", (event) => {
     $("#reason-confirm").disabled = !event.target.value.trim();
   });
+  $("#down-reason-code").addEventListener("change", (event) => {
+    const code = event.target.value;
+    $("#reason-confirm").disabled = !code;
+    // The sentence behind the chosen word, so two reasons that read alike on
+    // a button can still be told apart at the machine.
+    $("#down-reason-help").textContent = (vocabulary && vocabulary.reasons[code]) || "";
+  });
   $("#reason-cancel").addEventListener("click", () => {
     pendingState = null;
     $("#reason-box").classList.add("hidden");
   });
   $("#reason-confirm").addEventListener("click", () => {
+    if (picking()) {
+      const code = $("#down-reason-code").value;
+      if (!code) return;
+      setState(pendingState, null, code);
+      return;
+    }
     const reason = $("#down-reason").value.trim();
     if (!reason) return;
-    setState(pendingState, reason);
+    setState(pendingState, reason, null);
   });
 }
 
@@ -544,6 +592,7 @@ async function refresh() {
   wireQuality();
   wireMaintenance();
   await loadMachines();
+  await loadReasons();
   await loadLots();
   await refresh();
   setInterval(refresh, REFRESH_MS);

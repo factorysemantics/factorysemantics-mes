@@ -38,7 +38,18 @@
         asks why — an unlabelled stop is the row the pareto cannot explain.</p>
       <div id="state-buttons" class="state-grid" data-assist="station-state"></div>
       <div id="reason-box" class="reason hidden" data-assist="station-reason">
-        <div class="field">
+        <!-- Two ways to answer the same question, and the plant decides which.
+             With an approved vocabulary the operator picks from it and may not
+             type: four spellings of one reason is what the list exists to end,
+             and the list carries an explicit code for a reason nobody has
+             determined yet, so "required" never means "make something up".
+             With no vocabulary this is the text box it has always been. -->
+        <div class="field hidden" id="reason-pick">
+          <label for="down-reason-code">Why is it down?</label>
+          <select id="down-reason-code" data-assist="station-reason-code"></select>
+          <p id="down-reason-help" class="muted small"></p>
+        </div>
+        <div class="field" id="reason-type">
           <label for="down-reason">Why is it down?</label>
           <input id="down-reason" placeholder="e.g. jam at infeed, waiting on fitter">
         </div>
