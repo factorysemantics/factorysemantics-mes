@@ -1162,6 +1162,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operate/who-names-the-reasons/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — who names the downtime reasons
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operate/packs/" class="md-nav__link">
         
   
@@ -3885,9 +3913,15 @@ connection half of it, including the one case that does not cover.</p>
 <h2 id="unlabelled-is-reported-as-unlabelled">Unlabelled is reported as unlabelled<a class="headerlink" href="#unlabelled-is-reported-as-unlabelled" title="Permanent link">&para;</a></h2>
 <p>A downtime pareto that files unlabelled stops under "other" convinces a
 plant it has data it does not have. Here the unlabelled bar is named
-<em>unlabelled</em>. Reason codes are configuration; the how-to for shifts and
-reason codes is not written yet (as of 2026-09-07) — ask in Discussions and
-it moves up the list.</p>
+<em>unlabelled</em>.</p>
+<p>Reason codes are configuration, and since 2026-09-19 a plant can name its
+own: a list somebody drafts and somebody else puts in force, which the
+station screen then offers instead of a text box. See
+<a href="../../operate/who-names-the-reasons/">who names the reasons</a>. The pareto
+groups by code where there is one and by typed text where there is not — the
+two never merge — and <code>GET /analysis/downtime</code> says how many seconds of the
+window came from each, beside the unlabelled share. The three account for
+every second of downtime in the window.</p>
 <h2 id="to-shrink-the-grey-segment">To shrink the grey segment<a class="headerlink" href="#to-shrink-the-grey-segment" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Fill the rated cycle time for every machine in the worksheet.</li>

@@ -1008,6 +1008,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operate/who-names-the-reasons/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — who names the downtime reasons
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operate/packs/" class="md-nav__link">
         
   
@@ -2064,6 +2092,17 @@
     <span class="md-ellipsis">
       
         8. What this is not
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-built-what-the-pilot-taught-2026-09-19" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Built — what the pilot taught, 2026-09-19
       
     </span>
   </a>
@@ -3823,6 +3862,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#9-built-what-the-pilot-taught-2026-09-19" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Built — what the pilot taught, 2026-09-19
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -4598,6 +4648,65 @@ first one is a decision of its own.</p>
   decision <a href="../../decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators/">0035</a>
   is accepted.</li>
 </ul>
+<hr />
+<h2 id="9-built-what-the-pilot-taught-2026-09-19">9. Built — what the pilot taught, 2026-09-19<a class="headerlink" href="#9-built-what-the-pilot-taught-2026-09-19" title="Permanent link">&para;</a></h2>
+<p>The pilot in §6 is built: the table, the two capabilities, the catalogue, the
+station's select, the pareto's two totals, the pack kind, and the discovery
+half. The page above is not amended, and neither is decision 0035. Six things
+it got wrong or left out, recorded where the next piece will look:</p>
+<ol>
+<li>
+<p><strong>Three statuses were not enough.</strong> §6 proposed draft / approved /
+   superseded. The build needed a fourth, <code>retired</code>, because <em>superseded</em>
+   means another revision of this code took over and <em>retired</em> means this code
+   is no longer offered. A pareto that could not tell those apart could not
+   explain why a bar it still shows is on nobody's screen.</p>
+</li>
+<li>
+<p><strong><code>?status=draft</code> on the catalogue is two shapes on one path.</strong> §4 spelled
+   the waiting list as a query on the catalogue; it was built as
+   <code>GET /equipment/downtime-reasons/drafts</code>, because the catalogue is a map a
+   screen renders and the queue is a list a person works through, and one
+   route returning either is a route a caller has to guess at.</p>
+</li>
+<li>
+<p><strong>The panel signs rather than opens.</strong> §4 asked for "one action that opens
+   it where it can be signed". A vocabulary has no screen of its own in this
+   pilot, so the row's action <em>is</em> the signature, taken on the panel; the
+   server hands each row the path to post. That is honest for a vocabulary —
+   the row shows the whole draft — and it is what makes one panel able to sign
+   several kinds. A kind whose draft cannot be read in a row will want a link
+   instead, and the shape already carries one.</p>
+</li>
+<li>
+<p><strong>Two of the seven shipped terms do not describe a stop.</strong> §6 pointed at
+   the seven reasons in <code>src/fsmes/sim/labelled.py</code>, but <code>none</code> ("the machine
+   did not stop in this window") and <code>counter_reset</code> ("without the machine
+   stopping") are answers about a <em>window</em>, not labels for a stop. Shipping
+   them would have invited a wrong label, so the starting vocabulary is the
+   other five plus the explicit <code>not_yet_determined</code> that §7's question 3
+   asked for.</p>
+</li>
+<li>
+<p><strong>A packed vocabulary arrives in force, not as a draft.</strong> The page did not
+   say which, and "a draft never goes live by itself" reads like it should be
+   a draft. Applying a pack is a deliberate act by a person, and a plant whose
+   station screen offered nothing until somebody approved six seeded rows
+   would have shipped with a text box after all. Every change after the first
+   apply goes through the lifecycle.</p>
+</li>
+<li>
+<p><strong><code>protected_terms()</code> is in the wrong layer.</strong> It lives with the pack
+   checker (<code>src/fsmes/pack/check.py</code>), which is an edge, and the vocabulary
+   service reads it — so the layering test carries a written allowance for one
+   call-time import. Moving it down to the services layer is a change of its
+   own, and worth making before a second domain reads it.</p>
+</li>
+</ol>
+<p><strong>And what the pilot did not do</strong>, beyond what §6 already excluded: the
+analysis screen does not yet print the two totals the API now carries, because
+§6 said to touch no screen but the station's and the dashboard's. That is the
+smallest next piece, and it is one paragraph of JavaScript.</p>
 
 
 
