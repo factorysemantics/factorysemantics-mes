@@ -91,7 +91,23 @@ Never this process's own default. Until 2026-09-14 that is exactly what a pack n
 
 **Pack before database.** A schema migration may need a value the pack now carries, so the pack is applied first — and `fsmes pack apply` runs the migrations itself, in that order.
 
-Master data is seeded from `masterdata/`, one file per kind: `equipment.json`, `materials.json`, `bom.json`, `routings.json`, `quality_specs.json`, `lots.json`, `work_orders.json`, `maintenance_plans.json`, `shifts.json`. An entry whose code already exists is counted as present and **left alone, never updated** — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which `fsmes fleet list` and the console now show as *answered, but empty*.
+Master data is seeded from `masterdata/`, one file per kind: `equipment.json`, `materials.json`, `bom.json`, `routings.json`, `quality_specs.json`, `lots.json`, `work_orders.json`, `maintenance_plans.json`, `shifts.json`, `downtime_reasons.json`. An entry whose code already exists is counted as present and **left alone, never updated** — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which `fsmes fleet list` and the console now show as *answered, but empty*.
+
+### The words an operator picks from
+
+`downtime_reasons.json` is the list the station screen offers when a machine goes down. Each entry is a `code`, a `name` and an optional `description` — the sentence the screen shows beside the choice, and the one an agent reads to tell two reasons apart.
+
+```json
+[
+  {"code": "breakdown",  "name": "Breakdown", "description": "It was willing to run, something failed, and it made nothing until it was fixed."},
+  {"code": "starved",    "name": "Starved",   "description": "Nothing arrived for it to work on. The shortage was upstream."},
+  {"code": "not_yet_determined", "name": "Not yet determined", "description": "It stopped and nobody knows why yet."}
+]
+```
+
+A code is two to forty characters, lowercase, starting with a letter — it is grouped on and published, not read as a sentence — and it may not spell a word the product already owns (a state, a capability, a role, a KPI). `fsmes pack check` refuses both offline.
+
+**A packed vocabulary arrives in force**, not as a draft, because applying a pack is a deliberate act by a person and a plant whose station screen offered nothing until somebody approved six seeded rows would have shipped with a text box after all. Everything after that goes through [draft then approve](who-names-the-reasons.md), and **the plant owns the list from its first edit**: applying the pack again counts an edited code as present and leaves it exactly as the plant left it.
 
 ### The order book
 

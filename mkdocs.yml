@@ -100,6 +100,7 @@ nav:
       - How-to — read-only OPC UA commissioning: operate/opc-readonly.md
       - Explanation — losing sight of a machine: operate/opc-disconnections.md
       - Explanation — how much of the window did the MES see: operate/coverage.md
+      - How-to — who names the downtime reasons: operate/who-names-the-reasons.md
       - Reference — plant packs: operate/packs.md
       - How-to — plants from a fleet file: operate/registry.md
       - How-to — the fleet this installation owns: operate/fleet.md
