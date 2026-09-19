@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://docs.factorysemantics.com/dev/reference/cli/">
+        <link rel="canonical" href="https://docs.factorysemantics.com/dev/decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators/">
       
       
-        <link rel="prev" href="../settings/">
+        <link rel="prev" href="../0034-a-count-is-owed-until-it-is-booked/">
       
       
-        <link rel="next" href="../api/">
+        <link rel="next" href="../TEMPLATE/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Reference — CLI - FactorySemantics MES</title>
+        <title>0035 — Configuration is authored by the role that owns it, and selected by the operator - FactorySemantics MES</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#cli-reference" class="md-skip">
+        <a href="#0035-configuration-is-authored-by-the-role-that-owns-it-and-selected-by-the-operator" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Reference — CLI
+              0035 — Configuration is authored by the role that owns it, and selected by the operator
             
           </span>
         </div>
@@ -268,12 +268,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../../operate/" class="md-tabs__link">
           
   
@@ -290,10 +288,12 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
+      <li class="md-tabs__item md-tabs__item--active">
         <a href="../../develop/" class="md-tabs__link">
           
   
@@ -785,31 +785,26 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
             
   
   
@@ -827,7 +822,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1349,7 +1344,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../erp-confirmations/" class="md-nav__link">
+      <a href="../../reference/erp-confirmations/" class="md-nav__link">
         
   
   
@@ -1405,7 +1400,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../settings/" class="md-nav__link">
+      <a href="../../reference/settings/" class="md-nav__link">
         
   
   
@@ -1430,37 +1425,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Reference — CLI
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
         
   
   
@@ -1476,543 +1444,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#add-user" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        add-user
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#agent-eval" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        agent-eval
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ai-status" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ai-status
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#autoloop" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        autoloop
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#backup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        backup
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#db-status" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        db-status
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#demo" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        demo
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#design-backlog" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        design-backlog
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#design-log" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        design-log
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#design-pending" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        design-pending
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#design-verdict" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        design-verdict
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#draft-instructions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        draft-instructions
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#erp" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        erp
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#fleet" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        fleet
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#inbound" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        inbound
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#info" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        info
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#init-db" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        init-db
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#jev" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        jev
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#lab" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        lab
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#make-demo-feed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        make-demo-feed
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#make-tag-map" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        make-tag-map
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#oee" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        oee
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#opc-browse" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        opc-browse
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#opc-verify" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        opc-verify
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#pack" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        pack
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#plant" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        plant
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#prune-evidence" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        prune-evidence
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#restore" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        restore
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rollup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        rollup
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run-api
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-erp-sync" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run-erp-sync
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-log-sink" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run-log-sink
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-mock-erp" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run-mock-erp
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-opc-agent" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run-opc-agent
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-opc-sim" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run-opc-sim
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-operations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run-operations
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#runs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        runs
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#score" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        score
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#seed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        seed
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#seed-kepsim" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        seed-kepsim
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#seed-line" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        seed-line
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#set-password" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        set-password
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#shadow" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        shadow
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sim-generate" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        sim-generate
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sweep" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        sweep
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ui-check" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ui-check
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#uns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        uns
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2025,7 +1456,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/" class="md-nav__link">
+      <a href="../../reference/api/" class="md-nav__link">
         
   
   
@@ -2141,26 +1572,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
             
   
   
@@ -2178,7 +1614,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -2417,26 +1853,31 @@
                 
   
   
+    
   
   
+  
     
     
     
     
       
       
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_9" >
         
           
-          <label class="md-nav__link" for="__nav_4_9" id="__nav_4_9_label" tabindex="0">
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_9" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_9" id="__nav_4_9_label" tabindex="">
             
   
   
@@ -2454,7 +1895,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_9_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_9_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4_9">
             <span class="md-nav__icon md-icon"></span>
             
@@ -2472,7 +1913,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -2500,7 +1941,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0001-apache-2-with-dco/" class="md-nav__link">
+      <a href="../0001-apache-2-with-dco/" class="md-nav__link">
         
   
   
@@ -2528,7 +1969,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0002-kernel-and-modules/" class="md-nav__link">
+      <a href="../0002-kernel-and-modules/" class="md-nav__link">
         
   
   
@@ -2556,7 +1997,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0003-one-mcp-server/" class="md-nav__link">
+      <a href="../0003-one-mcp-server/" class="md-nav__link">
         
   
   
@@ -2584,7 +2025,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0004-never-invent-production/" class="md-nav__link">
+      <a href="../0004-never-invent-production/" class="md-nav__link">
         
   
   
@@ -2612,7 +2053,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0005-plain-html-no-build-step/" class="md-nav__link">
+      <a href="../0005-plain-html-no-build-step/" class="md-nav__link">
         
   
   
@@ -2640,7 +2081,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
+      <a href="../0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
         
   
   
@@ -2668,7 +2109,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0007-fresh-public-history/" class="md-nav__link">
+      <a href="../0007-fresh-public-history/" class="md-nav__link">
         
   
   
@@ -2696,7 +2137,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0008-erp-connectors-are-modules/" class="md-nav__link">
+      <a href="../0008-erp-connectors-are-modules/" class="md-nav__link">
         
   
   
@@ -2724,7 +2165,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0009-organisation-not-personal-account/" class="md-nav__link">
+      <a href="../0009-organisation-not-personal-account/" class="md-nav__link">
         
   
   
@@ -2752,7 +2193,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0010-github-discussions-only/" class="md-nav__link">
+      <a href="../0010-github-discussions-only/" class="md-nav__link">
         
   
   
@@ -2780,7 +2221,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0011-mkdocs-material-generated-reference/" class="md-nav__link">
+      <a href="../0011-mkdocs-material-generated-reference/" class="md-nav__link">
         
   
   
@@ -2808,7 +2249,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0012-contributor-covenant-3/" class="md-nav__link">
+      <a href="../0012-contributor-covenant-3/" class="md-nav__link">
         
   
   
@@ -2836,7 +2277,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0013-governance-is-one-page/" class="md-nav__link">
+      <a href="../0013-governance-is-one-page/" class="md-nav__link">
         
   
   
@@ -2864,7 +2305,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0014-first-public-version-is-0-1-0/" class="md-nav__link">
+      <a href="../0014-first-public-version-is-0-1-0/" class="md-nav__link">
         
   
   
@@ -2892,7 +2333,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0015-mcp-registry-name/" class="md-nav__link">
+      <a href="../0015-mcp-registry-name/" class="md-nav__link">
         
   
   
@@ -2920,7 +2361,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0016-no-trademark-registration/" class="md-nav__link">
+      <a href="../0016-no-trademark-registration/" class="md-nav__link">
         
   
   
@@ -2948,7 +2389,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
+      <a href="../0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
         
   
   
@@ -2976,7 +2417,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
+      <a href="../0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
         
   
   
@@ -3004,7 +2445,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0019-count-everything-the-machine-counted/" class="md-nav__link">
+      <a href="../0019-count-everything-the-machine-counted/" class="md-nav__link">
         
   
   
@@ -3032,7 +2473,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
+      <a href="../0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
         
   
   
@@ -3060,7 +2501,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0021-one-database-per-plant/" class="md-nav__link">
+      <a href="../0021-one-database-per-plant/" class="md-nav__link">
         
   
   
@@ -3088,7 +2529,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0022-what-a-plant-pack-may-contain/" class="md-nav__link">
+      <a href="../0022-what-a-plant-pack-may-contain/" class="md-nav__link">
         
   
   
@@ -3116,7 +2557,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0023-the-fleet-console-observes/" class="md-nav__link">
+      <a href="../0023-the-fleet-console-observes/" class="md-nav__link">
         
   
   
@@ -3144,7 +2585,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0024-a-nonconformance-has-a-life/" class="md-nav__link">
+      <a href="../0024-a-nonconformance-has-a-life/" class="md-nav__link">
         
   
   
@@ -3172,7 +2613,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0025-performance-is-measured-not-capped/" class="md-nav__link">
+      <a href="../0025-performance-is-measured-not-capped/" class="md-nav__link">
         
   
   
@@ -3200,7 +2641,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0026-counts-that-outrun-the-run-time/" class="md-nav__link">
+      <a href="../0026-counts-that-outrun-the-run-time/" class="md-nav__link">
         
   
   
@@ -3228,7 +2669,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0027-an-spc-signal-raises-a-hold/" class="md-nav__link">
+      <a href="../0027-an-spc-signal-raises-a-hold/" class="md-nav__link">
         
   
   
@@ -3256,7 +2697,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0028-which-shift-a-minute-belongs-to/" class="md-nav__link">
+      <a href="../0028-which-shift-a-minute-belongs-to/" class="md-nav__link">
         
   
   
@@ -3284,7 +2725,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0029-an-order-does-not-finish-itself/" class="md-nav__link">
+      <a href="../0029-an-order-does-not-finish-itself/" class="md-nav__link">
         
   
   
@@ -3312,7 +2753,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0030-a-lost-connection-is-unknown-time/" class="md-nav__link">
+      <a href="../0030-a-lost-connection-is-unknown-time/" class="md-nav__link">
         
   
   
@@ -3340,7 +2781,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0031-a-judgment-is-a-proposal/" class="md-nav__link">
+      <a href="../0031-a-judgment-is-a-proposal/" class="md-nav__link">
         
   
   
@@ -3368,7 +2809,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0032-a-hosted-judgment-and-the-shadow/" class="md-nav__link">
+      <a href="../0032-a-hosted-judgment-and-the-shadow/" class="md-nav__link">
         
   
   
@@ -3396,7 +2837,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0033-availability-is-a-share-of-what-was-watched/" class="md-nav__link">
+      <a href="../0033-availability-is-a-share-of-what-was-watched/" class="md-nav__link">
         
   
   
@@ -3424,7 +2865,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/0034-a-count-is-owed-until-it-is-booked/" class="md-nav__link">
+      <a href="../0034-a-count-is-owed-until-it-is-booked/" class="md-nav__link">
         
   
   
@@ -3449,10 +2890,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0035 — Configuration is authored by the role that owns it, and selected by the operator
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -3468,6 +2936,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options-considered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options considered
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#house-rules-touched" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        House rules touched
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -3480,7 +3023,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decisions/TEMPLATE/" class="md-nav__link">
+      <a href="../TEMPLATE/" class="md-nav__link">
         
   
   
@@ -3631,7 +3174,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tools/" class="md-nav__link">
+      <a href="../../reference/tools/" class="md-nav__link">
         
   
   
@@ -3972,10 +3515,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#add-user" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       
-        add-user
+        Context
       
     </span>
   </a>
@@ -3983,10 +3526,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#agent-eval" class="md-nav__link">
+  <a href="#options-considered" class="md-nav__link">
     <span class="md-ellipsis">
       
-        agent-eval
+        Options considered
       
     </span>
   </a>
@@ -3994,10 +3537,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ai-status" class="md-nav__link">
+  <a href="#decision" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ai-status
+        Decision
       
     </span>
   </a>
@@ -4005,10 +3548,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#autoloop" class="md-nav__link">
+  <a href="#consequences" class="md-nav__link">
     <span class="md-ellipsis">
       
-        autoloop
+        Consequences
       
     </span>
   </a>
@@ -4016,472 +3559,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#backup" class="md-nav__link">
+  <a href="#house-rules-touched" class="md-nav__link">
     <span class="md-ellipsis">
       
-        backup
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#db-status" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        db-status
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#demo" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        demo
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#design-backlog" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        design-backlog
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#design-log" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        design-log
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#design-pending" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        design-pending
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#design-verdict" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        design-verdict
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#draft-instructions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        draft-instructions
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#erp" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        erp
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#fleet" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        fleet
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#inbound" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        inbound
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#info" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        info
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#init-db" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        init-db
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#jev" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        jev
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#lab" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        lab
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#make-demo-feed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        make-demo-feed
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#make-tag-map" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        make-tag-map
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#oee" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        oee
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#opc-browse" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        opc-browse
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#opc-verify" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        opc-verify
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#pack" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        pack
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#plant" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        plant
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#prune-evidence" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        prune-evidence
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#restore" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        restore
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rollup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        rollup
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run-api
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-erp-sync" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run-erp-sync
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-log-sink" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run-log-sink
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-mock-erp" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run-mock-erp
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-opc-agent" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run-opc-agent
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-opc-sim" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run-opc-sim
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-operations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run-operations
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#runs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        runs
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#score" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        score
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#seed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        seed
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#seed-kepsim" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        seed-kepsim
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#seed-line" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        seed-line
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#set-password" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        set-password
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#shadow" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        shadow
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sim-generate" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        sim-generate
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sweep" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        sweep
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ui-check" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ui-check
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#uns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        uns
+        House rules touched
       
     </span>
   </a>
@@ -4505,7 +3586,7 @@
 
 
   
-    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/reference/cli.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -4513,149 +3594,184 @@
   
 
 
-<h1 id="cli-reference">CLI reference<a class="headerlink" href="#cli-reference" title="Permanent link">&para;</a></h1>
-<p>Generated from <code>fsmes --help</code> at build time. Every command is <code>fsmes &lt;command&gt;</code>.</p>
-<h2 id="add-user"><code>add-user</code><a class="headerlink" href="#add-user" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="agent-eval"><code>agent-eval</code><a class="headerlink" href="#agent-eval" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="ai-status"><code>ai-status</code><a class="headerlink" href="#ai-status" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="autoloop"><code>autoloop</code><a class="headerlink" href="#autoloop" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="backup"><code>backup</code><a class="headerlink" href="#backup" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="db-status"><code>db-status</code><a class="headerlink" href="#db-status" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="demo"><code>demo</code><a class="headerlink" href="#demo" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="design-backlog"><code>design-backlog</code><a class="headerlink" href="#design-backlog" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="design-log"><code>design-log</code><a class="headerlink" href="#design-log" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="design-pending"><code>design-pending</code><a class="headerlink" href="#design-pending" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="design-verdict"><code>design-verdict</code><a class="headerlink" href="#design-verdict" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="draft-instructions"><code>draft-instructions</code><a class="headerlink" href="#draft-instructions" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="erp"><code>erp</code><a class="headerlink" href="#erp" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="fleet"><code>fleet</code><a class="headerlink" href="#fleet" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="inbound"><code>inbound</code><a class="headerlink" href="#inbound" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="info"><code>info</code><a class="headerlink" href="#info" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="init-db"><code>init-db</code><a class="headerlink" href="#init-db" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="jev"><code>jev</code><a class="headerlink" href="#jev" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="lab"><code>lab</code><a class="headerlink" href="#lab" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="make-demo-feed"><code>make-demo-feed</code><a class="headerlink" href="#make-demo-feed" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="make-tag-map"><code>make-tag-map</code><a class="headerlink" href="#make-tag-map" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="oee"><code>oee</code><a class="headerlink" href="#oee" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="opc-browse"><code>opc-browse</code><a class="headerlink" href="#opc-browse" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="opc-verify"><code>opc-verify</code><a class="headerlink" href="#opc-verify" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="pack"><code>pack</code><a class="headerlink" href="#pack" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="plant"><code>plant</code><a class="headerlink" href="#plant" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="prune-evidence"><code>prune-evidence</code><a class="headerlink" href="#prune-evidence" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="restore"><code>restore</code><a class="headerlink" href="#restore" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="rollup"><code>rollup</code><a class="headerlink" href="#rollup" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="run-api"><code>run-api</code><a class="headerlink" href="#run-api" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="run-erp-sync"><code>run-erp-sync</code><a class="headerlink" href="#run-erp-sync" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="run-log-sink"><code>run-log-sink</code><a class="headerlink" href="#run-log-sink" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="run-mock-erp"><code>run-mock-erp</code><a class="headerlink" href="#run-mock-erp" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="run-opc-agent"><code>run-opc-agent</code><a class="headerlink" href="#run-opc-agent" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="run-opc-sim"><code>run-opc-sim</code><a class="headerlink" href="#run-opc-sim" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="run-operations"><code>run-operations</code><a class="headerlink" href="#run-operations" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="runs"><code>runs</code><a class="headerlink" href="#runs" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="score"><code>score</code><a class="headerlink" href="#score" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="seed"><code>seed</code><a class="headerlink" href="#seed" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="seed-kepsim"><code>seed-kepsim</code><a class="headerlink" href="#seed-kepsim" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="seed-line"><code>seed-line</code><a class="headerlink" href="#seed-line" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="set-password"><code>set-password</code><a class="headerlink" href="#set-password" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="shadow"><code>shadow</code><a class="headerlink" href="#shadow" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="sim-generate"><code>sim-generate</code><a class="headerlink" href="#sim-generate" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="sweep"><code>sweep</code><a class="headerlink" href="#sweep" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="ui-check"><code>ui-check</code><a class="headerlink" href="#ui-check" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
-<h2 id="uns"><code>uns</code><a class="headerlink" href="#uns" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>
-</code></pre></div>
+<h1 id="0035-configuration-is-authored-by-the-role-that-owns-it-and-selected-by-the-operator">0035 — Configuration is authored by the role that owns it, and selected by the operator<a class="headerlink" href="#0035-configuration-is-authored-by-the-role-that-owns-it-and-selected-by-the-operator" title="Permanent link">&para;</a></h1>
+<ul>
+<li><strong>Status:</strong> accepted (2026-09-18, by the maintainer, after one revision — the <em>discovered</em> step)</li>
+<li><strong>Date:</strong> 2026-09-18</li>
+<li><strong>Deciders:</strong> maintainer</li>
+</ul>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>The station screen asks a stopped machine's operator why, in a free-text
+input whose placeholder reads <em>"e.g. jam at infeed, waiting on fitter"</em>
+(<code>src/fsmes/web/station.html:43</code>). The answer is stored exactly as typed
+(<code>EquipmentState.reason</code>, <code>String(120)</code>, <code>src/fsmes/domain/equipment.py:40</code>)
+and the downtime pareto groups on that raw string —
+<code>key = state.reason or UNLABELLED</code> (<code>src/fsmes/services/analysis.py:583</code>),
+with no strip, no casefold and no alias map anywhere in the path. Four
+spellings are four bars; sorting is by seconds, so a reason split four ways
+sinks below reasons it outweighs. The chart truncates past fourteen
+characters (<code>src/fsmes/web/analysis.js:179-191</code>), so two different typos can
+render identically. An operator who types the word <code>unlabelled</code> moves
+<code>unlabelled_share</code> — a headline honesty figure — with no error anywhere. The
+value is published to the broker on the state-change event
+(<code>src/fsmes/services/outbox.py:104</code>), so it leaves the MES.</p>
+<p>There is no vocabulary table anywhere in this product. Twenty-six free-text
+columns hold a reason, code, category or comment; sixteen are typed by a
+person; none has an enum, a foreign key, a check constraint or a length
+check at the API. <code>docs/ARCHITECTURE.md:74</code> has listed a <code>downtime_reasons</code>
+table since the architecture was written; it has never been built.
+<code>docs/design/backlog/scrap-reason-codes.md</code> has been open since 2026-09-01
+asking whether such a list is master data per plant or an enum in the
+product. <code>docs/ai/JEV.md:403-412</code> defers the flagship downtime-reason work
+behind the same question.</p>
+<p>The other half is who may answer it. A <code>Role</code> is a row with a JSON array of
+capability names (<code>src/fsmes/domain/masterdata.py:159-183</code>) and capabilities
+are twenty-one strings the API, the agent tools and the screens all gate on
+(<code>src/fsmes/services/capabilities.py:24-46</code>) — the right shape. But one
+capability, <code>masterdata.write</code>, gates everything an engineer of any kind
+would author: equipment, materials, BOM, routings
+(<code>src/fsmes/api/routers/masterdata.py:64,105,129,175</code>), quality
+specifications (<code>src/fsmes/api/routers/quality.py:120</code>) and gauges
+(<code>api/routers/quality.py:407</code>). Only <code>admin</code> holds it, and <code>admin</code> holds all
+twenty-one (<code>capabilities.py:58-60</code>). There is exactly one configuration role in this
+MES today, and it is the plant administrator.</p>
+<p>The lifecycle this needs already exists three times: work instructions
+(<code>documents.write</code> / <code>documents.approve</code>, revisions that supersede rather
+than overwrite, <code>src/fsmes/domain/documents.py:38-55</code>), triggers (<em>"the
+draft → approved lifecycle work instructions have, because logic that fires
+against a live plant is a controlled thing"</em>, <code>src/fsmes/domain/triggers.py:1-9</code>)
+and setpoint adjustments. The <code>agent</code> role is deliberately built to hold the
+drafting half of each pair and never the approving half
+(<code>capabilities.py:88-97</code>).</p>
+<p>The design page is <a href="../../design/config-assistance/">configuration assistance</a>.</p>
+<h2 id="options-considered">Options considered<a class="headerlink" href="#options-considered" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>For</th>
+<th>Against</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Three tiers: role-authored vocabulary, operator selection, fixed — with the domain expressed as a capability prefix, and the draft→approve lifecycle the product already has</strong></td>
+<td>Nothing new to invent: the lifecycle, the audit spine, the capability gate and the protected-term list all exist. An engineer authors in their own domain without being made plant administrator. The operator's screen strictly narrows</td>
+<td>Splitting <code>masterdata.write</code> touches roles plants may already have built. Four domains are named before anything uses them</td>
+</tr>
+<tr>
+<td>A fixed enum of reasons in the product</td>
+<td>One list, no drift between plants, comparable across a fleet</td>
+<td>Two honest plants do not stop for the same reasons. It is house rule 4 (config, not code, at every plant boundary) answered in the wrong direction</td>
+</tr>
+<tr>
+<td>Vocabulary in the plant pack only</td>
+<td>Already validated offline, fingerprinted, reviewable, no schema change</td>
+<td><code>fsmes pack apply</code> never updates an entry that exists (<code>src/fsmes/pack/masterdata.py:36-41</code>), so a list a plant edits monthly cannot live there alone</td>
+</tr>
+<tr>
+<td>Leave the text box and clean the data on read — normalise, casefold, fuzzy-merge</td>
+<td>No schema change, fixes the existing history too</td>
+<td>Guessing that two strings meant one thing is inventing a record nobody made. Principle 4 in reverse</td>
+</tr>
+</tbody>
+</table>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p>Every setting in this MES belongs to exactly one of three tiers.
+<strong>Role-authored vocabulary</strong> is a list this plant owns — its reasons, its
+machines, its materials, its shifts, its tolerances — authored by the role
+that owns the domain and by nobody else. <strong>Operator selection</strong> is what a
+person on the floor chooses at the moment of work: always a choice from a
+tier-one list or a measurement against a tier-one tolerance, never a new
+word. <strong>Fixed</strong> is what the product owns — equipment states, order statuses,
+capability names, role codes, event kinds, KPI names, the four dispositions,
+the four SPC rules, and every field an API response is built on. The test is
+what breaks if two plants answer differently; the fixed list is not written
+out again but read from <code>protected_terms()</code>
+(<code>src/fsmes/pack/check.py:101-141</code>), which builds it by importing the
+product's own vocabularies. The rule that follows: <strong>every tier-two field
+names its tier-one list, and a tier-two field with no tier-one list behind
+it is free text, and free text is the bug.</strong></p>
+<p>A configuration domain is expressed as a capability prefix, not as a new
+concept. Roles stay data. <code>masterdata.write</code> stops being one word for five
+jobs: <code>process.define</code>/<code>process.approve</code>, <code>signals.define</code>/<code>signals.approve</code>,
+<code>quality.define</code>/<code>quality.approve</code> and <code>erp.define</code> are named now;
+<code>users.manage</code> is unchanged; where the database lives and which port a plant
+serves on stay outside the product's role model, because they are facts about
+the machine.</p>
+<p>A change to tier-one configuration follows the lifecycle this product
+already uses for instructions and triggers: a person holding
+<code>&lt;domain&gt;.define</code> drafts, or an assistant drafts <strong>for</strong> them with
+<code>on_behalf_of</code> recorded; the draft is validated for schema, for
+cross-references, and by a dry run against the plant's own data that states
+what it would and would not cover, with the total; the validated draft is
+<strong>discovered</strong> — it appears, counted and with its total, on the screen of
+every role that holds the matching <code>&lt;domain&gt;.approve</code> capability and on no
+screen that cannot act on it, stating how long it has waited; a person
+holding <code>&lt;domain&gt;.approve</code> signs it off, never the assistant; the approved
+revision
+supersedes the previous one and the operator's screen changes at the next
+load; and undo is approving the previous revision. <strong>Retiring a code changes
+what may be chosen next and never what was chosen before</strong> — an interval
+labelled with a retired code keeps that label, and the analysis keeps showing
+it.</p>
+<p>Tier one is seeded by the pack and owned by the database, in the shape
+<code>shifts</code> already has.</p>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<p>Easier: an engineer configures their own domain without being made
+administrator of the whole plant, which is the failure this is aimed at.
+Easier: an assistant can be given real configuration work, because the
+boundary it must not cross is a list the product computes rather than a
+paragraph of prose. Easier: the pareto stops lying.</p>
+<p>Harder: <code>masterdata.write</code> has to be split, and a plant that has already
+built a role on it must be migrated deliberately rather than silently.
+Harder: four domains are named before anything uses them, which is a bet
+that the names are right — taken because adding a capability is cheap and
+redefining one is not.</p>
+<p>Harder: discovery is a surface that has to be built, not a free ride on one
+that exists. <strong>A lifecycle whose last step is that somebody remembers to look
+is the failure this decision is aimed at</strong> — and all three of the lifecycles
+this one copies have exactly that gap today. A document draft is visible only
+to someone who opens the instructions screen and reads the rows, and its
+"draft only" filter means <em>never approved</em>, so a pending new revision of a
+document already in force is excluded from it
+(<code>src/fsmes/web/instructions.js:114-116</code>,
+<code>src/fsmes/api/routers/documents.py:71-72</code>). A trigger draft is a tile on the
+triggers screen (<code>src/fsmes/web/triggers.js:89-92</code>). A proposed adjustment is
+a tile on the adjustments screen counted over the loaded page rather than the
+queue (<code>src/fsmes/web/adjustments.js:108-111</code>). Nothing tells an approver
+anything: there is no inbox, no aggregate count, no approvals endpoint and no
+notification channel of any kind in this product, while the drafting
+capabilities sit with <code>supervisor</code> and <code>agent</code> and all three approve
+capabilities are held by <code>admin</code> alone
+(<code>src/fsmes/services/capabilities.py:55-59,93-94</code>). So the pilot carries the
+discovery half rather than deferring it.</p>
+<p>Honest gaps, named rather than half-built: approval here is an account code
+and a timestamp. There is no qualification record, no training matrix and no
+electronic signature in this product, so "a qualified role signs off" means,
+today, "a role an administrator granted the approve capability to". And
+configuration changes are not audited at all outside the database —
+<code>fsmes pack apply</code> writes no audit row; its only record is the <code>.pack.json</code>
+fingerprint stamp.</p>
+<p>To revisit: when the first real plant says which of the six domains it
+actually staffs; when a second vocabulary (scrap reasons) is due, which is
+the test of whether the loop generalised; and if a regulated plant needs
+signature meaning, which is a decision of its own.</p>
+<h2 id="house-rules-touched">House rules touched<a class="headerlink" href="#house-rules-touched" title="Permanent link">&para;</a></h2>
+<p><strong>3 — agent-native, and an agent acts for a person.</strong> The drafting half of
+each capability pair is what an assistant may hold; the approving half is
+what it may never hold, and the audit row says who it acted for.</p>
+<p><strong>4 — never invent production; unknown is not zero.</strong> No number moves
+because of anything here. A drafted vocabulary is a draft, so
+<code>unlabelled_share</code> reports what it reports today. Existing typed reasons are
+kept exactly as typed and never folded into codes automatically, because
+guessing what somebody meant is inventing a record. Every list this produces
+states its total, including how much of a window came from the vocabulary
+and how much did not.</p>
+<p><strong>7 — config, not code, at every plant boundary.</strong> A reason list is the
+plant's, not the product's. It is seeded by the pack and owned by the
+plant's database, because <code>pack apply</code> deliberately never updates what is
+already there.</p>
 
 
 
@@ -4693,7 +3809,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../settings/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Reference — settings">
+          <a href="../0034-a-count-is-owed-until-it-is-booked/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 0034 — A count the machine made is owed until it is booked, and a reading that fails is retried rather than forgotten">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -4703,20 +3819,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Reference — settings
+                0034 — A count the machine made is owed until it is booked, and a reading that fails is retried rather than forgotten
               </div>
             </div>
           </a>
         
         
           
-          <a href="../api/" class="md-footer__link md-footer__link--next" aria-label="Next: Reference — REST API">
+          <a href="../TEMPLATE/" class="md-footer__link md-footer__link--next" aria-label="Next: Template">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Reference — REST API
+                Template
               </div>
             </div>
             <div class="md-footer__button md-icon">
