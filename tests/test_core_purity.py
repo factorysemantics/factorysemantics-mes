@@ -132,6 +132,14 @@ CONTRACTS: dict[tuple[str, str], str] = {
 #: deployment that has not installed it. Checked too: the test below fails if
 #: one of these moves to module scope.
 DEFERRED: dict[tuple[str, str], str] = {
+    ("fsmes.services.reasons", "fsmes.pack.check"):
+        "the protected-word list, which is built by importing the product rather "
+        "than typed anywhere: a downtime reason may not spell a capability, a "
+        "state, a KPI or a role. It lives with the pack checker because that is "
+        "what needed it first, and the vocabulary service reads the same list so "
+        "the two cannot disagree - imported inside the validator, so nothing at "
+        "import time depends on it. Moving `protected_terms()` down to the "
+        "services layer, where it belongs, is a change of its own",
     ("fsmes.services.agent", "fsmes.mcp_server"):
         "a plant running the assistant in-process calls its own MCP tools; the "
         "server is imported inside the function that calls it, so a plant "

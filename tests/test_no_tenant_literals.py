@@ -161,6 +161,16 @@ def forbidden() -> dict[str, str]:
             named(name, entry.get("label") if isinstance(entry, dict) else None)
 
     for data in sorted(LABS.rglob("masterdata/*.json")):
+        # A downtime reason's code is a word, not an identity. The shipped
+        # starting vocabulary is deliberately the plainest manufacturing
+        # English there is - `blocked`, `starved`, `changeover` - which is the
+        # same English the simulator, the line drawing and the stylesheet have
+        # always used for the same ideas. Collecting them would forbid the
+        # product from saying `blocked` because a plant chose to call a stop
+        # that, which is not the rule. A plant that renames them owns the
+        # rename; nothing under `src/` reads this file.
+        if data.stem == "downtime_reasons":
+            continue
         rows = json.loads(data.read_text(encoding="utf-8"))
         for row in rows if isinstance(rows, list) else []:
             if isinstance(row, dict):

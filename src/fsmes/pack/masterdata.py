@@ -19,6 +19,7 @@ written by `fsmes pack apply`:
       work_orders.json         the order book: what to make, in what order, what is released
       maintenance_plans.json   the recurring jobs, and what makes each due
       shifts.json              the patterns this plant works
+      downtime_reasons.json    the reasons an operator picks from when it stops
 
 The last three arrived on 2026-09-14, when the bottling lab plant's line
 moved into a pack. It had been seeded by `fsmes seed-kepsim`, which builds a
@@ -61,6 +62,7 @@ KINDS: dict[str, str] = {
     "work_orders": "the order book: what to make, in what order, and what is released",
     "maintenance_plans": "the recurring jobs on a machine, and what makes each due",
     "shifts": "the shift patterns this plant works",
+    "downtime_reasons": "the reasons an operator may choose from when a machine stops",
 }
 
 REQUIRED: dict[str, tuple[str, ...]] = {
@@ -73,6 +75,7 @@ REQUIRED: dict[str, tuple[str, ...]] = {
     "work_orders": ("code", "material", "quantity"),
     "maintenance_plans": ("code", "name", "equipment", "trigger", "interval"),
     "shifts": ("code", "name", "starts", "ends"),
+    "downtime_reasons": ("code", "name"),
 }
 
 OPTIONAL: dict[str, tuple[str, ...]] = {
@@ -85,6 +88,7 @@ OPTIONAL: dict[str, tuple[str, ...]] = {
     "work_orders": ("priority", "release", "due_in_hours"),
     "maintenance_plans": ("instructions", "document_code", "expected_minutes"),
     "shifts": ("days", "equipment"),
+    "downtime_reasons": ("description",),
 }
 
 #: What `[[maintenance_plans]] trigger` may say, and what each counts. Spelt
@@ -215,6 +219,28 @@ def problems(directory: Path) -> list[str]:
                                  or set(days) - {"0", "1"}):
             out.append(f"shifts.json #{index} has days {days!r}; that is a seven "
                        'character mask of 0 and 1, Monday first - "1111100" is weekdays.')
+    # A downtime code is checked here, offline, by the same two rules the
+    # product enforces when a person drafts one: the shape, because the code
+    # is grouped on and published rather than read as a sentence, and the
+    # protected words, because a reason that spells a capability, a state or
+    # a KPI means two things at once. A pack seeds its vocabulary straight
+    # into the plant, so a pack that skipped these would be the one way round
+    # them.
+    if data.rows("downtime_reasons"):
+        from fsmes.pack.check import protected_terms
+        from fsmes.services.reasons import CODE
+
+        owned = protected_terms()
+        for index, row in enumerate(data.rows("downtime_reasons"), start=1):
+            code = row.get("code")
+            if code and not CODE.match(str(code)):
+                out.append(f"downtime_reasons.json #{index} has code {code!r}; a code is "
+                           "two to forty characters, starts with a lowercase letter, and "
+                           "holds lowercase letters, digits and underscores.")
+            elif code and code in owned:
+                out.append(f"downtime_reasons.json #{index} names {code!r}, which is "
+                           f"already {owned[code]} in this product.")
+
     # A component that is its own parent is a bill of materials that never
     # terminates, and the explosion would recurse until something gave way.
     for index, row in enumerate(data.rows("bom"), start=1):
@@ -251,6 +277,8 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
     from fsmes.db import utcnow
     from fsmes.domain import (
         BomItem,
+        DowntimeReason,
+        DowntimeReasonStatus,
         Equipment,
         EquipmentLevel,
         MaintenancePlan,
@@ -395,6 +423,23 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
             instructions=row.get("instructions"), document_code=row.get("document_code"),
             expected_minutes=float(row.get("expected_minutes", 30.0))))
         count("maintenance_plans", made=True)
+
+    # The vocabulary a plant starts with. It arrives **in force**, not as a
+    # draft: applying a pack is a deliberate act by a person, and a plant
+    # whose station screen offered nothing until somebody went and approved
+    # six seeded rows would be a plant that shipped with a text box after all.
+    # Every later change goes through draft → approve like everything else,
+    # and the plant owns the list from its first edit.
+    for row in data.rows("downtime_reasons"):
+        code = row["code"]
+        if session.scalar(select(DowntimeReason.id).where(DowntimeReason.code == code)):
+            count("downtime_reasons", made=False)
+            continue
+        session.add(DowntimeReason(
+            code=code, revision=1, name=row["name"], description=row.get("description", ""),
+            status=DowntimeReasonStatus.APPROVED, created_by="pack-apply",
+            approved_by="pack-apply", approved_at=utcnow()))
+        count("downtime_reasons", made=True)
 
     for row in data.rows("shifts"):
         code = row["code"]

@@ -84,7 +84,10 @@ def test_the_registry_says_how_many_modules_there_are_and_how_many_can_be_switch
 
     mounts = sum(len(m.routers) for m in registry.REGISTRY)
     tools = sum(len(m.tools) for m in registry.REGISTRY)
-    assert mounts == 23, f"{mounts} routers in the registry; the app mounted 23 before it existed"
+    # Twenty-four router mounts across twenty-three modules: `equipment`
+    # mounts two at the same prefix, the downtime vocabulary first, because
+    # the machine router ends with `/{code}` and would swallow it.
+    assert mounts == 24, f"{mounts} routers in the registry; the app mounted 24 before it existed"
     assert tools == 10, f"{tools} tool files in the registry; the MCP server registered 10"
 
 

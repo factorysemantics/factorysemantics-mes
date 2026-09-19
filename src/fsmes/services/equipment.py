@@ -23,9 +23,16 @@ def set_state(
     equipment_code: str,
     state: EquipmentStateName,
     reason: str | None = None,
+    reason_code: str | None = None,
     actor: str = "system",
 ) -> EquipmentState:
-    """Close the open state interval and start a new one. No-op if unchanged."""
+    """Close the open state interval and start a new one. No-op if unchanged.
+
+    `reason_code` is the plant's own vocabulary; `reason` is the sentence that
+    goes with it. Both are stored, never one instead of the other, so every
+    reader this product already has - the screens, the pareto's text half, the
+    namespace event - keeps reading what it has always read.
+    """
     equipment = masterdata.get_equipment(session, equipment_code)
     current = session.scalar(
         select(EquipmentState).where(EquipmentState.equipment_id == equipment.id, EquipmentState.ended_at.is_(None))
@@ -35,7 +42,8 @@ def set_state(
     now = utcnow()
     if current is not None:
         current.ended_at = now
-    new = EquipmentState(equipment_id=equipment.id, state=state, reason=reason, started_at=now)
+    new = EquipmentState(equipment_id=equipment.id, state=state, reason=reason,
+                         reason_code=reason_code, started_at=now)
     # The shift the interval began in. It is not re-stamped when the interval
     # closes: an interval that ran past a boundary belongs, as a record, to
     # the shift it started in, and per-shift reporting clips its seconds to
@@ -50,7 +58,7 @@ def set_state(
         entity_type="equipment",
         entity_id=equipment_code,
         before={"state": current.state.value} if current else None,
-        after={"state": state.value, "reason": reason},
+        after={"state": state.value, "reason": reason, "reason_code": reason_code},
     )
     # The same transaction that moved the machine writes the event, so the
     # namespace can never disagree with the state history about what

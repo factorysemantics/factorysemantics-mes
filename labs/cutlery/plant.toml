@@ -6,11 +6,12 @@
 #
 #     FSMES_PLANT_REGISTRY=labs/cutlery/fleet.toml fsmes plant cutlery start
 #
-# This plant's master data is **generated**, not declared: build_config.py,
-# make_tag_map.py and init.py write a 60-million-a-day line nobody would type
-# out. A pack carries no code (decision 0022), so the generator stays a lab
-# tool the person runs, and `fsmes pack apply` says it seeded nothing rather
-# than pretending it had. See README.md.
+# This plant's equipment, materials and routings are **generated**, not
+# declared: build_config.py, make_tag_map.py and init.py write a
+# 60-million-a-day line nobody would type out. A pack carries no code
+# (decision 0022), so the generator stays a lab tool the person runs. The one
+# thing the pack does declare is the downtime vocabulary: six words a person
+# reads, which no generator should be inventing. See README.md.
 
 [pack]
 format   = 1
@@ -38,6 +39,11 @@ speed        = 1
 [files]
 tag_map    = "tag_map.json"
 replay_dir = "out"
+# The one thing this plant's generators do not write: the words its operators
+# pick from when a machine stops. A vocabulary is exactly the kind of thing a
+# pack should carry - six lines a person reads - so it is declared rather than
+# generated, and `fsmes pack apply` seeds it.
+masterdata = "masterdata"
 
 [floor]
 # The quality plan: every dimensional specification, every fifteen minutes.

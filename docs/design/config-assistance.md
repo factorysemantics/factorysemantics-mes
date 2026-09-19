@@ -649,3 +649,58 @@ first one is a decision of its own.
 - **Not built.** Nothing here is a schema, an endpoint or a screen until
   decision [0035](../decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators.md)
   is accepted.
+
+---
+
+## 9. Built — what the pilot taught, 2026-09-19
+
+The pilot in §6 is built: the table, the two capabilities, the catalogue, the
+station's select, the pareto's two totals, the pack kind, and the discovery
+half. The page above is not amended, and neither is decision 0035. Six things
+it got wrong or left out, recorded where the next piece will look:
+
+1. **Three statuses were not enough.** §6 proposed draft / approved /
+   superseded. The build needed a fourth, `retired`, because *superseded*
+   means another revision of this code took over and *retired* means this code
+   is no longer offered. A pareto that could not tell those apart could not
+   explain why a bar it still shows is on nobody's screen.
+
+2. **`?status=draft` on the catalogue is two shapes on one path.** §4 spelled
+   the waiting list as a query on the catalogue; it was built as
+   `GET /equipment/downtime-reasons/drafts`, because the catalogue is a map a
+   screen renders and the queue is a list a person works through, and one
+   route returning either is a route a caller has to guess at.
+
+3. **The panel signs rather than opens.** §4 asked for "one action that opens
+   it where it can be signed". A vocabulary has no screen of its own in this
+   pilot, so the row's action *is* the signature, taken on the panel; the
+   server hands each row the path to post. That is honest for a vocabulary —
+   the row shows the whole draft — and it is what makes one panel able to sign
+   several kinds. A kind whose draft cannot be read in a row will want a link
+   instead, and the shape already carries one.
+
+4. **Two of the seven shipped terms do not describe a stop.** §6 pointed at
+   the seven reasons in `src/fsmes/sim/labelled.py`, but `none` ("the machine
+   did not stop in this window") and `counter_reset` ("without the machine
+   stopping") are answers about a *window*, not labels for a stop. Shipping
+   them would have invited a wrong label, so the starting vocabulary is the
+   other five plus the explicit `not_yet_determined` that §7's question 3
+   asked for.
+
+5. **A packed vocabulary arrives in force, not as a draft.** The page did not
+   say which, and "a draft never goes live by itself" reads like it should be
+   a draft. Applying a pack is a deliberate act by a person, and a plant whose
+   station screen offered nothing until somebody approved six seeded rows
+   would have shipped with a text box after all. Every change after the first
+   apply goes through the lifecycle.
+
+6. **`protected_terms()` is in the wrong layer.** It lives with the pack
+   checker (`src/fsmes/pack/check.py`), which is an edge, and the vocabulary
+   service reads it — so the layering test carries a written allowance for one
+   call-time import. Moving it down to the services layer is a change of its
+   own, and worth making before a second domain reads it.
+
+**And what the pilot did not do**, beyond what §6 already excluded: the
+analysis screen does not yet print the two totals the API now carries, because
+§6 said to touch no screen but the station's and the dashboard's. That is the
+smallest next piece, and it is one paragraph of JavaScript.

@@ -12,6 +12,51 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **A plant's downtime reasons become a list with an author.** The box that
+  asked why a machine stopped was a text input and the pareto grouped on
+  whatever came back, so *jam*, *Jam*, *jam at infeed* and *infed jam* were
+  four bars too small to act on while the real top reason was invisible. A
+  plant can now name its own reasons: `downtime_reasons` holds one revision of
+  one reason per row, somebody holding the new **`process.define`** drafts,
+  somebody holding the new **`process.approve`** puts it in force, and undo is
+  approving the previous revision. `GET /equipment/downtime-reasons` answers in
+  the shape `/triggers/catalog` already has, and **the station screen offers a
+  select where a plant has a vocabulary and the text box where it has none.**
+  Once a plant has one, going down takes a code from it — a list nobody has to
+  use is a suggestion beside the text box that caused the problem — and the
+  shipped vocabulary carries an explicit *not yet determined*, so "required"
+  never means "make something up". The page is
+  *Who names the reasons* (`docs/operate/who-names-the-reasons.md`); the
+  design is decision 0035.
+
+- **Retiring a code changes what may be chosen next, never what was chosen
+  before.** An interval labelled `jam_infeed` keeps that label when
+  `jam_infeed` leaves the list. A retirement is refused unless the draft says
+  how many recorded intervals carry the code — a code leaves the list with
+  somebody having looked at what it already labels, or it leaves it blind.
+
+- **`GET /dashboard/pending-approvals`, and a *Waiting for you* panel on the
+  plant dashboard.** Three approval lifecycles already ran in this product —
+  work instructions, triggers, setpoint adjustments — and **not one of them
+  told anybody**: no inbox, no aggregate count, no mail, webhook or push,
+  while drafting sits with supervisors and agents and approving sits with
+  administrators. The endpoint answers what is waiting that *this caller* may
+  act on, from their live capabilities: kind, code, what it is, who drafted it
+  and on whose behalf, how long it has waited, and one action that signs it —
+  counted, with the whole queue's total rather than the page's. A caller who
+  can approve nothing is told about nothing and the panel is absent for them
+  rather than empty. A draft nobody acts on waits visibly: it never expires and
+  never goes live by itself. One kind behind it today, the downtime
+  vocabulary; the other three join it next.
+
+- **`downtime_reasons.json`, the tenth master-data kind a plant pack may
+  carry.** Codes are checked offline by the same two rules the product
+  enforces when a person drafts one — the shape, and the protected words. A
+  packed vocabulary arrives in force, because applying a pack is a deliberate
+  act by a person, and **the plant owns the list from its first edit**:
+  applying again never rewrites a code that is already there. The three lab
+  packs and the cutlery demo ship six words, ISO-22400-shaped.
+
 - **The coverage ledger: every second of an OEE window, accounted for.**
   Per machine, per window, the MES now keeps a ledger of disjoint intervals
   that tile the window **exactly** — every second in one disposition
@@ -253,6 +298,20 @@ goes under Honesty with a migration line, so plant people can find it.
   can fall between two levels, beside the level carrying the most probability.
 
 ### Honesty
+
+- **The downtime pareto states both totals.** It groups by code where there is
+  one and by typed text where there is not, and the two never merge — a code is
+  a choice from a list somebody approved and a sentence is not.
+  `GET /analysis/downtime` now carries `from_the_list_seconds` and
+  `typed_seconds` beside the existing unlabelled share, and the three account
+  for every second of downtime in the window. One number alone would let a
+  plant with six codes and a thousand typed sentences look like a plant with
+  six reasons, and *how much of this window came from the list* is the number
+  that says whether the vocabulary is being used at all. A plant with no
+  vocabulary reports `vocabulary_total` 0 and nothing from a list, which is the
+  truth rather than a plant ignoring its own list. **Migration:** none — no
+  figure changes for any plant that has not named its reasons, and
+  `unlabelled_share` means exactly what it meant.
 
 - **Production a machine counted is no longer lost when the write that books
   it fails.** The OPC agent measures a counter delta against the last value

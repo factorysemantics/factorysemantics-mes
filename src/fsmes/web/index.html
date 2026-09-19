@@ -86,6 +86,22 @@
       </div>
     </section>
 
+    <!-- What is waiting on the person reading this screen. Rendered from
+         /dashboard/pending-approvals, which answers from the caller's own
+         capabilities: a person who cannot approve anything never sees this
+         panel at all, and the count is the whole queue rather than the page. -->
+    <section class="panel span-2 hidden" id="pending-panel" data-assist="pending-approvals">
+      <h2>Waiting for you <span id="pending-count" class="muted count">—</span></h2>
+      <p class="muted small">Drafts you can put in force. A draft changes
+        nothing on the floor and never goes live by itself.</p>
+      <div class="table-wrap">
+        <table id="pending">
+          <thead><tr><th>Kind</th><th>Code</th><th>What it is</th><th>Drafted by</th><th>Waiting</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="panel span-2">
       <h2>Machines <span id="m-count" class="muted count">—</span></h2>
       <p id="m-scope" class="muted small"></p>

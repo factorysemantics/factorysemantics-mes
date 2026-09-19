@@ -32,6 +32,15 @@ EXCLUDED = {
     "POST /triggers/{code}/withdraw": "taking it out of force is the same human capability",
     "POST /adjustments/{code}/approve": "the human in the loop before a PLC write; never a tool",
     "POST /adjustments/{code}/reject": "the same decision, the other way",
+    "POST /equipment/downtime-reasons/{code}/approve/{revision}":
+        "putting the plant's own vocabulary in front of every operator is a human "
+        "capability; the agent role is built without `process.approve`, so a tool "
+        "for it would be a tool that always refuses",
+    "POST /equipment/downtime-reasons":
+        "an agent may draft one - it holds `process.define` and the API is open to "
+        "it - but the tool that does it reads a month of typed reasons through a "
+        "model, which is the follow-up the design names; this change proves the "
+        "human loop first (surfaces, with the drafting assistant)",
     # operations the assistant widget owns
     "POST /assist/ask": "the in-UI assistant; agents ask the tools directly",
     "POST /assist/agent": "the in-UI agent's own front door; it calls the tools itself",

@@ -185,9 +185,16 @@ connection half of it, including the one case that does not cover.
 
 A downtime pareto that files unlabelled stops under "other" convinces a
 plant it has data it does not have. Here the unlabelled bar is named
-*unlabelled*. Reason codes are configuration; the how-to for shifts and
-reason codes is not written yet (as of 2026-09-07) — ask in Discussions and
-it moves up the list.
+*unlabelled*.
+
+Reason codes are configuration, and since 2026-09-19 a plant can name its
+own: a list somebody drafts and somebody else puts in force, which the
+station screen then offers instead of a text box. See
+[who names the reasons](../operate/who-names-the-reasons.md). The pareto
+groups by code where there is one and by typed text where there is not — the
+two never merge — and `GET /analysis/downtime` says how many seconds of the
+window came from each, beside the unlabelled share. The three account for
+every second of downtime in the window.
 
 ## To shrink the grey segment
 

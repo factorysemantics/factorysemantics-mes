@@ -18,6 +18,7 @@
    to six machines must never read as a six-machine plant. */
 
 const REFRESH_MS = 2000;
+const PENDING_REFRESH_MS = 30000;
 const MACHINE_PAGE = 24;
 const ORDER_PAGE = 10;
 const SPEC_CHOICES = 200;
@@ -25,6 +26,7 @@ const SPEC_CHOICES = 200;
 let user = null;
 let summary = null;
 let timer = null;
+let pendingTimer = null;
 
 const $ = (sel) => document.querySelector(sel);
 const el = (tag, cls, text) => {
@@ -104,7 +106,9 @@ function writeFilters() {
 
 function showLogin() {
   clearInterval(timer);
+  clearInterval(pendingTimer);
   timer = null;
+  pendingTimer = null;
   user = null;
   $("#app").classList.add("hidden");
   $("#login").classList.remove("hidden");
@@ -121,7 +125,12 @@ async function start() {
   readFilters();
   await loadLines();
   await refresh();
+  await refreshPending();
   if (!timer) timer = setInterval(refresh, REFRESH_MS);
+  // On its own, slower clock. This answer is per-caller, so unlike
+  // /dashboard/summary it cannot be shared between everyone watching, and a
+  // queue somebody signs off once a week does not need a two-second poll.
+  if (!pendingTimer) pendingTimer = setInterval(refreshPending, PENDING_REFRESH_MS);
 }
 
 $("#login-form").addEventListener("submit", async (event) => {
@@ -246,6 +255,75 @@ function render() {
   // still be typed - the server is what decides whether it exists.
   fillOptions("machine-options", machines.map((m) => [m.code, m.name]));
   fillSelect("orders", orders.filter((o) => ["released", "running"].includes(o.status)).map((o) => [o.code, o.code]));
+}
+
+/* ---------- what is waiting on the person reading this ----------
+
+   The step the product's three approval lifecycles were missing: a draft
+   somebody has to know to go and look for is a draft nobody signs. The
+   server answers from the caller's own capabilities, so this panel is empty
+   of things they cannot act on and absent entirely for somebody who can act
+   on nothing. */
+
+async function refreshPending() {
+  const panel = $("#pending-panel");
+  if (!panel) return;
+  let data;
+  try {
+    data = await api("/dashboard/pending-approvals");
+  } catch (error) {
+    return;  // the live dot already says the connection is gone
+  }
+  // On no screen that cannot act on it. Not "empty": absent.
+  if (!data.kinds_total) {
+    panel.classList.add("hidden");
+    return;
+  }
+  panel.classList.remove("hidden");
+  $("#pending-count").textContent = data.total
+    ? `${data.items.length} of ${data.total} waiting`
+    : "nothing waiting";
+
+  const body = $("#pending tbody");
+  body.replaceChildren();
+  if (!data.items.length) {
+    const row = el("tr");
+    const cell = el("td", "empty", "Nothing is waiting on you.");
+    cell.colSpan = 6;
+    row.append(cell);
+    body.append(row);
+    return;
+  }
+  for (const item of data.items) {
+    body.append(pendingRow(item));
+  }
+}
+
+function pendingRow(item) {
+  const row = el("tr");
+  row.append(el("td", null, item.kind.replace(/_/g, " ")));
+  row.append(el("td", null, `${item.code} rev ${item.revision}`));
+  row.append(el("td", null, `${item.title} — ${item.headline}`));
+  // Who drafted it and, when an agent drafted for somebody, on whose behalf.
+  row.append(el("td", null, item.drafted_by
+    + (item.on_behalf_of ? ` for ${item.on_behalf_of}` : "")));
+  // How long it has waited: the one column that changes with time, so a
+  // forgotten draft reads as "11 days" rather than falling off the end.
+  row.append(el("td", null, waited(item.waiting_seconds)));
+  row.append(cellWith(button("Approve", async () => {
+    await act(item.approve, `${item.code} is in force`);
+    await refreshPending();
+  })));
+  return row;
+}
+
+function waited(seconds) {
+  if (seconds === null || seconds === undefined) return "—";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `${hours} h`;
+  return `${Math.floor(hours / 24)} days`;
 }
 
 /* ---------- machines: the server's page ---------- */

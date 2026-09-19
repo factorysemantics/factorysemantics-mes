@@ -38,6 +38,15 @@ class EquipmentState(ShiftStamped, Base):
     equipment_id: Mapped[int] = mapped_column(ForeignKey("equipment.id"))
     state: Mapped[EquipmentStateName] = mapped_column(str_enum(EquipmentStateName))
     reason: Mapped[str | None] = mapped_column(String(120))
+    # The code from the plant's approved downtime vocabulary, when the label
+    # came from the list. Beside `reason`, never instead of it: the three
+    # other writers of a reason - triggers, inbound feeds and agent tools -
+    # keep writing text, every interval recorded before the plant had a
+    # vocabulary keeps exactly the text it has, and the pareto says how much
+    # of a window came from the list and how much did not rather than
+    # pretending. Null is the normal case on a plant that has not named its
+    # reasons yet, and stays null on one that never does.
+    reason_code: Mapped[str | None] = mapped_column(String(40))
     # Who named the stop. The interval is always this MES's own observation;
     # the label on it may have been supplied by another system, and a pareto
     # that cannot tell the two apart is a pareto nobody can audit.

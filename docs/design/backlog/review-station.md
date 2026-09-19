@@ -16,7 +16,13 @@ should take more than three taps:
 
 1. **The machine stops.** Dev hits the state that is true — usually Down —
    and the screen *demands a reason before accepting it*, because unlabelled
-   downtime is the thing the pareto cannot explain. Two taps + a short text.
+   downtime is the thing the pareto cannot explain. Two taps and a choice,
+   where the plant has named its reasons: from 2026-09-19 the box is a select
+   fed by the plant's approved vocabulary
+   ([who names the reasons](../../operate/who-names-the-reasons.md)), a typed
+   sentence is refused, and the list carries an explicit *not yet determined*
+   so "required" never means "make something up". On a plant that has approved
+   nothing it is the short text box it always was.
 2. **A batch comes off.** Book output: the order is already selected (it is
    the one this machine is running), type good/scrap on big inputs, Book.
 3. **Material arrives.** Issue the lot to this machine's station in the

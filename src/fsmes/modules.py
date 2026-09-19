@@ -169,7 +169,11 @@ REGISTRY: tuple[Module, ...] = (
         name="equipment",
         title="Machines, their states and their tags",
         kernel=True,
-        routers=(Mount("fsmes.api.routers.equipment", "/equipment", ("equipment",)),),
+        # Order matters. `routers.equipment` ends with `/{code}`, which matches
+        # any single segment, so the vocabulary's routes are mounted first or
+        # `/equipment/downtime-reasons` is read as a machine by that name.
+        routers=(Mount("fsmes.api.routers.reasons", "/equipment", ("equipment",)),
+                 Mount("fsmes.api.routers.equipment", "/equipment", ("equipment",))),
         pages=(
             Page("/dashboard/station", "station.html",
                  "One machine, arm's length: the line-side operator's screen."),
@@ -185,7 +189,7 @@ REGISTRY: tuple[Module, ...] = (
         ),
         tools=("fsmes.mcp.equipment",),
         tables=("equipment", "equipment_connections", "equipment_states", "tag_values",
-                "uns_publications"),
+                "uns_publications", "downtime_reasons"),
     ),
     Module(
         name="dashboard",
