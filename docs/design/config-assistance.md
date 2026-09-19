@@ -167,7 +167,7 @@ pack and owned by the database.**
 
 ---
 
-## 4. Draft → validated → signed off → live → undone
+## 4. Draft → validated → discovered → signed off → live → undone
 
 This lifecycle does not need inventing. The product has built it twice and a
 half already, and both times for the same stated reason.
@@ -188,7 +188,9 @@ half already, and both times for the same stated reason.
   (`src/fsmes/services/capabilities.py:45`).
 
 Configuration vocabulary is the fourth thing of that kind. The proposal is
-to give it the same lifecycle rather than a new one.
+to give it the same lifecycle rather than a new one — **plus the one step
+none of the three has**, which is the step where somebody is told a draft is
+waiting.
 
 **Draft.** A person holding `<domain>.define` drafts, or an assistant drafts
 for them. The product already knows how to say that: the audit row carries
@@ -214,6 +216,103 @@ already do each one somewhere:
    much it would not, and which spellings fold where.** A person can judge
    that in ten seconds, and it is computed from the plant's history rather
    than asserted.
+
+**Discovered.** The step this page was missing, and the one that decides
+whether any of the rest ever happens. A validated draft is worth nothing
+until the person who can sign it off knows it exists.
+
+*What this product does today, checked rather than assumed.* Three
+lifecycles already run here, and the design-chat notes are a fourth kind of
+thing that waits. Not one of them tells anybody.
+
+| Waiting item | Where it is visible today | Anything tells the approver? |
+|---|---|---|
+| A document draft | `/dashboard/instructions`, and only by reading rows. The "draft only" filter means *never approved* (`src/fsmes/web/instructions.js:114-116`, the same test in the API at `src/fsmes/api/routers/documents.py:71-72`), so a new revision of a document already in force is **excluded from it**. No draft count anywhere on the screen | No |
+| A trigger draft | `/dashboard/triggers`, on a tile — *"Drafts awaiting approval"*, counted over the plant and not the page, deliberately (`src/fsmes/web/triggers.html:28`, `src/fsmes/web/triggers.js:89-92`). The best surface in the product | No |
+| A proposed adjustment | `/dashboard/adjustments`, on a tile — *"Awaiting a decision"* — counted over the loaded page of fifty (`src/fsmes/web/adjustments.js:108-111`), so a deep queue reads short | No |
+| A design-chat note | Nowhere in the product. `fsmes design-pending` on the host, against `~/.local/share/fsmes/design.db` (`src/fsmes/cli.py:2496-2510`) | No |
+
+The honest sentence is: **you have to know to go and look.** There is no
+inbox, no badge, no aggregated count, no approvals endpoint and no
+notification of any kind — no mail, no webhook, no push — and not one of the
+four domain events the outbox emits is about an approval
+(`src/fsmes/services/outbox.py:82,112,145,155`). The capability split makes
+that the normal case rather than a corner: `documents.write`,
+`triggers.write` and `adjustments.propose` sit with `supervisor` and with
+`agent`, while all three approve capabilities are held by `admin` alone
+(`src/fsmes/services/capabilities.py:55-59,93-94`). The proposer and the
+approver are usually different people and nothing crosses between them — and
+an approved trigger can fill the adjustment queue overnight by itself
+through `propose_adjustment` (`src/fsmes/services/triggers.py:107`) with
+nobody told at all.
+
+So the gap is not this page's. It is the product's, three times over, and a
+vocabulary draft would have been the fourth.
+
+*Start where Scott started: an admin dashboard.* The nearest thing that
+exists is `/dashboard/admin`, gated on `users.manage`
+(`src/fsmes/web/common.js:55`), and it is people, roles and routings and
+nothing else (`src/fsmes/web/admin.html:34,64,89`). The plant dashboard
+`/dashboard` is the screen everybody opens, and its tiles are machines,
+orders, OEE and the ERP queue (`src/fsmes/web/index.html:38-46`); the
+payload behind it, `/dashboard/summary`, counts no waiting item of any kind
+(`src/fsmes/api/routers/dashboard.py:191-356`).
+
+A **pending-approvals panel** is one row per waiting item: the kind, the
+code, who drafted it and on whose behalf, **how long it has waited**, the
+headline of its dry run — for a vocabulary, what it would have covered —
+and one action that opens it where it can be signed. Counted, and with its
+total, in the envelope every list endpoint here already returns
+(`src/fsmes/api/paging.py:36-47`) and the house rule the style guide states
+as *"every list states its total"* (`docs/design/STYLE.md:32`).
+
+*And then the harder half, because an admin dashboard is not where a process
+engineer looks.* The whole point of §2 is that holding `process.approve`
+should not mean being administrator of the plant — so the person who signs
+off a vocabulary may never open an administrator's screen. The rule this
+page proposes is therefore not a screen but a placement:
+
+> **A pending item appears on the screen of the role that can act on it,
+> counted, with its total — and on no screen that cannot act on it.**
+
+That is one panel, rendered from what the caller may do rather than from who
+they are, and the mechanism is already in every screen: `GET /auth/me`
+returns the caller's capabilities, read live from the database rather than
+taken from the token (`src/fsmes/api/routers/auth.py:57-73`); one call per
+page is cached in `FS.whoami()`; `FS.can()` and `[data-needs-cap]` decide
+what renders (`src/fsmes/web/common.js:204-212`). A panel that asks the
+server for *everything waiting that I hold the approve capability for* is
+that mechanism turned around — the server answers from the caller's
+capabilities, instead of the screen hiding what the answer already
+contained.
+
+Where it goes: on the plant dashboard, because that is the screen everybody
+opens, and on the domain screen beside the thing it is about. Same panel,
+different scope — the plant dashboard shows every kind the caller may
+approve, the triggers screen shows triggers. Somebody who only ever opens
+one screen still finds their own queue on it, and nobody is shown a queue
+they cannot act on.
+
+*A draft nobody acts on waits, visibly.* It does not expire, it does not go
+live by itself, and it is never quietly dropped. The only thing that changes
+with time is one column — how long it has waited — so a forgotten draft
+reads as *"drafted 11 days ago"* rather than falling off the end of a list.
+Unknown is not zero, and neither is ignored.
+
+*The design-chat notes belong on the same panel.* A note somebody typed on a
+screen is a draft of a different kind with exactly this failure. Today it
+surfaces only if a person on the host remembers to run `fsmes design-pending`
+— and the module's own docstring already promises something the product does
+not do: *"opening the screen's Design panel shows what happened to what you
+said"* (`src/fsmes/services/design_triage.py:26-27`), while the panel calls
+`/design/chat` and `/design/status` and nothing else, starting an empty
+conversation on every load (`src/fsmes/web/design.js:160,213`). One more
+kind on one panel, for whoever can act on it.
+
+No notification channel is proposed here. Mail, a webhook or a push is a
+question for later (§7, question 6) and not a proposal: this product has no
+such channel at all, and the cheap honest fix is that the screen a person
+already opens tells them the truth when they open it.
 
 **Signed off.** A person holding `<domain>.approve`. Never the assistant:
 the `agent` role is built to hold the drafting half and never the approving
@@ -316,7 +415,9 @@ The outline, section by section. **This page does not write it.**
    that would change a number already booked. Any state class this plant has
    not turned on. Approving its own draft, always.
 8. **How to hand a draft over.** What the person is shown before they sign:
-   the diff, the coverage, what is retired and how many records carry it.
+   the diff, the coverage, what is retired and how many records carry it —
+   and that handing over means the draft now stands in that person's own
+   pending queue, not that a message was sent somewhere.
 9. **How to undo**, and what undo does not do — it changes what may be
    chosen next, never what was chosen before.
 10. **When to say it does not know.** Unknown is not zero. A vocabulary the
@@ -424,6 +525,15 @@ guess.
 - One pack masterdata kind, `downtime_reasons`, so a vocabulary can ship
   with a plant (`src/fsmes/pack/masterdata.py:53-90` refuses any file that
   is not one of its nine kinds).
+- **The discovery half, or the pilot has not tested the loop that fails.**
+  Three small things: `GET /equipment/downtime-reasons?status=draft`
+  returning the paging envelope with its total, the way `/adjustments`
+  already does (`src/fsmes/api/routers/adjustments.py:28-39`) and the two
+  older lifecycles do not; one endpoint that answers *what is waiting that
+  I may approve* from the caller's capabilities, which in this pilot has
+  exactly one kind behind it; and one panel on `/dashboard` that renders it
+  — kind, code, drafted by and for whom, how long it has waited, the
+  coverage headline, one link.
 
 **What it would not touch.** Not the OEE math. Not the definition of
 `unlabelled_share`. Not scrap — scrap has no reason column at all and that
@@ -432,7 +542,14 @@ is a second pilot, already written up in
 triggers, inbound feeds and agent tools keep writing text, and the pareto
 says how much of the window came from the list and how much did not, rather
 than pretending. Not `masterdata.write` — splitting it is its own change.
-Not any screen but the station's.
+Not any screen but the station's and the plant dashboard's.
+Not the three existing lifecycles: documents, triggers and adjustments keep
+the surfaces they have, and join the panel when the second vocabulary does.
+
+**What that adds, honestly:** one endpoint, one panel and their tests —
+call it a third again on top of the rest of this PR. It is still the right
+size. A pilot that proves drafting and signing but not finding has tested
+everything except the thing that went wrong.
 
 ### How it shows on the two lab plants
 
@@ -456,7 +573,7 @@ worth clustering — is answered in the code above: they hold none.)*
 
 ## 7. Questions for Scott
 
-Five, each with the option this page would take, and why.
+Six, each with the option this page would take, and why.
 
 **1. Are those six domains the right six for a real plant?** Administration,
 process engineering, controls, quality, supply chain, IT. *Proposed: yes,
@@ -493,6 +610,19 @@ signature — approval is an account code and a timestamp. Those are real
 features for a regulated plant and each is a decision of its own; building
 half of one inside this pilot would be worse than naming the gap.
 
+**6. Where does the approving role see what is waiting?** *Proposed: Scott's
+admin dashboard as the place to start, extended by one rule — a pending item
+appears on the screen of the role that can act on it, counted, with its
+total, and on no screen that cannot.* This is not a new worry: the product
+has the gap three times already, and §4 sets out what each of the three does
+today. Starting on the plant dashboard puts the panel where everybody
+already looks; rendering it from the caller's capabilities rather than from
+a role name is what keeps it useful to a process engineer who will never
+open an administrator's screen. The sub-question this page deliberately does
+not answer: whether any channel outside the screen — mail, a webhook, a push
+— is ever worth having. There is none in this product today, and adding the
+first one is a decision of its own.
+
 ---
 
 ## 8. What this is not
@@ -501,7 +631,12 @@ half of one inside this pilot would be worse than naming the gap.
   one loop. If the loop is right, the second vocabulary is a small change;
   if it is wrong, one table is what has to be undone.
 - **Not free-form chat that edits settings.** Every change is a draft, and
-  every draft waits for a person with a capability.
+  every draft waits for a person with a capability — visibly, on that
+  person's own screen.
+- **Not a notification system.** No mail, no webhook, no push is proposed
+  here. A screen somebody already opens says what is waiting for them when
+  they open it; whether anything should ever reach further than that is
+  question 6.
 - **Not an assistant with a right to sign anything off.** The `agent` role
   is built to hold drafting capabilities and no approving one
   (`src/fsmes/services/capabilities.py:88-97`); that stays true.

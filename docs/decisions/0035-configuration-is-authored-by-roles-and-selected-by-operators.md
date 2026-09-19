@@ -91,8 +91,12 @@ already uses for instructions and triggers: a person holding
 `<domain>.define` drafts, or an assistant drafts **for** them with
 `on_behalf_of` recorded; the draft is validated for schema, for
 cross-references, and by a dry run against the plant's own data that states
-what it would and would not cover, with the total; a person holding
-`<domain>.approve` signs it off, never the assistant; the approved revision
+what it would and would not cover, with the total; the validated draft is
+**discovered** — it appears, counted and with its total, on the screen of
+every role that holds the matching `<domain>.approve` capability and on no
+screen that cannot act on it, stating how long it has waited; a person
+holding `<domain>.approve` signs it off, never the assistant; the approved
+revision
 supersedes the previous one and the operator's screen changes at the next
 load; and undo is approving the previous revision. **Retiring a code changes
 what may be chosen next and never what was chosen before** — an interval
@@ -114,6 +118,25 @@ built a role on it must be migrated deliberately rather than silently.
 Harder: four domains are named before anything uses them, which is a bet
 that the names are right — taken because adding a capability is cheap and
 redefining one is not.
+
+Harder: discovery is a surface that has to be built, not a free ride on one
+that exists. **A lifecycle whose last step is that somebody remembers to look
+is the failure this decision is aimed at** — and all three of the lifecycles
+this one copies have exactly that gap today. A document draft is visible only
+to someone who opens the instructions screen and reads the rows, and its
+"draft only" filter means *never approved*, so a pending new revision of a
+document already in force is excluded from it
+(`src/fsmes/web/instructions.js:114-116`,
+`src/fsmes/api/routers/documents.py:71-72`). A trigger draft is a tile on the
+triggers screen (`src/fsmes/web/triggers.js:89-92`). A proposed adjustment is
+a tile on the adjustments screen counted over the loaded page rather than the
+queue (`src/fsmes/web/adjustments.js:108-111`). Nothing tells an approver
+anything: there is no inbox, no aggregate count, no approvals endpoint and no
+notification channel of any kind in this product, while the drafting
+capabilities sit with `supervisor` and `agent` and all three approve
+capabilities are held by `admin` alone
+(`src/fsmes/services/capabilities.py:55-59,93-94`). So the pilot carries the
+discovery half rather than deferring it.
 
 Honest gaps, named rather than half-built: approval here is an account code
 and a timestamp. There is no qualification record, no training matrix and no
