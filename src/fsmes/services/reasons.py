@@ -34,6 +34,14 @@ from fsmes.services import Conflict, Invalid, NotFound, audit
 #: sentence is.
 CODE = re.compile(r"^[a-z][a-z0-9_]{1,39}$")
 
+#: Segments the vocabulary's own routes already spell under
+#: `/equipment/downtime-reasons/`. A code that spelled one of these would be
+#: unreachable: `/equipment/downtime-reasons/drafts` is the drafts queue, so a
+#: reason called `drafts` could never have its history read. Refused at
+#: drafting time rather than discovered by a person who cannot open their own
+#: reason.
+RESERVED = ("drafts", "vocabulary")
+
 #: The statuses a revision can be in when it is the one the plant is currently
 #: living with. Exactly one revision of a code is in force at a time.
 IN_FORCE = (DowntimeReasonStatus.APPROVED, DowntimeReasonStatus.RETIRED)
@@ -134,6 +142,56 @@ def intervals_labelled(session: Session, code: str) -> int:
         .where(EquipmentState.reason_code == code)) or 0
 
 
+def intervals_by_code(session: Session) -> dict[str, int]:
+    """How many recorded intervals carry each code, in one query.
+
+    The screen needs this for every row at once - it is what a person is told
+    before they retire a code, rather than after the refusal - and a count per
+    code would be one query per reason.
+    """
+    rows = session.execute(
+        select(EquipmentState.reason_code, func.count())
+        .where(EquipmentState.reason_code.is_not(None))
+        .group_by(EquipmentState.reason_code)).all()
+    return {code: count for code, count in rows}
+
+
+def vocabulary(session: Session) -> list[dict]:
+    """Every code the plant has ever had, in code order: the revision in force,
+    the draft waiting on somebody, and how much history carries the code.
+
+    The catalogue answers *what may an operator choose*, which is the approved
+    list and nothing else. This answers *what is the plant's vocabulary*, which
+    includes the retired words it still reads in its own history and the drafts
+    nobody has signed - the three states the screen has to show at once, and
+    the reason a screen reading the catalogue alone would show a person a list
+    their own draft was missing from.
+    """
+    everything = list(session.scalars(
+        select(DowntimeReason).order_by(DowntimeReason.code, DowntimeReason.revision)))
+    carried = intervals_by_code(session)
+
+    by_code: dict[str, list[DowntimeReason]] = {}
+    for row in everything:
+        by_code.setdefault(row.code, []).append(row)
+
+    out_rows = []
+    for code, rows in by_code.items():
+        live = next((r for r in reversed(rows) if r.status in IN_FORCE), None)
+        draft = next((r for r in reversed(rows)
+                      if r.status is DowntimeReasonStatus.DRAFT), None)
+        out_rows.append({
+            "code": code,
+            "in_force": out(live) if live else None,
+            "draft": out(draft) if draft else None,
+            # Never None: a code nothing carries carries nothing, which is a
+            # measurement, not an unknown.
+            "labels_intervals": carried.get(code, 0),
+            "revisions": len(rows),
+        })
+    return out_rows
+
+
 # --------------------------------------------------------------- writing it
 
 
@@ -145,6 +203,11 @@ def _validate_code(session: Session, code: str) -> None:
             f"{code!r} is not a downtime code. A code is two to forty characters, "
             "starts with a lowercase letter, and holds lowercase letters, digits "
             "and underscores - it is grouped on and published, not a sentence.")
+    if code in RESERVED:
+        raise Invalid(
+            f"{code!r} is one of the vocabulary's own addresses "
+            f"(/equipment/downtime-reasons/{code}), so a reason spelled that way "
+            "could never be opened again. Any other word is free.")
     owned = protected_terms().get(code)
     if owned:
         raise Invalid(
