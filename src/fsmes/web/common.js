@@ -21,6 +21,14 @@
      an operator clicking Admin and landing on "Not your screen" was the
      old behaviour, and a dead-end chip is worse than no chip. */
 
+  /* One Configuration entry per workspace, never one per configurable thing.
+     Scott, 2026-09-21, after the downtime vocabulary arrived here as a chip
+     of its own: there will eventually be hundreds of configurable sections,
+     and a chip each is the bar nobody can read. A section lives on its
+     domain's Configuration page, which is a list read from the module
+     registry - so the next one is an entry in `fsmes/modules.py` and no
+     change here at all. `test_web.py` refuses the two sides drifting apart. */
+
   FS.NAV = [
     { group: "Floor", items: [
       { href: "/dashboard", label: "Floor", cap: null },
@@ -45,7 +53,7 @@
       { href: "/dashboard/machines", label: "Machines", cap: null },
       { href: "/dashboard/tags", label: "Tags", cap: null },
       { href: "/dashboard/triggers", label: "Triggers", cap: null },
-      { href: "/dashboard/reasons", label: "Downtime reasons", cap: null },
+      { href: "/dashboard/config/engineering", label: "Configuration", cap: null },
       { href: "/dashboard/adjustments", label: "Adjustments", cap: null },
       { href: "/dashboard/analysis", label: "Analysis", cap: null },
       { href: "/dashboard/masterdata", label: "Master data", cap: null },
@@ -407,9 +415,15 @@
     for (const item of items) row.appendChild(link(item, active));
   }
 
+  /* A page names itself with `data-nav`, and what it names is its own path
+     under /dashboard: "orders", or "config/engineering" for a screen one
+     level down. It used to be the last segment alone, which was the same
+     thing while every screen was one level deep - and would have made
+     Quality's configuration page (/dashboard/config/quality) light the
+     Quality screen's chip the day a second workspace got one. */
   function isActive(href, active) {
-    const leaf = href.split("/").pop().split("?")[0];
-    return active === leaf || (href === "/dashboard" && (active === "" || active === "floor"));
+    if (href === "/dashboard") return active === "" || active === "floor";
+    return active === href.split("?")[0].replace(/^\/dashboard\//, "");
   }
 
   function link(entry, active) {

@@ -12,7 +12,9 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from fsmes import modules
 from fsmes.api.deps import ReadDbDep, UserDep
+from fsmes.config import get_settings
 from fsmes.domain import (
     AuditLog,
     Equipment,
@@ -462,3 +464,70 @@ def pending_approval(kind: str, code: str, revision: int,
             f"reviewing a {kind.replace('_', ' ')} needs the "
             f"{PENDING_KINDS[kind]!r} capability, which this role does not grant")
     return review_service.review(db, kind, code, revision)
+
+
+# ------------------------------------------- what is configurable in here
+
+@router.get("/config/{domain}/sections")
+def config_sections(domain: str, db: ReadDbDep, user: UserDep) -> dict:
+    """Everything configurable in one workspace, with its total.
+
+    The list behind the **Configuration** entry in one workspace. Scott, 2026-09-21,
+    looking at the nav bar after the downtime vocabulary got a chip of its
+    own: one Configuration entry per domain, with that domain's configurable
+    sections inside it - not a top-level entry per configurable thing, which
+    with the hundreds of sections this product is heading for is a nav bar
+    nobody can read.
+
+    Read from `fsmes.modules`, filtered by what this plant serves, so a
+    section whose module is switched off is not offered a row that opens onto
+    a 404 - and the count of those is returned rather than dropped, because a
+    workspace with one section and a workspace with one section and three
+    switched off are different plants.
+
+    **This endpoint gates nothing.** Every section is listed to anybody who
+    may see the plant, exactly as the screens behind them already list
+    themselves; what it adds is `may_define` and `may_approve` per row, read
+    live from the caller's role, so a person can see whether the door in
+    front of them opens before they walk into it. The gates themselves stay
+    on each section's own screen and endpoints.
+    """
+    from fsmes.services import auth as auth_service
+
+    known = modules.DOMAIN_BY_SLUG.get(domain)
+    if known is None:
+        raise HTTPException(
+            404,
+            f"there is no configuration workspace called {domain!r}. "
+            f"This version has: {', '.join(sorted(modules.DOMAIN_BY_SLUG))}.")
+
+    served = get_settings().enabled_modules()
+    shown = modules.config_sections(domain, served)
+    everything = modules.config_sections(domain)
+
+    role = auth_service.current_role(db, user) or user["role"]
+    held = auth_service.capabilities_for(db, role)
+
+    return {
+        "domain": known.slug,
+        "title": known.title,
+        "about": known.about,
+        "items": [
+            {
+                "key": section.key,
+                "label": section.label,
+                "about": section.about,
+                "href": section.href,
+                "define": section.define,
+                "approve": section.approve,
+                "may_define": section.define is None or section.define in held,
+                "may_approve": section.approve is not None and section.approve in held,
+            }
+            for section in shown
+        ],
+        "total": len(shown),
+        # Not served here, but part of this version. Named, not just counted:
+        # "three sections you cannot see" is a question, and the answer is
+        # which modules this plant switched off.
+        "switched_off": [s.label for s in everything if s not in shown],
+    }

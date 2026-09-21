@@ -23,8 +23,8 @@ page is how it gets one.
 
 ## The short version
 
-1. Somebody holding `process.define` **drafts** a reason, on
-   **Engineering › Downtime reasons** (`/dashboard/reasons`) or through the
+1. Somebody holding `process.define` **drafts** a reason, on **Engineering ›
+   Configuration › Downtime reasons** (`/dashboard/reasons`) or through the
    API. Nothing changes on the floor.
 2. It appears on the *Waiting for you* panel on `/dashboard` — for the people
    who can act on it, and for nobody else.
@@ -55,9 +55,15 @@ is the point of the feature; an assistant that signs its own proposal is not.
 
 ## The screen
 
-**Engineering › Downtime reasons** (`/dashboard/reasons`) is where a plant's
-vocabulary is read and written. Everything below can also be done with a token
-and `curl`, and was only possible that way until this screen existed.
+**Engineering › Configuration › Downtime reasons** (`/dashboard/reasons`) is
+where a plant's vocabulary is read and written. It is one row on the Engineering
+workspace's **Configuration** page (`/dashboard/config/engineering`), which is
+where every configurable thing in that workspace is listed - one Configuration
+entry per workspace, never one per setting, however many settings arrive. The
+address above is unchanged, so a bookmark still opens this screen directly.
+
+Everything below can also be done with a token and `curl`, and was only
+possible that way until this screen existed.
 
 The list is open to anybody who can see the plant — a vocabulary nobody can
 read is a vocabulary nobody can choose from — and shows **every word the plant

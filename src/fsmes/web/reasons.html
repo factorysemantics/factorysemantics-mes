@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Downtime reasons — FactorySemantics MES</title>
+<title>Downtime reasons — Engineering configuration — FactorySemantics MES</title>
 <link rel="stylesheet" href="/static/themes.css">
 <link rel="stylesheet" href="/static/styles.css">
 <link rel="stylesheet" href="/static/station.css">
@@ -21,7 +21,10 @@
 </head>
 <body>
 <div id="app">
-  <header data-nav="reasons"></header>
+  <!-- This screen sits inside Engineering › Configuration rather than beside
+       it, so it lights that entry. The URL is unchanged: a bookmark of
+       /dashboard/reasons still opens exactly this page. -->
+  <header data-nav="config/engineering"></header>
 
   <section class="kpis">
     <div class="kpi"><span class="kpi-label">On the list</span><span id="kpi-approved" class="kpi-value">—</span>

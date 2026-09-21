@@ -276,3 +276,73 @@ def test_the_tree_screen_draws_the_same_trail_as_the_machine_page(browser, plant
         assert last.evaluate("el => el.tagName") != "A"
     finally:
         page.close()
+
+
+# --------------------------------------------- one Configuration entry, not many
+
+def _chips(page):
+    """Every chip a person can see, workspace row and screen row together."""
+    return [text.strip() for text in
+            page.locator("header[data-nav] nav.nav a, nav.subnav a").all_inner_texts()]
+
+
+def test_a_configurable_thing_is_a_row_in_configuration_not_a_chip_of_its_own(
+        browser, plant):
+    """Scott, 2026-09-21, testing the pilot build: the downtime vocabulary had
+    arrived in the nav bar as a top-level chip, and he does not want one of
+    those per configurable thing - there will eventually be hundreds of them.
+    So Engineering carries one Configuration entry, and the vocabulary is a
+    row on the page behind it."""
+    page = _open(browser, plant, "/dashboard/machines")
+    try:
+        chips = _chips(page)
+        assert "Configuration" in chips, f"Engineering has no Configuration entry: {chips}"
+        assert "Downtime reasons" not in chips, (
+            f"a configurable thing is still a chip of its own: {chips}")
+    finally:
+        page.close()
+
+
+def test_the_configuration_page_lists_what_is_configurable_and_states_its_total(
+        browser, plant):
+    """A list of sections that happens to be short today, not a single screen
+    wearing a plural name - so it says how many, even when it is one."""
+    page = _open(browser, plant, "/dashboard/config/engineering")
+    try:
+        page.wait_for_selector("#sections-table tbody tr", timeout=15000)
+        rows = page.locator("#sections-table tbody tr")
+        assert rows.count() == 1
+        assert "1 section" in page.locator("#section-count").inner_text()
+        assert urlparse(page.locator("#sections-table tbody tr a").first
+                        .get_attribute("href")).path == "/dashboard/reasons"
+        # The page says where the door is; it does not move who may open it.
+        assert "process.define" in page.locator("#sections-table").inner_text()
+    finally:
+        page.close()
+
+
+def test_the_vocabulary_can_still_be_drafted_from_inside_configuration(browser, plant):
+    """The whole point of moving the entry is that nothing behind it moved.
+    Two clicks from the Configuration page to a drafted word, in a browser,
+    the way an engineer does it."""
+    page = _open(browser, plant, "/dashboard/config/engineering")
+    try:
+        page.wait_for_selector("#sections-table tbody tr a", timeout=15000)
+        page.locator("#sections-table tbody tr a").first.click()
+        page.wait_for_url("**/dashboard/reasons", timeout=15000)
+        page.wait_for_selector("#reason-form", timeout=15000)
+
+        # Standing inside a section, the workspace's Configuration entry is
+        # the one marked - the way a machine page marks Machines.
+        assert page.locator("nav.subnav a[aria-current='page']").inner_text().strip() \
+            == "Configuration"
+
+        page.fill("#r-code", "ui_seam_check")
+        page.fill("#r-name", "Drafted from inside Configuration")
+        page.fill("#r-description", "A browser check that the move changed no behaviour.")
+        page.click("#r-submit")
+
+        page.wait_for_selector("#reasons-table tbody tr:has-text('ui_seam_check')",
+                               timeout=15000)
+    finally:
+        page.close()
