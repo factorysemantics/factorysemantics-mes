@@ -188,6 +188,13 @@ goes under Honesty with a migration line, so plant people can find it.
   against what it is showing and leaves the DOM alone when they are the same;
   a real change still redraws in full.
 
+- **The station stopped reporting itself disconnected from a plant it was
+  reading.** Its maintenance panel read a paging envelope as if it were a
+  list, so every refresh threw part-way through: the screen said
+  *reconnecting…* with nothing wrong with the connection, and never drew a
+  maintenance job. It now asks for the open work on the machine the way the
+  Maintenance screen does, and says how many are open when it draws fewer.
+
 - **A floor screen no longer stops people signing in, and it no longer takes
   ten seconds.** On a six-machine plant with a shift of one-second history,
   `/dashboard/summary` took **10 s**, `/equipment/{code}/oee` and

@@ -554,19 +554,36 @@ function wireQuality() {
 
 /* ---------- maintenance on this machine ---------- */
 
+// The jobs shown at the machine. Bounded, and counted: the panel says how
+// many are open even when it can only draw the first few of them.
+const MAINTENANCE_SHOWN = 10;
+
 async function renderMaintenance() {
   if (!window.FS.can("maintenance.perform")) return;
-  let rows = [];
-  try {
-    rows = await api(`/maintenance/orders?equipment=${encodeURIComponent(machine)}&limit=10`);
-  } catch (err) {
-    return;
-  }
-  const open = rows.filter((o) => ["due", "in_progress"].includes(o.status));
   const list = $("#maint");
-  const showing = JSON.stringify(open.map(
-    (order) => [order.code, order.kind, order.summary, order.reason, order.status]));
+  const count = $("#maint-count");
+  let page;
+  try {
+    // Open work on this machine, asked for as open work - the same question
+    // the Maintenance screen asks. Two things were wrong here. The answer is
+    // the standard paging envelope and this read it as a bare list, so the
+    // panel threw on every single refresh; `refresh()` caught that, which is
+    // why the station has been saying "reconnecting…" with nothing wrong
+    // with the connection and has never drawn a maintenance job. And asking
+    // for the last ten orders of any status, then keeping the open ones,
+    // shows a machine with no work owing the day its last ten were all done.
+    page = await api(`/maintenance/orders?equipment=${encodeURIComponent(machine)}`
+                     + `&status=due&status=in_progress&limit=${MAINTENANCE_SHOWN}`);
+  } catch (err) {
+    return;                 // a list that cannot be read is left as it was
+  }
+  const open = page.items || [];
+  const showing = JSON.stringify([page.total, open.map(
+    (order) => [order.code, order.kind, order.summary, order.reason, order.status])]);
   if (alreadyShowing(list, showing)) return;
+  // Rule 4: a list that stops short must never look complete.
+  setText(count, page.total > open.length
+    ? `— ${open.length} of ${page.total} open` : "");
   list.textContent = "";
   if (!open.length) {
     list.appendChild(el("li", "muted", "Nothing owed on this machine."));

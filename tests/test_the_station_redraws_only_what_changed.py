@@ -19,6 +19,11 @@ worth nothing:
   the quality results, not the queue, not the state buttons.
 * When a reading is actually recorded, the quality list redraws and shows it.
   A panel that never updates would pass the first test perfectly.
+* The refresh completes at all. Looking at the screen to check the first two
+  turned up a third fault behind them: the maintenance panel read a paging
+  envelope as if it were a list, threw on every refresh, and the loop caught
+  it - so the station had been saying "reconnecting…" with nothing wrong with
+  the connection, and had never once drawn a maintenance job.
 
 Same shape as `test_ui_nav.py` and `test_ui_oee_above_rated.py`, and marked
 slow for the same reason: it seeds a database, serves it on a loopback port
@@ -43,6 +48,9 @@ CHARACTERISTIC = "brix"     # the one specification the demo plant seeds
 #: Readings already on the board when the screen opens. Enough rows that a
 #: rebuild would be obvious, fewer than the six the panel shows.
 READINGS = [10.1, 10.4, 9.9]
+#: One job owing on the mixer, so the maintenance panel has something to draw
+#: and its silence is a failure rather than an empty plant.
+MAINTENANCE_JOB = "Mixer seal weeping"
 #: Two refresh ticks of the station screen (REFRESH_MS = 3000), and room to
 #: spare, so a pass cannot mean "the timer had not fired yet".
 WATCH_MS = 7500
@@ -59,7 +67,7 @@ def plant(tmp_path_factory):
     from fsmes.db import Base, make_engine, utcnow
     from fsmes.domain import Equipment, EquipmentState, EquipmentStateName
     from fsmes.seed import seed_demo_plant
-    from fsmes.services import auth, quality, workorders
+    from fsmes.services import auth, maintenance, quality, workorders
 
     path = tmp_path_factory.mktemp("flicker") / "plant.db"
     url = f"sqlite:///{path}"
@@ -89,6 +97,9 @@ def plant(tmp_path_factory):
                                      characteristic=CHARACTERISTIC, value=value,
                                      work_order_code="WO-FLICKER",
                                      equipment_code=MACHINE, actor="SCOTT")
+            maintenance.raise_corrective(session, equipment_code=MACHINE,
+                                         summary=MAINTENANCE_JOB,
+                                         reason="operator report")
             session.commit()
 
         sock = socket.socket()
@@ -161,6 +172,7 @@ def station(browser, plant):
     page.goto(f"{plant}/dashboard/station?m={MACHINE}", wait_until="load", timeout=30000)
     page.wait_for_selector("#q-recent li .mono", timeout=15000)
     page.wait_for_selector("#queue li .mono", timeout=15000)
+    page.wait_for_selector("#maint li .mono", timeout=15000)
     try:
         yield page
     finally:
@@ -186,7 +198,7 @@ WATCH = """
 }
 """
 
-PANELS = ["#q-recent", "#q-count", "#queue", "#state-buttons", "#book-order"]
+PANELS = ["#q-recent", "#q-count", "#queue", "#state-buttons", "#book-order", "#maint"]
 
 
 def test_nothing_on_the_station_is_rebuilt_while_the_plant_stands_still(station):
@@ -238,3 +250,19 @@ def test_the_quality_panel_still_shows_a_reading_that_was_just_recorded(station,
         "a new reading did not redraw the list")
     assert f"of {len(READINGS) + 1}" in station.locator("#q-count").text_content(), (
         "the panel did not say what its slice is a slice of")
+
+
+def test_the_station_finishes_its_refresh_and_says_so(station):
+    """Found by looking at the screen rather than at the list: every refresh
+    threw part-way through, so the station reported itself disconnected from a
+    plant it was reading perfectly, and the maintenance panel stayed blank
+    while a job was owing on the machine. Both halves are pinned here, because
+    a screen that lies about being live is worse than one that flickers - an
+    operator who learns to ignore "reconnecting…" ignores it on the day it is
+    true."""
+    assert station.locator("#live-text").text_content() == "live", (
+        "the station says it cannot reach a plant it is reading")
+    assert station.evaluate("() => !!window.__fsmesPageData"), (
+        "the refresh never reached the end, so nothing knows what is on screen")
+    assert MAINTENANCE_JOB in station.locator("#maint").text_content(), (
+        "a job is owing on this machine and the panel does not show it")
