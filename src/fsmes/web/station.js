@@ -25,6 +25,39 @@ function live(ok) {
   $("#live-text").textContent = ok ? "live" : "reconnecting…";
 }
 
+/* ---------- drawing only what changed ----------
+
+   This screen re-reads the plant every few seconds and then stays open for
+   the rest of the shift. Every list on it used to empty itself and rebuild
+   identical rows on every one of those ticks, so the quality results
+   disappeared and came back - and the card changed height while they did -
+   twenty times a minute, with nothing behind them having changed. That is
+   indistinguishable, at arm's length, from data arriving.
+
+   The fix is the smallest one that is still honest: before a list is
+   rebuilt, say in one string what is about to be drawn, and if that is word
+   for word what the list is already showing, leave the DOM alone. Same rows,
+   same order, same words: nothing to do. Anything else redraws wholesale,
+   exactly as it did before, so no real change is ever held back by a
+   comparison that tried to be clever. No diffing library, and no cache of
+   the API's answers - what is compared is what was drawn. */
+
+const drawn = new WeakMap();
+
+/** True when `node` is already showing `description`. Records the
+    description when it is not, so the caller can go on and draw it. */
+function alreadyShowing(node, description) {
+  if (drawn.get(node) === description) return true;
+  drawn.set(node, description);
+  return false;
+}
+
+/** Write text only when it would say something different. Assigning the same
+    string again throws away the text node and makes a new one for nothing. */
+function setText(node, text) {
+  if (node.textContent !== text) node.textContent = text;
+}
+
 /* ---------- which machine ---------- */
 
 function rememberMachine(code) {
@@ -63,13 +96,17 @@ function renderState(states) {
   current = states.find((row) => row.equipment === machine) || null;
   const pill = $("#machine-state");
   const state = current ? current.state : "unknown";
-  pill.className = `pill ${state}`;
-  pill.textContent = state;
-  $("#machine-since").textContent = current && current.since
+  const cls = `pill ${state}`;
+  if (pill.className !== cls) pill.className = cls;
+  setText(pill, state);
+  setText($("#machine-since"), current && current.since
     ? `since ${fmt.clock(current.since)}` + (current.reason ? ` — ${current.reason}` : "")
-    : "";
+    : "");
 
+  // The four buttons never change; only which of them is the current state
+  // does, so that is the whole of what this row is showing.
   const grid = $("#state-buttons");
+  if (alreadyShowing(grid, state)) return;
   grid.textContent = "";
   for (const name of STATES) {
     const button = el("button", `state-btn ${name}` + (state === name ? " current" : ""), name);
@@ -174,6 +211,10 @@ function wireReason() {
 
 function renderQueue() {
   const list = $("#queue");
+  const canBook = window.FS.can("production.book");
+  const showing = JSON.stringify([canBook, queue.map((entry) => [
+    entry.order, entry.seq, entry.operation, entry.good_qty, entry.quantity, entry.status])]);
+  if (alreadyShowing(list, showing)) return;
   list.textContent = "";
   if (!queue.length) {
     list.appendChild(el("li", "muted", "Nothing queued on this machine."));
@@ -187,7 +228,7 @@ function renderQueue() {
       `${entry.operation} — ${fmt.qty(entry.good_qty)} of ${fmt.qty(entry.quantity)} good`));
     li.appendChild(what);
 
-    if (window.FS.can("production.book")) {
+    if (canBook) {
       if (entry.status === "pending") {
         const start = el("button", "ghost", "Start");
         start.type = "button";
@@ -219,22 +260,29 @@ async function opAction(entry, action) {
 
 function renderBookTargets() {
   const select = $("#book-order");
-  const keep = select.value;
-  select.textContent = "";
   const open = queue.filter((entry) => entry.status !== "done");
-  for (const entry of open) {
-    const option = new Option(`${entry.order} · op ${entry.seq} (${entry.operation})`,
-                              entry.order);
-    option.dataset.seq = entry.seq;
-    select.appendChild(option);
+  // Rebuilding a dropdown underneath somebody is worse than a flicker: it
+  // shuts the list while they are reading it. Only the options matter here,
+  // so only a change in the options rebuilds them.
+  const showing = JSON.stringify(
+    open.map((entry) => [entry.order, entry.seq, entry.operation]));
+  if (!alreadyShowing(select, showing)) {
+    const keep = select.value;
+    select.textContent = "";
+    for (const entry of open) {
+      const option = new Option(`${entry.order} · op ${entry.seq} (${entry.operation})`,
+                                entry.order);
+      option.dataset.seq = entry.seq;
+      select.appendChild(option);
+    }
+    if (keep && [...select.options].some((o) => o.value === keep)) select.value = keep;
   }
-  if (keep && [...select.options].some((o) => o.value === keep)) select.value = keep;
   $("#book-submit").disabled = !open.length;
 
   const running = open.find((entry) => entry.status === "running") || open[0];
-  $("#issue-where").textContent = running
+  setText($("#issue-where"), running
     ? `Issues to ${running.order} at this station.`
-    : "No open order to issue against.";
+    : "No open order to issue against.");
   $("#issue-submit").disabled = !running;
 }
 
@@ -339,8 +387,7 @@ function bandText(spec) {
 }
 
 function showSpec() {
-  const spec = specFor(qKey());
-  $("#q-spec").textContent = bandText(spec);
+  setText($("#q-spec"), bandText(specFor(qKey())));
 }
 
 /* Which material this station is working on: the running operation if there
@@ -377,30 +424,33 @@ async function renderQuality() {
     if (keep && [...select.options].some((o) => o.value === keep)) select.value = keep;
   }
 
-  label.textContent = material ? `on ${material}` : "";
+  setText(label, material ? `on ${material}` : "");
   const nothingToJudge = !material || !qSpecs.length;
   $("#q-submit").disabled = nothingToJudge;
   $("#q-value").disabled = nothingToJudge;
+  let spec;
   if (!material) {
-    $("#q-spec").textContent = "Nothing is queued on this machine, so there is nothing to inspect.";
+    spec = "Nothing is queued on this machine, so there is nothing to inspect.";
   } else if (!qSpecs.length) {
-    $("#q-spec").textContent = `No characteristic has a specification for ${material}.`;
+    spec = `No characteristic has a specification for ${material}.`;
   } else {
-    showSpec();
+    spec = bandText(specFor(qKey()));
     // A list that stops short must never look complete (STYLE.md rule 4).
     if (qSpecsTotal > qSpecs.length) {
-      $("#q-spec").textContent += ` — ${qSpecs.length} of ${qSpecsTotal} characteristics listed.`;
+      spec += ` — ${qSpecs.length} of ${qSpecsTotal} characteristics listed.`;
     }
   }
+  setText($("#q-spec"), spec);
   await renderRecent();
 }
 
 async function renderRecent() {
   const list = $("#q-recent");
   const count = $("#q-count");
-  list.textContent = "";
   if (!qMaterial || !qSpecs.length) {
-    count.textContent = "";
+    if (alreadyShowing(list, "nothing to show yet")) return;
+    setText(count, "");
+    list.textContent = "";
     list.appendChild(el("li", "muted", "Nothing to show yet."));
     return;
   }
@@ -409,19 +459,31 @@ async function renderRecent() {
     page = await api(`/quality/checks?material=${encodeURIComponent(qMaterial)}`
                      + `&characteristic=${encodeURIComponent(qKey())}&limit=${Q_RECENT}`);
   } catch (err) {
-    count.textContent = "";
+    // A list that cannot be read is its own state, told apart from an empty
+    // one, so recovering redraws and a second failed read does not.
+    if (alreadyShowing(list, "could not read")) return;
+    setText(count, "");
+    list.textContent = "";
     list.appendChild(el("li", "muted", "Could not read the recent results."));
-    return;
-  }
-  // Rule 4: say what this is a slice of, never just the slice.
-  count.textContent = `— last ${page.items.length} of ${page.total.toLocaleString()} on `
-                    + `${qMaterial} · ${qKey()}`;
-  if (!page.items.length) {
-    list.appendChild(el("li", "muted", "No result recorded for this characteristic yet."));
     return;
   }
   const spec = specFor(qKey());
   const unit = spec && spec.unit ? ` ${spec.unit}` : "";
+  // Rule 4: say what this is a slice of, never just the slice.
+  const heading = `— last ${page.items.length} of ${page.total.toLocaleString()} on `
+                + `${qMaterial} · ${qKey()}`;
+  // Everything the rows below print, in the order they print it. A reading
+  // whose value, time, name or verdict changed is a different list; the same
+  // six readings again are not.
+  const showing = JSON.stringify([heading, unit, page.items.map(
+    (check) => [check.value, check.ts, check.checked_by, check.result])]);
+  if (alreadyShowing(list, showing)) return;
+  setText(count, heading);
+  list.textContent = "";
+  if (!page.items.length) {
+    list.appendChild(el("li", "muted", "No result recorded for this characteristic yet."));
+    return;
+  }
   for (const check of page.items) {
     const failed = check.result === "fail";
     const li = el("li", failed ? "out-of-spec" : null);
@@ -502,6 +564,9 @@ async function renderMaintenance() {
   }
   const open = rows.filter((o) => ["due", "in_progress"].includes(o.status));
   const list = $("#maint");
+  const showing = JSON.stringify(open.map(
+    (order) => [order.code, order.kind, order.summary, order.reason, order.status]));
+  if (alreadyShowing(list, showing)) return;
   list.textContent = "";
   if (!open.length) {
     list.appendChild(el("li", "muted", "Nothing owed on this machine."));

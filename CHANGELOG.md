@@ -179,6 +179,15 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Fixed
 
+- **The station screen no longer redraws itself for nothing.** Every panel on
+  `/dashboard/station` cleared itself and rebuilt identical rows on each
+  three-second refresh, and the quality results cleared *before* the read that
+  refilled them — so on a screen that hangs on a wall for a shift, the recent
+  readings blinked out twenty times a minute and the card lost 332 px of
+  height while they did. Each list now compares what it is about to draw
+  against what it is showing and leaves the DOM alone when they are the same;
+  a real change still redraws in full.
+
 - **A floor screen no longer stops people signing in, and it no longer takes
   ten seconds.** On a six-machine plant with a shift of one-second history,
   `/dashboard/summary` took **10 s**, `/equipment/{code}/oee` and
