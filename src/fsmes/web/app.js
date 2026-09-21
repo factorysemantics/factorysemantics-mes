@@ -123,6 +123,11 @@ async function start() {
   await FS.whoami();
   FS.applyCapGates();
   readFilters();
+  // Before the plant's own screens are drawn: a walk resuming from the
+  // station screen looks for the approve button shortly after the page
+  // loads, and the review it belongs to has to be back on the screen by
+  // then rather than behind a summary that is still being fetched.
+  await restoreReview();
   await loadLines();
   await refresh();
   await refreshPending();
@@ -327,15 +332,43 @@ function pendingRow(item) {
 
 let reviewing = null;
 
-async function openReview(item) {
+/* Which review was open, kept across a page load.
+
+   The walk through a change now leaves this screen - a change to the plant's
+   downtime vocabulary is read in front of the real select on the station
+   screen, not described on a card here - and its last step is the button
+   that signs. So the review has to be open again when the walk comes back,
+   or the walk would return somebody to a dashboard with nothing on it to
+   press. It also means a reload in the middle of reading one puts the
+   reading back rather than the queue. Cleared the moment the review is
+   closed or signed: this is where somebody was, not a preference. */
+const OPEN_REVIEW = "fsmes-review-open";
+
+function rememberReview(item) {
+  try {
+    sessionStorage.setItem(OPEN_REVIEW, JSON.stringify(
+      { kind: item.kind, code: item.code, revision: item.revision }));
+  } catch (error) { /* private window: the walk still works, the return does not */ }
+}
+
+function forgetReview() {
+  try { sessionStorage.removeItem(OPEN_REVIEW); } catch (error) { /* fine */ }
+}
+
+async function openReview(item, quiet = false) {
   let data;
   try {
     data = await api(`/dashboard/pending-approvals/${item.kind}/${item.code}/${item.revision}`);
   } catch (error) {
-    toast(error.message, "bad");
+    // Restoring one is allowed to fail in silence: the draft may have been
+    // signed from another tab, and a toast about it on a fresh page load
+    // would be an error message about something nobody just did.
+    if (quiet) forgetReview();
+    else toast(error.message, "bad");
     return;
   }
   reviewing = data;
+  rememberReview(data);
   renderReview(data);
   $("#review-panel").classList.remove("hidden");
   $("#review-panel").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -343,7 +376,20 @@ async function openReview(item) {
 
 function closeReview() {
   reviewing = null;
+  forgetReview();
   $("#review-panel").classList.add("hidden");
+}
+
+/* The review somebody was reading before the walk took them to the floor. */
+async function restoreReview() {
+  let saved = null;
+  try { saved = sessionStorage.getItem(OPEN_REVIEW); } catch (error) { return; }
+  if (!saved) return;
+  try {
+    await openReview(JSON.parse(saved), true);
+  } catch (error) {
+    forgetReview();
+  }
 }
 
 function renderReview(data) {
