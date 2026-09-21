@@ -215,6 +215,28 @@ goes under Honesty with a migration line, so plant people can find it.
   domain's single Configuration entry, and a test refuses either half without
   the other.
 
+- **Walking through a waiting draft now walks you to where the change takes
+  effect.** The guided walkthrough on a downtime-reason review used to stay on
+  the review panel and describe each change on a card beside it, which asked an
+  approver to picture the effect rather than see it. A step whose change has a
+  real control now **leaves the dashboard**: it opens
+  `/dashboard/station` and rings the actual dropdown an operator picks a stop
+  from, with the reason under review already selected in it. Which machine is
+  computed from the plant's own records — the one that has recorded the most
+  stops under that code — and the card says which machine and how many have
+  recorded it at all; the vocabulary is plant-wide, so only the history can
+  answer *which station*. The station screen opens that list **to be read, not
+  answered**: no state change is armed and the buttons that would change the
+  machine are off the screen while it is open. Three cases have nowhere honest
+  to stand and keep the old in-place description — a brand-new reason (nothing
+  has chosen it and the dropdown does not contain it), a code on the list that
+  no machine has ever chosen, and a code already retired. The last step is
+  still **Approve**, back on the review, and any step off the dashboard carries
+  a *Back to the review* button; the review reopens when you return, and
+  nothing is signed until Approve is pressed. No model is called anywhere in
+  it — the destination is read out of the plant's records, exactly as the words
+  are read out of the draft's own diff.
+
 ### Fixed
 
 - **The station screen no longer redraws itself for nothing.** Every panel on
