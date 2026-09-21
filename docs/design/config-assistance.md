@@ -96,6 +96,35 @@ them.
 
 ---
 
+## 2a. Navigation: one Configuration entry per domain, not one per setting
+
+Decided 2026-09-21, after Scott used the pilot and found the first
+counter-example: PR #87 gave downtime reasons their own top-level chip
+under Engineering (`FS.NAV`, `src/fsmes/web/common.js:44-52`) — *Machines,
+Tags, Triggers, Downtime reasons, Adjustments, Analysis, Master data*, one
+entry per thing. Scott's rule, stated for everything from here on: **a
+domain gets one `Configuration` entry in its nav group; every configurable
+section of that domain lives inside it.** He expects hundreds of
+configurable sections to exist eventually — a nav bar with a new top-level
+entry per one is the clutter this whole effort exists to prevent, and it
+is worse than the free-text box it replaces if the person configuring the
+plant cannot find the screen among fifty siblings.
+
+This is a correction to how §2's domains reach the screen, not to the
+domains themselves. Engineering's nav group today covers what will become
+two domains (process and controls) before either is split out; until they
+are, one `Configuration` entry under Engineering holds every domain's
+configurable section as a list within it, and a subnav or a picker inside
+that page — not a new top-level nav item — is how a second section (a
+second vocabulary, a routing editor, whatever process or controls
+engineering next needs to author) gets added. The same shape applies when
+Quality, Supply chain or the rest are built out: one `Configuration`
+chip in that group, not a chip per setting.
+
+`reason-authoring`'s placement (#87) is retrofitted to this shape rather
+than left as the exception — see `docs/design/config-assistance.md`'s own
+history and the handoff that did it.
+
 ## 3. Three tiers
 
 - **Tier one — role-authored vocabulary.** A list this plant owns: its
