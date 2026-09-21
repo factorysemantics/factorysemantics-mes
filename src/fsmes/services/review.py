@@ -105,16 +105,31 @@ def _change(field: str, label: str, before, after, *, note: str | None = None,
     return row
 
 
+def _count(number: int, noun: str) -> str:
+    """`1 recorded interval`, `2 recorded intervals`. The plant's counts are
+    read by people, and a panel that says "1 reasons" is a panel somebody
+    stops trusting about the numbers that matter."""
+    return f"{number} {noun}" if number == 1 else f"{number} {noun}s"
+
+
+def _stop(text) -> str:
+    """One of the plant's own values, with one full stop after it and never
+    two. A description that ends in a sentence already has its punctuation;
+    a name does not."""
+    text = str(text).rstrip()
+    return text if text.endswith((".", "!", "?", ":", ";")) else f"{text}."
+
+
 def _sentence(change: dict) -> str:
     """What the coach card says about one change. Deterministic, and built
     from the two values themselves - never a summary of them."""
     before, after = change.get("before"), change.get("after")
     if before in (None, ""):
-        text = f"The draft says: {after}. The plant says nothing about this today."
+        text = f"The draft says: {_stop(after)} The plant says nothing about this today."
     elif after in (None, ""):
-        text = f"Today: {before}. The draft leaves it empty."
+        text = f"Today: {_stop(before)} The draft leaves it empty."
     else:
-        text = f"Today: {before}. The draft: {after}."
+        text = f"Today: {_stop(before)} The draft: {_stop(after)}"
     note = change.get("note")
     return f"{text} {note}" if note else text
 
@@ -169,7 +184,8 @@ def _headline(row) -> str:
     """The dry run's one line for a vocabulary: what this draft would do to
     what the plant has already recorded."""
     if row.retires:
-        return f"retires a code that labels {row.labels_intervals} recorded intervals"
+        return ("retires a code that labels "
+                f"{_count(row.labels_intervals or 0, 'recorded interval')}")
     return ("a change to a reason already on the list" if row.revision > 1
             else "a new reason for the list")
 
@@ -225,9 +241,11 @@ def _review_downtime_reason(session: Session, code: str, revision: int) -> dict:
             "status", f"{code} leaves the list",
             "on the list, and choosable at the machine",
             "off the list; nothing new can be labelled with it",
-            note=(f"{carried} recorded intervals already carry this code and keep it. "
-                  "Retiring changes what may be chosen next, never what was chosen "
-                  "before, so the pareto goes on showing it under its name.")))
+            note=(f"{_count(carried, 'recorded interval')} already "
+                  f"{'carries' if carried == 1 else 'carry'} this code and "
+                  f"{'keeps' if carried == 1 else 'keep'} it. Retiring changes what "
+                  "may be chosen next, never what was chosen before, so the pareto "
+                  "goes on showing it under its name.")))
     elif supersedes is None:
         changes.append(_change(
             "code", f"{code} is a code the plant does not have", None, code,
@@ -277,7 +295,10 @@ def _review_downtime_reason(session: Session, code: str, revision: int) -> dict:
         "coverage": {
             "vocabulary_total": total,
             "vocabulary_total_after": after_total,
-            "of": "reasons on the list an operator may choose from",
+            # The noun, already right for the count. The server owns the
+            # plant's words here exactly as it owns the catalogue's.
+            "of": "reason an operator may choose from" if total == 1
+                  else "reasons an operator may choose from",
         },
         # What history already carries the code. Counted now, beside what the
         # drafter said when they wrote the draft - a draft that waited a week

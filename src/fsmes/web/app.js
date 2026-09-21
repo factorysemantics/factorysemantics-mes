@@ -378,6 +378,9 @@ function renderReview(data) {
     list.append(empty);
   }
 
+  // The server owns the words, including which of them are plural: this
+  // panel is read by the person who signs, and "1 reasons" is where they
+  // stop trusting the numbers on it.
   const coverage = data.coverage;
   $("#review-coverage").textContent =
     `The list holds ${coverage.vocabulary_total} ${coverage.of}`
@@ -386,22 +389,24 @@ function renderReview(data) {
       : `, and would hold ${coverage.vocabulary_total_after}.`);
 
   const affected = data.affected;
+  const many = affected.intervals_labelled !== 1;
   $("#review-affected").textContent =
-    `${affected.intervals_labelled} recorded intervals already carry ${data.code}. `
-    + "They keep their label whatever is signed here."
+    `${affected.intervals_labelled} recorded interval${many ? "s" : ""} already `
+    + `${many ? "carry" : "carries"} ${data.code}. `
+    + `${many ? "They keep their labels" : "It keeps its label"} whatever is signed here.`
     + (affected.moved_since_the_draft
       ? ` The draft was written when it was ${affected.stated_in_the_draft}.`
       : "");
 
   // Undo, from the same place the change is read: the revision this would
   // supersede, and the one click that puts it back.
-  const supersedes = $("#review-supersedes");
-  supersedes.querySelector(".what").textContent = data.supersedes
+  const supersedes = $("#review-supersedes").querySelector(".what");
+  supersedes.textContent = data.supersedes
     ? `It would supersede revision ${data.supersedes.revision} — ${data.supersedes.name}`
-      + (data.supersedes.approved_by ? `, approved by ${data.supersedes.approved_by}.` : ".")
+      + (data.supersedes.approved_by ? `, approved by ${data.supersedes.approved_by}. ` : ". ")
     : "There is no earlier revision: nothing of this code is in force today.";
-  const old = supersedes.querySelector("button");
-  if (old) old.remove();
+  // The button sits in the sentence that names the revision, so undo is read
+  // and reached in one place rather than hunted for on a history screen.
   if (data.undo) {
     supersedes.append(button(`Put revision ${data.supersedes.revision} back`, async () => {
       if (await act(data.undo, `${data.code} is back at revision ${data.supersedes.revision}`)) {

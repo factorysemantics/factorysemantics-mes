@@ -185,8 +185,57 @@ forgotten draft reads as *"11 days"* rather than falling off the end of a list.
 
 One kind is behind that endpoint today — the downtime vocabulary. Work
 instructions, triggers, setpoint adjustments and the design-chat notes join
-the same panel next; each already has a lifecycle, and joining is a row in
-`PENDING_KINDS` and a reader, not a new mechanism.
+the same panel next; each already has a lifecycle, and joining is an entry in
+`fsmes/services/review.py`'s registry — a reader and a reviewer — not a new
+mechanism.
+
+## Reading one before you sign it
+
+A row on that panel says a draft exists. It says nothing about what the draft
+would do to the plant, and signing on that is signing blind.
+
+**Review** on the row opens the substance, from
+`GET /dashboard/pending-approvals/{kind}/{code}/{revision}`:
+
+| What it shows | Why it is there |
+|---|---|
+| The draft against the revision it would supersede | A diff in the plant's own words — both values, never a summary of them |
+| How many reasons the list holds, and would hold | A list that grows by one and a list that shrinks by one are different acts |
+| How many recorded intervals already carry the code | And what the drafter said when they wrote it: a draft that waited a week was written against a smaller number |
+| Who drafted it, and on whose behalf | An agent drafting for a person says so here, not only in the audit trail |
+| The revision it would supersede, whole | With the one click that puts it back — undo is in the same reading as the change, not a hunt through a history screen |
+
+It is gated by the same capability that lists the kind. A panel that refuses
+the button while showing the substance is a panel that leaks the draft, so a
+caller who cannot sign a downtime reason cannot read its drafts here either.
+
+## Being walked through what changes
+
+*Walk me through it*, on the review, hands the draft to the floor assistant —
+the same guide mode that walks an operator through recording an inspection,
+with the same ring around the real control on the real screen.
+
+The walk is **generated from the draft's own diff**: one step per change, in
+order, each painting the row it belongs to, and the approve button last with
+what undoing it would take said on the card. A draft that changes a name and a
+sentence is three steps. A retirement is two: what leaves the list, with the
+count of intervals that keep their label, and then the button.
+
+![The review of a waiting draft, with the walk on its first step: the ring
+around the row that changed, and the coach card saying what the plant says
+today and what the draft would make it say.](images/review-walkthrough.png)
+
+Nothing in it is narrated by a model. The steps are built from the two values
+themselves, deterministically, and the coach card says so — *built from the
+draft itself, step by step; no model wrote this*. What is about to be signed
+is the one thing in this product that may not be paraphrased
+([decision 0031](../decisions/0031-a-judgment-is-a-proposal.md)).
+
+This is the first guide in the product that nobody authored, and the guide
+runner learned one thing to play it: a step may point at **one of several rows
+carrying the same anchor, by position**, because how many rows there are is not
+known until the draft is read. Everything else — the ring, the coach card,
+crossing screens, stopping — is what it already did.
 
 ## Approving, and undoing
 

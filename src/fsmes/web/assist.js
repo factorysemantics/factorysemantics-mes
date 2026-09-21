@@ -416,7 +416,8 @@
   function showPanel() {
     if (!panel) { panel = buildPanel(); document.body.appendChild(panel); }
     panel.style.display = "flex";
-    $(".assist-launch").style.display = "none";
+    const launcher = $(".assist-launch");
+    if (launcher) launcher.style.display = "none";
     try { sessionStorage.setItem(OPEN_KEY, "1"); } catch (e) { /* fine */ }
     if (!$("#assist-log").childElementCount && entries.length) replayEntries();
     if (!$("#assist-log").childElementCount) hello();
@@ -458,7 +459,12 @@
     walk = null;
     const launch = $(".assist-launch");
     if (launch) launch.style.display = "flex";
-    if (finished && wasGuide) {
+    // The panel comes back at the end of a walk - but only if there is one.
+    // A generated walk can be started by a screen (the approval review) in a
+    // session where the assistant never booted: it boots at page load and the
+    // dashboard signs in without one, so there is no launch button, no
+    // capabilities and no conversation to come back to. The walk just ends.
+    if (finished && wasGuide && me) {
       showPanel();
       say(`That is ${wasGuide.title.toLowerCase()}. Ask me again any time.`, "bot");
       if (wasGuide.evidence) offerEvidence({ evidence: wasGuide.evidence });
