@@ -1946,6 +1946,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="2a. Navigation: one Configuration entry per domain, not one per setting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#as-built-config-nav-restructure-2026-09-21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        As built — config-nav-restructure, 2026-09-21
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -3721,6 +3738,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="2a. Navigation: one Configuration entry per domain, not one per setting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#as-built-config-nav-restructure-2026-09-21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        As built — config-nav-restructure, 2026-09-21
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -4066,6 +4100,37 @@ chip in that group, not a chip per setting.</p>
 <p><code>reason-authoring</code>'s placement (#87) is retrofitted to this shape rather
 than left as the exception — see <code>docs/design/config-assistance.md</code>'s own
 history and the handoff that did it.</p>
+<h3 id="as-built-config-nav-restructure-2026-09-21">As built — <code>config-nav-restructure</code>, 2026-09-21<a class="headerlink" href="#as-built-config-nav-restructure-2026-09-21" title="Permanent link">&para;</a></h3>
+<p>The shape above, in code. Engineering's <code>Configuration</code> entry opens
+<code>/dashboard/config/engineering</code>: a list of that workspace's configurable
+sections, stating its total the way every list in this product does, with one
+row today — the downtime vocabulary.</p>
+<ol>
+<li><strong>A section is a registry entry, not a navigation change.</strong> A module that
+   adds something configurable adds a <code>ConfigSection</code> to its own entry in
+   <code>src/fsmes/modules.py</code>, naming the domain it belongs to. The row appears;
+   the nav bar does not grow. The first section in a <strong>new</strong> domain adds one
+   <code>ConfigDomain</code> there and one <code>Configuration</code> entry to that group in
+   <code>FS.NAV</code>, and <code>tests/test_configuration_sections.py</code> refuses either half
+   without the other — which is what stops this being retrofitted a second
+   time.</li>
+<li><strong>Nothing behind the entry moved.</strong> <code>/dashboard/reasons</code> is the same page
+   at the same address, so every bookmark still opens it; only the nav entry
+   pointing at it directly is gone. The screen now lights the <code>Configuration</code>
+   entry it sits inside, the way a machine page lights <em>Machines</em>.</li>
+<li><strong>The page gates nothing.</strong> It is visible to anybody who may see the
+   workspace, as the screens it lists already are; each section keeps its own
+   <code>define</code>/<code>approve</code> capabilities exactly where its author put them. What the
+   page adds is naming those capabilities and saying whether the person
+   reading holds them — so somebody can see whether the door in front of them
+   opens before walking into it.</li>
+<li><strong>A section a plant does not serve is withheld and named</strong>, never silently
+   dropped: a workspace with one section and a workspace with one section and
+   three switched off are different plants.</li>
+</ol>
+<p>One domain exists today, <em>engineering</em>. The rest of §2's six arrive as their
+first section does; naming a domain with nothing in it would serve a page that
+says nothing.</p>
 <h2 id="3-three-tiers">3. Three tiers<a class="headerlink" href="#3-three-tiers" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Tier one — role-authored vocabulary.</strong> A list this plant owns: its

@@ -3891,8 +3891,8 @@ plant, or had to find one.</p>
 page is how it gets one.</p>
 <h2 id="the-short-version">The short version<a class="headerlink" href="#the-short-version" title="Permanent link">&para;</a></h2>
 <ol>
-<li>Somebody holding <code>process.define</code> <strong>drafts</strong> a reason, on
-   <strong>Engineering › Downtime reasons</strong> (<code>/dashboard/reasons</code>) or through the
+<li>Somebody holding <code>process.define</code> <strong>drafts</strong> a reason, on <strong>Engineering ›
+   Configuration › Downtime reasons</strong> (<code>/dashboard/reasons</code>) or through the
    API. Nothing changes on the floor.</li>
 <li>It appears on the <em>Waiting for you</em> panel on <code>/dashboard</code> — for the people
    who can act on it, and for nobody else.</li>
@@ -3935,9 +3935,14 @@ same shape work instructions, triggers and setpoint adjustments already have.
 An assistant that reads a month of what operators typed and proposes six codes
 is the point of the feature; an assistant that signs its own proposal is not.</p>
 <h2 id="the-screen">The screen<a class="headerlink" href="#the-screen" title="Permanent link">&para;</a></h2>
-<p><strong>Engineering › Downtime reasons</strong> (<code>/dashboard/reasons</code>) is where a plant's
-vocabulary is read and written. Everything below can also be done with a token
-and <code>curl</code>, and was only possible that way until this screen existed.</p>
+<p><strong>Engineering › Configuration › Downtime reasons</strong> (<code>/dashboard/reasons</code>) is
+where a plant's vocabulary is read and written. It is one row on the Engineering
+workspace's <strong>Configuration</strong> page (<code>/dashboard/config/engineering</code>), which is
+where every configurable thing in that workspace is listed - one Configuration
+entry per workspace, never one per setting, however many settings arrive. The
+address above is unchanged, so a bookmark still opens this screen directly.</p>
+<p>Everything below can also be done with a token and <code>curl</code>, and was only
+possible that way until this screen existed.</p>
 <p>The list is open to anybody who can see the plant — a vocabulary nobody can
 read is a vocabulary nobody can choose from — and shows <strong>every word the plant
 has ever had</strong>, not just the approved ones. A word that is on the list <em>and</em>
