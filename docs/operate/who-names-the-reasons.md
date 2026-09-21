@@ -222,10 +222,10 @@ the same guide mode that walks an operator through recording an inspection,
 with the same ring around the real control on the real screen.
 
 The walk is **generated from the draft's own diff**: one step per change, in
-order, each painting the row it belongs to, and the approve button last with
-what undoing it would take said on the card. A draft that changes a name and a
-sentence is three steps. A retirement is two: what leaves the list, with the
-count of intervals that keep their label, and then the button.
+order, and the approve button last with what undoing it would take said on the
+card. A draft that changes a name and a sentence is three steps. A retirement
+is two: what leaves the list, with the count of intervals that keep their
+label, and then the button.
 
 ![The review of a waiting draft, with the walk on its first step: the ring
 around the row that changed, and the coach card saying what the plant says
@@ -237,11 +237,59 @@ draft itself, step by step; no model wrote this*. What is about to be signed
 is the one thing in this product that may not be paraphrased
 ([decision 0031](../decisions/0031-a-judgment-is-a-proposal.md)).
 
+### The step goes to the floor, not to a description of the floor
+
+A change to this vocabulary lands in one place: the dropdown an operator picks
+a stop from, at the machine. So that is where the walk takes you. A step whose
+change has a real control **leaves the review** and rings the actual
+`<select>` on the station screen, with the reason under review already chosen
+in it, so you read the change standing in front of the thing it changes.
+
+The destination is computed from the plant's own records, never proposed by
+anything: **the machine that has recorded the most stops under this code**,
+with the coach card saying which machine and how many machines have recorded
+it at all. The vocabulary itself is plant-wide — every station offers the same
+list — so which station is a fact only the history can answer.
+
+![The first step of the same walk, on the station screen: PACK01's own reason
+dropdown with the reason under review chosen in it, the ring around that
+dropdown, and the coach card saying what the plant says today, what the draft
+would make it say, and which machine this is being shown
+on.](images/review-walk-station.png)
+
+A step that changes the **word** rings the dropdown; a step that changes the
+**sentence beside it** rings that sentence, unless the plant has not written
+one yet — a ring around an empty paragraph points at nothing, so that step
+rings the word instead.
+
+That screen opens the list **to be read, not answered**. `Never mind` and
+`It is down` are off the screen while it is open, and no state change is
+armed: an approver reading a dropdown must not be one mis-click from putting a
+running machine down. `Close` puts it away.
+
+**Three cases have nowhere honest to stand, and keep the old behaviour** — the
+step stays on the review and describes the change in words:
+
+| Case | Why there is no destination |
+|---|---|
+| A brand-new reason | Nobody can have chosen a word the plant does not have yet, and the dropdown does not contain it, so ringing that dropdown would point at the absence of the thing under discussion |
+| A code on the list that no machine has ever chosen | Naming a machine out of the equipment table would be inventing a place |
+| A code already retired | It has left the list the walk would point at |
+
+The last step is always the **Approve** button, back on the review — so
+following the walk to the end returns you to the signature rather than
+stranding you at the machine. The coach card also carries a **Back to the
+review** button on any step that has left the dashboard, for stopping early,
+and the review you were reading is reopened when you get back. Nothing is
+signed by any of this: the draft is still waiting until Approve is pressed.
+
 This is the first guide in the product that nobody authored, and the guide
-runner learned one thing to play it: a step may point at **one of several rows
-carrying the same anchor, by position**, because how many rows there are is not
-known until the draft is read. Everything else — the ring, the coach card,
-crossing screens, stopping — is what it already did.
+runner learned three things to play it: a step may point at **one of several
+rows carrying the same anchor, by position** (how many rows there are is not
+known until the draft is read); a step's destination may name **which machine**
+and not only which screen; and a guide may name the screen it **came from**, so
+a walk that crossed can be brought back. Everything else — the ring, the coach
+card, crossing screens, stopping — is what it already did.
 
 ## Approving, and undoing
 

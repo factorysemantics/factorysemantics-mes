@@ -15,6 +15,7 @@ let vocabulary = null;     // the plant's approved downtime reasons, or null
 let current = null;        // this machine's current state row
 let queue = [];
 let pendingState = null;   // a state change awaiting its reason
+let reading = null;        // the code whose list is open to be read, not answered
 let completing = null;     // a maintenance order awaiting findings
 let qSpecs = [];           // specs for what this machine is running now
 let qSpecsTotal = 0;       // how many that material has in all
@@ -84,9 +85,13 @@ async function loadMachines() {
     select.value = want;
   }
   rememberMachine(select.value);
-  select.addEventListener("change", () => {
+  select.addEventListener("change", async () => {
+    const open = reading;
     rememberMachine(select.value);
-    refresh();
+    await refresh();
+    // The same list, said about the machine now on screen. The vocabulary is
+    // the plant's, so it does not change; the sentence under it does.
+    if (open) readReason(open);
   });
 }
 
@@ -123,6 +128,7 @@ function requestState(name) {
     // The reason is the point. The confirm button stays dead until there is
     // one, because "down: (blank)" is the row nobody can act on.
     pendingState = name;
+    stopReading();
     $("#down-reason").value = "";
     const select = $("#down-reason-code");
     if (select) select.selectedIndex = 0;
@@ -165,6 +171,52 @@ async function loadReasons() {
   }
 }
 
+/* ---------- the list, opened to be read ----------
+
+   A person approving a change to the plant's downtime vocabulary is being
+   asked what it does to the floor, and the floor is this screen: the select
+   an operator actually picks a stop from. `?reason=<code>` opens that select
+   for reading and puts the code in it, so the walk that brought them here
+   rings a control showing the very word under review.
+
+   Read, and nothing else. `pendingState` stays null and the two buttons that
+   would change this machine's state are off the screen while the box is
+   open, because an approver reading a list must not be one mis-click from
+   putting a running machine down. Pressing `down` for real leaves this mode
+   the way any other screen leaves a preview: it puts the real buttons back.
+
+   A code that is not on this plant's list, or a plant with no list at all,
+   opens nothing - the walk then says on its own card that the control is not
+   on this screen, which is true and better than an empty box. */
+
+function stopReading() {
+  if (!reading) return;
+  reading = null;
+  $("#reason-actions").classList.remove("hidden");
+  $("#reason-reading").classList.add("hidden");
+}
+
+function readReason(code) {
+  const select = $("#down-reason-code");
+  if (!picking() || !select) return false;
+  if (!code || ![...select.options].some((option) => option.value === code)) return false;
+
+  reading = code;
+  pendingState = null;
+  select.value = code;
+  // The sentence behind the word, the same one an operator gets when they
+  // choose it - the change event is what fills it, and a value set from
+  // script does not raise one.
+  $("#down-reason-help").textContent = (vocabulary && vocabulary.reasons[code]) || "";
+  $("#reason-reading-note").textContent =
+    `Open so it can be read. Choosing here changes nothing: ${machine} stays `
+    + `${current ? current.state : "as it is"}.`;
+  $("#reason-actions").classList.add("hidden");
+  $("#reason-reading").classList.remove("hidden");
+  $("#reason-box").classList.remove("hidden");
+  return true;
+}
+
 async function setState(name, reason, reasonCode) {
   try {
     const body = { state: name };
@@ -192,6 +244,10 @@ function wireReason() {
   });
   $("#reason-cancel").addEventListener("click", () => {
     pendingState = null;
+    $("#reason-box").classList.add("hidden");
+  });
+  $("#reason-reading-close").addEventListener("click", () => {
+    stopReading();
     $("#reason-box").classList.add("hidden");
   });
   $("#reason-confirm").addEventListener("click", () => {
@@ -677,5 +733,8 @@ async function refresh() {
   await loadReasons();
   await loadLots();
   await refresh();
+  // After the first refresh, so the note can say what this machine is doing
+  // while the list is being read.
+  readReason(new URL(window.location).searchParams.get("reason"));
   setInterval(refresh, REFRESH_MS);
 })();

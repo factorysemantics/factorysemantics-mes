@@ -475,11 +475,13 @@
     const g = walk.guide;
     // A generated guide has an id for the audit trail's sake, but no endpoint
     // serves it: it is saved whole, like a recording played from a draft.
+    // Whole means whole - it used to be copied field by field, and the first
+    // guide that crossed a screen boundary arrived on the other side having
+    // quietly lost `generated`, so the card that says no model wrote this
+    // stopped saying it exactly where it matters most.
     const saved = (g.id && !g.generated)
       ? { id: g.id, index: walk.index }
-      : { walk: { title: g.title, steps: g.steps, evidence: g.evidence || null,
-                  recorded_by: g.recorded_by, revision: g.revision, approved_by: g.approved_by },
-          index: walk.index, exact };
+      : { walk: { ...g }, index: walk.index, exact, moved: movedFor };
     sessionStorage.setItem(KEY, JSON.stringify(saved));
   }
 
@@ -519,17 +521,50 @@
     return document.querySelectorAll(`[data-assist="${step.anchor}"]`)[step.nth] || null;
   }
 
+  /* Which step we last left the page for. A destination is not always a
+     path: a step may want a particular machine's station, or a particular
+     material, and those ride in the query string. If the page it lands on
+     does not end up matching - the machine is not one this screen offers,
+     say - comparing again would send the browser round the same load for
+     ever, so a step is allowed to move the page once and then has to make do
+     with what it got. */
+  let movedFor = null;
+
+  /* Whether this step is asking for a screen other than the one we are on.
+     A step's `page` may carry a query string; every parameter it names has
+     to match, and any the page adds for itself are none of its business. */
+  function elsewhere(step) {
+    if (!step.page) return false;
+    const want = new URL(step.page, window.location.origin);
+    if (want.pathname !== window.location.pathname) return true;
+    const here = new URLSearchParams(window.location.search);
+    for (const [key, value] of want.searchParams) {
+      if (here.get(key) !== value) return true;
+    }
+    return false;
+  }
+
   function showStep() {
     if (!walk) return;
     const step = walk.guide.steps[walk.index];
 
     // A guide may cross screens. Remember where we are and let the next page
     // pick the walk back up.
-    if (step.page && window.location.pathname !== step.page) {
+    if (elsewhere(step)) {
+      if (movedFor === walk.index) {
+        // We already came here for this step and the screen is not what was
+        // asked for. Say that, rather than reloading it again.
+        paint(null, step, "That screen did not come up as this step asked for it.");
+        return;
+      }
+      movedFor = walk.index;
       saveWalk(true);
       window.location = step.page;
       return;
     }
+    // We are on the screen this step wanted, so the move is spent: going
+    // back to this step later is allowed to cross again.
+    movedFor = null;
 
     // A control may live behind a tab: open it first.
     if (step.tab) {
@@ -600,6 +635,21 @@
     const quit = el("button", "ghost", "Stop");
     quit.addEventListener("click", () => endWalk(false));
     row.appendChild(quit);
+
+    // A walk that crossed onto another screen can be brought back to the one
+    // it started on, without finishing it. The screen that signs is the
+    // point of a review walk, and stopping in front of the control it was
+    // reading would leave somebody on the floor's screen with no way back to
+    // it but the navigation.
+    if (walk.guide.home && window.location.pathname !== walk.guide.home) {
+      const back = walk.guide.home;   // read now: ending the walk forgets it
+      const home = el("button", "ghost", walk.guide.home_label || "Back");
+      home.addEventListener("click", () => {
+        endWalk(false);
+        window.location = back;
+      });
+      row.appendChild(home);
+    }
     row.appendChild(el("span", "spacer"));
 
     if (walk.index > 0) {
@@ -684,6 +734,9 @@
         const parsed = JSON.parse(saved);
         if (parsed.walk) {
           walk = { guide: parsed.walk, index: Math.min(parsed.index, parsed.walk.steps.length - 1) };
+          // Which step we crossed for, so arriving on a screen that is not
+          // quite what was asked for does not send us round again.
+          movedFor = parsed.moved === undefined ? null : parsed.moved;
           launch.style.display = "none";
           setTimeout(showStep, 400);
           return;
