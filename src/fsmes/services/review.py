@@ -36,8 +36,9 @@ from sqlalchemy.orm import Session
 from fsmes.db import utcnow
 from fsmes.services import NotFound
 
-#: The screen a review is read on. Every generated step names it, so a walk
-#: that is picked up after a page load lands back where the review is.
+#: The screen a review is read on. Every generated step falls back to it, and
+#: the walk names it as its home, so a walk that has crossed onto another
+#: screen can be brought back to the panel that signs.
 PAGE = "/dashboard"
 
 #: The anchors the review panel carries, and what each is for. They are in
@@ -45,6 +46,22 @@ PAGE = "/dashboard"
 #: built-in guides.
 CHANGE_ANCHOR = "review-change"       # one per change row, in order
 APPROVE_ANCHOR = "review-approve"     # the control that signs it
+
+#: The operator's own screen, and the control on it that a downtime
+#: vocabulary is: the list an operator picks a stop from. A change to the
+#: vocabulary is read there, in front of the real select, rather than
+#: described on the review panel - an approver is being asked what this does
+#: to the floor, and the floor is one screen away.
+STATION_PAGE = "/dashboard/station"
+
+#: The two halves of that control, and the field each belongs to: the word on
+#: the list, and the sentence the screen shows beside the word once it is
+#: chosen. A step that changes the sentence rings the sentence.
+STATION_ANCHORS = {                             # both in `web/station.html`
+    "name": "station-reason-code",
+    "description": "station-reason-help",
+    "status": "station-reason-code",
+}
 
 
 # --------------------------------------------------------------- the kinds
@@ -174,6 +191,12 @@ def walkthrough(reviewed: dict) -> dict:
         "title": f"Before you sign {reviewed['code']} revision {reviewed['revision']}",
         "steps": steps,
         "generated": True,
+        # Where the signing happens, so a walk that has crossed onto the
+        # floor's own screen can be brought back to it in one move. A walk
+        # that strands somebody in front of the control they just read is a
+        # walk that stopped short of the thing it was for.
+        "home": PAGE,
+        "home_label": "Back to the review",
     }
 
 
@@ -188,6 +211,37 @@ def _headline(row) -> str:
                 f"{_count(row.labels_intervals or 0, 'recorded interval')}")
     return ("a change to a reason already on the list" if row.revision > 1
             else "a new reason for the list")
+
+
+def _station_for(session, code: str) -> tuple[str, str] | None:
+    """Where a change to this word is visible on the floor, and how to say so.
+
+    `(url, sentence)`, or `None` when there is nowhere honest to stand.
+
+    The vocabulary is plant-wide - every station offers the same list - so
+    "which station" is not in the list itself. It is in the history: the
+    machines that have actually recorded a stop under this code are the ones
+    whose operators choose this word, and the busiest of them is where the
+    change is most worth looking at. Deterministic, and computed from the
+    plant's own records; nothing here proposes anything.
+
+    `None` for a code with no recorded stop behind it - a brand-new reason
+    nobody can have chosen yet, or one that has been on the list and never
+    used. Pointing at a machine picked out of the equipment table would be
+    inventing a place, and the review says it in words instead.
+    """
+    from fsmes.services import reasons as reasons_service
+
+    machines = reasons_service.machines_labelling(session, code)
+    if not machines:
+        return None
+    machine, _count = machines[0]
+    where = (f"The walk shows this on {machine}, "
+             + (f"the machine that has recorded {code}."
+                if len(machines) == 1
+                else f"the busiest of the {len(machines)} machines that have "
+                     f"recorded {code}."))
+    return f"{STATION_PAGE}?m={machine}&reason={code}", where
 
 
 def _waiting_downtime_reasons(session: Session, limit: int) -> tuple[list[dict], int]:
@@ -234,6 +288,44 @@ def _review_downtime_reason(session: Session, code: str, revision: int) -> dict:
     live = reasons_service.in_force(session, code)
     supersedes = live if (live is not None and live.id != row.id) else None
 
+    on_the_list = reasons_service.catalog(session)
+
+    # Where a person would see this change land, if there is such a place.
+    # Two conditions, and both are about honesty rather than convenience: the
+    # code has to be on the list the station screen draws today - otherwise
+    # the walk would ring a select that does not contain the word it is
+    # talking about - and some machine has to have recorded a stop under it,
+    # or there is no floor to stand on. A code that fails either is described
+    # on the review panel, exactly as it was before this existed.
+    floor = _station_for(session, code) if code in on_the_list else None
+
+    def on_the_floor(field: str, showing: bool = True) -> dict:
+        """`page` and `anchor` for a field with a control of its own, or
+        nothing at all - which is what makes a step stay on the review.
+
+        `showing` is false when the control for this field has nothing in it
+        on the screen today: the sentence beside a code is an empty paragraph
+        until a plant writes one, and a ring around an empty paragraph is a
+        line on the screen pointing at nothing. The step then rings the word
+        itself, which is what a person is actually looking at.
+        """
+        if not floor or field not in STATION_ANCHORS:
+            return {}
+        anchor = STATION_ANCHORS[field if showing else "name"]
+        return {"page": floor[0], "anchor": anchor}
+
+    # Which machine, said once. It is the same answer for every row of one
+    # diff, and a panel that repeats it under each change reads like two
+    # different facts about two different machines.
+    said_where = False
+
+    def where() -> str | None:
+        nonlocal said_where
+        if not floor or said_where:
+            return None
+        said_where = True
+        return floor[1]
+
     changes: list[dict] = []
     if row.retires:
         carried = reasons_service.intervals_labelled(session, code)
@@ -245,7 +337,9 @@ def _review_downtime_reason(session: Session, code: str, revision: int) -> dict:
                   f"{'carries' if carried == 1 else 'carry'} this code and "
                   f"{'keeps' if carried == 1 else 'keep'} it. Retiring changes what "
                   "may be chosen next, never what was chosen before, so the pareto "
-                  "goes on showing it under its name.")))
+                  "goes on showing it under its name."
+                  + (f" {where()}" if floor else "")),
+            **on_the_floor("status")))
     elif supersedes is None:
         changes.append(_change(
             "code", f"{code} is a code the plant does not have", None, code,
@@ -257,9 +351,10 @@ def _review_downtime_reason(session: Session, code: str, revision: int) -> dict:
         before = getattr(supersedes, field, None) if supersedes else None
         after = getattr(row, field)
         if (before or "") != (after or "") and (before or after):
-            changes.append(_change(field, label, before or None, after or None))
+            changes.append(_change(
+                field, label, before or None, after or None, note=where(),
+                **on_the_floor(field, showing=bool(before))))
 
-    on_the_list = reasons_service.catalog(session)
     total = len(on_the_list)
     if row.retires:
         after_total = total - 1 if code in on_the_list else total

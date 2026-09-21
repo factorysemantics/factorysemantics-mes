@@ -25,7 +25,12 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from fsmes.db import utcnow
-from fsmes.domain import DowntimeReason, DowntimeReasonStatus, EquipmentState
+from fsmes.domain import (
+    DowntimeReason,
+    DowntimeReasonStatus,
+    Equipment,
+    EquipmentState,
+)
 from fsmes.services import Conflict, Invalid, NotFound, audit
 
 #: A code is lowercase, starts with a letter, and holds letters, digits and
@@ -154,6 +159,27 @@ def intervals_by_code(session: Session) -> dict[str, int]:
         .where(EquipmentState.reason_code.is_not(None))
         .group_by(EquipmentState.reason_code)).all()
     return {code: count for code, count in rows}
+
+
+def machines_labelling(session: Session, code: str) -> list[tuple[str, int]]:
+    """Which machines have recorded a stop under this code, and how many each.
+
+    Most first, then by machine code, so the answer is the same every time it
+    is asked. This is what makes a word in the vocabulary point at somewhere
+    real: the list itself is plant-wide, but the floor that actually chooses a
+    word is a fact the history already holds, and a screen that wants to show
+    an approver the effect of a change has to stand somewhere.
+
+    An empty list is an answer, not a gap: a code nobody has ever chosen has
+    no machine behind it, and guessing one would be inventing a place.
+    """
+    rows = session.execute(
+        select(Equipment.code, func.count())
+        .join(EquipmentState, EquipmentState.equipment_id == Equipment.id)
+        .where(EquipmentState.reason_code == code)
+        .group_by(Equipment.code)).all()
+    return sorted(((machine, count) for machine, count in rows),
+                  key=lambda row: (-row[1], row[0]))
 
 
 def vocabulary(session: Session) -> list[dict]:
