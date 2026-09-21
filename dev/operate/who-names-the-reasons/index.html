@@ -1095,6 +1095,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-screen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The screen
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The screen">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#retiring-from-the-screen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retiring from the screen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-the-screen-does-not-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the screen does not do
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#drafting-one" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3626,6 +3665,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-screen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The screen
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The screen">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#retiring-from-the-screen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retiring from the screen
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-the-screen-does-not-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the screen does not do
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#drafting-one" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3769,8 +3847,9 @@ plant, or had to find one.</p>
 page is how it gets one.</p>
 <h2 id="the-short-version">The short version<a class="headerlink" href="#the-short-version" title="Permanent link">&para;</a></h2>
 <ol>
-<li>Somebody holding <code>process.define</code> <strong>drafts</strong> a reason. Nothing changes on
-   the floor.</li>
+<li>Somebody holding <code>process.define</code> <strong>drafts</strong> a reason, on
+   <strong>Engineering › Downtime reasons</strong> (<code>/dashboard/reasons</code>) or through the
+   API. Nothing changes on the floor.</li>
 <li>It appears on the <em>Waiting for you</em> panel on <code>/dashboard</code> — for the people
    who can act on it, and for nobody else.</li>
 <li>Somebody holding <code>process.approve</code> <strong>puts it in force</strong>. The row records
@@ -3811,7 +3890,102 @@ screen and no deployment.</p>
 same shape work instructions, triggers and setpoint adjustments already have.
 An assistant that reads a month of what operators typed and proposes six codes
 is the point of the feature; an assistant that signs its own proposal is not.</p>
+<h2 id="the-screen">The screen<a class="headerlink" href="#the-screen" title="Permanent link">&para;</a></h2>
+<p><strong>Engineering › Downtime reasons</strong> (<code>/dashboard/reasons</code>) is where a plant's
+vocabulary is read and written. Everything below can also be done with a token
+and <code>curl</code>, and was only possible that way until this screen existed.</p>
+<p>The list is open to anybody who can see the plant — a vocabulary nobody can
+read is a vocabulary nobody can choose from — and shows <strong>every word the plant
+has ever had</strong>, not just the approved ones. A word that is on the list <em>and</em>
+has an unsigned change waiting says both things at once, because an engineer
+told only the second would read a word as off the floor while operators are
+still choosing it:</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>What it says</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reason</td>
+<td>the code the analysis groups on, and the name on the operator's button</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>the sentence shown beside it at the machine</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>where the word stands — <em>on the list</em> or <em>retired</em> — and beside it what is waiting on somebody: <em>change waiting</em>, <em>retirement waiting</em>. A word nobody has ever signed reads <em>drafted, not signed</em></td>
+</tr>
+<tr>
+<td>Rev</td>
+<td>the revision in force, and the one drafted behind it: <code>1 → 2</code></td>
+</tr>
+<tr>
+<td>Drafted</td>
+<td>who wrote the newest revision, on whose behalf if an agent wrote it for somebody, and when</td>
+</tr>
+<tr>
+<td>Signed</td>
+<td>who put the revision in force and when, or <code>—</code> where nothing has been signed yet</td>
+</tr>
+<tr>
+<td>Labels</td>
+<td>how many recorded intervals carry the code</td>
+</tr>
+</tbody>
+</table>
+<p>Four tiles above it count the plant's vocabulary — on the list, drafts
+waiting, retired, and every word in all — and the list states its own total
+under the table.</p>
+<p><strong>The form is only there for a person holding <code>process.define</code></strong>, and it is
+absent rather than refusing: everyone else reads the list and sees no form at
+all. Three boxes — code, name, description — and <em>Save draft</em>.</p>
+<ul>
+<li><strong>A new word</strong>: type a code that does not exist yet.</li>
+<li><strong>The next revision of a word already in force</strong>: type its code (the box
+  offers what the plant already has). <em>New revision</em> on the row fills the form
+  for you.</li>
+<li><strong>Editing a draft nobody has signed</strong>: <em>Edit draft</em> on the row. Nobody is
+  choosing from it yet, so it is edited in place rather than stacking up
+  revisions.</li>
+</ul>
+<p>Nothing in the form re-states what the server already checks. A code that is
+spelled wrong, taken, or a word the product owns comes back as <strong>the server's
+own sentence</strong>, shown as it was written — a second copy of the rule in
+JavaScript is the copy that drifts, and the one that drifts is the one the
+person reads.</p>
+<p>Saving puts the draft on the <em>Waiting for you</em> panel and changes nothing on
+the floor. The screen says so where you are standing:</p>
+<blockquote>
+<p><code>jam_infeed rev 1 drafted — it reaches the floor when somebody signs it on
+the Floor screen</code></p>
+</blockquote>
+<h3 id="retiring-from-the-screen">Retiring from the screen<a class="headerlink" href="#retiring-from-the-screen" title="Permanent link">&para;</a></h3>
+<p><em>Retire</em> appears only on a word that is actually on the list. It asks first,
+and <strong>the confirmation carries the number</strong>:</p>
+<blockquote>
+<p>Retire <code>jam_infeed</code>? 412 recorded intervals carry it. They keep the label —
+retiring changes what may be chosen next, never what was chosen before. The
+retirement is a draft until somebody signs it.</p>
+</blockquote>
+<p>That is the same number the API demands in <code>labels_intervals</code>, put in front of
+the person <em>before</em> they decide instead of arriving as a refusal afterwards. A
+code nothing carries says so plainly rather than showing a zero that reads like
+a missing figure.</p>
+<p>The retirement is a draft like any other: the word stays on the list until
+somebody holding <code>process.approve</code> signs it.</p>
+<h3 id="what-the-screen-does-not-do">What the screen does not do<a class="headerlink" href="#what-the-screen-does-not-do" title="Permanent link">&para;</a></h3>
+<p><strong>It does not sign anything.</strong> Drafting and approving are separate powers and
+this is the drafting screen; putting a revision in force — including the undo,
+which is approving the previous revision — happens on the <em>Waiting for you</em>
+panel or through the API below. A screen that both drafted and signed would
+be one click away from being a table somebody edits.</p>
 <h2 id="drafting-one">Drafting one<a class="headerlink" href="#drafting-one" title="Permanent link">&para;</a></h2>
+<p>The same act from a terminal:</p>
 <div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-sX<span class="w"> </span>POST<span class="w"> </span><span class="s2">"</span><span class="nv">$MES</span><span class="s2">/equipment/downtime-reasons"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">"Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">"</span><span class="w"> </span>-H<span class="w"> </span><span class="s1">'Content-Type: application/json'</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"code": "jam_infeed", "name": "Jam at the infeed",</span>
