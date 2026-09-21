@@ -38,6 +38,16 @@
         asks why — an unlabelled stop is the row the pareto cannot explain.</p>
       <div id="state-buttons" class="state-grid" data-assist="station-state"></div>
       <div id="reason-box" class="reason hidden" data-assist="station-reason">
+        <!-- The same list, opened to be read rather than answered. An
+             approver walked here from a waiting draft is looking at the
+             control the change lands on; they are not putting this machine
+             down, and the buttons that would are not on the screen while
+             they look. -->
+        <div class="row hidden" id="reason-reading">
+          <p class="muted small" id="reason-reading-note"></p>
+          <span class="spacer"></span>
+          <button id="reason-reading-close" class="ghost" type="button">Close</button>
+        </div>
         <!-- Two ways to answer the same question, and the plant decides which.
              With an approved vocabulary the operator picks from it and may not
              type: four spellings of one reason is what the list exists to end,
@@ -47,13 +57,13 @@
         <div class="field hidden" id="reason-pick">
           <label for="down-reason-code">Why is it down?</label>
           <select id="down-reason-code" data-assist="station-reason-code"></select>
-          <p id="down-reason-help" class="muted small"></p>
+          <p id="down-reason-help" class="muted small" data-assist="station-reason-help"></p>
         </div>
         <div class="field" id="reason-type">
           <label for="down-reason">Why is it down?</label>
           <input id="down-reason" placeholder="e.g. jam at infeed, waiting on fitter">
         </div>
-        <div class="row">
+        <div class="row" id="reason-actions">
           <button id="reason-cancel" class="ghost" type="button">Never mind</button>
           <button id="reason-confirm" type="button" disabled>It is down</button>
         </div>
