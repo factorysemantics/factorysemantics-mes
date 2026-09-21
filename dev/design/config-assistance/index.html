@@ -1938,6 +1938,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#2a-navigation-one-configuration-entry-per-domain-not-one-per-setting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2a. Navigation: one Configuration entry per domain, not one per setting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#3-three-tiers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3702,6 +3713,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#2a-navigation-one-configuration-entry-per-domain-not-one-per-setting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2a. Navigation: one Configuration entry per domain, not one per setting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#3-three-tiers" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4019,6 +4041,31 @@ domain and leaving it empty is the honest answer.</p>
 <code>Material.unit</code> and <code>QualitySpec.unit</code> are free text with no list behind
 them.</p>
 <hr />
+<h2 id="2a-navigation-one-configuration-entry-per-domain-not-one-per-setting">2a. Navigation: one Configuration entry per domain, not one per setting<a class="headerlink" href="#2a-navigation-one-configuration-entry-per-domain-not-one-per-setting" title="Permanent link">&para;</a></h2>
+<p>Decided 2026-09-21, after Scott used the pilot and found the first
+counter-example: PR #87 gave downtime reasons their own top-level chip
+under Engineering (<code>FS.NAV</code>, <code>src/fsmes/web/common.js:44-52</code>) — <em>Machines,
+Tags, Triggers, Downtime reasons, Adjustments, Analysis, Master data</em>, one
+entry per thing. Scott's rule, stated for everything from here on: <strong>a
+domain gets one <code>Configuration</code> entry in its nav group; every configurable
+section of that domain lives inside it.</strong> He expects hundreds of
+configurable sections to exist eventually — a nav bar with a new top-level
+entry per one is the clutter this whole effort exists to prevent, and it
+is worse than the free-text box it replaces if the person configuring the
+plant cannot find the screen among fifty siblings.</p>
+<p>This is a correction to how §2's domains reach the screen, not to the
+domains themselves. Engineering's nav group today covers what will become
+two domains (process and controls) before either is split out; until they
+are, one <code>Configuration</code> entry under Engineering holds every domain's
+configurable section as a list within it, and a subnav or a picker inside
+that page — not a new top-level nav item — is how a second section (a
+second vocabulary, a routing editor, whatever process or controls
+engineering next needs to author) gets added. The same shape applies when
+Quality, Supply chain or the rest are built out: one <code>Configuration</code>
+chip in that group, not a chip per setting.</p>
+<p><code>reason-authoring</code>'s placement (#87) is retrofitted to this shape rather
+than left as the exception — see <code>docs/design/config-assistance.md</code>'s own
+history and the handoff that did it.</p>
 <h2 id="3-three-tiers">3. Three tiers<a class="headerlink" href="#3-three-tiers" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Tier one — role-authored vocabulary.</strong> A list this plant owns: its
