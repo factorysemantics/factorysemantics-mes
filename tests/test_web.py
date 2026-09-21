@@ -35,6 +35,7 @@ PAGES = [
     ("trace.html", "trace.js"),
     ("masterdata.html", "masterdata.js"),
     ("triggers.html", "triggers.js"),
+    ("reasons.html", "reasons.js"),
     ("adjustments.html", "adjustments.js"),
     ("coa.html", "coa.js"),
     ("admin.html", "admin.js"),
@@ -44,7 +45,8 @@ PAGES = [
 ROUTES = ["/dashboard", "/dashboard/station", "/dashboard/orders", "/dashboard/quality",
           "/dashboard/line", "/dashboard/line/3d", "/dashboard/machines", "/dashboard/tags",
           "/dashboard/maintenance", "/dashboard/schedule", "/dashboard/spc", "/dashboard/gauges", "/dashboard/trace",
-          "/dashboard/masterdata", "/dashboard/triggers", "/dashboard/adjustments", "/dashboard/coa",
+          "/dashboard/masterdata", "/dashboard/triggers", "/dashboard/reasons",
+          "/dashboard/adjustments", "/dashboard/coa",
           "/dashboard/machine/MIX01", "/dashboard/analysis", "/dashboard/admin",
           "/dashboard/instructions", "/dashboard/ops"]
 # Screens reached by a link or a tab rather than the nav: an object page has

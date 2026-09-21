@@ -18,7 +18,7 @@ from sqlalchemy import select
 
 from fsmes.db import utcnow
 from fsmes.domain import Equipment, EquipmentState, EquipmentStateName
-from fsmes.services import analysis, reasons, workorders
+from fsmes.services import Invalid, analysis, reasons, workorders
 
 
 @pytest.fixture()
@@ -318,6 +318,128 @@ def test_the_panel_signs_a_draft_and_the_queue_empties(admin, session):
     assert admin.post(item["approve"]).status_code == 200
     assert admin.get("/dashboard/pending-approvals").json()["total"] == 0
     assert "jam_infeed" in reasons.catalog(session)
+
+
+# ------------------------------------------------------------------ the screen
+#
+# PR #85 built the vocabulary end to end for signing and nowhere to draft
+# from, so the only person who could exercise the drafting half was somebody
+# holding a token and a terminal. These pin the half that was missing.
+
+
+def _screen(name):
+    from pathlib import Path
+    web = Path(__file__).resolve().parents[1] / "src" / "fsmes" / "web"
+    return (web / name).read_text(encoding="utf-8")
+
+
+def test_the_screen_lists_the_whole_vocabulary_and_says_how_big_it_is(admin, session):
+    """Approved, drafted and retired in one list. A screen reading only the
+    catalogue would show a person a list their own draft was missing from."""
+    _vocabulary(session, ("breakdown", "Breakdown"), ("changeover", "Changeover"))
+    reasons.define(session, code="changeover", name="Changeover", retires=True, actor="ENG")
+    reasons.approve(session, "changeover", 2, actor="ADMIN")
+    reasons.define(session, code="jam_infeed", name="Jam at the infeed", actor="ENG")
+    session.flush()
+
+    body = admin.get("/equipment/downtime-reasons/vocabulary").json()
+    assert body["total"] == 3 == len(body["reasons"])
+    states = {row["code"]: (row["in_force"] or {}).get("status") for row in body["reasons"]}
+    assert states == {"breakdown": "approved", "changeover": "retired", "jam_infeed": None}
+
+    waiting = next(r for r in body["reasons"] if r["code"] == "jam_infeed")
+    assert waiting["draft"]["name"] == "Jam at the infeed"
+    assert waiting["draft"]["created_by"] == "ENG"
+    # The catalogue an operator chooses from is untouched by all three.
+    assert list(reasons.catalog(session)) == ["breakdown"]
+
+
+def test_drafting_from_the_screen_makes_the_row_a_direct_call_makes(admin, session):
+    """The screen posts the same body a curl does, and gets the same row. It
+    is the form that was missing, not a second way of writing a reason."""
+    typed = admin.post("/equipment/downtime-reasons", json={
+        "code": "jam_infeed", "name": "Jam at the infeed",
+        "description": "Something stuck where product enters the machine."})
+    assert typed.status_code == 201, typed.text
+
+    row = typed.json()
+    listed = next(r for r in admin.get("/equipment/downtime-reasons/vocabulary")
+                  .json()["reasons"] if r["code"] == "jam_infeed")
+    assert listed["draft"] == row
+    assert row["status"] == "draft" and row["revision"] == 1
+    # And it is on the panel that signs it, unchanged.
+    assert admin.get("/dashboard/pending-approvals").json()["items"][0]["code"] == "jam_infeed"
+
+
+def test_a_person_who_may_not_draft_still_reads_the_list(client, session):
+    """A vocabulary nobody can read is a vocabulary nobody can choose from, so
+    the list is open and the form is not: the operator sees what the plant's
+    words are and is refused the act of writing one."""
+    _vocabulary(session, ("breakdown", "Breakdown"))
+    session.flush()
+
+    assert client.get("/equipment/downtime-reasons/vocabulary").json()["total"] == 1
+    refused = client.post("/equipment/downtime-reasons",
+                          json={"code": "jam_infeed", "name": "Jam at the infeed"})
+    assert refused.status_code == 403
+
+    # And the form itself is gated on the screen rather than merely refusing
+    # when it is used: a button that only ever says no is worse than no button.
+    assert 'data-needs-cap="process.define"' in _screen("reasons.html")
+
+
+def test_the_screen_shows_the_servers_own_refusal_and_keeps_no_copy_of_the_rule(
+        admin, session):
+    """Which words are taken is read from the product itself. A second copy in
+    JavaScript is the copy that drifts, and the one that drifts is the one the
+    person reads."""
+    refused = admin.post("/equipment/downtime-reasons",
+                         json={"code": "running", "name": "Running"})
+    assert refused.status_code == 400
+    assert "already" in refused.json()["detail"] and "running" in refused.json()["detail"]
+
+    script = _screen("reasons.js")
+    assert "protected" not in script.lower()
+    # No regular expression re-stating what a code may be spelled like.
+    assert "a-z0-9_" not in script
+
+
+def test_the_screen_is_told_how_much_history_a_code_labels_before_it_retires_it(
+        admin, session, line):
+    """The API refuses a blind retirement. The count that makes the refusal
+    avoidable rides on the list, so a person reads it before they decide."""
+    _vocabulary(session, ("jam_infeed", "Jam at the infeed"), ("breakdown", "Breakdown"))
+    for minutes_ago in (90, 60, 30):
+        _down(session, "MIX01", minutes_ago=minutes_ago, minutes=5,
+              reason_code="jam_infeed")
+    session.flush()
+
+    listed = {row["code"]: row["labels_intervals"] for row
+              in admin.get("/equipment/downtime-reasons/vocabulary").json()["reasons"]}
+    # Zero here is a measurement, not an unknown: nothing carries `breakdown`.
+    assert listed == {"jam_infeed": 3, "breakdown": 0}
+
+    # Retiring with that number is accepted; it is the number the API asks for.
+    drafted = admin.post("/equipment/downtime-reasons", json={
+        "code": "jam_infeed", "name": "Jam at the infeed",
+        "retires": True, "labels_intervals": listed["jam_infeed"]})
+    assert drafted.status_code == 201, drafted.text
+    assert drafted.json()["retires"] is True
+    # Still a draft: retiring from the screen proposes, and somebody signs.
+    assert "jam_infeed" in reasons.catalog(session)
+
+
+def test_a_reason_may_not_be_named_after_one_of_the_vocabularys_own_addresses(session):
+    """`/equipment/downtime-reasons/drafts` is the drafts queue, so a reason
+    called `drafts` would be a word whose own history could never be opened.
+    Refused when it is drafted rather than discovered by the person holding it."""
+    for taken in reasons.RESERVED:
+        with pytest.raises(Invalid) as refusal:
+            reasons.define(session, code=taken, name="A word with nowhere to live",
+                           actor="ENG")
+        assert taken in str(refusal.value)
+
+    assert reasons.define(session, code="drafts_pending", name="Fine", actor="ENG")
 
 
 # ------------------------------------------------------------------ the pareto

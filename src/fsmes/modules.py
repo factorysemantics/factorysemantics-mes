@@ -179,6 +179,10 @@ REGISTRY: tuple[Module, ...] = (
                  "One machine, arm's length: the line-side operator's screen."),
             Page("/dashboard/machines", "machines.html",
                  "Engineering: the plant as a tree, with cost centers and alarms."),
+            Page("/dashboard/reasons", "reasons.html",
+                 "Engineering: the plant's downtime vocabulary - what is on the "
+                 "list, what is drafted, what was retired, and the form that "
+                 "drafts the next word."),
             Page("/dashboard/tags", "tags.html",
                  "Engineering: every tag on every machine, and whether each machine "
                  "is still talking."),
