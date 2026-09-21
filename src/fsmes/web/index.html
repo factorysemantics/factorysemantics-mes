@@ -102,6 +102,45 @@
       </div>
     </section>
 
+    <!-- What one waiting draft would actually change, read before it is
+         signed. Rendered from /dashboard/pending-approvals/{kind}/{code}/{revision},
+         which is gated by the same capability as the panel above: a review is
+         a reading of configuration nobody has put in force yet.
+
+         The walk through it is generated from this same answer, so the coach
+         card and these rows cannot disagree about what is about to happen. -->
+    <section class="panel span-2 hidden" id="review-panel" data-assist="review">
+      <h2>Before you sign <span id="review-what" class="muted count">—</span></h2>
+      <p id="review-who" class="muted small"></p>
+
+      <h3>What would change</h3>
+      <ul class="feed" id="review-changes" data-assist="review-changes"></ul>
+      <!-- One row per change, in the order the diff states them. The
+           generated walk points at them by position, because how many there
+           are is not known until the draft is read - which is the one thing a
+           generated guide needs that an authored one does not. -->
+      <template id="review-change-row">
+        <li data-assist="review-change">
+          <span class="what"></span>
+          <span class="when"></span>
+        </li>
+      </template>
+
+      <h3>What it touches</h3>
+      <ul class="feed">
+        <li data-assist="review-coverage"><span class="what" id="review-coverage"></span></li>
+        <li data-assist="review-affected"><span class="what" id="review-affected"></span></li>
+        <li data-assist="review-supersedes" id="review-supersedes"><span class="what"></span></li>
+      </ul>
+
+      <div class="row">
+        <button id="review-walk" class="small" data-assist="review-walk">Walk me through it</button>
+        <span class="spacer"></span>
+        <button id="review-close" class="small">Close</button>
+        <button id="review-approve" class="small" data-assist="review-approve">Approve</button>
+      </div>
+    </section>
+
     <section class="panel span-2">
       <h2>Machines <span id="m-count" class="muted count">—</span></h2>
       <p id="m-scope" class="muted small"></p>

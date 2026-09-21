@@ -13,7 +13,17 @@
 
    A walk can span screens. Crossing one means the walk has to survive a page
    load, so the position is kept in sessionStorage and picked up on the other
-   side. */
+   side.
+
+   A guide comes from one of three places and plays the same either way: the
+   authored ones in `services/assistant.py`, the ones a supervisor recorded on
+   the real screens, and - since the approval review - ones GENERATED from
+   data, step by step, from the diff of a draft somebody is about to sign.
+   A generated guide is not fetched by id (no endpoint serves it) and its
+   steps may point at one of several rows carrying the same anchor, by
+   position: `{anchor, nth}`. How many rows there are is not known until the
+   draft is read, which is the one thing generating a guide needs that
+   authoring one does not. */
 
 (function () {
   const KEY = "fsmes-guide";
@@ -457,7 +467,9 @@
 
   function saveWalk(exact) {
     const g = walk.guide;
-    const saved = g.id
+    // A generated guide has an id for the audit trail's sake, but no endpoint
+    // serves it: it is saved whole, like a recording played from a draft.
+    const saved = (g.id && !g.generated)
       ? { id: g.id, index: walk.index }
       : { walk: { title: g.title, steps: g.steps, evidence: g.evidence || null,
                   recorded_by: g.recorded_by, revision: g.revision, approved_by: g.approved_by },
@@ -491,6 +503,16 @@
     }
   }
 
+  /* Which element a step points at. An authored step names an anchor that
+     appears once on the page; a generated step may name one of several rows
+     that carry the same anchor, by position. */
+  function stepTarget(step) {
+    if (step.nth === undefined || step.nth === null) {
+      return document.querySelector(`[data-assist="${step.anchor}"]`);
+    }
+    return document.querySelectorAll(`[data-assist="${step.anchor}"]`)[step.nth] || null;
+  }
+
   function showStep() {
     if (!walk) return;
     const step = walk.guide.steps[walk.index];
@@ -508,11 +530,15 @@
       const tab = document.querySelector(`[data-tab="${step.tab}"]`);
       if (tab && tab.getAttribute("aria-selected") !== "true" && !tab.classList.contains("active")) tab.click();
     }
-    const target = document.querySelector(`[data-assist="${step.anchor}"]`);
+    const target = stepTarget(step);
     if (!target) {
-      // The anchor is gone - almost always because a panel is hidden for this
-      // person's role. Say so rather than pointing at nothing.
-      paint(null, step, "That control is not on this screen for your role.");
+      // The anchor is gone - for an authored step almost always because a
+      // panel is hidden for this person's role; for a generated one because
+      // the thing it was built from has been closed or signed. Say which
+      // rather than pointing at nothing.
+      paint(null, step, step.nth === undefined
+        ? "That control is not on this screen for your role."
+        : "That part of the review is no longer on the screen.");
       return;
     }
     // A control may sit in a popover that a button opens: press it first.
@@ -551,7 +577,13 @@
       walk.guide.steps.forEach((_, i) => dots.appendChild(el("i", i === walk.index ? "on" : (i < walk.index ? "done" : ""))));
       coach.appendChild(dots);
     }
-    if (walk.guide.recorded_by) {
+    if (walk.guide.generated) {
+      // Where the words came from, said on the card. Nothing on a generated
+      // walk was written by a model - it is the draft's own diff, in the
+      // plant's own words (decisions 0031, 0032).
+      coach.appendChild(el("div", "meta",
+        "Built from the draft itself, step by step. No model wrote this."));
+    } else if (walk.guide.recorded_by) {
       const who = `Recorded by ${walk.guide.recorded_by}`
         + (walk.guide.revision ? ` · rev ${walk.guide.revision}` : "")
         + (walk.guide.approved_by ? ` · approved by ${walk.guide.approved_by}` : " · draft");
@@ -598,7 +630,7 @@
   window.addEventListener("scroll", () => {
     if (!walk || !ring || ring.style.display === "none") return;
     const step = walk.guide.steps[walk.index];
-    const target = document.querySelector(`[data-assist="${step.anchor}"]`);
+    const target = stepTarget(step);
     if (target) paint(target, step, null);
   }, { passive: true });
 
