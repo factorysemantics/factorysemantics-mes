@@ -36,6 +36,7 @@ PAGES = [
     ("masterdata.html", "masterdata.js"),
     ("triggers.html", "triggers.js"),
     ("reasons.html", "reasons.js"),
+    ("config.html", "config.js"),
     ("adjustments.html", "adjustments.js"),
     ("coa.html", "coa.js"),
     ("admin.html", "admin.js"),
@@ -46,6 +47,7 @@ ROUTES = ["/dashboard", "/dashboard/station", "/dashboard/orders", "/dashboard/q
           "/dashboard/line", "/dashboard/line/3d", "/dashboard/machines", "/dashboard/tags",
           "/dashboard/maintenance", "/dashboard/schedule", "/dashboard/spc", "/dashboard/gauges", "/dashboard/trace",
           "/dashboard/masterdata", "/dashboard/triggers", "/dashboard/reasons",
+          "/dashboard/config/engineering",
           "/dashboard/adjustments", "/dashboard/coa",
           "/dashboard/machine/MIX01", "/dashboard/analysis", "/dashboard/admin",
           "/dashboard/instructions", "/dashboard/ops"]
@@ -55,6 +57,12 @@ ROUTES = ["/dashboard", "/dashboard/station", "/dashboard/orders", "/dashboard/q
 LINKED = {
     "/dashboard/machine/MIX01": "FS.link(\"machine\", ...) from every machine mention",
     "/dashboard/line/3d": "the 3D tab on /dashboard/line",
+    # A configurable thing is a row on its workspace's Configuration page, not
+    # a chip of its own: Scott, 2026-09-21, on a nav bar that had just grown
+    # one. The row is generated from `fsmes.modules`, and
+    # test_configuration_sections.py checks that every registered section
+    # points at a screen this product actually serves.
+    "/dashboard/reasons": "the Downtime reasons row on Engineering \u203a Configuration",
 }
 
 
@@ -289,7 +297,7 @@ def test_every_page_uses_the_shared_header(page):
     """One header, rendered from the manifest. A page with its own copy is a
     page that will drift - a stale ninth nav link proved it."""
     html = (WEB / page).read_text(encoding="utf-8")
-    assert re.search(r'<header data-nav="[a-z0-9]+"></header>', html), (
+    assert re.search(r'<header data-nav="[a-z0-9/]+"></header>', html), (
         f"{page} does not use the shared header")
     assert 'class="ghost link"' not in html, (
         f"{page} still carries a hand-pasted nav")
@@ -325,7 +333,7 @@ def test_no_screen_can_quietly_appear_without_the_header():
 
     for name in screens:
         html = (WEB / name).read_text(encoding="utf-8")
-        assert re.search(r'<header data-nav="[a-z0-9]+"></header>', html), (
+        assert re.search(r'<header data-nav="[a-z0-9/]+"></header>', html), (
             f"{name} is a plant screen with no header menu on it - a screen "
             f"nobody can leave. Add the header, or say in NOT_PLANT_SCREENS "
             f"why this page is not a plant screen")

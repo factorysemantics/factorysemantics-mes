@@ -125,6 +125,40 @@ chip in that group, not a chip per setting.
 than left as the exception — see `docs/design/config-assistance.md`'s own
 history and the handoff that did it.
 
+### As built — `config-nav-restructure`, 2026-09-21
+
+The shape above, in code. Engineering's `Configuration` entry opens
+`/dashboard/config/engineering`: a list of that workspace's configurable
+sections, stating its total the way every list in this product does, with one
+row today — the downtime vocabulary.
+
+1. **A section is a registry entry, not a navigation change.** A module that
+   adds something configurable adds a `ConfigSection` to its own entry in
+   `src/fsmes/modules.py`, naming the domain it belongs to. The row appears;
+   the nav bar does not grow. The first section in a **new** domain adds one
+   `ConfigDomain` there and one `Configuration` entry to that group in
+   `FS.NAV`, and `tests/test_configuration_sections.py` refuses either half
+   without the other — which is what stops this being retrofitted a second
+   time.
+2. **Nothing behind the entry moved.** `/dashboard/reasons` is the same page
+   at the same address, so every bookmark still opens it; only the nav entry
+   pointing at it directly is gone. The screen now lights the `Configuration`
+   entry it sits inside, the way a machine page lights *Machines*.
+3. **The page gates nothing.** It is visible to anybody who may see the
+   workspace, as the screens it lists already are; each section keeps its own
+   `define`/`approve` capabilities exactly where its author put them. What the
+   page adds is naming those capabilities and saying whether the person
+   reading holds them — so somebody can see whether the door in front of them
+   opens before walking into it.
+4. **A section a plant does not serve is withheld and named**, never silently
+   dropped: a workspace with one section and a workspace with one section and
+   three switched off are different plants.
+
+One domain exists today, *engineering*. The rest of §2's six arrive as their
+first section does; naming a domain with nothing in it would serve a page that
+says nothing.
+
+
 ## 3. Three tiers
 
 - **Tier one — role-authored vocabulary.** A list this plant owns: its

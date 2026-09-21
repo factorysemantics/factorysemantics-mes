@@ -196,6 +196,25 @@ goes under Honesty with a migration line, so plant people can find it.
   version a moving alias answers as, so a pin can be moved on purpose. It is a
   build-loop command: nothing in a plant runs it, and shadow mode refuses it.
 
+### Changed
+
+- **The navigation gets one *Configuration* entry per workspace, instead of a
+  chip per configurable thing.** *Engineering › Downtime reasons* was a
+  top-level entry of its own for four days; with hundreds of configurable
+  sections ahead of this product, a chip each is a nav bar nobody can read. So
+  **Engineering › Configuration** (`/dashboard/config/engineering`) is now the
+  door, and the downtime vocabulary is the first row on it — listed with what
+  it changes, which capability drafts it and which one signs it, and the
+  workspace's total, which is one today. **The screen itself did not move:
+  `/dashboard/reasons` is the same page at the same address, so a bookmark
+  still opens it; only the nav entry pointing at it directly is gone.**
+  Nothing about who may draft or sign anything changed — each section keeps
+  its own gates, and the Configuration page gates nothing. Adding the next
+  configurable thing is now a `ConfigSection` entry in `fsmes.modules` and no
+  navigation change at all; the first section in a new domain adds that
+  domain's single Configuration entry, and a test refuses either half without
+  the other.
+
 ### Fixed
 
 - **The station screen no longer redraws itself for nothing.** Every panel on

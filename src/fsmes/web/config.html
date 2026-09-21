@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configuration — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/station.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <!-- One file serves every domain's Configuration page, so which workspace
+       this is has to be on the header before common.js reads it. The value is
+       the page's own path under /dashboard, which is what tells Engineering ›
+       Configuration apart from the Quality screen when Quality gets one. -->
+  <header data-nav="config"></header>
+  <script>
+    document.querySelector("header[data-nav]").dataset.nav =
+      window.location.pathname.replace(/^\/dashboard\//, "").replace(/\/$/, "");
+  </script>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <main class="object-main">
+    <section class="panel span-2">
+      <h2><span id="domain-title">Configuration</span> <span id="section-count" class="muted count">—</span></h2>
+      <p id="domain-about" class="muted small"></p>
+      <div class="table-wrap"><table id="sections-table">
+        <thead><tr>
+          <th>Section</th><th>What you change here</th><th>Who may draft</th><th>Who signs it</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <p id="sections-empty" class="muted small hidden"></p>
+      <p id="switched-off" class="muted small hidden"></p>
+    </section>
+  </main>
+
+  <p class="screen-source">the sections /dashboard/config/{domain}/sections · each section's own screen owns its rules
+    about who may draft and who may sign</p>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/config.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

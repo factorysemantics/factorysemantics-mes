@@ -73,6 +73,90 @@ class Page:
 
 
 @dataclass(frozen=True)
+class ConfigDomain:
+    """One area of the plant that has things in it a person configures.
+
+    A domain is a workspace in the navigation, not a module: *Engineering*
+    holds the machines, the tags, the triggers and the downtime vocabulary,
+    which come from four different modules. Scott, 2026-09-21, looking at a
+    nav bar that had grown a chip for the downtime vocabulary: he does not
+    want a top-level entry per configurable thing, he wants **one
+    Configuration entry per domain** with that domain's configurable sections
+    inside it, because there will eventually be hundreds of sections and a
+    chip each is exactly the clutter this work exists to remove.
+
+    A domain listed here is served a page at ``/dashboard/config/<slug>``.
+    Domains appear as their first section does; naming one with nothing in it
+    would serve a page that says nothing.
+    """
+
+    slug: str
+    """The last segment of the page's path, and what a section names."""
+
+    title: str
+    """What the navigation calls this workspace - `FS.NAV`'s group name."""
+
+    about: str
+    """The sentence a person reads at the top of the page."""
+
+
+@dataclass(frozen=True)
+class ConfigSection:
+    """One configurable thing, on one domain's Configuration page.
+
+    This is the seam that keeps the navigation from growing. A module that
+    adds something configurable adds a `ConfigSection` to its own entry in
+    this registry and nothing else: the row appears on its domain's
+    Configuration page, and the nav bar does not change. A section whose
+    module is switched off is not listed, and the page says how many are not.
+
+    It carries no behaviour. `href` points at the screen that already owns the
+    thing, which keeps every bookmark alive and leaves each section's own
+    capability gates exactly where its author put them - this registry decides
+    where the door is, never who may walk through it.
+    """
+
+    domain: str
+    """The `ConfigDomain` slug this section is listed under."""
+
+    key: str
+    """A stable name for the section, for tests and for anything that links
+    to a row rather than to the page."""
+
+    label: str
+    """What the row is called."""
+
+    about: str
+    """One sentence: what a person changes here."""
+
+    href: str
+    """The screen that does the configuring."""
+
+    define: str | None = None
+    """The capability that drafts a change here, if there is one. Shown so a
+    person can see who this section belongs to; the gate itself lives on the
+    section's own screen and its own endpoints."""
+
+    approve: str | None = None
+    """The capability that puts a change in force, if this section has an
+    approval step. `None` means it takes effect when it is saved."""
+
+
+#: Every configuration domain, in nav order. One today. A second is one entry
+#: here plus at least one `ConfigSection` naming it, and `test_web.py` refuses
+#: a domain with a page and no sections, or sections and no nav entry.
+CONFIG_DOMAINS: tuple[ConfigDomain, ...] = (
+    ConfigDomain(
+        "engineering", "Engineering",
+        "What the plant's own screens are configured with: the words its "
+        "records are written in, and the settings behind them. Each section "
+        "keeps its own rules about who may draft and who may sign."),
+)
+
+DOMAIN_BY_SLUG: dict[str, ConfigDomain] = {d.slug: d for d in CONFIG_DOMAINS}
+
+
+@dataclass(frozen=True)
 class Module:
     name: str
     title: str
@@ -84,6 +168,11 @@ class Module:
 
     routers: tuple[Mount, ...] = ()
     pages: tuple[Page, ...] = ()
+
+    config_sections: tuple[ConfigSection, ...] = ()
+    """What this module puts on a domain's Configuration page. Empty for all
+    but one module today; this is where the next configurable thing goes so
+    that it needs no new navigation entry."""
 
     tools: tuple[str, ...] = ()
     """Dotted MCP tool modules, e.g. ``fsmes.mcp.quality``. Each exposes
@@ -191,6 +280,18 @@ REGISTRY: tuple[Module, ...] = (
                  "maintenance, and what is queued on it. The script reads the code "
                  "from the URL; the page is the same file for every machine."),
         ),
+        config_sections=(
+            ConfigSection(
+                domain="engineering",
+                key="downtime_reasons",
+                label="Downtime reasons",
+                about="The words an operator picks from when a machine stops, and "
+                      "that the pareto groups on. Drafted here, put in force on the "
+                      "Floor screen's Waiting for you panel.",
+                href="/dashboard/reasons",
+                define="process.define",
+                approve="process.approve"),
+        ),
         tools=("fsmes.mcp.equipment",),
         tables=("equipment", "equipment_connections", "equipment_states", "tag_values",
                 "uns_publications", "downtime_reasons"),
@@ -200,7 +301,15 @@ REGISTRY: tuple[Module, ...] = (
         title="The plant floor front door",
         kernel=True,
         routers=(Mount("fsmes.api.routers.dashboard", "/dashboard", ("dashboard",)),),
-        pages=(Page("/dashboard", "index.html", "The plant at a glance."),),
+        # One file serves every domain's Configuration page and reads the
+        # domain out of its own URL, the way machine.html reads a machine
+        # code. The paths are written out rather than templated so that a
+        # crawl, a link check and this registry all see real addresses.
+        pages=(Page("/dashboard", "index.html", "The plant at a glance."),
+               *(Page(f"/dashboard/config/{domain.slug}", "config.html",
+                      f"{domain.title}: everything configurable in this workspace, "
+                      "in one place, so a new setting needs no new nav entry.")
+                 for domain in CONFIG_DOMAINS)),
     ),
 
     # -------------------------------------------------------- the modules
@@ -399,3 +508,28 @@ def disabled(spec: str | None = None) -> tuple[Module, ...]:
     answer, so anything reporting the state can state its total."""
     names = resolve(spec)
     return tuple(m for m in REGISTRY if m.name not in names)
+
+
+def config_sections(domain: str, served: tuple[Module, ...] | None = None
+                    ) -> tuple[ConfigSection, ...]:
+    """The sections of one domain, in registry order.
+
+    `served` is the modules a plant actually serves; the default is every
+    module this version has. A section belonging to a module that is switched
+    off is not listed - the screen behind it answers 404, and a row that opens
+    onto a 404 is worse than no row.
+    """
+    modules = REGISTRY if served is None else served
+    return tuple(section
+                 for module in modules
+                 for section in module.config_sections
+                 if section.domain == domain)
+
+
+def config_domains_with_sections() -> tuple[ConfigDomain, ...]:
+    """The domains this version has at least one configurable section in.
+
+    What the navigation should carry a Configuration entry for. Read by the
+    test that keeps `FS.NAV` and this registry from drifting apart.
+    """
+    return tuple(d for d in CONFIG_DOMAINS if config_sections(d.slug))
