@@ -8,12 +8,11 @@ dashboard that scales to a wall panel and one that hammers the API.
 import threading
 import time
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from fsmes.api.deps import ReadDbDep, UserDep
-from fsmes.db import utcnow
 from fsmes.domain import (
     AuditLog,
     Equipment,
@@ -33,6 +32,7 @@ from fsmes.services import connection as connection_service
 from fsmes.services import equipment as equipment_service
 from fsmes.services import line as line_service
 from fsmes.services import line_clock, masterdata, workorders
+from fsmes.services import review as review_service
 
 router = APIRouter()
 
@@ -360,45 +360,15 @@ def _build_summary(db: Session, oee_hours: float, line: str | None = None,
 # --------------------------------------------------- what is waiting on you
 
 #: The kinds of waiting item this endpoint can answer for, and the capability
-#: that lets somebody act on each. One entry today: the plant's downtime
+#: that lets somebody act on each. Read from the one registry that also knows
+#: how to *review* each kind (`fsmes.services.review.KINDS`): a panel that can
+#: list a kind it cannot show the substance of is the blind signature this
+#: product already shipped once. One entry today: the plant's downtime
 #: vocabulary. Work instructions, triggers, setpoint adjustments and the
 #: design-chat notes are the follow-up - each already has a lifecycle and a
-#: screen of its own, and joining them here is a row in this table plus a
-#: reader, not a new mechanism.
-PENDING_KINDS: dict[str, str] = {
-    "downtime_reason": "process.approve",
-}
-
-
-def _waiting_downtime_reasons(db: Session, limit: int) -> tuple[list[dict], int]:
-    """Every downtime-reason draft waiting on an approver."""
-    from fsmes.services import reasons as reasons_service
-
-    rows, total = reasons_service.drafts(db, limit=limit)
-    now = utcnow()
-    items = [{
-        "kind": "downtime_reason",
-        "code": row.code,
-        "revision": row.revision,
-        "title": row.name,
-        # The dry run's headline for a vocabulary: what this draft would do
-        # to what the plant has already recorded.
-        "headline": (f"retires a code that labels {row.labels_intervals} recorded intervals"
-                     if row.retires else
-                     ("a change to a reason already on the list" if row.revision > 1
-                      else "a new reason for the list")),
-        "drafted_by": row.created_by,
-        "on_behalf_of": row.on_behalf_of,
-        "drafted_at": row.created_at,
-        # How long it has waited. The only column that changes with time, so a
-        # forgotten draft reads as "eleven days" rather than falling off a list.
-        "waiting_seconds": max((now - row.created_at).total_seconds(), 0.0),
-        "approve": f"/equipment/downtime-reasons/{row.code}/approve/{row.revision}",
-    } for row in rows]
-    return items, total
-
-
-_WAITING_READERS = {"downtime_reason": _waiting_downtime_reasons}
+#: screen of its own, and joining them is an entry in that registry, not a new
+#: mechanism here.
+PENDING_KINDS: dict[str, str] = review_service.capabilities()
 
 
 @router.get("/pending-approvals")
@@ -427,16 +397,12 @@ def pending_approvals(db: ReadDbDep, user: UserDep,
     A draft nobody acts on waits, visibly. It does not expire, it does not go
     live by itself, and nothing here drops it.
     """
-    from fsmes.services import auth as auth_service
-
-    role = auth_service.current_role(db, user) or user["role"]
-    held = auth_service.capabilities_for(db, role)
-    mine = [kind for kind, capability in PENDING_KINDS.items() if capability in held]
+    mine = _kinds_for(db, user)
 
     items: list[dict] = []
     total = 0
     for kind in mine:
-        got, count = _WAITING_READERS[kind](db, limit)
+        got, count = review_service.KINDS[kind].waiting(db, limit)
         items.extend(got)
         total += count
     items.sort(key=lambda row: row["waiting_seconds"], reverse=True)
@@ -455,3 +421,44 @@ def pending_approvals(db: ReadDbDep, user: UserDep,
         "kinds_total": len(mine),
         "kinds_known": sorted(PENDING_KINDS),
     }
+
+
+def _kinds_for(db: Session, user: dict) -> list[str]:
+    """The kinds this caller may act on, from their live capabilities.
+
+    Read here rather than taken from the token, so revoking a power takes
+    effect on this panel at once - the same rule `require()` follows.
+    """
+    from fsmes.services import auth as auth_service
+
+    role = auth_service.current_role(db, user) or user["role"]
+    held = auth_service.capabilities_for(db, role)
+    return [kind for kind, capability in PENDING_KINDS.items() if capability in held]
+
+
+@router.get("/pending-approvals/{kind}/{code}/{revision}")
+def pending_approval(kind: str, code: str, revision: int,
+                     db: ReadDbDep, user: UserDep) -> dict:
+    """What one waiting item would actually change, and the walk through it.
+
+    The panel above found the draft; this is what the person reads before
+    they sign it. Everything the review needs in one call - the diff against
+    the revision it would supersede, how large the plant's list is now and
+    after, how much recorded history already carries the code, who drafted it
+    and on whose behalf, the one click that puts back what the plant has
+    today - and a guide generated from that diff, in the shape the floor
+    assistant already plays.
+
+    **Gated by the same capability that lists it.** A caller who cannot sign a
+    kind cannot read its drafts here either: a review is a reading of
+    configuration that has not been put in force, and a panel that refuses the
+    button while showing the substance is a panel that leaks the draft.
+    """
+    if kind not in PENDING_KINDS:
+        raise HTTPException(404, f"nothing here reviews a {kind!r}")
+    if kind not in _kinds_for(db, user):
+        raise HTTPException(
+            403,
+            f"reviewing a {kind.replace('_', ' ')} needs the "
+            f"{PENDING_KINDS[kind]!r} capability, which this role does not grant")
+    return review_service.review(db, kind, code, revision)
