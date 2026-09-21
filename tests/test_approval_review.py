@@ -26,7 +26,7 @@ from fsmes.domain import (
     EquipmentState,
     EquipmentStateName,
 )
-from fsmes.services import NotFound, reasons, review
+from fsmes.services import NotFound, reasons, review, walkthroughs
 
 WEB = Path(__file__).resolve().parents[1] / "src" / "fsmes" / "web"
 
@@ -34,6 +34,15 @@ WEB = Path(__file__).resolve().parents[1] / "src" / "fsmes" / "web"
 def _anchors_on_the_dashboard() -> set[str]:
     html = (WEB / "index.html").read_text(encoding="utf-8")
     return set(re.findall(r'data-assist="([^"]+)"', html))
+
+
+def _screen(page: str) -> str:
+    """A step's page without whatever it asked that screen to show.
+
+    A destination is more than a path now - which machine's station, which
+    reason to open - and the anchors belong to the screen, not to the query
+    it was asked with."""
+    return page.split("?", 1)[0]
 
 
 def _in_force(session, code, name, description=""):
@@ -208,16 +217,19 @@ def test_every_generated_step_points_at_a_control_the_screen_actually_has(
                    description="Stuck at the infeed.", actor="ENG")
     session.flush()
 
-    present = _anchors_on_the_dashboard()
     for code, revision in (("breakdown", 2), ("jam_infeed", 1)):
         walk = admin.get(
             f"/dashboard/pending-approvals/downtime_reason/{code}/{revision}"
         ).json()["walkthrough"]
         for index, step in enumerate(walk["steps"], 1):
-            assert step["page"] == "/dashboard"
+            screen = _screen(step["page"])
+            present = walkthroughs.anchors_on(screen)
+            assert present, (
+                f"{code} rev {revision} step {index} points at {screen!r}, "
+                "which is not a screen this product serves")
             assert step["anchor"] in present, (
                 f"{code} rev {revision} step {index} points at "
-                f"data-assist={step['anchor']!r}, which index.html does not have")
+                f"data-assist={step['anchor']!r}, which {screen} does not have")
             assert step["title"] and step["body"]
 
 
@@ -377,3 +389,203 @@ def test_the_row_and_the_review_tell_the_same_story_about_a_draft(admin, session
     assert body["headline"] == item["headline"]
     assert body["title"] == item["title"]
     assert body["waiting_seconds"] > 11 * 24 * 3600 - 60
+
+
+# ------------------------------------------- where the change actually lands
+
+
+def test_a_change_to_a_word_the_floor_uses_walks_to_the_floors_own_screen(
+        admin, session):
+    """The point of the walk, in one test. An approver is being asked what a
+    change does to the plant, and the plant is the select an operator picks a
+    stop from - so the step goes to the station screen and rings that control,
+    rather than describing it on the panel the review is read on."""
+    _in_force(session, "breakdown", "Breakdown", "The machine has stopped.")
+    _down_with(session, "MIX01", "breakdown")
+    reasons.define(session, code="breakdown", name="Mechanical breakdown",
+                   description="Something on the machine has failed.", actor="ENG")
+    session.flush()
+
+    walk = admin.get(
+        "/dashboard/pending-approvals/downtime_reason/breakdown/2").json()["walkthrough"]
+    name_step = walk["steps"][0]
+    assert name_step["page"] == "/dashboard/station?m=MIX01&reason=breakdown"
+    assert name_step["anchor"] == "station-reason-code"
+    # And the sentence beside the word rings the sentence, not the word again.
+    assert walk["steps"][1]["anchor"] == "station-reason-help"
+    # The anchor is on the real select, not on a card that describes it.
+    station = (WEB / "station.html").read_text(encoding="utf-8")
+    assert 'id="down-reason-code" data-assist="station-reason-code"' in station
+    # Both values still, in the words the plant uses for them.
+    assert "Breakdown." in name_step["body"] and "Mechanical breakdown." in name_step["body"]
+
+
+def test_the_machine_the_walk_stands_on_is_the_one_that_records_the_stop_most(
+        admin, session):
+    """Which station is a fact the history holds, not a guess: the vocabulary
+    is plant-wide, and the floor that chooses a word is the floor that has
+    recorded it. The sentence says how many machines that is, so the choice
+    is readable rather than mysterious."""
+    _in_force(session, "breakdown", "Breakdown")
+    _down_with(session, "MIX01", "breakdown", minutes_ago=90)
+    _down_with(session, "PACK01", "breakdown", minutes_ago=80)
+    _down_with(session, "PACK01", "breakdown", minutes_ago=70)
+    reasons.define(session, code="breakdown", name="Mechanical breakdown", actor="ENG")
+    session.flush()
+
+    change = admin.get(
+        "/dashboard/pending-approvals/downtime_reason/breakdown/2").json()["changes"][0]
+    assert change["page"] == "/dashboard/station?m=PACK01&reason=breakdown"
+    assert "the busiest of the 2 machines that have recorded breakdown" in change["note"]
+
+
+def test_a_brand_new_reason_has_no_floor_to_stand_on_and_says_so_in_place(
+        admin, session):
+    """Nobody can have chosen a word the plant does not have yet, so there is
+    no machine whose screen shows it and no honest place to walk to. The step
+    stays on the review panel and describes the change, exactly as it did
+    before any of this existed."""
+    reasons.define(session, code="jam_infeed", name="Jam at the infeed",
+                   description="Stuck where product enters.", actor="ENG")
+    session.flush()
+
+    walk = admin.get(
+        "/dashboard/pending-approvals/downtime_reason/jam_infeed/1").json()["walkthrough"]
+    assert {step["page"] for step in walk["steps"]} == {"/dashboard"}
+    assert walk["steps"][0]["anchor"] == "review-change"
+    assert walk["steps"][0]["nth"] == 0
+
+
+def test_a_word_on_the_list_that_no_machine_has_ever_chosen_also_stays_in_place(
+        admin, session):
+    """The other case with nowhere to stand. The code is on the list an
+    operator sees, but no machine has recorded a stop under it, so naming one
+    out of the equipment table would be inventing a place."""
+    _in_force(session, "waiting_on_fitter", "Waiting on a fitter")
+    reasons.define(session, code="waiting_on_fitter", name="Waiting for the fitter",
+                   actor="ENG")
+    session.flush()
+
+    assert reasons.machines_labelling(session, "waiting_on_fitter") == []
+    walk = admin.get(
+        "/dashboard/pending-approvals/downtime_reason/waiting_on_fitter/2"
+    ).json()["walkthrough"]
+    assert {step["page"] for step in walk["steps"]} == {"/dashboard"}
+
+
+def test_a_retirement_walks_to_the_list_the_code_is_about_to_leave(admin, session):
+    """What retiring a word does is take it out of that select. Somebody
+    signing that should be looking at the select."""
+    _in_force(session, "breakdown", "Breakdown")
+    _down_with(session, "MIX01", "breakdown")
+    reasons.define(session, code="breakdown", name="Breakdown", retires=True,
+                   labels_intervals=1, actor="ENG")
+    session.flush()
+
+    body = admin.get(
+        "/dashboard/pending-approvals/downtime_reason/breakdown/2").json()
+    status = body["changes"][0]
+    assert status["field"] == "status"
+    assert status["page"] == "/dashboard/station?m=MIX01&reason=breakdown"
+    # The count that may not be signed blind is still the first thing said.
+    assert status["note"].startswith("1 recorded interval already carries")
+
+
+def test_the_walk_knows_the_screen_that_signs_and_ends_on_it(admin, session):
+    """The round trip. A walk that has crossed onto the floor's screen can be
+    brought back to the panel that signs, and its last step is that button -
+    so following it to the end lands on the signature rather than stranding
+    somebody in front of a select."""
+    _in_force(session, "breakdown", "Breakdown")
+    _down_with(session, "MIX01", "breakdown")
+    reasons.define(session, code="breakdown", name="Mechanical breakdown", actor="ENG")
+    session.flush()
+
+    walk = admin.get(
+        "/dashboard/pending-approvals/downtime_reason/breakdown/2").json()["walkthrough"]
+    assert walk["home"] == "/dashboard"
+    assert walk["home_label"]
+    assert walk["steps"][-1]["page"] == "/dashboard"
+    assert walk["steps"][-1]["anchor"] == "review-approve"
+
+
+def test_reading_a_draft_and_its_walk_signs_nothing(admin, session):
+    """The whole round trip changes nothing until the button is pressed. A
+    review that quietly put a word in front of every operator would be the
+    failure this panel exists to end."""
+    _in_force(session, "breakdown", "Breakdown")
+    _down_with(session, "MIX01", "breakdown")
+    reasons.define(session, code="breakdown", name="Mechanical breakdown", actor="ENG")
+    session.flush()
+
+    for _ in range(2):
+        admin.get("/dashboard/pending-approvals/downtime_reason/breakdown/2")
+    assert reasons.in_force(session, "breakdown").name == "Breakdown"
+    assert reasons.open_draft(session, "breakdown").revision == 2
+    assert admin.get("/dashboard/pending-approvals").json()["total"] == 1
+
+    admin.post("/equipment/downtime-reasons/breakdown/approve/2")
+    assert reasons.in_force(session, "breakdown").name == "Mechanical breakdown"
+    assert admin.get("/dashboard/pending-approvals").json()["total"] == 0
+
+
+def test_the_screen_that_is_walked_to_opens_its_list_to_be_read_not_answered(
+        admin, session):
+    """The destination carries which machine and which reason, and the station
+    screen opens that list with the buttons that would change the machine off
+    the screen. An approver reading a list must not be one mis-click from
+    putting a running machine down."""
+    _in_force(session, "breakdown", "Breakdown")
+    _down_with(session, "MIX01", "breakdown")
+    reasons.define(session, code="breakdown", name="Mechanical breakdown", actor="ENG")
+    session.flush()
+
+    page = admin.get(
+        "/dashboard/pending-approvals/downtime_reason/breakdown/2"
+    ).json()["walkthrough"]["steps"][0]["page"]
+    assert "m=MIX01" in page and "reason=breakdown" in page
+
+    js = (WEB / "station.js").read_text(encoding="utf-8")
+    # The reveal reads the same parameter the step names, arms no state
+    # change, and takes the two buttons that would change one off the screen.
+    assert 'searchParams.get("reason")' in js
+    assert '$("#reason-actions").classList.add("hidden")' in js
+    assert "pendingState = null;" in js
+
+
+def test_which_machine_the_walk_stands_on_is_said_once_for_the_whole_diff(
+        admin, session):
+    """It is one answer about one draft. Repeating it under every change row
+    reads like two facts about two machines."""
+    _in_force(session, "breakdown", "Breakdown", "The machine has stopped.")
+    _down_with(session, "MIX01", "breakdown")
+    reasons.define(session, code="breakdown", name="Mechanical breakdown",
+                   description="Something on the machine has failed.", actor="ENG")
+    session.flush()
+
+    body = admin.get(
+        "/dashboard/pending-approvals/downtime_reason/breakdown/2").json()
+    said = [change for change in body["changes"] if "MIX01" in (change.get("note") or "")]
+    assert len(said) == 1
+    # Every row still goes there; only the sentence about it is said once.
+    assert {change["page"] for change in body["changes"]} == {
+        "/dashboard/station?m=MIX01&reason=breakdown"}
+
+
+def test_a_sentence_the_plant_has_not_written_yet_rings_the_word_instead(
+        admin, session):
+    """The screen shows a reason's sentence in a paragraph under the list, and
+    that paragraph is empty until a plant writes one. A ring around an empty
+    paragraph is a line on the screen pointing at nothing, so the step rings
+    the word, which is what there is to look at."""
+    _in_force(session, "breakdown", "Breakdown")          # no description
+    _down_with(session, "MIX01", "breakdown")
+    reasons.define(session, code="breakdown", name="Breakdown",
+                   description="Something on the machine has failed.", actor="ENG")
+    session.flush()
+
+    change = admin.get(
+        "/dashboard/pending-approvals/downtime_reason/breakdown/2").json()["changes"][0]
+    assert change["field"] == "description"
+    assert change["before"] is None
+    assert change["anchor"] == "station-reason-code"
