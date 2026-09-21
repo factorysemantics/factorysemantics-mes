@@ -12,6 +12,23 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **The downtime vocabulary has a screen: Engineering › Downtime reasons**
+  (`/dashboard/reasons`). The lifecycle shipped with a place to *sign* a
+  reason and nowhere to *draft* one, so the only person who could use the
+  drafting half was somebody holding a token and a terminal. The screen lists
+  every word the plant has ever had — on the list, drafted, retired, never
+  signed — with who drafted it and when, who signed it and when, and how many
+  recorded intervals each code labels; it states the vocabulary's total. A
+  person holding `process.define` drafts a new word, edits the open draft of
+  one, drafts the next revision of one already in force, or drafts a
+  retirement — and **is told how much history a code labels before deciding to
+  retire it**, rather than after a refusal. Everyone else reads the list and
+  sees no form. Signing is unchanged and still happens on the *Waiting for
+  you* panel. `GET /equipment/downtime-reasons/vocabulary` is the list behind
+  it; the catalogue an operator chooses from is untouched. A reason may no
+  longer be named `drafts` or `vocabulary` — those are the vocabulary's own
+  addresses, and a word spelled that way could never have its history opened.
+
 - **A plant's downtime reasons become a list with an author.** The box that
   asked why a machine stopped was a text input and the pareto grouped on
   whatever came back, so *jam*, *Jam*, *jam at infeed* and *infed jam* were

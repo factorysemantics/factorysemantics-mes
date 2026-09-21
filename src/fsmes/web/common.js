@@ -45,6 +45,7 @@
       { href: "/dashboard/machines", label: "Machines", cap: null },
       { href: "/dashboard/tags", label: "Tags", cap: null },
       { href: "/dashboard/triggers", label: "Triggers", cap: null },
+      { href: "/dashboard/reasons", label: "Downtime reasons", cap: null },
       { href: "/dashboard/adjustments", label: "Adjustments", cap: null },
       { href: "/dashboard/analysis", label: "Analysis", cap: null },
       { href: "/dashboard/masterdata", label: "Master data", cap: null },

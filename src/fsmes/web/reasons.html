@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Downtime reasons — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/station.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="reasons"></header>
+
+  <section class="kpis">
+    <div class="kpi"><span class="kpi-label">On the list</span><span id="kpi-approved" class="kpi-value">—</span>
+      <span class="kpi-sub">an operator may choose these</span></div>
+    <div class="kpi"><span class="kpi-label">Drafts waiting to be signed</span><span id="kpi-drafts" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Retired</span><span id="kpi-retired" class="kpi-value">—</span>
+      <span class="kpi-sub">off the list, still labelling history</span></div>
+    <div class="kpi"><span class="kpi-label">Words in all</span><span id="kpi-codes" class="kpi-value">—</span>
+      <span class="kpi-sub">every code the plant has ever had</span></div>
+  </section>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <main class="object-main">
+    <!-- What you DO sits apart from what you READ (STYLE.md rule 10). The
+         strip is absent entirely for a person without `process.define`: the
+         list stays readable, because a vocabulary nobody can read is a
+         vocabulary nobody can choose from. -->
+    <section class="panel actions span-2" data-needs-cap="process.define" data-assist="reason-actions">
+      <h2>Draft a reason <span class="muted">— it changes nothing on the floor until somebody signs it</span></h2>
+      <div class="forms">
+        <form id="reason-form" class="stack" data-assist="reason-form">
+          <h3 id="form-title">A new word</h3>
+          <!-- The same shape as the Admin screen's "Define a role" form: the two
+               short fields side by side, the sentence on its own line, the
+               buttons under them, and a Cancel that appears only while an
+               existing word is being edited. -->
+          <div class="row">
+            <input id="r-code" placeholder="Code (jam_infeed)" required data-assist="reason-code"
+                   aria-label="Code" autocomplete="off" list="reason-codes">
+            <datalist id="reason-codes"></datalist>
+          </div>
+          <input id="r-name" placeholder="Name" required
+                 aria-label="Name" data-assist="reason-name">
+          <input id="r-description" placeholder="What this reason means"
+                 aria-label="Description" data-assist="reason-description">
+          <div class="row">
+            <button id="r-submit" data-assist="reason-submit">Save draft</button>
+            <button id="r-cancel" type="button" class="ghost hidden">Cancel</button>
+          </div>
+          <p id="form-help" class="muted small">The <strong>code</strong> is what the analysis groups on and
+            what leaves this plant: two to forty characters, lowercase, starting with a letter. The
+            <strong>name</strong> is what the operator reads on the button, and the description is the sentence
+            shown beside it at the machine. Typing a code that already exists drafts its next revision; typing
+            one that has a draft open edits that draft.</p>
+        </form>
+      </div>
+    </section>
+
+    <section class="panel span-2">
+      <h2>The plant's vocabulary <span id="reason-count" class="muted count">—</span></h2>
+      <p class="muted small">A draft is on nobody's screen but this one and the <em>Waiting for you</em> panel
+        on the Floor screen, where somebody holding <code>process.approve</code> signs it. Retiring changes what
+        may be chosen next and never what was chosen before: the intervals a retired code labelled keep its label.</p>
+      <div class="filter-bar" data-assist="reason-filters">
+        <input id="v-q" type="search" placeholder="Code, name or description" aria-label="Code, name or description">
+        <select id="v-status" aria-label="Status">
+          <option value="">Any status</option>
+          <option value="approved">on the list</option>
+          <option value="draft">something waiting to be signed</option>
+          <option value="retired">retired</option>
+          <option value="none">never signed</option>
+        </select>
+      </div>
+      <div class="table-wrap"><table id="reasons-table">
+        <thead><tr>
+          <th>Reason</th><th>Description</th><th>Status</th><th class="num">Rev</th>
+          <th>Drafted</th><th>Signed</th><th class="num">Labels</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div id="v-pager" class="pager"></div>
+      <p id="v-empty" class="muted small hidden"></p>
+    </section>
+  </main>
+
+  <p class="screen-source">vocabulary /equipment/downtime-reasons/vocabulary · draft and retire
+    POST /equipment/downtime-reasons · signing happens on /dashboard (Waiting for you)</p>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/reasons.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

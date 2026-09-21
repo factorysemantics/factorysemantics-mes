@@ -10,6 +10,10 @@ Reading the list needs only `plant.read` - a vocabulary nobody can read is a
 vocabulary nobody can choose from. Drafting and approving are separate powers,
 because writing down what the plant's stops are called and putting that in
 front of every operator are different jobs.
+
+Two literal segments sit under `/downtime-reasons/`: `drafts` and
+`vocabulary`. `fsmes.services.reasons.RESERVED` refuses a code that spells
+either, so the history of a plant's own reason can never become unreachable.
 """
 
 from __future__ import annotations
@@ -64,6 +68,23 @@ def waiting(
     """
     rows, total = reasons.drafts(db, limit=limit, offset=offset)
     return paging.page([reasons.out(row) for row in rows], total, limit, offset)
+
+
+@router.get("/downtime-reasons/vocabulary")
+def vocabulary(db: ReadDbDep) -> dict:
+    """The whole vocabulary, in code order - approved, draft and retired
+    together, with how many recorded intervals each code labels.
+
+    What the Downtime reasons screen lists. Separate from the catalogue for the
+    same reason the drafts queue is: the catalogue is a map the station screen
+    renders into a select, and offering a draft or a retired word there would
+    put on the floor exactly what the lifecycle exists to keep off it.
+
+    The count of labelled intervals rides along because it is what a person is
+    told *before* they retire a code, rather than discovering it in a refusal.
+    """
+    rows = reasons.vocabulary(db)
+    return {"reasons": rows, "total": len(rows)}
 
 
 @router.get("/downtime-reasons/{code}")

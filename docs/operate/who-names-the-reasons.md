@@ -23,8 +23,9 @@ page is how it gets one.
 
 ## The short version
 
-1. Somebody holding `process.define` **drafts** a reason. Nothing changes on
-   the floor.
+1. Somebody holding `process.define` **drafts** a reason, on
+   **Engineering › Downtime reasons** (`/dashboard/reasons`) or through the
+   API. Nothing changes on the floor.
 2. It appears on the *Waiting for you* panel on `/dashboard` — for the people
    who can act on it, and for nobody else.
 3. Somebody holding `process.approve` **puts it in force**. The row records
@@ -52,7 +53,85 @@ same shape work instructions, triggers and setpoint adjustments already have.
 An assistant that reads a month of what operators typed and proposes six codes
 is the point of the feature; an assistant that signs its own proposal is not.
 
+## The screen
+
+**Engineering › Downtime reasons** (`/dashboard/reasons`) is where a plant's
+vocabulary is read and written. Everything below can also be done with a token
+and `curl`, and was only possible that way until this screen existed.
+
+The list is open to anybody who can see the plant — a vocabulary nobody can
+read is a vocabulary nobody can choose from — and shows **every word the plant
+has ever had**, not just the approved ones. A word that is on the list *and*
+has an unsigned change waiting says both things at once, because an engineer
+told only the second would read a word as off the floor while operators are
+still choosing it:
+
+| Column | What it says |
+|---|---|
+| Reason | the code the analysis groups on, and the name on the operator's button |
+| Description | the sentence shown beside it at the machine |
+| Status | where the word stands — *on the list* or *retired* — and beside it what is waiting on somebody: *change waiting*, *retirement waiting*. A word nobody has ever signed reads *drafted, not signed* |
+| Rev | the revision in force, and the one drafted behind it: `1 → 2` |
+| Drafted | who wrote the newest revision, on whose behalf if an agent wrote it for somebody, and when |
+| Signed | who put the revision in force and when, or `—` where nothing has been signed yet |
+| Labels | how many recorded intervals carry the code |
+
+Four tiles above it count the plant's vocabulary — on the list, drafts
+waiting, retired, and every word in all — and the list states its own total
+under the table.
+
+**The form is only there for a person holding `process.define`**, and it is
+absent rather than refusing: everyone else reads the list and sees no form at
+all. Three boxes — code, name, description — and *Save draft*.
+
+- **A new word**: type a code that does not exist yet.
+- **The next revision of a word already in force**: type its code (the box
+  offers what the plant already has). *New revision* on the row fills the form
+  for you.
+- **Editing a draft nobody has signed**: *Edit draft* on the row. Nobody is
+  choosing from it yet, so it is edited in place rather than stacking up
+  revisions.
+
+Nothing in the form re-states what the server already checks. A code that is
+spelled wrong, taken, or a word the product owns comes back as **the server's
+own sentence**, shown as it was written — a second copy of the rule in
+JavaScript is the copy that drifts, and the one that drifts is the one the
+person reads.
+
+Saving puts the draft on the *Waiting for you* panel and changes nothing on
+the floor. The screen says so where you are standing:
+
+> `jam_infeed rev 1 drafted — it reaches the floor when somebody signs it on
+> the Floor screen`
+
+### Retiring from the screen
+
+*Retire* appears only on a word that is actually on the list. It asks first,
+and **the confirmation carries the number**:
+
+> Retire `jam_infeed`? 412 recorded intervals carry it. They keep the label —
+> retiring changes what may be chosen next, never what was chosen before. The
+> retirement is a draft until somebody signs it.
+
+That is the same number the API demands in `labels_intervals`, put in front of
+the person *before* they decide instead of arriving as a refusal afterwards. A
+code nothing carries says so plainly rather than showing a zero that reads like
+a missing figure.
+
+The retirement is a draft like any other: the word stays on the list until
+somebody holding `process.approve` signs it.
+
+### What the screen does not do
+
+**It does not sign anything.** Drafting and approving are separate powers and
+this is the drafting screen; putting a revision in force — including the undo,
+which is approving the previous revision — happens on the *Waiting for you*
+panel or through the API below. A screen that both drafted and signed would
+be one click away from being a table somebody edits.
+
 ## Drafting one
+
+The same act from a terminal:
 
 ```bash
 curl -sX POST "$MES/equipment/downtime-reasons" \
