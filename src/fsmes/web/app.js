@@ -310,12 +310,129 @@ function pendingRow(item) {
   // How long it has waited: the one column that changes with time, so a
   // forgotten draft reads as "11 days" rather than falling off the end.
   row.append(el("td", null, waited(item.waiting_seconds)));
-  row.append(cellWith(button("Approve", async () => {
-    await act(item.approve, `${item.code} is in force`);
-    await refreshPending();
-  })));
+  // Not an approve button. Signing from a row is signing blind: the row says
+  // a draft exists, and nothing about what it would do to the plant.
+  row.append(cellWith(button("Review", () => openReview(item))));
   return row;
 }
+
+/* ---------- what it would actually change ----------
+
+   The panel above finds the draft; this reads it. One call answers the whole
+   review - the diff against the revision it would supersede, how big the
+   list is now and after, how much recorded history carries the code, and the
+   revision to put back - and carries a walkthrough generated from that same
+   diff, which the floor assistant plays with the ring it walks operators
+   through tasks with. */
+
+let reviewing = null;
+
+async function openReview(item) {
+  let data;
+  try {
+    data = await api(`/dashboard/pending-approvals/${item.kind}/${item.code}/${item.revision}`);
+  } catch (error) {
+    toast(error.message, "bad");
+    return;
+  }
+  reviewing = data;
+  renderReview(data);
+  $("#review-panel").classList.remove("hidden");
+  $("#review-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function closeReview() {
+  reviewing = null;
+  $("#review-panel").classList.add("hidden");
+}
+
+function renderReview(data) {
+  $("#review-what").textContent =
+    `${data.label} ${data.code}, revision ${data.revision} — ${data.headline}`;
+  $("#review-who").textContent =
+    `Drafted by ${data.drafted_by}`
+    + (data.on_behalf_of ? ` for ${data.on_behalf_of}` : "")
+    + ` on ${clock(data.drafted_at)}`
+    + (data.waiting_seconds ? `, waiting ${waited(data.waiting_seconds)}.` : ".")
+    + " A draft changes nothing on the floor until somebody puts it in force.";
+
+  const list = $("#review-changes");
+  list.replaceChildren();
+  const template = $("#review-change-row");
+  for (const change of data.changes) {
+    const row = template.content.firstElementChild.cloneNode(true);
+    row.querySelector(".what").textContent = change.label;
+    // Both values, never a summary of them: the approver reads what the
+    // plant says today beside what the draft would make it say.
+    row.querySelector(".when").textContent =
+      (change.before === null || change.before === undefined
+        ? `nothing today → ${change.after}`
+        : (change.after === null || change.after === undefined
+          ? `${change.before} → nothing`
+          : `${change.before} → ${change.after}`))
+      + (change.note ? ` · ${change.note}` : "");
+    list.append(row);
+  }
+  if (!data.changes.length) {
+    const empty = el("li", "empty", "This revision says exactly what is in force today.");
+    list.append(empty);
+  }
+
+  // The server owns the words, including which of them are plural: this
+  // panel is read by the person who signs, and "1 reasons" is where they
+  // stop trusting the numbers on it.
+  const coverage = data.coverage;
+  $("#review-coverage").textContent =
+    `The list holds ${coverage.vocabulary_total} ${coverage.of}`
+    + (coverage.vocabulary_total_after === coverage.vocabulary_total
+      ? ", and would still hold that many."
+      : `, and would hold ${coverage.vocabulary_total_after}.`);
+
+  const affected = data.affected;
+  const many = affected.intervals_labelled !== 1;
+  $("#review-affected").textContent =
+    `${affected.intervals_labelled} recorded interval${many ? "s" : ""} already `
+    + `${many ? "carry" : "carries"} ${data.code}. `
+    + `${many ? "They keep their labels" : "It keeps its label"} whatever is signed here.`
+    + (affected.moved_since_the_draft
+      ? ` The draft was written when it was ${affected.stated_in_the_draft}.`
+      : "");
+
+  // Undo, from the same place the change is read: the revision this would
+  // supersede, and the one click that puts it back.
+  const supersedes = $("#review-supersedes").querySelector(".what");
+  supersedes.textContent = data.supersedes
+    ? `It would supersede revision ${data.supersedes.revision} — ${data.supersedes.name}`
+      + (data.supersedes.approved_by ? `, approved by ${data.supersedes.approved_by}. ` : ". ")
+    : "There is no earlier revision: nothing of this code is in force today.";
+  // The button sits in the sentence that names the revision, so undo is read
+  // and reached in one place rather than hunted for on a history screen.
+  if (data.undo) {
+    supersedes.append(button(`Put revision ${data.supersedes.revision} back`, async () => {
+      if (await act(data.undo, `${data.code} is back at revision ${data.supersedes.revision}`)) {
+        closeReview();
+        await refreshPending();
+      }
+    }));
+  }
+}
+
+$("#review-close").addEventListener("click", closeReview);
+
+$("#review-walk").addEventListener("click", () => {
+  // The assistant's own guide runner, playing a guide nobody authored: the
+  // steps came from the diff above.
+  if (!reviewing || !window.fsmesAssist) return;
+  window.fsmesAssist.beginWalk(reviewing.walkthrough);
+});
+
+$("#review-approve").addEventListener("click", async () => {
+  if (!reviewing) return;
+  if (await act(reviewing.approve, `${reviewing.code} is in force`)) {
+    closeReview();
+    await refreshPending();
+  }
+});
 
 function waited(seconds) {
   if (seconds === null || seconds === undefined) return "—";

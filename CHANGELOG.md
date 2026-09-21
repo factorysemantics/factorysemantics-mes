@@ -66,6 +66,25 @@ goes under Honesty with a migration line, so plant people can find it.
   never goes live by itself. One kind behind it today, the downtime
   vocabulary; the other three join it next.
 
+- **`GET /dashboard/pending-approvals/{kind}/{code}/{revision}`, and a review
+  the floor assistant walks you through.** The panel above shipped with a row
+  and an approve button, which is a blind signature: the row says a draft
+  exists and nothing about what it would do to the plant. **Review** on the
+  row now opens the substance in one call — the draft against the revision it
+  would supersede as a diff in plain words, how many reasons the list holds
+  and would hold, how many recorded intervals already carry the code (counted
+  now, beside what the drafter said when they wrote it), who drafted it and on
+  whose behalf, and the one click that puts the previous revision back. It is
+  gated by the same capability that lists the kind: a panel that refuses the
+  button while showing the substance leaks the draft. **Walk me through it**
+  hands that diff to the assistant's guide mode — one step per change, each
+  painting the row it belongs to with the ring that walks an operator through
+  a task, the approve control last. The walk is generated deterministically
+  from the draft; **no model is called anywhere in it**, and the coach card
+  says so. Kinds live in one registry (`services/review.py`) with a reader and
+  a reviewer each, so a kind can no longer be listed as waiting without
+  something that can show what it would change.
+
 - **`downtime_reasons.json`, the tenth master-data kind a plant pack may
   carry.** Codes are checked offline by the same two rules the product
   enforces when a person drafts one — the shape, and the protected words. A
