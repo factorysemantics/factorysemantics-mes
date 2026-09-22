@@ -16,7 +16,7 @@
         <link rel="prev" href="../m8-packs-and-fleet/">
       
       
-        <link rel="next" href="../../decisions/">
+        <link rel="next" href="../config-audit-2026-09-21/">
       
       
         
@@ -2137,10 +2137,49 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#10-the-audit-what-else-is-still-hard-coded-2026-09-21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. The audit — what else is still hard-coded, 2026-09-21
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config-audit-2026-09-21/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design — the configuration audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2169,10 +2208,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_10" >
         
           
-          <label class="md-nav__link" for="__nav_4_9" id="__nav_4_9_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4_10" id="__nav_4_10_label" tabindex="">
             
   
   
@@ -2190,8 +2229,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_9">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3929,6 +3968,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#10-the-audit-what-else-is-still-hard-coded-2026-09-21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. The audit — what else is still hard-coded, 2026-09-21
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -4819,6 +4869,41 @@ it got wrong or left out, recorded where the next piece will look:</p>
 analysis screen does not yet print the two totals the API now carries, because
 §6 said to touch no screen but the station's and the dashboard's. That is the
 smallest next piece, and it is one paragraph of JavaScript.</p>
+<hr />
+<h2 id="10-the-audit-what-else-is-still-hard-coded-2026-09-21">10. The audit — what else is still hard-coded, 2026-09-21<a class="headerlink" href="#10-the-audit-what-else-is-still-hard-coded-2026-09-21" title="Permanent link">&para;</a></h2>
+<p>This page decided <em>how</em>. The next question is <em>what else</em>, and it is answered
+somewhere that can go stale without taking a decision with it:
+<strong><a href="../config-audit-2026-09-21/">What is still hard-coded that a plant might want to own</a></strong>,
+produced by <code>fsmes config-audit</code>, which applies §3's two-plants test to the
+whole tree mechanically and can be rerun any day.</p>
+<p>Three things from it belong here rather than there, because they bind
+everything built from now on and are not a snapshot of one day's source:</p>
+<ol>
+<li><strong>The literal that is in the source today becomes the shipped default,
+   unchanged.</strong> Every candidate the audit finds already has a value, so making
+   one configurable must not also move it. A plant that configures nothing
+   behaves exactly as it does now.</li>
+<li><strong>A list is honest as a plain list up to twelve; past twelve it needs search
+   and a stated, stable sort.</strong> Twelve because this product already answered
+   "how many rows is a screenful" once, at <code>services/analysis.py:440</code>. A
+   scrolled list without search reproduces the failure the free-text box had:
+   the word is in there, the person cannot find it, and they add a duplicate.</li>
+<li><strong>Kind-tagging is a rule about the PR, not about the literal.</strong> The PR that
+   makes any setting configurable adds a <code>ConfigSection</code> in <code>modules.py</code> in the
+   same PR — every setting, including one that will only ever be a key in
+   <code>plant.toml</code> — and adds a <code>KINDS</code> entry in <code>services/review.py</code> in the same
+   PR <em>if and only if</em> it has a draft-then-approve step. Neither is ever added
+   afterwards. The nav was retrofitted once (§2a); that is what this rule
+   exists to prevent happening again.</li>
+</ol>
+<p>One correction to §3's table came out of the audit and is recorded here rather
+than left in a dated page. §3 places "SPC rules 1–4" in tier three with the
+note <em>"A rule a plant can switch off is a chart that lies."</em> That reasoning is
+about the <strong>chart</strong>, and it holds. Whether a plant may choose which rules raise
+a <strong>hold</strong> is a different question that §3 did not ask, and it is open. The
+rule <em>windows</em> — 2-of-3, 4-of-5, 8-in-a-row — are tier three either way: a
+plant that changed them would publish <code>SpcSignal.rule = 3</code> while meaning
+something nobody else means by rule 3.</p>
 
 
 
@@ -4873,13 +4958,13 @@ smallest next piece, and it is one paragraph of JavaScript.</p>
         
         
           
-          <a href="../../decisions/" class="md-footer__link md-footer__link--next" aria-label="Next: Decisions">
+          <a href="../config-audit-2026-09-21/" class="md-footer__link md-footer__link--next" aria-label="Next: Design — the configuration audit">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Decisions
+                Design — the configuration audit
               </div>
             </div>
             <div class="md-footer__button md-icon">
