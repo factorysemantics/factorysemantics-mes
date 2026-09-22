@@ -142,7 +142,17 @@ def open_nc(
     it was opened, or a supervisor is being asked to take the machine's word
     for it. A person raising one writes the description; their evidence stays
     null rather than invented.
+
+    **The severity is checked against the plant's own list, once it has one.**
+    A plant that has approved no severity behaves exactly as this did before
+    the list existed: the column takes what it is given. A plant that has one
+    may only raise a record at a word on it - and no record already raised is
+    read or rewritten, because a hold graded `major` last March was graded
+    `major`, whatever the plant calls things now.
     """
+    from fsmes.services import severities
+
+    severity = severities.validate(session, severity)
     wo = workorders.get(session, work_order_code) if work_order_code else None
     now = utcnow()
     nc = NonConformance(code="NC-PENDING", description=description[:400], severity=severity,

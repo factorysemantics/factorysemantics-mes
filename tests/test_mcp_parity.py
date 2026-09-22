@@ -41,6 +41,15 @@ EXCLUDED = {
         "it - but the tool that does it reads a month of typed reasons through a "
         "model, which is the follow-up the design names; this change proves the "
         "human loop first (surfaces, with the drafting assistant)",
+    "POST /quality/severities/{code}/approve/{revision}":
+        "putting the plant's own severities in front of every quality record is a "
+        "human capability; the agent role is built without `quality.approve`, so a "
+        "tool for it would be a tool that always refuses",
+    "POST /quality/severities":
+        "an agent may draft one - it holds `quality.define` and the API is open to "
+        "it - and the tool arrives with the same drafting assistant the downtime "
+        "vocabulary is waiting on, because both want the plant's own history read "
+        "before a word is proposed",
     # operations the assistant widget owns
     "POST /assist/ask": "the in-UI assistant; agents ask the tools directly",
     "POST /assist/agent": "the in-UI agent's own front door; it calls the tools itself",

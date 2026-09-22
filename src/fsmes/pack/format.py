@@ -73,7 +73,12 @@ class Key:
 
     name: str
     kind: str
-    """`str`, `int`, `float`, `bool`, `path`, `paths`."""
+    """`str`, `int`, `float`, `bool`, `path`, `paths`, `ints`.
+
+    `ints` is a TOML array of whole numbers - `hold_rules = [1, 2]`. It
+    compiles to a comma-separated string, because a setting is an environment
+    variable and an environment variable is text; the product parses it back
+    where it reads it, and states what it parsed."""
     about: str
     becomes: str | None = None
     """The `MES_*` setting this compiles to, or None when the key is read by
@@ -182,6 +187,16 @@ SCHEMA: tuple[Section, ...] = (
             "window this MES saw less than 80% of comes back as unknown, with the "
             "ledger saying where the rest of it went.",
             "MES_OEE_COVERAGE_FLOOR"),
+    )),
+    Section("quality", "What this plant asks of its own quality records.", (
+        Key("hold_rules", "ints",
+            "Which Western Electric rules raise a quality hold, as a list of "
+            "rule numbers from 1 to 4. Leave it out and all four do, which is "
+            "what this product has always done. The chart draws and records "
+            "every rule whatever this says - a rule a plant switched off the "
+            "chart would be a chart that lies (decision 0036); what a plant "
+            "chooses here is which of them are worth somebody's morning.",
+            "MES_QUALITY_HOLD_RULES"),
     )),
     Section("floor", "The shop floor's own cadence, for a simulated plant.", (
         Key("inspect_every", "int", "Seconds between recorded quality checks.",
@@ -344,6 +359,13 @@ def settings(pack: Pack) -> dict[str, str]:
                 value = pack.path(str(value)).as_posix()
             elif key.kind == "bool":
                 value = "true" if value else "false"
+            elif key.kind == "ints":
+                # A setting is text. The list is written as a comma list
+                # rather than as Python's own repr, so the value a person
+                # reads in `fsmes info` is the value they wrote in the pack.
+                if not isinstance(value, list):
+                    continue  # already refused by the checker; never guessed at here
+                value = ",".join(str(int(item)) for item in value)
             out[key.becomes] = str(value)
     out["MES_MODULES"] = module_spec(pack)
     if pack.table("words"):

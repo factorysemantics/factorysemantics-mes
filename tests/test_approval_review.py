@@ -142,7 +142,8 @@ def test_a_retirement_states_how_many_recorded_intervals_it_would_affect(
     session.flush()
 
     body = admin.get("/dashboard/pending-approvals/downtime_reason/breakdown/2").json()
-    assert body["affected"]["intervals_labelled"] == 2
+    assert body["affected"]["records"] == 2
+    assert body["affected"]["of"] == "recorded interval"
     assert body["affected"]["stated_in_the_draft"] == 2
     assert body["affected"]["moved_since_the_draft"] is False
     assert body["coverage"]["vocabulary_total_after"] == 0
@@ -163,7 +164,7 @@ def test_history_that_moved_while_the_draft_waited_is_said_rather_than_hidden(
 
     affected = admin.get(
         "/dashboard/pending-approvals/downtime_reason/breakdown/2").json()["affected"]
-    assert affected["intervals_labelled"] == 2
+    assert affected["records"] == 2
     assert affected["stated_in_the_draft"] == 1
     assert affected["moved_since_the_draft"] is True
 

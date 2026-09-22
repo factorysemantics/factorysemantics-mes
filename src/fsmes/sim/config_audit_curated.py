@@ -156,12 +156,16 @@ CURATED: tuple[Curated, ...] = (
         "Q5", "quality", "general",
         "Which Western Electric rules are in force",
         "services/spc.py", 84, '"a point beyond three sigma"',
-        why="Whether a plant may switch a rule off at all is a question "
-            "decision 0035 has not answered - section 2 of the audit argues "
+        why="Whether a plant may switch a rule off at all was a question "
+            "decision 0035 had not answered - section 2 of the audit argues "
             "the chart is the product's, and a chart drawn with rule 4 off "
             "and still called an SPC chart does not say what it appears to. "
             "That is a product decision, which is why it is on the short "
-            "list. All four run today and that stays the shipped default."),
+            "list. Decision 0036 made it on 2026-09-22 and it is built: every "
+            "rule is drawn and recorded on every plant, and `[quality] "
+            "hold_rules` chooses which of them raise a hold. All four is the "
+            "shipped default, so a plant that configures nothing is "
+            "unchanged."),
     Curated(
         "Q6", "quality", "plant",
         "The gauge rule of ten, and its floor of four",

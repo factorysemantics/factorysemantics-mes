@@ -12,6 +12,52 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **The plant's own non-conformance severities — the second vocabulary, and
+  the test of whether the first one's loop generalised.**
+  `NonConformance.severity` had been twenty characters of free text
+  defaulting to `minor` since the table was written: nothing validated it, no
+  list stood behind it, and the only two words in the product were the two
+  its own code writes (a recorded check outside its specification opens a
+  minor one; SPC rule 1 opens a major one). A plant can now name its own:
+  `nc_severities` holds one revision of one word per row, somebody holding
+  the new **`quality.define`** drafts on **Quality › Configuration ›
+  Non-conformance severities** (`/dashboard/severities`), somebody holding
+  the new **`quality.approve`** puts it in force on the *Waiting for you*
+  panel, and undo is approving the previous revision. `GET
+  /quality/severities` answers in the same catalogue shape every server-owned
+  list in this product does, and there is a `nc_severities.json` pack kind.
+  **A plant that approves nothing behaves exactly as it did** — the column
+  takes what it is given; the moment a plant has one word in force, a new
+  record may only be raised at a word on the list, and **no existing record
+  is read or rewritten.** `minor` and `major` may be renamed and described in
+  the plant's own words and may not be retired: the product's own code paths
+  write them, so the refusal lands where a person is standing rather than on
+  a machine raising a hold at three in the morning, and `fsmes pack check`
+  refuses a seeded list that omits either. The four lab packs ship exactly
+  those two words — shipping `critical` to be helpful would be inventing a
+  plant. [Who names the severities](docs/operate/quality-severities.md).
+
+- **Quality has a Configuration entry**, the second workspace to get one
+  (`/dashboard/config/quality`): the severity vocabulary, and which SPC rules
+  raise a hold. One entry per domain with its configurable sections inside
+  it, not a nav chip per setting.
+
+- **Which SPC rules raise a quality hold is the plant's —
+  `[quality] hold_rules`, and decision
+  [0036](docs/decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md).**
+  All four Western Electric rules have always raised a non-conformance, which
+  on a characteristic that trips a warning rule several times a shift is a
+  queue nobody works. Decision 0035 had placed the four rules with the
+  product — *"a rule a plant can switch off is a chart that lies"* — and it
+  was answering about the **chart**. It still is: **every rule is evaluated,
+  drawn, recorded and counted in the verdict on every plant**, and what a
+  plant chooses is which of them are worth somebody's morning. Leave the key
+  out and all four hold, which is what this product has always done. An empty
+  list is a real answer and is never silent — the chart payload carries
+  `rules` and `hold_rules`, and the SPC screen says on every load which rules
+  this plant holds on and which are *drawn and recorded and raise no hold*, so
+  a firing that opened nothing is explained rather than noticed.
+
 - **`fsmes config-audit` — find the business judgments still hard-coded in
   the source.** Decision 0035 gave one test for whether a setting belongs to
   the plant or to the product — *ask what breaks if two plants answer
@@ -217,6 +263,28 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Changed
 
+- **The approvals panel takes a second kind, and one line of it had to
+  change.** The panel, the endpoint that answers *what is waiting that I may
+  approve* from the caller's live capabilities, the review and the generated
+  walk all took the non-conformance severities without being touched — one
+  entry in `services/review.py`'s `KINDS` registry, which is what decision
+  0035 said a second vocabulary would test. What did not survive was a noun:
+  the review panel spelled *recorded interval* in the browser, so a severity
+  draft would have told an approver that non-conformances were downtime
+  intervals. The server owns that word now, beside the coverage sentence that
+  already did — `affected.records` and `affected.of` replace
+  `affected.intervals_labelled` on
+  `GET /dashboard/pending-approvals/{kind}/{code}/{revision}`.
+
+- **The draft → approve lifecycle is one implementation, read by both
+  vocabularies.** Draft, validate, approve, retire and undo were written for
+  the downtime reasons over one table; they are now
+  `fsmes.services.vocabulary`, with each list naming what is true of it alone
+  — what carries its codes, what the product writes itself, what its own
+  routes already spell. Two copies of *"retiring changes what may be chosen
+  next and never what was chosen before"* would have been two copies that
+  drift.
+
 - **`fsmes config-audit` says whose answer each candidate is, not just where
   it lives.** The audit sorted seventy-five hard-coded judgments by domain, by
   size and by the reason each one qualified. It was missing the
@@ -286,6 +354,13 @@ goes under Honesty with a migration line, so plant people can find it.
   are read out of the draft's own diff.
 
 ### Fixed
+
+- **The trigger catalogue advertised a severity nothing in this product has
+  ever written.** `open_nc`'s help read *"severity (minor|major|critical)"*,
+  so a trigger configured from the catalogue's own words raised records graded
+  `critical` — a word that existed on no list, in no enum and nowhere else in
+  the product. The sentence now points at the plant's own severity list, and
+  the value is checked against it wherever a plant has one.
 
 - **Dependabot's Python pull requests arrive with `uv.lock` already
   regenerated.** `.github/dependabot.yml` asked for Python updates through

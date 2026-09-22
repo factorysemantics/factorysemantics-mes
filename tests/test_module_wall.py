@@ -84,10 +84,11 @@ def test_the_registry_says_how_many_modules_there_are_and_how_many_can_be_switch
 
     mounts = sum(len(m.routers) for m in registry.REGISTRY)
     tools = sum(len(m.tools) for m in registry.REGISTRY)
-    # Twenty-four router mounts across twenty-three modules: `equipment`
-    # mounts two at the same prefix, the downtime vocabulary first, because
-    # the machine router ends with `/{code}` and would swallow it.
-    assert mounts == 24, f"{mounts} routers in the registry; the app mounted 24 before it existed"
+    # Twenty-five router mounts across twenty-three modules: two modules mount
+    # two each at one prefix, with the vocabulary first - `equipment` because
+    # the machine router ends with `/{code}` and would swallow it, `quality`
+    # for the same structural reason before it has such a route.
+    assert mounts == 25, f"{mounts} routers in the registry; the app mounted 24 before it existed"
     assert tools == 10, f"{tools} tool files in the registry; the MCP server registered 10"
 
 
@@ -241,7 +242,7 @@ def test_every_table_the_registry_names_is_a_real_table():
         "module keeps its rows - stays checkable.")
 
     optional = sum(len(m.tables) for m in registry.REGISTRY if not m.kernel)
-    assert optional == 20, (
+    assert optional == 21, (
         f"{optional} of {len(known)} tables belong to a module a plant may switch off")
 
 

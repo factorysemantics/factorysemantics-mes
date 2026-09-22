@@ -36,6 +36,7 @@ PAGES = [
     ("masterdata.html", "masterdata.js"),
     ("triggers.html", "triggers.js"),
     ("reasons.html", "reasons.js"),
+    ("severities.html", "severities.js"),
     ("config.html", "config.js"),
     ("adjustments.html", "adjustments.js"),
     ("coa.html", "coa.js"),
@@ -47,7 +48,8 @@ ROUTES = ["/dashboard", "/dashboard/station", "/dashboard/orders", "/dashboard/q
           "/dashboard/line", "/dashboard/line/3d", "/dashboard/machines", "/dashboard/tags",
           "/dashboard/maintenance", "/dashboard/schedule", "/dashboard/spc", "/dashboard/gauges", "/dashboard/trace",
           "/dashboard/masterdata", "/dashboard/triggers", "/dashboard/reasons",
-          "/dashboard/config/engineering",
+          "/dashboard/config/engineering", "/dashboard/config/quality",
+          "/dashboard/severities",
           "/dashboard/adjustments", "/dashboard/coa",
           "/dashboard/machine/MIX01", "/dashboard/analysis", "/dashboard/admin",
           "/dashboard/instructions", "/dashboard/ops"]
@@ -63,6 +65,7 @@ LINKED = {
     # test_configuration_sections.py checks that every registered section
     # points at a screen this product actually serves.
     "/dashboard/reasons": "the Downtime reasons row on Engineering \u203a Configuration",
+    "/dashboard/severities": "the Non-conformance severities row on Quality \u203a Configuration",
 }
 
 

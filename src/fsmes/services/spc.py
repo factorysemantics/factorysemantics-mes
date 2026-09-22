@@ -156,6 +156,13 @@ def chart(session: Session, material: str, characteristic: str,
         "upper_spec": spec.max_value,
         "n": len(values),
         "points": [{"value": v, "ts": t} for v, t in zip(values, stamps, strict=False)],
+        # Which of the four rules raise a hold on this plant, and all four
+        # rule numbers beside them. Stated on every chart, whatever the plant
+        # chose, so a rule that fires and opens nothing is explained rather
+        # than noticed: a screen that showed a firing with no hold and said
+        # nothing about why is the chart lying by omission (decision 0036).
+        "rules": sorted(RULE_WINDOW),
+        "hold_rules": list(hold_rules()),
     }
 
     if len(values) < MIN_POINTS:
@@ -221,6 +228,7 @@ def _acted_on(session: Session, spec: QualitySpec, signals: list[dict], ids: lis
     """
     if not signals:
         return []
+    holds_on = hold_rules()
     keys = {_window_key(ids, s["index"], s["rule"]): s["index"] for s in signals}
     rows = session.scalars(select(SpcSignal).where(
         SpcSignal.spec_id == spec.id, SpcSignal.window_key.in_(keys))).all()
@@ -231,13 +239,22 @@ def _acted_on(session: Session, spec: QualitySpec, signals: list[dict], ids: lis
     out = []
     for signal in signals:
         key = _window_key(ids, signal["index"], signal["rule"])
-        out.append({**signal, "nonconformance": holds.get((signal["rule"], key))})
+        out.append({**signal,
+                    "nonconformance": holds.get((signal["rule"], key)),
+                    # Whether this plant raises a hold on this rule at all.
+                    # A firing with no hold means two different things - the
+                    # excursion already had one open, or this plant does not
+                    # hold on this rule - and the reader is owed which.
+                    "held": signal["rule"] in holds_on})
     return out
 
 
 def _verdict(stable: bool, capability: dict | None, signals: list[dict]) -> str:
     if not stable:
         rules = sorted({s["rule"] for s in signals})
+        # The process is out of control whether or not this plant raises a
+        # hold on the rule that said so. `hold_rules` decides who is called,
+        # never what the chart concluded.
         return (f"out of control - rule(s) {', '.join(map(str, rules))} fired. "
                 f"Capability is not meaningful until this is settled.")
     if capability is None:
@@ -263,6 +280,25 @@ RULE_WINDOW = {1: 1, 2: 3, 3: 5, 4: 8}
 #: The pseudo-tag a trigger watches to act on an SPC signal. No PLC publishes
 #: it; the MES raises it. See `fsmes.services.triggers.EVENT_TAGS`.
 SIGNAL_TAG = "spc.signal"
+
+
+def hold_rules() -> tuple[int, ...]:
+    """Which of the four rules raise a quality hold on this plant.
+
+    Decision [0036](../../docs/decisions/0036-the-chart-draws-every-rule.md):
+    the chart draws and records all four whatever this returns - a rule a
+    plant could switch off the chart would be a chart that lies, which is what
+    0035 said and still says. What a plant chooses is which of them are worth
+    somebody's morning. All four is the default and is what this product has
+    always done.
+
+    Read at the moment it is needed rather than at import, so a plant that
+    changes its pack and restarts gets the new answer without this module
+    having cached the old one.
+    """
+    from fsmes.config import get_settings
+
+    return get_settings().hold_rules()
 
 
 def _window_key(ids: list[int], index: int, rule: int) -> str:
@@ -346,6 +382,7 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
                                     SpcSignal.window_key.in_(keys)))
     }
 
+    holds_on = hold_rules()
     raised: list[dict] = []
     for signal in signals:
         key = _window_key(ids, signal["index"], signal["rule"])
@@ -361,6 +398,21 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
             window={**control, "n": len(values),
                     "points": [{"value": c.value, "ts": c.ts.isoformat(), "check": c.id} for c in window]})
         session.add(row)
+
+        # The signal row is written whatever the plant holds on: the chart
+        # draws every rule, and a firing this plant does not act on is still a
+        # firing it will want to see. Decision 0036.
+        if signal["rule"] not in holds_on:
+            session.flush()
+            raised.append({"rule": signal["rule"], "what": signal["what"],
+                           "value": signal["value"], "material": material,
+                           "characteristic": spec.characteristic,
+                           # Not a hold this plant has yet to open: a hold it
+                           # does not open. Null would read as the first.
+                           "nonconformance": None, "held": False,
+                           "equipment": _equipment_code(session, check),
+                           "window_key": key})
+            continue
 
         nc = _hold_for(session, spec)
         if nc is None:
@@ -382,7 +434,8 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
         row.nonconformance_id = nc.id
         raised.append({"rule": signal["rule"], "what": signal["what"], "value": signal["value"],
                        "material": material, "characteristic": spec.characteristic,
-                       "nonconformance": nc.code, "equipment": _equipment_code(session, check),
+                       "nonconformance": nc.code, "held": True,
+                       "equipment": _equipment_code(session, check),
                        "window_key": key})
     return raised
 

@@ -37,6 +37,16 @@ EXCLUDED = {
     "POST /equipment/downtime-reasons/{code}/approve/{revision}":
         "the panel does call it, by the path the server hands each row - which is what "
         "lets one panel sign several kinds - so the path is never written in a script",
+    # the plant's non-conformance severities: the same two, for the same two
+    # reasons. That the excuses read identically is the point - the second
+    # vocabulary joined the panel without the panel being touched.
+    "GET /quality/severities/drafts":
+        "the vocabulary's own screen lists everything instead; /dashboard's "
+        "pending-approvals panel reads the cross-kind endpoint, so this one is for an "
+        "agent and the API",
+    "POST /quality/severities/{code}/approve/{revision}":
+        "the panel does call it, by the path the server hands each row - which is what "
+        "lets one panel sign several kinds - so the path is never written in a script",
     # system plumbing
     "GET /metrics": "for Prometheus, not a screen",
     "GET /pack": "for the fleet console, which is a page of its own and not a plant's screen",

@@ -117,7 +117,14 @@ ACTION_HELP = {
     "propose_adjustment": "Put a setpoint change in the recommendation queue for a person to approve. "
                           "Params: setpoint (the writable tag), value, rationale.",
     "log_event": "Write an audit row naming the trigger, tag and value. Params: message.",
-    "open_nc": "Open a non-conformance. Params: description, severity (minor|major|critical).",
+    # The severities are the plant's own list, not three words typed here.
+    # This sentence used to offer `critical`, which nothing in this product
+    # has ever written and no plant had on any list - so a trigger configured
+    # from the catalogue's own words raised a record graded with a word that
+    # existed nowhere else.
+    "open_nc": "Open a non-conformance. Params: description, severity - a code from "
+               "this plant's severity list at /quality/severities, or minor where the "
+               "plant has no list.",
     "create_maintenance_order": "Raise corrective maintenance on the machine. Params: summary, reason.",
     "set_machine_down": "Set the machine down with the trigger as the reason. Params: reason.",
 }

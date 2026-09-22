@@ -340,7 +340,7 @@ row.
 | **Q2** | Which SPC rule counts as a *major* finding | `services/spc.py:370` `severity="major" if signal["rule"] == 1 else "minor"` | A plant that treats a four-of-five trend as major changes only its own triage queue; rule numbers and the NC payload are identical. | small | **`plant`** — one triage policy per plant; two characteristics do not want different answers |
 | **Q3** | The non-conformance severity vocabulary itself | `domain/quality.py:99` `String(20), default="minor"`; written at `services/quality.py:148` and `spc.py:370`, unvalidated at `api/routers/quality.py:274` | Named in 0035 §2 as quality-engineering configuration and in §3 as *"free text by accident, not by design"*. `critical/major/minor/observation` breaks nothing outside the plant. | large | **`plant`** — the plant's own words, used the same way everywhere in it |
 | **Q4** | How far back a chart and the rules look | `services/spc.py:49`, `:145`, `:288` (`limit: int = 200`); `api/routers/quality.py:368` | A plant inspecting every fifteen minutes and one inspecting hourly want different histories behind one chart. | small | **`plant`** — a plant inspecting every fifteen minutes wants a different history from one inspecting hourly. *Unsure: it could be per characteristic — see the tool's row* |
-| **Q5** | Which Western Electric rules are in force | `services/spc.py:80-106` — all four always run | **Needs a decision against 0035 first.** §3 places the four rules in tier three (*"a rule a plant can switch off is a chart that lies"*); whether a plant may choose which rules raise a *hold*, as opposed to which are drawn, is a question §3 did not ask. Window sizes stay tier three either way — see §2. | medium, and blocked on the decision | **`general`** — whether a rule may be switched off at all is a product decision 0035 never made — **§8** |
+| **Q5** | Which Western Electric rules raise a hold | `services/spc.py:80-106` — all four always did | **Decided 2026-09-22 by [0036](../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md)**, and built: every rule is drawn and recorded on every plant, and `[quality] hold_rules` chooses which of them open a non-conformance, defaulting to all four. Window sizes stay tier three — see §2. | medium — **done** | **`general`** — the question *may a plant choose at all* was the product's, and 0036 answered it. What the answer hands the plant is a `plant` key — **§8** |
 | **Q6** | The gauge rule of ten, and its floor of four | `services/gauges.py:179` `"adequate": ratio >= 10`, `:185` `ratio >= 4` | Comment: *"Four is the usual floor."* AIAG says 10:1, ANSI Z540 says 4:1; both plants are right and nothing off-plant reads the word `adequate`. Directly analogous to the accepted Cpk case. | small | **`plant`** — AIAG says 10:1 and ANSI Z540 says 4:1; a plant follows one standard for every gauge it owns |
 | **Q7** | A gauge is "due soon" thirty days out | `web/gauges.js:31`, `:41`, `:80` | The maintenance 80% judgment in another domain — and invented in the browser: the server deliberately returns only `days_until_due` and `overdue` (`services/gauges.py:53-54`). Quarterly calibration wants 14 days; annual wants 60. | medium (needs to reach the browser) | **`object`** — a quarterly calibration wants fourteen days of warning and an annual one sixty — it belongs beside the gauge's own interval |
 | **Q8** | Default calibration interval for a new gauge | `services/gauges.py:59` `interval_days: int = 365`, repeated at `api/routers/quality.py:354` and `web/gauges.js:122` | The per-gauge column exists; only the plant's house default is product-owned, in three places. | small | **`plant`** — the per-gauge interval is already the engineer's; this is the plant's house default |
@@ -574,7 +574,7 @@ somebody's plant.
 
 | | What it is | The default it ships | Why anybody is asked |
 |---|---|---|---|
-| **Q5** | Which Western Electric rules are in force | all four, always | 0035 §3 says a rule a plant can switch off is a chart that lies — and it was answering about the *chart*. Whether a plant may choose which rules raise a **hold** is a question it never asked. Until that is decided, nothing here can be built. |
+| **Q5** | Which Western Electric rules raise a hold | all four, always | 0035 §3 says a rule a plant can switch off is a chart that lies — and it was answering about the *chart*. Whether a plant may choose which rules raise a **hold** is a question it never asked. **Answered 2026-09-22 by [0036](../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md): the chart draws and records every rule, and the plant chooses which of them hold. Built, defaulting to all four.** |
 | **A2** | PBKDF2 iteration count | `240_000` | It is the product's entire password policy — no length rule, no complexity rule, no lockout beside it. A plant that turns it down is weaker without knowing it, so the floor is the product's to raise as hardware gets faster. |
 | **A13** | The assistant's house style — "at most four sentences" | four sentences | The assistant's voice is the product's. It is written twice, in `agent.py` and `assistant.py`, which is the evidence that nobody owns it yet. |
 | **A14** | How many suggestion and guide chips a screen offers | four — and four again, independently | Two hard-coded copies of one judgment, one on the server and one in the browser. The honest fix is one number, not a setting. |
@@ -589,9 +589,12 @@ was found in process, controls or supply chain: every judgment in those three
 is either a plant's or an object's, which is what you would expect of the
 three domains that touch the floor.*
 
-Only **Q5** blocks anything: it needs a decision against 0035 §3 before it can
-be built. The other eight are one-line changes whenever somebody decides the
-product's number should be a different number.
+**Q5** was the only one of the nine that blocked anything, and it no longer
+does: decision
+[0036](../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md)
+answered it on 2026-09-22 and the key is built. The other eight are one-line
+changes whenever somebody decides the product's number should be a different
+number.
 
 ---
 

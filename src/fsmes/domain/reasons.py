@@ -26,30 +26,20 @@ Undo is therefore one move and deletes nothing: approve the previous revision.
 
 from __future__ import annotations
 
-import enum
 from datetime import datetime
 
 from sqlalchemy import Boolean, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from fsmes.db import Base, utcnow
-from fsmes.domain.common import str_enum
+from fsmes.domain.common import VocabularyStatus, str_enum
 
-
-class DowntimeReasonStatus(enum.StrEnum):
-    """Where one revision of one reason stands.
-
-    `retired` is the fourth because a vocabulary shrinks as well as grows, and
-    a retired term is not a superseded one: superseded means *another revision
-    of this code took over*, retired means *this code is no longer offered*.
-    A pareto that could not tell those apart could not explain why a bar it
-    still shows is no longer on anybody's screen.
-    """
-
-    DRAFT = "draft"
-    APPROVED = "approved"
-    SUPERSEDED = "superseded"
-    RETIRED = "retired"
+#: Where one revision of one reason stands. The four statuses are shared with
+#: every other vocabulary this plant authors rather than spelled again here:
+#: `draft`, `approved`, `superseded` and `retired` mean the same thing about a
+#: downtime reason as they do about a non-conformance severity, and two
+#: separate spellings of one idea are two spellings that drift apart.
+DowntimeReasonStatus = VocabularyStatus
 
 
 class DowntimeReason(Base):

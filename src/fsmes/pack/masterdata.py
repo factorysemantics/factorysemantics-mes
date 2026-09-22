@@ -20,6 +20,7 @@ written by `fsmes pack apply`:
       maintenance_plans.json   the recurring jobs, and what makes each due
       shifts.json              the patterns this plant works
       downtime_reasons.json    the reasons an operator picks from when it stops
+      nc_severities.json       the plant's own words for how bad a finding is
 
 The last three arrived on 2026-09-14, when the bottling lab plant's line
 moved into a pack. It had been seeded by `fsmes seed-kepsim`, which builds a
@@ -63,6 +64,7 @@ KINDS: dict[str, str] = {
     "maintenance_plans": "the recurring jobs on a machine, and what makes each due",
     "shifts": "the shift patterns this plant works",
     "downtime_reasons": "the reasons an operator may choose from when a machine stops",
+    "nc_severities": "the severities a non-conformance may be raised at",
 }
 
 REQUIRED: dict[str, tuple[str, ...]] = {
@@ -76,6 +78,7 @@ REQUIRED: dict[str, tuple[str, ...]] = {
     "maintenance_plans": ("code", "name", "equipment", "trigger", "interval"),
     "shifts": ("code", "name", "starts", "ends"),
     "downtime_reasons": ("code", "name"),
+    "nc_severities": ("code", "name"),
 }
 
 OPTIONAL: dict[str, tuple[str, ...]] = {
@@ -89,6 +92,7 @@ OPTIONAL: dict[str, tuple[str, ...]] = {
     "maintenance_plans": ("instructions", "document_code", "expected_minutes"),
     "shifts": ("days", "equipment"),
     "downtime_reasons": ("description",),
+    "nc_severities": ("description",),
 }
 
 #: What `[[maintenance_plans]] trigger` may say, and what each counts. Spelt
@@ -241,6 +245,39 @@ def problems(directory: Path) -> list[str]:
                 out.append(f"downtime_reasons.json #{index} names {code!r}, which is "
                            f"already {owned[code]} in this product.")
 
+    # The same two rules for the severity vocabulary, plus one only it has: a
+    # pack that seeds a list must seed the words the product's own code paths
+    # write. `services/quality.py` opens a minor non-conformance when a check
+    # falls out of specification and `services/spc.py` opens a major one for
+    # rule 1, so a plant whose list lacked either would find out at the moment
+    # a machine raised a hold. Checked here, offline, where a person is
+    # reading and can fix it.
+    if data.rows("nc_severities"):
+        from fsmes.pack.check import protected_terms
+        from fsmes.services.severities import CODE as SEVERITY_CODE
+        from fsmes.services.severities import PRODUCT_WRITES
+
+        owned = protected_terms()
+        seeded = set()
+        for index, row in enumerate(data.rows("nc_severities"), start=1):
+            code = row.get("code")
+            if code:
+                seeded.add(str(code))
+            if code and not SEVERITY_CODE.match(str(code)):
+                out.append(f"nc_severities.json #{index} has code {code!r}; a code is "
+                           "two to twenty characters, starts with a lowercase letter, "
+                           "and holds lowercase letters, digits and underscores.")
+            elif code and code in owned:
+                out.append(f"nc_severities.json #{index} names {code!r}, which is "
+                           f"already {owned[code]} in this product.")
+        for code, written in PRODUCT_WRITES:
+            if code not in seeded:
+                out.append(f"nc_severities.json has no {code!r}, which this product "
+                           f"writes itself: {written}. A plant seeded with a list "
+                           "missing it would refuse at the moment a machine raised a "
+                           "hold. Seed it - the name and the sentence beside it are "
+                           "yours to write.")
+
     # A component that is its own parent is a bill of materials that never
     # terminates, and the explosion would recurse until something gave way.
     for index, row in enumerate(data.rows("bom"), start=1):
@@ -285,6 +322,7 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
         Material,
         MaterialLot,
         MaterialType,
+        NcSeverity,
         QualitySpec,
         Routing,
         RoutingOperation,
@@ -292,6 +330,7 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
         TriggerKind,
         WorkOrder,
     )
+    from fsmes.domain.common import VocabularyStatus
     from fsmes.services import calendar as calendar_service
     from fsmes.services import workorders
 
@@ -440,6 +479,21 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
             status=DowntimeReasonStatus.APPROVED, created_by="pack-apply",
             approved_by="pack-apply", approved_at=utcnow()))
         count("downtime_reasons", made=True)
+
+    # The severity vocabulary, on the same terms and for the same reason: a
+    # plant whose quality screen graded nothing until somebody approved two
+    # seeded rows would be a plant that shipped with a free-text column after
+    # all. Every later change goes through draft -> approve.
+    for row in data.rows("nc_severities"):
+        code = row["code"]
+        if session.scalar(select(NcSeverity.id).where(NcSeverity.code == code)):
+            count("nc_severities", made=False)
+            continue
+        session.add(NcSeverity(
+            code=code, revision=1, name=row["name"], description=row.get("description", ""),
+            status=VocabularyStatus.APPROVED, created_by="pack-apply",
+            approved_by="pack-apply", approved_at=utcnow()))
+        count("nc_severities", made=True)
 
     for row in data.rows("shifts"):
         code = row["code"]

@@ -272,7 +272,10 @@ def test_the_panel_shows_a_draft_only_to_a_caller_who_may_approve_it(
     session.flush()
 
     mine = admin.get("/dashboard/pending-approvals").json()
-    assert mine["total"] == 1 and mine["kinds"] == ["downtime_reason"]
+    # An administrator may approve both of this product's vocabularies, so
+    # both kinds are theirs; one draft is waiting and it is this one.
+    assert mine["total"] == 1
+    assert mine["kinds"] == ["downtime_reason", "nc_severity"]
     assert mine["items"][0]["code"] == "jam_infeed"
     assert mine["items"][0]["approve"] == "/equipment/downtime-reasons/jam_infeed/approve/1"
 

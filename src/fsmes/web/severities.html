@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Non-conformance severities — Quality configuration — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/station.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <!-- This screen sits inside Quality › Configuration and lights that entry,
+       the way the downtime vocabulary lights Engineering's. -->
+  <header data-nav="config/quality"></header>
+
+  <section class="kpis">
+    <div class="kpi"><span class="kpi-label">On the list</span><span id="kpi-approved" class="kpi-value">—</span>
+      <span class="kpi-sub">a finding may be graded at these</span></div>
+    <div class="kpi"><span class="kpi-label">Drafts waiting to be signed</span><span id="kpi-drafts" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Retired</span><span id="kpi-retired" class="kpi-value">—</span>
+      <span class="kpi-sub">off the list, still grading history</span></div>
+    <div class="kpi"><span class="kpi-label">Words in all</span><span id="kpi-codes" class="kpi-value">—</span>
+      <span class="kpi-sub">every code the plant has ever had</span></div>
+  </section>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <main class="object-main">
+    <!-- What you DO sits apart from what you READ (STYLE.md rule 10). The
+         strip is absent entirely for a person without `quality.define`: the
+         list stays readable, because a vocabulary nobody can read is a
+         vocabulary nobody can choose from. -->
+    <section class="panel actions span-2" data-needs-cap="quality.define" data-assist="severity-actions">
+      <h2>Draft a severity <span class="muted">— it grades nothing until somebody signs it</span></h2>
+      <div class="forms">
+        <form id="severity-form" class="stack" data-assist="severity-form">
+          <h3 id="form-title">A new word</h3>
+          <div class="row">
+            <input id="s-code" placeholder="Code (critical)" required data-assist="severity-code"
+                   aria-label="Code" autocomplete="off" list="severity-codes">
+            <datalist id="severity-codes"></datalist>
+          </div>
+          <input id="s-name" placeholder="Name" required
+                 aria-label="Name" data-assist="severity-name">
+          <input id="s-description" placeholder="What a finding at this severity means"
+                 aria-label="Description" data-assist="severity-description">
+          <div class="row">
+            <button id="s-submit" data-assist="severity-submit">Save draft</button>
+            <button id="s-cancel" type="button" class="ghost hidden">Cancel</button>
+          </div>
+          <p id="form-help" class="muted small">The <strong>code</strong> is what is stored on every
+            non-conformance and printed on a certificate: two to twenty characters, lowercase, starting with a
+            letter. The <strong>name</strong> is what a person reads beside the record, and the description is
+            the sentence that tells two severities apart. Typing a code that already exists drafts its next
+            revision; typing one that has a draft open edits that draft.</p>
+        </form>
+      </div>
+    </section>
+
+    <section class="panel span-2">
+      <h2>The plant's severities <span id="severity-count" class="muted count">—</span></h2>
+      <p class="muted small">A draft is on nobody's screen but this one and the <em>Waiting for you</em> panel
+        on the Floor screen, where somebody holding <code>quality.approve</code> signs it. Retiring changes what
+        may be graded next and never what was graded before: the non-conformances a retired word graded keep it,
+        and so does the certificate that printed it.</p>
+      <p id="product-writes" class="muted small"></p>
+      <div class="filter-bar" data-assist="severity-filters">
+        <input id="v-q" type="search" placeholder="Code, name or description" aria-label="Code, name or description">
+        <select id="v-status" aria-label="Status">
+          <option value="">Any status</option>
+          <option value="approved">on the list</option>
+          <option value="draft">something waiting to be signed</option>
+          <option value="retired">retired</option>
+          <option value="none">never signed</option>
+        </select>
+      </div>
+      <div class="table-wrap"><table id="severities-table">
+        <thead><tr>
+          <th>Severity</th><th>Description</th><th>Status</th><th class="num">Rev</th>
+          <th>Drafted</th><th>Signed</th><th class="num">Records</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div id="v-pager" class="pager"></div>
+      <p id="v-empty" class="muted small hidden"></p>
+    </section>
+  </main>
+
+  <p class="screen-source">vocabulary /quality/severities/vocabulary · draft and retire
+    POST /quality/severities · signing happens on /dashboard (Waiting for you)</p>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/severities.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

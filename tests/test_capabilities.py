@@ -411,10 +411,13 @@ def test_the_agent_role_runs_production_and_never_approves_or_administers():
     # decides. `process.define` joined them with the plant's downtime
     # vocabulary - an agent that reads a month of typed reasons and proposes
     # six codes is the point of that feature, and it never signs them.
-    assert operator < agent < supervisor | {"documents.write", "process.define"}
+    # `quality.define` joined them with the second vocabulary, on the same
+    # terms and for the same reason.
+    assert operator < agent < supervisor | {"documents.write", "process.define",
+                                            "quality.define"}
     for held_by_people_only in ("users.manage", "masterdata.write", "documents.approve",
                                 "orders.close", "quality.close_nc", "maintenance.plan",
-                                "scheduling.plan", "process.approve"):
+                                "scheduling.plan", "process.approve", "quality.approve"):
         assert held_by_people_only not in agent, held_by_people_only
 
 

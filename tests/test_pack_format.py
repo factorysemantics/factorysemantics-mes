@@ -554,6 +554,89 @@ def test_a_coverage_floor_reaches_the_plant_as_a_setting(pack_dir):
     assert fmt.settings(fmt.read(pack_dir))["MES_OEE_COVERAGE_FLOOR"] == "0.8"
 
 
+# ------------------------------------------- which SPC rules raise a hold
+
+
+def test_a_pack_that_names_no_hold_rules_holds_on_all_four_as_it_always_did(pack_dir):
+    """Decision 0036, and rule one of the configuration audit: the literal in
+    the source is the shipped default, unchanged. A plant that writes nothing
+    behaves exactly as it does now."""
+    assert problems(pack_dir) == []
+    assert "MES_QUALITY_HOLD_RULES" not in fmt.settings(fmt.read(pack_dir))
+
+
+def test_a_hold_rule_list_reaches_the_plant_as_a_comma_list_a_person_can_read(pack_dir):
+    """A setting is text, and the text is what the person wrote - not Python's
+    own repr of the list they wrote it as."""
+    written(pack_dir, MINIMAL + "\n[quality]\nhold_rules = [1, 2]\n")
+    assert problems(pack_dir) == []
+    assert fmt.settings(fmt.read(pack_dir))["MES_QUALITY_HOLD_RULES"] == "1,2"
+
+
+def test_a_pack_may_only_ever_narrow_the_four_rules(pack_dir):
+    """The rule numbers are the product's and stay the product's: a plant that
+    renumbered them would publish `SpcSignal.rule = 3` meaning something
+    nobody else means by rule 3."""
+    written(pack_dir, MINIMAL + "\n[quality]\nhold_rules = [5]\n")
+    found = problems(pack_dir)
+    assert any("[quality] hold_rules" in line and "this product has four" in line
+               for line in found)
+
+
+def test_a_rule_named_twice_is_said_rather_than_quietly_deduplicated(pack_dir):
+    written(pack_dir, MINIMAL + "\n[quality]\nhold_rules = [1, 1]\n")
+    assert any("twice" in line for line in problems(pack_dir))
+
+
+def test_holding_on_no_rule_is_a_real_answer_and_checks_clean(pack_dir):
+    """A plant running SPC as an observation is a plant, not a mistake. It is
+    never silent: the chart states which rules raise a hold whatever this
+    says."""
+    written(pack_dir, MINIMAL + "\n[quality]\nhold_rules = []\n")
+    assert problems(pack_dir) == []
+    assert fmt.settings(fmt.read(pack_dir))["MES_QUALITY_HOLD_RULES"] == ""
+
+
+# ---------------------------------------- the severity vocabulary, in a pack
+
+
+def test_a_pack_that_seeds_severities_must_seed_the_ones_the_product_writes(
+        pack_dir):
+    """A plant whose list lacked `major` would find out at the moment a
+    machine raised a hold. Refused here instead, offline, where a person is
+    reading and can fix it."""
+    masterdata_dir = pack_dir / "masterdata"
+    masterdata_dir.mkdir()
+    (masterdata_dir / "nc_severities.json").write_text(json.dumps(
+        [{"code": "minor", "name": "Minor"}]), encoding="utf-8")
+    written(pack_dir, MINIMAL + '\n[files]\nmasterdata = "masterdata"\n')
+    found = problems(pack_dir)
+    assert any("nc_severities.json has no 'major'" in line for line in found)
+
+
+def test_a_seeded_severity_may_not_spell_a_word_the_product_owns(pack_dir):
+    masterdata_dir = pack_dir / "masterdata"
+    masterdata_dir.mkdir()
+    (masterdata_dir / "nc_severities.json").write_text(json.dumps([
+        {"code": "minor", "name": "Minor"},
+        {"code": "major", "name": "Major"},
+        {"code": "scrap", "name": "Scrap"}]), encoding="utf-8")
+    written(pack_dir, MINIMAL + '\n[files]\nmasterdata = "masterdata"\n')
+    assert any("scrap" in line and "a KPI" in line for line in problems(pack_dir))
+
+
+def test_every_shipped_pack_seeds_the_two_severities_the_product_writes():
+    """The four lab packs carry exactly the two words the source writes today
+    and nothing else. Shipping `critical` to be helpful would be inventing a
+    plant."""
+    for name in ("labs/multiplant/bottling", "labs/multiplant/machining",
+                 "labs/multiplant/finewire", "labs/cutlery"):
+        rows = json.loads((REPO / name / "masterdata" / "nc_severities.json")
+                          .read_text(encoding="utf-8"))
+        assert [row["code"] for row in rows] == ["minor", "major"], name
+        assert all(row["description"] for row in rows), name
+
+
 def test_the_three_shipped_packs_set_a_floor_so_the_behaviour_is_visible():
     """A feature nothing ships with is a feature nobody sees. The lab packs
     set one; the cutlery demo deliberately does not, so the no-floor path is

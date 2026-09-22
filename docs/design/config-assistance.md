@@ -202,7 +202,8 @@ should read that same function rather than keep a second list.
 | Non-conformance disposition | `NcDisposition`, four values (`domain/quality.py:80-91`) | three | The ERP reads it; four is what a plant does |
 | Non-conformance severity | `String(20)`, default `"minor"` (`domain/quality.py:99`) | two, **no tier one** | Free text by accident, not by design |
 | Quality specification limits | `QualitySpec.min_value/max_value/unit`; pack `masterdata/quality_specs.json` | one | Quality engineering |
-| SPC rules 1–4 | `_western_electric`, hard-coded (`services/spc.py:67-112`) | three | A rule a plant can switch off is a chart that lies |
+| SPC rules 1–4 — *which are drawn and recorded* | `_western_electric`, hard-coded (`services/spc.py`) | three | A rule a plant can switch off is a chart that lies |
+| SPC rules 1–4 — *which raise a hold* | `[quality] hold_rules`, all four by default | one | Decision [0036](../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md), 2026-09-22. The row above was one row until then, and the distinction is the whole of that decision |
 | OPC `state_map` — raw PLC value → MES state | `tag_map.json` (`integrations/opc/tag_map.py:33-37`) | one | Controls engineering. The MES state names it maps *to* are tier three |
 | Shift patterns | `shift_patterns` table; pack kind `shifts` | one | Decision [0028](../decisions/0028-which-shift-a-minute-belongs-to.md) fixes what a shift *means*; the patterns are the plant's |
 | Machine names | `Equipment.code`/`name`, plus `MachineMap.object` | one | Two domains, joined by the tag map |
@@ -799,10 +800,17 @@ everything built from now on and are not a snapshot of one day's source:
    exists to prevent happening again.
 
 One correction to §3's table came out of the audit and is recorded here rather
-than left in a dated page. §3 places "SPC rules 1–4" in tier three with the
+than left in a dated page. §3 placed "SPC rules 1–4" in tier three with the
 note *"A rule a plant can switch off is a chart that lies."* That reasoning is
 about the **chart**, and it holds. Whether a plant may choose which rules raise
-a **hold** is a different question that §3 did not ask, and it is open. The
-rule *windows* — 2-of-3, 4-of-5, 8-in-a-row — are tier three either way: a
-plant that changed them would publish `SpcSignal.rule = 3` while meaning
-something nobody else means by rule 3.
+a **hold** is a different question that §3 did not ask.
+
+**It was answered on 2026-09-22 by decision
+[0036](../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md):
+every rule is evaluated, drawn and recorded on every plant, and which of them
+raise a quality hold is the plant's, defaulting to all four.** §3's sentence
+stays true and is now scoped to the chart, which is what it was always about;
+§3's table above is split into the two rows the distinction needs. The rule
+*windows* — 2-of-3, 4-of-5, 8-in-a-row — are tier three either way: a plant
+that changed them would publish `SpcSignal.rule = 3` while meaning something
+nobody else means by rule 3.
