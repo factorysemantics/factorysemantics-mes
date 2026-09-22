@@ -51,6 +51,24 @@ function whoCell(capability, held, noneMeans) {
   return cell;
 }
 
+/* A section that is a key in the plant's pack rather than a list somebody
+   edits on a screen. Neither capability column can say the truth about one:
+   nobody drafts it and nobody signs it. So both cells say where it lives and
+   what changing it takes, and the row still points at the screen its effect
+   is read on. */
+function packCell(key, half) {
+  const cell = el("td");
+  if (half === "define") {
+    cell.appendChild(el("code", null, key));
+    cell.append(" ");
+    cell.appendChild(el("span", "muted small", "— in this plant's pack"));
+  } else {
+    cell.appendChild(el("span", "muted",
+                        "nobody — it changes when the pack is applied and the plant restarts"));
+  }
+  return cell;
+}
+
 function draw(page) {
   $("#domain-title").textContent = `${page.title} configuration`;
   document.title = `${page.title} configuration — FactorySemantics MES`;
@@ -77,10 +95,15 @@ function draw(page) {
     row.appendChild(name);
 
     row.appendChild(el("td", "muted", section.about));
-    row.appendChild(whoCell(section.define, section.may_define,
-                            "anybody who can see this screen"));
-    row.appendChild(whoCell(section.approve, section.may_approve,
-                            "nobody — a change here takes effect when it is saved"));
+    if (section.pack_key) {
+      row.appendChild(packCell(section.pack_key, "define"));
+      row.appendChild(packCell(section.pack_key, "approve"));
+    } else {
+      row.appendChild(whoCell(section.define, section.may_define,
+                              "anybody who can see this screen"));
+      row.appendChild(whoCell(section.approve, section.may_approve,
+                              "nobody — a change here takes effect when it is saved"));
+    }
     body.appendChild(row);
   }
 

@@ -101,6 +101,7 @@ nav:
       - Explanation — losing sight of a machine: operate/opc-disconnections.md
       - Explanation — how much of the window did the MES see: operate/coverage.md
       - How-to — who names the downtime reasons: operate/who-names-the-reasons.md
+      - How-to — who names the severities: operate/quality-severities.md
       - Reference — plant packs: operate/packs.md
       - How-to — plants from a fleet file: operate/registry.md
       - How-to — the fleet this installation owns: operate/fleet.md
@@ -170,6 +171,7 @@ nav:
           - decisions/0033-availability-is-a-share-of-what-was-watched.md
           - decisions/0034-a-count-is-owed-until-it-is-booked.md
           - decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators.md
+          - decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md
           - Template: decisions/TEMPLATE.md
   - Agents:
       - agents/index.md

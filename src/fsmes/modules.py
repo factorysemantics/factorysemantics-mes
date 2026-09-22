@@ -141,6 +141,17 @@ class ConfigSection:
     """The capability that puts a change in force, if this section has an
     approval step. `None` means it takes effect when it is saved."""
 
+    pack_key: str | None = None
+    """The `plant.toml` key this section is, where it is a key rather than a
+    list somebody edits on a screen - `[quality] hold_rules`.
+
+    Named because the two capability fields cannot say the truth about one:
+    nobody drafts it and nobody signs it, it is written in the plant's pack
+    and takes effect when the pack is applied and the plant restarts. A page
+    that said *anybody who can see this screen* about a key nobody can change
+    from a screen would be worse than saying nothing.
+    """
+
 
 #: Every configuration domain, in nav order. One today. A second is one entry
 #: here plus at least one `ConfigSection` naming it, and `test_web.py` refuses
@@ -400,6 +411,15 @@ REGISTRY: tuple[Module, ...] = (
                 href="/dashboard/severities",
                 define="quality.define",
                 approve="quality.approve"),
+            ConfigSection(
+                domain="quality",
+                key="spc_hold_rules",
+                label="Which SPC rules raise a hold",
+                about="The chart draws and records all four Western Electric "
+                      "rules on every plant. Which of them open a non-conformance "
+                      "is this plant's, and defaults to all four (decision 0036).",
+                href="/dashboard/spc",
+                pack_key="[quality] hold_rules"),
         ),
         tools=("fsmes.mcp.quality",),
         tables=("quality_specs", "quality_checks", "non_conformances",

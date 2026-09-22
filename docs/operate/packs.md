@@ -47,6 +47,7 @@ Every key is enumerated in `fsmes.pack.format`, and **an unknown key is an error
 | `[erp]` | `mode` | `off`, `file`, `rest` or `erpnext` |
 | `[uns]` | `mode`, `topic_prefix` | `off`, `log` or `mqtt` |
 | `[inbound]` | `mapping`, `sql`, `mqtt_mode` | What other systems tell this plant |
+| `[quality]` | `hold_rules` | Which Western Electric rules raise a quality hold, as a list of rule numbers from 1 to 4 — `hold_rules = [1, 2]`. Leave it out and all four do, which is what this product has always done. Every rule is drawn and recorded whatever this says ([decision 0036](../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md)) |
 | `[oee]` | `coverage_floor` | How much of a window this MES must have watched before it reports a KPI for it, between 0 and 1. Leave it out and nothing is withheld — see [how much of the window did the MES see](coverage.md) |
 | `[floor]` | `inspect_every`, `issue_every`, `inspect_all` | A simulated plant's own cadence |
 | `[[accounts]]` | `code`, `name`, `role`, `password_env` | Accounts `pack apply` creates, from passwords the environment holds |
@@ -91,7 +92,7 @@ Never this process's own default. Until 2026-09-14 that is exactly what a pack n
 
 **Pack before database.** A schema migration may need a value the pack now carries, so the pack is applied first — and `fsmes pack apply` runs the migrations itself, in that order.
 
-Master data is seeded from `masterdata/`, one file per kind: `equipment.json`, `materials.json`, `bom.json`, `routings.json`, `quality_specs.json`, `lots.json`, `work_orders.json`, `maintenance_plans.json`, `shifts.json`, `downtime_reasons.json`. An entry whose code already exists is counted as present and **left alone, never updated** — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which `fsmes fleet list` and the console now show as *answered, but empty*.
+Master data is seeded from `masterdata/`, one file per kind: `equipment.json`, `materials.json`, `bom.json`, `routings.json`, `quality_specs.json`, `lots.json`, `work_orders.json`, `maintenance_plans.json`, `shifts.json`, `downtime_reasons.json`, `nc_severities.json`. An entry whose code already exists is counted as present and **left alone, never updated** — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which `fsmes fleet list` and the console now show as *answered, but empty*.
 
 ### The words an operator picks from
 
@@ -108,6 +109,21 @@ Master data is seeded from `masterdata/`, one file per kind: `equipment.json`, `
 A code is two to forty characters, lowercase, starting with a letter — it is grouped on and published, not read as a sentence — and it may not spell a word the product already owns (a state, a capability, a role, a KPI). `fsmes pack check` refuses both offline.
 
 **A packed vocabulary arrives in force**, not as a draft, because applying a pack is a deliberate act by a person and a plant whose station screen offered nothing until somebody approved six seeded rows would have shipped with a text box after all. Everything after that goes through [draft then approve](who-names-the-reasons.md), and **the plant owns the list from its first edit**: applying the pack again counts an edited code as present and leaves it exactly as the plant left it.
+
+### How bad a finding is
+
+`nc_severities.json` is the second vocabulary, on exactly the same terms: a `code`, a `name` and an optional `description`, arriving in force, owned by the plant from its first edit, and changed afterwards through [draft then approve](quality-severities.md).
+
+```json
+[
+  {"code": "minor", "name": "Minor", "description": "The plant can work through it in the normal course of the shift."},
+  {"code": "major", "name": "Major", "description": "Somebody should look at this now rather than at the end of the shift."}
+]
+```
+
+A severity code is two to **twenty** characters — it is stored on every non-conformance, in a column twenty characters wide, and a list that could approve a word too long to store would refuse at the one moment it mattered.
+
+**A pack that seeds this list must seed `minor` and `major`.** The product opens non-conformances itself — a recorded check outside its specification, and the SPC rules — and it writes those two words. A plant whose list lacked one would find out at the moment a machine raised a hold, so `fsmes pack check` refuses it offline instead. The **names** and the sentences beside them are the plant's; only the codes are fixed, and only those two.
 
 ### The order book
 

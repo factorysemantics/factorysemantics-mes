@@ -522,6 +522,12 @@ def config_sections(domain: str, db: ReadDbDep, user: UserDep) -> dict:
                 "approve": section.approve,
                 "may_define": section.define is None or section.define in held,
                 "may_approve": section.approve is not None and section.approve in held,
+                # The `plant.toml` key this section is, where it is a key
+                # rather than a list somebody edits here. Null for everything
+                # a screen changes; a string is the page saying *nobody
+                # drafts this and nobody signs it - it is in the pack*, which
+                # neither capability field can say.
+                "pack_key": section.pack_key,
             }
             for section in shown
         ],

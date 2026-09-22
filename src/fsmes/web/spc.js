@@ -113,6 +113,23 @@ async function load() {
   if (!data.signals.length) {
     const tr = el("tr"); const td = el("td", "muted", data.control ? "No rule fired. The process is in control." : "—"); td.colSpan = 4; tr.append(td); body.append(tr);
   }
+  // Which of the four this plant raises a hold on. Said on every chart,
+  // including the one where all four are held, because "all four" and "the
+  // three this plant chose" are different plants and only one of them has a
+  // rule that fires into silence by design (decision 0036).
+  const rules = data.rules || [];
+  const holds = data.hold_rules || [];
+  const off = rules.filter((rule) => !holds.includes(rule));
+  $("#hold-rules").textContent = !rules.length ? ""
+    : !off.length
+      ? `Every rule this plant draws raises a hold: ${rules.map((r) => `rule ${r}`).join(", ")}.`
+      : holds.length
+        ? `This plant raises a hold on ${holds.map((r) => `rule ${r}`).join(", ")}. `
+          + `${off.map((r) => `Rule ${r}`).join(" and ")} `
+          + `${off.length === 1 ? "is drawn and recorded and raises no hold" : "are drawn and recorded and raise no hold"}.`
+        : "This plant raises a hold on no rule. Every firing below is drawn and "
+          + "recorded, and none of them opened a non-conformance.";
+
   for (const s of data.signals) {
     const tr = el("tr");
     tr.append(el("td", "code", `rule ${s.rule}`));
@@ -126,6 +143,10 @@ async function load() {
       const link = el("a", "obj", s.nonconformance);
       link.href = `/dashboard/quality?n_q=${encodeURIComponent(s.nonconformance)}&n_status=`;
       acted.append("held — ", link);
+    } else if (s.held === false) {
+      // Two different facts, and the reader is owed which: a rule this plant
+      // does not hold on, or a firing that joined a hold already open.
+      acted.append(el("span", "muted small", "no hold — this plant does not hold on this rule"));
     } else {
       acted.append(el("span", "muted small", "no hold of its own"));
     }

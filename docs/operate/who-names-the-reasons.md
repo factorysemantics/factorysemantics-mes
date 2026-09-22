@@ -395,6 +395,8 @@ edit, and `fsmes pack apply` never rewrites a code that is already there.
 
 - [Reading OEE](../plant/reading-oee.md) — where the unlabelled bar comes from
 - [Plant packs](packs.md) — shipping a vocabulary with a plant
+- [Who names the severities](quality-severities.md) — the same loop, the
+  second time: the plant's own words for how bad a finding is
 - [Configuration is authored by roles](../design/config-assistance.md) — the
   design this is the first piece of, and
   [decision 0035](../decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators.md)
