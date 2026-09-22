@@ -1952,6 +1952,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="1. The test, and the tool">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-fourth-question-whose-answer-is-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The fourth question: whose answer is it?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2136,6 +2153,28 @@
     <span class="md-ellipsis">
       
         7. What this page does not do
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-the-nine-that-are-anybodys-to-weigh-in-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. The nine that are anybody's to weigh in on
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-bulk-editing-which-object-scope-makes-necessary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Bulk editing, which object scope makes necessary
       
     </span>
   </a>
@@ -3721,6 +3760,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="1. The test, and the tool">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-fourth-question-whose-answer-is-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The fourth question: whose answer is it?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -3911,6 +3967,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#8-the-nine-that-are-anybodys-to-weigh-in-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. The nine that are anybody's to weigh in on
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-bulk-editing-which-object-scope-makes-necessary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Bulk editing, which object scope makes necessary
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3937,7 +4015,11 @@
 
 
 <h1 id="what-is-still-hard-coded-that-a-plant-might-want-to-own">What is still hard-coded that a plant might want to own<a class="headerlink" href="#what-is-still-hard-coded-that-a-plant-might-want-to-own" title="Permanent link">&para;</a></h1>
-<p><em>An audit, 2026-09-21. Written against <code>main</code> at <code>3f1430a8</code>.</em></p>
+<p><em>An audit, 2026-09-21. Written against <code>main</code> at <code>3f1430a8</code>.</em>
+<em>Re-run 2026-09-22 against <code>main</code> at <code>40ba6e5a</code>, with a fourth
+classification on every candidate — </em><em>scope</em><em>, §1 — and a list of what
+that leaves anybody to answer, §8. Every <code>file:line</code> below was checked
+again; all of them still point at the code they name.</em></p>
 <p>Decision <a href="../config-assistance/">0035</a> settled <em>how</em> configuration should work
 in this MES — three tiers, six domains, one <code>Configuration</code> entry per domain,
 draft then approve. The pilot built it once, for downtime reasons. This page
@@ -3984,6 +4066,71 @@ itself. The useful habit is <code>fsmes config-audit --json &gt; audit.json</cod
 and again on a branch: what is new in the diff is what that branch just
 hard-coded. It is deliberately a command and not a report, because a report is
 true on the day it is written and this codebase gains a file a week.</p>
+<h3 id="the-fourth-question-whose-answer-is-it">The fourth question: whose answer is it?<a class="headerlink" href="#the-fourth-question-whose-answer-is-it" title="Permanent link">&para;</a></h3>
+<p>The tier test settles <em>where a setting lives</em>. It does not settle <em>who is
+asked for the value</em>, and on a list of seventy-five that is the question that
+decides whether the list is usable at all — because nobody can honestly pick a
+counter-reset threshold for somebody else's counter.</p>
+<p>So every candidate carries a fourth classification beside its domain, its size
+and the reason it qualified: its <strong>scope</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Scope</th>
+<th>Whose answer it is</th>
+<th>Where it lives</th>
+<th>Who gets asked</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>general</code></td>
+<td>the product's</td>
+<td>one shipped default</td>
+<td>a maintainer weighs in — the list is <strong>§8</strong></td>
+</tr>
+<tr>
+<td><code>plant</code></td>
+<td>the plant's</td>
+<td><code>plant.toml</code> or masterdata, under its domain's <code>Configuration</code> tab</td>
+<td>nobody outside the plant. The literal in the source today ships as the default</td>
+</tr>
+<tr>
+<td><code>object</code></td>
+<td>one object's</td>
+<td>on the object — beside <code>state_map</code> and <code>cycle_seconds</code> in the tag map, or the equivalent row</td>
+<td>nobody outside the plant. The engineer looking at that tag, machine, material or gauge sets it</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The rule, applied to all of them:</strong></p>
+<blockquote>
+<p>Would two honest engineers <strong>at the same plant</strong> answer differently for two
+different objects? → <code>object</code>.
+Would two honest <strong>plants</strong> answer differently? → <code>plant</code>.
+Otherwise → <code>general</code>.</p>
+</blockquote>
+<p>The order matters. The object question is asked first, because an answer that
+differs between two tags on one line cannot be a plant-wide setting without
+being wrong for one of them.</p>
+<p><strong>Where the answers are kept, so a rerun keeps them.</strong> In the tool, not in
+this page. <code>src/fsmes/sim/config_audit_curated.py</code> holds one row per curated
+candidate — id, domain, scope, the argument for that scope, and an <em>unsure</em>
+line where there is one — written down as a table in source exactly the way
+<code>DOMAIN_RULES</code> holds the domain assignments, because both are arguments
+somebody had rather than data anybody generated. Each row is anchored on a
+distinctive fragment of its line and <strong>not on a line number</strong>, so a refactor
+moves a row and the tool reports where it moved to; a row whose anchor has
+gone is reported as <strong>stale</strong> and has to be read again by a person, rather
+than quietly pointing at whatever is now on line 703. A test fails if any row
+goes stale.</p>
+<div class="highlight"><pre><span></span><code>fsmes config-audit --scope object     # the twelve that belong on a tag,
+                                      #   machine, material or gauge
+fsmes config-audit --scope general    # the nine anybody is asked about
+fsmes config-audit --scope plant --domain controls
+fsmes config-audit --json             # every candidate, with its scope and
+                                      #   the argument for it
+</code></pre></div>
 <p><strong>What it found, on the day it was written:</strong> <strong>419 candidates in 235 files
 scanned, with 75 files skipped by rule</strong> — 155 of the 419 carry strong
 evidence (a hedging comment beside them, or a name that says what they are) and
@@ -4015,6 +4162,17 @@ the evidence: it argues for the number instead of stating it, which is what a
 judgment call sounds like before anybody calls it configuration.
 <strong>Qualifies.</strong> Its twin is at <code>src/fsmes/web/maintenance.js:44</code>, so this is a
 medium too.</p>
+<p><strong>Both calibration examples carry a scope, and both are the plant's.</strong> The
+Cpk bar is <code>Q0</code> in the tool — it is the one candidate this page works through
+in prose and never gave a row number in §4, so the curated list the tool
+carries is seventy-six where §4's list is seventy-five, and both totals are
+said out loud rather than one quietly becoming the other. The maintenance
+warning is <code>P1</code>. Eighty per cent is a fraction of each plan's own interval, so
+a weekly greasing and a yearly overhaul do not need different fractions; what
+differs is how much warning a plant's spares lead time needs. The Cpk bar
+carries an <em>unsure</em> line: a plant that grades characteristics critical, major
+and minor might want a higher bar on a critical one, which would make it
+<code>object</code>.</p>
 <p><strong>One thing in the handoff's Quality example did not survive the reading.</strong>
 The handoff asked whether <em>which of the four Western Electric rules are active,
 and their window sizes</em>, qualifies. It splits:</p>
@@ -4120,9 +4278,19 @@ in that same PR:</strong></p>
    anybody, and inventing a kind for it would be a registry entry that never
    has a row.</li>
 </ol>
-<p>So: <strong>the section key applies to everything, from the first PR. The review kind
-applies to whatever gets an approval step, from the first PR that gives it
-one.</strong> Neither is ever retrofitted. That is the whole point of stating the rule
+<p><strong>And one exception, which scope decides.</strong> An <code>object</code>-scope setting gets
+<strong>no <code>ConfigSection</code> of its own.</strong> It is not a screen; it is a column on
+something that already has one. A per-tag counter-reset threshold appears
+where the tag is configured — in the tag map, under controls engineering's
+<code>Configuration</code> tab — beside <code>state_map</code> and <code>cycle_seconds</code>, and a section
+key pointing at a second screen that lists every tag's threshold would be a
+second place to set one thing. The same goes for a per-gauge warning window
+and a per-material buffer. <code>general</code> and <code>plant</code> settings keep the rule above
+unchanged.</p>
+<p>So: <strong>the section key applies to everything a plant configures as a setting of
+its own, from the first PR. The review kind applies to whatever gets an
+approval step, from the first PR that gives it one. An <code>object</code> setting joins
+the row it belongs to and gets neither.</strong> Neither is ever retrofitted. That is the whole point of stating the rule
 now, because the nav <em>was</em> retrofitted — <code>config-nav-restructure</code> had to go
 back and undo one top-level chip after the pilot shipped, and the test that
 lands with it exists specifically so nobody does it a second time.</p>
@@ -4139,6 +4307,19 @@ a key plus a screen or an API field, <strong>large</strong> is a new database-ba
 vocabulary with a screen of its own.</p>
 <p>Where a candidate has a second copy in the browser, that is noted, because a
 duplicated literal is what turns a small into a medium.</p>
+<p><strong>By scope: 9 <code>general</code>, 54 <code>plant</code>, 12 <code>object</code> — 75 in all.</strong> Only the nine
+are questions for anybody reading this page, and §8 lists them. The other
+sixty-six are <em>routed</em>, not asked: fifty-four to a plant's <code>Configuration</code> tab
+under the domain named on their row, twelve to the row of the tag, machine,
+material or gauge they describe. Every one of those sixty-six ships the
+literal that is in the source today, so a plant that configures nothing
+behaves exactly as it does now.</p>
+<p><strong>Eight rows say they are unsure</strong> which side of a line they fall on — <code>Q0</code>,
+<code>Q4</code>, <code>Q10</code>, <code>P12</code>, <code>C4</code>, <code>C13</code>, <code>A21</code>, <code>A22</code> — and each says what would
+settle it rather than picking quietly. Seven of them are in the table below;
+the eighth is <code>Q0</code>, the Cpk bar, which lives in §2. The tool carries all
+seventy-six; this section's total is seventy-five, and they differ by that one
+row.</p>
 <h3 id="quality-engineering-13">Quality engineering — 13<a class="headerlink" href="#quality-engineering-13" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -4148,6 +4329,7 @@ duplicated literal is what turns a small into a medium.</p>
 <th>Where</th>
 <th>Why it qualified</th>
 <th>Size</th>
+<th>Scope — whose answer is it?</th>
 </tr>
 </thead>
 <tbody>
@@ -4157,6 +4339,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/spc.py:45</code> <code>MIN_POINTS = 12</code></td>
 <td>Comment already hedges: <em>"Below this the limits move so much with each new reading that they mislead more than they inform."</em> A plant that insists on 25 produces the same payload shape.</td>
 <td>small (the pallet certificate prints the word "twelve" at <code>services/coa.py:380</code>)</td>
+<td><strong><code>plant</code></strong> — twelve or twenty-five is one plant's trust in its own data, the same for every characteristic</td>
 </tr>
 <tr>
 <td><strong>Q2</strong></td>
@@ -4164,6 +4347,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/spc.py:370</code> <code>severity="major" if signal["rule"] == 1 else "minor"</code></td>
 <td>A plant that treats a four-of-five trend as major changes only its own triage queue; rule numbers and the NC payload are identical.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — one triage policy per plant; two characteristics do not want different answers</td>
 </tr>
 <tr>
 <td><strong>Q3</strong></td>
@@ -4171,6 +4355,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>domain/quality.py:99</code> <code>String(20), default="minor"</code>; written at <code>services/quality.py:148</code> and <code>spc.py:370</code>, unvalidated at <code>api/routers/quality.py:274</code></td>
 <td>Named in 0035 §2 as quality-engineering configuration and in §3 as <em>"free text by accident, not by design"</em>. <code>critical/major/minor/observation</code> breaks nothing outside the plant.</td>
 <td>large</td>
+<td><strong><code>plant</code></strong> — the plant's own words, used the same way everywhere in it</td>
 </tr>
 <tr>
 <td><strong>Q4</strong></td>
@@ -4178,6 +4363,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/spc.py:49</code>, <code>:145</code>, <code>:288</code> (<code>limit: int = 200</code>); <code>api/routers/quality.py:368</code></td>
 <td>A plant inspecting every fifteen minutes and one inspecting hourly want different histories behind one chart.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — a plant inspecting every fifteen minutes wants a different history from one inspecting hourly. <em>Unsure: it could be per characteristic — see the tool's row</em></td>
 </tr>
 <tr>
 <td><strong>Q5</strong></td>
@@ -4185,6 +4371,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/spc.py:80-106</code> — all four always run</td>
 <td><strong>Needs a decision against 0035 first.</strong> §3 places the four rules in tier three (<em>"a rule a plant can switch off is a chart that lies"</em>); whether a plant may choose which rules raise a <em>hold</em>, as opposed to which are drawn, is a question §3 did not ask. Window sizes stay tier three either way — see §2.</td>
 <td>medium, and blocked on the decision</td>
+<td><strong><code>general</code></strong> — whether a rule may be switched off at all is a product decision 0035 never made — <strong>§8</strong></td>
 </tr>
 <tr>
 <td><strong>Q6</strong></td>
@@ -4192,6 +4379,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/gauges.py:179</code> <code>"adequate": ratio &gt;= 10</code>, <code>:185</code> <code>ratio &gt;= 4</code></td>
 <td>Comment: <em>"Four is the usual floor."</em> AIAG says 10:1, ANSI Z540 says 4:1; both plants are right and nothing off-plant reads the word <code>adequate</code>. Directly analogous to the accepted Cpk case.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — AIAG says 10:1 and ANSI Z540 says 4:1; a plant follows one standard for every gauge it owns</td>
 </tr>
 <tr>
 <td><strong>Q7</strong></td>
@@ -4199,6 +4387,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>web/gauges.js:31</code>, <code>:41</code>, <code>:80</code></td>
 <td>The maintenance 80% judgment in another domain — and invented in the browser: the server deliberately returns only <code>days_until_due</code> and <code>overdue</code> (<code>services/gauges.py:53-54</code>). Quarterly calibration wants 14 days; annual wants 60.</td>
 <td>medium (needs to reach the browser)</td>
+<td><strong><code>object</code></strong> — a quarterly calibration wants fourteen days of warning and an annual one sixty — it belongs beside the gauge's own interval</td>
 </tr>
 <tr>
 <td><strong>Q8</strong></td>
@@ -4206,6 +4395,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/gauges.py:59</code> <code>interval_days: int = 365</code>, repeated at <code>api/routers/quality.py:354</code> and <code>web/gauges.js:122</code></td>
 <td>The per-gauge column exists; only the plant's house default is product-owned, in three places.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — the per-gauge interval is already the engineer's; this is the plant's house default</td>
 </tr>
 <tr>
 <td><strong>Q9</strong></td>
@@ -4213,6 +4403,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/coa.py:277</code> — <code>m.startswith("UT-")</code></td>
 <td>One plant's material-numbering convention in product code. Any plant not numbering pieces <code>UT-*</code> gets an empty capability block and no error. Arguably a latent bug as much as a config gap.</td>
 <td>medium</td>
+<td><strong><code>object</code></strong> — whether a material is counted in pieces on a certificate is a fact about that material</td>
 </tr>
 <tr>
 <td><strong>Q10</strong></td>
@@ -4220,6 +4411,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/coa.py:175</code>, <code>:177</code> — <code>[:200]</code></td>
 <td>A customer-facing certificate that must list every unit, versus one that must stay printable, is the plant's and its customer's decision.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — the plant's agreement with the people who read the certificate. <em>Unsure: it could sit on the customer</em></td>
 </tr>
 <tr>
 <td><strong>Q11</strong></td>
@@ -4227,6 +4419,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/serialization.py:87</code> <code>f"{prefix}-{number:06d}"</code></td>
 <td>Eight digits or a different separator affects only the plant's own labels and scans; a serial is an opaque value, not a field name.</td>
 <td>medium (the recovery scan at <code>:77-80</code> must keep reading old serials)</td>
+<td><strong><code>plant</code></strong> — one label scheme per plant, read by its own scanners</td>
 </tr>
 <tr>
 <td><strong>Q12</strong></td>
@@ -4234,6 +4427,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/quality.py:158</code> <code>f"NC-{nc.id:05d}"</code></td>
 <td>A plant that calls them NCRs changes only its own <code>code</code> strings; nothing off-plant is keyed on the prefix.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — a plant that calls them NCRs calls all of them NCRs</td>
 </tr>
 <tr>
 <td><strong>Q13</strong></td>
@@ -4241,9 +4435,11 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/serialization.py:48</code> <code>MAX_DEPTH = 6</code></td>
 <td>Comment: <em>"a sixth is somebody's mistake, not a plant"</em> — which is an assertion about somebody else's packaging. Piece→stack→pack→case→pallet→truck→container is not a mistake.</td>
 <td>small (it doubles as a loop guard, so the key needs a hard ceiling)</td>
+<td><strong><code>plant</code></strong> — how deep the plant's own packaging goes; one answer, not one per shipment</td>
 </tr>
 </tbody>
 </table>
+<p><em>Scope: 1 general · 10 plant · 2 object — 13 in all.</em></p>
 <h3 id="manufacturing-process-engineering-12">Manufacturing / process engineering — 12<a class="headerlink" href="#manufacturing-process-engineering-12" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -4253,6 +4449,7 @@ duplicated literal is what turns a small into a medium.</p>
 <th>Where</th>
 <th>Why it qualified</th>
 <th>Size</th>
+<th>Scope — whose answer is it?</th>
 </tr>
 </thead>
 <tbody>
@@ -4262,6 +4459,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/maintenance.py:92</code>; twin at <code>web/maintenance.js:44</code></td>
 <td><strong>Calibration example.</strong> See §2.</td>
 <td>medium</td>
+<td><strong><code>plant</code></strong> — a fraction of each plan's own interval, so it already scales; what differs between plants is spares lead time</td>
 </tr>
 <tr>
 <td><strong>P2</strong></td>
@@ -4269,6 +4467,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/scheduling.py:37</code> <code>DEFAULT_CYCLE_SECONDS = 3.0</code></td>
 <td>Comment admits it: <em>"a schedule built on it is a guess, which <code>uses_default_cycle</code> reports rather than hides."</em> A bottling line and a CNC cell want different guesses.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — the per-object answer is the machine's own rating, which already exists; this is the plant's fallback when there is none</td>
 </tr>
 <tr>
 <td><strong>P3</strong></td>
@@ -4276,6 +4475,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/maintenance.py:284</code> and <code>services/scheduling.py:109</code> — both <code>60.0</code></td>
 <td>Every corrective job. It sizes the backlog's downtime figure and the block the scheduler reserves; a supervisor deciding whether tonight is the night is reading it.</td>
 <td>small (one key, two call sites)</td>
+<td><strong><code>plant</code></strong> — same shape as P2: the plant's fallback when a job has no plan</td>
 </tr>
 <tr>
 <td><strong>P4</strong></td>
@@ -4283,6 +4483,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/maintenance.py:227</code> <code>30.0</code>, repeated at <code>api/routers/maintenance.py:21</code> and <code>web/maintenance.js:208</code></td>
 <td>The per-plan column exists; only the house default is hard-coded, three times.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — the per-plan column exists; only the house default is in code</td>
 </tr>
 <tr>
 <td><strong>P5</strong></td>
@@ -4290,6 +4491,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/analysis.py:196,438,549,673,779</code>; <code>api/routers/analysis.py:27</code>, <code>kpis.py:14</code>, <code>equipment.py:105</code>, <code>dashboard.py:86</code>, <code>assist.py:60-61</code>; <code>web/common.js:493</code></td>
 <td>The comment says the assumption out loud: <em>"then eight hours - a shift."</em> A twelve-hour-shift plant wants 12. Every payload already carries <code>requested_hours</code>, so nothing downstream is keyed on the default.</td>
 <td>medium</td>
+<td><strong><code>plant</code></strong> — shift length, which the plant already states in <code>shift_patterns</code></td>
 </tr>
 <tr>
 <td><strong>P6</strong></td>
@@ -4297,6 +4499,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>web/common.js:484</code> <code>WINDOWS = [[0.25,…],[1,…],[8,…],[24,…],[168,…]]</code></td>
 <td>A tier-one list (the plant's shifts, which already live in <code>shift_patterns</code>) with a tier-three literal in front of it. Same judgment as P5, one level up.</td>
 <td>medium</td>
+<td><strong><code>plant</code></strong> — which windows a plant's people work in; its own shifts are the honest source</td>
 </tr>
 <tr>
 <td><strong>P7</strong></td>
@@ -4304,6 +4507,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/analysis.py:440</code> <code>limit: int = 12</code>; <code>api/routers/analysis.py:65</code></td>
 <td>A six-station cell and a 108-station plant want different screenfuls. The payload states <code>machines_shown</code> / <code>machines_total</code>, so nothing is hidden by moving it. <em>(This is also the twelve that rule two borrows.)</em></td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — one plant, one screenful, for all of its screens</td>
 </tr>
 <tr>
 <td><strong>P8</strong></td>
@@ -4311,6 +4515,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/calendar.py:52</code> <code>PREVIOUS_HORIZON_DAYS = 14</code></td>
 <td>Comment hedges: <em>"Two weeks covers a plant that ran nothing over a shutdown."</em> A seasonal plant with a six-week shutdown answers differently, and the refusal sentence is the plant's own.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — a seasonal plant with a six-week shutdown answers differently from a continuous one</td>
 </tr>
 <tr>
 <td><strong>P9</strong></td>
@@ -4318,6 +4523,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/calendar.py:469</code> <code>days: str = "1111100"</code>; also <code>api/routers/scheduling.py:21</code>, <code>pack/masterdata.py:451</code>, <code>mcp/scheduling.py:53</code>, <code>domain/calendar.py:45</code></td>
 <td>Sunday–Thursday is a real working week. The mask format is a product fact; which mask is the default is not. At <code>pack/masterdata.py:451</code> a pack that omits <code>days</code> is silently seeded a five-day plant — arguably the honest fix there is to refuse.</td>
 <td>small (one key, five sites)</td>
+<td><strong><code>plant</code></strong> — the mask format is the product's; which mask is the plant's calendar</td>
 </tr>
 <tr>
 <td><strong>P10</strong></td>
@@ -4325,6 +4531,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/coverage.py:285</code> <code>MIN_OBSERVED_SECONDS = 10.0</code></td>
 <td>This product already made the sibling judgment a pack key — <code>[oee] coverage_floor</code> — with the argument that <em>"a number vanishing off a screen because of a threshold nobody chose is its own kind of dishonesty."</em> By its own reasoning this second suppression threshold belongs beside it.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — its sibling <code>[oee] coverage_floor</code> is already a pack key, argued that way when it was made one</td>
 </tr>
 <tr>
 <td><strong>P11</strong></td>
@@ -4332,6 +4539,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/scheduling.py:210</code> <code>hours: float = 24.0</code>; <code>api/routers/scheduling.py:66</code>; the fixed picker at <code>web/schedule.html:48</code></td>
 <td>A job shop planning a fortnight and a line planning a shift want different boards.</td>
 <td>small (medium if the offered options become a plant list)</td>
+<td><strong><code>plant</code></strong> — a job shop planning a fortnight and a line planning a shift want different boards</td>
 </tr>
 <tr>
 <td><strong>P12</strong></td>
@@ -4339,9 +4547,11 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>web/orders.js:43-44</code> — <code>&gt;= 0.98</code> good, <code>&gt;= 0.90</code> warning</td>
 <td>A foundry at 85% and an assembly line at 99.5% are both healthy. This is a plant's own definition of acceptable, read by nobody outside it.</td>
 <td>medium (browser-side)</td>
+<td><strong><code>object</code></strong> — a difficult casting and a simple assembly do not share a good yield, and one plant makes both. <em>Unsure: a single-product plant would call this plant-wide</em></td>
 </tr>
 </tbody>
 </table>
+<p><em>Scope: 0 general · 11 plant · 1 object — 12 in all.</em></p>
 <h3 id="controls-engineering-14">Controls engineering — 14<a class="headerlink" href="#controls-engineering-14" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -4351,6 +4561,7 @@ duplicated literal is what turns a small into a medium.</p>
 <th>Where</th>
 <th>Why it qualified</th>
 <th>Size</th>
+<th>Scope — whose answer is it?</th>
 </tr>
 </thead>
 <tbody>
@@ -4360,6 +4571,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/tags.py:45</code> <code>STALE_AFTER_SECONDS = 60.0</code>; applied <code>:165-166</code>, published <code>:202</code>, <code>:394</code>; screens <code>web/tags.js:50,122</code>, <code>web/machine.js:82,105</code></td>
 <td>A plant polling a historian every five minutes shows every machine permanently stale. The product already publishes the threshold <em>as data</em> (<code>stale_after_seconds</code>), which is the tell that it wants to be a setting.</td>
 <td>medium</td>
+<td><strong><code>object</code></strong> — a counter published every 200 ms and a historian value polled every five minutes go stale at different ages — it belongs beside <code>cycle_seconds</code></td>
 </tr>
 <tr>
 <td><strong>C2</strong></td>
@@ -4367,6 +4579,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>integrations/opc/agent.py:1016</code>, <code>:1022</code> <code>await asyncio.sleep(3)</code></td>
 <td>A flaky wireless gateway wants a backing-off retry rather than a hammer; a wired backbone wants one second. The number is also duplicated into the operator-visible log line <em>"retrying in 3s"</em>.</td>
 <td>small</td>
+<td><strong><code>object</code></strong> — a wireless gateway and a wired backbone are two endpoints in one plant; it belongs on the connection</td>
 </tr>
 <tr>
 <td><strong>C3</strong></td>
@@ -4374,6 +4587,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>integrations/opc/agent.py:519-520</code> <code>BOOK_ATTEMPTS = 4</code>, <code>BOOK_BACKOFF_S = 0.5</code></td>
 <td>Its own fourteen-line comment names <code>sqlite_busy_timeout_ms</code>, which <strong>is</strong> already a setting — so one half of this pair is configurable and the other is not.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — the agent arguing with its own database — the same policy for every tag it books</td>
 </tr>
 <tr>
 <td><strong>C4</strong></td>
@@ -4381,6 +4595,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>integrations/opc/agent.py:118</code> <code>GROUP_GRACE_S = 0.25</code>, <code>:121</code> <code>GROUP_TIMEOUT_S = 3.0</code></td>
 <td>Both comments derive them from <code>opc_publish_ms</code>, which is configurable; these are not. A station behind a gateway that fans tags out over half a second records every unit as partial.</td>
 <td>medium</td>
+<td><strong><code>object</code></strong> — a station behind a gateway that fans its tags out needs more grace than one that publishes them together. <em>Unsure: it may be per connection</em></td>
 </tr>
 <tr>
 <td><strong>C5</strong></td>
@@ -4388,6 +4603,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>integrations/opc/agent.py:123</code> <code>ORDER_CACHE_S = 10.0</code></td>
 <td>"Trusted" is the hedge. A job-shop station changing over every ninety seconds mis-books up to ten seconds of units to the previous order at every changeover.</td>
 <td>small</td>
+<td><strong><code>object</code></strong> — a job-shop station changing over every ninety seconds trusts a cached order far less than a continuous line does</td>
 </tr>
 <tr>
 <td><strong>C6</strong></td>
@@ -4395,6 +4611,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/adjustments.py:32</code> <code>FOLLOWED_FRACTION = 0.5</code>, applied <code>:170</code></td>
 <td>The comment reasons from an assumed first-order lag. A fast electric heater and a two-tonne oil bath disagree, and the same 0.5 marks one plant's every adjustment verified and the other's every adjustment failed.</td>
 <td>medium</td>
+<td><strong><code>object</code></strong> — a fast electric heater and a two-tonne oil bath follow a setpoint differently; it belongs on the loop, beside its lag</td>
 </tr>
 <tr>
 <td><strong>C7</strong></td>
@@ -4402,6 +4619,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/adjustments.py:80</code> <code>max(3 * float(meta.get("lag_s", 40.0)), 30.0)</code></td>
 <td>Three separate judgments about somebody else's process, on one line. A plant with a twenty-minute oven verifies at thirty seconds and records a failure that did not happen. <code>verify_after_seconds</code> is already a per-recommendation field, so only the default is at stake.</td>
 <td>small</td>
+<td><strong><code>object</code></strong> — <code>lag_s</code> is already a per-recommendation field; the 40 s and the 30 s floor are the same per-object judgment left in code</td>
 </tr>
 <tr>
 <td><strong>C8</strong></td>
@@ -4409,6 +4627,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/uns.py:30-32</code> <code>MAX_ATTEMPTS = 8</code>, <code>BASE_BACKOFF_SECONDS = 5</code>, <code>MAX_BACKOFF_SECONDS = 3600</code></td>
 <td>A broker restarted nightly for twenty minutes kills every queued event at eight attempts. <code>uns_qos</code>, <code>uns_batch</code>, <code>uns_inflight</code> and <code>uns_poll_seconds</code> are all already settings — the retry policy is the one piece left in code.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — one broker per plant, one retry policy</td>
 </tr>
 <tr>
 <td><strong>C9</strong></td>
@@ -4416,6 +4635,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/triggers.py:260</code> <code>reload_seconds: float = 30.0</code></td>
 <td>The docstring promises an approval <em>"reaches the agent without a restart"</em>; the number quietly bounds how fast. A plant stopping a line on an SPC signal wants five seconds.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — one agent, one reload cadence</td>
 </tr>
 <tr>
 <td><strong>C10</strong></td>
@@ -4423,6 +4643,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/triggers.py:131</code> <code>cooldown_seconds: float = 300.0</code>; also <code>api/routers/triggers.py:23</code>, <code>domain/triggers.py:54</code></td>
 <td>Five minutes of silence after a <em>machine down</em> trigger is right on a continuous line and wrong on a station with forty-second cycles. The per-trigger value is already tier one; only the inherited default is not.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — the per-trigger cooldown is already the engineer's; only the inherited default is in code</td>
 </tr>
 <tr>
 <td><strong>C11</strong></td>
@@ -4430,6 +4651,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>integrations/opc/agent.py:76-77</code> <code>HISTORY_RATIO = 10</code>, <code>MIN_HISTORY_MS = 1000</code></td>
 <td><code>tag_retention_days</code> is already a setting; how densely those days are filled is not. The comment's <em>"buys nothing a person will read"</em> is an assertion about somebody else's engineer.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — a ratio against each tag's own publish rate, so it scales already; what is left is how much the plant stores</td>
 </tr>
 <tr>
 <td><strong>C12</strong></td>
@@ -4437,6 +4659,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>integrations/opc/agent.py:67</code> <code>_ORDER_SYNC_SECONDS = 2.0</code>; <code>:1047</code> <code>_ADJUSTMENT_POLL_SECONDS = 5.0</code></td>
 <td>Two hundred machines on one endpoint is a hundred database reads a second to discover nothing changed. <code>api/routers/adjustments.py:60</code> makes a user-facing promise — <em>"The OPC agent writes within seconds"</em> — that rests on the second one.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — agent-wide cadences against one database</td>
 </tr>
 <tr>
 <td><strong>C13</strong></td>
@@ -4444,6 +4667,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>integrations/opc/agent.py:107</code> <code>MEMBER_RETRIES = 3</code></td>
 <td><em>"in case its pieces were written just after it"</em> — "in case" is the hedge. Three is a guess about one line's publishing order.</td>
 <td>small</td>
+<td><strong><code>object</code></strong> — three is a guess about how one line publishes a container and its pieces. <em>Unsure: it could be plant-wide</em></td>
 </tr>
 <tr>
 <td><strong>C14</strong></td>
@@ -4451,9 +4675,11 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>integrations/opc/agent.py:703</code> <code>if last is None or value &lt; last // 2:</code></td>
 <td><strong>Flagged for review as the closest of these to tier three</strong>, because it sits directly on house rule 1. The comment says <em>"a counter that fell to near zero is a PLC reset"</em>; the code says <em>below half</em>, and those are not the same sentence. A counter that wraps at 65535 and one reset per shift disagree about what "near zero" means.</td>
 <td>small, but it needs the never-invent-production argument made explicitly</td>
+<td><strong><code>object</code></strong> — <strong>the first concrete case of bulk editing.</strong> A counter that wraps at 65535 and one zeroed every shift are two tags, not two plants — the threshold belongs on the tag, beside <code>state_map</code> and <code>cycle_seconds</code>, set by the controls engineer looking at that counter</td>
 </tr>
 </tbody>
 </table>
+<p><em>Scope: 0 general · 6 plant · 8 object — 14 in all.</em></p>
 <h3 id="supply-chain-erp-7">Supply chain / ERP — 7<a class="headerlink" href="#supply-chain-erp-7" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -4463,6 +4689,7 @@ duplicated literal is what turns a small into a medium.</p>
 <th>Where</th>
 <th>Why it qualified</th>
 <th>Size</th>
+<th>Scope — whose answer is it?</th>
 </tr>
 </thead>
 <tbody>
@@ -4472,6 +4699,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/erp.py:41-43</code> <code>MAX_ATTEMPTS = 8</code>, <code>BASE_BACKOFF_SECONDS = 5</code>, <code>MAX_BACKOFF_SECONDS = 3600</code></td>
 <td>An ERP down for a four-hour weekly window kills a shift of confirmations. <code>mark_refused</code> (<code>:188-207</code>) already argues at length that <em>"eight attempts over an hour only delay the moment a person hears about it"</em> — and resolved it by special-casing refusals rather than by moving the number.</td>
 <td>small to medium (<code>attempts</code> is on the outbox screen)</td>
+<td><strong><code>plant</code></strong> — one ERP, one maintenance window, one retry policy</td>
 </tr>
 <tr>
 <td><strong>S2</strong></td>
@@ -4479,6 +4707,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>integrations/erp/erpnext_adapter.py:44</code> <code>_OPEN_STATUSES = ("Not Started", "In Process")</code></td>
 <td>ERPNext's vocabulary, which sites customise, written into MES code as an order-release policy. The comment states it as a policy, not a fact.</td>
 <td>medium (belongs beside <code>erpnext_company</code>)</td>
+<td><strong><code>plant</code></strong> — the site's own ERPNext customisation, beside <code>erpnext_company</code></td>
 </tr>
 <tr>
 <td><strong>S3</strong></td>
@@ -4486,6 +4715,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>integrations/erp/erpnext_adapter.py:204</code> <code>rel_tol=1e-3, abs_tol=0.01</code></td>
 <td>The comment contains the two-plants test by accident: <em>"a Float rounded to the site's float precision, which is two decimals </em><em>on some sites</em><em>"</em>. A site on precision 4 with gram-level quantities has a real disagreement hidden by it.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — one site, one float precision</td>
 </tr>
 <tr>
 <td><strong>S4</strong></td>
@@ -4493,6 +4723,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>integrations/erp/erpnext_adapter.py:97</code> <code>timeout: float = 30.0</code> (and <code>from_settings</code> at <code>:264-275</code> never passes one); <code>integrations/erp/rest_adapter.py:12</code> <code>timeout=10.0</code></td>
 <td>An ERPNext bench across a VPN posting a Manufacture entry against a large BOM routinely exceeds thirty seconds, and every one of those burns an attempt. <code>jev_timeout_seconds</code> is a setting with a paragraph of justification; the path that talks to a system the plant does not own has none.</td>
 <td>small — <code>from_settings</code> already reads eight <code>erpnext_*</code> settings and could read a ninth</td>
+<td><strong><code>plant</code></strong> — one link between this plant and its ERP</td>
 </tr>
 <tr>
 <td><strong>S5</strong></td>
@@ -4500,6 +4731,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/staging.py:76</code> and <code>:86</code> — <code>will_run_out: short &gt; 0</code></td>
 <td>A plant wanting safety stock or a lead-time buffer ("warn me at eight hours of cover") gets no warning until it is already short. The docstring hedges the <em>other</em> half of the same judgment and never mentions this one.</td>
 <td>medium (large if per-material)</td>
+<td><strong><code>object</code></strong> — a screw with a week of lead time and a casting with three months want different buffers — it belongs on the material</td>
 </tr>
 <tr>
 <td><strong>S6</strong></td>
@@ -4507,6 +4739,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>integrations/erp/contract.py:29</code>, <code>:48</code>; <code>services/workorders.py:72</code>; <code>domain/workorders.py:43</code> — all <code>50</code></td>
 <td><code>erpnext_adapter.py:306-308</code> refuses to invent a priority — <em>"inventing one here would outrank the MES's own dispatch ordering with a number nobody set"</em> — and then defers to an invented number. On a plant using a 1–9 scale every ERP order sorts behind everything a person typed.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — priority is already per order; only what an order carrying none inherits is in code</td>
 </tr>
 <tr>
 <td><strong>S7</strong></td>
@@ -4514,9 +4747,11 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>integrations/erp/validate.py:50</code> <code>SECONDS_TOLERANCE = 1.0</code></td>
 <td><em>"because a file can carry whole seconds where the MES had more"</em> is a fact about one plant's incumbent. <code>incumbent.py:86</code> already reads a plant-supplied <code>tolerances</code> object for exactly this; this constant was the one not routed through it — arguably a bug rather than a new setting.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — a fact about one plant's incumbent; <code>incumbent.py</code> already reads a plant-supplied <code>tolerances</code> object</td>
 </tr>
 </tbody>
 </table>
+<p><em>Scope: 0 general · 6 plant · 1 object — 7 in all.</em></p>
 <h3 id="plant-administration-25">Plant administration — 25<a class="headerlink" href="#plant-administration-25" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -4526,6 +4761,7 @@ duplicated literal is what turns a small into a medium.</p>
 <th>Where</th>
 <th>Why it qualified</th>
 <th>Size</th>
+<th>Scope — whose answer is it?</th>
 </tr>
 </thead>
 <tbody>
@@ -4535,6 +4771,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/auth.py:170</code> and <code>api/routers/auth.py:80</code> — <code>role: str = "operator"</code></td>
 <td>One plant onboards everyone as <code>viewer</code> and grants up. The role <em>codes</em> stay tier three; only which is the default moves.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — one plant onboards everyone as <code>viewer</code> and grants up; another starts them on the floor</td>
 </tr>
 <tr>
 <td><strong>A2</strong></td>
@@ -4542,6 +4779,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/auth.py:110</code> <code>_ITERATIONS = 240_000</code></td>
 <td>The count is written into the stored hash (<code>:116</code>) and read back at verify (<code>:124</code>), so moving it breaks no existing account. Worth noting on its own that this is the <em>only</em> password-policy number in the product: no length rule, no complexity rule, no lockout.</td>
 <td>small</td>
+<td><strong><code>general</code></strong> — a password floor is the product's, not a preference a plant may quietly lower — <strong>§8</strong></td>
 </tr>
 <tr>
 <td><strong>A3</strong></td>
@@ -4549,6 +4787,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>api/paging.py:28-29</code> <code>DEFAULT_LIMIT = 50</code>, <code>MAX_LIMIT = 500</code></td>
 <td>Comment: <em>"Big enough that a shift's work fits, small enough that no screen ever ships megabytes by accident"</em> — one plant's shift. The envelope shape is what an API reader depends on, not the number.</td>
 <td>small (medium if <code>le=500</code> must stay in the OpenAPI schema)</td>
+<td><strong><code>plant</code></strong> — a plant with three thousand characteristics and one with fifty want different ceilings</td>
 </tr>
 <tr>
 <td><strong>A4</strong></td>
@@ -4556,6 +4795,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>api/routers/dashboard.py:378</code> <code>Query(20, ge=1, le=100)</code></td>
 <td>The panel has no pager, so item 21 is simply not on the screen. The endpoint's own docstring argues <em>"A draft nobody acts on waits, visibly"</em>, which is the argument for letting a plant choose.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — how many waiting drafts fit on one plant's screen</td>
 </tr>
 <tr>
 <td><strong>A5</strong></td>
@@ -4563,6 +4803,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>web/admin.js:23</code> <code>userPageSize = 25</code>, <code>:29</code> <code>routingPageSize = 25</code></td>
 <td><code>api/routers/admin.py:158-160</code> says <em>"Three hundred employees is an ordinary plant"</em>; 25 is one plant's answer to that.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — twenty-five rows is one plant's answer to three hundred employees</td>
 </tr>
 <tr>
 <td><strong>A6</strong></td>
@@ -4570,6 +4811,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>web/app.js:20-24</code> <code>REFRESH_MS = 2000</code>, <code>PENDING_REFRESH_MS = 30000</code>, <code>MACHINE_PAGE = 24</code>, <code>ORDER_PAGE = 10</code>, <code>SPEC_CHOICES = 200</code></td>
 <td>The file's own header narrates these as tuning against one plant: <em>"On the 108-station lab plant that was the Floor summary's whole cost."</em> A plant on a thin WAN link wants a ten-second poll.</td>
 <td>small (medium if they should come from the server)</td>
+<td><strong><code>plant</code></strong> — a plant on a thin WAN link wants a ten-second poll where one on a switched floor network wants two</td>
 </tr>
 <tr>
 <td><strong>A7</strong></td>
@@ -4577,6 +4819,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>web/admin.js:400</code> <code>setInterval(refresh, 8000)</code></td>
 <td>8 s here, 2 s on the floor, 30 s for approvals, with no shared knob. The inconsistency is itself the evidence that nobody chose these together.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — the same answer as A6 from a third file; the plant should say it once</td>
 </tr>
 <tr>
 <td><strong>A8</strong></td>
@@ -4584,6 +4827,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>web/common.js:484</code>, <code>:493</code></td>
 <td>Same item as <strong>P6</strong>, seen from administration: a tier-one list (the plant's shifts) with a hard-coded literal in front of it. Listed in both domains because it is one change that two domains are waiting on.</td>
 <td>medium</td>
+<td><strong><code>plant</code></strong> — the same item as P6, seen from administration</td>
 </tr>
 <tr>
 <td><strong>A9</strong></td>
@@ -4591,6 +4835,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>web/common.js:297</code> <code>{ limit = 500, cap = 2000 }</code></td>
 <td>A plant with 3,000 characteristics hits it. It returns <code>complete: false</code>, so nothing lies — but where the ceiling sits is the plant's call.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — where the ceiling sits is the plant's own size</td>
 </tr>
 <tr>
 <td><strong>A10</strong></td>
@@ -4598,6 +4843,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/walkthroughs.py:50</code> <code>MAX_STEPS = 60</code>; <code>:91</code> <code>title[:120]</code>, <code>body[:1000]</code>; <code>:96</code> <code>[:200]</code>; <code>:99</code> <code>[:60]</code></td>
 <td>A plant with a ninety-step changeover procedure is refused for a reason nothing outside it cares about, and the four truncations silently shorten the plant's own words. None of the five numbers carries a comment.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — a plant with a ninety-step changeover procedure is refused today for nobody else's reason</td>
 </tr>
 <tr>
 <td><strong>A11</strong></td>
@@ -4605,6 +4851,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/walkthroughs.py:105</code> and <code>:122</code> — <code>needs or "plant.read"</code></td>
 <td>A plant that wants every recorded walkthrough gated to at least <code>production.book</code> has to name it on every recording. Capability names stay tier three.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — a plant says once what every recorded walkthrough must be gated to</td>
 </tr>
 <tr>
 <td><strong>A12</strong></td>
@@ -4612,6 +4859,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/agent.py:45-47</code> <code>MAX_ROUNDS = 12</code>, <code>SESSION_TTL = 30 * 60</code>, <code>RESULT_LIMIT = 6000</code>; <code>:377</code> <code>max_tokens=4096</code></td>
 <td><code>SESSION_TTL</code> is a session-lifetime policy exactly like <code>token_ttl_seconds</code>, which <em>is</em> an env var. The three comments describe rather than justify — there is no "why 12". <code>MODEL</code> and <code>MES_AGENT_MONTHLY_USD</code> two lines away are already env-read, so the pattern exists.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — <code>SESSION_TTL</code> is a session-lifetime policy like <code>token_ttl_seconds</code>, which is already the plant's</td>
 </tr>
 <tr>
 <td><strong>A13</strong></td>
@@ -4619,6 +4867,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/agent.py:109</code>, <code>services/assistant.py:825</code></td>
 <td>A plant that wants terser or fuller answers on the floor screen. Changes only what a person reads. Duplicated in two files that would have to stay in step.</td>
 <td>medium</td>
+<td><strong><code>general</code></strong> — the assistant's voice is the product's, and two plants hearing different lengths is it speaking two ways — <strong>§8</strong></td>
 </tr>
 <tr>
 <td><strong>A14</strong></td>
@@ -4626,6 +4875,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/assistant.py:692</code> <code>out[:4]</code>; <code>web/assist.js:163</code> <code>guides.slice(0, 4)</code></td>
 <td>How many <em>things to try</em> the floor screen offers — and the server truncates to four <em>and</em> the client truncates to four, independently. Two hard-coded copies of one judgment.</td>
 <td>small</td>
+<td><strong><code>general</code></strong> — the shape of the product's own screen, and the honest fix is one number rather than the two copies there are — <strong>§8</strong></td>
 </tr>
 <tr>
 <td><strong>A15</strong></td>
@@ -4633,6 +4883,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/assistant.py:782</code> <code>score &gt;= 2</code></td>
 <td>The comment defends the <em>approach</em> (<em>"Crude on purpose"</em>) and never the number. A plant whose guide titles use its own words gets different overlap counts.</td>
 <td>small</td>
+<td><strong><code>general</code></strong> — nobody outside this repository can see what the score counts, so no plant can answer it — <strong>§8</strong></td>
 </tr>
 <tr>
 <td><strong>A16</strong></td>
@@ -4640,6 +4891,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/assistant.py:836</code> <code>[:3000]</code>; <code>services/design.py:191</code> <code>budget: int = 2500</code>, <code>:203</code> <code>[:12000]</code>, <code>:212</code> <code>budget: int = 14000</code></td>
 <td>These decide how much of the plant's own facts reach the answer. A plant running a larger local model wants more.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — how much of the plant's own facts reach the model, on the plant's own hardware</td>
 </tr>
 <tr>
 <td><strong>A17</strong></td>
@@ -4647,6 +4899,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/assistant.py:730</code> <code>60.0</code>; <code>services/drafting.py:43</code> <code>180.0</code>; <code>services/design.py:160</code> <code>120.0</code>, <code>:183</code> <code>45.0</code>, <code>:204</code> <code>90.0</code>, <code>:321</code> <code>240.0</code></td>
 <td>A plant on a slower GPU needs longer everywhere, and there is no single place to say so.</td>
 <td>medium</td>
+<td><strong><code>plant</code></strong> — one GPU per plant to say it about</td>
 </tr>
 <tr>
 <td><strong>A18</strong></td>
@@ -4654,6 +4907,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/drafting.py:30-40</code>, especially <code>:35</code> <em>"Six to ten steps"</em> and <code>:33-34</code> the Purpose / Steps / If it fails structure</td>
 <td>A plant whose QMS mandates Scope / Hazards / Steps / Records gets the wrong shape. <strong>One clause of <code>HOUSE_STYLE</code> is explicitly <em>not</em> a candidate</strong>: <code>:37-38</code>, <em>"An operator must never be told to adjust a reading toward the middle"</em>, is a product invariant and must not become configurable.</td>
 <td>medium</td>
+<td><strong><code>plant</code></strong> — the plant's document standard — with the one clause at <code>:37-38</code> that stays a product invariant and is not configurable</td>
 </tr>
 <tr>
 <td><strong>A19</strong></td>
@@ -4661,6 +4915,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/ai_status.py:56</code> <code>ROLLUP_STALE = timedelta(hours=40)</code></td>
 <td>The comment names the single machine it was chosen for: <em>"main is LUKS-encrypted and regularly off overnight, so 'late' usually means 'the machine slept'."</em></td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — chosen for one machine's sleep pattern; a plant server that never sleeps answers differently</td>
 </tr>
 <tr>
 <td><strong>A20</strong></td>
@@ -4668,6 +4923,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/ai_status.py:46-51</code> <code>BUDGET = [...]</code></td>
 <td>A fixed list openly described as a ratified decision with a date on it. A plant that runs neither triage nor rollups is shown a priority list describing somebody else's machine. Weaker: it is displayed, not enforced.</td>
 <td>small</td>
+<td><strong><code>general</code></strong> — a list describing one development machine, displayed rather than enforced — <strong>§8</strong></td>
 </tr>
 <tr>
 <td><strong>A21</strong></td>
@@ -4675,6 +4931,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>web/assist.js:59</code> <code>entries.slice(-60)</code>; <code>:503</code> <code>attempt &lt; 20</code>, <code>150</code> ms</td>
 <td>How much of a conversation survives a page change, and how long a walkthrough waits for a control to appear on a slow plant PC.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — the plant's slowest PC. <em>Unsure: the 60-entry log ring in the same row is a product shape and would be general on its own</em></td>
 </tr>
 <tr>
 <td><strong>A22</strong></td>
@@ -4682,6 +4939,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>web/common.js:235</code> <code>3500</code>; <code>web/admin.js:48</code> <code>4000</code>; debounces at <code>admin.js:392</code>, <code>app.js:572</code>, <code>app.js:643</code>, all <code>250</code></td>
 <td>Accessibility: a plant that wants confirmations to linger. The 3500/4000 split is two files disagreeing about one judgment.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — an accessibility answer a plant gives for its own people. <em>Unsure: 3500 against 4000 is a product disagreement to settle first</em></td>
 </tr>
 <tr>
 <td><strong>A23</strong></td>
@@ -4689,6 +4947,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>web/app.js:172</code> <code>Date.now() - linesLoadedAt &lt; 60000</code></td>
 <td>How stale the line picker may be. Nothing outside reads it.</td>
 <td>small</td>
+<td><strong><code>general</code></strong> — a browser cache lifetime no plant has a way to set — <strong>§8</strong></td>
 </tr>
 <tr>
 <td><strong>A24</strong></td>
@@ -4696,6 +4955,7 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>services/reasons.py:40</code> <code>{1,39}</code>, surfaced at <code>:229</code> as <em>"two to forty characters"</em></td>
 <td>Split deliberately: the <strong>character class</strong> is a protocol fact and the docstring at <code>:36-39</code> says why, so it does not qualify. The <strong>40</strong> does — nothing downstream cares whether a code is 40 or 64 characters.</td>
 <td>small</td>
+<td><strong><code>general</code></strong> — forty characters or sixty-four changes nothing anybody can observe — <strong>§8</strong></td>
 </tr>
 <tr>
 <td><strong>A25</strong></td>
@@ -4703,9 +4963,11 @@ duplicated literal is what turns a small into a medium.</p>
 <td><code>pack/masterdata.py:451</code> <code>row.get("days", "1111100")</code></td>
 <td>A plant running seven days is silently seeded a five-day calendar. Same item as <strong>P9</strong> from the pack's side; the honest fix here may be to refuse rather than default.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — the same answer as P9, from the pack's side</td>
 </tr>
 </tbody>
 </table>
+<p><em>Scope: 7 general · 18 plant · 0 object — 25 in all.</em></p>
 <h3 id="it-4">IT — 4<a class="headerlink" href="#it-4" title="Permanent link">&para;</a></h3>
 <p>0035 §2 deliberately leaves IT outside the role model, on the grounds that
 where the database lives and which port a plant serves on are facts about the
@@ -4719,6 +4981,7 @@ and is rejected below. Four are plant judgments wearing an IT coat.</p>
 <th>Where</th>
 <th>Why it qualified</th>
 <th>Size</th>
+<th>Scope — whose answer is it?</th>
 </tr>
 </thead>
 <tbody>
@@ -4728,6 +4991,7 @@ and is rejected below. Four are plant judgments wearing an IT coat.</p>
 <td><code>fleet/observe.py:32</code> <code>TIMEOUT = 3.0</code></td>
 <td>Comment: <em>"Long enough for a plant that is busy, short enough that a console polling a dozen of them does not hang on the one that is off."</em> Two fleets with different link quality answer differently, and getting it wrong reports a healthy plant as unreachable.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — one answer per fleet; getting it wrong reports a healthy plant as unreachable</td>
 </tr>
 <tr>
 <td><strong>I2</strong></td>
@@ -4735,6 +4999,7 @@ and is rejected below. Four are plant judgments wearing an IT coat.</p>
 <td><code>logging.py:95</code> <code>maxBytes=5_000_000, backupCount=5</code></td>
 <td>Twenty-five megabytes of history per component is a retention policy, one file away from <code>tag_retention_days</code>, which is a setting. Weak but real.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — a retention policy one file from <code>tag_retention_days</code>, which is already the plant's</td>
 </tr>
 <tr>
 <td><strong>I3</strong></td>
@@ -4742,6 +5007,7 @@ and is rejected below. Four are plant judgments wearing an IT coat.</p>
 <td><code>api/app.py:142</code> <code>await asyncio.sleep(3600)</code></td>
 <td>"Hourly" is stated as policy on the Ops screen (<code>services/retention.py:68</code>). The window it prunes <em>to</em> is already a setting; the cadence is not. Weak.</td>
 <td>small</td>
+<td><strong><code>general</code></strong> — hourly is defensible in every plant; the window it prunes to is already the plant's — <strong>§8</strong></td>
 </tr>
 <tr>
 <td><strong>I4</strong></td>
@@ -4749,9 +5015,11 @@ and is rejected below. Four are plant judgments wearing an IT coat.</p>
 <td><code>services/assistant.py:33</code>, <code>services/drafting.py:28</code>, <code>services/design.py:44</code> — all <code>qwen3:8b</code></td>
 <td>Which model drafts a plant's work instructions is the plant's call, and it is already recorded on the document as <code>drafted_by_model</code>, so the field's meaning does not change. <code>MES_AGENT_MODEL</code> exists for the cloud half; the local half has no equivalent.</td>
 <td>small</td>
+<td><strong><code>plant</code></strong> — the plant's hardware and its choice, already recorded on the document as <code>drafted_by_model</code></td>
 </tr>
 </tbody>
 </table>
+<p><em>Scope: 1 general · 3 plant · 0 object — 4 in all.</em></p>
 <h3 id="unassigned-0">Unassigned — 0<a class="headerlink" href="#unassigned-0" title="Permanent link">&para;</a></h3>
 <p>Every candidate a person kept was placed. The tool reports 17 raw matches as
 <code>unassigned</code> — <code>api/paging.py</code>, <code>cli.py</code>, <code>plant.py</code>, <code>integrations/jev/</code> — and
@@ -4822,15 +5090,146 @@ follow-up; and <code>services/analysis.py:59</code> defines <code>_MIN_WINDOW_SE
 that nothing reads — the live copy is <code>coverage.MIN_OBSERVED_SECONDS</code> (<strong>P10</strong>).</p>
 <hr />
 <h2 id="7-what-this-page-does-not-do">7. What this page does not do<a class="headerlink" href="#7-what-this-page-does-not-do" title="Permanent link">&para;</a></h2>
-<p>It does not pick. Seventy-five candidates across six domains, sized roughly,
-each with the argument for why it qualified written next to it — so the choice
-can be made on what the plant needs rather than on what is easiest to build.</p>
+<p><strong>It does not turn seventy-five candidates into seventy-five questions.</strong> A
+<code>plant</code> item and an <code>object</code> item are <em>routed</em>, not asked: the first one
+appears under its domain's <code>Configuration</code> tab with today's literal as its
+default, and the second one appears on the row of the tag, machine, material
+or gauge it describes, set by the engineer who is looking at that object.
+Neither ever comes back to a maintainer as an open question, because a
+maintainer cannot answer it honestly — the right answer depends on a plant, or
+on a counter, that they have never seen. Sixty-six of the seventy-five are in
+that position. What is left to answer is §8, and it is nine items long.</p>
+<p>It does not pick, either. Seventy-five candidates across six domains, sized
+roughly, each with the argument for why it qualified written next to it — so
+the choice can be made on what the plant needs rather than on what is easiest
+to build.</p>
 <p>Four of them come with a caveat rather than a clean recommendation, and those
 are worth reading before choosing: <strong>Q5</strong> needs a decision against 0035 §3
-first; <strong>C14</strong> sits on house rule 1 and needs that argument made out loud;
-<strong>A18</strong> contains one clause that must stay a product invariant; and <strong>Q9</strong> and
-<strong>S7</strong> may be better fixed as bugs than shipped as settings.</p>
-<p>Rerun <code>fsmes config-audit</code> before using this page. It was true on 2026-09-21.</p>
+first; <strong>C14</strong> sits on house rule 1, and scope is the argument it needed — a
+threshold nobody can set for a counter they have never seen is not a default
+anybody should be asked to pick, it is a property of the tag, which is what
+<code>object</code> scope says and why C14 is §9's first bulk-edit case; <strong>A18</strong> contains
+one clause that must stay a product invariant; and <strong>Q9</strong> and <strong>S7</strong> may be
+better fixed as bugs than shipped as settings.</p>
+<p>Rerun <code>fsmes config-audit</code> before using this page. It was true on 2026-09-21,
+and every <code>file:line</code> in it was checked again on 2026-09-22.</p>
+<hr />
+<h2 id="8-the-nine-that-are-anybodys-to-weigh-in-on">8. The nine that are anybody's to weigh in on<a class="headerlink" href="#8-the-nine-that-are-anybodys-to-weigh-in-on" title="Permanent link">&para;</a></h2>
+<p>Everything else on the list is routed. These nine are <code>general</code> — one default
+across every plant, because two honest plants have no reason, or no way, to
+answer them differently. Each ships <strong>today's literal, unchanged</strong>; that is
+the rule from §3 and it applies here too. What is being asked is whether the
+number the product already picked is the right one, not what to set for
+somebody's plant.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>What it is</th>
+<th>The default it ships</th>
+<th>Why anybody is asked</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Q5</strong></td>
+<td>Which Western Electric rules are in force</td>
+<td>all four, always</td>
+<td>0035 §3 says a rule a plant can switch off is a chart that lies — and it was answering about the <em>chart</em>. Whether a plant may choose which rules raise a <strong>hold</strong> is a question it never asked. Until that is decided, nothing here can be built.</td>
+</tr>
+<tr>
+<td><strong>A2</strong></td>
+<td>PBKDF2 iteration count</td>
+<td><code>240_000</code></td>
+<td>It is the product's entire password policy — no length rule, no complexity rule, no lockout beside it. A plant that turns it down is weaker without knowing it, so the floor is the product's to raise as hardware gets faster.</td>
+</tr>
+<tr>
+<td><strong>A13</strong></td>
+<td>The assistant's house style — "at most four sentences"</td>
+<td>four sentences</td>
+<td>The assistant's voice is the product's. It is written twice, in <code>agent.py</code> and <code>assistant.py</code>, which is the evidence that nobody owns it yet.</td>
+</tr>
+<tr>
+<td><strong>A14</strong></td>
+<td>How many suggestion and guide chips a screen offers</td>
+<td>four — and four again, independently</td>
+<td>Two hard-coded copies of one judgment, one on the server and one in the browser. The honest fix is one number, not a setting.</td>
+</tr>
+<tr>
+<td><strong>A15</strong></td>
+<td>Lexical guide-match threshold, used when the model is down</td>
+<td><code>score &gt;= 2</code></td>
+<td>Nobody outside this repository can see what the score counts, so no plant can answer it. The product picks, and says why.</td>
+</tr>
+<tr>
+<td><strong>A20</strong></td>
+<td>The standing GPU priority order</td>
+<td>the list at <code>ai_status.py:46-51</code></td>
+<td>It describes one development machine and is displayed rather than enforced. The honest answer may be to stop showing a plant somebody else's priorities at all.</td>
+</tr>
+<tr>
+<td><strong>A23</strong></td>
+<td>Line-list cache lifetime on the floor screen</td>
+<td>60 s</td>
+<td>A browser cache lifetime for a list that changes when somebody edits masterdata. No plant has a way to know what to set it to.</td>
+</tr>
+<tr>
+<td><strong>A24</strong></td>
+<td>Downtime-code length cap</td>
+<td>40 characters</td>
+<td>No payload, screen or export is keyed on the length. Forty or sixty-four changes nothing anybody can observe. The character class beside it stays a protocol fact.</td>
+</tr>
+<tr>
+<td><strong>I3</strong></td>
+<td>Retention prune cadence</td>
+<td>hourly</td>
+<td>The window it prunes <em>to</em> is already the plant's answer; how often the product sweeps to honour it is the product's business.</td>
+</tr>
+</tbody>
+</table>
+<p><em>Scope: 9 general — 1 quality, 7 administration, 1 IT. No <code>general</code> candidate
+was found in process, controls or supply chain: every judgment in those three
+is either a plant's or an object's, which is what you would expect of the
+three domains that touch the floor.</em></p>
+<p>Only <strong>Q5</strong> blocks anything: it needs a decision against 0035 §3 before it can
+be built. The other eight are one-line changes whenever somebody decides the
+product's number should be a different number.</p>
+<hr />
+<h2 id="9-bulk-editing-which-object-scope-makes-necessary">9. Bulk editing, which <code>object</code> scope makes necessary<a class="headerlink" href="#9-bulk-editing-which-object-scope-makes-necessary" title="Permanent link">&para;</a></h2>
+<p>Design only. Nothing here is built, and this is two paragraphs rather than a
+design page; the design page is its own step if it is picked.</p>
+<p><strong>What it means in this product's terms.</strong> Twelve candidates are <code>object</code>
+scope, and an <code>object</code> setting is not one value — it is one value <em>per tag, per
+gauge, per material</em>. A plant with four hundred counter tags cannot be asked to
+open four hundred rows, and telling an engineer "set all production tags to a
+small threshold" is the sentence they would actually say. In this product that
+sentence is a <strong>draft that touches N rows instead of one</strong>: the assistant
+proposes a single draft listing every tag-map entry it would change and the
+before and after of each, validation runs <strong>per tag</strong> and a tag that fails
+drops out of the draft with its reason shown rather than failing the whole
+set, the engineer signs the draft once with the same <code>signals.approve</code>
+capability the reason-codes pilot uses, and the whole thing is one revision,
+so undoing it is one undo and not four hundred. It is the same
+draft → validated → discovered → signed → live → undone loop 0035 already
+describes, applied to a set of objects rather than to one vocabulary. The
+seams it would use all exist: the <code>ConfigSection</code> for controls engineering,
+the <code>KINDS</code> registry in <code>services/review.py</code> (a bulk edit is a new kind, whose
+<em>what would change</em> reviewer renders N rows instead of one), the tag map file
+itself, and <code>pack apply</code>'s never-overwrite rule, which already says a pack may
+not silently replace a value a plant set by hand — a bulk edit must obey the
+same rule in reverse, and say which tags it is leaving alone.</p>
+<p><strong>What it must refuse.</strong> A bulk edit may set a value on many objects; it may
+not change what a value <em>means</em> on any of them. Setting a counter-reset
+threshold on every production counter is one judgment applied many times, and
+an engineer can check it by reading one row and trusting the rest. Rewriting
+what a tag's <code>state_map</code> maps — which word a PLC code means — is a different
+judgment per tag, and applying one answer to four hundred of them would be
+inventing production on three hundred and ninety-nine machines nobody looked
+at. The line is: <strong>a bulk edit is allowed where the same sentence is true of
+every object it touches, and refused where the engineer would have to look at
+each object to know.</strong> <code>C14</code> is on the right side of that line, which is why
+it is the first case: <em>"a counter that resets once a shift"</em> is a property an
+engineer knows about a whole class of counters at once.</p>
 
 
 
