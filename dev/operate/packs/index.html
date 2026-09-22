@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://docs.factorysemantics.com/dev/operate/packs/">
       
       
-        <link rel="prev" href="../who-names-the-reasons/">
+        <link rel="prev" href="../quality-severities/">
       
       
         <link rel="next" href="../registry/">
@@ -1038,6 +1038,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../quality-severities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — who names the severities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -1150,6 +1178,17 @@
     <span class="md-ellipsis">
       
         The words an operator picks from
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-bad-a-finding-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How bad a finding is
       
     </span>
   </a>
@@ -3146,6 +3185,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0036 — The chart draws every rule; the plant chooses which raise a hold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -3694,6 +3761,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#how-bad-a-finding-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How bad a finding is
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#the-order-book" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3876,6 +3954,11 @@ fsmes<span class="w"> </span>pack<span class="w"> </span>migrate<span class="w">
 <td>What other systems tell this plant</td>
 </tr>
 <tr>
+<td><code>[quality]</code></td>
+<td><code>hold_rules</code></td>
+<td>Which Western Electric rules raise a quality hold, as a list of rule numbers from 1 to 4 — <code>hold_rules = [1, 2]</code>. Leave it out and all four do, which is what this product has always done. Every rule is drawn and recorded whatever this says (<a href="../../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/">decision 0036</a>)</td>
+</tr>
+<tr>
 <td><code>[oee]</code></td>
 <td><code>coverage_floor</code></td>
 <td>How much of a window this MES must have watched before it reports a KPI for it, between 0 and 1. Leave it out and nothing is withheld — see <a href="../coverage/">how much of the window did the MES see</a></td>
@@ -3923,7 +4006,7 @@ Usable, as far as a file can say: 9 file(s) read, nothing refused, 4 thing(s) on
 </ol>
 <p>Never this process's own default. Until 2026-09-14 that is exactly what a pack naming no database got, which is how <code>fsmes fleet create</code> came to migrate and seed a stray <code>./fsmes.db</code> and then record ownership of a plant that had never been created. A database nobody named is not this plant's.</p>
 <p><strong>Pack before database.</strong> A schema migration may need a value the pack now carries, so the pack is applied first — and <code>fsmes pack apply</code> runs the migrations itself, in that order.</p>
-<p>Master data is seeded from <code>masterdata/</code>, one file per kind: <code>equipment.json</code>, <code>materials.json</code>, <code>bom.json</code>, <code>routings.json</code>, <code>quality_specs.json</code>, <code>lots.json</code>, <code>work_orders.json</code>, <code>maintenance_plans.json</code>, <code>shifts.json</code>, <code>downtime_reasons.json</code>. An entry whose code already exists is counted as present and <strong>left alone, never updated</strong> — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which <code>fsmes fleet list</code> and the console now show as <em>answered, but empty</em>.</p>
+<p>Master data is seeded from <code>masterdata/</code>, one file per kind: <code>equipment.json</code>, <code>materials.json</code>, <code>bom.json</code>, <code>routings.json</code>, <code>quality_specs.json</code>, <code>lots.json</code>, <code>work_orders.json</code>, <code>maintenance_plans.json</code>, <code>shifts.json</code>, <code>downtime_reasons.json</code>, <code>nc_severities.json</code>. An entry whose code already exists is counted as present and <strong>left alone, never updated</strong> — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which <code>fsmes fleet list</code> and the console now show as <em>answered, but empty</em>.</p>
 <h3 id="the-words-an-operator-picks-from">The words an operator picks from<a class="headerlink" href="#the-words-an-operator-picks-from" title="Permanent link">&para;</a></h3>
 <p><code>downtime_reasons.json</code> is the list the station screen offers when a machine goes down. Each entry is a <code>code</code>, a <code>name</code> and an optional <code>description</code> — the sentence the screen shows beside the choice, and the one an agent reads to tell two reasons apart.</p>
 <div class="highlight"><pre><span></span><code><span class="p">[</span>
@@ -3934,6 +4017,15 @@ Usable, as far as a file can say: 9 file(s) read, nothing refused, 4 thing(s) on
 </code></pre></div>
 <p>A code is two to forty characters, lowercase, starting with a letter — it is grouped on and published, not read as a sentence — and it may not spell a word the product already owns (a state, a capability, a role, a KPI). <code>fsmes pack check</code> refuses both offline.</p>
 <p><strong>A packed vocabulary arrives in force</strong>, not as a draft, because applying a pack is a deliberate act by a person and a plant whose station screen offered nothing until somebody approved six seeded rows would have shipped with a text box after all. Everything after that goes through <a href="../who-names-the-reasons/">draft then approve</a>, and <strong>the plant owns the list from its first edit</strong>: applying the pack again counts an edited code as present and leaves it exactly as the plant left it.</p>
+<h3 id="how-bad-a-finding-is">How bad a finding is<a class="headerlink" href="#how-bad-a-finding-is" title="Permanent link">&para;</a></h3>
+<p><code>nc_severities.json</code> is the second vocabulary, on exactly the same terms: a <code>code</code>, a <code>name</code> and an optional <code>description</code>, arriving in force, owned by the plant from its first edit, and changed afterwards through <a href="../quality-severities/">draft then approve</a>.</p>
+<div class="highlight"><pre><span></span><code><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"minor"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Minor"</span><span class="p">,</span><span class="w"> </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"The plant can work through it in the normal course of the shift."</span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"major"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Major"</span><span class="p">,</span><span class="w"> </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Somebody should look at this now rather than at the end of the shift."</span><span class="p">}</span>
+<span class="p">]</span>
+</code></pre></div>
+<p>A severity code is two to <strong>twenty</strong> characters — it is stored on every non-conformance, in a column twenty characters wide, and a list that could approve a word too long to store would refuse at the one moment it mattered.</p>
+<p><strong>A pack that seeds this list must seed <code>minor</code> and <code>major</code>.</strong> The product opens non-conformances itself — a recorded check outside its specification, and the SPC rules — and it writes those two words. A plant whose list lacked one would find out at the moment a machine raised a hold, so <code>fsmes pack check</code> refuses it offline instead. The <strong>names</strong> and the sentences beside them are the plant's; only the codes are fixed, and only those two.</p>
 <h3 id="the-order-book">The order book<a class="headerlink" href="#the-order-book" title="Permanent link">&para;</a></h3>
 <p><code>work_orders.json</code> is the plant's <strong>schedule</strong>, not one order to give the counters somewhere to book. Each entry is a code, a material and a quantity; <code>priority</code>, <code>release</code> and <code>due_in_hours</code> are optional.</p>
 <div class="highlight"><pre><span></span><code><span class="p">[</span>
@@ -4028,7 +4120,7 @@ Usable, as far as a file can say: 9 file(s) read, nothing refused, 4 thing(s) on
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../who-names-the-reasons/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How-to — who names the downtime reasons">
+          <a href="../quality-severities/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How-to — who names the severities">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -4038,7 +4130,7 @@ Usable, as far as a file can say: 9 file(s) read, nothing refused, 4 thing(s) on
                 Previous
               </span>
               <div class="md-ellipsis">
-                How-to — who names the downtime reasons
+                How-to — who names the severities
               </div>
             </div>
           </a>

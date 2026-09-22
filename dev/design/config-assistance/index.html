@@ -1036,6 +1036,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operate/quality-severities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — who names the severities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operate/packs/" class="md-nav__link">
         
   
@@ -3255,6 +3283,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0036 — The chart draws every rule; the plant chooses which raise a hold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -4255,10 +4311,16 @@ should read that same function rather than keep a second list.</p>
 <td>Quality engineering</td>
 </tr>
 <tr>
-<td>SPC rules 1–4</td>
-<td><code>_western_electric</code>, hard-coded (<code>services/spc.py:67-112</code>)</td>
+<td>SPC rules 1–4 — <em>which are drawn and recorded</em></td>
+<td><code>_western_electric</code>, hard-coded (<code>services/spc.py</code>)</td>
 <td>three</td>
 <td>A rule a plant can switch off is a chart that lies</td>
+</tr>
+<tr>
+<td>SPC rules 1–4 — <em>which raise a hold</em></td>
+<td><code>[quality] hold_rules</code>, all four by default</td>
+<td>one</td>
+<td>Decision <a href="../../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/">0036</a>, 2026-09-22. The row above was one row until then, and the distinction is the whole of that decision</td>
 </tr>
 <tr>
 <td>OPC <code>state_map</code> — raw PLC value → MES state</td>
@@ -4897,13 +4959,19 @@ everything built from now on and are not a snapshot of one day's source:</p>
    exists to prevent happening again.</li>
 </ol>
 <p>One correction to §3's table came out of the audit and is recorded here rather
-than left in a dated page. §3 places "SPC rules 1–4" in tier three with the
+than left in a dated page. §3 placed "SPC rules 1–4" in tier three with the
 note <em>"A rule a plant can switch off is a chart that lies."</em> That reasoning is
 about the <strong>chart</strong>, and it holds. Whether a plant may choose which rules raise
-a <strong>hold</strong> is a different question that §3 did not ask, and it is open. The
-rule <em>windows</em> — 2-of-3, 4-of-5, 8-in-a-row — are tier three either way: a
-plant that changed them would publish <code>SpcSignal.rule = 3</code> while meaning
-something nobody else means by rule 3.</p>
+a <strong>hold</strong> is a different question that §3 did not ask.</p>
+<p><strong>It was answered on 2026-09-22 by decision
+<a href="../../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/">0036</a>:
+every rule is evaluated, drawn and recorded on every plant, and which of them
+raise a quality hold is the plant's, defaulting to all four.</strong> §3's sentence
+stays true and is now scoped to the chart, which is what it was always about;
+§3's table above is split into the two rows the distinction needs. The rule
+<em>windows</em> — 2-of-3, 4-of-5, 8-in-a-row — are tier three either way: a plant
+that changed them would publish <code>SpcSignal.rule = 3</code> while meaning something
+nobody else means by rule 3.</p>
 
 
 

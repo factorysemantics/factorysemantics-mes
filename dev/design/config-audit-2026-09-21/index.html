@@ -1036,6 +1036,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operate/quality-severities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — who names the severities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operate/packs/" class="md-nav__link">
         
   
@@ -3260,6 +3288,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0036 — The chart draws every rule; the plant chooses which raise a hold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -4367,11 +4423,11 @@ row.</p>
 </tr>
 <tr>
 <td><strong>Q5</strong></td>
-<td>Which Western Electric rules are in force</td>
-<td><code>services/spc.py:80-106</code> — all four always run</td>
-<td><strong>Needs a decision against 0035 first.</strong> §3 places the four rules in tier three (<em>"a rule a plant can switch off is a chart that lies"</em>); whether a plant may choose which rules raise a <em>hold</em>, as opposed to which are drawn, is a question §3 did not ask. Window sizes stay tier three either way — see §2.</td>
-<td>medium, and blocked on the decision</td>
-<td><strong><code>general</code></strong> — whether a rule may be switched off at all is a product decision 0035 never made — <strong>§8</strong></td>
+<td>Which Western Electric rules raise a hold</td>
+<td><code>services/spc.py:80-106</code> — all four always did</td>
+<td><strong>Decided 2026-09-22 by <a href="../../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/">0036</a></strong>, and built: every rule is drawn and recorded on every plant, and <code>[quality] hold_rules</code> chooses which of them open a non-conformance, defaulting to all four. Window sizes stay tier three — see §2.</td>
+<td>medium — <strong>done</strong></td>
+<td><strong><code>general</code></strong> — the question <em>may a plant choose at all</em> was the product's, and 0036 answered it. What the answer hands the plant is a <code>plant</code> key — <strong>§8</strong></td>
 </tr>
 <tr>
 <td><strong>Q6</strong></td>
@@ -5133,9 +5189,9 @@ somebody's plant.</p>
 <tbody>
 <tr>
 <td><strong>Q5</strong></td>
-<td>Which Western Electric rules are in force</td>
+<td>Which Western Electric rules raise a hold</td>
 <td>all four, always</td>
-<td>0035 §3 says a rule a plant can switch off is a chart that lies — and it was answering about the <em>chart</em>. Whether a plant may choose which rules raise a <strong>hold</strong> is a question it never asked. Until that is decided, nothing here can be built.</td>
+<td>0035 §3 says a rule a plant can switch off is a chart that lies — and it was answering about the <em>chart</em>. Whether a plant may choose which rules raise a <strong>hold</strong> is a question it never asked. <strong>Answered 2026-09-22 by <a href="../../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/">0036</a>: the chart draws and records every rule, and the plant chooses which of them hold. Built, defaulting to all four.</strong></td>
 </tr>
 <tr>
 <td><strong>A2</strong></td>
@@ -5191,9 +5247,12 @@ somebody's plant.</p>
 was found in process, controls or supply chain: every judgment in those three
 is either a plant's or an object's, which is what you would expect of the
 three domains that touch the floor.</em></p>
-<p>Only <strong>Q5</strong> blocks anything: it needs a decision against 0035 §3 before it can
-be built. The other eight are one-line changes whenever somebody decides the
-product's number should be a different number.</p>
+<p><strong>Q5</strong> was the only one of the nine that blocked anything, and it no longer
+does: decision
+<a href="../../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/">0036</a>
+answered it on 2026-09-22 and the key is built. The other eight are one-line
+changes whenever somebody decides the product's number should be a different
+number.</p>
 <hr />
 <h2 id="9-bulk-editing-which-object-scope-makes-necessary">9. Bulk editing, which <code>object</code> scope makes necessary<a class="headerlink" href="#9-bulk-editing-which-object-scope-makes-necessary" title="Permanent link">&para;</a></h2>
 <p>Design only. Nothing here is built, and this is two paragraphs rather than a

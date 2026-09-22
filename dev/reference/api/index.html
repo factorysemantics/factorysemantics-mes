@@ -1041,6 +1041,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operate/quality-severities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — who names the severities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operate/packs/" class="md-nav__link">
         
   
@@ -3272,6 +3300,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0036 — The chart draws every rule; the plant chooses which raise a hold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -4042,7 +4098,7 @@
 
 
 <h1 id="rest-api-reference">REST API reference<a class="headerlink" href="#rest-api-reference" title="Permanent link">&para;</a></h1>
-<p>Generated from the OpenAPI document at build time: 146 paths. A running instance serves the interactive version at <code>/docs</code> and the raw document at <code>/openapi.json</code>. Sign in at <code>POST /auth/login</code> and send <code>Authorization: Bearer &lt;token&gt;</code>; every write needs a role.</p>
+<p>Generated from the OpenAPI document at build time: 151 paths. A running instance serves the interactive version at <code>/docs</code> and the raw document at <code>/openapi.json</code>. Sign in at <code>POST /auth/login</code> and send <code>Authorization: Bearer &lt;token&gt;</code>; every write needs a role.</p>
 <h2 id="adjustments">adjustments<a class="headerlink" href="#adjustments" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -4804,6 +4860,36 @@
 <td><code>POST</code></td>
 <td><code>/quality/nonconformances/{code}/review</code></td>
 <td>Review Nc</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/quality/severities</code></td>
+<td>Catalog</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/quality/severities</code></td>
+<td>Define</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/quality/severities/drafts</code></td>
+<td>Waiting</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/quality/severities/vocabulary</code></td>
+<td>Vocabulary</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/quality/severities/{code}</code></td>
+<td>History</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/quality/severities/{code}/approve/{revision}</code></td>
+<td>Approve</td>
 </tr>
 <tr>
 <td><code>GET</code></td>
