@@ -395,3 +395,51 @@ def test_the_command_refuses_a_scope_it_does_not_have():
     assert result.exit_code == 2
     assert "unknown scope" in result.output
     assert "object" in result.output, "it says which scopes there are"
+
+
+# ------------------------------------------------- the page and the tool agree
+#
+# The audit page carries the scope of each candidate in its own tables, so a
+# person reading it never has to run anything. That is two copies of one
+# judgment, which is the failure this whole audit is about - so a test holds
+# them together. The page owns the prose; the tool owns the label; this
+# refuses to let the label drift.
+
+
+def _audit_page() -> str:
+    from pathlib import Path
+
+    page = (Path(__file__).resolve().parents[1]
+            / "docs" / "design" / "config-audit-2026-09-21.md")
+    return page.read_text(encoding="utf-8")
+
+
+def test_the_audit_page_gives_every_candidate_the_scope_the_tool_gives_it():
+    import re
+
+    rows = re.findall(r"^\| \*\*([QPCSAI]\d+)\*\* \|.*\*\*`(\w+)`\*\*",
+                      _audit_page(), re.M)
+    assert len(rows) == 75, (
+        f"section 4 of the audit page lists {len(rows)} candidates with a "
+        "scope; it listed 75 when the scope was added")
+    for candidate_id, scope in rows:
+        row = next((r for r in config_audit.CURATED
+                    if r.id == candidate_id), None)
+        assert row is not None, f"{candidate_id} is on the page and not in the tool"
+        assert row.scope == scope, (
+            f"{candidate_id} is {scope} on the page and {row.scope} in the "
+            "tool; one of them is wrong and both are read")
+
+
+def test_the_page_asks_a_person_only_about_the_general_candidates():
+    page = _audit_page()
+    general = [row.id for row in config_audit.CURATED if row.scope == "general"]
+    section = page.split("## 8.")[1].split("## 9.")[0]
+    for candidate_id in general:
+        assert f"**{candidate_id}**" in section, (
+            f"{candidate_id} is general and is not in the list of what "
+            "anybody is asked")
+    for row in config_audit.CURATED:
+        if row.scope != "general":
+            assert f"| **{row.id}** |" not in section, (
+                f"{row.id} is {row.scope}: it is routed, not asked")

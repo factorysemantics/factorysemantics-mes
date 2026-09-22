@@ -1,9 +1,16 @@
 """The seventy-five candidates a person kept, and where each one's answer lives.
 
 `config_audit.py` scans. This file remembers. The scan finds literals; a
-person read all 419 of them on 2026-09-21 and kept 75, and those 75 carry two
+person read all 419 of them on 2026-09-21 and kept 75, and those carry two
 judgments a scanner cannot make: which **domain** owns the setting, and — added
 here on 2026-09-22 — what its **scope** is.
+
+**Seventy-six rows, where the design page lists seventy-five.** `Q0` — the Cpk
+bar at which a process is called capable — is the audit page's own calibration
+example, worked through in its section 2 and never given a row number in its
+section 4. It is a candidate like any other, so it is carried here with a
+scope, and both totals are said out loud rather than one of them quietly
+becoming the other.
 
 **Scope answers "whose answer is it?", and it decides who is asked.**
 
@@ -97,6 +104,22 @@ CURATED: tuple[Curated, ...] = (
 
     # ------------------------------------------------------ quality engineering
 
+    Curated(
+        "Q0", "quality", "plant",
+        "The Cpk bar at which a process is called capable",
+        "services/spc.py", 246, "if cpk >= 1.33:",
+        why="1.33 is a widely used industry convention and not a law of "
+            "physics. A plant with looser tolerances or a stricter quality "
+            "culture can set a different bar and still be telling the truth "
+            "about itself; the Cpk number keeps its meaning either way, and "
+            "only the English word beside it moves.",
+        unsure="It could be object. A plant that grades characteristics as "
+               "critical, major and minor may want a higher bar on a "
+               "critical one; what would settle it is whether any plant "
+               "charts two characteristics it would judge capable at "
+               "different numbers. It is section 2's calibration example and "
+               "has no row in section 4 of the design page, so the curated "
+               "list is 76 where that page's list is 75."),
     Curated(
         "Q1", "quality", "plant",
         "Fewest readings before control limits are drawn at all",
@@ -213,7 +236,7 @@ CURATED: tuple[Curated, ...] = (
         "services/scheduling.py", 37, "DEFAULT_CYCLE_SECONDS = 3.0",
         why="The per-object answer already exists - it is the machine's own "
             "cycle rating. What is hard-coded is the guess a plant makes for "
-            "a machine nobody has rated yet, and a bottling plant and a "
+            "a machine nobody has rated yet, and a filling line and a "
             "machine shop guess differently."),
     Curated(
         "P3", "process", "plant",

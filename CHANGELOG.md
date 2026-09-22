@@ -217,6 +217,35 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Changed
 
+- **`fsmes config-audit` says whose answer each candidate is, not just where
+  it lives.** The audit sorted seventy-five hard-coded judgments by domain, by
+  size and by the reason each one qualified. It was missing the
+  classification that decides who gets asked, so the command now carries a
+  fourth one on every curated candidate — its **scope**. `general` means one
+  default across every plant and a maintainer weighs in; `plant` means the
+  plant's own answer, routed to its domain's *Configuration* tab with today's
+  literal as the shipped default; `object` means a property of one tag,
+  machine, material, gauge or order, set on that object's own row by the
+  engineer looking at it. The rule, applied to all of them: *would two honest
+  engineers at the same plant answer differently for two different objects?*
+  → `object`; *would two honest plants answer differently?* → `plant`;
+  otherwise → `general`. **Only the nine `general` items are open questions:**
+  fifty-four `plant` and twelve `object` items are routed to the person who
+  can actually answer them, which is the whole point — nobody can pick a
+  counter-reset threshold for a counter they have never seen. `--scope
+  general|plant|object` filters the list, combines with `--domain`, and
+  `--json` carries each scope with the argument for it. The judgments live in
+  `src/fsmes/sim/config_audit_curated.py`, a table in source the way the
+  domain table is, and each row is anchored on a fragment of its line rather
+  than a line number: a refactor moves a row and the tool says it moved, and a
+  row whose anchor is gone is reported stale for a person to re-read rather
+  than quietly pointing at whatever is on that line now. The audit page
+  (`docs/design/config-audit-2026-09-21.md`) carries the same scopes in its
+  tables, with a new §8 listing only what anybody is asked, and a §9 sketching
+  bulk editing — the counter-reset threshold being the first case where an
+  engineer wants to say *"set all production tags to a small threshold"* once
+  rather than four hundred times.
+
 - **The navigation gets one *Configuration* entry per workspace, instead of a
   chip per configurable thing.** *Engineering › Downtime reasons* was a
   top-level entry of its own for four days; with hundreds of configurable
