@@ -1,6 +1,25 @@
 version: 2
 updates:
-  - package-ecosystem: pip
+  # Python updates run through the `uv` ecosystem, not `pip`, because this
+  # repository has a lockfile and CI requires it to be current.
+  #
+  # `pip` edits the version constraints in `pyproject.toml` and has no
+  # concept of `uv.lock` — it never regenerates it. Since #74 made
+  # `uv lock --check` a required check, that combination meant every
+  # Python bump Dependabot opened arrived with a stale lock and failed
+  # `lockfile` on arrival; #86 (ruff 0.16.7 → 0.16.8) is the one that made
+  # it obvious. The `uv` ecosystem reads `pyproject.toml` and `uv.lock`
+  # together and writes both in the same commit, so the required check
+  # passes without anyone running `uv lock` by hand.
+  #
+  # The group below is carried over unchanged. It groups on `patterns`,
+  # which `uv` supports; the one grouping key `uv` does not support is
+  # `dependency-type`, and this repository never used it. `uv` also treats
+  # every declared dependency as a production one — it draws no dev/prod
+  # line — which changes nothing here, because `patterns: ["*"]` already
+  # puts the runtime dependencies and the `dev`, `docs`, `postgres`,
+  # `mcp`, `agent`, `mqtt` and `jev` extras in one pull request.
+  - package-ecosystem: uv
     directory: /
     schedule:
       interval: weekly
