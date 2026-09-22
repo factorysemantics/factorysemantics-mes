@@ -12,6 +12,25 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **`fsmes config-audit` — find the business judgments still hard-coded in
+  the source.** Decision 0035 gave one test for whether a setting belongs to
+  the plant or to the product — *ask what breaks if two plants answer
+  differently* — and it had only ever been applied by hand, to a dozen
+  settings, on a design page. The command applies it to the whole tree: every
+  number, mapping and fixed list sitting near a word that names a judgment
+  (threshold, limit, window, rule, severity, warning, due, capable, and the
+  rest), reported with its file, its line, the literal, and the comment beside
+  it, grouped by the six configuration domains. Python is read with `ast`, so
+  a named mapping is reported once instead of once per number; the browser
+  files are read as text. It **decides nothing** — a person applies the test —
+  and it states how many files it read and how many it skipped with a reason
+  for each, so *we looked at everything* is checkable rather than asserted. A
+  file the domain table does not place is reported as unassigned rather than
+  folded into the biggest domain. `--strong` narrows to the candidates with a
+  hedging comment or a self-describing name without changing any domain's
+  stated total; `--json` is for diffing one run against the next, which is the
+  point of it being a command and not a report.
+
 - **The downtime vocabulary has a screen: Engineering › Downtime reasons**
   (`/dashboard/reasons`). The lifecycle shipped with a place to *sign* a
   reason and nowhere to *draft* one, so the only person who could use the
