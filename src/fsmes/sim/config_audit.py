@@ -34,6 +34,23 @@ written. `fsmes config-audit` is true on the day it is run, which is the only
 useful kind of true for a codebase that gains a file a week. Rerun it; diff
 the JSON; the new literals are the ones somebody added since.
 
+**The judgments a scan cannot make, carried beside it.** Two things about a
+candidate are a person's call and not a scanner's: which domain owns it, and
+**whose answer it is** - its *scope*. Domain is decided by `DOMAIN_RULES`
+below. Scope lives in `config_audit_curated.py`, one row per candidate a
+person kept, and it decides who gets asked:
+
+- `general` - one default across every plant, so a maintainer weighs in;
+- `plant` - the plant's own answer, routed to its domain's Configuration tab;
+- `object` - a property of one tag, machine, material, gauge or order, set by
+  the engineer who knows that object.
+
+**Only `general` is an open question.** The other two are answered where the
+thing is configured, by the person in front of it, and asking a maintainer to
+pick a number for somebody else's tag is how a list of 75 becomes 75
+questions nobody can honestly answer. `--scope` filters by it; `--json`
+carries it beside the literal.
+
 Deterministic. No model, no network, no database, no plant.
 """
 
@@ -44,6 +61,13 @@ import json
 import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+
+from fsmes.sim.config_audit_curated import (
+    CURATED,
+    SCOPE_RULE,
+    SCOPE_TITLES,
+    Curated,
+)
 
 REPO = Path(__file__).resolve().parents[3]
 SRC = REPO / "src" / "fsmes"
@@ -288,9 +312,92 @@ class Candidate:
     comment: str | None = None
     """The comment or docstring line beside it, if there is one."""
     strength: str = "possible"
+    curated_id: str | None = None
+    """The id the curated list gave this line - `C14` and the rest - when a
+    person kept it. `None` means the scan found it and nobody has read it
+    yet, which is most of them."""
+    scope: str | None = None
+    """Whose answer it is: `general`, `plant` or `object`. Only a curated
+    line has one, because scope is a judgment and the scan makes none."""
 
     def sort_key(self) -> tuple:
         return (self.strength != "strong", self.path, self.line)
+
+
+# ------------------------------------------------------- the curated judgment
+
+
+@dataclass
+class CuratedFinding:
+    """One curated candidate, checked against the source as it stands today.
+
+    A curated row is pinned to a fragment of its line and not to a line
+    number, because a line number is true until somebody adds an import above
+    it. `where` says which of three things is true now:
+
+    - `here` - the anchor is on the line the curated list recorded;
+    - `moved` - the anchor is alive, at a different line, and `line_now` says
+      where (the row is still good; the page's citation is what is stale);
+    - `stale` - the anchor is gone. Nobody can say whether that judgment
+      still exists, so somebody has to read that row again. It is reported,
+      never dropped.
+    """
+
+    entry: Curated
+    line_now: int | None
+    where: str
+    seen_by_scan: bool
+    """Whether the scan also found a literal on that line. Some of these were
+    found by a person reading the file - a judgment written as a `for` loop, a
+    prose house style, a `startswith` test with no number in it - and no
+    scanner is going to see those. Reporting which of the two found each row
+    keeps the scanner's blind spots visible instead of implied."""
+
+    @property
+    def path(self) -> str:
+        """The path as the rest of this module spells it."""
+        return f"src/fsmes/{self.entry.path}"
+
+
+def _anchor_lines(source_root: Path, entry: Curated) -> list[int]:
+    """Every line in the file that still carries this row's anchor."""
+    try:
+        text = (source_root / entry.path).read_text(
+            encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    return [i for i, line in enumerate(text.splitlines(), start=1)
+            if entry.needle in line]
+
+
+def locate_curated(candidates: list[Candidate],
+                   source_root: Path | None = None) -> list[CuratedFinding]:
+    """Check every curated row against the source, in the order it was written.
+
+    Also the only place scope is attached to a scanned candidate: a candidate
+    sitting on a curated row's line gets that row's id and scope, so
+    `--json` carries the judgment beside the literal rather than in a
+    document somebody has to go and find.
+    """
+    root = source_root or SRC
+    scanned: dict[tuple[str, int], Candidate] = {
+        (c.path, c.line): c for c in candidates}
+    findings: list[CuratedFinding] = []
+    for entry in CURATED:
+        hits = _anchor_lines(root, entry)
+        if not hits:
+            line_now, where = None, "stale"
+        elif entry.line in hits:
+            line_now, where = entry.line, "here"
+        else:
+            line_now, where = hits[0], "moved"
+        relative = f"src/fsmes/{entry.path}"
+        found = scanned.get((relative, line_now)) if line_now else None
+        if found is not None:
+            found.curated_id = entry.id
+            found.scope = entry.scope
+        findings.append(CuratedFinding(entry, line_now, where, found is not None))
+    return findings
 
 
 # ------------------------------------------------------------- reading Python
@@ -550,6 +657,11 @@ class Run:
     files_scanned: int
     files_skipped: list[tuple[str, str]]
     unreadable: list[tuple[str, str]]
+    curated: list[CuratedFinding] = field(default_factory=list)
+    """The candidates a person kept, each with the scope they argued it into.
+    Empty when the scan was pointed at a tree that is not this product's
+    source, because a judgment about this codebase says nothing about
+    somebody else's."""
 
     def by_domain(self) -> dict[str, list[Candidate]]:
         out: dict[str, list[Candidate]] = {k: [] for k in DOMAIN_TITLES}
@@ -567,7 +679,30 @@ class Run:
             "candidates": len(self.candidates),
             "strong": sum(1 for c in self.candidates if c.strength == "strong"),
             "possible": sum(1 for c in self.candidates if c.strength == "possible"),
+            "curated": len(self.curated),
         }
+
+    def curated_by_scope(self) -> dict[str, list[CuratedFinding]]:
+        """The curated list, split by whose answer it is. Every scope is a
+        key, including an empty one - a scope missing from a report is a
+        scope nobody can argue with."""
+        out: dict[str, list[CuratedFinding]] = {k: [] for k in SCOPE_TITLES}
+        for finding in self.curated:
+            out[finding.entry.scope].append(finding)
+        return out
+
+    def curated_totals(self) -> dict[str, int]:
+        """How the curated list divides, and how much of it still anchors."""
+        by_scope = self.curated_by_scope()
+        totals = {scope: len(rows) for scope, rows in by_scope.items()}
+        totals["curated"] = len(self.curated)
+        totals["moved"] = sum(1 for f in self.curated if f.where == "moved")
+        totals["stale"] = sum(1 for f in self.curated if f.where == "stale")
+        totals["unsure"] = sum(1 for f in self.curated if f.entry.unsure)
+        totals["seen_by_scan"] = sum(1 for f in self.curated if f.seen_by_scan)
+        totals["seen_by_a_person"] = sum(
+            1 for f in self.curated if not f.seen_by_scan)
+        return totals
 
 
 def _skip_reason(relative: str) -> str | None:
@@ -624,7 +759,8 @@ def scan(root: Path | None = None) -> Run:
         unique.append(c)
 
     unique.sort(key=Candidate.sort_key)
-    return Run(unique, scanned, skipped, unreadable)
+    curated = locate_curated(unique, src) if src == SRC else []
+    return Run(unique, scanned, skipped, unreadable, curated)
 
 
 # ------------------------------------------------------------------ reporting
@@ -639,13 +775,47 @@ def as_json(run: Run) -> str:
                    "total": len(rows),
                    "candidates": [asdict(c) for c in rows]}
             for slug, rows in run.by_domain().items()},
+        "curated": {
+            "rule": SCOPE_RULE,
+            "totals": run.curated_totals(),
+            "scopes": {
+                scope: {"title": SCOPE_TITLES[scope],
+                        "total": len(rows),
+                        "candidates": [_curated_json(f) for f in rows]}
+                for scope, rows in run.curated_by_scope().items()}},
         "files_skipped": [{"path": p, "why": w} for p, w in run.files_skipped],
         "unreadable": [{"path": p, "why": w} for p, w in run.unreadable],
     }, indent=2, sort_keys=False)
 
 
-def as_text(run: Run, only: str | None = None, strong_only: bool = False) -> list[str]:
-    """The run as lines a person reads, strongest evidence first per domain."""
+def _curated_json(finding: CuratedFinding) -> dict:
+    entry = finding.entry
+    return {
+        "id": entry.id,
+        "domain": entry.domain,
+        "scope": entry.scope,
+        "what": entry.what,
+        "path": finding.path,
+        "line_when_written": entry.line,
+        "line_now": finding.line_now,
+        "where": finding.where,
+        "anchor": entry.needle,
+        "why_this_scope": entry.why,
+        "unsure": entry.unsure,
+        "found_by": "the scan" if finding.seen_by_scan else "a person reading",
+    }
+
+
+def as_text(run: Run, only: str | None = None, strong_only: bool = False,
+            scope: str | None = None) -> list[str]:
+    """The run as lines a person reads, strongest evidence first per domain.
+
+    With `scope`, only the curated list is printed, and only the rows whose
+    answer belongs to that scope - the raw scan has no scope, because scope
+    is a judgment and the scan makes none.
+    """
+    if scope:
+        return _curated_text(run, scope=scope, only=only)
     totals = run.totals()
     out = [
         f"{totals['candidates']} configuration candidate(s) "
@@ -668,7 +838,10 @@ def as_text(run: Run, only: str | None = None, strong_only: bool = False) -> lis
             out.append("  none")
             continue
         for c in shown:
-            out.append(f"  {c.path}:{c.line}  {c.literal}   [{c.strength}]")
+            tag = f"   [{c.strength}]"
+            if c.curated_id:
+                tag += f" [{c.curated_id}: {c.scope}]"
+            out.append(f"  {c.path}:{c.line}  {c.literal}{tag}")
             out.append(f"      {c.what}")
             out.append(f"      why: {', '.join(c.why)}")
             if c.comment:
@@ -676,4 +849,62 @@ def as_text(run: Run, only: str | None = None, strong_only: bool = False) -> lis
     if run.unreadable:
         out += ["", f"{len(run.unreadable)} file(s) could not be read:"]
         out += [f"  {p}: {w}" for p, w in run.unreadable]
+    out += _curated_summary(run)
+    return out
+
+
+def _curated_summary(run: Run) -> list[str]:
+    """The curated list's own totals, under the full report."""
+    if not run.curated:
+        return []
+    totals = run.curated_totals()
+    out = ["", f"The curated list - {totals['curated']} candidate(s) a person "
+               "kept, by whose answer it is:", ""]
+    for slug, title in SCOPE_TITLES.items():
+        out.append(f"  {totals[slug]:>3}  {title}")
+    out += [
+        "",
+        f"  {totals['seen_by_scan']} of them the scan also finds; "
+        f"{totals['seen_by_a_person']} only a person reading the file does.",
+        f"  {totals['moved']} have moved since the list was written; "
+        f"{totals['stale']} no longer anchor and need re-reading; "
+        f"{totals['unsure']} say they are unsure of their scope.",
+        "",
+        f"  The rule: {SCOPE_RULE}",
+        "  Nothing in plant or object is an open question for a maintainer: "
+        "it is routed",
+        "  to the plant's Configuration tab or to the object's own row. "
+        "Use --scope to list them.",
+    ]
+    return out
+
+
+def _curated_text(run: Run, scope: str, only: str | None = None) -> list[str]:
+    """One scope of the curated list, with the whole list's totals above it."""
+    totals = run.curated_totals()
+    rows = run.curated_by_scope().get(scope, [])
+    if only:
+        rows = [f for f in rows if f.entry.domain == only]
+    out = [
+        f"{totals['curated']} curated candidate(s): "
+        + ", ".join(f"{totals[s]} {s}" for s in SCOPE_TITLES),
+        "",
+        SCOPE_RULE,
+        "",
+        f"{SCOPE_TITLES[scope]} - {len(rows)} candidate(s)"
+        + (f" in {only}" if only else ""),
+        "-" * 70,
+    ]
+    if not rows:
+        out.append("  none")
+        return out
+    for finding in rows:
+        entry = finding.entry
+        where = finding.line_now if finding.line_now else "gone"
+        moved = "" if finding.where == "here" else f"  ({finding.where})"
+        out.append(f"  {entry.id}  {entry.what}")
+        out.append(f"      {finding.path}:{where}{moved}   [{entry.domain}]")
+        out.append(f"      why {entry.scope}: {entry.why}")
+        if entry.unsure:
+            out.append(f"      unsure: {entry.unsure}")
     return out
