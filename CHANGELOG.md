@@ -258,6 +258,17 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Fixed
 
+- **Dependabot's Python pull requests arrive with `uv.lock` already
+  regenerated.** `.github/dependabot.yml` asked for Python updates through
+  the `pip` ecosystem, which edits the version constraints in
+  `pyproject.toml` and has no concept of a lockfile. Since the `lockfile`
+  check became required, that combination failed every Python bump on
+  arrival — not one flaky run, but 100% of them, and a person had to run
+  `uv lock` by hand on each. Python updates now run through Dependabot's
+  `uv` ecosystem, which reads `pyproject.toml` and `uv.lock` together and
+  writes both in the same commit. The weekly `python` group is unchanged: it
+  groups on `patterns`, which `uv` supports.
+
 - **The station screen no longer redraws itself for nothing.** Every panel on
   `/dashboard/station` cleared itself and rebuilt identical rows on each
   three-second refresh, and the quality results cleared *before* the read that
