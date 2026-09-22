@@ -45,6 +45,7 @@
       { href: "/dashboard/gauges", label: "Gauges", cap: null },
       { href: "/dashboard/trace", label: "Trace", cap: null },
       { href: "/dashboard/coa", label: "Certificates", cap: null },
+      { href: "/dashboard/config/quality", label: "Configuration", cap: null },
     ] },
     { group: "Maintenance", items: [
       { href: "/dashboard/maintenance", label: "Maintenance", cap: null },

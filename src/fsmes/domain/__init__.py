@@ -66,6 +66,7 @@ from fsmes.domain.serialization import (
     UnitInspection,
     UnitStatus,
 )
+from fsmes.domain.severities import NcSeverity, NcSeverityStatus
 from fsmes.domain.timeseries import TagValue
 from fsmes.domain.triggers import Trigger, TriggerCondition, TriggerFiring, TriggerStatus
 from fsmes.domain.uns import UnsPublication
@@ -109,6 +110,8 @@ __all__ = [
     "MessageDirection",
     "MessageStatus",
     "NcDisposition",
+    "NcSeverity",
+    "NcSeverityStatus",
     "NcStatus",
     "NonConformance",
     "OperationStatus",

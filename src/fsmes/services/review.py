@@ -63,6 +63,15 @@ STATION_ANCHORS = {                             # both in `web/station.html`
     "status": "station-reason-code",
 }
 
+#: Where a change to a severity is read. A severity is not chosen on the
+#: floor - nothing in this product has ever offered a person a severity
+#: select - so the honest place to stand is the list of records the word
+#: already grades, on the Quality screen, where it prints beside every one of
+#: them. One anchor, because one control shows all three fields: the word, the
+#: name it is given and the sentence behind it are one line of one row there.
+QUALITY_PAGE = "/dashboard/quality"
+QUALITY_ANCHOR = "nc-list"                      # in `web/quality.html`
+
 
 # --------------------------------------------------------------- the kinds
 
@@ -399,8 +408,15 @@ def _review_downtime_reason(session: Session, code: str, revision: int) -> dict:
         # drafter said when they wrote the draft - a draft that waited a week
         # was written against a smaller number, and an approver reading one
         # number would not know which.
+        #
+        # `of` is the noun, and it is here because the second kind arrived:
+        # the panel used to spell "recorded interval" in the browser, which
+        # made a severity draft read as though non-conformances were downtime
+        # intervals. The server owns the plant's words on this panel, exactly
+        # as it already did for `coverage.of`.
         "affected": {
-            "intervals_labelled": carried,
+            "records": carried,
+            "of": "recorded interval",
             "stated_in_the_draft": stated,
             "moved_since_the_draft": stated is not None and stated != carried,
         },
@@ -413,11 +429,170 @@ def _review_downtime_reason(session: Session, code: str, revision: int) -> dict:
     }
 
 
-#: Every kind of waiting item, and how to read one. One entry today - the
-#: plant's downtime vocabulary. Work instructions, triggers, setpoint
-#: adjustments and the design-chat notes each already have a lifecycle and a
-#: screen; joining them is an entry here with a `waiting` and a `review`, and
-#: the walk they inherit needs no change at all.
+# --------------------------------------------- the severity vocabulary
+
+
+def _severity_headline(row) -> str:
+    """The dry run's one line for a severity draft."""
+    if row.retires:
+        return ("retires a word that grades "
+                f"{_count(row.labels_records or 0, 'non-conformance')}")
+    return ("a change to a severity already on the list" if row.revision > 1
+            else "a new severity for the list")
+
+
+def _waiting_nc_severities(session: Session, limit: int) -> tuple[list[dict], int]:
+    """Every severity draft waiting on an approver."""
+    from fsmes.services import severities as severities_service
+
+    rows, total = severities_service.drafts(session, limit=limit)
+    now = utcnow()
+    items = [{
+        "kind": "nc_severity",
+        "code": row.code,
+        "revision": row.revision,
+        "title": row.name,
+        "headline": _severity_headline(row),
+        "drafted_by": row.created_by,
+        "on_behalf_of": row.on_behalf_of,
+        "drafted_at": row.created_at,
+        "waiting_seconds": max((now - row.created_at).total_seconds(), 0.0),
+        "review": f"/dashboard/pending-approvals/nc_severity/{row.code}/{row.revision}",
+        "approve": f"/quality/severities/{row.code}/approve/{row.revision}",
+    } for row in rows]
+    return items, total
+
+
+def _review_nc_severity(session: Session, code: str, revision: int) -> dict:
+    """One revision of one severity, against the one the plant is living with.
+
+    The same reading as a downtime reason's, with the two things that are
+    different about a severity said out loud: what carries it is a record
+    somebody has to work through a disposition rather than an interval a
+    machine spent stopped, and two of the words are written by the product
+    itself and cannot be retired.
+    """
+    from fsmes.services import severities as severities_service
+
+    row = next((r for r in severities_service.revisions(session, code)
+                if r.revision == revision), None)
+    if row is None:
+        raise NotFound(f"no non-conformance severity {code} revision {revision}")
+
+    live = severities_service.in_force(session, code)
+    supersedes = live if (live is not None and live.id != row.id) else None
+
+    on_the_list = severities_service.catalog(session)
+    carried = severities_service.records_labelled(session, code)
+
+    # Where the change lands, if there is anywhere honest to stand. Two
+    # conditions, both about honesty: the word has to be on the list the
+    # plant grades with today, and some record has to carry it - a ring round
+    # a list holding nothing graded with this word is a line on the screen
+    # pointing at nothing. A brand-new severity fails both, and is read on the
+    # review panel instead, which is exactly what it is: a word about records
+    # that do not exist yet.
+    floor = (code in on_the_list and carried > 0)
+
+    def on_the_floor() -> dict:
+        return {"page": QUALITY_PAGE, "anchor": QUALITY_ANCHOR} if floor else {}
+
+    said_where = False
+
+    def where() -> str | None:
+        """Which screen, said once. The same answer for every row of one
+        diff, and a panel that repeats it under each change reads like two
+        different facts."""
+        nonlocal said_where
+        if not floor or said_where:
+            return None
+        said_where = True
+        return (f"The walk shows this on the Quality screen, where {code} prints "
+                f"beside each of the {_count(carried, 'non-conformance')} it grades.")
+
+    changes: list[dict] = []
+    if row.retires:
+        changes.append(_change(
+            "status", f"{code} leaves the list",
+            "on the list; a finding may be graded with it",
+            "off the list; nothing new can be graded with it",
+            note=(f"{_count(carried, 'non-conformance')} already "
+                  f"{'carries' if carried == 1 else 'carry'} this word and "
+                  f"{'keeps' if carried == 1 else 'keep'} it - on the record, and "
+                  "on any certificate that printed it. Retiring changes what may "
+                  "be graded next, never what was graded before."
+                  + (f" {where()}" if floor else "")),
+            **on_the_floor()))
+    elif supersedes is None:
+        changes.append(_change(
+            "code", f"{code} is a severity the plant does not have", None, code,
+            note="It is stored on every record graded with it and printed on the "
+                 "certificate, so it is the half of this that is hard to change "
+                 "later."))
+
+    for field, label in (("name", f"What a person reads beside a {code} record"),
+                         ("description", f"The sentence that says what {code} means")):
+        before = getattr(supersedes, field, None) if supersedes else None
+        after = getattr(row, field)
+        if (before or "") != (after or "") and (before or after):
+            changes.append(_change(field, label, before or None, after or None,
+                                   note=where(), **on_the_floor()))
+
+    total = len(on_the_list)
+    if row.retires:
+        after_total = total - 1 if code in on_the_list else total
+    elif code in on_the_list:
+        after_total = total
+    else:
+        after_total = total + 1
+
+    stated = row.labels_records
+    now = utcnow()
+    return {
+        "kind": "nc_severity",
+        "label": "non-conformance severity",
+        "code": code,
+        "revision": revision,
+        "title": row.name,
+        "description": row.description,
+        "status": row.status.value,
+        "retires": row.retires,
+        "headline": _severity_headline(row),
+        "drafted_by": row.created_by,
+        "on_behalf_of": row.on_behalf_of,
+        "drafted_at": row.created_at,
+        "waiting_seconds": (max((now - row.created_at).total_seconds(), 0.0)
+                            if row.status.value == "draft" else None),
+        "approved_by": row.approved_by,
+        "approved_at": row.approved_at,
+        "changes": changes,
+        "coverage": {
+            "vocabulary_total": total,
+            "vocabulary_total_after": after_total,
+            "of": "severity a finding may be graded at" if total == 1
+                  else "severities a finding may be graded at",
+        },
+        "affected": {
+            "records": carried,
+            "of": "non-conformance",
+            "stated_in_the_draft": stated,
+            "moved_since_the_draft": stated is not None and stated != carried,
+        },
+        "supersedes": severities_service.out(supersedes) if supersedes else None,
+        "approve": f"/quality/severities/{code}/approve/{revision}",
+        "undo": (f"/quality/severities/{code}/approve/{supersedes.revision}"
+                 if supersedes else None),
+    }
+
+
+#: Every kind of waiting item, and how to read one. Two: the plant's downtime
+#: vocabulary and its non-conformance severities. Adding the second was one
+#: entry here plus a `waiting` and a `review` of its own - the panel, the
+#: endpoint that answers from a caller's capabilities, the review screen and
+#: the walk were not touched, which is what decision 0035 said the second
+#: vocabulary would test. Work instructions, triggers, setpoint adjustments
+#: and the design-chat notes each already have a lifecycle and a screen;
+#: joining them is the same entry again.
 KINDS: dict[str, Kind] = {
     "downtime_reason": Kind(
         name="downtime_reason",
@@ -425,5 +600,12 @@ KINDS: dict[str, Kind] = {
         capability="process.approve",
         waiting=_waiting_downtime_reasons,
         review=_review_downtime_reason,
+    ),
+    "nc_severity": Kind(
+        name="nc_severity",
+        label="non-conformance severity",
+        capability="quality.approve",
+        waiting=_waiting_nc_severities,
+        review=_review_nc_severity,
     ),
 }

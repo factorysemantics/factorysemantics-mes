@@ -49,6 +49,12 @@ CAPABILITIES: dict[str, str] = {
     # whole plant - which was the only way to do it before these two existed.
     "process.define":    "Draft the plant's process vocabulary: the downtime reasons an operator picks from",
     "process.approve":   "Put a process vocabulary in force - what every stop from now on is named with",
+    # Quality engineering: the plant's own words for its quality records, and
+    # the numbers its charts and certificates are judged against. Split from
+    # `masterdata.write` for the same reason process engineering was - naming
+    # four severities should not mean being administrator of the whole plant.
+    "quality.define":    "Draft the plant's quality vocabulary: the severities a non-conformance is raised at",
+    "quality.approve":   "Put a quality vocabulary in force - what every non-conformance from now on is graded with",
 }
 
 _VIEWER = ("plant.read",)
@@ -63,7 +69,8 @@ _SUPERVISOR = (*_OPERATOR, "orders.close", "quality.close_nc", "audit.read",
 _ADMIN = (*_SUPERVISOR, "masterdata.write", "users.manage",
           "documents.approve", "maintenance.plan",
           "scheduling.plan", "triggers.approve", "adjustments.approve",
-          "process.define", "process.approve")
+          "process.define", "process.approve",
+          "quality.define", "quality.approve")
 
 # The built-ins. The first four are the old ladder expressed as bundles, so
 # nothing an existing account could do changes. They are protected from
@@ -94,13 +101,13 @@ BUILTIN_ROLES: dict[str, dict] = {
         "description": (
             "What an agent deployment holds by default: run production and record "
             "what it sees, read the audit trail, draft instructions and draft the "
-            "plant's process vocabulary. It never approves - not an instruction, "
-            "not a trigger, not a setpoint and not a reason code - never "
-            "administers accounts and never defines master data; an admin grants "
-            "more, deliberately, per plant."
+            "plant's process and quality vocabularies. It never approves - not an "
+            "instruction, not a trigger, not a setpoint, not a reason code and not "
+            "a severity - never administers accounts and never defines master "
+            "data; an admin grants more, deliberately, per plant."
         ),
         "capabilities": [*_OPERATOR, "audit.read", "documents.write", "triggers.write",
-                         "adjustments.propose", "process.define"],
+                         "adjustments.propose", "process.define", "quality.define"],
     },
     "quality_inspector": {
         "name": "Quality Inspector",

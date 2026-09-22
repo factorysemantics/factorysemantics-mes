@@ -71,6 +71,22 @@ NOT_TENANT: dict[str, str] = {
         "gets; it is collected only because a lab seed passes it as a `code=`.",
 }
 
+#: The two non-conformance severities the product writes itself. They were in
+#: `src/fsmes/domain/quality.py`, `services/quality.py` and `services/spc.py`
+#: long before any pack carried them, and they land in this collector only
+#: because the lab packs now seed them - which they must, since a plant whose
+#: severity list lacked a word the product writes would refuse at the moment a
+#: machine raised a hold (`src/fsmes/pack/masterdata.py` checks exactly that).
+#: The direction of travel is the opposite of the one this test hunts: the
+#: product's own words reached the packs, not a plant's identity the product.
+for _severity, _what in (("minor", "a recorded check outside its specification, and "
+                                   "SPC rules 2 to 4"),
+                         ("major", "SPC rule 1, a point beyond three sigma")):
+    NOT_TENANT[_severity] = (
+        f"a non-conformance severity this product opens a record at itself ({_what}). "
+        "Product vocabulary every plant gets, collected only because each lab pack "
+        "seeds the two words the product writes.")
+
 #: The demo plant's own six stations. They are in `src/fsmes/seed_kepsim.py`
 #: because the six-station bottling line *is* the product's reference line -
 #: `fsmes demo` is the product demonstrating itself - and they are collected

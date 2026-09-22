@@ -205,6 +205,7 @@ def check(directory: Path, *, version: str = __version__) -> Report:
     problems += _sections(pack)
     problems += _identity(pack)
     problems += _coverage_floor(pack)
+    problems += _hold_rules(pack)
     problems += _modules(pack)
     problems += _words(pack)
     files, file_problems, file_unknowns = _files(pack)
@@ -293,7 +294,8 @@ def _sections(pack: fmt.Pack) -> list[Problem]:
     return out
 
 
-_TYPES = {"str": str, "int": int, "float": (int, float), "bool": bool, "path": str}
+_TYPES = {"str": str, "int": int, "float": (int, float), "bool": bool, "path": str,
+          "ints": list}
 
 
 def _typed(where: str, key: fmt.Key, value) -> list[Problem]:
@@ -353,6 +355,46 @@ def _coverage_floor(pack: fmt.Pack) -> list[Problem]:
             "Leave the key out to withhold nothing - that is what no floor means, and "
             "coverage is printed beside every figure either way."))]
     return []
+
+
+def _hold_rules(pack: fmt.Pack) -> list[Problem]:
+    """`[quality] hold_rules` names Western Electric rules, and there are four.
+
+    The rule *numbers* are the product's and always will be: a plant that
+    renumbered them would publish `SpcSignal.rule = 3` meaning something
+    nobody else means by rule 3. So this key may only ever narrow the set
+    {1, 2, 3, 4}, and a number outside it is a typo rather than a preference.
+
+    An empty list is allowed and is a real answer - *record and draw every
+    rule, raise a hold on none of them* - because a plant running SPC as an
+    observation is a plant, not a mistake. It is never silent: the chart says
+    which rules raise a hold on this plant whatever the list holds.
+    """
+    value = pack.table("quality").get("hold_rules")
+    if value is None or not isinstance(value, list):
+        return []  # absent, or already refused by the type check
+    out: list[Problem] = []
+    seen: set[int] = set()
+    for item in value:
+        if isinstance(item, bool) or not isinstance(item, int):
+            out.append(Problem("[quality] hold_rules", (
+                f"holds {item!r}. It is a list of Western Electric rule numbers, "
+                "each a whole number from 1 to 4.")))
+            continue
+        if item not in (1, 2, 3, 4):
+            out.append(Problem("[quality] hold_rules", (
+                f"names rule {item}, and this product has four: 1 (a point beyond "
+                "three sigma), 2 (two of three beyond two sigma), 3 (four of five "
+                "beyond one sigma) and 4 (eight in a row on one side of centre). "
+                "The numbering is the product's, because a plant that renumbered "
+                "the rules would publish a rule number meaning something nobody "
+                "else means by it.")))
+        elif item in seen:
+            out.append(Problem("[quality] hold_rules", (
+                f"names rule {item} twice. Once is what it means either way, and a "
+                "list a person has to read twice is a list worth tidying.")))
+        seen.add(item)
+    return out
 
 
 def _modules(pack: fmt.Pack) -> list[Problem]:

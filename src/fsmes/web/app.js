@@ -434,10 +434,15 @@ function renderReview(data) {
       ? ", and would still hold that many."
       : `, and would hold ${coverage.vocabulary_total_after}.`);
 
+  // The noun is the server's, like the coverage sentence above it: a
+  // severity draft is about non-conformances and a reason draft is about
+  // recorded intervals, and a panel that spelled one of them here would be
+  // telling the approver of the other kind something untrue about their own
+  // plant.
   const affected = data.affected;
-  const many = affected.intervals_labelled !== 1;
+  const many = affected.records !== 1;
   $("#review-affected").textContent =
-    `${affected.intervals_labelled} recorded interval${many ? "s" : ""} already `
+    `${affected.records} ${affected.of}${many ? "s" : ""} already `
     + `${many ? "carry" : "carries"} ${data.code}. `
     + `${many ? "They keep their labels" : "It keeps its label"} whatever is signed here.`
     + (affected.moved_since_the_draft

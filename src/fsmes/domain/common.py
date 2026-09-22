@@ -36,3 +36,24 @@ class ShiftStamped:
 
     shift_code: Mapped[str | None] = mapped_column(String(40))
     shift_day: Mapped[date | None] = mapped_column(Date)
+
+
+class VocabularyStatus(enum.StrEnum):
+    """Where one revision of one word in a plant's vocabulary stands.
+
+    Written once and read by every vocabulary, because two lists whose
+    statuses were spelled separately would be two lists that drift. The
+    downtime reasons were the first; the non-conformance severities are the
+    second.
+
+    `retired` is the fourth because a vocabulary shrinks as well as grows,
+    and a retired term is not a superseded one: superseded means *another
+    revision of this code took over*, retired means *this code is no longer
+    offered*. A report that could not tell those apart could not explain why
+    a word it still shows is on nobody's screen.
+    """
+
+    DRAFT = "draft"
+    APPROVED = "approved"
+    SUPERSEDED = "superseded"
+    RETIRED = "retired"

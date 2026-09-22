@@ -151,6 +151,11 @@ CONFIG_DOMAINS: tuple[ConfigDomain, ...] = (
         "What the plant's own screens are configured with: the words its "
         "records are written in, and the settings behind them. Each section "
         "keeps its own rules about who may draft and who may sign."),
+    ConfigDomain(
+        "quality", "Quality",
+        "What this plant's quality records are written in, and the numbers "
+        "its charts and certificates are judged against. The words are the "
+        "plant's; the arithmetic behind them is the product's."),
 )
 
 DOMAIN_BY_SLUG: dict[str, ConfigDomain] = {d.slug: d for d in CONFIG_DOMAINS}
@@ -364,7 +369,13 @@ REGISTRY: tuple[Module, ...] = (
     Module(
         name="quality",
         title="Specifications, checks, non-conformances and gauges",
-        routers=(Mount("fsmes.api.routers.quality", "/quality", ("quality",)),),
+        # The severities are mounted first, for the reason the downtime
+        # vocabulary is mounted before `routers.equipment`: a router that ends
+        # with `/{code}` reads any single segment as one of its own. This one
+        # has no such route today, and the ordering is here so that the day it
+        # grows one, nothing has to be found out the hard way.
+        routers=(Mount("fsmes.api.routers.severities", "/quality", ("quality",)),
+                 Mount("fsmes.api.routers.quality", "/quality", ("quality",))),
         pages=(
             Page("/dashboard/quality", "quality.html",
                  "Inspection history against the specification that judged it."),
@@ -373,10 +384,26 @@ REGISTRY: tuple[Module, ...] = (
                  "capable, and which are two different questions."),
             Page("/dashboard/gauges", "gauges.html",
                  "The gauge register, calibration, and what a failed one invalidated."),
+            Page("/dashboard/severities", "severities.html",
+                 "Quality: the plant's own words for how bad a finding is - what "
+                 "is on the list, what is drafted, what was retired, and the form "
+                 "that drafts the next word."),
+        ),
+        config_sections=(
+            ConfigSection(
+                domain="quality",
+                key="nc_severities",
+                label="Non-conformance severities",
+                about="The words a non-conformance is graded with, on the record "
+                      "and on the certificate. Drafted here, put in force on the "
+                      "Floor screen's Waiting for you panel.",
+                href="/dashboard/severities",
+                define="quality.define",
+                approve="quality.approve"),
         ),
         tools=("fsmes.mcp.quality",),
         tables=("quality_specs", "quality_checks", "non_conformances",
-                "spc_signals", "gauges", "calibrations"),
+                "spc_signals", "gauges", "calibrations", "nc_severities"),
     ),
     Module(
         name="kpis",

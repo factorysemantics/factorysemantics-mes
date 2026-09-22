@@ -304,6 +304,22 @@ class Settings(BaseSettings):
     # rather than shown a figure measured over eleven minutes of a shift.
     oee_coverage_floor: float = 0.0
 
+    # --- Which SPC rules raise a hold (fsmes.services.spc) ----------------
+    # Decision 0036: **the chart draws and records every rule; the plant
+    # chooses which of them raise a hold.** A comma list of Western Electric
+    # rule numbers, and `[quality] hold_rules` in plant.toml is where it comes
+    # from.
+    #
+    # All four is the default and is what this product has always done, so a
+    # plant that writes nothing behaves exactly as it does now. The numbering
+    # itself is never the plant's: a plant that renumbered the rules would
+    # publish `SpcSignal.rule = 3` meaning something nobody else means by it.
+    #
+    # An empty value is a real answer - record and draw every rule, raise a
+    # hold on none - and is never silent: the chart states which rules raise a
+    # hold on this plant whatever this holds.
+    quality_hold_rules: str = "1,2,3,4"
+
     # --- The judgment model (fsmes.integrations.jev) ----------------------
     # A hosted model that answers fixed, typed questions about state it is
     # given and writes no text. Used in the development build loop only: the
@@ -368,6 +384,26 @@ class Settings(BaseSettings):
         """
         module_registry.resolve(self.modules)
         return self
+
+    def hold_rules(self) -> tuple[int, ...]:
+        """Which SPC rules raise a quality hold on this plant, in order.
+
+        Parsed rather than trusted: anything that is not one of the four rule
+        numbers is dropped, because the alternative is a plant refusing to
+        start over a typo in a list that only ever narrows a set. `fsmes pack
+        check` is where a person is told about the typo, offline, and the
+        `/quality/spc/...` payload states what was actually parsed so nobody
+        has to guess which reading applied.
+        """
+        rules: list[int] = []
+        for part in (self.quality_hold_rules or "").split(","):
+            part = part.strip()
+            if not part.isdigit():
+                continue
+            rule = int(part)
+            if rule in (1, 2, 3, 4) and rule not in rules:
+                rules.append(rule)
+        return tuple(sorted(rules))
 
     def enabled_modules(self) -> tuple[module_registry.Module, ...]:
         """The modules this plant serves, in registry order."""
