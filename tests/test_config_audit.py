@@ -246,3 +246,152 @@ def test_the_command_can_emit_a_report_a_later_run_can_be_diffed_against():
     assert result.exit_code == 0
     report = json.loads(result.output)
     assert report["totals"]["files_scanned"] > 100
+
+
+# ------------------------------------------------ the scope of each judgment
+#
+# Scope is the fourth thing a candidate carries, after domain, size and the
+# reason it qualified: whose answer is it? It decides who gets asked, so the
+# tests that matter are that every curated candidate has one, that the totals
+# add up to the whole list, and that the per-object ones - the counter-reset
+# threshold above all - are reachable without reading the design page.
+
+
+def test_every_curated_candidate_says_whose_answer_it_is():
+    from fsmes.sim import config_audit_curated
+
+    for row in config_audit_curated.CURATED:
+        assert row.scope in config_audit_curated.SCOPE_TITLES, (
+            f"{row.id} has no scope, so nobody knows who to ask")
+        assert row.domain in config_audit.DOMAIN_TITLES
+        assert row.why.strip(), f"{row.id} states a scope without arguing it"
+
+
+def test_the_scopes_add_up_to_the_whole_curated_list():
+    from fsmes.sim import config_audit_curated
+
+    totals = config_audit_curated.totals_by_scope()
+    assert sum(totals.values()) == len(config_audit_curated.CURATED)
+    assert set(totals) == set(config_audit_curated.SCOPE_TITLES), (
+        "a scope with nothing in it is still listed, or its total is a "
+        "claim nobody can check")
+
+
+def test_no_two_curated_candidates_share_an_id():
+    from fsmes.sim import config_audit_curated
+
+    ids = [row.id for row in config_audit_curated.CURATED]
+    assert len(ids) == len(set(ids))
+
+
+def test_the_counter_reset_threshold_is_a_property_of_one_tag():
+    from fsmes.sim import config_audit_curated
+
+    c14 = config_audit_curated.by_id("C14")
+    assert c14 is not None
+    assert c14.scope == "object", (
+        "a counter that wraps at 65535 and one zeroed every shift are two "
+        "tags, not two plants")
+    assert c14.domain == "controls"
+    assert "tag" in c14.why.lower()
+
+
+def test_every_curated_candidate_still_points_at_real_code():
+    """The list is anchored on a fragment of the line, not on a line number,
+    so a refactor moves a row rather than breaking it. A row whose anchor has
+    gone is reported as stale and has to be read again by a person - that is
+    the one thing this test refuses to let pass quietly."""
+    run = config_audit.scan()
+    assert len(run.curated) == len(config_audit.CURATED)
+    stale = [f.entry.id for f in run.curated if f.where == "stale"]
+    assert not stale, f"these curated rows no longer anchor anywhere: {stale}"
+
+
+def test_a_curated_line_carries_its_scope_on_the_scanned_candidate():
+    run = config_audit.scan()
+    tagged = [c for c in run.candidates if c.curated_id]
+    assert tagged, "the scan and the curated list have to meet somewhere"
+    assert all(c.scope for c in tagged)
+    assert any(c.curated_id == "P1" for c in tagged), (
+        "the maintenance warning at 80% is one a person kept and the scan "
+        "finds, so it should carry both")
+
+
+def test_a_candidate_nobody_curated_claims_no_scope():
+    run = config_audit.scan()
+    uncurated = [c for c in run.candidates if not c.curated_id]
+    assert uncurated, "419 raw matches, 75 kept - most carry no judgment"
+    assert all(c.scope is None for c in uncurated), (
+        "scope is a judgment; the scan does not get to make one")
+
+
+def test_the_scan_does_not_judge_a_tree_that_is_not_this_product(tmp_path):
+    _write(tmp_path, "warn.py", "# the stale limit for now\nWARN_AT = 45\n")
+    run = config_audit.scan(tmp_path)
+    assert run.curated == [], (
+        "a judgment about this codebase says nothing about somebody else's")
+
+
+def test_the_report_states_the_scope_totals_beside_the_scan():
+    run = config_audit.scan()
+    totals = run.curated_totals()
+    assert totals["curated"] == len(config_audit.CURATED)
+    assert sum(totals[s] for s in config_audit.SCOPE_TITLES) == totals["curated"]
+    lines = config_audit.as_text(run)
+    assert any("curated list" in line for line in lines)
+    for title in config_audit.SCOPE_TITLES.values():
+        assert any(title in line for line in lines)
+
+
+def test_the_json_carries_the_scope_and_the_rule_that_decided_it():
+    run = config_audit.scan()
+    report = json.loads(config_audit.as_json(run))
+    assert set(report["curated"]["scopes"]) == set(config_audit.SCOPE_TITLES)
+    assert "object" in report["curated"]["rule"]
+    rows = report["curated"]["scopes"]["object"]["candidates"]
+    c14 = [r for r in rows if r["id"] == "C14"]
+    assert c14, "--json has to carry the judgment beside the literal"
+    assert c14[0]["why_this_scope"]
+    assert c14[0]["path"].endswith("integrations/opc/agent.py")
+
+
+# ---------------------------------------------------------------- the command
+
+
+def test_asking_for_the_object_scope_returns_the_counter_reset_threshold():
+    from typer.testing import CliRunner
+
+    from fsmes.cli import app
+
+    result = CliRunner().invoke(app, ["config-audit", "--scope", "object"])
+    assert result.exit_code == 0, result.output
+    assert "C14" in result.output
+    assert "Counter-reset detection" in result.output
+    assert "C1 " in result.output, "tag staleness is per-tag for the same reason"
+    assert "A2" not in result.output, "a product-wide decision is not an object"
+    assert str(len(config_audit.CURATED)) in result.output, (
+        "every list states its total, including when it is filtered")
+
+
+def test_asking_for_the_general_scope_returns_only_what_a_maintainer_is_asked():
+    from typer.testing import CliRunner
+
+    from fsmes.cli import app
+
+    result = CliRunner().invoke(app, ["config-audit", "--scope", "general"])
+    assert result.exit_code == 0, result.output
+    assert "C14" not in result.output
+    general = [row.id for row in config_audit.CURATED if row.scope == "general"]
+    for candidate_id in general:
+        assert candidate_id in result.output
+
+
+def test_the_command_refuses_a_scope_it_does_not_have():
+    from typer.testing import CliRunner
+
+    from fsmes.cli import app
+
+    result = CliRunner().invoke(app, ["config-audit", "--scope", "regional"])
+    assert result.exit_code == 2
+    assert "unknown scope" in result.output
+    assert "object" in result.output, "it says which scopes there are"

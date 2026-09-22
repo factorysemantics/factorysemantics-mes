@@ -2737,6 +2737,13 @@ def config_audit_cmd(
         help="Only the candidates with a hedging comment beside them or a "
              "name that says what they are. Every domain still states its "
              "full total."),
+    scope: str = typer.Option(
+        None, "--scope",
+        help="Only the curated candidates whose answer belongs to this "
+             "scope: general (one default across every plant, a product "
+             "decision), plant (the plant's own answer, under its domain's "
+             "Configuration tab) or object (a property of one tag, machine, "
+             "material, gauge or order). Combine with --domain."),
     as_json: bool = typer.Option(
         False, "--json", help="The whole run, for diffing against the next one."),
 ) -> None:
@@ -2753,6 +2760,13 @@ def config_audit_cmd(
     reads the list and applies the test. Rerun it after any change and diff
     the --json against the last run: what is new is what somebody just added.
 
+    Beside the scan it carries the curated list - the candidates a person
+    kept - and each of those carries a scope, which is whose answer it is:
+    general, plant or object. Only a general candidate is a question for a
+    maintainer; plant and object are routed to the plant's Configuration tab
+    or to the object's own row, and are answered by the engineer who knows
+    them. `--scope object` lists that second kind.
+
     Deterministic - no model, no network, no database, no plant.
     """
     from fsmes.sim import config_audit
@@ -2765,7 +2779,12 @@ def config_audit_cmd(
         typer.echo(f"unknown domain {domain!r}; "
                    f"one of {', '.join(config_audit.DOMAIN_TITLES)}")
         raise typer.Exit(2)
-    for line in config_audit.as_text(run, only=domain, strong_only=strong):
+    if scope and scope not in config_audit.SCOPE_TITLES:
+        typer.echo(f"unknown scope {scope!r}; "
+                   f"one of {', '.join(config_audit.SCOPE_TITLES)}")
+        raise typer.Exit(2)
+    for line in config_audit.as_text(run, only=domain, strong_only=strong,
+                                     scope=scope):
         typer.echo(line)
 
 
