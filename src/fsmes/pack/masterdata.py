@@ -83,7 +83,7 @@ REQUIRED: dict[str, tuple[str, ...]] = {
 
 OPTIONAL: dict[str, tuple[str, ...]] = {
     "equipment": ("parent", "ideal_cycle_seconds"),
-    "materials": ("unit", "type"),
+    "materials": ("unit", "type", "counted_in_pieces"),
     "bom": ("operation_seq",),
     "routings": (),
     "quality_specs": ("unit", "min", "max"),
@@ -369,7 +369,11 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
             count("materials", made=False)
             continue
         made = Material(code=code, name=row["name"], unit=row.get("unit", "ea"),
-                        type=MaterialType(row.get("type", "raw")))
+                        type=MaterialType(row.get("type", "raw")),
+                        # Whether a pallet certificate counts this material in
+                        # pieces. The pack says so; the product used to guess
+                        # it from the shape of the code.
+                        counted_in_pieces=bool(row.get("counted_in_pieces", False)))
         session.add(made)
         materials[code] = made
         count("materials", made=True)

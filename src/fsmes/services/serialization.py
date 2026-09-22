@@ -43,9 +43,41 @@ from fsmes.services import Conflict, Invalid, NotFound, audit, masterdata, worko
 # How many ids one IN(...) carries. SQLite allows 32,766 bound parameters;
 # a page of ten thousand keeps the statements few without going near it.
 CHUNK = 10_000
-# How deep a containment tree is walked. Piece, stack, pack, pallet, truck
-# is five; a sixth is somebody's mistake, not a plant.
+# How deep a containment tree is walked. Piece, stack, pack, pallet, truck is
+# five, and six is the default - which is what was here. Piece, stack, pack,
+# case, pallet, truck, container is a plant too, so it is `[quality]
+# containment_max_depth` since the configuration audit of 2026-09-21.
 MAX_DEPTH = 6
+# And the product's own ceiling above it, because this number is also the
+# guard that stops a containment walk running away. A plant may choose how
+# deep its packaging goes; it may not choose to let a cycle in the data walk
+# forever.
+DEPTH_CEILING = 12
+# How many digits a generated serial carries after its prefix. `[quality]
+# serial_digits`, six by default.
+SERIAL_DIGITS = 6
+
+
+def max_depth() -> int:
+    """How deep this plant's containment goes, never past the product's own
+    ceiling."""
+    from fsmes.config import get_settings
+
+    written = int(getattr(get_settings(), "quality_containment_max_depth", MAX_DEPTH))
+    return max(1, min(written, DEPTH_CEILING))
+
+
+def serial_digits() -> int:
+    """How many digits this plant's generated serials carry.
+
+    The hyphen between prefix and number stays the product's: `next_serial`'s
+    recovery scan below reads `PREFIX-digits` to find where a plant's own
+    numbering had already got to, and a plant that changed the separator would
+    start again at one over serials it had already issued.
+    """
+    from fsmes.config import get_settings
+
+    return max(1, int(getattr(get_settings(), "quality_serial_digits", SERIAL_DIGITS)))
 # How many units one batch may bring into existence.
 MAX_BATCH = 5_000
 
@@ -84,7 +116,7 @@ def next_serial(session: Session, prefix: str) -> str:
     number = row.next
     row.next = number + 1
     session.flush()
-    return f"{prefix}-{number:06d}"
+    return f"{prefix}-{number:0{serial_digits()}d}"
 
 
 # ---------------------------------------------------------------- one at a time
@@ -135,7 +167,7 @@ def _ancestors(session: Session, unit_id: int) -> list[int]:
     """The chain of containers above a unit, nearest first."""
     chain: list[int] = []
     cursor = session.scalar(select(SerialUnit.parent_id).where(SerialUnit.id == unit_id))
-    while cursor is not None and len(chain) < MAX_DEPTH + 1:
+    while cursor is not None and len(chain) < max_depth() + 1:
         chain.append(cursor)
         cursor = session.scalar(select(SerialUnit.parent_id).where(SerialUnit.id == cursor))
     return chain
@@ -301,7 +333,7 @@ def _descendants(session: Session, root_id: int, cap: int | None = None) -> tupl
     levels: list[list[tuple]] = []
     frontier = [root_id]
     truncated = False
-    for _ in range(MAX_DEPTH):
+    for _ in range(max_depth()):
         level: list[tuple] = []
         for chunk in _chunks(frontier):
             level.extend(session.execute(
@@ -325,7 +357,7 @@ def _descendant_ids(session: Session, root_ids: list[int]) -> list[int]:
     """Every unit beneath any of the roots, ids only."""
     out: list[int] = []
     frontier = list(root_ids)
-    for _ in range(MAX_DEPTH):
+    for _ in range(max_depth()):
         level: list[int] = []
         for chunk in _chunks(frontier):
             level.extend(session.scalars(select(SerialUnit.id).where(SerialUnit.parent_id.in_(chunk))))
@@ -526,7 +558,7 @@ def where_used(session: Session, lot_code: str) -> dict:
     # unit counts with it, until nothing has a parent.
     tops: Counter = Counter()
     frontier = counts
-    for _ in range(MAX_DEPTH):
+    for _ in range(max_depth()):
         if not frontier:
             break
         parent_of: dict[int, int | None] = {}

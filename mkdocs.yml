@@ -102,6 +102,7 @@ nav:
       - Explanation — how much of the window did the MES see: operate/coverage.md
       - How-to — who names the downtime reasons: operate/who-names-the-reasons.md
       - How-to — who names the severities: operate/quality-severities.md
+      - Reference — this plant's own quality numbers: operate/quality-numbers.md
       - Reference — plant packs: operate/packs.md
       - How-to — plants from a fleet file: operate/registry.md
       - How-to — the fleet this installation owns: operate/fleet.md

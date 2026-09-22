@@ -12,6 +12,33 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **This plant's own quality numbers — thirteen `[quality]` keys, and one
+  rule.** Where a process stops being capable (1.33 and 1.0), how many
+  readings a control limit needs (12), how far back a chart looks (200), the
+  gauge rule of ten and its floor of four, a new gauge's calibration interval
+  (365), how many serials a pallet certificate prints (200), how many digits a
+  serial carries (6), what a non-conformance is called (`NC-00017`), how deep
+  the packaging goes (6), and which SPC rules are a major finding (rule 1).
+  Each was a literal in the source, most with a comment beside it arguing for
+  the number rather than stating it — which is what a judgment call sounds
+  like before anybody calls it configuration. **Every default is the literal
+  that was there, so a plant that writes none of these keys behaves exactly as
+  it did.** `fsmes pack check` reads them offline and refuses a number that
+  would leave the thing it decides unable to decide anything — control limits
+  from one reading, a Cpk bar that makes *marginal* unreachable — and refuses
+  nothing else. All thirteen are listed on **Quality › Configuration** with
+  the value this plant is running on and whether the plant chose it.
+  [This plant's own quality numbers](docs/operate/quality-numbers.md).
+
+- **How much warning a gauge wants is the gauge's** — `gauges.warn_days`,
+  thirty by default, set when a gauge is registered and left blank for the
+  default. A quarterly calibration wants a fortnight and an annual one wants
+  two months, and one plant owns both. Until this column existed the gauges
+  screen decided *due soon* in JavaScript at three separate places, so the
+  shop floor's definition of the phrase lived in the browser and the server
+  did not know it; `GET /quality/gauges` now answers `warn_days` and
+  `due_soon` per gauge and counts them for the register.
+
 - **The plant's own non-conformance severities — the second vocabulary, and
   the test of whether the first one's loop generalised.**
   `NonConformance.severity` had been twenty characters of free text
@@ -263,6 +290,17 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Changed
 
+- **The Configuration page says what each setting is set to.** A row used to
+  say where the door was and who may open it. It now also says the value this
+  plant is running on and whether that value is the product's default or one
+  the plant chose — two answers and not three, because by the time a plant is
+  serving, a pack key *is* an environment variable and the file it was
+  compiled from is not recorded anywhere the running process can see. Naming a
+  pack there would be a guess, and this column exists so nobody has to guess.
+  Past twelve sections the page gains a search box and states its sort; below
+  twelve it does not, because a search box on a list the eye can read whole is
+  furniture.
+
 - **The approvals panel takes a second kind, and one line of it had to
   change.** The panel, the endpoint that answers *what is waiting that I may
   approve* from the caller's live capabilities, the review and the generated
@@ -354,6 +392,18 @@ goes under Honesty with a migration line, so plant people can find it.
   are read out of the draft's own diff.
 
 ### Fixed
+
+- **A pallet certificate computed capability only for materials numbered
+  `UT-*`.** `services/coa.py` decided which materials were counted in pieces
+  by testing the shape of their code, which is one plant's numbering
+  convention living in product code: **any plant not numbering its pieces that
+  way got an empty capability block on every pallet certificate and no error
+  anywhere.** Whether a material is counted in pieces is now a fact recorded
+  on the material — `materials.counted_in_pieces` — and the migration sets it
+  true for exactly the materials that prefix chose, so nothing about an
+  existing plant's certificates changes. It is the same answer, given honestly
+  by a flag instead of guessed from a name. Found by the configuration audit
+  of 2026-09-21 as the first of its three defects.
 
 - **The trigger catalogue advertised a severity nothing in this product has
   ever written.** `open_nc`'s help read *"severity (minor|major|critical)"*,

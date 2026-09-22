@@ -206,6 +206,7 @@ def check(directory: Path, *, version: str = __version__) -> Report:
     problems += _identity(pack)
     problems += _coverage_floor(pack)
     problems += _hold_rules(pack)
+    problems += _quality_numbers(pack)
     problems += _modules(pack)
     problems += _words(pack)
     files, file_problems, file_unknowns = _files(pack)
@@ -373,16 +374,23 @@ def _hold_rules(pack: fmt.Pack) -> list[Problem]:
     value = pack.table("quality").get("hold_rules")
     if value is None or not isinstance(value, list):
         return []  # absent, or already refused by the type check
+    return _rule_numbers("[quality] hold_rules", value)
+
+
+def _rule_numbers(where: str, value: list) -> list[Problem]:
+    """A list of Western Electric rule numbers, checked. Two keys hold one -
+    which rules raise a hold, and which of those are major - and they are the
+    same list of four either way."""
     out: list[Problem] = []
     seen: set[int] = set()
     for item in value:
         if isinstance(item, bool) or not isinstance(item, int):
-            out.append(Problem("[quality] hold_rules", (
+            out.append(Problem(where, (
                 f"holds {item!r}. It is a list of Western Electric rule numbers, "
                 "each a whole number from 1 to 4.")))
             continue
         if item not in (1, 2, 3, 4):
-            out.append(Problem("[quality] hold_rules", (
+            out.append(Problem(where, (
                 f"names rule {item}, and this product has four: 1 (a point beyond "
                 "three sigma), 2 (two of three beyond two sigma), 3 (four of five "
                 "beyond one sigma) and 4 (eight in a row on one side of centre). "
@@ -390,10 +398,98 @@ def _hold_rules(pack: fmt.Pack) -> list[Problem]:
                 "the rules would publish a rule number meaning something nobody "
                 "else means by it.")))
         elif item in seen:
-            out.append(Problem("[quality] hold_rules", (
+            out.append(Problem(where, (
                 f"names rule {item} twice. Once is what it means either way, and a "
                 "list a person has to read twice is a list worth tidying.")))
         seen.add(item)
+    return out
+
+
+#: `[quality]` keys that are a count or a measurement, and the range each has
+#: to be in for the thing it decides to mean anything. `(low, high, why)`;
+#: `high` is None where the only wrong answer is a number at or below the
+#: floor. Every default the product ships is inside its own range, and a test
+#: holds it to that - a range that refused the shipped value would be a range
+#: that refused a plant for behaving as the product does.
+QUALITY_RANGES: dict[str, tuple[float, float | None, str]] = {
+    "cpk_capable": (0, None, "a Cpk bar is a positive number"),
+    "cpk_marginal": (0, None, "a Cpk bar is a positive number"),
+    "spc_min_points": (2, None,
+                       "control limits come from a mean moving range, which "
+                       "needs at least two readings to have a range at all"),
+    "spc_history": (1, None, "a chart reads at least one reading"),
+    "gauge_ratio_adequate": (0, None, "a resolution ratio is a positive number"),
+    "gauge_ratio_floor": (0, None, "a resolution ratio is a positive number"),
+    "gauge_default_interval_days": (0, None,
+                                    "a calibration interval is a positive "
+                                    "number of days"),
+    "coa_serials_listed": (0, None,
+                           "a certificate lists at least one serial, or the "
+                           "key is doing nothing a reader can see"),
+    "serial_digits": (1, 12, "a serial number carries between one and twelve digits"),
+    "containment_max_depth": (1, 12,
+                              "it is also the guard that stops a containment "
+                              "walk running away, so the product keeps a hard "
+                              "ceiling of twelve"),
+}
+
+#: What a non-conformance code may start with. Short, because the number's
+#: own width comes after it and the whole thing lives in a twenty-character
+#: column; upper case and plain, because it is printed on certificates and
+#: read back by people.
+NC_PREFIX = re.compile(r"\A[A-Z][A-Z0-9]{0,9}\Z")
+
+
+def _quality_numbers(pack: fmt.Pack) -> list[Problem]:
+    """`[quality]`'s counts and measurements, and the two pairs that have to
+    stay in order.
+
+    Ranges rather than opinions: this refuses a number that would make the
+    thing it decides meaningless, and it refuses nothing else. A plant that
+    wants twenty-five readings behind its limits, or a four-to-one gauge
+    floor, is answering its own question and is not being second-guessed here.
+    """
+    table = pack.table("quality")
+    out: list[Problem] = []
+
+    for name, (low, high, why) in QUALITY_RANGES.items():
+        value = table.get(name)
+        if value is None or isinstance(value, bool) or not isinstance(value, int | float):
+            continue  # absent, or already refused by the type check
+        if value <= low or (high is not None and value > high):
+            bound = f"above {low}" if high is None else f"between {low} and {high}"
+            out.append(Problem(f"[quality] {name}", f"is {value}, and it has to be {bound}: {why}."))
+
+    # The two pairs. Each is one judgment written as two numbers, and the
+    # numbers crossing over does not refuse anything - it quietly makes one of
+    # them unreachable, which is worse.
+    for lower, upper, sentence in (
+            ("cpk_marginal", "cpk_capable",
+             "a process cannot be marginal at a higher Cpk than it is capable "
+             "at; nothing would ever be called marginal"),
+            ("gauge_ratio_floor", "gauge_ratio_adequate",
+             "a gauge cannot be too coarse at a finer ratio than it is "
+             "adequate at; nothing would ever be called usable but marginal")):
+        low_value, high_value = table.get(lower), table.get(upper)
+        if not all(isinstance(v, int | float) and not isinstance(v, bool)
+                   for v in (low_value, high_value)):
+            continue
+        if low_value >= high_value:
+            out.append(Problem(f"[quality] {lower}", (
+                f"is {low_value} and `{upper}` is {high_value}. {sentence[0].upper()}"
+                f"{sentence[1:]}.")))
+
+    prefix = table.get("nc_code_prefix")
+    if isinstance(prefix, str) and not NC_PREFIX.match(prefix):
+        out.append(Problem("[quality] nc_code_prefix", (
+            f"is {prefix!r}. It is one to ten characters, upper case, starting "
+            "with a letter - it is printed on certificates and read back by "
+            "people, and the number's own width comes after it in a "
+            "twenty-character column.")))
+
+    rules = table.get("major_rules")
+    if isinstance(rules, list):
+        out += _rule_numbers("[quality] major_rules", rules)
     return out
 
 

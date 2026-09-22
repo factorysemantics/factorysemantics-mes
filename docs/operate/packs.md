@@ -47,7 +47,7 @@ Every key is enumerated in `fsmes.pack.format`, and **an unknown key is an error
 | `[erp]` | `mode` | `off`, `file`, `rest` or `erpnext` |
 | `[uns]` | `mode`, `topic_prefix` | `off`, `log` or `mqtt` |
 | `[inbound]` | `mapping`, `sql`, `mqtt_mode` | What other systems tell this plant |
-| `[quality]` | `hold_rules` | Which Western Electric rules raise a quality hold, as a list of rule numbers from 1 to 4 — `hold_rules = [1, 2]`. Leave it out and all four do, which is what this product has always done. Every rule is drawn and recorded whatever this says ([decision 0036](../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md)) |
+| `[quality]` | `hold_rules`, `major_rules`, `cpk_capable`, `cpk_marginal`, `spc_min_points`, `spc_history`, `gauge_ratio_adequate`, `gauge_ratio_floor`, `gauge_default_interval_days`, `coa_serials_listed`, `serial_digits`, `nc_code_prefix`, `containment_max_depth` | [This plant's own quality numbers](quality-numbers.md) — every one ships the value that was in the product's source, so a plant that writes none of them behaves exactly as it does now |
 | `[oee]` | `coverage_floor` | How much of a window this MES must have watched before it reports a KPI for it, between 0 and 1. Leave it out and nothing is withheld — see [how much of the window did the MES see](coverage.md) |
 | `[floor]` | `inspect_every`, `issue_every`, `inspect_all` | A simulated plant's own cadence |
 | `[[accounts]]` | `code`, `name`, `role`, `password_env` | Accounts `pack apply` creates, from passwords the environment holds |

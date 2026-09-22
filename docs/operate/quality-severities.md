@@ -129,9 +129,10 @@ draft → approve like everything else.
 - **It does not decide which rules raise a hold.** That is
   [decision 0036](../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md)
   and `[quality] hold_rules`, listed on the same Configuration page.
-- **It does not choose the severity an SPC rule writes.** Rule 1 writes
-  `major` and the rest write `minor`, which is what the source does today.
-  Making that the plant's is the audit's **Q2**, and it is a separate change.
+- **It does not decide which rule is a major finding.** Which SPC rules open
+  a major non-conformance rather than a minor one is `[quality] major_rules`
+  — rule 1 alone by default, which is what the source does. See
+  [this plant's own quality numbers](quality-numbers.md).
 - **There is no severity input on any screen.** There never has been: nothing
   in this product has ever offered a person a severity to pick. The places a
   severity is written are the two product code paths above and a trigger's
@@ -143,6 +144,8 @@ draft → approve like everything else.
 - [Who names the reasons](who-names-the-reasons.md) — the first vocabulary,
   and the same loop
 - [Plant packs](packs.md) — shipping a severity list with a plant
+- [This plant's own quality numbers](quality-numbers.md) — the numbers, as
+  opposed to the words
 - [Configuration is authored by roles](../design/config-assistance.md), and
   [decision 0035](../decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators.md)
 - [What is still hard-coded](../design/config-audit-2026-09-21.md) — where

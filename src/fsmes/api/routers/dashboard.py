@@ -468,6 +468,39 @@ def pending_approval(kind: str, code: str, revision: int,
 
 # ------------------------------------------- what is configurable in here
 
+
+def _pack_key(written: str) -> dict:
+    """One `[section] key`, with the value this plant is running on.
+
+    Read from the settings the plant actually started with rather than from
+    the pack file, because by the time a plant is serving, a pack key *is* an
+    environment variable - `fsmes pack apply` compiled it and the file it came
+    from is not recorded anywhere the running process can see.
+
+    So the honest answer to *who set this* is two-valued, and it says exactly
+    that: **the value is the product's default, unchanged**, or **this plant
+    set it**. Naming the pack that wrote it would be a guess, and this screen
+    exists so that nobody has to guess what their plant is set to.
+    """
+    from fsmes.config import Settings, get_settings
+    from fsmes.pack import format as fmt
+
+    section, _, name = written.strip("[]").partition("] ")
+    key = next((k for k in fmt.BY_SECTION[section].keys if k.name == name), None)
+    field = (key.becomes or "").removeprefix("MES_").lower() if key else ""
+    settings = get_settings()
+    value = getattr(settings, field, None)
+    default = Settings.model_fields[field].default if field in Settings.model_fields else None
+    return {
+        "key": written,
+        "about": key.about if key else None,
+        # Everything reaches a screen as text, because that is what a setting
+        # is by the time a plant reads one.
+        "value": "" if value is None else str(value),
+        "default": "" if default is None else str(default),
+        "is_default": value == default,
+    }
+
 @router.get("/config/{domain}/sections")
 def config_sections(domain: str, db: ReadDbDep, user: UserDep) -> dict:
     """Everything configurable in one workspace, with its total.
@@ -522,12 +555,12 @@ def config_sections(domain: str, db: ReadDbDep, user: UserDep) -> dict:
                 "approve": section.approve,
                 "may_define": section.define is None or section.define in held,
                 "may_approve": section.approve is not None and section.approve in held,
-                # The `plant.toml` key this section is, where it is a key
-                # rather than a list somebody edits here. Null for everything
-                # a screen changes; a string is the page saying *nobody
-                # drafts this and nobody signs it - it is in the pack*, which
-                # neither capability field can say.
-                "pack_key": section.pack_key,
+                # The `plant.toml` keys this section is, each with the value
+                # this plant is actually running on and whether the plant
+                # chose it. Empty for everything a screen changes; a list is
+                # the page saying *nobody drafts this and nobody signs it -
+                # it is in the pack*, which neither capability field can say.
+                "pack_keys": [_pack_key(name) for name in section.pack_keys],
             }
             for section in shown
         ],

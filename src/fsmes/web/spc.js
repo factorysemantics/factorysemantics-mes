@@ -105,7 +105,12 @@ async function load() {
   capCell("#f-pp", cap && cap.pp, "—");
   const verdict = $("#verdict");
   verdict.textContent = data.verdict || data.note || "—";
-  verdict.className = "verdict " + (data.stable === false ? "bad" : data.capability && data.capability.cpk >= 1.33 ? "good" : "");
+  // The bar is the plant's, and the server sends it. This line held its own
+  // 1.33 until the plant got the key, so a plant that moved the bar got a
+  // green figure under a sentence calling it marginal.
+  verdict.className = "verdict " + (data.stable === false ? "bad"
+    : data.capability && data.cpk_capable !== undefined
+      && data.capability.cpk >= data.cpk_capable ? "good" : "");
   $("#chart-note").textContent = data.control ? "" : `— ${data.note || "no control limits"}`;
   draw(data);
   const body = $("#signals tbody");
@@ -120,13 +125,19 @@ async function load() {
   const rules = data.rules || [];
   const holds = data.hold_rules || [];
   const off = rules.filter((rule) => !holds.includes(rule));
+  // "rule 1 and rule 2", not "rule 1, rule 2": this is a sentence somebody
+  // reads, and the plant's own answer deserves to read like one.
+  const list = (numbers) => numbers.map((r) => `rule ${r}`)
+    .reduce((text, one, i, all) =>
+      text + (i === 0 ? "" : i === all.length - 1 ? " and " : ", ") + one, "");
   $("#hold-rules").textContent = !rules.length ? ""
     : !off.length
-      ? `Every rule this plant draws raises a hold: ${rules.map((r) => `rule ${r}`).join(", ")}.`
+      ? `Every rule this plant draws raises a hold: ${list(rules)}.`
       : holds.length
-        ? `This plant raises a hold on ${holds.map((r) => `rule ${r}`).join(", ")}. `
-          + `${off.map((r) => `Rule ${r}`).join(" and ")} `
-          + `${off.length === 1 ? "is drawn and recorded and raises no hold" : "are drawn and recorded and raise no hold"}.`
+        ? `This plant raises a hold on ${list(holds)}. `
+          + `${list(off).charAt(0).toUpperCase()}${list(off).slice(1)} `
+          + `${off.length === 1 ? "is" : "are"} drawn and recorded and `
+          + `${off.length === 1 ? "raises" : "raise"} no hold.`
         : "This plant raises a hold on no rule. Every firing below is drawn and "
           + "recorded, and none of them opened a non-conformance.";
 

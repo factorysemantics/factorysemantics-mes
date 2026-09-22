@@ -65,6 +65,18 @@ class Material(Base):
     name: Mapped[str] = mapped_column(String(120))
     unit: Mapped[str] = mapped_column(String(20), default="ea")
     type: Mapped[MaterialType] = mapped_column(str_enum(MaterialType), default=MaterialType.RAW)
+    # Whether a pallet certificate counts this material in pieces and prints
+    # a capability block for it.
+    #
+    # A fact about the material, recorded on it. Until this column existed,
+    # `services/coa.py` decided it by testing whether the code started `UT-`,
+    # which is one plant's numbering convention living in product code: any
+    # plant not numbering its pieces that way got an empty capability block
+    # on every certificate and no error anywhere. The migration sets this
+    # true for exactly the materials that prefix chose, so nothing about an
+    # existing plant's certificates changes - it is the same answer, given
+    # honestly by a flag instead of guessed from a name.
+    counted_in_pieces: Mapped[bool] = mapped_column(default=False)
 
 
 class BomItem(Base):

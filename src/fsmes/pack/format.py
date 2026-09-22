@@ -188,7 +188,10 @@ SCHEMA: tuple[Section, ...] = (
             "ledger saying where the rest of it went.",
             "MES_OEE_COVERAGE_FLOOR"),
     )),
-    Section("quality", "What this plant asks of its own quality records.", (
+    Section("quality",
+            "What this plant asks of its own quality records. Every key here "
+            "ships the value that was in the product's source, so a plant that "
+            "writes none of them behaves exactly as it does now.", (
         Key("hold_rules", "ints",
             "Which Western Electric rules raise a quality hold, as a list of "
             "rule numbers from 1 to 4. Leave it out and all four do, which is "
@@ -197,6 +200,76 @@ SCHEMA: tuple[Section, ...] = (
             "chart would be a chart that lies (decision 0036); what a plant "
             "chooses here is which of them are worth somebody's morning.",
             "MES_QUALITY_HOLD_RULES"),
+        Key("major_rules", "ints",
+            "Which of those rules open a *major* non-conformance rather than a "
+            "minor one, as a list of rule numbers. Rule 1 alone by default, "
+            "which is what the source does. The two words come from this "
+            "plant's own severity list.",
+            "MES_QUALITY_MAJOR_RULES"),
+        Key("cpk_capable", "float",
+            "The Cpk at or above which this plant calls a process capable. "
+            "1.33 is the usual convention and is the default; a plant with "
+            "looser tolerances or a stricter quality culture answers "
+            "differently and is still telling the truth about itself. Only the "
+            "English word beside the figure moves - the Cpk itself is "
+            "arithmetic.",
+            "MES_QUALITY_CPK_CAPABLE"),
+        Key("cpk_marginal", "float",
+            "The Cpk at or above which a process is called marginal rather "
+            "than not capable. 1.0 by default, and it must be below "
+            "`cpk_capable`.",
+            "MES_QUALITY_CPK_MARGINAL"),
+        Key("spc_min_points", "int",
+            "The fewest readings this plant will draw control limits from. "
+            "Twelve by default: below that the limits move so much with each "
+            "new reading that they mislead more than they inform. A plant that "
+            "insists on twenty-five produces the same payload shape, and the "
+            "pallet certificate prints whatever this says.",
+            "MES_QUALITY_SPC_MIN_POINTS"),
+        Key("spc_history", "int",
+            "How many readings back a chart and the rules look. Two hundred by "
+            "default. A plant inspecting every fifteen minutes and one "
+            "inspecting hourly want different histories behind one chart.",
+            "MES_QUALITY_SPC_HISTORY"),
+        Key("gauge_ratio_adequate", "float",
+            "How many times finer than the tolerance a gauge must resolve "
+            "before this plant calls it adequate. Ten by default - AIAG's rule "
+            "of ten; ANSI Z540 says four, and both plants are right.",
+            "MES_QUALITY_GAUGE_RATIO_ADEQUATE"),
+        Key("gauge_ratio_floor", "float",
+            "The ratio below which a gauge is too coarse to judge a tolerance "
+            "at all. Four by default, and it must not be above "
+            "`gauge_ratio_adequate`.",
+            "MES_QUALITY_GAUGE_RATIO_FLOOR"),
+        Key("gauge_default_interval_days", "int",
+            "The calibration interval a newly registered gauge gets when "
+            "nobody says otherwise. 365 by default. Each gauge's own interval "
+            "is the engineer's and is unaffected.",
+            "MES_QUALITY_GAUGE_DEFAULT_INTERVAL_DAYS"),
+        Key("coa_serials_listed", "int",
+            "How many serial numbers a pallet certificate prints before it says "
+            "how many more there are. Two hundred by default. A certificate "
+            "that must list every unit and one that must stay printable are "
+            "the plant's agreement with whoever reads it.",
+            "MES_QUALITY_COA_SERIALS_LISTED"),
+        Key("serial_digits", "int",
+            "How many digits a generated serial number carries after the "
+            "prefix. Six by default. The separator is a hyphen and stays the "
+            "product's: the scan that recovers a counter from serials already "
+            "issued reads `PREFIX-digits`, and a plant that changed the "
+            "separator would restart its own numbering.",
+            "MES_QUALITY_SERIAL_DIGITS"),
+        Key("nc_code_prefix", "str",
+            "What this plant calls a non-conformance on the record itself - "
+            "`NC` by default, giving `NC-00017`. A plant that calls them NCRs "
+            "calls all of them NCRs. The number's width stays the product's.",
+            "MES_QUALITY_NC_CODE_PREFIX"),
+        Key("containment_max_depth", "int",
+            "How deep this plant's packaging goes: piece, stack, pack, pallet, "
+            "truck is five and six is the default. It is also the guard that "
+            "stops a containment walk running away, so the product keeps a "
+            "hard ceiling of twelve above whatever is written here.",
+            "MES_QUALITY_CONTAINMENT_MAX_DEPTH"),
     )),
     Section("floor", "The shop floor's own cadence, for a simulated plant.", (
         Key("inspect_every", "int", "Seconds between recorded quality checks.",

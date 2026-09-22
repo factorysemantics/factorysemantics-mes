@@ -236,7 +236,12 @@ def test_a_pallet_certificate_states_capability_over_its_own_window_and_lists_ev
     _order(session)
     cola = session.scalar(select(Material).where(Material.code == "FG-COLA"))
     # A utensil material with two dimensional specifications, checked eight times each in the window.
-    session.add(Material(code="UT-FORK", name="Fork", unit="ea", type=cola.type))
+    # `counted_in_pieces` is what puts a material's capability block on a
+    # pallet certificate. It used to be read off the `UT-` prefix, which is
+    # why this fixture spells one; now the material says so, which is the
+    # whole of what that change was.
+    session.add(Material(code="UT-FORK", name="Fork", unit="ea", type=cola.type,
+                         counted_in_pieces=True))
     session.flush()
     fork = session.scalar(select(Material).where(Material.code == "UT-FORK"))
     for char, lo, hi in (("length_mm", 164.0, 166.0), ("weight_g", 3.6, 4.2)):
@@ -300,7 +305,12 @@ def test_a_pallet_made_between_two_checks_states_capability_from_the_last_twelve
 
     _order(session)
     cola = session.scalar(select(Material).where(Material.code == "FG-COLA"))
-    session.add(Material(code="UT-FORK", name="Fork", unit="ea", type=cola.type))
+    # `counted_in_pieces` is what puts a material's capability block on a
+    # pallet certificate. It used to be read off the `UT-` prefix, which is
+    # why this fixture spells one; now the material says so, which is the
+    # whole of what that change was.
+    session.add(Material(code="UT-FORK", name="Fork", unit="ea", type=cola.type,
+                         counted_in_pieces=True))
     session.flush()
     fork = session.scalar(select(Material).where(Material.code == "UT-FORK"))
     session.add(QualitySpec(material=fork, characteristic="length_mm", unit="mm", min_value=164.0, max_value=166.0))

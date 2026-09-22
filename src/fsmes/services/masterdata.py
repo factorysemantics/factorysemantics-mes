@@ -164,10 +164,20 @@ def create_material(
     name: str,
     unit: str = "ea",
     type: MaterialType = MaterialType.RAW,
+    counted_in_pieces: bool = False,
     actor: str = "system",
 ) -> Material:
+    """Define a material.
+
+    `counted_in_pieces` says whether a pallet certificate counts this material
+    in pieces and prints a capability block for it. False by default, which is
+    what every material that is not a piece gets today; the plant says which
+    of its materials are, because until this flag existed the product guessed
+    it from a code prefix.
+    """
     _ensure_unique(session, Material, code)
-    obj = Material(code=code, name=name, unit=unit, type=type)
+    obj = Material(code=code, name=name, unit=unit, type=type,
+                   counted_in_pieces=counted_in_pieces)
     session.add(obj)
     session.flush()
     audit.record(
@@ -176,7 +186,8 @@ def create_material(
         action="material.created",
         entity_type="material",
         entity_id=code,
-        after={"name": name, "unit": unit, "type": type.value},
+        after={"name": name, "unit": unit, "type": type.value,
+               "counted_in_pieces": counted_in_pieces},
     )
     return obj
 

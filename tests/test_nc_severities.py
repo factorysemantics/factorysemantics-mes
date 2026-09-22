@@ -396,7 +396,7 @@ def test_a_section_that_is_a_pack_key_says_so_rather_than_naming_a_capability(
     can see this screen* would be worse than saying nothing."""
     page = admin.get("/dashboard/config/quality/sections").json()
     rules = next(row for row in page["items"] if row["key"] == "spc_hold_rules")
-    assert rules["pack_key"] == "[quality] hold_rules"
+    assert [key["key"] for key in rules["pack_keys"]] == ["[quality] hold_rules"]
     assert rules["define"] is None and rules["approve"] is None
     assert rules["href"] == "/dashboard/spc"
 

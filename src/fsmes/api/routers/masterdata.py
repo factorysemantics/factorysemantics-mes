@@ -81,6 +81,10 @@ class MaterialIn(BaseModel):
     name: str
     unit: str = "ea"
     type: MaterialType = MaterialType.RAW
+    # Whether a pallet certificate counts this material in pieces and prints
+    # a capability block for it. A fact about the material, said here rather
+    # than guessed from the shape of its code.
+    counted_in_pieces: bool = False
 
 
 class MaterialOut(MaterialIn):
@@ -99,13 +103,17 @@ def list_materials(
     if q:
         like = f"%{q}%"
         query = query.where(Material.code.ilike(like) | Material.name.ilike(like))
-    return [MaterialOut(code=m.code, name=m.name, unit=m.unit, type=m.type) for m in db.scalars(query)]
+    return [MaterialOut(code=m.code, name=m.name, unit=m.unit, type=m.type,
+                        counted_in_pieces=m.counted_in_pieces) for m in db.scalars(query)]
 
 
 @router.post("/materials", status_code=201, dependencies=[require("masterdata.write")])
 def create_material(body: MaterialIn, db: DbDep, actor: ActorDep) -> MaterialOut:
-    m = masterdata.create_material(db, code=body.code, name=body.name, unit=body.unit, type=body.type, actor=actor)
-    return MaterialOut(code=m.code, name=m.name, unit=m.unit, type=m.type)
+    m = masterdata.create_material(db, code=body.code, name=body.name, unit=body.unit,
+                                   type=body.type,
+                                   counted_in_pieces=body.counted_in_pieces, actor=actor)
+    return MaterialOut(code=m.code, name=m.name, unit=m.unit, type=m.type,
+                       counted_in_pieces=m.counted_in_pieces)
 
 
 class BomItemIn(BaseModel):

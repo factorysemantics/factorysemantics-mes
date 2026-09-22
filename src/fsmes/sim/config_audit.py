@@ -699,6 +699,10 @@ class Run:
         totals["moved"] = sum(1 for f in self.curated if f.where == "moved")
         totals["stale"] = sum(1 for f in self.curated if f.where == "stale")
         totals["unsure"] = sum(1 for f in self.curated if f.entry.unsure)
+        # How many of these are answered. A list of what is still hard-coded
+        # that could not say how much of it no longer is would be a list
+        # nobody could tell was being worked through.
+        totals["settled"] = sum(1 for f in self.curated if f.entry.settled)
         totals["seen_by_scan"] = sum(1 for f in self.curated if f.seen_by_scan)
         totals["seen_by_a_person"] = sum(
             1 for f in self.curated if not f.seen_by_scan)
@@ -802,6 +806,7 @@ def _curated_json(finding: CuratedFinding) -> dict:
         "anchor": entry.needle,
         "why_this_scope": entry.why,
         "unsure": entry.unsure,
+        "settled": entry.settled,
         "found_by": "the scan" if finding.seen_by_scan else "a person reading",
     }
 
@@ -869,6 +874,9 @@ def _curated_summary(run: Run) -> list[str]:
         f"  {totals['moved']} have moved since the list was written; "
         f"{totals['stale']} no longer anchor and need re-reading; "
         f"{totals['unsure']} say they are unsure of their scope.",
+        f"  {totals['settled']} have since been built and say what they "
+        f"became; the row stays, because deleting it would lose the argument "
+        f"with it.",
         "",
         f"  The rule: {SCOPE_RULE}",
         "  Nothing in plant or object is an open question for a maintainer: "
@@ -907,4 +915,6 @@ def _curated_text(run: Run, scope: str, only: str | None = None) -> list[str]:
         out.append(f"      why {entry.scope}: {entry.why}")
         if entry.unsure:
             out.append(f"      unsure: {entry.unsure}")
+        if entry.settled:
+            out.append(f"      settled: {entry.settled}")
     return out
