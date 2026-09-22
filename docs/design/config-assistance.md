@@ -767,3 +767,42 @@ it got wrong or left out, recorded where the next piece will look:
 analysis screen does not yet print the two totals the API now carries, because
 §6 said to touch no screen but the station's and the dashboard's. That is the
 smallest next piece, and it is one paragraph of JavaScript.
+
+---
+
+## 10. The audit — what else is still hard-coded, 2026-09-21
+
+This page decided *how*. The next question is *what else*, and it is answered
+somewhere that can go stale without taking a decision with it:
+**[What is still hard-coded that a plant might want to own](config-audit-2026-09-21.md)**,
+produced by `fsmes config-audit`, which applies §3's two-plants test to the
+whole tree mechanically and can be rerun any day.
+
+Three things from it belong here rather than there, because they bind
+everything built from now on and are not a snapshot of one day's source:
+
+1. **The literal that is in the source today becomes the shipped default,
+   unchanged.** Every candidate the audit finds already has a value, so making
+   one configurable must not also move it. A plant that configures nothing
+   behaves exactly as it does now.
+2. **A list is honest as a plain list up to twelve; past twelve it needs search
+   and a stated, stable sort.** Twelve because this product already answered
+   "how many rows is a screenful" once, at `services/analysis.py:440`. A
+   scrolled list without search reproduces the failure the free-text box had:
+   the word is in there, the person cannot find it, and they add a duplicate.
+3. **Kind-tagging is a rule about the PR, not about the literal.** The PR that
+   makes any setting configurable adds a `ConfigSection` in `modules.py` in the
+   same PR — every setting, including one that will only ever be a key in
+   `plant.toml` — and adds a `KINDS` entry in `services/review.py` in the same
+   PR *if and only if* it has a draft-then-approve step. Neither is ever added
+   afterwards. The nav was retrofitted once (§2a); that is what this rule
+   exists to prevent happening again.
+
+One correction to §3's table came out of the audit and is recorded here rather
+than left in a dated page. §3 places "SPC rules 1–4" in tier three with the
+note *"A rule a plant can switch off is a chart that lies."* That reasoning is
+about the **chart**, and it holds. Whether a plant may choose which rules raise
+a **hold** is a different question that §3 did not ask, and it is open. The
+rule *windows* — 2-of-3, 4-of-5, 8-in-a-row — are tier three either way: a
+plant that changed them would publish `SpcSignal.rule = 3` while meaning
+something nobody else means by rule 3.

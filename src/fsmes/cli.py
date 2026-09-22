@@ -2727,6 +2727,48 @@ def agent_eval_cmd(
     typer.echo(f"{passed}/{len(rows)} passed")
 
 
+@app.command("config-audit")
+def config_audit_cmd(
+    domain: str = typer.Option(
+        None, help="Only this domain: administration, process, controls, "
+                   "quality, supply-chain, it, unassigned."),
+    strong: bool = typer.Option(
+        False, "--strong",
+        help="Only the candidates with a hedging comment beside them or a "
+             "name that says what they are. Every domain still states its "
+             "full total."),
+    as_json: bool = typer.Option(
+        False, "--json", help="The whole run, for diffing against the next one."),
+) -> None:
+    """Find the business judgments still hard-coded in the source.
+
+    A configuration candidate is a number, mapping or fixed list that encodes
+    a judgment a reasonable plant could make differently - the Cpk bar at
+    1.33, the maintenance warning at 80% through an interval - rather than a
+    physical fact. Decision 0035's test: ask what breaks if two plants answer
+    differently.
+
+    Reports each with its file, line, the literal, and the comment beside it,
+    organised by the six configuration domains. It decides nothing; a person
+    reads the list and applies the test. Rerun it after any change and diff
+    the --json against the last run: what is new is what somebody just added.
+
+    Deterministic - no model, no network, no database, no plant.
+    """
+    from fsmes.sim import config_audit
+
+    run = config_audit.scan()
+    if as_json:
+        typer.echo(config_audit.as_json(run))
+        return
+    if domain and domain not in config_audit.DOMAIN_TITLES:
+        typer.echo(f"unknown domain {domain!r}; "
+                   f"one of {', '.join(config_audit.DOMAIN_TITLES)}")
+        raise typer.Exit(2)
+    for line in config_audit.as_text(run, only=domain, strong_only=strong):
+        typer.echo(line)
+
+
 @app.command("autoloop")
 def autoloop_cmd(
     agent: bool = typer.Option(

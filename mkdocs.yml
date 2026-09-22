@@ -132,6 +132,7 @@ nav:
       - Style: design/STYLE.md
       - Design — M8 packs and fleet: design/m8-packs-and-fleet.md
       - Design — configuration assistance: design/config-assistance.md
+      - Design — the configuration audit: design/config-audit-2026-09-21.md
       - Decisions:
           - decisions/index.md
           - decisions/0001-apache-2-with-dco.md
