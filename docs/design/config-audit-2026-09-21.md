@@ -334,6 +334,19 @@ row.
 
 ### Quality engineering — 13
 
+> **Built, 2026-09-22.** Every row in this table is answered. Q3 is the
+> product's second draft-then-approve vocabulary
+> ([who names the severities](../operate/quality-severities.md)); Q5 is
+> [decision 0036](../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md);
+> the rest are `[quality]` keys and two object columns
+> ([this plant's own quality numbers](../operate/quality-numbers.md)). **Every
+> one ships the literal that is in the *Where* column**, so a plant that
+> configures nothing behaves exactly as it did — which is rule one, and it is
+> the whole rollout plan. The table below is left as it was read on
+> 2026-09-21, with a *settled* line on each row in
+> `fsmes config-audit --scope plant --domain quality`, because deleting a row
+> the day somebody acted on it would lose the argument with it.
+
 | | What it is | Where | Why it qualified | Size | Scope — whose answer is it? |
 |---|---|---|---|---|---|
 | **Q1** | Fewest readings before control limits are drawn at all | `services/spc.py:45` `MIN_POINTS = 12` | Comment already hedges: *"Below this the limits move so much with each new reading that they mislead more than they inform."* A plant that insists on 25 produces the same payload shape. | small (the pallet certificate prints the word "twelve" at `services/coa.py:380`) | **`plant`** — twelve or twenty-five is one plant's trust in its own data, the same for every characteristic |

@@ -37,9 +37,21 @@
     <section class="panel span-2">
       <h2><span id="domain-title">Configuration</span> <span id="section-count" class="muted count">—</span></h2>
       <p id="domain-about" class="muted small"></p>
+      <!-- Search appears once the list passes twelve, which is the number
+           this product already answered "how many rows is one screenful" with
+           (services/analysis.py). Below it a search box is furniture: the eye
+           is faster than a control and a focus trap. Above it a list without
+           one reproduces exactly what the free-text box did - the thing is in
+           there, the person cannot find it, and they reach for a new one. -->
+      <div id="section-filter" class="filter-bar hidden" data-assist="config-filter">
+        <input id="c-q" type="search" aria-label="Section, setting or key"
+               placeholder="Section, setting or key">
+      </div>
+      <p id="section-sort" class="muted small"></p>
       <div class="table-wrap"><table id="sections-table">
         <thead><tr>
-          <th>Section</th><th>What you change here</th><th>Who may draft</th><th>Who signs it</th>
+          <th>Section</th><th>What you change here</th><th>Set to</th>
+          <th>Who may draft</th><th>Who signs it</th>
         </tr></thead>
         <tbody></tbody>
       </table></div>

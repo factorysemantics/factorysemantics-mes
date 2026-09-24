@@ -67,11 +67,18 @@ def _get_or_create(session: Session, code: str, **kwargs) -> Equipment:
     return equipment
 
 
-def _material(session: Session, spec: dict, kind: MaterialType) -> Material:
+def _material(session: Session, spec: dict, kind: MaterialType,
+              counted_in_pieces: bool = False) -> Material:
     existing = session.scalar(select(Material).where(Material.code == spec["code"]))
     if existing is not None:
         return existing
-    material = Material(code=spec["code"], name=spec["name"], unit=spec["unit"], type=kind)
+    material = Material(code=spec["code"], name=spec["name"], unit=spec["unit"], type=kind,
+                        # Whether a pallet certificate counts this material in
+                        # pieces. The utensils are the pieces on this line, and
+                        # that is a fact about the line rather than about the
+                        # shape of their codes - which is what the product used
+                        # to read it from.
+                        counted_in_pieces=counted_in_pieces)
     session.add(material)
     return material
 
@@ -107,7 +114,8 @@ def seed(session: Session, scenario_dir: Path = HERE) -> dict | None:
 
         kind = meta["kind"]
         product = _material(session, meta["material"],
-                            MaterialType.FINISHED if kind in ("wrapper", "palletizer") else MaterialType.INTERMEDIATE)
+                            MaterialType.FINISHED if kind in ("wrapper", "palletizer") else MaterialType.INTERMEDIATE,
+                            counted_in_pieces=(kind == "utensil"))
         # The dimensional checks a person records every fifteen minutes on
         # this utensil - the characteristics the pallet certificate states a
         # Cpk for. Declared once per material, whichever of its lines seeds first.

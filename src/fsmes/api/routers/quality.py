@@ -351,9 +351,15 @@ class GaugeIn(BaseModel):
     code: str
     name: str
     kind: str = "general"
-    interval_days: int = 365
+    # Left out is the plant's house answer, not a number this schema decides.
+    # It was 365 here, 365 again in the service and 365 a third time in the
+    # browser; now `[quality] gauge_default_interval_days` says it once.
+    interval_days: int | None = None
     resolution: float | None = None
     location: str | None = None
+    # How many days of warning this gauge wants before it falls due. Left out
+    # is the column's own default of thirty.
+    warn_days: int | None = None
 
 
 class CalibrationIn(BaseModel):
@@ -365,7 +371,10 @@ class CalibrationIn(BaseModel):
 
 
 @router.get("/spc/{material}/{characteristic}")
-def spc(material: str, characteristic: str, db: DbDep, limit: int = 200) -> dict:
+def spc(material: str, characteristic: str, db: DbDep,
+        limit: int | None = Query(
+            None, description="How many readings back to look. The plant's own "
+                              "`[quality] spc_history` when it is left out.")) -> dict:
     """An individuals control chart, with capability and what fired.
 
     Control limits come from the process's own variation, not the tolerance.
@@ -411,8 +420,9 @@ def register_gauge(body: GaugeIn, db: DbDep, actor: ActorDep) -> dict:
     gauge = gauge_service.register(
         db, code=body.code, name=body.name, kind=body.kind,
         interval_days=body.interval_days, resolution=body.resolution,
-        location=body.location, actor=actor)
-    return {"code": gauge.code, "next_due": gauge_service.due_on(gauge)}
+        location=body.location, warn_days=body.warn_days, actor=actor)
+    return {"code": gauge.code, "next_due": gauge_service.due_on(gauge),
+            "interval_days": gauge.interval_days, "warn_days": gauge.warn_days}
 
 
 @router.post("/gauges/{code}/calibrate", dependencies=[require("quality.close_nc")])

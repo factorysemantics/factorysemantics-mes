@@ -99,6 +99,23 @@ class Curated:
     unsure: str | None = None
     """The other answer, and what would settle it. None when the row is settled."""
 
+    settled: str | None = None
+    """What this candidate became, and when, once it stopped being a literal.
+
+    A row does not leave this list when it is built. The list is what a
+    person read on 2026-09-21 and the argument they made; deleting a row the
+    day somebody acted on it would leave the page claiming a smaller tree
+    than it read, and would lose the argument with it. So the row stays, its
+    `needle` moves to where the judgment lives now - the key's own default -
+    and this sentence says what happened.
+    """
+
+
+#: The sentence a row gets when the literal it named became a key, said the
+#: same way every time so a reader can see at a glance which of these are
+#: answered and which are still questions.
+DONE = "Built 2026-09-22: it is `[quality] %s`, shipping the literal that was here."
+
 
 CURATED: tuple[Curated, ...] = (
 
@@ -107,7 +124,7 @@ CURATED: tuple[Curated, ...] = (
     Curated(
         "Q0", "quality", "plant",
         "The Cpk bar at which a process is called capable",
-        "services/spc.py", 246, "if cpk >= 1.33:",
+        "config.py", 246, "quality_cpk_capable: float = 1.33",
         why="1.33 is a widely used industry convention and not a law of "
             "physics. A plant with looser tolerances or a stricter quality "
             "culture can set a different bar and still be telling the truth "
@@ -119,39 +136,52 @@ CURATED: tuple[Curated, ...] = (
                "charts two characteristics it would judge capable at "
                "different numbers. It is section 2's calibration example and "
                "has no row in section 4 of the design page, so the curated "
-               "list is 76 where that page's list is 75."),
+               "list is 76 where that page's list is 75.",
+        settled="Built 2026-09-22: it is `[quality] cpk_capable` and "
+                "`cpk_marginal`, shipping the 1.33 and the 1.0 that were "
+                "here. The Cpk itself never moved - only the word beside it - "
+                "and the browser's own copy of the bar went with it."),
     Curated(
         "Q1", "quality", "plant",
         "Fewest readings before control limits are drawn at all",
-        "services/spc.py", 45, "MIN_POINTS = 12",
+        "config.py", 45, "quality_spc_min_points: int = 12",
         why="One plant draws limits at twelve readings and one insists on "
             "twenty-five, because it is a statement about how much data that "
             "plant's quality system is willing to trust. Inside a plant the "
-            "answer is the same for every characteristic."),
+            "answer is the same for every characteristic.",
+        settled=DONE % "spc_min_points" + " The pallet certificate prints the "
+                "key's value rather than the word twelve."),
     Curated(
         "Q2", "quality", "plant",
         "Which SPC rule counts as a major finding",
-        "services/spc.py", 370, 'severity="major" if signal["rule"] == 1',
+        "config.py", 370, 'quality_major_rules: str = "1"',
         why="Which rule is major is one triage policy for the whole plant. "
             "Two characteristics do not want different answers; two plants "
-            "with different escalation paths do."),
+            "with different escalation paths do.",
+        settled=DONE % "major_rules" + " The two words themselves come from "
+                "the plant's severity vocabulary."),
     Curated(
         "Q3", "quality", "plant",
         "The non-conformance severity vocabulary itself",
-        "domain/quality.py", 99, 'severity: Mapped[str] = mapped_column(String(20)',
+        "domain/severities.py", 99, 'class NcSeverity(Base):',
         why="A vocabulary is the plant's own words, used the same way "
             "everywhere in it. critical/major/minor/observation at one plant "
-            "and a 1-to-5 scale at another are both honest."),
+            "and a 1-to-5 scale at another are both honest.",
+        settled="Built 2026-09-22: `nc_severities`, the second draft-then-"
+                "approve vocabulary in this product, with `quality.define` "
+                "and `quality.approve`, a pack kind and a screen. It ships "
+                "the two words the source writes and no third."),
     Curated(
         "Q4", "quality", "plant",
         "How far back a chart and the rules look",
-        "services/spc.py", 49, "limit: int = 200)",
+        "config.py", 49, "quality_spc_history: int = 200",
         why="A plant inspecting every fifteen minutes and one inspecting "
             "hourly want different histories behind one chart.",
         unsure="It could be object. A plant that samples one characteristic "
                "every unit and another once a shift might want the history "
                "per characteristic; what would settle it is whether any real "
-               "plant asks for two different windows on one chart screen."),
+               "plant asks for two different windows on one chart screen.",
+        settled=DONE % "spc_history"),
     Curated(
         "Q5", "quality", "general",
         "Which Western Electric rules are in force",
@@ -165,56 +195,83 @@ CURATED: tuple[Curated, ...] = (
             "rule is drawn and recorded on every plant, and `[quality] "
             "hold_rules` chooses which of them raise a hold. All four is the "
             "shipped default, so a plant that configures nothing is "
-            "unchanged."),
+            "unchanged.",
+        settled="Decided and built 2026-09-22 - decision 0036, `[quality] "
+                "hold_rules`. The chart draws and records every rule on every "
+                "plant; only who gets called changed."),
     Curated(
         "Q6", "quality", "plant",
         "The gauge rule of ten, and its floor of four",
-        "services/gauges.py", 179, '"adequate": ratio >= 10',
+        "config.py", 179, "quality_gauge_ratio_adequate: float = 10.0",
         why="AIAG says 10:1 and ANSI Z540 says 4:1. A plant follows one "
-            "standard, for every gauge it owns."),
+            "standard, for every gauge it owns.",
+        settled=DONE % "gauge_ratio_adequate" + " Its floor is "
+                "`gauge_ratio_floor`, and the two are checked against each "
+                "other so neither can make the other unreachable."),
     Curated(
         "Q7", "quality", "object",
         'A gauge is "due soon" thirty days out',
-        "web/gauges.js", 31, "g.days_until_due <= 30",
+        "domain/gauges.py", 31, "warn_days: Mapped[int] = mapped_column(default=30)",
         why="A quarterly calibration wants fourteen days of warning and an "
             "annual one wants sixty, and both gauges hang in the same "
             "calibration room. It belongs beside the gauge's own interval, "
-            "set by the person who calibrates it."),
+            "set by the person who calibrates it.",
+        settled="Built 2026-09-22: a `warn_days` column on the gauge, thirty "
+                "by default - the number the browser had invented for itself "
+                "at three places on one screen. The server answers `due_soon` "
+                "now, so the floor's definition of the phrase left JavaScript."),
     Curated(
         "Q8", "quality", "plant",
         "Default calibration interval for a new gauge",
-        "services/gauges.py", 59, "interval_days: int = 365",
+        "config.py", 59, "quality_gauge_default_interval_days: int = 365",
         why="The per-gauge interval is already the engineer's. What is "
             "hard-coded is the plant's house default for a gauge nobody has "
-            "set one on yet."),
+            "set one on yet.",
+        settled=DONE % "gauge_default_interval_days" + " The three copies - "
+                "the service, the API schema and the browser's form - became "
+                "one."),
     Curated(
         "Q9", "quality", "object",
         'Which materials are "pieces" on a pallet certificate',
-        "services/coa.py", 277, 'm.startswith("UT-")',
+        "domain/masterdata.py", 277, "counted_in_pieces: Mapped[bool]",
         why="Whether a material is counted in pieces on a certificate is a "
             "fact about that material. Two materials in one plant answer "
             "differently, which is exactly why a prefix test is standing in "
-            "for the flag today."),
+            "for the flag today.",
+        settled="Built 2026-09-22: `materials.counted_in_pieces`, migrated "
+                "true for exactly the materials the `UT-` prefix chose. This "
+                "also closes the first of the three defects section 6 names - "
+                "a plant numbering its pieces any other way got an empty "
+                "capability block and no error."),
     Curated(
         "Q10", "quality", "plant",
         "How many serials a certificate lists before truncating",
-        "services/coa.py", 175, 'data["serials"][:200]',
+        "config.py", 175, "quality_coa_serials_listed: int = 200",
         why="How long a certificate may be is the plant's agreement with the "
             "people who read it, and the plant prints them all the same way.",
         unsure="It could be object. If one customer demands every unit listed "
                "and another does not, the answer sits on the customer or the "
                "material; what would settle it is whether any plant runs two "
-               "certificate agreements at once."),
+               "certificate agreements at once.",
+        settled=DONE % "coa_serials_listed"),
     Curated(
         "Q11", "quality", "plant",
         "The serial number format",
-        "services/serialization.py", 87, 'f"{prefix}-{number:06d}"',
-        why="One label scheme per plant, read by its own scanners."),
+        "config.py", 87, "quality_serial_digits: int = 6",
+        why="One label scheme per plant, read by its own scanners.",
+        settled="Built 2026-09-22 as `[quality] serial_digits`, the width "
+                "only. The separator stays the product's and the row says why: "
+                "`next_serial`'s recovery scan reads `PREFIX-digits` to find "
+                "where a plant's numbering had got to, so a plant that changed "
+                "the hyphen would start again at one over labels already on "
+                "pallets."),
     Curated(
         "Q12", "quality", "plant",
         "The non-conformance code format",
-        "services/quality.py", 158, 'f"NC-{nc.id:05d}"',
-        why="A plant that calls them NCRs calls all of them NCRs."),
+        "config.py", 158, 'quality_nc_code_prefix: str = "NC"',
+        why="A plant that calls them NCRs calls all of them NCRs.",
+        settled=DONE % "nc_code_prefix" + " The width of the number after it "
+                "stays the product's."),
     Curated(
         "Q13", "quality", "plant",
         "How deep a containment tree may go",
@@ -222,7 +279,11 @@ CURATED: tuple[Curated, ...] = (
         why="How deep the plant's own packaging goes - piece, stack, pack, "
             "case, pallet, truck - is one answer per plant, not per shipment. "
             "It doubles as a loop guard, so the plant's key needs a ceiling "
-            "over it."),
+            "over it.",
+        settled=DONE % "containment_max_depth" + " The ceiling is "
+                "`serialization.DEPTH_CEILING`, twelve, and a plant may "
+                "choose how deep its packaging goes without switching off the "
+                "guard."),
 
     # --------------------------------------- manufacturing / process engineering
 

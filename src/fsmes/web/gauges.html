@@ -27,7 +27,8 @@
     <div class="kpi"><span class="kpi-label">Gauges</span><span id="kpi-gauges" class="kpi-value">—</span></div>
     <div class="kpi"><span class="kpi-label">Out of calibration</span><span id="kpi-overdue" class="kpi-value">—</span>
       <span id="kpi-verdict" class="kpi-sub"></span></div>
-    <div class="kpi"><span class="kpi-label">Due within 30 days</span><span id="kpi-soon" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Due soon</span><span id="kpi-soon" class="kpi-value">—</span>
+      <span class="kpi-sub">inside each gauge's own warning window</span></div>
     <div class="kpi"><span class="kpi-label">Out of service</span><span id="kpi-oos" class="kpi-value">—</span></div>
   </section>
 
@@ -41,13 +42,13 @@
         <select id="g-state" aria-label="Calibration state">
           <option value="">Any state</option>
           <option value="overdue">out of calibration</option>
-          <option value="due_soon">due within 30 days</option>
+          <option value="due_soon">due inside its own warning window</option>
           <option value="ok">in calibration</option>
           <option value="off_floor">out of service or lost</option>
         </select>
       </div>
       <div class="table-wrap"><table id="gauges-table" class="row-select">
-        <thead><tr><th>Gauge</th><th>Kind</th><th>Where</th><th>Status</th><th class="num">Resolution</th><th>Last calibrated</th><th>Due</th></tr></thead>
+        <thead><tr><th>Gauge</th><th>Kind</th><th>Where</th><th>Status</th><th class="num">Resolution</th><th>Last calibrated</th><th>Due</th><th class="num">Warns</th></tr></thead>
         <tbody></tbody>
       </table></div>
       <div id="g-pager" class="pager"></div>
@@ -94,11 +95,24 @@
           <input id="reg-code" placeholder="Code (SCALE-01)" required>
           <input id="reg-name" placeholder="Name" required>
           <input id="reg-kind" placeholder="Kind" value="general">
-          <input id="reg-interval" type="number" min="1" value="365" placeholder="Interval (days)">
+          <!-- Blank is the plant's own house interval and warning window, not
+               a number this form decides. It carried a `value="365"` of its
+               own until the plant got the key; a form that pre-fills the
+               product's answer is a third copy of it. -->
+          <input id="reg-interval" type="number" min="1" placeholder="Interval (days)"
+                 aria-label="Interval in days">
+          <input id="reg-warn" type="number" min="0" placeholder="Warn (days before)"
+                 aria-label="Days of warning before it falls due">
           <input id="reg-resolution" type="number" step="any" placeholder="Resolution">
           <input id="reg-location" placeholder="Location">
           <button id="reg-submit">Register</button>
         </div>
+        <p class="muted small">Leave the interval and the warning blank and this gauge
+          takes the plant's own answers — the interval from <code>[quality]
+          gauge_default_interval_days</code>, the warning from the thirty days every
+          gauge starts with. Both are this gauge's own from the moment you give it one:
+          a quarterly calibration wants a fortnight's warning and an annual one wants
+          two months.</p>
       </form>
     </section>
   </main>

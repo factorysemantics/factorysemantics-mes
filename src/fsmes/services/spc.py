@@ -41,12 +41,56 @@ from fsmes.services import NotFound
 # imported so nobody has to go looking for what it means.
 D2_N2 = 1.128
 # Fewest points worth computing limits from. Below this the limits move so
-# much with each new reading that they mislead more than they inform.
+# much with each new reading that they mislead more than they inform. The
+# plant's, since the configuration audit of 2026-09-21 named it - `[quality]
+# spc_min_points`, twelve by default, which is what was here.
 MIN_POINTS = 12
+# How many readings back a chart and the rules look. `[quality] spc_history`,
+# two hundred by default.
+HISTORY = 200
+# Where a process stops being capable, and where it stops being marginal.
+# `[quality] cpk_capable` and `cpk_marginal`. Only the English word beside the
+# figure moves: the Cpk is arithmetic and means the same on every plant.
+CPK_CAPABLE = 1.33
+CPK_MARGINAL = 1.0
+
+
+def _number(name: str, fallback):
+    """One of this plant's quality numbers, read at the moment it is needed.
+
+    Not at import: a plant that changes its pack and restarts gets the new
+    answer without this module having cached the old one, and a test that
+    asks what a different plant would do does not have to reload a module.
+    """
+    from fsmes.config import get_settings
+
+    return getattr(get_settings(), name, fallback)
+
+
+def min_points() -> int:
+    """The fewest readings this plant draws control limits from."""
+    return int(_number("quality_spc_min_points", MIN_POINTS))
+
+
+def history() -> int:
+    """How many readings back this plant's charts and rules look."""
+    return int(_number("quality_spc_history", HISTORY))
+
+
+def cpk_bars() -> tuple[float, float]:
+    """`(capable, marginal)` - where this plant draws the two words.
+
+    Returned together because they are one judgment written as two numbers,
+    and a caller that read one without the other could print *capable* and
+    *not capable* for the same figure.
+    """
+    return (float(_number("quality_cpk_capable", CPK_CAPABLE)),
+            float(_number("quality_cpk_marginal", CPK_MARGINAL)))
 
 
 def _values(session: Session, material: str, characteristic: str,
-            limit: int = 200) -> tuple[QualitySpec, list[QualityCheck]]:
+            limit: int | None = None) -> tuple[QualitySpec, list[QualityCheck]]:
+    limit = history() if limit is None else limit
     mat = session.scalar(select(Material).where(Material.code == material))
     if mat is None:
         raise NotFound(f"no material {material}")
@@ -119,7 +163,7 @@ def capability(values: list[float], lower_spec: float | None, upper_spec: float 
     overall spread from the sample standard deviation. None when there are
     too few readings, no limits, or no variation to divide by; the caller
     says why rather than printing a number nobody should trust."""
-    if len(values) < MIN_POINTS or lower_spec is None or upper_spec is None:
+    if len(values) < min_points() or lower_spec is None or upper_spec is None:
         return None
     centre = sum(values) / len(values)
     moving = [abs(b - a) for a, b in itertools.pairwise(values)]
@@ -142,8 +186,10 @@ def capability(values: list[float], lower_spec: float | None, upper_spec: float 
 
 
 def chart(session: Session, material: str, characteristic: str,
-          limit: int = 200) -> dict:
+          limit: int | None = None) -> dict:
     """An individuals chart with control limits, capability, and what fired."""
+    fewest = min_points()
+    capable, marginal = cpk_bars()
     spec, checks = _values(session, material, characteristic, limit)
     values = [c.value for c in checks]
     stamps = [c.ts for c in checks]
@@ -163,14 +209,23 @@ def chart(session: Session, material: str, characteristic: str,
         # nothing about why is the chart lying by omission (decision 0036).
         "rules": sorted(RULE_WINDOW),
         "hold_rules": list(hold_rules()),
+        "major_rules": list(major_rules()),
+        # The numbers this plant judges by, beside the figures they judge.
+        # The browser used to hold its own copy of the Cpk bar to pick the
+        # verdict's colour, so a plant that moved the bar got a green figure
+        # under a sentence calling it marginal.
+        "min_points": fewest,
+        "history": len(values),
+        "cpk_capable": capable,
+        "cpk_marginal": marginal,
     }
 
-    if len(values) < MIN_POINTS:
+    if len(values) < fewest:
         # Say why rather than draw limits nobody should trust. Control limits
         # from six points move with every reading.
         return {**base, "control": None, "capability": None, "signals": [],
                 "note": f"{len(values)} readings; control limits need at least "
-                        f"{MIN_POINTS} to mean anything"}
+                        f"{fewest} to mean anything"}
 
     centre = sum(values) / len(values)
     moving = [abs(b - a) for a, b in itertools.pairwise(values)]
@@ -260,9 +315,10 @@ def _verdict(stable: bool, capability: dict | None, signals: list[dict]) -> str:
     if capability is None:
         return "in control; capability needs both specification limits to compute"
     cpk = capability["cpk"]
-    if cpk >= 1.33:
+    capable, marginal = cpk_bars()
+    if cpk >= capable:
         return f"in control and capable (Cpk {cpk})"
-    if cpk >= 1.0:
+    if cpk >= marginal:
         return (f"in control but marginal (Cpk {cpk}) - the process fits, with "
                 f"little room for drift")
     return (f"in control but not capable (Cpk {cpk}) - the process is stable "
@@ -280,6 +336,23 @@ RULE_WINDOW = {1: 1, 2: 3, 3: 5, 4: 8}
 #: The pseudo-tag a trigger watches to act on an SPC signal. No PLC publishes
 #: it; the MES raises it. See `fsmes.services.triggers.EVENT_TAGS`.
 SIGNAL_TAG = "spc.signal"
+
+
+#: The two severity codes this product's own SPC path writes. They are the
+#: codes, not the words: a plant renames them on its severity list and every
+#: screen reads its own name for them (`fsmes.services.severities`). Which
+#: *rules* earn the major one is `[quality] major_rules`, which is the
+#: configurable half - a plant that treats a four-of-five trend as major
+#: changes only its own triage queue.
+MAJOR = "major"
+MINOR = "minor"
+
+
+def major_rules() -> tuple[int, ...]:
+    """Which rules open a major non-conformance rather than a minor one."""
+    from fsmes.config import get_settings
+
+    return get_settings().major_rules()
 
 
 def hold_rules() -> tuple[int, ...]:
@@ -321,7 +394,7 @@ def _description(material: str, spec: QualitySpec, signal: dict, control: dict, 
 
 
 def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None,
-             limit: int = 200, actor: str = "spc") -> list[dict]:
+             limit: int | None = None, actor: str = "spc") -> list[dict]:
     """Run the rules over this characteristic's readings and act on what fires.
 
     Called from the write path, so a rule that trips is acted on whether or
@@ -345,9 +418,10 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
 
     checks = list(session.scalars(
         select(QualityCheck).where(QualityCheck.spec_id == spec.id)
-        .order_by(QualityCheck.id.desc()).limit(limit)))
+        .order_by(QualityCheck.id.desc())
+        .limit(history() if limit is None else limit)))
     checks.reverse()
-    if len(checks) < MIN_POINTS:
+    if len(checks) < min_points():
         return []
 
     values = [c.value for c in checks]
@@ -383,6 +457,7 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
     }
 
     holds_on = hold_rules()
+    majors = major_rules()
     raised: list[dict] = []
     for signal in signals:
         key = _window_key(ids, signal["index"], signal["rule"])
@@ -419,7 +494,7 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
             nc = quality.open_nc(
                 session,
                 description=_description(material, spec, signal, control, len(values)),
-                severity="major" if signal["rule"] == 1 else "minor",
+                severity=MAJOR if signal["rule"] in majors else MINOR,
                 work_order_code=_order_code(session, check),
                 actor=actor,
                 evidence={

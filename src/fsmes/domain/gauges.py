@@ -49,6 +49,15 @@ class Gauge(Base):
     # Months between calibrations, and when it was last done.
     interval_days: Mapped[int] = mapped_column(default=365)
     last_calibrated: Mapped[date | None] = mapped_column(Date)
+    # How many days before it falls due this gauge is called *due soon*.
+    #
+    # On the gauge rather than in the plant's settings because a quarterly
+    # calibration wants a fortnight's warning and an annual one wants two
+    # months, and one plant owns both. Thirty is the number the gauges screen
+    # had invented for itself, at three places in one JavaScript file, so
+    # until this column existed the shop floor's definition of *due soon*
+    # lived in the browser and the server did not know it.
+    warn_days: Mapped[int] = mapped_column(default=30)
     # What it can resolve. A gauge whose resolution is a third of the tolerance
     # cannot judge that tolerance, and the check that says so is below.
     resolution: Mapped[float | None] = mapped_column()

@@ -20,6 +20,20 @@ from fsmes.domain import (
 )
 from fsmes.services import Conflict, NotFound, audit, calendar, masterdata, workorders
 
+#: What this plant calls a non-conformance on the record itself. `NC` by
+#: default, giving `NC-00017`, which is what was here before the
+#: configuration audit of 2026-09-21 named it: a plant that calls them NCRs
+#: changes only its own `code` strings, and nothing off-plant is keyed on the
+#: prefix. The width of the number after it stays the product's.
+NC_CODE_PREFIX = "NC"
+
+
+def nc_code_prefix() -> str:
+    from fsmes.config import get_settings
+
+    return str(getattr(get_settings(), "quality_nc_code_prefix", NC_CODE_PREFIX)
+               or NC_CODE_PREFIX)
+
 
 def create_spec(
     session: Session,
@@ -165,7 +179,7 @@ def open_nc(
     calendar.attribute(session, nc, now)
     session.add(nc)
     session.flush()
-    nc.code = f"NC-{nc.id:05d}"
+    nc.code = f"{nc_code_prefix()}-{nc.id:05d}"
     audit.record(
         session,
         actor=actor,

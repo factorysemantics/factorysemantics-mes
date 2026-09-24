@@ -141,15 +141,22 @@ class ConfigSection:
     """The capability that puts a change in force, if this section has an
     approval step. `None` means it takes effect when it is saved."""
 
-    pack_key: str | None = None
-    """The `plant.toml` key this section is, where it is a key rather than a
-    list somebody edits on a screen - `[quality] hold_rules`.
+    pack_keys: tuple[str, ...] = ()
+    """The `plant.toml` keys this section is, where it is keys rather than a
+    list somebody edits on a screen - `("[quality] hold_rules",)`.
 
     Named because the two capability fields cannot say the truth about one:
     nobody drafts it and nobody signs it, it is written in the plant's pack
     and takes effect when the pack is applied and the plant restarts. A page
     that said *anybody who can see this screen* about a key nobody can change
     from a screen would be worse than saying nothing.
+
+    A tuple rather than one name because some judgments are one decision
+    written as two numbers - where a process stops being capable and where it
+    stops being marginal, the gauge rule of ten and its floor - and splitting
+    those into two rows would make the list longer without making it clearer,
+    while naming only one of them would be a half-truth on the screen a person
+    reads to find out what their plant is set to.
     """
 
 
@@ -419,7 +426,95 @@ REGISTRY: tuple[Module, ...] = (
                       "rules on every plant. Which of them open a non-conformance "
                       "is this plant's, and defaults to all four (decision 0036).",
                 href="/dashboard/spc",
-                pack_key="[quality] hold_rules"),
+                pack_keys=("[quality] hold_rules",)),
+            ConfigSection(
+                domain="quality",
+                key="spc_major_rules",
+                label="Which rules are a major finding",
+                about="Which of those rules open a major non-conformance rather "
+                      "than a minor one. Rule 1 alone by default. The two words "
+                      "come from this plant's own severity list.",
+                href="/dashboard/spc",
+                pack_keys=("[quality] major_rules",)),
+            ConfigSection(
+                domain="quality",
+                key="cpk_bars",
+                label="Where a process is called capable",
+                about="The Cpk at or above which this plant says capable, and the "
+                      "one below it for marginal. Only the English word moves - "
+                      "the Cpk itself is arithmetic and means the same everywhere.",
+                href="/dashboard/spc",
+                pack_keys=("[quality] cpk_capable", "[quality] cpk_marginal")),
+            ConfigSection(
+                domain="quality",
+                key="spc_min_points",
+                label="Fewest readings behind a control limit",
+                about="Below this the limits move so much with each new reading "
+                      "that they mislead more than they inform. Twelve by default, "
+                      "and the pallet certificate prints whatever this says.",
+                href="/dashboard/spc",
+                pack_keys=("[quality] spc_min_points",)),
+            ConfigSection(
+                domain="quality",
+                key="spc_history",
+                label="How far back a chart looks",
+                about="A plant inspecting every fifteen minutes and one inspecting "
+                      "hourly want different histories behind one chart.",
+                href="/dashboard/spc",
+                pack_keys=("[quality] spc_history",)),
+            ConfigSection(
+                domain="quality",
+                key="gauge_ratio",
+                label="When a gauge can judge a tolerance",
+                about="The rule of ten and its floor of four. AIAG says 10:1 and "
+                      "ANSI Z540 says 4:1; a plant follows one standard for every "
+                      "gauge it owns.",
+                href="/dashboard/gauges",
+                pack_keys=("[quality] gauge_ratio_adequate", "[quality] gauge_ratio_floor")),
+            ConfigSection(
+                domain="quality",
+                key="gauge_default_interval",
+                label="A new gauge's calibration interval",
+                about="The house default for a gauge nobody gives one. Each "
+                      "gauge's own interval is the engineer's and is unaffected, "
+                      "as is how much warning each gauge wants.",
+                href="/dashboard/gauges",
+                pack_keys=("[quality] gauge_default_interval_days",)),
+            ConfigSection(
+                domain="quality",
+                key="coa_serials_listed",
+                label="Serials printed on a certificate",
+                about="How many serial numbers a pallet certificate lists before "
+                      "it says how many more there are. The plant's agreement "
+                      "with whoever reads the certificate.",
+                href="/dashboard/coa",
+                pack_keys=("[quality] coa_serials_listed",)),
+            ConfigSection(
+                domain="quality",
+                key="serial_digits",
+                label="How a serial number is numbered",
+                about="How many digits a generated serial carries after its "
+                      "prefix. The hyphen between them stays the product's: the "
+                      "scan that recovers a counter reads PREFIX-digits.",
+                href="/dashboard/trace",
+                pack_keys=("[quality] serial_digits",)),
+            ConfigSection(
+                domain="quality",
+                key="nc_code_prefix",
+                label="What a non-conformance is called",
+                about="`NC-00017` by default. A plant that calls them NCRs calls "
+                      "all of them NCRs; the number's width stays the product's.",
+                href="/dashboard/quality",
+                pack_keys=("[quality] nc_code_prefix",)),
+            ConfigSection(
+                domain="quality",
+                key="containment_max_depth",
+                label="How deep the packaging goes",
+                about="Piece, stack, pack, pallet, truck is five. It is also the "
+                      "guard that stops a containment walk running away, so the "
+                      "product keeps a hard ceiling of twelve above it.",
+                href="/dashboard/trace",
+                pack_keys=("[quality] containment_max_depth",)),
         ),
         tools=("fsmes.mcp.quality",),
         tables=("quality_specs", "quality_checks", "non_conformances",

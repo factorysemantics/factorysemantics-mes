@@ -35,6 +35,20 @@ from fsmes.services import Invalid, NotFound, audit, documents, execution, tags,
 PREFIX = "COA-"
 
 
+#: How many serial numbers a pallet certificate prints before it says how
+#: many more there are. `[quality] coa_serials_listed`, two hundred by
+#: default - which is what was here. A certificate that must list every unit
+#: and one that must stay printable are the plant's agreement with whoever
+#: reads it, and neither is the product's business.
+SERIALS_LISTED = 200
+
+
+def serials_listed() -> int:
+    from fsmes.config import get_settings
+
+    return int(getattr(get_settings(), "quality_coa_serials_listed", SERIALS_LISTED))
+
+
 def code_for(order_code: str) -> str:
     return f"{PREFIX}{order_code}"
 
@@ -172,10 +186,11 @@ def render(data: dict, *, issued_by: str, issued_at: datetime, revision: int, su
         lines.append("No process history covers this order's window.")
     if data["serials"]:
         lines += ["", "## Serialised units", "", "| Serial | Status | Packed into |", "|---|---|---|"]
-        for s in data["serials"][:200]:
+        listed = serials_listed()
+        for s in data["serials"][:listed]:
             lines.append(f"| {s['serial']} | {s['status']} | {s['packed_into'] or '—'} |")
-        if len(data["serials"]) > 200:
-            lines.append(f"| … {len(data['serials']) - 200} more | | |")
+        if len(data["serials"]) > listed:
+            lines.append(f"| … {len(data['serials']) - listed} more | | |")
     lines += ["", "---", "",
               "Every figure above is read from the MES's own records: bookings from machine counters, "
               "lots issued at stations, checks recorded against specifications, and tag history. "
@@ -272,9 +287,17 @@ def gather_pallet(session: Session, serial: str) -> dict:
     # process's record of itself up to the pallet's close. A pallet is made
     # in minutes and a check is recorded every fifteen, so the window alone
     # rarely holds the sample a capability figure needs; the record extends
-    # back to the most recent MIN_POINTS checks at or before the close, and
-    # the certificate states the span those checks cover.
-    piece_materials = sorted({m for m, n in tree["by_material"].items() if m.startswith("UT-")})
+    # back to the most recent `[quality] spc_min_points` checks at or before
+    # the close, and the certificate states the span those checks cover.
+    fewest = spc.min_points()
+    # Which of the materials on this pallet are counted in pieces. A fact
+    # about the material, recorded on it, since the configuration audit of
+    # 2026-09-21 found this line testing a code prefix: any plant not
+    # numbering its pieces `UT-*` got an empty capability block and no error.
+    piece_materials = sorted(
+        m for m in tree["by_material"]
+        if session.scalar(select(Material.counted_in_pieces)
+                          .where(Material.code == m)) is True)
     characteristics = []
     for material in piece_materials:
         mat = session.scalar(select(Material).where(Material.code == material))
@@ -286,10 +309,10 @@ def gather_pallet(session: Session, serial: str) -> dict:
                                            QualityCheck.ts >= window[0], QualityCheck.ts <= window[1])
                 .order_by(QualityCheck.ts)).all()
             checks = in_window
-            if len(checks) < spc.MIN_POINTS:
+            if len(checks) < fewest:
                 recent = session.scalars(
                     select(QualityCheck).where(QualityCheck.spec_id == spec.id, QualityCheck.ts <= window[1])
-                    .order_by(QualityCheck.ts.desc()).limit(spc.MIN_POINTS)).all()
+                    .order_by(QualityCheck.ts.desc()).limit(fewest)).all()
                 checks = sorted(recent, key=lambda c: c.ts)
             values = [c.value for c in checks]
             cap = spc.capability(values, spec.min_value, spec.max_value)
@@ -305,7 +328,7 @@ def gather_pallet(session: Session, serial: str) -> dict:
                 "cpk": cap["cpk"] if cap else None, "cp": cap["cp"] if cap else None,
                 "ppk": cap["ppk"] if cap else None, "stable": cap["stable"] if cap else None,
                 "note": None if cap else (f"{len(values)} checks on record; capability needs "
-                                         f"{spc.MIN_POINTS} and both limits"),
+                                         f"{fewest} and both limits"),
             })
 
     # The automated inspections of everything on the pallet: judged, and how many failed.
@@ -334,6 +357,8 @@ def gather_pallet(session: Session, serial: str) -> dict:
 def render_pallet(data: dict, *, issued_by: str, issued_at: datetime, revision: int, supersedes: int | None) -> str:
     """The pallet certificate as Markdown: the capability block, then every
     wrap with its stack, plate and pieces."""
+    from fsmes.services import spc
+
     w = data["window"]
     lines = [
         f"# Certificate of analysis — pallet {data['pallet']}",
@@ -377,7 +402,8 @@ def render_pallet(data: dict, *, issued_by: str, issued_at: datetime, revision: 
     lines += ["", "---", "",
               "The capability figures are computed from the checks a person recorded against each "
               "specification up to the pallet's close: those inside the window the contents were made, "
-              "extended back to the most recent twelve where the window holds fewer, with the span stated; "
+              f"extended back to the most recent {spc.min_points()} where the window holds fewer, "
+              "with the span stated; "
               "sigma from the mean moving range, as the SPC chart computes it. "
               "The contents are read from the containment record "
               "at issue, and every unit named was judged by its station's vision system. This revision "

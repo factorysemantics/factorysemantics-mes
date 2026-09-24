@@ -28,7 +28,10 @@ function fail(error) {
 function statusPill(g) {
   if (g.status === "out_of_service" || g.status === "lost") return el("span", "pill down", g.status.replace("_", " "));
   if (g.overdue) return el("span", "pill down", g.never_calibrated ? "never calibrated" : "overdue");
-  if (g.days_until_due !== null && g.days_until_due <= 30) return el("span", "pill idle", `due in ${g.days_until_due} d`);
+  // The server decides "due soon", from this gauge's own warning window.
+  // This file used to hold its own thirty, three times, which meant the
+  // shop floor's definition of the phrase lived in JavaScript.
+  if (g.due_soon) return el("span", "pill idle", `due in ${g.days_until_due} d`);
   return el("span", "pill running", "in calibration");
 }
 
@@ -38,7 +41,7 @@ let gaugeOffset = 0;
 function gaugeState(g) {
   if (["out_of_service", "lost"].includes(g.status)) return "off_floor";
   if (g.overdue) return "overdue";
-  if (g.days_until_due !== null && g.days_until_due <= 30) return "due_soon";
+  if (g.due_soon) return "due_soon";
   return "ok";
 }
 
@@ -60,7 +63,7 @@ function drawRegister() {
   const body = $("#gauges-table tbody");
   body.replaceChildren();
   if (!page.items.length) {
-    const tr = el("tr"); const td = el("td", "muted", register.gauges.length ? "No gauge matches." : "No gauges registered."); td.colSpan = 7; tr.append(td); body.append(tr);
+    const tr = el("tr"); const td = el("td", "muted", register.gauges.length ? "No gauge matches." : "No gauges registered."); td.colSpan = 8; tr.append(td); body.append(tr);
   }
   for (const g of page.items) {
     const tr = el("tr", g.code === selected ? "selected" : null);
@@ -69,6 +72,11 @@ function drawRegister() {
     tr.append(el("td", "num", g.resolution === null ? "—" : String(g.resolution)));
     tr.append(el("td", "muted small", g.last_calibrated || "never"));
     tr.append(el("td", "muted small", g.due_on || "—"));
+    // This gauge's own warning window, so a person can see why one reads
+    // "due soon" a fortnight out and another reads it two months out.
+    const warns = el("td", "num", `${g.warn_days} d`);
+    warns.title = `${g.code} is called due soon ${g.warn_days} days before it falls due`;
+    tr.append(warns);
     tr.addEventListener("click", () => { selected = g.code; loadImpact().catch(fail); drawRegister(); });
     body.append(tr);
   }
@@ -77,7 +85,7 @@ function drawRegister() {
   $("#kpi-gauges").textContent = register.gauges.length;
   $("#kpi-overdue").textContent = register.overdue;
   $("#kpi-verdict").textContent = register.verdict;
-  $("#kpi-soon").textContent = register.gauges.filter((g) => !g.overdue && g.days_until_due !== null && g.days_until_due <= 30).length;
+  $("#kpi-soon").textContent = register.due_soon;
   $("#kpi-oos").textContent = register.gauges.filter((g) => ["out_of_service", "lost"].includes(g.status)).length;
   const select = $("#cal-gauge");
   const keep = select.value;
@@ -119,7 +127,10 @@ function wire() {
     try {
       const out = await api("/quality/gauges", { method: "POST", body: {
         code: $("#reg-code").value.trim().toUpperCase(), name: $("#reg-name").value.trim(),
-        kind: $("#reg-kind").value.trim() || "general", interval_days: Number($("#reg-interval").value || 365),
+        kind: $("#reg-kind").value.trim() || "general",
+        // Blank is the plant's house interval, not a number typed here.
+        interval_days: $("#reg-interval").value ? Number($("#reg-interval").value) : null,
+        warn_days: $("#reg-warn").value ? Number($("#reg-warn").value) : null,
         resolution: $("#reg-resolution").value ? Number($("#reg-resolution").value) : null,
         location: $("#reg-location").value.trim() || null } });
       toast(`${out.code} registered`);

@@ -15,6 +15,27 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from fsmes import modules as module_registry
 
 
+def _rule_list(written: str) -> tuple[int, ...]:
+    """A comma list of Western Electric rule numbers, as the four they can be.
+
+    Parsed rather than trusted: anything that is not one of the four rule
+    numbers is dropped, because the alternative is a plant refusing to start
+    over a typo in a list that only ever narrows a set. `fsmes pack check` is
+    where a person is told about the typo, offline, and the chart payload
+    states what was actually parsed so nobody has to guess which reading
+    applied.
+    """
+    rules: list[int] = []
+    for part in (written or "").split(","):
+        part = part.strip()
+        if not part.isdigit():
+            continue
+        rule = int(part)
+        if rule in (1, 2, 3, 4) and rule not in rules:
+            rules.append(rule)
+    return tuple(sorted(rules))
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="MES_", env_file=".env", extra="ignore")
 
@@ -320,6 +341,65 @@ class Settings(BaseSettings):
     # hold on this plant whatever this holds.
     quality_hold_rules: str = "1,2,3,4"
 
+    # --- This plant's own quality numbers (fsmes.services.spc, .gauges,
+    # --- .coa, .serialization, .quality) ---------------------------------
+    # Every one of these is a judgment that was a literal in the source until
+    # the configuration audit of 2026-09-21 named it, and **every default
+    # below is the literal that was there**, so a plant that writes none of
+    # them behaves exactly as it did. They arrive as `[quality]` keys in
+    # plant.toml; `fsmes pack check` validates their ranges and the two pairs
+    # that have to stay in order.
+    #
+    # What is not here, deliberately: the Western Electric rule numbers and
+    # their windows, the four dispositions, and the arithmetic behind Cp, Cpk
+    # and Pp. Those are the product's, because a plant that changed one would
+    # publish a figure meaning something nobody else means by it.
+
+    # Which rules open a *major* non-conformance rather than a minor one. The
+    # two words themselves come from the plant's severity vocabulary; this is
+    # which rule earns which.
+    quality_major_rules: str = "1"
+
+    # The Cpk at which a process is called capable, and the one below it at
+    # which it is called marginal. Only the English word beside the figure
+    # moves: the Cpk is arithmetic and is the same number on every plant.
+    quality_cpk_capable: float = 1.33
+    quality_cpk_marginal: float = 1.0
+
+    # The fewest readings control limits are drawn from, and how far back a
+    # chart and the rules look.
+    quality_spc_min_points: int = 12
+    quality_spc_history: int = 200
+
+    # The gauge rule of ten and its floor of four. AIAG says 10:1, ANSI Z540
+    # says 4:1, and a plant follows one standard for every gauge it owns.
+    quality_gauge_ratio_adequate: float = 10.0
+    quality_gauge_ratio_floor: float = 4.0
+
+    # The interval a newly registered gauge gets when nobody says otherwise.
+    # Each gauge's own interval is the engineer's and is untouched by this.
+    quality_gauge_default_interval_days: int = 365
+
+    # How many serials a pallet certificate prints before it says how many
+    # more there are.
+    quality_coa_serials_listed: int = 200
+
+    # How many digits a generated serial carries after its prefix. The hyphen
+    # between them stays the product's: `next_serial`'s recovery scan reads
+    # `PREFIX-digits` to find where a plant's own numbering had got to, and a
+    # plant that changed the separator would restart from one over serials it
+    # had already issued.
+    quality_serial_digits: int = 6
+
+    # What this plant calls a non-conformance on the record. The width of the
+    # number after it stays the product's.
+    quality_nc_code_prefix: str = "NC"
+
+    # How deep a containment tree may go. It is also the guard that stops a
+    # walk running away, so the product keeps a hard ceiling above it -
+    # `fsmes.services.serialization.DEPTH_CEILING`.
+    quality_containment_max_depth: int = 6
+
     # --- The judgment model (fsmes.integrations.jev) ----------------------
     # A hosted model that answers fixed, typed questions about state it is
     # given and writes no text. Used in the development build loop only: the
@@ -385,25 +465,14 @@ class Settings(BaseSettings):
         module_registry.resolve(self.modules)
         return self
 
-    def hold_rules(self) -> tuple[int, ...]:
-        """Which SPC rules raise a quality hold on this plant, in order.
+    def major_rules(self) -> tuple[int, ...]:
+        """Which SPC rules open a major non-conformance rather than a minor
+        one. Parsed the same way `hold_rules` is, and for the same reason."""
+        return _rule_list(self.quality_major_rules)
 
-        Parsed rather than trusted: anything that is not one of the four rule
-        numbers is dropped, because the alternative is a plant refusing to
-        start over a typo in a list that only ever narrows a set. `fsmes pack
-        check` is where a person is told about the typo, offline, and the
-        `/quality/spc/...` payload states what was actually parsed so nobody
-        has to guess which reading applied.
-        """
-        rules: list[int] = []
-        for part in (self.quality_hold_rules or "").split(","):
-            part = part.strip()
-            if not part.isdigit():
-                continue
-            rule = int(part)
-            if rule in (1, 2, 3, 4) and rule not in rules:
-                rules.append(rule)
-        return tuple(sorted(rules))
+    def hold_rules(self) -> tuple[int, ...]:
+        """Which SPC rules raise a quality hold on this plant, in order."""
+        return _rule_list(self.quality_hold_rules)
 
     def enabled_modules(self) -> tuple[module_registry.Module, ...]:
         """The modules this plant serves, in registry order."""
