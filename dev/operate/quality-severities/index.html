@@ -16,7 +16,7 @@
         <link rel="prev" href="../who-names-the-reasons/">
       
       
-        <link rel="next" href="../packs/">
+        <link rel="next" href="../quality-numbers/">
       
       
         
@@ -1192,6 +1192,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quality-numbers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — this plant's own quality numbers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -3907,9 +3935,10 @@ draft → approve like everything else.</p>
 <li><strong>It does not decide which rules raise a hold.</strong> That is
   <a href="../../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/">decision 0036</a>
   and <code>[quality] hold_rules</code>, listed on the same Configuration page.</li>
-<li><strong>It does not choose the severity an SPC rule writes.</strong> Rule 1 writes
-  <code>major</code> and the rest write <code>minor</code>, which is what the source does today.
-  Making that the plant's is the audit's <strong>Q2</strong>, and it is a separate change.</li>
+<li><strong>It does not decide which rule is a major finding.</strong> Which SPC rules open
+  a major non-conformance rather than a minor one is <code>[quality] major_rules</code>
+  — rule 1 alone by default, which is what the source does. See
+  <a href="../quality-numbers/">this plant's own quality numbers</a>.</li>
 <li><strong>There is no severity input on any screen.</strong> There never has been: nothing
   in this product has ever offered a person a severity to pick. The places a
   severity is written are the two product code paths above and a trigger's
@@ -3921,6 +3950,8 @@ draft → approve like everything else.</p>
 <li><a href="../who-names-the-reasons/">Who names the reasons</a> — the first vocabulary,
   and the same loop</li>
 <li><a href="../packs/">Plant packs</a> — shipping a severity list with a plant</li>
+<li><a href="../quality-numbers/">This plant's own quality numbers</a> — the numbers, as
+  opposed to the words</li>
 <li><a href="../../design/config-assistance/">Configuration is authored by roles</a>, and
   <a href="../../decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators/">decision 0035</a></li>
 <li><a href="../../design/config-audit-2026-09-21/">What is still hard-coded</a> — where
@@ -3980,13 +4011,13 @@ draft → approve like everything else.</p>
         
         
           
-          <a href="../packs/" class="md-footer__link md-footer__link--next" aria-label="Next: Reference — plant packs">
+          <a href="../quality-numbers/" class="md-footer__link md-footer__link--next" aria-label="Next: Reference — this plant&#39;s own quality numbers">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Reference — plant packs
+                Reference — this plant's own quality numbers
               </div>
             </div>
             <div class="md-footer__button md-icon">

@@ -21,6 +21,7 @@
 - [Operate — Explanation — how much of the window did the MES see](https://docs.factorysemantics.com/dev/operate/coverage/)
 - [Operate — How-to — who names the downtime reasons](https://docs.factorysemantics.com/dev/operate/who-names-the-reasons/)
 - [Operate — How-to — who names the severities](https://docs.factorysemantics.com/dev/operate/quality-severities/)
+- [Operate — Reference — this plant's own quality numbers](https://docs.factorysemantics.com/dev/operate/quality-numbers/)
 - [Operate — Reference — plant packs](https://docs.factorysemantics.com/dev/operate/packs/)
 - [Operate — How-to — plants from a fleet file](https://docs.factorysemantics.com/dev/operate/registry/)
 - [Operate — How-to — the fleet this installation owns](https://docs.factorysemantics.com/dev/operate/fleet/)
