@@ -2250,6 +2250,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#and-the-assistant-already-has-it-do-not-write-a-tool-per-domain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        And the assistant already has it — do not write a tool per domain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#what-is-still-the-packs" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4170,6 +4181,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#and-the-assistant-already-has-it-do-not-write-a-tool-per-domain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        And the assistant already has it — do not write a tool per domain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#what-is-still-the-packs" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5185,6 +5207,26 @@ sitting beside them on the same page, which keeps its full draft → approve →
 supersede → retire lifecycle: its words are written <em>onto records that outlive
 it</em>. <strong>A setting is editable here when nothing stores the value it had at the
 moment it decided something.</strong> That is the test to apply to the next one.</p>
+<h3 id="and-the-assistant-already-has-it-do-not-write-a-tool-per-domain">And the assistant already has it — do not write a tool per domain<a class="headerlink" href="#and-the-assistant-already-has-it-do-not-write-a-tool-per-domain" title="Permanent link">&para;</a></h3>
+<p>There are <strong>two</strong> agent tools for every live setting there will ever be, and
+they landed with the mechanism above: <code>plant_settings(plant, domain)</code> reads a
+whole workspace, and <code>write_plant_setting(plant, domain, key, value)</code> puts one
+value in force through the same <code>PATCH</code> a person's Save uses. Both read the
+registry rather than a list of their own, so the two steps at the top of this
+section are still the whole opt-in: <strong>a section that becomes live is reachable
+through the assistant with no tool written for it.</strong></p>
+<p>So the drafting story for a live setting is this tool, not a new one. Nobody
+should add another file under <code>src/fsmes/mcp/</code> for the next domain's numbers —
+the reason <code>write_plant_setting</code> is not in <code>agent.NEEDS</code> is exactly that no
+single capability gates it: it is the owning section's <code>define</code>, read per call
+from the registry (<code>agent.PER_CALL_NEEDS</code> carries the reason in the source).</p>
+<p>The card a person sees is <code>propose_adjustment</code>'s, not <code>draft_nc_severity</code>'s,
+for the reason the section above gives: there is no draft state to sign, so
+the proposal waits for a click rather than for an approver. <strong>Show me</strong> walks
+to the owning workspace's Configuration page with the box filled in
+(<code>?setting=&lt;key&gt;</code>) and ends on Save; <strong>Do it</strong> writes it and then walks back to
+the same box to show the value in force. There is no approve capability
+anywhere near either tool, and there is nothing for one to do.</p>
 <h3 id="what-is-still-the-packs">What is still the pack's<a class="headerlink" href="#what-is-still-the-packs" title="Permanent link">&para;</a></h3>
 <p><code>fsmes pack apply</code> seeds a key once and never updates it, exactly as it treats
 every masterdata kind. So a pack file is how a <em>new</em> plant starts and not how
