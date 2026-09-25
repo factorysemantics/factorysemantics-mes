@@ -1162,13 +1162,41 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#where-to-see-what-this-plant-is-set-to" class="md-nav__link">
+  <a href="#editing-a-plants-own-quality-numbers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Where to see what this plant is set to
+        Editing a plant's own quality numbers
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Editing a plant&#39;s own quality numbers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-pack-still-does-and-what-it-no-longer-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the pack still does, and what it no longer does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-the-value-lives-and-what-the-screen-can-honestly-say" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the value lives, and what the screen can honestly say
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -3683,13 +3711,41 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#where-to-see-what-this-plant-is-set-to" class="md-nav__link">
+  <a href="#editing-a-plants-own-quality-numbers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Where to see what this plant is set to
+        Editing a plant's own quality numbers
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Editing a plant&#39;s own quality numbers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-pack-still-does-and-what-it-no-longer-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the pack still does, and what it no longer does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-the-value-lives-and-what-the-screen-can-honestly-say" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where the value lives, and what the screen can honestly say
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -3737,9 +3793,11 @@ packaging goes. Each one was a judgment somebody made once, and most of them
 had a comment beside them arguing for the number rather than stating it —
 which is what a judgment call sounds like before anybody calls it
 configuration.</p>
-<p>They are this plant's now. They live in <code>[quality]</code> in the plant pack, they
-are listed on <strong>Quality › Configuration</strong> with the value the plant is
-actually running on, and they follow one rule above all the others:</p>
+<p>They are this plant's now. They are seeded from <code>[quality]</code> in the plant pack,
+owned by the plant's database from then on, and <strong>edited on Quality ›
+Configuration</strong> by somebody holding <code>quality.define</code> — with the value the
+plant is actually running on beside each one. They follow one rule above all
+the others:</p>
 <blockquote>
 <p><strong>The literal that was in the source is the shipped default, unchanged.</strong>
 A plant that writes none of these keys behaves exactly as it did.</p>
@@ -3833,7 +3891,9 @@ and the second one needs its own argument.</p>
 <span class="n">gauge_ratio_adequate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span>
 <span class="n">gauge_ratio_floor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span>
 </code></pre></div>
-<p><code>fsmes pack check</code> reads every one of them offline. It refuses a number that
+<p><code>fsmes pack check</code> reads every one of them offline, and <strong>the Configuration
+page refuses the same values in the same sentences</strong> — one wording for one
+rule, so a screen cannot accept what a pack file cannot hold. It refuses a number that
 would leave the thing it decides unable to decide anything — control limits
 from one reading, a serial with no digits, a Cpk bar that makes <em>marginal</em>
 unreachable — and it refuses nothing else. A plant that wants twenty-five
@@ -3883,15 +3943,63 @@ capability block on every pallet certificate and <strong>no error anywhere</stro
 migration sets the flag true for exactly the materials that prefix chose, so
 nothing about an existing plant's certificates changes — it is the same
 answer, given honestly by a flag instead of guessed from a name.</p>
-<h2 id="where-to-see-what-this-plant-is-set-to">Where to see what this plant is set to<a class="headerlink" href="#where-to-see-what-this-plant-is-set-to" title="Permanent link">&para;</a></h2>
+<h2 id="editing-a-plants-own-quality-numbers">Editing a plant's own quality numbers<a class="headerlink" href="#editing-a-plants-own-quality-numbers" title="Permanent link">&para;</a></h2>
 <p><strong>Quality › Configuration</strong> (<code>/dashboard/config/quality</code>) lists every section
 with its keys, the value this plant is running on, and whether that value is
-the product's default or one the plant set.</p>
-<p>It says only those two things, and that is not laziness. By the time a plant
-is serving, a pack key <strong>is</strong> an environment variable — <code>fsmes pack apply</code>
-compiled it and the file it came from is not recorded anywhere the running
-process can see. Naming a pack on that screen would be a guess, and the
-screen exists so nobody has to guess what their plant is set to.</p>
+the product's default or one the plant set. Eleven of its twelve sections are
+these numbers, and each one is a box you type in.</p>
+<ol>
+<li>Open <strong>Quality › Configuration</strong>. Each row's <strong>Set to</strong> column holds one
+   box per key, with the key's name beside it.</li>
+<li>Type the new value and press <strong>Save</strong>. There is one Save per row, because
+   the Cpk bars and the gauge ratios are each <em>one judgment written as two
+   numbers</em> — a screen that saved half of one would make <em>marginal</em>
+   unreachable until you had typed the other half.</li>
+<li>It is in force at once. No approval step, no restart, and no pack to
+   re-apply: the next chart drawn, the next serial issued and the next
+   certificate printed read the new number.</li>
+</ol>
+<p>You need the <strong><code>quality.define</code></strong> capability, which the built-in Administrator
+and Agent roles hold. Without it the page shows you every value and no box:
+a number nobody can read is a number nobody can argue with, and the reading is
+open to anybody who may see the plant.</p>
+<p>Every change is written to the audit trail — who, when, what it was and what
+it became. <strong>Undo is typing the old number back.</strong> There is deliberately no
+revision history here, because nothing in this MES records <em>the Cpk bar that
+was in force when I was judged</em>: a non-conformance stores its severity, and a
+chart is drawn fresh every time. That is the difference between these numbers
+and <a href="../quality-severities/">the severity vocabulary</a>, which does have a
+draft → approve lifecycle, because the words it holds are written onto records
+that outlive it.</p>
+<h3 id="what-the-pack-still-does-and-what-it-no-longer-does">What the pack still does, and what it no longer does<a class="headerlink" href="#what-the-pack-still-does-and-what-it-no-longer-does" title="Permanent link">&para;</a></h3>
+<p><code>fsmes pack apply</code> <strong>seeds</strong> each key the pack carries, once. After that the
+database owns it, and a later apply leaves it exactly as it is — the same rule
+every other kind a pack seeds already keeps, and for the same reason: a pack
+that reached back into a number somebody deliberately changed on a running
+plant would be the pack overruling the plant.</p>
+<p>So editing <code>plant.toml</code> and re-applying does <strong>not</strong> move a number this plant
+has already taken ownership of. If that is what you want, change it on the
+screen; the pack file is how a <em>new</em> plant starts, not how a running one is
+steered. <code>fsmes pack status</code> reports the difference.</p>
+<h3 id="where-the-value-lives-and-what-the-screen-can-honestly-say">Where the value lives, and what the screen can honestly say<a class="headerlink" href="#where-the-value-lives-and-what-the-screen-can-honestly-say" title="Permanent link">&para;</a></h3>
+<p>The screen has two answers about any key — <strong>the product's default,
+unchanged</strong> or <strong>this plant set it</strong> — and it says only those two. A row
+written by <code>fsmes pack apply</code> is the second of them, because the plant did set
+it, in its pack; naming <em>which</em> pack would be a guess, since by the time a
+plant is serving the file it was built from is not recorded anywhere the
+running process can see.</p>
+<p>Underneath, a number is read in three layers, in this order:</p>
+<ol>
+<li>the row in this plant's <code>plant_settings</code> table — what its administrator or
+   its pack wrote;</li>
+<li>the setting the pack compiled into the environment (<code>MES_QUALITY_*</code>);</li>
+<li>the literal this version of the product ships.</li>
+</ol>
+<p>Which is why <strong>a plant that has never touched the page and never applied a
+pack behaves exactly as it did before any of this existed</strong> — and why
+upgrading to this version moves no data: a plant already running on
+<code>spc_min_points = 25</code> from its pack keeps drawing limits from twenty-five
+readings through layer two, with an empty table.</p>
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../packs/">Plant packs</a> — where these keys live</li>

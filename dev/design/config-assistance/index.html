@@ -2204,6 +2204,67 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#11-how-a-plant-scope-setting-becomes-editable-built-2026-09-24" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. How a plant-scope setting becomes editable — built 2026-09-24
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11. How a plant-scope setting becomes editable — built 2026-09-24">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-a-future-section-has-to-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a future section has to do
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-mechanism-in-four-sentences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The mechanism, in four sentences
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-there-is-no-approval-step" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why there is no approval step
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-is-still-the-packs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is still the pack's
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -4063,6 +4124,67 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#11-how-a-plant-scope-setting-becomes-editable-built-2026-09-24" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. How a plant-scope setting becomes editable — built 2026-09-24
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11. How a plant-scope setting becomes editable — built 2026-09-24">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-a-future-section-has-to-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a future section has to do
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-mechanism-in-four-sentences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The mechanism, in four sentences
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-there-is-no-approval-step" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why there is no approval step
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-is-still-the-packs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is still the pack's
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -5000,6 +5122,76 @@ stays true and is now scoped to the chart, which is what it was always about;
 <em>windows</em> — 2-of-3, 4-of-5, 8-in-a-row — are tier three either way: a plant
 that changed them would publish <code>SpcSignal.rule = 3</code> while meaning something
 nobody else means by rule 3.</p>
+<hr />
+<h2 id="11-how-a-plant-scope-setting-becomes-editable-built-2026-09-24">11. How a plant-scope setting becomes editable — built 2026-09-24<a class="headerlink" href="#11-how-a-plant-scope-setting-becomes-editable-built-2026-09-24" title="Permanent link">&para;</a></h2>
+<p>§3 said tier one is <strong>seeded by the pack and owned by the database</strong>, and
+named <code>shifts</code> as the shape that already worked. §10's audit then turned
+thirteen <code>[quality]</code> literals into pack keys (#98) — compiled into
+environment variables and read from there, which made each of them a row on
+Quality's Configuration page saying <em>nobody — it changes when the pack is
+applied and the plant restarts.</em></p>
+<p>Scott clicked one on 2026-09-24 and asked the obvious question: <em>"when I click
+on stuff, it doesn't seem to take me to where I can actually make those
+changes. Shouldn't it?"</em> He was right, and the honest answer was that #98 had
+taken the fallback its handoff allowed. So the second half was built, and
+built <strong>generically</strong>, because Process, Controls and Supply chain each have
+the same gap waiting for them.</p>
+<h3 id="what-a-future-section-has-to-do">What a future section has to do<a class="headerlink" href="#what-a-future-section-has-to-do" title="Permanent link">&para;</a></h3>
+<p>Two things, and nothing else.</p>
+<ol>
+<li><strong>Set <code>edit_here=True</code> on its <code>ConfigSection</code></strong> in <code>fsmes/modules.py</code>.</li>
+<li><strong>Name the capability in that section's <code>define</code></strong>, and leave <code>approve</code>
+   as <code>None</code>.</li>
+</ol>
+<p>That is the whole opt-in. No table of its own, no endpoint of its own, no
+migration, no <code>KINDS</code> entry, no JavaScript. The page renders an input per key,
+<code>PATCH /dashboard/config/{domain}/settings/{key}</code> accepts it gated on that
+section's own <code>define</code>, and <code>fsmes pack apply</code> seeds it.</p>
+<p>A section that sets <code>edit_here</code> and names no <code>define</code> is refused by
+<code>test_live_plant_settings.py</code>, because <em>anybody who can see this screen may
+change this number</em> is exactly what <code>pack_keys</code> was invented to avoid saying.</p>
+<h3 id="the-mechanism-in-four-sentences">The mechanism, in four sentences<a class="headerlink" href="#the-mechanism-in-four-sentences" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong><code>plant_settings</code></strong> holds one row per setting a plant owns, keyed by the
+  pack's own <code>[section] key</code> and holding its value as text — the same string
+  the compiled setting would have carried, so the database and the environment
+  hold a value in the same shape. It belongs to the <code>dashboard</code> module, which
+  is kernel: a plant that switches Quality off keeps the numbers it chose.</li>
+<li><strong>Three layers</strong>, read in this order: the row, the setting the pack
+  compiled, the literal the product ships. So <em>a plant that configures nothing
+  behaves exactly as it did</em>, and the migration that added the table moves no
+  data — which is also why it does not try to read a plant's pack file from
+  inside a migration, something a migration cannot honestly do.</li>
+<li><strong>Read through the caller's session</strong>, memoised on <code>session.info</code> the way
+  <code>services/calendar</code> keeps shift patterns out of a hot loop. One query per
+  section per unit of work, no process cache and no refresh interval: a number
+  saved is in force on the next reading, in every process, with no restart.</li>
+<li><strong>Validated by <code>fsmes pack check</code>'s own rules</strong>, called on the table with
+  the one value changed — which is what lets <code>cpk_marginal</code> be judged against
+  the <code>cpk_capable</code> this plant is actually running on rather than against the
+  product's default. One wording for one rule, whichever door the value came
+  in by.</li>
+</ul>
+<h3 id="why-there-is-no-approval-step">Why there is no approval step<a class="headerlink" href="#why-there-is-no-approval-step" title="Permanent link">&para;</a></h3>
+<p>Rule three of this design, restated because this is the first thing built
+squarely on it: <em>a number a plant administrator edits and which takes effect
+when saved has no pending state.</em> Nothing in this MES records <strong>the Cpk bar
+that was in force when I was judged</strong> — a non-conformance stores its severity,
+and a chart is drawn fresh every time — so there is nothing for a revision to
+protect and nothing for an approver to sign. Undo is typing the old number
+back, and the audit row says what it was.</p>
+<p>That is the line between these eleven sections and the severity vocabulary
+sitting beside them on the same page, which keeps its full draft → approve →
+supersede → retire lifecycle: its words are written <em>onto records that outlive
+it</em>. <strong>A setting is editable here when nothing stores the value it had at the
+moment it decided something.</strong> That is the test to apply to the next one.</p>
+<h3 id="what-is-still-the-packs">What is still the pack's<a class="headerlink" href="#what-is-still-the-packs" title="Permanent link">&para;</a></h3>
+<p><code>fsmes pack apply</code> seeds a key once and never updates it, exactly as it treats
+every masterdata kind. So a pack file is how a <em>new</em> plant starts and not how
+a running one is steered, and editing <code>plant.toml</code> and re-applying does not
+move a number the plant has taken ownership of. <code>fsmes pack status</code> reports
+the difference rather than resolving it, which is the same answer decision
+0022 gave about a routing an order has already run against.</p>
 
 
 
