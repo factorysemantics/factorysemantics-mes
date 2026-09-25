@@ -888,6 +888,30 @@ supersede → retire lifecycle: its words are written *onto records that outlive
 it*. **A setting is editable here when nothing stores the value it had at the
 moment it decided something.** That is the test to apply to the next one.
 
+### And the assistant already has it — do not write a tool per domain
+
+There are **two** agent tools for every live setting there will ever be, and
+they landed with the mechanism above: `plant_settings(plant, domain)` reads a
+whole workspace, and `write_plant_setting(plant, domain, key, value)` puts one
+value in force through the same `PATCH` a person's Save uses. Both read the
+registry rather than a list of their own, so the two steps at the top of this
+section are still the whole opt-in: **a section that becomes live is reachable
+through the assistant with no tool written for it.**
+
+So the drafting story for a live setting is this tool, not a new one. Nobody
+should add another file under `src/fsmes/mcp/` for the next domain's numbers —
+the reason `write_plant_setting` is not in `agent.NEEDS` is exactly that no
+single capability gates it: it is the owning section's `define`, read per call
+from the registry (`agent.PER_CALL_NEEDS` carries the reason in the source).
+
+The card a person sees is `propose_adjustment`'s, not `draft_nc_severity`'s,
+for the reason the section above gives: there is no draft state to sign, so
+the proposal waits for a click rather than for an approver. **Show me** walks
+to the owning workspace's Configuration page with the box filled in
+(`?setting=<key>`) and ends on Save; **Do it** writes it and then walks back to
+the same box to show the value in force. There is no approve capability
+anywhere near either tool, and there is nothing for one to do.
+
 ### What is still the pack's
 
 `fsmes pack apply` seeds a key once and never updates it, exactly as it treats
