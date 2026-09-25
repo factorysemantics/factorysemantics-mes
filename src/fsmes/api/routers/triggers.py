@@ -20,7 +20,11 @@ class TriggerIn(BaseModel):
     threshold: float
     equipment: str | None = None
     sustained_seconds: float = 0.0
-    cooldown_seconds: float = 300.0
+    # Left out, this plant's own inherited cooldown stands - `[controls]
+    # trigger_default_cooldown_seconds`. A literal here would be a second copy
+    # of it, and a screen that sent five minutes would overrule a plant that
+    # had chosen forty seconds without anybody meaning to.
+    cooldown_seconds: float | None = None
     action: str = "log_event"
     action_params: dict | None = None
     note: str | None = None

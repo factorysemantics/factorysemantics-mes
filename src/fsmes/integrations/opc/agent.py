@@ -66,6 +66,29 @@ def _failed(event: str, exc: BaseException, **fields) -> None:
 
 _ORDER_SYNC_SECONDS = 2.0
 
+
+def _controls(name: str, fallback):
+    """One of this plant's `[controls]` numbers, read at the moment it is
+    needed, with the literal this module ships as the last layer.
+
+    The agent is a separate process from the API, so there is no request to
+    hang a session on: it opens one of its own per reading, inside a loop that
+    ticks once every few seconds at most. That is the price of *no restart* -
+    a cadence edited on Engineering's Configuration page is in force on the
+    next pass of the loop rather than the next deployment.
+
+    It never raises. A database this agent cannot read is the condition every
+    one of these numbers exists to survive, and the shipped literal is the
+    right answer to fall back on rather than a stopped loop.
+    """
+    try:
+        from fsmes.services import plant_settings
+
+        with session_scope() as session:
+            return plant_settings.value(session, "controls", name, fallback)
+    except Exception:
+        return fallback
+
 # The floor under the health watchdog. A check more often than once a second
 # buys nothing a plant can act on and costs a round trip every time.
 MIN_HEALTH_SECONDS = 1.0
@@ -375,16 +398,17 @@ class _Handler:
                     log.warning("container members never seen", container=serial, missing=missing)
 
     def _ingest_with_retry(self, events: list[dict]) -> bool:
-        for attempt in range(1, self.BOOK_ATTEMPTS + 1):
+        attempts, backoff = self._book_policy()
+        for attempt in range(1, attempts + 1):
             try:
                 self._ingest(events)
                 return True
             except Exception:
-                if attempt == self.BOOK_ATTEMPTS:
+                if attempt == attempts:
                     log.exception("failed to ingest inspection events", events=len(events))
                     return False
                 log.warning("inspection ingest failed, retrying", events=len(events), attempt=attempt)
-                time.sleep(self.BOOK_BACKOFF_S * 2 ** (attempt - 1))
+                time.sleep(backoff * 2 ** (attempt - 1))
         return False
 
     def start(self) -> None:
@@ -519,6 +543,34 @@ class _Handler:
     BOOK_ATTEMPTS = 4
     BOOK_BACKOFF_S = 0.5
 
+    def _book_policy(self) -> tuple[int, float]:
+        """How hard this plant argues with its own database, in force now.
+
+        `[controls] opc_book_attempts` and `opc_book_backoff_s`, read through
+        `fsmes.services.plant_settings` - so a controls engineer who changes
+        either on Engineering's Configuration page changes the next retry loop
+        rather than waiting for the agent to be restarted.
+
+        The two class attributes above stay the fallback, and they are read off
+        `self` rather than off the class so that a test or a subclass that sets
+        one still has it honoured on a plant that has configured neither.
+
+        A failure to read them is a failure to retry at all if it propagates,
+        so it does not: a database this agent cannot query is exactly the
+        condition the retry exists for, and the shipped policy is the right
+        answer to fall back on.
+        """
+        try:
+            from fsmes.services import plant_settings
+
+            with session_scope() as session:
+                return (int(plant_settings.value(session, "controls", "opc_book_attempts",
+                                                 self.BOOK_ATTEMPTS)),
+                        float(plant_settings.value(session, "controls", "opc_book_backoff_s",
+                                                   self.BOOK_BACKOFF_S)))
+        except Exception:
+            return self.BOOK_ATTEMPTS, self.BOOK_BACKOFF_S
+
     def _book_with_retry(self, decisions: list[tuple]) -> bool:
         """Book a batch, and only then believe what it counted.
 
@@ -542,7 +594,8 @@ class _Handler:
         because a counter is absolute, the next reading re-measures the
         whole delta and the units arrive late instead of never.
         """
-        for attempt in range(1, self.BOOK_ATTEMPTS + 1):
+        attempts, backoff = self._book_policy()
+        for attempt in range(1, attempts + 1):
             pending: dict[tuple[str, str], int] = {}
             started = time.monotonic()
             try:
@@ -552,7 +605,7 @@ class _Handler:
                 return True
             except Exception as exc:
                 waited_ms = round(1000 * (time.monotonic() - started))
-                if attempt == self.BOOK_ATTEMPTS:
+                if attempt == attempts:
                     _failed("failed to book decisions", exc, rows=len(decisions),
                             attempts=attempt, waited_ms=waited_ms,
                             machines=sorted({spec.equipment for spec, _t, _v in decisions}),
@@ -561,8 +614,8 @@ class _Handler:
                     return False
                 log.warning("booking failed, retrying", rows=len(decisions), attempt=attempt,
                             waited_ms=waited_ms, error=f"{type(exc).__name__}: {exc}"[:160],
-                            wait_s=self.BOOK_BACKOFF_S * 2 ** (attempt - 1))
-                time.sleep(self.BOOK_BACKOFF_S * 2 ** (attempt - 1))
+                            wait_s=backoff * 2 ** (attempt - 1))
+                time.sleep(backoff * 2 ** (attempt - 1))
         return False
 
     def _book(self, session, decisions: list[tuple], pending: dict[tuple[str, str], int]) -> None:
@@ -748,7 +801,10 @@ async def _order_code_loop(order_nodes: dict) -> None:
                                  path="opc.order_code", what=f"{equipment_code} OrderCode")
                 written[equipment_code] = order_code
                 log.info("order code written to machine", equipment=equipment_code, order=order_code or "(none)")
-        await asyncio.sleep(_ORDER_SYNC_SECONDS)
+        # Read each pass: two hundred machines on one endpoint is a hundred
+        # database reads a second to discover nothing changed, and a plant
+        # that has noticed should not have to restart its agent to fix it.
+        await asyncio.sleep(float(_controls("opc_order_sync_seconds", _ORDER_SYNC_SECONDS)))
 
 
 async def resolve_nodes(client: Client, machines: list[MachineMap], namespace: str) -> tuple[dict, dict]:
@@ -955,9 +1011,15 @@ async def run(settings: Settings) -> None:
                 )
                 await subscription.subscribe_data_change(fast, queuesize=QUEUE_SIZE)
                 if slow:
+                    # Read here, once per connection, and that is the honest
+                    # answer for these two: a sampling interval is a number the
+                    # OPC server holds for the life of a subscription, so
+                    # "immediately" for this pair means "when the agent next
+                    # subscribes". The Configuration page's own wording says so.
+                    ratio = int(_controls("opc_history_ratio", HISTORY_RATIO))
+                    least_ms = int(_controls("opc_min_history_ms", MIN_HISTORY_MS))
                     history = await client.create_subscription(
-                        max(settings.opc_publish_ms * HISTORY_RATIO,
-                            MIN_HISTORY_MS), handler
+                        max(settings.opc_publish_ms * ratio, least_ms), handler
                     )
                     await history.subscribe_data_change(slow, queuesize=QUEUE_SIZE)
                 if groups:
@@ -1156,7 +1218,12 @@ async def _adjustment_loop(node_info: dict, machines: list[MachineMap], manifest
             await verify_written_adjustments(nodes, session_scope, pv_before)
         except Exception as exc:
             _failed("adjustment loop failed; continuing", exc)
-        await asyncio.sleep(_ADJUSTMENT_POLL_SECONDS)
+        # `POST /adjustments/{code}/approve` promises a person that the agent
+        # writes within seconds. That promise now quotes this number rather
+        # than a literal, and a plant that raises it past a few seconds is
+        # changing what it has told its own operators.
+        await asyncio.sleep(float(_controls("opc_adjustment_poll_seconds",
+                                            _ADJUSTMENT_POLL_SECONDS)))
 
 
 # ------------------------------------------------------- one plant, many agents

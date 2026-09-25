@@ -18,7 +18,44 @@ from sqlalchemy.orm import Session
 
 from fsmes.db import utcnow
 from fsmes.domain import EquipmentStateName, Trigger, TriggerCondition, TriggerFiring, TriggerStatus
-from fsmes.services import Conflict, Invalid, NotFound, audit, equipment, maintenance, masterdata, quality
+from fsmes.services import (
+    Conflict,
+    Invalid,
+    NotFound,
+    audit,
+    equipment,
+    maintenance,
+    masterdata,
+    plant_settings,
+    quality,
+)
+
+# How fast an approval on screen reaches a running agent, and how long a newly
+# drafted trigger stays quiet after firing when nobody says otherwise. Both stay
+# as the literals the product ships; what a plant is running on is the accessor
+# beside each, reading `[controls] trigger_reload_seconds` and
+# `trigger_default_cooldown_seconds` through the three layers.
+RELOAD_SECONDS = 30.0
+DEFAULT_COOLDOWN_SECONDS = 300.0
+
+
+def reload_seconds(session: Session) -> float:
+    """How often this plant's agent re-reads its approved triggers.
+
+    The docstring on `Evaluator` promises that an approval reaches the agent
+    without a restart; this is the number that says how fast, and a plant that
+    stops a line on an SPC signal wants five seconds rather than thirty.
+    """
+    return float(plant_settings.value(
+        session, "controls", "trigger_reload_seconds", RELOAD_SECONDS))
+
+
+def default_cooldown_seconds(session: Session) -> float:
+    """The cooldown a new trigger inherits on this plant. Five minutes of
+    silence is right on a continuous line and wrong on a station with
+    forty-second cycles; each trigger's own value is the engineer's."""
+    return float(plant_settings.value(
+        session, "controls", "trigger_default_cooldown_seconds", DEFAULT_COOLDOWN_SECONDS))
 
 # --------------------------------------------------------------- the catalog
 
@@ -135,10 +172,15 @@ ACTION_HELP = {
 
 def create(session: Session, *, code: str, name: str, tag: str, condition: str, threshold: float,
            equipment_code: str | None = None, sustained_seconds: float = 0.0,
-           cooldown_seconds: float = 300.0, action: str = "log_event", action_params: dict | None = None,
+           cooldown_seconds: float | None = None, action: str = "log_event",
+           action_params: dict | None = None,
            note: str | None = None, actor: str = "system") -> Trigger:
     if session.scalar(select(Trigger).where(Trigger.code == code)):
         raise Conflict(f"trigger {code} already exists")
+    # None means *this plant's own inherited cooldown*, resolved here rather
+    # than in the signature so a caller gets what the plant is running on now.
+    if cooldown_seconds is None:
+        cooldown_seconds = default_cooldown_seconds(session)
     try:
         kind = TriggerCondition(condition)
     except ValueError as exc:
@@ -261,20 +303,34 @@ class Evaluator:
     Definitions are reloaded every `reload_seconds` so an approval on screen
     reaches the agent without a restart. State is per (trigger, machine) so a
     trigger on "any machine" watches each one separately.
+
+    `reload_seconds` left as None is *this plant's own cadence*, read from
+    `[controls] trigger_reload_seconds` inside the session `_load` already
+    opens - so changing it on Engineering's Configuration page changes how fast
+    the next reload comes round, with no restart of the agent either.
     """
 
     scope: Callable
-    reload_seconds: float = 30.0
+    reload_seconds: float | None = None
     clock: Callable[[], datetime] = utcnow
+    #: What the plant last said its cadence was, when `reload_seconds` is None.
+    #: The product's own number until the first load has read the plant's, which
+    #: is the honest starting point: the first reload is due immediately anyway.
+    _every: float = RELOAD_SECONDS
     _triggers: list[Trigger] = field(default_factory=list)
     _loaded_at: datetime | None = None
     _watch: dict[tuple[str, str], _Watch] = field(default_factory=dict)
 
     def _load(self) -> None:
         now = self.clock()
-        if self._loaded_at and (now - self._loaded_at).total_seconds() < self.reload_seconds:
+        every = self.reload_seconds if self.reload_seconds is not None else self._every
+        if self._loaded_at and (now - self._loaded_at).total_seconds() < every:
             return
         with self.scope() as session:
+            # Read inside the session this load already opens, so a cadence
+            # edited on the page is in force from the next reload on.
+            if self.reload_seconds is None:
+                self._every = reload_seconds(session)
             rows = session.scalars(select(Trigger).where(Trigger.status == TriggerStatus.APPROVED)).all()
             # Detach: the agent keeps these across sessions.
             self._triggers = [Trigger(id=t.id, code=t.code, name=t.name, equipment_code=t.equipment_code,
