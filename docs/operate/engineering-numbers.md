@@ -59,6 +59,13 @@ screen because of a threshold nobody chose is its own kind of dishonesty* — is
 the argument for this one. A Configuration workspace is a place on a screen and
 a pack section is a table in a file, and those two do not have to share a name.
 
+`default_report_hours` is which of the `report_windows` a screen opens on. It
+does not have to be one of them: a plant that opens on twelve hours and offers
+a different five gets its twelve added to the picker beside them, the same way
+a window asked for in a URL already is. Nothing refuses the combination,
+because a plant that wants a default off its own quick list is answering its own
+question.
+
 ```toml
 [process]
 # A plant on twelve-hour shifts, working Sunday to Thursday, that thinks in

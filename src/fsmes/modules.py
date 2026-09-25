@@ -342,7 +342,7 @@ REGISTRY: tuple[Module, ...] = (
             ConfigSection(
                 domain="engineering",
                 key="opc_book_retry",
-                label="How hard the agent tries to book what a machine said",
+                label="How hard a booking is retried",
                 about="How many times the OPC agent retries booking a batch of "
                       "readings, and the first wait between attempts, doubling "
                       "each time. Readings a machine sent are not dropped "
@@ -357,7 +357,7 @@ REGISTRY: tuple[Module, ...] = (
             ConfigSection(
                 domain="engineering",
                 key="uns_retry_policy",
-                label="How long the namespace keeps trying",
+                label="How long the namespace retries",
                 about="How many attempts a publication gets before it is "
                       "recorded dead, the first wait, and the ceiling the "
                       "doubling stops at. A broker restarted nightly for twenty "
@@ -376,7 +376,7 @@ REGISTRY: tuple[Module, ...] = (
             ConfigSection(
                 domain="engineering",
                 key="opc_history_sampling",
-                label="How densely tag history is sampled",
+                label="How densely tag history is kept",
                 about="How much slower the rest of a machine's tags are sampled "
                       "than the ones the MES reasons about, as a multiple of the "
                       "publish interval, and the floor under that. A ratio, so "
@@ -392,7 +392,7 @@ REGISTRY: tuple[Module, ...] = (
             ConfigSection(
                 domain="engineering",
                 key="opc_agent_cadences",
-                label="How often the agent looks for work",
+                label="The agent's own cadences",
                 about="How often the agent checks whether a machine's order code "
                       "has changed, and how often it looks for approved setpoint "
                       "adjustments to write. Two hundred machines on one endpoint "
@@ -481,7 +481,7 @@ REGISTRY: tuple[Module, ...] = (
             ConfigSection(
                 domain="engineering",
                 key="default_job_minutes",
-                label="How long a job with no plan is assumed to take",
+                label="How long an unplanned job takes",
                 about="Every corrective job. It sizes the backlog's downtime "
                       "figure and the block the scheduler reserves, so a "
                       "supervisor deciding whether tonight is the night is "
@@ -515,7 +515,7 @@ REGISTRY: tuple[Module, ...] = (
             ConfigSection(
                 domain="engineering",
                 key="default_cycle_seconds",
-                label="Cycle time for a machine with no rating",
+                label="Cycle time with no rating",
                 about="What one unit is assumed to cost at a station that has "
                       "not been commissioned. A machine's own rated cycle time "
                       "always wins, and a schedule built on this fallback says "
@@ -539,7 +539,7 @@ REGISTRY: tuple[Module, ...] = (
             ConfigSection(
                 domain="engineering",
                 key="previous_shift_horizon_days",
-                label="How far back the previous shift may reach",
+                label="How far back previous reaches",
                 about="Two weeks covers a plant that ran nothing over a "
                       "shutdown. A seasonal plant with a six-week one answers "
                       "differently, and the refusal a screen shows quotes "
@@ -741,7 +741,7 @@ REGISTRY: tuple[Module, ...] = (
             ConfigSection(
                 domain="engineering",
                 key="min_observed_seconds",
-                label="The floor below which no rate is reported",
+                label="The floor under every rate",
                 about="Below this much observed time, nothing is divided by it: "
                       "the answer is unknown with the ledger saying why, rather "
                       "than a figure measured over four seconds. Its sibling "
@@ -781,7 +781,7 @@ REGISTRY: tuple[Module, ...] = (
             ConfigSection(
                 domain="engineering",
                 key="default_report_hours",
-                label="How long a window is when nobody says",
+                label="The default reporting window",
                 about="The source called eight hours *a shift*. A plant working "
                       "twelve-hour shifts answers 12, and every payload still "
                       "states the hours it was actually given, so nothing "
@@ -924,7 +924,7 @@ REGISTRY: tuple[Module, ...] = (
             ConfigSection(
                 domain="engineering",
                 key="trigger_reload_seconds",
-                label="How fast an approval reaches the agent",
+                label="How fast an approval lands",
                 about="A trigger approved on screen reaches the running agent "
                       "without a restart; this is how fast. A plant that stops a "
                       "line on an SPC signal wants five seconds, and one with "
@@ -936,7 +936,7 @@ REGISTRY: tuple[Module, ...] = (
             ConfigSection(
                 domain="engineering",
                 key="trigger_default_cooldown_seconds",
-                label="A new trigger's inherited cooldown",
+                label="A new trigger's cooldown",
                 about="How long a newly drafted trigger stays quiet after firing "
                       "when nobody says otherwise. Five minutes of silence is "
                       "right on a continuous line and wrong on a station with "
