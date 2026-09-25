@@ -178,9 +178,15 @@ class ConfigSection:
     """
 
 
-#: Every configuration domain, in nav order. One today. A second is one entry
+#: Every configuration domain, in nav order. Four. A fifth is one entry
 #: here plus at least one `ConfigSection` naming it, and `test_web.py` refuses
 #: a domain with a page and no sections, or sections and no nav entry.
+#:
+#: `title` is the nav group the domain's Configuration entry sits in, and it
+#: is a group that already exists rather than a new one: section 2a of
+#: `docs/design/config-assistance.md` is that there is one Configuration
+#: entry per workspace and no new chip per configurable thing. Administration
+#: goes under **Setup**, beside Ops and Admin, for that reason.
 CONFIG_DOMAINS: tuple[ConfigDomain, ...] = (
     ConfigDomain(
         "engineering", "Engineering",
@@ -199,6 +205,14 @@ CONFIG_DOMAINS: tuple[ConfigDomain, ...] = (
         "order statuses it will take an order in, how long it waits, and "
         "when a number read back is the number sent. The contract itself is "
         "the product's; what this plant asks of the link is the plant's."),
+    ConfigDomain(
+        "administration", "Setup",
+        "What this plant's own administration is set to: who a new account "
+        "is, how big an answer is, what its screens' clocks run at, what one "
+        "conversation with a model may spend, and the plumbing underneath. "
+        "It carries IT's settings too - decision 0035 section 2 keeps IT "
+        "outside the role model, so they are written by whoever holds "
+        "`users.manage` rather than by a capability of their own."),
 )
 
 DOMAIN_BY_SLUG: dict[str, ConfigDomain] = {d.slug: d for d in CONFIG_DOMAINS}
@@ -248,6 +262,59 @@ REGISTRY: tuple[Module, ...] = (
         title="Health, metrics and version",
         kernel=True,
         routers=(Mount("fsmes.api.routers.system", "", ("system",), public=True),),
+        config_sections=(
+            # IT's three plant-scope rows of the configuration audit. They are
+            # listed on the **Administration** page and gated on
+            # `users.manage`, because decision 0035 section 2 deliberately
+            # keeps IT outside the role model: it has no capability of its own
+            # and gets no `ConfigDomain`. A workspace of its own would need
+            # both, and the person who administers a plant's accounts is
+            # already the only person who can reach these.
+            #
+            # Their keys live in `[system]` rather than `[admin]` because a
+            # pack table is a table in a file and a Configuration workspace is
+            # a place on a screen - the distinction `plant_settings.owner`
+            # exists to keep - and these are the plant's plumbing rather than
+            # its administration.
+            ConfigSection(
+                domain="administration",
+                key="local_model",
+                label="Which local model answers",
+                about="Which model on this machine answers a question and "
+                      "drafts an instruction. Each document already records "
+                      "the model that wrote it, so nothing a record means "
+                      "changes when this does.",
+                href="/dashboard/ops",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[system] local_model_name",)),
+            ConfigSection(
+                domain="administration",
+                key="log_rotation",
+                label="How much log history this plant keeps",
+                about="The size one component's log grows to before it "
+                      "rotates, and how many rotations are kept. Read when a "
+                      "process starts: logging is configured before this "
+                      "plant's database is open, so this one takes a restart "
+                      "and the page says so.",
+                href="/dashboard/ops",
+                define="users.manage",
+                pack_keys=("[system] log_rotation_max_bytes",
+                           "[system] log_rotation_backups")),
+            ConfigSection(
+                domain="administration",
+                key="fleet_probe",
+                label="How long the console waits for a plant to answer",
+                about="The fleet console's own number about every plant it "
+                      "watches, rather than any one plant's about itself, so "
+                      "it is read when the console starts. Too short reports "
+                      "a healthy plant unreachable. Listed on a plant because "
+                      "a plant's pack is where it is written; the console is "
+                      "not a screen this plant serves.",
+                href="/dashboard/ops",
+                define="users.manage",
+                pack_keys=("[system] fleet_health_probe_timeout",)),
+        ),
     ),
     Module(
         name="auth",
@@ -263,6 +330,224 @@ REGISTRY: tuple[Module, ...] = (
         pages=(Page("/dashboard/admin", "admin.html",
                     "People, roles and routings. The screen gates itself on the "
                     "users.manage capability, as the API does."),),
+        config_sections=(
+            # Administration's own numbers, all of them gated on the one
+            # capability this domain has. They are listed under the `admin`
+            # module because they are the plant administrator's answers -
+            # who a new account is, how big an answer is, what a screen's
+            # clock runs at, what one conversation with a model may spend -
+            # and because that module is kernel, so this page is served on
+            # every plant however much of the product it switched off.
+            ConfigSection(
+                domain="administration",
+                key="new_account_role",
+                label="The role a new account starts with",
+                about="One plant onboards everyone as a viewer and grants "
+                      "upward; another starts them on the floor. The role "
+                      "codes themselves stay the product's.",
+                href="/dashboard/admin",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[admin] default_new_account_role",)),
+            ConfigSection(
+                domain="administration",
+                key="list_paging",
+                label="How big a list answer is",
+                about="The rows a list returns when nobody says, and the most "
+                      "any caller may ask for. The one section here that is "
+                      "read at start-up: both numbers are published in this "
+                      "plant's own API document, and a ceiling that moved "
+                      "under a caller holding it would make that document a "
+                      "lie.",
+                href="/docs",
+                define="users.manage",
+                pack_keys=("[admin] list_default_limit", "[admin] list_max_limit")),
+            ConfigSection(
+                domain="administration",
+                key="pending_panel",
+                label="How many waiting items the panel shows",
+                about="The Floor screen's approvals panel has no pager, so "
+                      "this is not how much fits on a page - it is how much "
+                      "exists as far as that panel is concerned.",
+                href="/dashboard",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[admin] pending_approvals_page_size",)),
+            ConfigSection(
+                domain="administration",
+                key="screen_refresh",
+                label="How often a screen re-reads the plant",
+                about="Three clocks, in one place, because the plant should "
+                      "say it once: the floor, the approvals panel beside it, "
+                      "and the Admin screen. They stay three numbers because "
+                      "a screen watching machines and a screen listing "
+                      "employees are not one cadence.",
+                href="/dashboard",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[screens] floor_refresh_ms",
+                           "[screens] floor_pending_refresh_ms",
+                           "[screens] admin_refresh_ms")),
+            ConfigSection(
+                domain="administration",
+                key="floor_paging",
+                label="How much of the floor one page shows",
+                about="Machine cards, work orders and the characteristics the "
+                      "specification picker offers. The tiles above the grid "
+                      "still count the whole plant, whatever this says.",
+                href="/dashboard",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[screens] floor_machine_page",
+                           "[screens] floor_order_page",
+                           "[screens] floor_spec_choices")),
+            ConfigSection(
+                domain="administration",
+                key="admin_paging",
+                label="How many rows the Admin screen lists",
+                about="People and routings, a page at a time. Three hundred "
+                      "employees is one plant's ordinary.",
+                href="/dashboard/admin",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[screens] admin_user_page_size",
+                           "[screens] admin_routing_page_size")),
+            ConfigSection(
+                domain="administration",
+                key="whole_list_ceiling",
+                label="How far a screen reads a whole list",
+                about="For the few pickers that need all of a bounded list: "
+                      "the page size and the ceiling it stops at. Nothing "
+                      "lies when the ceiling is met - the screen is told the "
+                      "list is incomplete and says so - but a plant with "
+                      "three thousand characteristics meets it every day.",
+                href="/dashboard/quality",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[screens] all_pages_limit", "[screens] all_pages_cap")),
+            ConfigSection(
+                domain="administration",
+                key="screen_feedback",
+                label="How long a confirmation stays, and how long typing settles",
+                about="How long a message lingers is an accessibility answer a "
+                      "plant gives for its own people; the debounce is how "
+                      "long a search box waits before it searches.",
+                href="/dashboard/admin",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[screens] toast_ms", "[screens] input_debounce_ms")),
+            ConfigSection(
+                domain="administration",
+                key="walkthrough_limits",
+                label="How long a recorded walkthrough may be",
+                about="The most steps one may have, and the four lengths at "
+                      "which the plant's own words are shortened. A plant "
+                      "with a ninety-step changeover says so here.",
+                href="/dashboard/instructions",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[admin] walkthrough_max_steps",
+                           "[admin] walkthrough_title_chars",
+                           "[admin] walkthrough_body_chars",
+                           "[admin] walkthrough_fill_chars",
+                           "[admin] walkthrough_tab_chars")),
+            ConfigSection(
+                domain="administration",
+                key="walkthrough_gate",
+                label="What a recorded walkthrough asks of a viewer",
+                about="The capability a recording is gated on when nobody "
+                      "says otherwise. The capability names stay the "
+                      "product's, and one this version does not have is "
+                      "refused rather than accepted and never granted.",
+                href="/dashboard/instructions",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[admin] walkthrough_default_capability",)),
+            ConfigSection(
+                domain="administration",
+                key="assistant_log",
+                label="What the assistant remembers across a page change",
+                about="How many lines of the conversation survive, and how "
+                      "long a walkthrough keeps looking for a control that "
+                      "has not appeared yet. Twenty looks at 150 ms is three "
+                      "seconds, and the plant's slowest PC is what the pair "
+                      "is really about.",
+                href="/dashboard",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[screens] assistant_log_entries",
+                           "[screens] assistant_fill_attempts",
+                           "[screens] assistant_fill_wait_ms")),
+            ConfigSection(
+                domain="administration",
+                key="agent_budget",
+                label="What one conversation with the floor agent may spend",
+                about="Turns per message, how long a conversation lives "
+                      "without one, and how much of a tool result the model "
+                      "is shown. A conversation keeps the budget it opened "
+                      "with, so a change here reaches the next one.",
+                href="/dashboard",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[admin] agent_max_rounds",
+                           "[admin] agent_session_ttl_seconds",
+                           "[admin] agent_result_limit")),
+            ConfigSection(
+                domain="administration",
+                key="model_context",
+                label="How much of this plant reaches a model",
+                about="The facts behind an assistant answer, and the design "
+                      "chat's three budgets. A plant running a larger local "
+                      "model on better hardware can afford more.",
+                href="/dashboard/ops",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[admin] assistant_context_chars",
+                           "[admin] design_compress_budget",
+                           "[admin] design_compress_source_chars",
+                           "[admin] design_source_budget")),
+            ConfigSection(
+                domain="administration",
+                key="local_model_timeouts",
+                label="How long this plant waits for its own model",
+                about="Six timeouts, one per thing waited for, in one place: "
+                      "they were six anonymous numbers in five files. A plant "
+                      "on a slower GPU raises all six and can see which one "
+                      "it just raised.",
+                href="/dashboard/ops",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[admin] assistant_timeout_seconds",
+                           "[admin] drafting_timeout_seconds",
+                           "[admin] design_generate_timeout_seconds",
+                           "[admin] design_classify_timeout_seconds",
+                           "[admin] design_compress_timeout_seconds",
+                           "[admin] design_chat_timeout_seconds")),
+            ConfigSection(
+                domain="administration",
+                key="document_house_style",
+                label="The shape a drafted work instruction takes",
+                about="A plant whose quality system mandates Scope / Hazards "
+                      "/ Steps / Records writes its own structure here. What "
+                      "keeps the draft honest is not in it and cannot be: an "
+                      "operator is never told to adjust a reading toward the "
+                      "middle, whatever a plant writes.",
+                href="/dashboard/instructions",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[admin] document_house_style",)),
+            ConfigSection(
+                domain="administration",
+                key="ai_rollup_stale",
+                label="When the AI panel calls a daily rollup late",
+                about="Forty hours, chosen for one encrypted laptop that is "
+                      "regularly off overnight. A plant's server that never "
+                      "sleeps answers differently.",
+                href="/dashboard/ops",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[admin] ai_rollup_stale_hours",)),
+        ),
         tables=("roles", "personnel"),
     ),
     Module(

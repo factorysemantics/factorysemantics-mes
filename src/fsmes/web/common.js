@@ -73,6 +73,7 @@
       { href: "/dashboard/instructions", label: "Instructions", cap: null },
       { href: "/dashboard/ops", label: "Ops", cap: "audit.read" },
       { href: "/dashboard/admin", label: "Admin", cap: "users.manage" },
+      { href: "/dashboard/config/administration", label: "Configuration", cap: null },
     ] },
   ];
 
