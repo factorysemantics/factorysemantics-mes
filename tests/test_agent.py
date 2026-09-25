@@ -19,7 +19,9 @@ from fsmes.services import capabilities as caps
 WEB = Path(__file__).resolve().parents[1] / "src" / "fsmes" / "web"
 PAGE_FILES = {"/dashboard": "index.html", "/dashboard/quality": "quality.html",
               "/dashboard/station": "station.html", "/dashboard/orders": "orders.html",
-              "/dashboard/maintenance": "maintenance.html"}
+              "/dashboard/maintenance": "maintenance.html",
+              "/dashboard/reasons": "reasons.html",
+              "/dashboard/severities": "severities.html"}
 
 
 
@@ -60,8 +62,10 @@ def block_text(text):
     return SimpleNamespace(type="text", text=text)
 
 
-def block_tool(id_, name, **args):
-    return SimpleNamespace(type="tool_use", id=id_, name=name, input=args)
+def block_tool(id_, tool, **args):
+    # `tool`, not `name`: a tool argument called `name` is ordinary (a reason's
+    # name, a severity's) and would collide with the parameter.
+    return SimpleNamespace(type="tool_use", id=id_, name=tool, input=args)
 
 
 def response(*blocks, stop="end_turn"):
@@ -92,6 +96,13 @@ def scripted(monkeypatch, tmp_path):
                     "request": {"method": "POST", "path": "/quality/checks", "body": args}}
         if name == "record_check":
             return {"done": "recorded", "response": {"result": "pass"}, "audited_as": "AGENT"}
+        if name == "draft_downtime_reason" and dry_run:
+            return {"dry_run": True, "would": f"draft the downtime reason {args['code']}",
+                    "request": {"method": "POST", "path": "/equipment/downtime-reasons", "body": args}}
+        if name == "draft_downtime_reason":
+            return {"done": f"draft the downtime reason {args['code']}", "audited_as": "AGENT",
+                    "on_behalf_of": on_behalf_of,
+                    "response": {"code": args["code"], "revision": 1, "status": "draft"}}
         return {"machines": [{"code": "WASH01"}]}
 
     monkeypatch.setattr(agent, "_call_model", fake_model)
@@ -132,6 +143,74 @@ def test_reads_run_free_and_writes_pause_until_confirmed(scripted):
     results = sess.history[-2]["content"]
     assert [r["tool_use_id"] for r in results] == ["t2"]
     assert sess.history[2]["content"][0]["tool_use_id"] == "t1"
+
+
+def test_drafting_a_reason_is_the_same_card_and_lands_on_the_drafters_own_screen(scripted):
+    """Scott, 2026-09-24: "shouldn't the AGENT be able to perform those same
+    actions and take me to that page with those actions performed?" It is the
+    ordinary proposal card - the agent drafts on his behalf and nothing is in
+    force, and the evidence step is the vocabulary list he would be looking at
+    if he had typed the form himself."""
+    script, calls = scripted
+    script += [
+        response(block_text("I will draft it for you to sign."),
+                 block_tool("t1", "draft_downtime_reason", code="jam_infeed", name="Infeed jam",
+                            description="Bottles bridged at the infeed guide"),
+                 stop="tool_use"),
+        response(block_text("Drafted jam_infeed. It waits for somebody who can sign it.")),
+    ]
+    sess = agent.open_session("SCOTT", "bottling", {"plant.read", "process.define"})
+    out = agent.message(sess, "draft a downtime reason for a jam at the infeed")
+
+    assert out["kind"] == "proposals"
+    proposal = out["proposals"][0]
+    assert proposal["preview"]["would"] == "draft the downtime reason jam_infeed"
+    assert calls[0]["dry_run"] is True and calls[0]["on_behalf_of"] == "SCOTT"
+
+    # "Show me" walks the real form on the real screen, already filled in.
+    steps = proposal["surface"]["steps"]
+    assert [s["page"] for s in steps] == ["/dashboard/reasons"] * 5
+    assert [s["anchor"] for s in steps] == ["reason-form", "reason-code", "reason-name",
+                                            "reason-description", "reason-submit"]
+    assert steps[1]["fill"] == {"value": "jam_infeed"}
+    assert steps[2]["fill"] == {"value": "Infeed jam"}
+    assert steps[3]["fill"] == {"value": "Bottles bridged at the infeed guide"}
+    assert "fill" not in steps[4]                            # the button is his to press
+
+    # "Do it" runs it on his behalf and walks him to where his draft now sits.
+    done = agent.confirm(sess, proposal["id"])
+    real = calls[-1]
+    assert real["dry_run"] is False and real["on_behalf_of"] == "SCOTT"
+    assert real["client_ref"] == proposal["id"]
+    assert done["done"][0]["evidence"]["page"] == "/dashboard/reasons"
+    assert done["done"][0]["evidence"]["anchor"] == "reason-vocabulary"
+    assert "process.approve" in done["done"][0]["evidence"]["body"]
+
+
+def test_a_person_who_may_not_define_is_never_offered_the_drafting_tools():
+    """The capability gate, before the API's: an operator's assistant does not
+    carry a tool whose last step would refuse them."""
+    operator = {t["name"] for t in agent.catalogue({"plant.read", "quality.record"})}
+    assert "draft_downtime_reason" not in operator and "draft_nc_severity" not in operator
+    # Reading the vocabulary is nobody's secret - a list nobody can read is a
+    # list nobody can choose from.
+    assert "downtime_reasons" in operator and "nc_severities" in operator
+    engineer = {t["name"]: t for t in agent.catalogue({"plant.read", "process.define", "quality.define"})}
+    assert engineer["draft_downtime_reason"]["write"] and engineer["draft_nc_severity"]["write"]
+    for hidden in ("plant", "dry_run", "on_behalf_of", "client_ref"):
+        assert hidden not in engineer["draft_downtime_reason"]["input_schema"]["properties"]
+    assert set(engineer["draft_nc_severity"]["input_schema"]["required"]) == {"code", "name"}
+
+
+def test_no_tool_anywhere_signs_a_vocabulary_off():
+    """Decision 0035, and the `agent` role's own description: it never
+    approves - not a reason code and not a severity."""
+    names = {t.name for t in agent.registry_tools()}
+    assert {n for n in names if "approve" in n or "sign" in n} == {"assign_role"}
+    assert "process.approve" not in caps.BUILTIN_ROLES["agent"]["capabilities"]
+    assert "quality.approve" not in caps.BUILTIN_ROLES["agent"]["capabilities"]
+    assert "process.define" in caps.BUILTIN_ROLES["agent"]["capabilities"]
+    assert "quality.define" in caps.BUILTIN_ROLES["agent"]["capabilities"]
 
 
 def test_the_sentence_scott_typed_becomes_a_proposal_and_then_the_quality_call(scripted):
@@ -307,6 +386,17 @@ def test_every_surface_step_points_at_a_control_that_exists(tool):
         assert step["anchor"] in anchors_on(step["page"]), (
             f"{tool} step {i} points at data-assist={step['anchor']!r} which "
             f"{PAGE_FILES[step['page']]} does not have")
+
+
+@pytest.mark.parametrize("tool", sorted(assistant.SURFACES))
+def test_every_page_a_walk_crosses_onto_carries_the_assistant(tool):
+    """A walk that spans screens is resumed by assist.js on arrival. A page
+    that does not load it would take the person there and stop."""
+    surface = assistant.SURFACES[tool]
+    for step in [*surface["steps"], surface["evidence"]]:
+        html = (WEB / PAGE_FILES[step["page"]]).read_text(encoding="utf-8")
+        assert "/static/assist.js" in html, (
+            f"{tool} walks to {step['page']}, which does not load assist.js")
 
 
 @pytest.mark.parametrize("tool", sorted(assistant.SURFACES))

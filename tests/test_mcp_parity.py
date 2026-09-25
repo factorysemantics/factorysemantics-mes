@@ -36,20 +36,14 @@ EXCLUDED = {
         "putting the plant's own vocabulary in front of every operator is a human "
         "capability; the agent role is built without `process.approve`, so a tool "
         "for it would be a tool that always refuses",
-    "POST /equipment/downtime-reasons":
-        "an agent may draft one - it holds `process.define` and the API is open to "
-        "it - but the tool that does it reads a month of typed reasons through a "
-        "model, which is the follow-up the design names; this change proves the "
-        "human loop first (surfaces, with the drafting assistant)",
     "POST /quality/severities/{code}/approve/{revision}":
         "putting the plant's own severities in front of every quality record is a "
         "human capability; the agent role is built without `quality.approve`, so a "
         "tool for it would be a tool that always refuses",
-    "POST /quality/severities":
-        "an agent may draft one - it holds `quality.define` and the API is open to "
-        "it - and the tool arrives with the same drafting assistant the downtime "
-        "vocabulary is waiting on, because both want the plant's own history read "
-        "before a word is proposed",
+    # POST /equipment/downtime-reasons and POST /quality/severities came off this
+    # list when draft_downtime_reason and draft_nc_severity landed. The approve
+    # routes above stay: the agent role holds neither `process.approve` nor
+    # `quality.approve`, so a tool for either would always refuse.
     # operations the assistant widget owns
     "POST /assist/ask": "the in-UI assistant; agents ask the tools directly",
     "POST /assist/agent": "the in-UI agent's own front door; it calls the tools itself",

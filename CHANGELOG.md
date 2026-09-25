@@ -12,6 +12,24 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **The assistant can draft the plant's own words, and never sign them.** Two
+  agent tools that were missing while the API was already open to them:
+  `draft_downtime_reason` and `draft_nc_severity`, with `downtime_reasons` and
+  `nc_severities` to read the whole vocabulary first — statuses, revisions, and
+  how many recorded intervals or non-conformances each code labels, with its
+  total. They are the same shape as every other agent write: through the plant's
+  HTTP API as the `AGENT` account, `dry_run` previews and sends nothing,
+  `on_behalf_of` puts the person's name beside the agent's in the audit trail,
+  `client_ref` makes a repeat return its first answer. In the floor assistant
+  each arrives as the proposal card the other write tools already use —
+  **Do it** drafts and walks you to your word sitting in the vocabulary as a
+  draft, **Show me** fills the real form on Engineering › Downtime reasons or
+  Quality › Non-conformance severities and stops in front of Save draft.
+  Approving stays a person's: the `agent` role holds neither `process.approve`
+  nor `quality.approve`, so there is no tool for it and the route refuses the
+  agent by name. Retiring a word stays a screen action too, because the count
+  of history a code labels belongs in front of somebody before they drop it.
+
 - **This plant's own quality numbers — thirteen `[quality]` keys, and one
   rule.** Where a process stops being capable (1.33 and 1.0), how many
   readings a control limit needs (12), how far back a chart looks (200), the

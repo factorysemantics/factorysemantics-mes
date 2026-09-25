@@ -616,6 +616,108 @@ SURFACES: dict[str, dict] = {
                      "title": "Its status changed",
                      "body": "The order's status column now shows the new state."},
     },
+    # The two vocabularies. The screens these walk to were built for a person
+    # holding `<domain>.define` to draft on (#87, #97), and drafting is all the
+    # agent role can do here: it holds `process.define` and `quality.define`
+    # and neither `*.approve`, so "Do it" ends at a draft and the evidence step
+    # says who signs it. Retiring is not offered - the count of intervals or
+    # records a word labels is what a person is told before they take it off
+    # the list, and that conversation belongs on the screen.
+    "draft_downtime_reason": {
+        "title": "Draft a downtime reason",
+        "needs": "process.define",
+        "pages": ["/dashboard/reasons", "/dashboard/machines", "/dashboard/station"],
+        "example": "Draft a downtime reason for a jam at the infeed",
+        "steps": [
+            {"page": "/dashboard/reasons", "anchor": "reason-form",
+             "title": "The form that drafts a word",
+             "body": (
+                 "This is where the plant's downtime vocabulary is written by hand. "
+                 "I have filled it in from what you asked - read each field before "
+                 "you save, because this word ends up on every operator's screen."
+             )},
+            {"page": "/dashboard/reasons", "anchor": "reason-code",
+             "title": "The code",
+             "fill": {"value": "{code}"},
+             "body": (
+                 "{code}. This is what the pareto groups on and what leaves the "
+                 "plant, so it outlives the wording beside it. Typing a code that "
+                 "already exists drafts its next revision rather than a second word."
+             )},
+            {"page": "/dashboard/reasons", "anchor": "reason-name",
+             "title": "What the operator reads",
+             "fill": {"value": "{name}"},
+             "body": "{name}. This is the button at the machine."},
+            {"page": "/dashboard/reasons", "anchor": "reason-description",
+             "title": "What it means",
+             "fill": {"value": "{description}", "default": ""},
+             "body": (
+                 "The sentence shown beside the button. Two operators picking the "
+                 "same word for the same stop is the whole point of writing it down."
+             )},
+            {"page": "/dashboard/reasons", "anchor": "reason-submit",
+             "title": "Press Save draft",
+             "body": (
+                 "You press it, not me - it is drafted under your own name. It "
+                 "changes nothing on the floor: somebody holding process.approve "
+                 "signs it on the Floor screen first."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/reasons", "anchor": "reason-vocabulary",
+                     "title": "It is in the vocabulary, as a draft",
+                     "body": (
+                         "Your word is in the list with status draft. It reaches the "
+                         "floor when somebody holding process.approve signs it on the "
+                         "Floor screen's Waiting for you panel - never me."
+                     )},
+    },
+    "draft_nc_severity": {
+        "title": "Draft a non-conformance severity",
+        "needs": "quality.define",
+        "pages": ["/dashboard/severities", "/dashboard/quality"],
+        "example": "Draft a non-conformance severity for a cosmetic defect",
+        "steps": [
+            {"page": "/dashboard/severities", "anchor": "severity-form",
+             "title": "The form that drafts a word",
+             "body": (
+                 "This is where the plant's severities are written by hand. I have "
+                 "filled it in from what you asked - read it before you save: this "
+                 "word grades findings, and the grading is what people act on."
+             )},
+            {"page": "/dashboard/severities", "anchor": "severity-code",
+             "title": "The code",
+             "fill": {"value": "{code}"},
+             "body": (
+                 "{code}. This is stored on every non-conformance raised at this "
+                 "severity. Some codes the product writes itself and those can "
+                 "never be retired; the list says which."
+             )},
+            {"page": "/dashboard/severities", "anchor": "severity-name",
+             "title": "What a person reads",
+             "fill": {"value": "{name}"},
+             "body": "{name}."},
+            {"page": "/dashboard/severities", "anchor": "severity-description",
+             "title": "What a finding at this severity means",
+             "fill": {"value": "{description}", "default": ""},
+             "body": (
+                 "The sentence that decides whether two inspectors grade the same "
+                 "defect the same way. It is worth more than the name."
+             )},
+            {"page": "/dashboard/severities", "anchor": "severity-submit",
+             "title": "Press Save draft",
+             "body": (
+                 "You press it, not me - it is drafted under your own name, and it "
+                 "grades nothing until somebody holding quality.approve signs it."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/severities", "anchor": "severity-vocabulary",
+                     "title": "It is in the severities, as a draft",
+                     "body": (
+                         "Your word is in the list with status draft. It can be put on "
+                         "a quality record once somebody holding quality.approve signs "
+                         "it on the Floor screen's Waiting for you panel."
+                     )},
+    },
     "raise_corrective_maintenance": {
         "title": "Raise corrective work",
         "needs": "maintenance.perform",

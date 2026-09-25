@@ -91,6 +91,8 @@ NEEDS: dict[str, str] = {
     "create_document": "documents.write",
     "draft_instruction": "documents.write",
     "draft_trigger": "triggers.write",
+    "draft_downtime_reason": "process.define",
+    "draft_nc_severity": "quality.define",
     "propose_adjustment": "adjustments.propose",
     "plan_order": "scheduling.plan",
     "plan_all_orders": "scheduling.plan",
