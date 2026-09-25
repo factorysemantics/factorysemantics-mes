@@ -8,9 +8,11 @@ had a comment beside them arguing for the number rather than stating it —
 which is what a judgment call sounds like before anybody calls it
 configuration.
 
-They are this plant's now. They live in `[quality]` in the plant pack, they
-are listed on **Quality › Configuration** with the value the plant is
-actually running on, and they follow one rule above all the others:
+They are this plant's now. They are seeded from `[quality]` in the plant pack,
+owned by the plant's database from then on, and **edited on Quality ›
+Configuration** by somebody holding `quality.define` — with the value the
+plant is actually running on beside each one. They follow one rule above all
+the others:
 
 > **The literal that was in the source is the shipped default, unchanged.**
 > A plant that writes none of these keys behaves exactly as it did.
@@ -48,7 +50,9 @@ gauge_ratio_adequate = 4
 gauge_ratio_floor = 2
 ```
 
-`fsmes pack check` reads every one of them offline. It refuses a number that
+`fsmes pack check` reads every one of them offline, and **the Configuration
+page refuses the same values in the same sentences** — one wording for one
+rule, so a screen cannot accept what a pack file cannot hold. It refuses a number that
 would leave the thing it decides unable to decide anything — control limits
 from one reading, a serial with no digits, a Cpk bar that makes *marginal*
 unreachable — and it refuses nothing else. A plant that wants twenty-five
@@ -104,17 +108,71 @@ migration sets the flag true for exactly the materials that prefix chose, so
 nothing about an existing plant's certificates changes — it is the same
 answer, given honestly by a flag instead of guessed from a name.
 
-## Where to see what this plant is set to
+## Editing a plant's own quality numbers
 
 **Quality › Configuration** (`/dashboard/config/quality`) lists every section
 with its keys, the value this plant is running on, and whether that value is
-the product's default or one the plant set.
+the product's default or one the plant set. Eleven of its twelve sections are
+these numbers, and each one is a box you type in.
 
-It says only those two things, and that is not laziness. By the time a plant
-is serving, a pack key **is** an environment variable — `fsmes pack apply`
-compiled it and the file it came from is not recorded anywhere the running
-process can see. Naming a pack on that screen would be a guess, and the
-screen exists so nobody has to guess what their plant is set to.
+1. Open **Quality › Configuration**. Each row's **Set to** column holds one
+   box per key, with the key's name beside it.
+2. Type the new value and press **Save**. There is one Save per row, because
+   the Cpk bars and the gauge ratios are each *one judgment written as two
+   numbers* — a screen that saved half of one would make *marginal*
+   unreachable until you had typed the other half.
+3. It is in force at once. No approval step, no restart, and no pack to
+   re-apply: the next chart drawn, the next serial issued and the next
+   certificate printed read the new number.
+
+You need the **`quality.define`** capability, which the built-in Administrator
+and Agent roles hold. Without it the page shows you every value and no box:
+a number nobody can read is a number nobody can argue with, and the reading is
+open to anybody who may see the plant.
+
+Every change is written to the audit trail — who, when, what it was and what
+it became. **Undo is typing the old number back.** There is deliberately no
+revision history here, because nothing in this MES records *the Cpk bar that
+was in force when I was judged*: a non-conformance stores its severity, and a
+chart is drawn fresh every time. That is the difference between these numbers
+and [the severity vocabulary](quality-severities.md), which does have a
+draft → approve lifecycle, because the words it holds are written onto records
+that outlive it.
+
+### What the pack still does, and what it no longer does
+
+`fsmes pack apply` **seeds** each key the pack carries, once. After that the
+database owns it, and a later apply leaves it exactly as it is — the same rule
+every other kind a pack seeds already keeps, and for the same reason: a pack
+that reached back into a number somebody deliberately changed on a running
+plant would be the pack overruling the plant.
+
+So editing `plant.toml` and re-applying does **not** move a number this plant
+has already taken ownership of. If that is what you want, change it on the
+screen; the pack file is how a *new* plant starts, not how a running one is
+steered. `fsmes pack status` reports the difference.
+
+### Where the value lives, and what the screen can honestly say
+
+The screen has two answers about any key — **the product's default,
+unchanged** or **this plant set it** — and it says only those two. A row
+written by `fsmes pack apply` is the second of them, because the plant did set
+it, in its pack; naming *which* pack would be a guess, since by the time a
+plant is serving the file it was built from is not recorded anywhere the
+running process can see.
+
+Underneath, a number is read in three layers, in this order:
+
+1. the row in this plant's `plant_settings` table — what its administrator or
+   its pack wrote;
+2. the setting the pack compiled into the environment (`MES_QUALITY_*`);
+3. the literal this version of the product ships.
+
+Which is why **a plant that has never touched the page and never applied a
+pack behaves exactly as it did before any of this existed** — and why
+upgrading to this version moves no data: a plant already running on
+`spc_min_points = 25` from its pack keeps drawing limits from twenty-five
+readings through layer two, with an empty table.
 
 ## See also
 

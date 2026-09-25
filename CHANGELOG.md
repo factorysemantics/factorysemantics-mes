@@ -308,6 +308,42 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Changed
 
+- **Eleven Quality settings move from the pack file to the plant's database,
+  and the Configuration page edits them.** Scott, using the page: *"when I
+  click on stuff, it doesn't seem to take me to where I can actually make those
+  changes. Shouldn't it?"* He was right — each of those rows said *nobody, it
+  changes when the pack is applied and the plant restarts*, and the link took
+  him to the screen where the value's **effect** was visible with no control to
+  change it anywhere. Now the Cpk bars, the two SPC rule lists, the readings
+  behind a control limit and how far back a chart looks, the gauge rule of ten
+  and its floor, a new gauge's calibration interval, the serials a certificate
+  lists, a serial's digit width, what a non-conformance is called and how deep
+  the packaging goes are all **typed into a box on Quality › Configuration by
+  somebody holding `quality.define`, in force at once, audited, with no
+  restart and no pack to re-apply.** No approval step: nothing in this MES
+  records the Cpk bar that was in force when it judged something, so there is
+  nothing for a revision to protect, and undo is typing the old number back.
+  `fsmes pack check`'s own ranges refuse the same values from the page in the
+  same sentences, including the two pairs — `cpk_marginal` is judged against
+  the `cpk_capable` this plant is running on, not the product's default.
+  [Editing a plant's own quality numbers](docs/operate/quality-numbers.md#editing-a-plants-own-quality-numbers).
+
+  **Migration:** additive, and it moves no data. `plant_settings` starts empty
+  on every existing plant, and a value is read in three layers — that table,
+  then the `MES_QUALITY_*` setting the pack compiled, then the literal the
+  product ships — so **a plant that has changed nothing behaves exactly as it
+  did, and one already running on its own pack values keeps them.** The next
+  `fsmes pack apply` seeds a row per key its pack carries, once: after that the
+  database owns it and a later apply leaves it alone, the same rule every other
+  kind a pack seeds already keeps. Editing `plant.toml` and re-applying no
+  longer moves a number the plant has taken ownership of — change it on the
+  screen; `fsmes pack status` reports the difference.
+
+  And the mechanism is the pattern, not Quality's: a future plant-scope section
+  becomes editable by setting `edit_here=True` on its `ConfigSection` and naming
+  the capability in `define`. No table, endpoint, migration or JavaScript of its
+  own. [Decision 0035 §11](docs/design/config-assistance.md).
+
 - **The Configuration page says what each setting is set to.** A row used to
   say where the door was and who may open it. It now also says the value this
   plant is running on and whether that value is the product's default or one
