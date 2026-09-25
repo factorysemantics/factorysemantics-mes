@@ -318,6 +318,33 @@ td { padding: 10px; border-bottom: 1px solid rgba(38,48,64,.5); vertical-align: 
 tbody tr:last-child td { border-bottom: none; }
 td.code { font-family: var(--mono); font-size: 13px; }
 
+/* A setting edited in the table it is read in (Configuration pages). One line
+   per key, and one Save for the section below them, because the Cpk bars and
+   the gauge ratios are each one judgment written as two numbers. */
+.setting-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s1);
+  flex-wrap: wrap;
+  padding-bottom: var(--s1);
+}
+.setting-line input {
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  padding: 3px 7px;
+}
+.setting-save {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding-top: var(--s1);
+  flex-wrap: wrap;
+}
+/* The server's own refusal, in its own words, beside the button that asked
+   for it. Red rather than a toast: a sentence about the number in the box
+   belongs next to the box. */
+.setting-save .refused { color: var(--down); font-size: var(--fs-sm); max-width: 34ch; }
+
 .pill {
   font-size: 11px;
   font-weight: 600;
