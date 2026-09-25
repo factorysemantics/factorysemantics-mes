@@ -454,10 +454,21 @@ def test_the_agent_reads_every_live_setting_in_a_workspace_with_its_total(wired)
     assert out["not_written_here_total"] == len(out["not_written_here"])
 
 
-def test_the_same_two_tools_answer_for_a_workspace_with_nothing_live_in_it(wired):
-    """Engineering has a Configuration page and no live settings yet. Nothing
-    domain-specific is asked of either tool, so the honest answer is a workspace
-    with a total of nothing - not an error, and not a guess."""
+def test_the_same_two_tools_answer_for_a_workspace_with_nothing_live_in_it(wired, monkeypatch):
+    """A Configuration page with no live settings yet answers with a total of
+    nothing - not an error, and not a guess.
+
+    Every real domain has something live in it now (Quality, Engineering,
+    Administration, supply chain each built their own), so this pins the
+    *empty* case by removing engineering's sections for the one call rather
+    than by trusting a domain to stay empty - which is exactly the trust this
+    tool's whole point was to not need."""
+    from fsmes import modules
+
+    real = modules.config_sections
+    monkeypatch.setattr(modules, "config_sections",
+                        lambda domain, served=None: () if domain == "engineering" else real(domain, served))
+
     out = mcp_server.plant_settings("testplant", "engineering")
     assert out["domain"] == "engineering" and out["total"] == 0
 

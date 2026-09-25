@@ -334,12 +334,21 @@ def test_a_curated_line_carries_its_scope_on_the_scanned_candidate():
 def test_a_row_that_became_a_pack_key_anchors_on_that_keys_own_default():
     """A row that became a `plant.toml` key points at the key's default.
 
-    The other half of the seam above. Nineteen rows became keys on 2026-09-25 -
-    seventeen Engineering's and the two Administration rows that were the same
-    item as two of them - and each one's anchor moved from the code that held
-    the literal to the `Settings` field its key compiles to. A `settled`
-    sentence with an anchor still on the old line would be this list claiming a
-    change it had not checked.
+    The other half of the seam above. Nineteen rows became Engineering keys on
+    2026-09-25 - seventeen Engineering's own plus the two Administration rows
+    that were the same item as two of them (A8/P6, A25/P9) - and each one's
+    anchor moved from the code that held the literal to the `Settings` field
+    its key compiles to. A `settled` sentence with an anchor still on the old
+    line would be this list claiming a change it had not checked.
+
+    Scoped to this PR's own nineteen IDs rather than "settled on 2026-09-25":
+    supply chain's six settled the same calendar day (this file was rebased
+    onto it), and one of those - S7 - deliberately anchors somewhere other
+    than `config.py`, because it is the pack's first key with no live
+    `Settings` default at all (`docs/design/config-assistance.md` §12). A
+    date is an incidental fact about when something was built, not an
+    identity; asserting by ID is what stays true regardless of what else
+    lands on the same day.
 
     Only the rows that became *keys*: a row that became a database-backed
     vocabulary or a column on an object - `Q3`'s severities, `Q7`'s per-gauge
@@ -347,12 +356,15 @@ def test_a_row_that_became_a_pack_key_anchors_on_that_keys_own_default():
     on, and pretending otherwise would be this test having an opinion about
     where an answer has to live.
     """
-    live = [c for c in config_audit.CURATED
-            if c.settled and "2026-09-25" in c.settled]
+    ids = {"P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9", "P10", "P11",
+           "C3", "C8", "C9", "C10", "C11", "C12", "A8", "A25"}
+    live = [c for c in config_audit.CURATED if c.id in ids]
     assert len(live) == 19, (
         "seventeen Engineering rows plus A8 and A25, which are P6 and P9 under "
         "another domain's numbering - said out loud so the count cannot drift"
     )
+    unsettled = [c.id for c in live if not c.settled or "2026-09-25" not in c.settled]
+    assert not unsettled, f"named as live but not marked settled: {unsettled}"
     off = [c.id for c in live if c.path != "config.py"]
     assert not off, (
         "a row that became a key anchors on that key's own default in "
