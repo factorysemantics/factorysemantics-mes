@@ -37,26 +37,34 @@ DEFAULT_INTERVAL_DAYS = 365
 DEFAULT_WARN_DAYS = 30
 
 
-def ratios() -> tuple[float, float]:
+def _number(session: Session, name: str, fallback):
+    """One of this plant's two gauge judgments, read at the moment it is needed.
+
+    Read through `fsmes.services.plant_settings`: the row this plant's own
+    administrator edited on Quality's Configuration page, then the setting its
+    pack compiled, then the literal above. The session is the caller's own, so
+    the reading is one memoised query on a unit of work already open and a
+    number saved on the screen is in force on the next reading.
+    """
+    from fsmes.services import plant_settings
+
+    return plant_settings.value(session, "quality", name, fallback)
+
+
+def ratios(session: Session) -> tuple[float, float]:
     """`(adequate, floor)` - this plant's two resolution bars.
 
     Together, because they are one judgment written as two numbers and a
     caller that read one without the other could call a gauge both adequate
     and too coarse.
     """
-    from fsmes.config import get_settings
-
-    settings = get_settings()
-    return (float(getattr(settings, "quality_gauge_ratio_adequate", RATIO_ADEQUATE)),
-            float(getattr(settings, "quality_gauge_ratio_floor", RATIO_FLOOR)))
+    return (float(_number(session, "gauge_ratio_adequate", RATIO_ADEQUATE)),
+            float(_number(session, "gauge_ratio_floor", RATIO_FLOOR)))
 
 
-def default_interval_days() -> int:
+def default_interval_days(session: Session) -> int:
     """The house calibration interval for a gauge nobody gave one."""
-    from fsmes.config import get_settings
-
-    return int(getattr(get_settings(), "quality_gauge_default_interval_days",
-                       DEFAULT_INTERVAL_DAYS))
+    return int(_number(session, "gauge_default_interval_days", DEFAULT_INTERVAL_DAYS))
 
 
 def get(session: Session, code: str) -> Gauge:
@@ -117,7 +125,8 @@ def register(session: Session, *, code: str, name: str, kind: str = "general",
     """
     if session.scalar(select(Gauge).where(Gauge.code == code)):
         raise Conflict(f"gauge {code} already exists")
-    interval_days = default_interval_days() if interval_days is None else interval_days
+    interval_days = (default_interval_days(session) if interval_days is None
+                     else interval_days)
     if interval_days <= 0:
         raise Invalid("calibration interval must be positive")
     if warn_days is not None and warn_days < 0:
@@ -237,7 +246,7 @@ def resolution_check(session: Session, code: str, tolerance: float) -> dict:
     if gauge.resolution is None or gauge.resolution <= 0:
         return {"gauge": code, "verdict": "gauge resolution is not recorded"}
     ratio = tolerance / gauge.resolution
-    adequate, floor = ratios()
+    adequate, floor = ratios(session)
     return {
         "gauge": code,
         "resolution": gauge.resolution,

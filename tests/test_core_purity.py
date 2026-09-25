@@ -140,6 +140,20 @@ DEFERRED: dict[tuple[str, str], str] = {
         "list so the two cannot disagree - imported inside the validator, so "
         "nothing at import time depends on it. Moving `protected_terms()` down "
         "to the services layer, where it belongs, is a change of its own",
+    ("fsmes.services.plant_settings", "fsmes.pack.format"):
+        "the pack schema is the one declaration of what a setting is called, "
+        "what kind of thing it holds and which `MES_*` variable it compiles "
+        "to, and the service that owns the database-backed half of the same "
+        "setting reads it rather than keeping a second copy that could drift. "
+        "Beside `vocabulary` below it and for the same reason: the declaration "
+        "belongs in the foundations and lives with the pack reader because "
+        "that is what needed it first. Imported inside each function, so a "
+        "plant installed without the pack tooling still imports fsmes.services",
+    ("fsmes.services.plant_settings", "fsmes.pack.check"):
+        "one wording for one rule. A Cpk pair that `fsmes pack check` refuses "
+        "in a file must be refused in the same sentence when somebody types it "
+        "into the Configuration page, and a second copy of those ranges behind "
+        "an input is how a screen comes to accept what a pack cannot",
     ("fsmes.services.agent", "fsmes.mcp_server"):
         "a plant running the assistant in-process calls its own MCP tools; the "
         "server is imported inside the function that calls it, so a plant "

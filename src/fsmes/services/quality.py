@@ -28,11 +28,19 @@ from fsmes.services import Conflict, NotFound, audit, calendar, masterdata, work
 NC_CODE_PREFIX = "NC"
 
 
-def nc_code_prefix() -> str:
-    from fsmes.config import get_settings
+def nc_code_prefix(session: Session) -> str:
+    """What this plant calls a non-conformance on the record.
 
-    return str(getattr(get_settings(), "quality_nc_code_prefix", NC_CODE_PREFIX)
-               or NC_CODE_PREFIX)
+    Read through `fsmes.services.plant_settings`: the row this plant's own
+    administrator edited on Quality's Configuration page, then the setting its
+    pack compiled, then the literal above. The session is the caller's own, so
+    the reading is one memoised query on a unit of work already open and a
+    number saved on the screen is in force on the next reading.
+    """
+    from fsmes.services import plant_settings
+
+    return str(plant_settings.value(session, "quality", "nc_code_prefix",
+                                    NC_CODE_PREFIX) or NC_CODE_PREFIX)
 
 
 def create_spec(
@@ -179,7 +187,7 @@ def open_nc(
     calendar.attribute(session, nc, now)
     session.add(nc)
     session.flush()
-    nc.code = f"{nc_code_prefix()}-{nc.id:05d}"
+    nc.code = f"{nc_code_prefix(session)}-{nc.id:05d}"
     audit.record(
         session,
         actor=actor,

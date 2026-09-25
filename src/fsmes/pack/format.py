@@ -410,6 +410,84 @@ def words(pack: Pack) -> dict[str, str]:
     return {str(k): str(v) for k, v in pack.table("words").items()}
 
 
+def key_named(section: str, name: str) -> Key | None:
+    """One key of the schema, by the two names that identify it. None when
+    this version has no such key, which callers say out loud rather than
+    guessing at - a pack key nobody can look up is a pack key nobody can
+    validate."""
+    known = BY_SECTION.get(section)
+    if known is None:
+        return None
+    return next((k for k in known.keys if k.name == name), None)
+
+
+def parse(key: Key, written: str):
+    """Text as the value its key is, or `ValueError` saying why it is not.
+
+    The other direction from `settings` below, and it exists for the same
+    reason that one does: a setting is text by the time anything reads one, so
+    something has to turn a person's typing back into the whole number, the
+    measurement or the list of rule numbers the key declares itself to be -
+    once, here, rather than at each screen that offers an input.
+
+    It converts and it does not judge. Whether 25 readings is a sensible
+    number of readings, or whether rule 7 exists, is `fsmes.pack.check`'s
+    question and is answered there for a pack file and for an edited setting
+    alike; this refuses only text that is not the kind of thing at all.
+    """
+    written = (written or "").strip()
+    if key.kind == "int":
+        try:
+            return int(written)
+        except ValueError:
+            raise ValueError(f"{written!r} is not a whole number.") from None
+    if key.kind == "float":
+        try:
+            return float(written)
+        except ValueError:
+            raise ValueError(f"{written!r} is not a number.") from None
+    if key.kind == "bool":
+        if written.lower() in ("true", "yes", "on", "1"):
+            return True
+        if written.lower() in ("false", "no", "off", "0"):
+            return False
+        raise ValueError(f"{written!r} is not true or false.")
+    if key.kind == "ints":
+        # An empty list is a real answer for every key of this kind the
+        # product has - `hold_rules = []` is *draw every rule and hold on
+        # none of them* - so empty text parses to the empty list rather than
+        # refusing.
+        out: list[int] = []
+        for part in written.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            try:
+                out.append(int(part))
+            except ValueError:
+                raise ValueError(
+                    f"{part!r} is not a whole number. This key is a list of them, "
+                    "written with commas between.") from None
+        return out
+    return written
+
+
+def as_written(key: Key, value) -> str:
+    """One value as the text a compiled setting carries it in.
+
+    The same three coercions `settings` performs, factored out so that a value
+    stored in the database and the same value compiled from a pack file reach
+    the product as the identical string. `path` is not here: a path is
+    resolved against the pack directory it came from, which nothing editing a
+    setting afterwards has.
+    """
+    if key.kind == "bool":
+        return "true" if value else "false"
+    if key.kind == "ints":
+        return ",".join(str(int(item)) for item in value)
+    return str(value)
+
+
 def settings(pack: Pack) -> dict[str, str]:
     """Every `MES_*` variable this pack states, and only those.
 

@@ -9,11 +9,12 @@ import threading
 import time
 
 from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from fsmes import modules
-from fsmes.api.deps import ReadDbDep, UserDep
+from fsmes.api.deps import ActorDep, DbDep, ReadDbDep, UserDep
 from fsmes.config import get_settings
 from fsmes.domain import (
     AuditLog,
@@ -469,37 +470,128 @@ def pending_approval(kind: str, code: str, revision: int,
 # ------------------------------------------- what is configurable in here
 
 
-def _pack_key(written: str) -> dict:
-    """One `[section] key`, with the value this plant is running on.
+def _pack_key(db: Session, domain: str, written: str) -> dict:
+    """One `[section] key`, with the value this plant is actually running on.
 
-    Read from the settings the plant actually started with rather than from
-    the pack file, because by the time a plant is serving, a pack key *is* an
-    environment variable - `fsmes pack apply` compiled it and the file it came
-    from is not recorded anywhere the running process can see.
+    Read from `fsmes.services.plant_settings`, which is the row this plant's
+    own administrator edited, then the setting its pack compiled, then the
+    literal the product ships. So the honest answer to *who set this* is still
+    two-valued and still says exactly that: **the value is the product's
+    default, unchanged**, or **this plant set it**. What changed on 2026-09-24
+    is where the second one lives - the database rather than a file the running
+    process cannot see - and that it can be written from this page.
 
-    So the honest answer to *who set this* is two-valued, and it says exactly
-    that: **the value is the product's default, unchanged**, or **this plant
-    set it**. Naming the pack that wrote it would be a guess, and this screen
-    exists so that nobody has to guess what their plant is set to.
+    A key its section does not mark `edit_here` is read the same way and
+    carries no row; it answers with `set_by: null` and the screen prints it
+    without an input, which is the honest reading of a setting that genuinely
+    cannot move while a plant is running.
     """
+    from fsmes.services import plant_settings
+
+    _, name = plant_settings.split(written)
+    try:
+        return plant_settings.state(db, domain, name)
+    except plant_settings.Unknown:
+        # A section that is not editable here: describe the key from the pack
+        # schema and the settings it compiled to, with no row behind it.
+        return _read_only_key(written)
+
+
+def _read_only_key(written: str) -> dict:
+    """A pack key no section on this page can write, as the page reads it."""
     from fsmes.config import Settings, get_settings
     from fsmes.pack import format as fmt
+    from fsmes.services import plant_settings
 
-    section, _, name = written.strip("[]").partition("] ")
-    key = next((k for k in fmt.BY_SECTION[section].keys if k.name == name), None)
-    field = (key.becomes or "").removeprefix("MES_").lower() if key else ""
-    settings = get_settings()
-    value = getattr(settings, field, None)
+    section, name = plant_settings.split(written)
+    key = fmt.key_named(section, name)
+    field = plant_settings.field_name(key) if key else ""
+    value = getattr(get_settings(), field, None)
     default = Settings.model_fields[field].default if field in Settings.model_fields else None
     return {
         "key": written,
+        "name": name,
         "about": key.about if key else None,
+        "kind": key.kind if key else "str",
         # Everything reaches a screen as text, because that is what a setting
         # is by the time a plant reads one.
         "value": "" if value is None else str(value),
         "default": "" if default is None else str(default),
         "is_default": value == default,
+        "set_by": None,
     }
+
+
+class SettingIn(BaseModel):
+    """A new value for one setting, as text.
+
+    Text, not a union of every type a key can be, for the same reason the
+    column is text: a setting *is* text by the time a plant reads one, and
+    `fsmes.pack.format.parse` is the one place that turns a person's typing
+    into the whole number, the measurement or the list of rule numbers the key
+    declares itself to be. A field typed `int | float | str | list[int]` here
+    would be a second parser, reachable only over HTTP, disagreeing with the
+    one a pack file goes through.
+    """
+
+    value: str
+
+
+@router.patch("/config/{domain}/settings/{key}")
+def set_setting(domain: str, key: str, body: SettingIn,
+                db: DbDep, actor: ActorDep, user: UserDep) -> dict:
+    """Put one of this plant's own settings in force, now.
+
+    **The gate is the section's, not this endpoint's.** Which capability may
+    write a setting is declared on the `ConfigSection` that lists it - the
+    registry decides where the door is and each section's author decides who
+    walks through it - so the capability is looked up per key and refused in
+    the same words `require()` would have used. That is why this is not a
+    `dependencies=[require(...)]`: there is no one capability to name.
+
+    No approval step and no draft. Rule three of decision 0035: *a number a
+    plant administrator edits and which takes effect when saved has no pending
+    state.* Nothing records the Cpk bar that was in force when it was judged,
+    so there is nothing for a revision to protect; undo is typing the old
+    number back, and the audit row says what it was.
+
+    Validated by `fsmes pack check`'s own rules and refused in its own
+    sentences, including the two pairs - `cpk_marginal` is judged against the
+    `cpk_capable` this plant is already running on, not against the product's
+    default.
+    """
+    from fsmes.services import auth as auth_service
+    from fsmes.services import plant_settings
+
+    known = modules.DOMAIN_BY_SLUG.get(domain)
+    if known is None:
+        raise HTTPException(
+            404,
+            f"there is no configuration workspace called {domain!r}. "
+            f"This version has: {', '.join(sorted(modules.DOMAIN_BY_SLUG))}.")
+    try:
+        section, _, _schema = plant_settings.owner(domain, key)
+    except plant_settings.Unknown as exc:
+        raise HTTPException(404, str(exc)) from None
+
+    # Read live from the role rather than from the token, so revoking a power
+    # takes effect here at once - the same rule `require()` keeps.
+    role = auth_service.current_role(db, user) or user["role"]
+    held = auth_service.capabilities_for(db, role)
+    if section.define and section.define not in held:
+        raise HTTPException(
+            403,
+            f"this action needs the {section.define!r} capability, "
+            f"which the {role!r} role does not grant")
+
+    try:
+        return plant_settings.write(db, domain=domain, key=key,
+                                    written=body.value, actor=actor)
+    except plant_settings.Invalid as exc:
+        # 422, not 400: the request is well formed and the value is not one
+        # this key can hold, which is what the sentence says.
+        raise HTTPException(422, str(exc)) from None
+
 
 @router.get("/config/{domain}/sections")
 def config_sections(domain: str, db: ReadDbDep, user: UserDep) -> dict:
@@ -560,7 +652,11 @@ def config_sections(domain: str, db: ReadDbDep, user: UserDep) -> dict:
                 # chose it. Empty for everything a screen changes; a list is
                 # the page saying *nobody drafts this and nobody signs it -
                 # it is in the pack*, which neither capability field can say.
-                "pack_keys": [_pack_key(name) for name in section.pack_keys],
+                "pack_keys": [_pack_key(db, domain, name) for name in section.pack_keys],
+                # Whether this section's pack keys are edited on this page.
+                # The page renders an input for a section that says yes and
+                # `packCell`'s text for one that says no.
+                "edit_here": section.edit_here,
             }
             for section in shown
         ],

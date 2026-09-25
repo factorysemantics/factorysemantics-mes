@@ -145,11 +145,9 @@ class ConfigSection:
     """The `plant.toml` keys this section is, where it is keys rather than a
     list somebody edits on a screen - `("[quality] hold_rules",)`.
 
-    Named because the two capability fields cannot say the truth about one:
-    nobody drafts it and nobody signs it, it is written in the plant's pack
-    and takes effect when the pack is applied and the plant restarts. A page
-    that said *anybody who can see this screen* about a key nobody can change
-    from a screen would be worse than saying nothing.
+    Named because a pack key is the one name for a setting that every part of
+    this product already agrees on: the pack schema declares it, `fsmes pack
+    check` validates it by it, and the Configuration page prints it.
 
     A tuple rather than one name because some judgments are one decision
     written as two numbers - where a process stops being capable and where it
@@ -157,6 +155,26 @@ class ConfigSection:
     those into two rows would make the list longer without making it clearer,
     while naming only one of them would be a half-truth on the screen a person
     reads to find out what their plant is set to.
+    """
+
+    edit_here: bool = False
+    """Whether this section's `pack_keys` are **edited on the Configuration
+    page itself**, rather than only read there.
+
+    This is the one flag a plant-scope section sets to become live. True means
+    the database owns these keys - seeded from the pack when the plant was
+    built, written afterwards by somebody holding `define`, in force at once -
+    so the page renders an input and `PATCH /dashboard/config/{domain}/settings/{key}`
+    accepts a new value. False means the keys are read at start-up and nothing
+    on a screen can change them, which is what every one of these was until
+    2026-09-24 and is still the honest answer for a setting that genuinely
+    cannot move while a plant is running.
+
+    `docs/design/config-assistance.md` §11 is the whole of what a future
+    section has to do: one flag here, and `define` naming the capability that
+    may write it. No table of its own, no endpoint of its own, no `KINDS`
+    entry - rule three of decision 0035 is explicit that a number taking
+    effect when it is saved has no pending state to review.
     """
 
 
@@ -335,6 +353,13 @@ REGISTRY: tuple[Module, ...] = (
                       f"{domain.title}: everything configurable in this workspace, "
                       "in one place, so a new setting needs no new nav entry.")
                  for domain in CONFIG_DOMAINS)),
+        # The settings a plant owns, for every domain at once. It belongs here
+        # rather than to Quality because the table is the Configuration page's
+        # own, keyed by pack section and key, and the next domain's live
+        # section writes rows into this same table. Here also means always
+        # present: a plant that switches Quality off keeps the numbers it had
+        # chosen, and they are what it reads again when Quality comes back.
+        tables=("plant_settings",),
     ),
 
     # -------------------------------------------------------- the modules
@@ -428,6 +453,8 @@ REGISTRY: tuple[Module, ...] = (
                       "rules on every plant. Which of them open a non-conformance "
                       "is this plant's, and defaults to all four (decision 0036).",
                 href="/dashboard/spc",
+                define="quality.define",
+                edit_here=True,
                 pack_keys=("[quality] hold_rules",)),
             ConfigSection(
                 domain="quality",
@@ -437,6 +464,8 @@ REGISTRY: tuple[Module, ...] = (
                       "than a minor one. Rule 1 alone by default. The two words "
                       "come from this plant's own severity list.",
                 href="/dashboard/spc",
+                define="quality.define",
+                edit_here=True,
                 pack_keys=("[quality] major_rules",)),
             ConfigSection(
                 domain="quality",
@@ -446,6 +475,8 @@ REGISTRY: tuple[Module, ...] = (
                       "one below it for marginal. Only the English word moves - "
                       "the Cpk itself is arithmetic and means the same everywhere.",
                 href="/dashboard/spc",
+                define="quality.define",
+                edit_here=True,
                 pack_keys=("[quality] cpk_capable", "[quality] cpk_marginal")),
             ConfigSection(
                 domain="quality",
@@ -455,6 +486,8 @@ REGISTRY: tuple[Module, ...] = (
                       "that they mislead more than they inform. Twelve by default, "
                       "and the pallet certificate prints whatever this says.",
                 href="/dashboard/spc",
+                define="quality.define",
+                edit_here=True,
                 pack_keys=("[quality] spc_min_points",)),
             ConfigSection(
                 domain="quality",
@@ -463,6 +496,8 @@ REGISTRY: tuple[Module, ...] = (
                 about="A plant inspecting every fifteen minutes and one inspecting "
                       "hourly want different histories behind one chart.",
                 href="/dashboard/spc",
+                define="quality.define",
+                edit_here=True,
                 pack_keys=("[quality] spc_history",)),
             ConfigSection(
                 domain="quality",
@@ -472,6 +507,8 @@ REGISTRY: tuple[Module, ...] = (
                       "ANSI Z540 says 4:1; a plant follows one standard for every "
                       "gauge it owns.",
                 href="/dashboard/gauges",
+                define="quality.define",
+                edit_here=True,
                 pack_keys=("[quality] gauge_ratio_adequate", "[quality] gauge_ratio_floor")),
             ConfigSection(
                 domain="quality",
@@ -481,6 +518,8 @@ REGISTRY: tuple[Module, ...] = (
                       "gauge's own interval is the engineer's and is unaffected, "
                       "as is how much warning each gauge wants.",
                 href="/dashboard/gauges",
+                define="quality.define",
+                edit_here=True,
                 pack_keys=("[quality] gauge_default_interval_days",)),
             ConfigSection(
                 domain="quality",
@@ -490,6 +529,8 @@ REGISTRY: tuple[Module, ...] = (
                       "it says how many more there are. The plant's agreement "
                       "with whoever reads the certificate.",
                 href="/dashboard/coa",
+                define="quality.define",
+                edit_here=True,
                 pack_keys=("[quality] coa_serials_listed",)),
             ConfigSection(
                 domain="quality",
@@ -499,6 +540,8 @@ REGISTRY: tuple[Module, ...] = (
                       "prefix. The hyphen between them stays the product's: the "
                       "scan that recovers a counter reads PREFIX-digits.",
                 href="/dashboard/trace",
+                define="quality.define",
+                edit_here=True,
                 pack_keys=("[quality] serial_digits",)),
             ConfigSection(
                 domain="quality",
@@ -507,6 +550,8 @@ REGISTRY: tuple[Module, ...] = (
                 about="`NC-00017` by default. A plant that calls them NCRs calls "
                       "all of them NCRs; the number's width stays the product's.",
                 href="/dashboard/quality",
+                define="quality.define",
+                edit_here=True,
                 pack_keys=("[quality] nc_code_prefix",)),
             ConfigSection(
                 domain="quality",
@@ -516,6 +561,8 @@ REGISTRY: tuple[Module, ...] = (
                       "guard that stops a containment walk running away, so the "
                       "product keeps a hard ceiling of twelve above it.",
                 href="/dashboard/trace",
+                define="quality.define",
+                edit_here=True,
                 pack_keys=("[quality] containment_max_depth",)),
         ),
         tools=("fsmes.mcp.quality", "fsmes.mcp.severities"),

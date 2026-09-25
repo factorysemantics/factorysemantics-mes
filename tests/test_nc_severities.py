@@ -389,15 +389,23 @@ def test_quality_has_one_configuration_entry_and_the_severities_are_in_it(
     assert rows["nc_severities"]["may_approve"] is True
 
 
-def test_a_section_that_is_a_pack_key_says_so_rather_than_naming_a_capability(
+def test_a_section_that_is_a_pack_key_names_who_may_edit_it_and_nobody_who_signs(
         admin):
-    """Neither capability column can say the truth about a key in the plant's
-    pack: nobody drafts it and nobody signs it. A page that said *anybody who
-    can see this screen* would be worse than saying nothing."""
+    """A pack key that this plant owns is drafted by somebody and signed by
+    nobody, and the page says both.
+
+    It said *nobody - it changes when the pack is applied and the plant
+    restarts* for the three days between #98 and 2026-09-24, which was true
+    then and is what Scott found when he clicked one. Now the database owns it:
+    `quality.define` may write it and there is no approval step, because a
+    number that takes effect when it is saved has no pending state to review.
+    """
     page = admin.get("/dashboard/config/quality/sections").json()
     rules = next(row for row in page["items"] if row["key"] == "spc_hold_rules")
     assert [key["key"] for key in rules["pack_keys"]] == ["[quality] hold_rules"]
-    assert rules["define"] is None and rules["approve"] is None
+    assert rules["define"] == "quality.define"
+    assert rules["approve"] is None
+    assert rules["edit_here"] is True
     assert rules["href"] == "/dashboard/spc"
 
 
@@ -424,7 +432,7 @@ def test_every_rule_is_drawn_and_recorded_whatever_the_plant_holds_on(
     off the chart would be a chart that lies."""
     from fsmes.config import get_settings
 
-    monkeypatch.setattr(spc, "hold_rules", lambda: ())
+    monkeypatch.setattr(spc, "hold_rules", lambda _session: ())
     _steady(session)
     raised = quality.record_check(session, material_code="FG-COLA",
                                   characteristic="brix", value=11.9, actor="test")[2]
@@ -452,7 +460,7 @@ def test_a_rule_the_plant_does_not_hold_on_opens_no_nonconformance(
 
     from fsmes.domain import NonConformance
 
-    monkeypatch.setattr(spc, "hold_rules", lambda: (2, 3, 4))
+    monkeypatch.setattr(spc, "hold_rules", lambda _session: (2, 3, 4))
     _steady(session)
     quality.record_check(session, material_code="FG-COLA", characteristic="brix",
                          value=11.9, actor="test")

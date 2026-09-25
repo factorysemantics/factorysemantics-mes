@@ -43,10 +43,20 @@ PREFIX = "COA-"
 SERIALS_LISTED = 200
 
 
-def serials_listed() -> int:
-    from fsmes.config import get_settings
+def serials_listed(session: Session) -> int:
+    """How many serials this plant's certificates print before they say how
+    many more there are.
 
-    return int(getattr(get_settings(), "quality_coa_serials_listed", SERIALS_LISTED))
+    Read through `fsmes.services.plant_settings`: the row this plant's own
+    administrator edited on Quality's Configuration page, then the setting its
+    pack compiled, then the literal above. The session is the caller's own, so
+    the reading is one memoised query on a unit of work already open and a
+    number saved on the screen is in force on the next reading.
+    """
+    from fsmes.services import plant_settings
+
+    return int(plant_settings.value(session, "quality", "coa_serials_listed",
+                                    SERIALS_LISTED))
 
 
 def code_for(order_code: str) -> str:
@@ -127,6 +137,11 @@ def gather(session: Session, order_code: str) -> dict:
         "nonconformances": [{"code": n.code, "severity": n.severity, "status": n.status.value,
                              "description": n.description} for n in ncs],
         "envelopes": _envelopes(session, wo),
+        # This plant's own number, carried with the data rather than read
+        # again by the renderer: a certificate is rendered from what was
+        # gathered, and a second reading could print a count the list beside
+        # it was not cut to.
+        "serials_listed": serials_listed(session),
     }
 
 
@@ -186,7 +201,7 @@ def render(data: dict, *, issued_by: str, issued_at: datetime, revision: int, su
         lines.append("No process history covers this order's window.")
     if data["serials"]:
         lines += ["", "## Serialised units", "", "| Serial | Status | Packed into |", "|---|---|---|"]
-        listed = serials_listed()
+        listed = data["serials_listed"]
         for s in data["serials"][:listed]:
             lines.append(f"| {s['serial']} | {s['status']} | {s['packed_into'] or '—'} |")
         if len(data["serials"]) > listed:
@@ -289,7 +304,7 @@ def gather_pallet(session: Session, serial: str) -> dict:
     # rarely holds the sample a capability figure needs; the record extends
     # back to the most recent `[quality] spc_min_points` checks at or before
     # the close, and the certificate states the span those checks cover.
-    fewest = spc.min_points()
+    fewest = spc.min_points(session)
     # Which of the materials on this pallet are counted in pieces. A fact
     # about the material, recorded on it, since the configuration audit of
     # 2026-09-21 found this line testing a code prefix: any plant not
@@ -315,7 +330,7 @@ def gather_pallet(session: Session, serial: str) -> dict:
                     .order_by(QualityCheck.ts.desc()).limit(fewest)).all()
                 checks = sorted(recent, key=lambda c: c.ts)
             values = [c.value for c in checks]
-            cap = spc.capability(values, spec.min_value, spec.max_value)
+            cap = spc.capability(values, spec.min_value, spec.max_value, fewest=fewest)
             characteristics.append({
                 "material": material, "characteristic": spec.characteristic, "unit": spec.unit,
                 "lower_spec": spec.min_value, "upper_spec": spec.max_value,
@@ -351,13 +366,16 @@ def gather_pallet(session: Session, serial: str) -> dict:
         "inspections": {"units_inspected": inspected, "failed_on_pallet": failed},
         "characteristics": characteristics,
         "contents": tree["contains"],
+        # The fewest readings this plant draws a capability figure from,
+        # carried with the data for the same reason as above: the sentence
+        # under the table has to name the number the table was computed with.
+        "min_points": fewest,
     }
 
 
 def render_pallet(data: dict, *, issued_by: str, issued_at: datetime, revision: int, supersedes: int | None) -> str:
     """The pallet certificate as Markdown: the capability block, then every
     wrap with its stack, plate and pieces."""
-    from fsmes.services import spc
 
     w = data["window"]
     lines = [
@@ -402,7 +420,7 @@ def render_pallet(data: dict, *, issued_by: str, issued_at: datetime, revision: 
     lines += ["", "---", "",
               "The capability figures are computed from the checks a person recorded against each "
               "specification up to the pallet's close: those inside the window the contents were made, "
-              f"extended back to the most recent {spc.min_points()} where the window holds fewer, "
+              f"extended back to the most recent {data['min_points']} where the window holds fewer, "
               "with the span stated; "
               "sigma from the mean moving range, as the SPC chart computes it. "
               "The contents are read from the containment record "

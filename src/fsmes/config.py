@@ -465,13 +465,23 @@ class Settings(BaseSettings):
         module_registry.resolve(self.modules)
         return self
 
+    # These two read the *compiled pack setting* and nothing else, which since
+    # 2026-09-24 is the second of three layers rather than the whole answer:
+    # what a plant is running on is `fsmes.services.spc.hold_rules(session)`
+    # and `major_rules(session)`, which read the row its administrator edited
+    # first and fall back to these. Kept because a setting a plant can write in
+    # its pack is worth being able to read as a setting - `fsmes info` and a
+    # status line print what the environment holds - and because the two
+    # readings agreeing on a plant that has edited nothing is a test.
+
     def major_rules(self) -> tuple[int, ...]:
-        """Which SPC rules open a major non-conformance rather than a minor
-        one. Parsed the same way `hold_rules` is, and for the same reason."""
+        """Which SPC rules the pack asked to open a major non-conformance
+        rather than a minor one. Parsed the same way `hold_rules` is, and for
+        the same reason."""
         return _rule_list(self.quality_major_rules)
 
     def hold_rules(self) -> tuple[int, ...]:
-        """Which SPC rules raise a quality hold on this plant, in order."""
+        """Which SPC rules the pack asked to raise a quality hold, in order."""
         return _rule_list(self.quality_hold_rules)
 
     def enabled_modules(self) -> tuple[module_registry.Module, ...]:
