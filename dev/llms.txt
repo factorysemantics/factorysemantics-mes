@@ -23,6 +23,7 @@
 - [Operate — How-to — who names the severities](https://docs.factorysemantics.com/dev/operate/quality-severities/)
 - [Operate — Reference — this plant's own quality numbers](https://docs.factorysemantics.com/dev/operate/quality-numbers/)
 - [Operate — Reference — what this plant asks of its ERP link](https://docs.factorysemantics.com/dev/operate/erp-settings/)
+- [Operate — Reference — this plant's own engineering numbers](https://docs.factorysemantics.com/dev/operate/engineering-numbers/)
 - [Operate — Reference — plant packs](https://docs.factorysemantics.com/dev/operate/packs/)
 - [Operate — How-to — plants from a fleet file](https://docs.factorysemantics.com/dev/operate/registry/)
 - [Operate — How-to — the fleet this installation owns](https://docs.factorysemantics.com/dev/operate/fleet/)

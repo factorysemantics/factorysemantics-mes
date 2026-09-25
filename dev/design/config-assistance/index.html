@@ -1120,6 +1120,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operate/engineering-numbers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — this plant's own engineering numbers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operate/packs/" class="md-nav__link">
         
   
@@ -2343,6 +2371,45 @@
     <span class="md-ellipsis">
       
         One audit row that was wrong, and what reading it settled
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-applied-a-third-time-engineering-2026-09-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. Applied a third time — Engineering, 2026-09-25
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="13. Applied a third time — Engineering, 2026-09-25">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#two-things-11-did-not-say-and-should-have" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two things §11 did not say, and should have
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-fourteen-that-were-left" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The fourteen that were left
       
     </span>
   </a>
@@ -4335,6 +4402,45 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#13-applied-a-third-time-engineering-2026-09-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. Applied a third time — Engineering, 2026-09-25
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="13. Applied a third time — Engineering, 2026-09-25">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#two-things-11-did-not-say-and-should-have" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two things §11 did not say, and should have
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-fourteen-that-were-left" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The fourteen that were left
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -5424,6 +5530,60 @@ this MES and an <em>incumbent MES's export</em>, and <code>scorecard.py</code> a
 document this MES itself wrote</strong>, and <code>fsmes erp validate</code> is handed no
 mapping at all. Nothing was missed; the audit row conflated them. The curated
 row says so now rather than the correction living only here.</p>
+<h2 id="13-applied-a-third-time-engineering-2026-09-25">13. Applied a third time — Engineering, 2026-09-25<a class="headerlink" href="#13-applied-a-third-time-engineering-2026-09-25" title="Permanent link">&para;</a></h2>
+<p>§11 said the whole opt-in was two lines and claimed the next domain would need
+nothing else. Scott asked the obvious follow-up — <em>"can the methodology be
+expanded to all tabs?"</em> — and process and controls engineering were the first
+answer to it. <strong>Seventeen sections, twenty-two keys, and §11's claim held</strong>: the
+<code>plant_settings</code> table, the <code>PATCH</code> endpoint, the three-layer read, the seeding
+rule and the page's own input all took them with no change of their own.</p>
+<p>What the second application did need, and what each of those tells us about §11:</p>
+<ul>
+<li><strong>Two new pack tables</strong>, <code>[process]</code> and <code>[controls]</code>, plus one key added to
+  <code>[oee]</code>. A declaration is not the mechanism; §11 never claimed a domain would
+  arrive with its keys already declared.</li>
+<li><strong>A new key kind, <code>floats</code></strong>, for a list of measurements. <code>report_windows</code> is
+  <code>[0.25, 1, 8, 24, 168]</code> and <code>ints</code> cannot say that a quarter of an hour is a
+  real window. The kind is the pack format's, not this seam's.</li>
+<li><strong>A new capability, <code>signals.define</code>.</strong> §2 named it in this very document and
+  said adding it later would be cheap because a capability is a string and a
+  role is a list of them. It was. Its pair <code>signals.approve</code> is deliberately
+  still absent: there is nothing yet for it to approve, and a capability a plant
+  could grant that gates nothing is a role saying something untrue about itself.</li>
+<li><strong>A checker per pack table</strong>, found by name from <code>plant_settings.write</code>. §11's
+  <em>one wording for one rule</em> only works if the validation a pack file goes
+  through is the validation an input goes through, so a section that gains a
+  <code>&lt;section&gt;_numbers</code> in <code>fsmes.pack.check</code> gains it behind the input, and a
+  section with none is validated by <code>fmt.parse</code> alone. That is the honest answer
+  for a key whose only wrong values are ones that are not the kind of thing.</li>
+</ul>
+<h3 id="two-things-11-did-not-say-and-should-have">Two things §11 did not say, and should have<a class="headerlink" href="#two-things-11-did-not-say-and-should-have" title="Permanent link">&para;</a></h3>
+<p><strong>Some settings the browser draws with cannot ride on a payload.</strong> §11's shape
+is that a number reaches the screen beside the figure it judges — the Cpk bar
+arrives with the chart it colours — and that is right, because a number beside
+its own figure cannot drift from it. Three of these seventeen cannot do it: the
+shared time picker is built before any panel has asked for anything, and the
+shift form and the schedule board's horizon are controls rather than readings.
+<code>GET /dashboard/screens</code> serves those, and the rule for what belongs on it is
+narrow: <strong>a setting goes there only when no payload it could ride on exists
+yet.</strong> Anything else belongs with its figure.</p>
+<p><strong>"In force at once" has honest exceptions, and they have to be named on the
+page.</strong> <code>opc_history_ratio</code> and its floor are read when the OPC agent next
+subscribes, because a sampling interval is a number the server holds for the
+life of a subscription. There is no way to make that immediate, and the choice
+is between saying so on the row and letting somebody believe otherwise. §11's
+promise should be read as <em>in force on the next reading</em>, and a section whose
+next reading is a reconnection says which.</p>
+<h3 id="the-fourteen-that-were-left">The fourteen that were left<a class="headerlink" href="#the-fourteen-that-were-left" title="Permanent link">&para;</a></h3>
+<p>Process and controls engineering had thirty-one candidates on the audit page;
+seventeen are here. The other fourteen are the ones scoped <code>object</code>, and they
+are the clearest demonstration that this seam has a boundary: a counter that
+wraps at 65535 and one zeroed every shift are two tags, not two plants. A
+plant-wide setting for them would be wrong about one of them, and <code>plant_settings</code>
+is keyed by <code>[section] key</code> with no room for a third name — deliberately, since
+a table that could hold <em>per object</em> rows would be a second object model. Those
+belong on the object's own row, and <code>C14</code> in particular waits on the bulk-edit
+design §9 opened.</p>
 
 
 
