@@ -89,7 +89,10 @@ def test_the_registry_says_how_many_modules_there_are_and_how_many_can_be_switch
     # the machine router ends with `/{code}` and would swallow it, `quality`
     # for the same structural reason before it has such a route.
     assert mounts == 25, f"{mounts} routers in the registry; the app mounted 24 before it existed"
-    assert tools == 10, f"{tools} tool files in the registry; the MCP server registered 10"
+    # Twelve tool files across ten modules that ship one: `equipment` and
+    # `quality` each have a second for their vocabulary, mirroring the second
+    # router and the screen that drafts it.
+    assert tools == 12, f"{tools} tool files in the registry; the MCP server registered 12"
 
 
 # ----------------------------------------------------------------- routes

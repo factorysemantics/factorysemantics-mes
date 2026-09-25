@@ -315,7 +315,9 @@ REGISTRY: tuple[Module, ...] = (
                 define="process.define",
                 approve="process.approve"),
         ),
-        tools=("fsmes.mcp.equipment",),
+        # Two tool files, for the same reason there are two routers: the
+        # vocabulary is its own thing, read and drafted on its own screen.
+        tools=("fsmes.mcp.equipment", "fsmes.mcp.reasons"),
         tables=("equipment", "equipment_connections", "equipment_states", "tag_values",
                 "uns_publications", "downtime_reasons"),
     ),
@@ -516,7 +518,7 @@ REGISTRY: tuple[Module, ...] = (
                 href="/dashboard/trace",
                 pack_keys=("[quality] containment_max_depth",)),
         ),
-        tools=("fsmes.mcp.quality",),
+        tools=("fsmes.mcp.quality", "fsmes.mcp.severities"),
         tables=("quality_specs", "quality_checks", "non_conformances",
                 "spc_signals", "gauges", "calibrations", "nc_severities"),
     ),

@@ -7,6 +7,7 @@ The tools are thin wrappers over _call/_write, so that is what gets tested -
 through the real app, with the real role gates.
 """
 
+import asyncio
 import json
 
 import pytest
@@ -346,3 +347,82 @@ def test_the_agent_reads_a_certificate_and_issuing_is_a_supervisors_act(wired, s
     assert [c["order"] for c in mcp_server.certificates("testplant")["certificates"]] == ["WO-COA-T"]
     refused = mcp_server.issue_certificate("testplant", "WO-COA-T")
     assert "error" in refused and "403" in refused["error"]
+
+
+def test_the_agent_drafts_a_downtime_reason_for_a_person_and_cannot_sign_it(wired, session):
+    """The vocabulary half of the write discipline: the agent holds
+    `process.define`, so a draft is its to make; `process.approve` is nobody's
+    tool, so the word never reaches the floor by an agent's doing."""
+    auth.create_user(session, code="P.ENGEL", name="P Engel", password="x", role="supervisor")
+    session.flush()
+
+    before = mcp_server.downtime_reasons("testplant")
+    assert "total" in before, before
+
+    preview = mcp_server.draft_downtime_reason("testplant", code="jam_infeed", name="Infeed jam",
+                                               description="Bottles bridged at the infeed guide",
+                                               dry_run=True)
+    assert preview["dry_run"] is True
+    assert preview["request"]["path"] == "/equipment/downtime-reasons"
+    assert preview["request"]["body"]["code"] == "jam_infeed" and "done" not in preview
+    assert mcp_server.downtime_reasons("testplant")["total"] == before["total"]
+
+    made = mcp_server.draft_downtime_reason("testplant", code="jam_infeed", name="Infeed jam",
+                                            description="Bottles bridged at the infeed guide",
+                                            on_behalf_of="p.engel")
+    assert made.get("audited_as") == "AGENT" and made.get("on_behalf_of") == "P.ENGEL", made
+    assert made["response"]["status"] == "draft" and made["response"]["revision"] == 1
+
+    listed = mcp_server.downtime_reasons("testplant")
+    row = next(r for r in listed["reasons"] if r["code"] == "jam_infeed")
+    assert listed["total"] == before["total"] + 1
+    # Nothing in force: a drafted word is on no operator's screen.
+    assert row["in_force"] is None and row["draft"]["status"] == "draft"
+    assert row["draft"]["created_by"] == "AGENT" and row["draft"]["on_behalf_of"] == "P.ENGEL"
+    assert row["labels_intervals"] == 0
+
+    trail = mcp_server.audit("testplant", actor="AGENT")["audit"]
+    drafted = [e for e in trail if e["action"] == "downtime_reason.drafted"]
+    assert drafted and drafted[0]["on_behalf_of"] == "P.ENGEL"
+
+    # There is no approve tool to reach for, and the route behind one refuses
+    # the agent role by name - so the refusal is a refusal, not a silence.
+    names = {tool.name for tool in asyncio.run(mcp_server.mcp.list_tools())}
+    assert not [n for n in names if "reason" in n and "approve" in n]
+    refused = mcp_server._call("testplant", "POST",
+                               "/equipment/downtime-reasons/jam_infeed/approve/1")
+    assert "error" in refused and "403" in refused["error"] and "process.approve" in refused["error"]
+    still = next(r for r in mcp_server.downtime_reasons("testplant")["reasons"]
+                 if r["code"] == "jam_infeed")
+    assert still["in_force"] is None
+
+
+def test_the_agent_drafts_a_severity_the_same_way_and_signs_nothing(wired):
+    """The second vocabulary, in the same shape - which is the point of it
+    being the same shape."""
+    preview = mcp_server.draft_nc_severity("testplant", code="cosmetic", name="Cosmetic",
+                                           description="Visible but fit for use", dry_run=True)
+    assert preview["dry_run"] is True and preview["request"]["path"] == "/quality/severities"
+
+    made = mcp_server.draft_nc_severity("testplant", code="cosmetic", name="Cosmetic",
+                                        description="Visible but fit for use")
+    assert made.get("audited_as") == "AGENT" and made["response"]["status"] == "draft", made
+
+    listed = mcp_server.nc_severities("testplant")
+    row = next(r for r in listed["severities"] if r["code"] == "cosmetic")
+    assert row["in_force"] is None and row["draft"]["revision"] == 1
+    assert listed["total"] >= 1 and row["labels_records"] == 0
+
+    refused = mcp_server._call("testplant", "POST", "/quality/severities/cosmetic/approve/1")
+    assert "error" in refused and "403" in refused["error"] and "quality.approve" in refused["error"]
+
+
+def test_a_repeated_vocabulary_draft_with_one_client_ref_runs_once(wired):
+    """A double click on the proposal card is one draft, not two revisions."""
+    first = mcp_server.draft_downtime_reason("testplant", code="wash_cip", name="CIP wash",
+                                            description="Clean-in-place cycle", client_ref="ref-cip")
+    again = mcp_server.draft_downtime_reason("testplant", code="wash_cip", name="CIP wash",
+                                            description="Clean-in-place cycle", client_ref="ref-cip")
+    assert first["response"] == again["response"]
+    rows = [r for r in mcp_server.downtime_reasons("testplant")["reasons"] if r["code"] == "wash_cip"]
+    assert len(rows) == 1 and rows[0]["revisions"] == 1
