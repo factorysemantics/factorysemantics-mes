@@ -380,6 +380,15 @@ class Settings(BaseSettings):
     # rather than shown a figure measured over eleven minutes of a shift.
     oee_coverage_floor: float = 0.0
 
+    # The least observed time this MES will divide by. Below it, no rate, no
+    # OEE and no availability is reported for a window at all - the answer is
+    # unknown with the ledger saying why, rather than a figure measured over
+    # four seconds. `[oee] min_observed_seconds`, and beside `coverage_floor`
+    # on purpose: both are this plant saying how little evidence is too little,
+    # and the argument that made one of them a key makes the other one too.
+    # Ten seconds is the literal `fsmes.services.coverage` shipped.
+    oee_min_observed_seconds: float = 10.0
+
     # --- Which SPC rules raise a hold (fsmes.services.spc) ----------------
     # Decision 0036: **the chart draws and records every rule; the plant
     # chooses which of them raise a hold.** A comma list of Western Electric
@@ -454,6 +463,110 @@ class Settings(BaseSettings):
     # walk running away, so the product keeps a hard ceiling above it -
     # `fsmes.services.serialization.DEPTH_CEILING`.
     quality_containment_max_depth: int = 6
+
+    # --- What this plant assumes, and how much of itself it shows
+    # --- (fsmes.services.maintenance, .scheduling, .analysis, .calendar) ---
+    # `[process]` in plant.toml. Every one of these was a literal in the source
+    # until the configuration audit of 2026-09-21 named it, and **every default
+    # below is the literal that was there**, so a plant that writes none of
+    # them behaves exactly as it did.
+    #
+    # Since 2026-09-25 these are the second of three layers rather than the
+    # whole answer: what a plant is running on is
+    # `fsmes.services.plant_settings.value(session, "process", ...)`, which
+    # reads the row Engineering's Configuration page wrote first and falls back
+    # to this. They are kept as settings because a value a plant can write in
+    # its pack is worth being able to read as a setting - `fsmes info` prints
+    # what the environment holds - and because the two readings agreeing on a
+    # plant that has edited nothing is a test.
+
+    # How far through a plan's own interval counts as coming due. A fraction,
+    # so it already scales from a weekly filter change to an annual overhaul.
+    process_maintenance_due_soon_fraction: float = 0.8
+
+    # What one unit is assumed to cost at a station with no rated cycle time,
+    # and how long a maintenance job with no plan is assumed to take. Both are
+    # fallbacks: a machine's own rating and a plan's own minutes always win,
+    # and a schedule built on the fallback says so.
+    process_default_cycle_seconds: float = 3.0
+    process_default_job_minutes: float = 60.0
+
+    # The expected duration a new maintenance plan inherits. Each plan's own
+    # figure is the engineer's and is untouched by this.
+    process_maintenance_plan_default_minutes: float = 30.0
+
+    # How long a window is when a caller asks for none - the source called it
+    # *a shift* - and the window lengths every time picker offers, as a comma
+    # list of hours. A plant on twelve-hour shifts answers 12 and offers its
+    # own five; every payload states the `requested_hours` it was given, so
+    # nothing downstream reads either of these as a fact about a window.
+    process_default_report_hours: float = 8.0
+    process_report_windows: str = "0.25,1,8,24,168"
+
+    # How many machines one Gantt draws. The payload states `machines_shown`
+    # beside `machines_total`, so moving this hides nothing.
+    process_gantt_screenful: int = 12
+
+    # How far back `shift=previous` looks for a shift that has ended. Two
+    # weeks covers a plant that ran nothing over a shutdown; a seasonal plant
+    # with a six-week one answers differently, and the refusal sentence quotes
+    # whatever this says.
+    process_previous_shift_horizon_days: int = 14
+
+    # The working week a shift pattern gets when it names no days. The format
+    # is the product's - seven flags, Monday first - and which mask is the
+    # default is the plant's, because Sunday to Thursday is a real week.
+    process_working_week_mask: str = "1111100"
+
+    # How far ahead the schedule board looks when nobody says.
+    process_schedule_default_horizon_hours: float = 24.0
+
+    # --- How hard this plant argues with what it talks to
+    # --- (fsmes.integrations.opc.agent, fsmes.services.uns, .triggers) ----
+    # `[controls]` in plant.toml, and the same three layers as `[process]`
+    # above. Not *where* the OPC server or the broker is - that is
+    # `opc_endpoint` and `uns_broker_url`, one line of plumbing each - but how
+    # long to keep trying and how densely to sample, which is the controls
+    # engineer's tuning. Every default is the literal that was in the source.
+
+    # How many times the OPC agent retries booking a batch of readings, and
+    # the first wait between attempts, doubling each time. Readings a machine
+    # sent are not dropped without trying: house rule 1, read the other way.
+    controls_opc_book_attempts: int = 4
+    controls_opc_book_backoff_s: float = 0.5
+
+    # The namespace outbox's retry policy: how many attempts before a
+    # publication is recorded dead, the first wait, and the ceiling the
+    # doubling curve stops at. Dead is never deleted - what this changes is
+    # how long the plant keeps trying before a person has to decide.
+    #
+    # `fsmes.services.erp` holds the same three numbers for the ERP outbox and
+    # they are deliberately not merged: one plant's broker and one plant's ERP
+    # have different maintenance windows, and a single policy would make one of
+    # the two wrong. They are `[erp]`'s to name if they are ever made keys.
+    controls_uns_max_attempts: int = 8
+    controls_uns_base_backoff_s: int = 5
+    controls_uns_max_backoff_s: int = 3600
+
+    # How often a running agent re-reads the approved triggers, which is how
+    # fast an approval on screen reaches the machines, and the cooldown a newly
+    # drafted trigger inherits. Each trigger's own cooldown is the engineer's.
+    controls_trigger_reload_seconds: float = 30.0
+    controls_trigger_default_cooldown_seconds: float = 300.0
+
+    # How much slower the rest of a machine's tags are sampled than the ones
+    # the MES reasons about, as a multiple of `opc_publish_ms`, and the floor
+    # under that interval. A ratio, so it scales with each plant's publish
+    # rate; what is left to answer is how much history to store. Read when the
+    # agent subscribes, which is what a subscription interval can honestly be.
+    controls_opc_history_ratio: int = 10
+    controls_opc_min_history_ms: int = 1000
+
+    # The agent's two cadences against one database. `POST /adjustments/{code}/
+    # approve` promises a person that the agent writes within seconds, and the
+    # second of these is the number that promise rests on.
+    controls_opc_order_sync_seconds: float = 2.0
+    controls_opc_adjustment_poll_seconds: float = 5.0
 
     # --- The judgment model (fsmes.integrations.jev) ----------------------
     # A hosted model that answers fixed, typed questions about state it is

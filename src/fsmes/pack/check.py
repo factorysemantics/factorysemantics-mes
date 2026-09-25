@@ -205,8 +205,11 @@ def check(directory: Path, *, version: str = __version__) -> Report:
     problems += _sections(pack)
     problems += _identity(pack)
     problems += _coverage_floor(pack)
+    problems += _oee_numbers(pack)
     problems += _quality_numbers(pack)
     problems += _erp_numbers(pack)
+    problems += _process_numbers(pack)
+    problems += _controls_numbers(pack)
     problems += _modules(pack)
     problems += _words(pack)
     files, file_problems, file_unknowns = _files(pack)
@@ -296,7 +299,7 @@ def _sections(pack: fmt.Pack) -> list[Problem]:
 
 
 _TYPES = {"str": str, "int": int, "float": (int, float), "bool": bool, "path": str,
-          "ints": list, "strs": list}
+          "ints": list, "strs": list, "floats": list}
 
 
 def _typed(where: str, key: fmt.Key, value) -> list[Problem]:
@@ -456,12 +459,9 @@ def quality_numbers(table: dict) -> list[Problem]:
     out: list[Problem] = []
 
     for name, (low, high, why) in QUALITY_RANGES.items():
-        value = table.get(name)
-        if value is None or isinstance(value, bool) or not isinstance(value, int | float):
-            continue  # absent, or already refused by the type check
-        if value <= low or (high is not None and value > high):
-            bound = f"above {low}" if high is None else f"between {low} and {high}"
-            out.append(Problem(f"[quality] {name}", f"is {value}, and it has to be {bound}: {why}."))
+        problem = _range_problem(f"[quality] {name}", table.get(name), low, high, why)
+        if problem:
+            out.append(problem)
 
     # The two pairs. Each is one judgment written as two numbers, and the
     # numbers crossing over does not refuse anything - it quietly makes one of
@@ -617,6 +617,231 @@ def _open_statuses(statuses: list) -> list[Problem]:
         seen.add(item.strip())
     return out
 
+
+
+def _range_problem(where: str, value, low: float, high: float | None, why: str,
+                   *, low_ok: bool = False) -> Problem | None:
+    """One number outside the range its key needs to mean anything, said once.
+
+    Every ranged key in every section comes through here, so a plant reading
+    two complaints about two different sections reads them in the same shape,
+    and a value refused in a pack file is refused in the same sentence when
+    somebody types it into the Configuration page.
+
+    `low_ok` is whether the floor itself is allowed, and it is a real
+    distinction rather than a tidiness one: a Cpk bar of zero is meaningless
+    and a retry backoff of zero means *retry at once*, which is a plant
+    answering its own question.
+    """
+    if value is None or isinstance(value, bool) or not isinstance(value, int | float):
+        return None  # absent, or already refused by the type check
+    too_low = value < low if low_ok else value <= low
+    if not too_low and (high is None or value <= high):
+        return None
+    if high is None:
+        bound = f"at least {low}" if low_ok else f"above {low}"
+    else:
+        bound = f"from {low} to {high}" if low_ok else f"between {low} and {high}"
+    return Problem(where, f"is {value}, and it has to be {bound}: {why}.")
+
+
+#: `[process]` keys that are a count or a measurement, with the range each
+#: needs for the thing it decides to mean anything, as
+#: `(low, high, why, low_ok)`. Same shape and same rule as `QUALITY_RANGES`
+#: above: refuse a number that makes the key meaningless and refuse nothing
+#: else. Every default this product ships is inside its own range, and a test
+#: holds it to that.
+PROCESS_RANGES: dict[str, tuple[float, float | None, str, bool]] = {
+    "maintenance_due_soon_fraction": (
+        0, 1, "it is a share of each plan's own interval, so it is greater "
+        "than 0 and at most 1 - a plan is not coming due before it has been "
+        "used at all, and at 1 it is simply due", False),
+    "default_cycle_seconds": (
+        0, None, "a unit takes some time to make, and a schedule divides by "
+        "this", False),
+    "default_job_minutes": (
+        0, None, "a maintenance job takes some time, and the backlog's "
+        "downtime figure is the sum of these", False),
+    "maintenance_plan_default_minutes": (
+        0, None, "a plan reserves some time on the machine", False),
+    "default_report_hours": (
+        0, 720, "it is a window length in hours, and every window control in "
+        "this product already refuses more than thirty days - a default "
+        "outside that could not be asked for on purpose", False),
+    "gantt_screenful": (
+        0, None, "a Gantt draws at least one machine, and the payload says "
+        "how many of the plant's total it drew", False),
+    "previous_shift_horizon_days": (
+        0, None, "`shift=previous` looks back some number of days; at zero it "
+        "looks back to this instant and finds nothing", False),
+    "schedule_default_horizon_hours": (
+        0, None, "a board looks forward some amount of time", False),
+}
+
+#: `[controls]` keys that are a count or a measurement. Several allow zero,
+#: which is why these carry the flag: *retry at once* and *no cooldown* are
+#: plants answering their own question, and refusing them would be this
+#: checker having an opinion rather than a rule.
+CONTROLS_RANGES: dict[str, tuple[float, float | None, str, bool]] = {
+    "opc_book_attempts": (
+        0, None, "the agent makes at least one attempt to book what a machine "
+        "told it - readings the plant sent are not dropped without trying", False),
+    "opc_book_backoff_s": (
+        0, None, "zero is a real answer and means retry at once; a negative "
+        "wait is not a wait", True),
+    "uns_max_attempts": (
+        0, None, "a publication is attempted at least once before it is "
+        "recorded dead", False),
+    "uns_base_backoff_s": (
+        0, None, "zero is a real answer and means retry at once", True),
+    "uns_max_backoff_s": (
+        0, None, "it is the ceiling the doubling curve stops at", True),
+    "trigger_reload_seconds": (
+        0, None, "an agent that re-read its triggers every zero seconds would "
+        "read them instead of watching the plant", False),
+    "trigger_default_cooldown_seconds": (
+        0, None, "zero is a real answer and means a trigger may fire on every "
+        "reading that satisfies it", True),
+    "opc_history_ratio": (
+        1, None, "it is a multiple of `opc_publish_ms`, so 1 samples the rest "
+        "of a machine's tags as fast as the semantic ones - which is a real "
+        "answer - and below 1 would sample them faster than the tags the MES "
+        "reasons about", True),
+    "opc_min_history_ms": (
+        0, None, "it is the floor under that interval, and zero means the "
+        "ratio alone decides", True),
+    "opc_order_sync_seconds": (
+        0, None, "a loop that waited zero seconds between passes would hold "
+        "the endpoint and the database for ever", False),
+    "opc_adjustment_poll_seconds": (
+        0, None, "a loop that waited zero seconds between passes would hold "
+        "the endpoint and the database for ever", False),
+}
+
+#: How long a window a screen may offer, in hours. The same thirty days every
+#: window control in this product already refuses, said here so that a list
+#: cannot offer a window the API would turn down.
+WINDOW_CEILING_HOURS = 720
+
+
+def _process_numbers(pack: fmt.Pack) -> list[Problem]:
+    """`[process]`'s counts and measurements, as a pack file carries them."""
+    return process_numbers(pack.table("process"))
+
+
+def process_numbers(table: dict) -> list[Problem]:
+    """`[process]`'s counts and measurements, its working week and its window
+    list.
+
+    Takes the table rather than the pack for the reason `quality_numbers`
+    does: one setting edited on Engineering's Configuration page is judged by
+    exactly the rules a pack file is judged by, in the same words.
+    """
+    out: list[Problem] = []
+    for name, (low, high, why, low_ok) in PROCESS_RANGES.items():
+        problem = _range_problem(f"[process] {name}", table.get(name), low, high, why,
+                                 low_ok=low_ok)
+        if problem:
+            out.append(problem)
+
+    mask = table.get("working_week_mask")
+    if isinstance(mask, str) and (len(mask) != 7 or set(mask) - {"0", "1"}):
+        # The same sentence `calendar.create_pattern` refuses a shift pattern
+        # with, because it is the same rule about the same seven characters.
+        out.append(Problem("[process] working_week_mask", (
+            f"is {mask!r}. Days must be seven characters of 0 or 1, Monday "
+            "first. The format is the product's; which mask is the default is "
+            "this plant's.")))
+
+    windows = table.get("report_windows")
+    if isinstance(windows, list):
+        out += _window_list("[process] report_windows", windows)
+    return out
+
+
+def _window_list(where: str, value: list) -> list[Problem]:
+    """The window lengths a screen offers: at least one, each a real length of
+    time, and each one a window control could actually ask for.
+
+    An empty list is refused, and it is the one place in this module that
+    refuses an empty list: `hold_rules = []` is *draw every rule and hold on
+    none of them*, a plant's real answer, while `report_windows = []` is a
+    time picker with nothing in it, which is not an answer about the plant but
+    a screen that cannot be used.
+    """
+    out: list[Problem] = []
+    if not value:
+        out.append(Problem(where, (
+            "is empty, which would leave every screen's time picker with "
+            "nothing in it. A plant that wants one window writes one.")))
+        return out
+    seen: set[float] = set()
+    for item in value:
+        if isinstance(item, bool) or not isinstance(item, int | float):
+            out.append(Problem(where, (
+                f"holds {item!r}, which is not a length of time. Every entry "
+                "is a number of hours; a quarter of an hour is 0.25.")))
+            continue
+        hours = float(item)
+        if hours <= 0 or hours > WINDOW_CEILING_HOURS:
+            out.append(Problem(where, (
+                f"offers {hours} hours, and a window is greater than 0 and at "
+                f"most {WINDOW_CEILING_HOURS} - thirty days, which is what "
+                "every window control in this product already refuses.")))
+            continue
+        if hours in seen:
+            out.append(Problem(where, (
+                f"offers {hours} hours twice. A picker with the same window in "
+                "it twice is a picker somebody will read as two different "
+                "things.")))
+        seen.add(hours)
+    return out
+
+
+def _controls_numbers(pack: fmt.Pack) -> list[Problem]:
+    """`[controls]`'s counts and measurements, as a pack file carries them."""
+    return controls_numbers(pack.table("controls"))
+
+
+def controls_numbers(table: dict) -> list[Problem]:
+    """`[controls]`'s retry policies and cadences, and the one pair in them.
+
+    Takes the table, not the pack, for the reason `quality_numbers` does.
+    """
+    out: list[Problem] = []
+    for name, (low, high, why, low_ok) in CONTROLS_RANGES.items():
+        problem = _range_problem(f"[controls] {name}", table.get(name), low, high, why,
+                                 low_ok=low_ok)
+        if problem:
+            out.append(problem)
+
+    # One pair, and it is the same kind of thing as the two Cpk pairs: nothing
+    # is refused by the numbers crossing over, a curve is just quietly capped
+    # below where it starts, so every retry waits the ceiling.
+    base, cap = table.get("uns_base_backoff_s"), table.get("uns_max_backoff_s")
+    if all(isinstance(v, int | float) and not isinstance(v, bool) for v in (base, cap)) \
+            and base > cap:
+        out.append(Problem("[controls] uns_base_backoff_s", (
+            f"is {base} and `uns_max_backoff_s` is {cap}. A backoff curve "
+            "cannot start above the ceiling it is capped at; every retry would "
+            "wait the ceiling and the doubling would do nothing.")))
+    return out
+
+
+def _oee_numbers(pack: fmt.Pack) -> list[Problem]:
+    """`[oee]`'s own floor, as a pack file carries it."""
+    return oee_numbers(pack.table("oee"))
+
+
+def oee_numbers(table: dict) -> list[Problem]:
+    """`[oee] min_observed_seconds`, checked. `coverage_floor` keeps its own
+    function above: it is the one key in this product a plant states by
+    *leaving out*, and folding it in here would lose that sentence."""
+    problem = _range_problem(
+        "[oee] min_observed_seconds", table.get("min_observed_seconds"), 0, None,
+        "nothing is divided by zero seconds, which is the whole reason this "
+        "floor exists", False)
+    return [problem] if problem else []
 
 def _modules(pack: fmt.Pack) -> list[Problem]:
     out: list[Problem] = []
