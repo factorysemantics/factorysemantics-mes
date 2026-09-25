@@ -1092,6 +1092,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operate/erp-settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — what this plant asks of its ERP link
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operate/packs/" class="md-nav__link">
         
   
@@ -2265,6 +2293,56 @@
     <span class="md-ellipsis">
       
         What is still the pack's
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-the-second-domain-and-the-first-honest-exception-2026-09-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. The second domain, and the first honest exception - 2026-09-25
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. The second domain, and the first honest exception - 2026-09-25">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-setting-a-connector-applies-not-a-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A setting a connector applies, not a service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a-setting-that-genuinely-cannot-be-live-and-says-so" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A setting that genuinely cannot be live, and says so
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#one-audit-row-that-was-wrong-and-what-reading-it-settled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One audit row that was wrong, and what reading it settled
       
     </span>
   </a>
@@ -4207,6 +4285,56 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#12-the-second-domain-and-the-first-honest-exception-2026-09-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. The second domain, and the first honest exception - 2026-09-25
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. The second domain, and the first honest exception - 2026-09-25">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-setting-a-connector-applies-not-a-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A setting a connector applies, not a service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a-setting-that-genuinely-cannot-be-live-and-says-so" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A setting that genuinely cannot be live, and says so
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#one-audit-row-that-was-wrong-and-what-reading-it-settled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One audit row that was wrong, and what reading it settled
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -4406,9 +4534,18 @@ row today — the downtime vocabulary.</p>
    dropped: a workspace with one section and a workspace with one section and
    three switched off are different plants.</li>
 </ol>
-<p>One domain exists today, <em>engineering</em>. The rest of §2's six arrive as their
-first section does; naming a domain with nothing in it would serve a page that
-says nothing.</p>
+<p>Three domains exist today: <em>engineering</em> (#87 and the restructure above),
+<em>quality</em> (#97) and <em>supply chain</em> (2026-09-25). The rest of §2's six arrive
+as their first section does; naming a domain with nothing in it would serve a
+page that says nothing.</p>
+<p><strong>A domain does not have to invent a nav group.</strong> Supply chain is the case
+that settled it: what it configures is the ERP link, and this product has no
+ERP screen - an order from the ERP lands in the order book and the outbox is a
+panel on Ops. So its one <code>Configuration</code> entry sits in the <strong>Orders</strong> group,
+beside the screens its settings are about, rather than in a group created to
+hold a settings page and nothing else. The rule stays <em>one Configuration entry
+per domain</em>; where that entry sits is wherever the domain's screens already
+are.</p>
 <h2 id="3-three-tiers">3. Three tiers<a class="headerlink" href="#3-three-tiers" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Tier one — role-authored vocabulary.</strong> A list this plant owns: its
@@ -5234,6 +5371,59 @@ a running one is steered, and editing <code>plant.toml</code> and re-applying do
 move a number the plant has taken ownership of. <code>fsmes pack status</code> reports
 the difference rather than resolving it, which is the same answer decision
 0022 gave about a routing an order has already run against.</p>
+<h2 id="12-the-second-domain-and-the-first-honest-exception-2026-09-25">12. The second domain, and the first honest exception - 2026-09-25<a class="headerlink" href="#12-the-second-domain-and-the-first-honest-exception-2026-09-25" title="Permanent link">&para;</a></h2>
+<p>§11's claim was that a future section needs two lines. Supply chain is the
+test of it, and it held: five of its six sections are <code>edit_here=True</code> plus
+<code>erp.define</code>, and they needed no table, endpoint, migration or JavaScript of
+their own. What they did need was everything §11 does not cover, which is
+worth writing down because Process and Controls will meet the same two things.</p>
+<h3 id="a-setting-a-connector-applies-not-a-service">A setting a <em>connector</em> applies, not a service<a class="headerlink" href="#a-setting-a-connector-applies-not-a-service" title="Permanent link">&para;</a></h3>
+<p>Quality's eleven are read by services, which are handed the caller's session,
+so §11's "read through the caller's session" was the whole answer. Four of
+supply chain's are read by a <strong>transport</strong> - which order statuses to ask the
+ERP for, when a number read back is the number sent, how long to wait - and a
+transport is handed no unit of work <strong>on purpose</strong>: <code>integrations/erp/sync.py</code>
+keeps every database transaction short and never lets one span an HTTP call,
+so an adapter that opened a session to find out its own timeout would be the
+first thing to break that rule.</p>
+<p>So the worker reads them, not the adapter. <code>sync.cycle</code> builds a
+<code>services.erp.Policy</code> in one short transaction, closed before anything is
+sent, and hands it to the connector through an optional <code>configure</code> method -
+read off the object the way <code>check</code> already is, so a connector published on
+its own and written against the older port keeps the values it was built with
+and no cycle fails over a method nobody promised. A setting saved on the page
+is in force at the start of the next cycle: <code>MES_ERP_POLL_SECONDS</code>, five
+seconds by default, with nothing restarted.</p>
+<p><strong>The shape to reuse:</strong> where the reader of a setting is an edge rather than a
+service, the answer is to carry the value to the edge from a caller that has a
+session, not to give the edge a database.</p>
+<h3 id="a-setting-that-genuinely-cannot-be-live-and-says-so">A setting that genuinely cannot be live, and says so<a class="headerlink" href="#a-setting-that-genuinely-cannot-be-live-and-says-so" title="Permanent link">&para;</a></h3>
+<p><code>[erp] confirmation_seconds_tolerance</code> is read by <code>fsmes erp validate</code>, which
+reads a folder of files and <strong>no database</strong> - that is its contract, and a
+plant's ERP team runs it on a laptop that has never had an MES database on it.
+There is no session to read a live row through, so a box saying <em>in force the
+moment you save it</em> would have been false.</p>
+<p>It is a pack key and a setting with no <code>edit_here</code>, and it is the first
+section in this product to take that path. The page already had the words:
+<em>nobody - it changes when the pack is applied and the plant restarts</em>, which
+<code>config.js</code> kept on the day the live ones arrived precisely because "a setting
+that genuinely cannot move while a plant is running is a real thing a future
+section may be". It was.</p>
+<p><strong>The test to apply:</strong> §11 asks whether anything stores the value a setting
+had at the moment it decided something. Ask a second question beside it -
+<strong>is there a session where this value is read?</strong> A no is not a reason to leave
+a judgment in the source; it is a reason for the row to say the other true
+sentence.</p>
+<h3 id="one-audit-row-that-was-wrong-and-what-reading-it-settled">One audit row that was wrong, and what reading it settled<a class="headerlink" href="#one-audit-row-that-was-wrong-and-what-reading-it-settled" title="Permanent link">&para;</a></h3>
+<p>S7 of the 2026-09-21 audit called this constant "arguably a bug rather than a
+new setting", because <code>incumbent.py</code> already reads a plant-supplied
+<code>tolerances</code> object it was never routed through. Reading both: they are two
+different comparisons. <code>incumbent.Mapping.tolerances</code> is the slack between
+this MES and an <em>incumbent MES's export</em>, and <code>scorecard.py</code> already reads it.
+<code>validate.py</code>'s constant is the slack between two numbers <strong>inside one
+document this MES itself wrote</strong>, and <code>fsmes erp validate</code> is handed no
+mapping at all. Nothing was missed; the audit row conflated them. The curated
+row says so now rather than the correction living only here.</p>
 
 
 

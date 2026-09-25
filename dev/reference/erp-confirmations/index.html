@@ -1097,6 +1097,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operate/erp-settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — what this plant asks of its ERP link
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operate/packs/" class="md-nav__link">
         
   
@@ -4123,10 +4151,10 @@
 </tr>
 <tr>
 <td><code>priority</code> <em>(optional)</em></td>
-<td>integer</td>
+<td>integer, or null</td>
 <td>Which order the dispatch list puts first; lower runs earlier.</td>
-<td>The ERP's priority, or 50 when the schedule does not say.</td>
-<td>Never; the default is stated rather than left empty.</td>
+<td>The ERP's priority, exactly as the schedule gives it.</td>
+<td>When the schedule does not say - which for an ERPNext Work Order is always, because that doctype has no priority field. The MES then gives the order the priority this plant chose for orders carrying none (<code>[erp] default_order_priority</code>, 50 unless the plant says otherwise). Null here means the ERP was silent, not that the order has no priority once it is in the MES.</td>
 </tr>
 <tr>
 <td><code>erp_reference</code> <em>(optional)</em></td>
