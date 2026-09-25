@@ -57,8 +57,11 @@ def _facts(db, capabilities: set[str]) -> dict:
         pass
 
     with contextlib.suppress(Exception):
-        facts["oee"] = analysis_service.oee_breakdown(db, hours=8.0).get("line")
-        facts["downtime"] = analysis_service.downtime_pareto(db, hours=8.0)
+        # This plant's own reporting window, not eight hours: an assistant
+        # summarising "the shift" for a twelve-hour plant was summarising two
+        # thirds of it.
+        facts["oee"] = analysis_service.oee_breakdown(db).get("line")
+        facts["downtime"] = analysis_service.downtime_pareto(db)
 
     # The plant's own approved procedure outranks a model's idea of one.
     # Handing these over means an answer about how something is done can

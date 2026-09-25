@@ -84,7 +84,11 @@ def _plant_version(db: Session) -> tuple:
 @router.get("/summary")
 def summary(
     db: ReadDbDep,
-    oee_hours: float = 8.0,
+    # No default of its own: left out, the OEE tiles are drawn over this
+    # plant's own reporting window - `[process] default_report_hours` - read at
+    # the moment of the request. The eight hours that used to be here was the
+    # product's assumption that a shift is eight hours long.
+    oee_hours: float | None = None,
     line: str | None = Query(None, description="Only this line's machines, at any depth beneath it."),
     machine_q: str | None = Query(None, description="Match a machine code or name."),
     machine_state: str | None = Query(
@@ -192,7 +196,7 @@ def _matching(machines: list[Equipment], open_states: dict, q: str | None,
     return out
 
 
-def _build_summary(db: Session, oee_hours: float, line: str | None = None,
+def _build_summary(db: Session, oee_hours: float | None, line: str | None = None,
                    machine_q: str | None = None, machine_state: str | None = None,
                    machine_limit: int | None = None, machine_offset: int = 0) -> dict:
     scope = _machines(db, line)
@@ -467,6 +471,16 @@ def pending_approval(kind: str, code: str, revision: int,
     return review_service.review(db, kind, code, revision)
 
 
+# ------------------------------------------- what the screens are set to
+
+#: The window lengths every time picker offers, as the product ships them.
+#: `common.js` held this list as a literal of its own until 2026-09-25; it is
+#: `[process] report_windows` now, and this is the third layer under it. Written
+#: here rather than imported from a service because no service draws a time
+#: picker - the list is the browser's question, and this endpoint is the answer.
+REPORT_WINDOWS: tuple[float, ...] = (0.25, 1.0, 8.0, 24.0, 168.0)
+
+
 # ------------------------------------------- what is configurable in here
 
 
@@ -593,6 +607,56 @@ def set_setting(domain: str, key: str, body: SettingIn,
         raise HTTPException(422, str(exc)) from None
 
 
+@router.get("/screens")
+def screen_settings(db: ReadDbDep, user: UserDep) -> dict:
+    """The handful of this plant's own numbers the browser itself draws with.
+
+    Every other live setting reaches a screen inside the payload it belongs to -
+    the Cpk bar arrives with the chart it colours, `due_soon` arrives on the
+    maintenance plan it is about - which is the right shape, because a number
+    beside the figure it judges cannot drift from it.
+
+    These four cannot do that. The time picker is built before any panel has
+    asked for anything, and the shift form and the board's horizon are controls
+    rather than readings. Their alternative was what `common.js` actually did
+    until 2026-09-25: hold its own copy of the window list and its own eight
+    hours, so a plant that offered a twelve-hour window on the server offered
+    the product's five in the browser.
+
+    It gates nothing beyond being signed in, and deliberately: these are the
+    same numbers the Configuration page prints to anybody who may see the
+    plant, and a screen that cannot read what it is set to cannot draw itself.
+    """
+    from fsmes.services import calendar as calendar_service
+    from fsmes.services import maintenance as maintenance_service
+    from fsmes.services import plant_settings
+    from fsmes.services import scheduling as scheduling_service
+
+    return {
+        # The list every time picker offers, and which of them a screen opens
+        # on. A viewer who has chosen a window of their own keeps it.
+        "report_windows": list(plant_settings.value(
+            db, "process", "report_windows", REPORT_WINDOWS)),
+        "default_report_hours": calendar_service.default_report_hours(db),
+        # The working week a new shift pattern starts from on the form.
+        "working_week_mask": calendar_service.working_week_mask(db),
+        # What the schedule board opens on.
+        "schedule_default_horizon_hours": scheduling_service.default_horizon_hours(db),
+        # Sent so a screen can *say* what coming due means on this plant. The
+        # colouring itself reads `due_soon` off each plan, which is the server's
+        # own judgment and cannot disagree with the sentence beside it.
+        "maintenance_due_soon_fraction": maintenance_service.due_soon_fraction(db),
+    }
+
+
+def _module_title(section: modules.ConfigSection) -> str | None:
+    """The title of the module that put one section on a page, for the group
+    heading. `None` for a section whose module is not in the registry, which
+    cannot happen from the registry itself and is not guessed at here."""
+    module = modules.module_of_section(section)
+    return module.title if module else None
+
+
 @router.get("/config/{domain}/sections")
 def config_sections(domain: str, db: ReadDbDep, user: UserDep) -> dict:
     """Everything configurable in one workspace, with its total.
@@ -642,6 +706,11 @@ def config_sections(domain: str, db: ReadDbDep, user: UserDep) -> dict:
                 "key": section.key,
                 "label": section.label,
                 "about": section.about,
+                # Which module put this row here. Returned so the page can
+                # print the grouping it already says it is sorted by: with
+                # eighteen rows in one workspace, a stated order nobody can
+                # see is an order nobody can trust.
+                "module": _module_title(section),
                 "href": section.href,
                 "define": section.define,
                 "approve": section.approve,

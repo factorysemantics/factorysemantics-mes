@@ -48,16 +48,34 @@ from fsmes.domain import (
     TagValue,
 )
 from fsmes.kernel.tags import STRUCTURAL_TAGS
-from fsmes.services import NotFound, coverage, line_clock, masterdata, reasons
+from fsmes.services import NotFound, coverage, line_clock, masterdata, plant_settings, reasons
 from fsmes.services import calendar as calendar_service
 from fsmes.services import connection as connection_service
 from fsmes.services import equipment as equipment_service
 from fsmes.services import line as line_service
 from fsmes.services import oee as oee_rules
 
-# Below this much observed history, rates are not reported at all.
-_MIN_WINDOW_SECONDS = 10.0
+# Below this much observed history, rates are not reported at all. Unused here
+# since `fsmes.services.coverage` became the one place that answers it; kept as
+# a name nothing reads would be worse than deleted, so it is deleted and
+# `coverage.min_observed_seconds` is the answer.
 UNLABELLED = "unlabelled"
+
+# How many machines one Gantt draws before it stops, which a six-station cell
+# and a 108-station plant answer differently. It stays here as the literal the
+# product ships; what this plant is running on is the accessor below it.
+#
+# How long a window is when nobody says lives in `services.calendar` rather
+# than here - see `calendar.default_report_hours` for why, and because the OEE
+# path in `services.equipment` reads the same number and importing this module
+# from there would be a cycle.
+GANTT_SCREENFUL = 12
+
+
+def gantt_screenful(db: Session) -> int:
+    """How many machines this plant draws on one Gantt. The payload says how
+    many of the plant's total it drew, so moving this hides nothing."""
+    return int(plant_settings.value(db, "process", "gantt_screenful", GANTT_SCREENFUL))
 
 
 def _line_and_units(db: Session, line_code: str | None) -> tuple[Equipment, list[Equipment]]:
@@ -193,7 +211,7 @@ def _overlap(state: EquipmentState, start: datetime, end: datetime) -> float:
     return max(0.0, (hi - lo).total_seconds())
 
 
-def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
+def oee_breakdown(db: Session, line_code: str | None = None, hours: float | None = None,
                   shift: str | None = None) -> dict:
     """OEE per station with every loss named, plus the line rollup.
 
@@ -202,6 +220,9 @@ def oee_breakdown(db: Session, line_code: str | None = None, hours: float = 8.0,
     stand. Each loss is expressed in the unit its fix is measured in — seconds
     for availability, units for performance and quality.
     """
+    # None is *this plant's own reporting window*, resolved here rather than
+    # in the signature so a caller gets what the plant is running on now.
+    hours = calendar_service.default_report_hours(db) if hours is None else hours
     centre, units = _line_and_units(db, line_code)
     the_shift = _shift(db, shift)
     start, end = _window(db, units, hours, the_shift)
@@ -435,20 +456,26 @@ def _merge_short(intervals: list[dict], floor_seconds: float) -> list[dict]:
     return out
 
 
-def state_timeline(db: Session, line_code: str | None = None, hours: float = 8.0,
+def state_timeline(db: Session, line_code: str | None = None, hours: float | None = None,
                    pixels: int = 1200, equipment: list[str] | None = None,
-                   limit: int = 12, shift: str | None = None) -> dict:
+                   limit: int | None = None, shift: str | None = None) -> dict:
     """Every state interval per machine — the shift drawn as a Gantt.
 
     This is the view that makes a line legible: starvation walking downstream
     from a breakdown is obvious as a picture and nearly invisible as a table.
     """
+    # None is *this plant's own reporting window*, resolved here rather than
+    # in the signature so a caller gets what the plant is running on now.
+    hours = calendar_service.default_report_hours(db) if hours is None else hours
     centre, units = _line_and_units(db, line_code)
     the_shift = _shift(db, shift)
 
     # A Gantt of sixty machines is not a chart anybody reads, and sending it
     # cost 3.2 MB per screen load. Scope it: named machines if the caller
-    # knows what it wants, otherwise the first screenful.
+    # knows what it wants, otherwise the first screenful - and how many
+    # machines one screenful is, is this plant's own answer.
+    if limit is None:
+        limit = gantt_screenful(db)
     all_units = units
     if equipment:
         # Named machines are found across the whole plant, not one line. A
@@ -546,7 +573,7 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float = 8.0
     }
 
 
-def downtime_pareto(db: Session, line_code: str | None = None, hours: float = 8.0,
+def downtime_pareto(db: Session, line_code: str | None = None, hours: float | None = None,
                     shift: str | None = None) -> dict:
     """Downtime grouped by reason, worst first, with a running cumulative share.
 
@@ -570,6 +597,9 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float = 8.
     With `unlabelled_seconds` the three account for every second in
     `total_seconds`.
     """
+    # None is *this plant's own reporting window*, resolved here rather than
+    # in the signature so a caller gets what the plant is running on now.
+    hours = calendar_service.default_report_hours(db) if hours is None else hours
     centre, units = _line_and_units(db, line_code)
     the_shift = _shift(db, shift)
     start, end = _window(db, units, hours, the_shift)
@@ -670,7 +700,7 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float = 8.
 
 
 def tag_trend(
-    db: Session, equipment_code: str, tag: str | None = None, hours: float = 8.0,
+    db: Session, equipment_code: str, tag: str | None = None, hours: float | None = None,
     buckets: int = 240, shift: str | None = None
 ) -> dict:
     """One machine's process value over the window, averaged into buckets.
@@ -684,6 +714,9 @@ def tag_trend(
     PostgreSQL, and this project runs on both — a portability bug here would
     only surface in the deployment that matters.
     """
+    # None is *this plant's own reporting window*, resolved here rather than
+    # in the signature so a caller gets what the plant is running on now.
+    hours = calendar_service.default_report_hours(db) if hours is None else hours
     unit = masterdata.get_equipment(db, equipment_code)
     the_shift = _shift(db, shift)
     end = utcnow()
@@ -776,9 +809,12 @@ def tag_trend(
     }
 
 
-def production_trend(db: Session, line_code: str | None = None, hours: float = 8.0,
+def production_trend(db: Session, line_code: str | None = None, hours: float | None = None,
                      buckets: int = 60, shift: str | None = None) -> dict:
     """Good and scrap over time for the whole line, bucketed."""
+    # None is *this plant's own reporting window*, resolved here rather than
+    # in the signature so a caller gets what the plant is running on now.
+    hours = calendar_service.default_report_hours(db) if hours is None else hours
     centre, units = _line_and_units(db, line_code)
     the_shift = _shift(db, shift)
     ids = [unit.id for unit in units]

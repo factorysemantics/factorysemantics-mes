@@ -57,7 +57,11 @@ def get_adjustment(code: str, db: DbDep) -> dict:
 
 @router.post("/{code}/approve", dependencies=[require("adjustments.approve")])
 def approve(code: str, body: DecisionIn, db: DbDep, actor: ActorDep) -> dict:
-    """The human in the loop. The OPC agent writes within seconds."""
+    """The human in the loop. The OPC agent writes within seconds - within
+    `[controls] opc_adjustment_poll_seconds`, which is five by default and is
+    this plant's to change on Engineering's Configuration page. A plant that
+    raises it past a few seconds is changing what this sentence promises its
+    own operators, which is why the sentence names the number."""
     return adjustments.out(adjustments.approve(db, code, note=body.note, actor=actor))
 
 

@@ -51,6 +51,11 @@ class Trigger(Base):
     sustained_seconds: Mapped[float] = mapped_column(default=0.0)
     # Once fired, quiet for this long: an alarm word that stays set is one
     # event, not one per publish interval.
+    #
+    # The column's own last resort, for a row inserted without going through
+    # `fsmes.services.triggers.create` - which fills it in from `[controls]
+    # trigger_default_cooldown_seconds`, this plant's own inherited default,
+    # before it gets here. A column default cannot read a plant's settings.
     cooldown_seconds: Mapped[float] = mapped_column(default=300.0)
     # One name from the catalog in services.triggers.ACTIONS.
     action: Mapped[str] = mapped_column(String(40))

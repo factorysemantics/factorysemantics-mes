@@ -86,10 +86,10 @@ def test_the_plan_says_where_its_numbers_came_from(session, cell):
         operations=[{"seq": 10, "name": "Mill", "equipment": "MILL-A",
                      "run_seconds_per_unit": 12}])
     timed = routing.operations[0]
-    assert scheduling.operation_minutes(timed, 10)[1] == "routing"
+    assert scheduling.operation_minutes(session, timed, 10)[1] == "routing"
 
     timed.run_seconds_per_unit = None
-    assert scheduling.operation_minutes(timed, 10)[1] == "machine"
+    assert scheduling.operation_minutes(session, timed, 10)[1] == "machine"
 
 
 def test_durations_are_snapshotted_onto_the_order(session, cell):

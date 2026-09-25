@@ -25,11 +25,50 @@ from sqlalchemy.orm import Session
 
 from fsmes.db import utcnow
 from fsmes.domain import ErpMessage, MessageDirection, MessageStatus, UnsPublication
-from fsmes.services import Invalid, NotFound, audit
+from fsmes.services import Invalid, NotFound, audit, plant_settings
 
+# How hard this plant argues with its broker: how many attempts a publication
+# gets before it is recorded dead, the first wait, and the ceiling the doubling
+# curve stops at. These stay as the literals the product ships; what a plant is
+# running on is `retry_policy` below, which reads `[controls] uns_max_attempts`
+# and its two siblings through the three layers.
+#
+# `fsmes.services.erp` holds the same three numbers for the ERP outbox and they
+# are deliberately not merged. One plant's broker and one plant's ERP have
+# different maintenance windows, so a single policy would make one of the two
+# wrong - noticed while making these editable, and left alone.
 MAX_ATTEMPTS = 8
 BASE_BACKOFF_SECONDS = 5
 MAX_BACKOFF_SECONDS = 3600
+
+
+@dataclass(frozen=True)
+class Retry:
+    """One plant's answer to *how long do we keep trying*.
+
+    Read once per unit of work and passed down, rather than read inside
+    `mark_error`: one run of the publisher should not change its mind about the
+    policy half way through a batch, and the two functions below take plain ORM
+    objects with no session to read from anyway.
+    """
+
+    attempts: int = MAX_ATTEMPTS
+    base_seconds: int = BASE_BACKOFF_SECONDS
+    max_seconds: int = MAX_BACKOFF_SECONDS
+
+
+def retry_policy(session: Session) -> Retry:
+    """This plant's namespace retry policy, in force now.
+
+    A broker restarted nightly for twenty minutes kills every queued event at
+    eight attempts. Dead is never deleted, so what this changes is how long the
+    plant keeps trying before a person has to decide about it.
+    """
+    read = plant_settings.value
+    return Retry(
+        attempts=int(read(session, "controls", "uns_max_attempts", MAX_ATTEMPTS)),
+        base_seconds=int(read(session, "controls", "uns_base_backoff_s", BASE_BACKOFF_SECONDS)),
+        max_seconds=int(read(session, "controls", "uns_max_backoff_s", MAX_BACKOFF_SECONDS)))
 
 
 def enrol(session: Session, limit: int = 1000) -> list[UnsPublication]:
@@ -78,9 +117,16 @@ def due(session: Session, limit: int = 200, now: datetime | None = None
     return [(publication, message) for publication, message in rows]
 
 
-def backoff_seconds(attempts: int) -> int:
-    """5 s, 10 s, 20 s ... capped at an hour. The outbox's own curve."""
-    return min(BASE_BACKOFF_SECONDS * 2 ** max(0, attempts - 1), MAX_BACKOFF_SECONDS)
+def backoff_seconds(attempts: int, policy: Retry | None = None) -> int:
+    """5 s, 10 s, 20 s ... capped at an hour. The outbox's own curve.
+
+    `policy` is this plant's own answer, from `retry_policy`. Left out, the
+    curve is the one the product ships - which is what a caller with no session
+    to read a policy through is entitled to, and what every reading on a plant
+    that has configured nothing returns anyway.
+    """
+    policy = policy or Retry()
+    return min(policy.base_seconds * 2 ** max(0, attempts - 1), policy.max_seconds)
 
 
 def mark_published(publication: UnsPublication, topic: str,
@@ -100,7 +146,7 @@ def mark_published(publication: UnsPublication, topic: str,
 
 
 def mark_error(publication: UnsPublication, error: Exception, topic: str | None = None,
-               now: datetime | None = None) -> UnsPublication:
+               now: datetime | None = None, policy: Retry | None = None) -> UnsPublication:
     """Record the failure, back off, and after enough attempts stop trying.
 
     Dead is not deleted. An event the plant's namespace never received is a
@@ -108,15 +154,17 @@ def mark_error(publication: UnsPublication, error: Exception, topic: str | None 
     quietly drop it to keep the queue looking tidy.
     """
     now = now or utcnow()
+    policy = policy or Retry()
     publication.attempts = (publication.attempts or 0) + 1
     publication.error = str(error)[:400]
     if topic:
         publication.topic = topic[:400]
-    if publication.attempts >= MAX_ATTEMPTS:
+    if publication.attempts >= policy.attempts:
         publication.status = MessageStatus.DEAD
         publication.next_attempt_at = None
     else:
-        publication.next_attempt_at = now + timedelta(seconds=backoff_seconds(publication.attempts))
+        publication.next_attempt_at = now + timedelta(
+            seconds=backoff_seconds(publication.attempts, policy))
     return publication
 
 
@@ -154,6 +202,7 @@ def record(session: Session, outcomes: Iterable[Outcome],
     if not outcomes:
         return {}
     now = now or utcnow()
+    policy = retry_policy(session)
     by_id = {publication.id: publication for publication in session.scalars(
         select(UnsPublication)
         .where(UnsPublication.id.in_([outcome.publication_id for outcome in outcomes])))}
@@ -164,7 +213,7 @@ def record(session: Session, outcomes: Iterable[Outcome],
         if outcome.error is None:
             mark_published(publication, outcome.topic, now=now)
         else:
-            mark_error(publication, outcome.error, outcome.topic, now=now)
+            mark_error(publication, outcome.error, outcome.topic, now=now, policy=policy)
     session.flush()
     return by_id
 

@@ -27,17 +27,49 @@ from fsmes.domain import (
     WorkOrder,
 )
 from fsmes.domain.workorders import OrderStatus
-from fsmes.services import Invalid, audit, calendar, masterdata, workorders
+from fsmes.services import (
+    Invalid,
+    audit,
+    calendar,
+    maintenance,
+    masterdata,
+    plant_settings,
+    workorders,
+)
 
-# What one unit costs at a station when nothing says. Real cycle times are
-# seeded onto the machine from the tag map; this only keeps a plan possible
-# for a plant that has not commissioned its machines yet - and a schedule
-# built on it is a guess, which `uses_default_cycle` reports rather than
-# hides.
+# What one unit costs at a station when nothing says, and how far ahead the
+# board looks when nobody says. Real cycle times are seeded onto the machine
+# from the tag map; the fallback only keeps a plan possible for a plant that
+# has not commissioned its machines yet - and a schedule built on it is a
+# guess, which `uses_default_cycle` reports rather than hides.
+#
+# Both stay here as the literals the product ships. What a plant is running on
+# is the accessor below each of them, which reads the row Engineering's
+# Configuration page wrote first, the setting this plant's pack compiled
+# second, and the literal third.
 DEFAULT_CYCLE_SECONDS = 3.0
+DEFAULT_HORIZON_HOURS = 24.0
 
 
-def operation_minutes(operation, units: float) -> tuple[float, str]:
+def default_cycle_seconds(session: Session) -> float:
+    """What this plant assumes one unit costs at a station with no rating.
+
+    A filling line and a CNC cell want different guesses, and a plant that
+    has commissioned its machines never reads this at all.
+    """
+    return float(plant_settings.value(
+        session, "process", "default_cycle_seconds", DEFAULT_CYCLE_SECONDS))
+
+
+def default_horizon_hours(session: Session) -> float:
+    """How far ahead this plant's schedule board looks when nobody says. A job
+    shop planning a fortnight and a line planning a shift want different
+    boards."""
+    return float(plant_settings.value(
+        session, "process", "schedule_default_horizon_hours", DEFAULT_HORIZON_HOURS))
+
+
+def operation_minutes(session: Session, operation, units: float) -> tuple[float, str]:
     """How long this operation takes for this quantity, and where that came
     from.
 
@@ -47,15 +79,20 @@ def operation_minutes(operation, units: float) -> tuple[float, str]:
     routes able to plan - and the second return value says which happened,
     because a plan built on a fallback is a guess and a planner is entitled
     to know that before promising a date.
+
+    It takes a session because the last fallback of all - a machine with no
+    rating either - is this plant's own number rather than the product's, and
+    a signature that made the session optional would be two functions with one
+    name: one that read what the plant chose and one that quietly did not.
     """
     run = operation.run_seconds_per_unit
     if run:
         setup = float(operation.setup_seconds or 0.0)
         return round((setup + run * units) / 60.0, 2), "routing"
-    return round(units * _cycle_seconds(operation) / 60.0, 2), "machine"
+    return round(units * _cycle_seconds(session, operation) / 60.0, 2), "machine"
 
 
-def _cycle_seconds(operation) -> float:
+def _cycle_seconds(session: Session, operation) -> float:
     """How long one unit takes at this operation's machine.
 
     This read `cycle_seconds`, and the column is `ideal_cycle_seconds` - so
@@ -71,7 +108,7 @@ def _cycle_seconds(operation) -> float:
     """
     equipment = operation.equipment
     value = equipment.ideal_cycle_seconds if equipment is not None else None
-    return float(value) if value else DEFAULT_CYCLE_SECONDS
+    return float(value) if value else default_cycle_seconds(session)
 
 
 def _busy_until(session: Session, equipment_id: int, after: datetime) -> datetime:
@@ -106,7 +143,8 @@ def _place_maintenance(session: Session, equipment_id: int,
             cursor = max(cursor, already.planned_end)
             continue
 
-        minutes = order.plan.expected_minutes if order.plan else 60.0
+        minutes = (order.plan.expected_minutes if order.plan
+                   else maintenance.default_job_minutes(session))
         start = calendar.next_working(session, cursor, equipment_id)
         end = calendar.add_working(session, start, minutes, equipment_id)
         session.add(ScheduledSlot(
@@ -149,7 +187,7 @@ def plan_order(session: Session, code: str, *, start: datetime | None = None,
         free = _busy_until(session, equipment_id, cursor)
         free = _place_maintenance(session, equipment_id, free)
 
-        minutes, _basis = operation_minutes(operation, remaining)
+        minutes, _basis = operation_minutes(session, operation, remaining)
         begin = calendar.next_working(session, free, equipment_id)
         finish = calendar.add_working(session, begin, minutes, equipment_id)
 
@@ -207,13 +245,17 @@ def plan_all(session: Session, *, start: datetime | None = None,
 
 
 def board(session: Session, *, equipment_code: str | None = None,
-          hours: float = 24.0) -> dict:
+          hours: float | None = None) -> dict:
     """The schedule as a machine-by-machine board.
 
     What a supervisor looks at: each machine down the side, time across, and
     the maintenance blocks visible alongside the work so the day reads as one
     thing rather than two lists.
     """
+    # None means *this plant's own horizon*, resolved here rather than in the
+    # signature so that what a caller gets is what the plant is running on now.
+    if hours is None:
+        hours = default_horizon_hours(session)
     now = utcnow()
     until = now + timedelta(hours=hours)
     query = select(ScheduledSlot).where(
@@ -238,6 +280,10 @@ def board(session: Session, *, equipment_code: str | None = None,
     booked = sum(s["minutes"] for rows in machines.values() for s in rows)
     return {
         "from": now, "to": until,
+        # The window this board actually covers, stated rather than left to be
+        # inferred from two timestamps - so a screen drawing the board reads
+        # the plant's own horizon instead of keeping a copy of it.
+        "hours": hours,
         "machines": [{"equipment": code, "slots": rows}
                      for code, rows in sorted(machines.items())],
         "booked_minutes": round(booked, 1),

@@ -490,10 +490,36 @@
 
   /* ---------- the time window, shared ----------
      One control every page with a window reads: ?hours= wins, then what the
-     viewer last chose, then eight hours - a shift. */
+     viewer last chose, then this plant's own default.
 
-  const WINDOWS = [[0.25, "15 min"], [1, "1 hour"], [8, "8 hours"], [24, "24 hours"], [168, "7 days"]];
+     The list and the default are the plant's, from /dashboard/screens - which
+     is `[process] report_windows` and `default_report_hours`, editable on
+     Engineering's Configuration page. This file held both as literals until
+     2026-09-25, which meant a plant that offered a twelve-hour window on the
+     server offered the product's five in the browser and opened on eight
+     hours whatever it had said.
+
+     The shipped five stay here as the answer before /dashboard/screens has
+     come back, and they are exactly what the server ships, because a picker
+     that renders empty for a moment is worse than one that renders the
+     product's list and is corrected. */
+
+  const SHIPPED_WINDOWS = [0.25, 1, 8, 24, 168];
+  let windows = SHIPPED_WINDOWS.slice();
+  let defaultHours = 8;
   let windowHours = null;
+  let chosen = false;   // whether this viewer picked the window themselves
+
+  /* A window's label from its own length, so the plant's list needs no words
+     beside it. It reproduces the five labels this file used to hold:
+     0.25 → "15 min", 1 → "1 hour", 8 → "8 hours", 24 → "24 hours",
+     168 → "7 days". */
+  function windowLabel(h) {
+    if (h < 1) return `${Math.round(h * 60)} min`;
+    if (h === 1) return "1 hour";
+    if (h < 48) return `${FS.fmt.qty(h)} hours`;
+    return `${FS.fmt.qty(h / 24)} days`;
+  }
 
   FS.window = {
     hours() {
@@ -501,20 +527,37 @@
       const fromUrl = parseFloat(new URL(window.location).searchParams.get("hours"));
       let saved = null;
       try { saved = parseFloat(localStorage.getItem("fsmes-window")); } catch (err) { /* private window */ }
-      windowHours = fromUrl > 0 ? fromUrl : (saved > 0 ? saved : 8);
+      chosen = fromUrl > 0 || saved > 0;
+      windowHours = fromUrl > 0 ? fromUrl : (saved > 0 ? saved : defaultHours);
       return windowHours;
+    },
+    /* This plant's list and default, fetched once per page. Awaited by `bind`
+       before it builds the control, and safe to call again. */
+    async ready() {
+      const said = await FS.screens;
+      if (!said) return;
+      if (Array.isArray(said.report_windows) && said.report_windows.length) {
+        windows = said.report_windows.slice();
+      }
+      if (said.default_report_hours > 0) defaultHours = said.default_report_hours;
+      /* A viewer who has chosen nothing follows the plant. One who has picked
+         a window, by URL or last time, keeps it: a plant changing its default
+         is not a reason to move somebody off the window they are reading. */
+      if (!chosen) windowHours = null;
     },
     set(hours) {
       windowHours = hours;
+      chosen = true;
       try { localStorage.setItem("fsmes-window", String(hours)); } catch (err) { /* fine */ }
       const url = new URL(window.location);
       url.searchParams.set("hours", String(hours));
       history.replaceState(null, "", url);
     },
-    bind(select, onChange) {
+    async bind(select, onChange) {
+      await FS.window.ready();
       const current = FS.window.hours();
-      select.replaceChildren(...WINDOWS.map(([h, label]) => new Option(label, String(h), false, h === current)));
-      if (!WINDOWS.some(([h]) => h === current)) select.appendChild(new Option(`${current} h`, String(current), true, true));
+      select.replaceChildren(...windows.map((h) => new Option(windowLabel(h), String(h), false, h === current)));
+      if (!windows.some((h) => h === current)) select.appendChild(new Option(`${current} h`, String(current), true, true));
       select.addEventListener("change", () => { FS.window.set(parseFloat(select.value)); onChange(FS.window.hours()); });
     },
   };
@@ -625,6 +668,18 @@
   if (header) buildHeader(header);
   // In order: the replay bar measures the shadow bar to sit under it.
   FS.shadowBar().then(() => FS.replayBar());
+
+  /* The numbers this plant's own screens are drawn with, fetched once per page
+     and shared - the window list, the default window, the working week a new
+     shift starts from, the board's horizon. Not public: it needs a session,
+     which every screen that reads it already has.
+
+     It resolves to null rather than rejecting on a plant that answers 403 or
+     404, so a screen behind a sign-in wall renders the product's own defaults
+     instead of failing to render. Every reader treats null as *nothing said*. */
+  FS.screens = fetch("/dashboard/screens", { headers: { Accept: "application/json" } })
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null);
 
   /* The plant's identity, fetched once per page and shared. Public, like
      /shadow, and for the same reason: the sign-in screen needs it too.

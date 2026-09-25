@@ -25,7 +25,11 @@
 
   <section class="kpis">
     <div class="kpi"><span class="kpi-label">Due now</span><span id="kpi-due" class="kpi-value">—</span></div>
-    <div class="kpi"><span class="kpi-label">Due soon</span><span id="kpi-soon" class="kpi-value">—</span></div>
+    <div class="kpi"><span class="kpi-label">Due soon</span><span id="kpi-soon" class="kpi-value">—</span>
+      <!-- What "soon" means on this plant, filled in by maintenance.js from
+           /dashboard/screens. A tile that counts things by a threshold and
+           does not say the threshold is a number nobody can check. -->
+      <span id="kpi-soon-sub" class="kpi-sub"></span></div>
     <div class="kpi"><span class="kpi-label">Open work</span><span id="kpi-open" class="kpi-value">—</span>
       <span id="kpi-open-split" class="kpi-sub"></span></div>
     <div class="kpi"><span class="kpi-label">Expected downtime</span><span id="kpi-downtime" class="kpi-value">—</span>
@@ -102,7 +106,7 @@
               <option value="calendar_days">every N days</option>
             </select>
             <input id="plan-interval" type="number" min="0.1" step="0.1" placeholder="N" required>
-            <input id="plan-minutes" type="number" min="1" step="1" placeholder="Expected minutes" value="30">
+            <input id="plan-minutes" type="number" min="1" step="1" placeholder="Expected minutes — this plant's default">
             <input id="plan-document" placeholder="Instruction code (optional)">
             <button id="plan-submit">Create plan</button>
           </div>

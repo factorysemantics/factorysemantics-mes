@@ -42,6 +42,13 @@ class ShiftPattern(Base):
     name: Mapped[str] = mapped_column(String(120))
     starts: Mapped[time] = mapped_column(Time)
     ends: Mapped[time] = mapped_column(Time)
+    # The column's own last resort, for a row inserted without going through
+    # `fsmes.services.calendar.create_pattern`. Every path a person or a pack
+    # takes goes through that, and it fills `days` in from `[process]
+    # working_week_mask` - this plant's own week - before it gets here. A
+    # column default cannot read a plant's settings, so this stays the
+    # product's five days and is the one of P9's five sites that is a schema
+    # fact rather than a judgment.
     days: Mapped[str] = mapped_column(String(7), default="1111100")
     active: Mapped[bool] = mapped_column(default=True)
     # A shift may belong to one line, or to the whole site when null.

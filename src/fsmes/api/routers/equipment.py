@@ -102,7 +102,7 @@ def set_state(code: str, body: StateIn, db: DbDep, actor: ActorDep) -> dict:
 
 
 @router.get("/{code}/oee")
-def oee(code: str, db: ReadDbDep, hours: float = 8.0) -> dict:
+def oee(code: str, db: ReadDbDep, hours: float | None = None) -> dict:
     return equipment.oee(db, equipment_code=code, hours=hours)
 
 

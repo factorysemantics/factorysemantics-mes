@@ -315,7 +315,8 @@ def production_sums(session: Session, equipment_ids: list[int], start: datetime,
             for equipment_id, good, scrap, outside_qty in session.execute(query).all()}
 
 
-def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) -> dict[str, dict]:
+def oee_many(session: Session, machines: list[Equipment],
+             hours: float | None = None) -> dict[str, dict]:
     """OEE for every machine given, over one trailing window, in a handful of
     grouped queries rather than three per machine. {code: oee dict}.
 
@@ -332,6 +333,12 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
     denominator too would report 100 % coverage on a machine commissioned ten
     minutes ago, which is the reading the ledger exists to stop.
     """
+    # None is *this plant's own reporting window* - `[process]
+    # default_report_hours` - read here rather than declared in the signature,
+    # so the eight hours a caller used to inherit is the plant's answer and not
+    # this module's assumption that a shift is eight hours long.
+    if hours is None:
+        hours = calendar.default_report_hours(session)
     end = utcnow()
     asked = end - timedelta(hours=hours)
     ids = [m.id for m in machines]
@@ -458,7 +465,7 @@ def oee_many(session: Session, machines: list[Equipment], hours: float = 8.0) ->
     return out
 
 
-def oee(session: Session, *, equipment_code: str, hours: float = 8.0) -> dict:
+def oee(session: Session, *, equipment_code: str, hours: float | None = None) -> dict:
     """OEE over a trailing window. Components that cannot be computed (no rated
     cycle time, no production) are reported as null rather than guessed.
 

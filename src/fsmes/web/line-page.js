@@ -142,6 +142,8 @@ function onTab(name) {
   select.value = lineCode;
   rememberLine(lineCode);
   select.addEventListener("change", () => { rememberLine(select.value); onTab(FS.tabs.current()); });
-  FS.window.bind($("#hours"), () => onTab(FS.tabs.current()));
+  // Awaited: it reads this plant's own window list and default before it
+  // builds the control, and `FS.tabs.init` draws a panel straight afterwards.
+  await FS.window.bind($("#hours"), () => onTab(FS.tabs.current()));
   FS.tabs.init(document, onTab);
 })().catch(fail);

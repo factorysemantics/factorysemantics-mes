@@ -23,7 +23,57 @@ from fsmes.domain import (
     TriggerKind,
 )
 from fsmes.domain.equipment import EquipmentStateName
-from fsmes.services import Conflict, Invalid, NotFound, audit, masterdata
+from fsmes.services import Conflict, Invalid, NotFound, audit, masterdata, plant_settings
+
+# What this plant assumes when nothing has told it otherwise. These stay as
+# the literals the product ships, and every one of them is still a judgment
+# rather than arithmetic - what changed on 2026-09-25 is whose judgment.
+# `plant_settings.value` reads the row Engineering's Configuration page wrote
+# first, the setting this plant's pack compiled second, and one of these third,
+# so a plant that has configured nothing behaves exactly as it did before any
+# of them was a key.
+
+# A plant wants warning, not a surprise. Anything past 80% of a plan's own
+# interval is worth putting on a shift plan even though it is not due yet -
+# and how much warning is worth having depends on how long a spare takes to
+# arrive, which is why it is the plant's number and not this module's.
+DUE_SOON_FRACTION = 0.8
+# What a corrective job with no plan behind it is assumed to take. It sizes the
+# backlog's downtime figure, so a supervisor deciding whether tonight is the
+# night is reading it.
+DEFAULT_JOB_MINUTES = 60.0
+# The house default a new plan inherits. Each plan's own figure is the
+# engineer's and is untouched by this.
+PLAN_DEFAULT_MINUTES = 30.0
+
+
+def due_soon_fraction(session: Session) -> float:
+    """How far through a plan's own interval this plant calls coming due.
+
+    A fraction rather than a number of hours, so it already scales from a
+    weekly filter change to an annual overhaul; what differs between plants is
+    how long a spare part takes to arrive.
+    """
+    return float(plant_settings.value(
+        session, "process", "maintenance_due_soon_fraction", DUE_SOON_FRACTION))
+
+
+def default_job_minutes(session: Session) -> float:
+    """How long this plant assumes a job with no plan behind it takes.
+
+    It sizes the backlog's downtime figure and the block the scheduler
+    reserves, so a supervisor deciding whether tonight is the night is reading
+    it.
+    """
+    return float(plant_settings.value(
+        session, "process", "default_job_minutes", DEFAULT_JOB_MINUTES))
+
+
+def plan_default_minutes(session: Session) -> float:
+    """The expected duration a new plan inherits when nobody says. Each plan's
+    own figure is the engineer's and is untouched by this."""
+    return float(plant_settings.value(
+        session, "process", "maintenance_plan_default_minutes", PLAN_DEFAULT_MINUTES))
 
 
 def runtime_hours(session: Session, equipment_id: int, since=None) -> float:
@@ -76,6 +126,7 @@ def status_of(session: Session, plan: MaintenancePlan) -> dict:
             used, unit = round(elapsed, 2), "days"
 
     fraction = used / plan.interval if plan.interval else 1.0
+    soon = due_soon_fraction(session)
     return {
         "plan": plan.code,
         "name": plan.name,
@@ -87,9 +138,13 @@ def status_of(session: Session, plan: MaintenancePlan) -> dict:
         "remaining": round(max(0.0, plan.interval - used), 2),
         "fraction": round(fraction, 3),
         "due": fraction >= 1.0,
-        # A plant wants warning, not a surprise. Anything past 80% is worth
-        # putting on a shift plan even though it is not due yet.
-        "due_soon": 0.8 <= fraction < 1.0,
+        # A plant wants warning, not a surprise. Anything past this plant's own
+        # fraction of the plan's interval is worth putting on a shift plan even
+        # though it is not due yet - and the fraction is sent with the row, so
+        # the screen that colours the bar amber reads this plant's number
+        # rather than keeping a copy of the product's.
+        "due_soon": soon <= fraction < 1.0,
+        "due_soon_fraction": soon,
         "expected_minutes": plan.expected_minutes,
         "document": plan.document_code,
         "last_done_at": plan.last_done_at,
@@ -224,7 +279,7 @@ def complete(session: Session, code: str, *, findings: str | None = None,
 
 
 def create_plan(session: Session, *, code: str, name: str, equipment_code: str,
-                trigger: str, interval: float, expected_minutes: float = 30.0,
+                trigger: str, interval: float, expected_minutes: float | None = None,
                 instructions: str | None = None, document_code: str | None = None,
                 actor: str = "system") -> MaintenancePlan:
     if session.scalar(select(MaintenancePlan).where(MaintenancePlan.code == code)):
@@ -239,6 +294,11 @@ def create_plan(session: Session, *, code: str, name: str, equipment_code: str,
             f"{', '.join(t.value for t in TriggerKind)}") from exc
 
     equipment = masterdata.get_equipment(session, equipment_code)
+    # None means *this plant's house default*, and it is resolved here rather
+    # than in the signature so that the default a caller gets is the one this
+    # plant is running on now, not the one the module was imported with.
+    if expected_minutes is None:
+        expected_minutes = plan_default_minutes(session)
     plan = MaintenancePlan(
         code=code, name=name, equipment_id=equipment.id, trigger=kind,
         interval=interval, expected_minutes=expected_minutes,
@@ -280,8 +340,9 @@ def backlog(session: Session) -> dict:
     open_orders = list(session.scalars(select(MaintenanceOrder).where(
         MaintenanceOrder.status.in_(
             (MaintenanceStatus.DUE, MaintenanceStatus.IN_PROGRESS)))))
+    assumed = default_job_minutes(session)
     minutes = sum(
-        (o.plan.expected_minutes if o.plan else 60.0) for o in open_orders)
+        (o.plan.expected_minutes if o.plan else assumed) for o in open_orders)
     overdue = [o for o in open_orders if o.kind is MaintenanceKind.PREVENTIVE]
     return {
         "open": len(open_orders),

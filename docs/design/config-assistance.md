@@ -996,3 +996,63 @@ document this MES itself wrote**, and `fsmes erp validate` is handed no
 mapping at all. Nothing was missed; the audit row conflated them. The curated
 row says so now rather than the correction living only here.
 
+## 13. Applied a third time — Engineering, 2026-09-25
+
+§11 said the whole opt-in was two lines and claimed the next domain would need
+nothing else. Scott asked the obvious follow-up — *"can the methodology be
+expanded to all tabs?"* — and process and controls engineering were the first
+answer to it. **Seventeen sections, twenty-two keys, and §11's claim held**: the
+`plant_settings` table, the `PATCH` endpoint, the three-layer read, the seeding
+rule and the page's own input all took them with no change of their own.
+
+What the second application did need, and what each of those tells us about §11:
+
+- **Two new pack tables**, `[process]` and `[controls]`, plus one key added to
+  `[oee]`. A declaration is not the mechanism; §11 never claimed a domain would
+  arrive with its keys already declared.
+- **A new key kind, `floats`**, for a list of measurements. `report_windows` is
+  `[0.25, 1, 8, 24, 168]` and `ints` cannot say that a quarter of an hour is a
+  real window. The kind is the pack format's, not this seam's.
+- **A new capability, `signals.define`.** §2 named it in this very document and
+  said adding it later would be cheap because a capability is a string and a
+  role is a list of them. It was. Its pair `signals.approve` is deliberately
+  still absent: there is nothing yet for it to approve, and a capability a plant
+  could grant that gates nothing is a role saying something untrue about itself.
+- **A checker per pack table**, found by name from `plant_settings.write`. §11's
+  *one wording for one rule* only works if the validation a pack file goes
+  through is the validation an input goes through, so a section that gains a
+  `<section>_numbers` in `fsmes.pack.check` gains it behind the input, and a
+  section with none is validated by `fmt.parse` alone. That is the honest answer
+  for a key whose only wrong values are ones that are not the kind of thing.
+
+### Two things §11 did not say, and should have
+
+**Some settings the browser draws with cannot ride on a payload.** §11's shape
+is that a number reaches the screen beside the figure it judges — the Cpk bar
+arrives with the chart it colours — and that is right, because a number beside
+its own figure cannot drift from it. Three of these seventeen cannot do it: the
+shared time picker is built before any panel has asked for anything, and the
+shift form and the schedule board's horizon are controls rather than readings.
+`GET /dashboard/screens` serves those, and the rule for what belongs on it is
+narrow: **a setting goes there only when no payload it could ride on exists
+yet.** Anything else belongs with its figure.
+
+**"In force at once" has honest exceptions, and they have to be named on the
+page.** `opc_history_ratio` and its floor are read when the OPC agent next
+subscribes, because a sampling interval is a number the server holds for the
+life of a subscription. There is no way to make that immediate, and the choice
+is between saying so on the row and letting somebody believe otherwise. §11's
+promise should be read as *in force on the next reading*, and a section whose
+next reading is a reconnection says which.
+
+### The fourteen that were left
+
+Process and controls engineering had thirty-one candidates on the audit page;
+seventeen are here. The other fourteen are the ones scoped `object`, and they
+are the clearest demonstration that this seam has a boundary: a counter that
+wraps at 65535 and one zeroed every shift are two tags, not two plants. A
+plant-wide setting for them would be wrong about one of them, and `plant_settings`
+is keyed by `[section] key` with no room for a third name — deliberately, since
+a table that could hold *per object* rows would be a second object model. Those
+belong on the object's own row, and `C14` in particular waits on the bulk-edit
+design §9 opened.

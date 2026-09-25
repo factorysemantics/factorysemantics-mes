@@ -160,7 +160,12 @@ function wire() {
         code: $("#t-code").value.trim().toUpperCase(), name: $("#t-name").value.trim(),
         equipment: $("#t-machine").value || null, tag: $("#t-tag").value.trim(),
         condition: $("#t-condition").value, threshold: Number($("#t-threshold").value),
-        sustained_seconds: Number($("#t-sustained").value || 0), cooldown_seconds: Number($("#t-cooldown").value || 0),
+        sustained_seconds: Number($("#t-sustained").value || 0),
+        /* Left blank, this plant's own inherited cooldown stands. `|| 0` would
+           have been worse than the old 300: zero is a real answer meaning *fire
+           on every reading*, so a blank box used to mean the one thing nobody
+           typing nothing intends. */
+        cooldown_seconds: $("#t-cooldown").value === "" ? null : Number($("#t-cooldown").value),
         action: $("#t-action").value, action_params: params } });
       toast(`${out.code} drafted — approve it to put it in force`);
       $("#trigger-form").reset();

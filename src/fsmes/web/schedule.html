@@ -44,6 +44,11 @@
     <section class="tab-panel" data-panel="board">
       <div class="panel">
         <h2>The board <span class="muted">— each machine, time across, maintenance beside the work</span>
+          <!-- Which of these is selected is this plant's own horizon, set by
+               schedule.js from /dashboard/screens. The four offered are the
+               product's: what a plant owns is how far ahead the board looks,
+               which is one number, and a horizon that is none of these four is
+               added to the list rather than silently rounded to one of them. -->
           <label class="pick inline">next <select id="horizon">
             <option value="8">8 hours</option><option value="24" selected>24 hours</option>
             <option value="72">3 days</option><option value="168">7 days</option></select></label>
@@ -92,7 +97,7 @@
             <input id="shift-name" placeholder="Name" required>
             <input id="shift-starts" type="time" value="06:00" required>
             <input id="shift-ends" type="time" value="14:00" required>
-            <input id="shift-days" placeholder="Days Mon→Sun, 1111100" value="1111100" pattern="[01]{7}" required>
+            <input id="shift-days" placeholder="Days Mon→Sun, e.g. 1111100" pattern="[01]{7}" required>
             <button id="shift-submit">Add shift</button>
           </div>
         </form>

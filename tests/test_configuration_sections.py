@@ -77,15 +77,37 @@ def test_a_screen_one_level_down_names_itself_in_full():
 
 
 def test_the_configuration_page_lists_the_workspaces_sections_with_its_total(client):
-    """Every list states its total, and a total of one is still a total: this
-    is a list of sections that happens to be short today, not a single screen
-    wearing a plural name."""
+    """Every list states its total. Engineering's was one section for three
+    days and is eighteen since 2026-09-25, and the page says which number it
+    is rather than leaving a reader to count the rows."""
     page = client.get("/dashboard/config/engineering/sections").json()
 
     assert page["title"] == "Engineering"
-    assert page["total"] == len(page["items"]) == 1
-    assert [row["key"] for row in page["items"]] == ["downtime_reasons"]
+    assert page["total"] == len(page["items"]) == 18
+    # The vocabulary is still the first row, because `equipment` is still the
+    # first module this plant mounts, and the order the page states is that.
+    assert page["items"][0]["key"] == "downtime_reasons"
     assert page["items"][0]["href"] == "/dashboard/reasons"
+
+
+def test_every_row_names_the_module_that_put_it_there(client):
+    """The page says it is grouped by the module each section belongs to, so
+    each row has to carry the module it belongs to. An order a reader is told
+    about and cannot see is an order they have to take on trust."""
+    page = client.get("/dashboard/config/engineering/sections").json()
+    titles = [row["module"] for row in page["items"]]
+
+    assert all(titles), "a row with no module is a group heading nobody can draw"
+    # Grouped, not merely labelled: each module's sections are contiguous, so
+    # the same module never comes back after another one has been drawn.
+    seen, groups = set(), []
+    for title in titles:
+        if not groups or groups[-1] != title:
+            groups.append(title)
+            assert title not in seen, f"{title} appears in two separate groups"
+            seen.add(title)
+    assert groups[0] == "Machines, their states and their tags"
+    assert len(groups) == 6
 
 
 def test_each_row_names_the_capability_that_drafts_it_and_the_one_that_signs_it(
@@ -115,15 +137,25 @@ def test_a_section_whose_module_a_plant_does_not_serve_is_withheld_and_named(cli
     workspace with nothing in it and a workspace with one section switched off
     are different plants, and only one of them has a screen to go looking for.
 
-    Held on the registry helper rather than through `MES_MODULES`, because the
-    one section this product has today belongs to `equipment`, which is part
-    of the kernel and cannot be switched off. So the endpoint's own answer is
-    the honest one: nothing is withheld on any plant, today.
+    Held on the registry helper rather than through `MES_MODULES` so that the
+    assertion is about the rule and not about which modules a test plant
+    happens to serve. Since 2026-09-25 this is a real case rather than a
+    hypothetical one: Engineering's eighteen sections come from six modules and
+    five of those six are optional, so a plant that serves no scheduling has
+    four fewer rows and is told so.
     """
-    without = tuple(m for m in modules.REGISTRY if m.name != "equipment")
-    assert modules.config_sections("engineering", without) == ()
-    assert [s.label for s in modules.config_sections("engineering")] == ["Downtime reasons"]
+    without = tuple(m for m in modules.REGISTRY if m.name != "scheduling")
+    kept = {s.key for s in modules.config_sections("engineering", without)}
+    everything = {s.key for s in modules.config_sections("engineering")}
 
+    assert everything - kept == {"default_cycle_seconds", "schedule_default_horizon_hours",
+                                "previous_shift_horizon_days", "working_week_mask"}
+    # The vocabulary belongs to `equipment`, which is kernel, so no plant can
+    # be without it.
+    assert "downtime_reasons" in kept
+
+    # This test plant serves everything, so nothing is withheld from it - and
+    # the endpoint says so out loud rather than leaving the key off.
     assert client.get("/dashboard/config/engineering/sections").json()["switched_off"] == []
 
 

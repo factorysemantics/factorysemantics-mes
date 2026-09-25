@@ -339,6 +339,72 @@ REGISTRY: tuple[Module, ...] = (
                 href="/dashboard/reasons",
                 define="process.define",
                 approve="process.approve"),
+            ConfigSection(
+                domain="engineering",
+                key="opc_book_retry",
+                label="How hard a booking is retried",
+                about="How many times the OPC agent retries booking a batch of "
+                      "readings, and the first wait between attempts, doubling "
+                      "each time. Readings a machine sent are not dropped "
+                      "without trying: house rule one, read the other way round. "
+                      "Its sibling `sqlite_busy_timeout_ms` has been a setting "
+                      "for months; this was the other half of the same argument.",
+                href="/dashboard/tags",
+                define="signals.define",
+                edit_here=True,
+                pack_keys=("[controls] opc_book_attempts",
+                           "[controls] opc_book_backoff_s")),
+            ConfigSection(
+                domain="engineering",
+                key="uns_retry_policy",
+                label="How long the namespace retries",
+                about="How many attempts a publication gets before it is "
+                      "recorded dead, the first wait, and the ceiling the "
+                      "doubling stops at. A broker restarted nightly for twenty "
+                      "minutes kills every queued event at eight attempts. Dead "
+                      "is never deleted, so what this changes is how long the "
+                      "plant keeps trying before a person has to decide. The ERP "
+                      "outbox holds the same three numbers and they are "
+                      "deliberately separate: one plant's broker and one plant's "
+                      "ERP have different maintenance windows.",
+                href="/dashboard/ops",
+                define="signals.define",
+                edit_here=True,
+                pack_keys=("[controls] uns_max_attempts",
+                           "[controls] uns_base_backoff_s",
+                           "[controls] uns_max_backoff_s")),
+            ConfigSection(
+                domain="engineering",
+                key="opc_history_sampling",
+                label="How densely tag history is kept",
+                about="How much slower the rest of a machine's tags are sampled "
+                      "than the ones the MES reasons about, as a multiple of the "
+                      "publish interval, and the floor under that. A ratio, so "
+                      "it already scales with each plant's publish rate; what is "
+                      "left to answer is how much history to store. These two "
+                      "take effect when the agent next subscribes, which is what "
+                      "a subscription interval a server holds can honestly be.",
+                href="/dashboard/tags",
+                define="signals.define",
+                edit_here=True,
+                pack_keys=("[controls] opc_history_ratio",
+                           "[controls] opc_min_history_ms")),
+            ConfigSection(
+                domain="engineering",
+                key="opc_agent_cadences",
+                label="The agent's own cadences",
+                about="How often the agent checks whether a machine's order code "
+                      "has changed, and how often it looks for approved setpoint "
+                      "adjustments to write. Two hundred machines on one endpoint "
+                      "is a hundred database reads a second to discover nothing "
+                      "changed. Approving an adjustment promises a person that "
+                      "the agent writes within seconds, and the second of these "
+                      "is the number that promise rests on.",
+                href="/dashboard/adjustments",
+                define="signals.define",
+                edit_here=True,
+                pack_keys=("[controls] opc_order_sync_seconds",
+                           "[controls] opc_adjustment_poll_seconds")),
         ),
         # Two tool files, for the same reason there are two routers: the
         # vocabulary is its own thing, read and drafted on its own screen.
@@ -399,6 +465,42 @@ REGISTRY: tuple[Module, ...] = (
         pages=(Page("/dashboard/maintenance", "maintenance.html",
                     "What has come due on use, what is open and what clearing it costs, "
                     "the plans, and the work that was done."),),
+        config_sections=(
+            ConfigSection(
+                domain="engineering",
+                key="maintenance_due_soon",
+                label="When a plan is coming due",
+                about="How far through a plan's own interval counts as a warning "
+                      "rather than a surprise. A fraction, so it scales from a "
+                      "weekly filter change to an annual overhaul; what differs "
+                      "between plants is how long a spare takes to arrive.",
+                href="/dashboard/maintenance",
+                define="process.define",
+                edit_here=True,
+                pack_keys=("[process] maintenance_due_soon_fraction",)),
+            ConfigSection(
+                domain="engineering",
+                key="default_job_minutes",
+                label="How long an unplanned job takes",
+                about="Every corrective job. It sizes the backlog's downtime "
+                      "figure and the block the scheduler reserves, so a "
+                      "supervisor deciding whether tonight is the night is "
+                      "reading it.",
+                href="/dashboard/maintenance",
+                define="process.define",
+                edit_here=True,
+                pack_keys=("[process] default_job_minutes",)),
+            ConfigSection(
+                domain="engineering",
+                key="maintenance_plan_default_minutes",
+                label="A new plan's expected duration",
+                about="The house default a new plan inherits. Each plan's own "
+                      "figure is the engineer's and is unaffected.",
+                href="/dashboard/maintenance",
+                define="process.define",
+                edit_here=True,
+                pack_keys=("[process] maintenance_plan_default_minutes",)),
+        ),
         tools=("fsmes.mcp.maintenance",),
         tables=("maintenance_plans", "maintenance_orders"),
     ),
@@ -409,6 +511,57 @@ REGISTRY: tuple[Module, ...] = (
         pages=(Page("/dashboard/schedule", "schedule.html",
                     "The board, what the plan promises each order, and the calendar "
                     "every promise rests on."),),
+        config_sections=(
+            ConfigSection(
+                domain="engineering",
+                key="default_cycle_seconds",
+                label="Cycle time with no rating",
+                about="What one unit is assumed to cost at a station that has "
+                      "not been commissioned. A machine's own rated cycle time "
+                      "always wins, and a schedule built on this fallback says "
+                      "so rather than hiding it. A filling line and a CNC cell "
+                      "want different guesses.",
+                href="/dashboard/schedule",
+                define="process.define",
+                edit_here=True,
+                pack_keys=("[process] default_cycle_seconds",)),
+            ConfigSection(
+                domain="engineering",
+                key="schedule_default_horizon_hours",
+                label="How far ahead the board looks",
+                about="A job shop planning a fortnight and a line planning a "
+                      "shift want different boards. This is what the board "
+                      "opens on; a person can still pick another window on it.",
+                href="/dashboard/schedule",
+                define="process.define",
+                edit_here=True,
+                pack_keys=("[process] schedule_default_horizon_hours",)),
+            ConfigSection(
+                domain="engineering",
+                key="previous_shift_horizon_days",
+                label="How far back previous reaches",
+                about="Two weeks covers a plant that ran nothing over a "
+                      "shutdown. A seasonal plant with a six-week one answers "
+                      "differently, and the refusal a screen shows quotes "
+                      "whatever this says.",
+                href="/dashboard/schedule",
+                define="process.define",
+                edit_here=True,
+                pack_keys=("[process] previous_shift_horizon_days",)),
+            ConfigSection(
+                domain="engineering",
+                key="working_week_mask",
+                label="The default working week",
+                about="The days a shift pattern works when it names none: seven "
+                      "flags, Monday first. The format is the product's; which "
+                      "mask is the default is this plant's, because Sunday to "
+                      "Thursday is a real working week. Every pattern that names "
+                      "its own days is unaffected.",
+                href="/dashboard/schedule",
+                define="process.define",
+                edit_here=True,
+                pack_keys=("[process] working_week_mask",)),
+        ),
         tools=("fsmes.mcp.scheduling",),
         tables=("scheduled_slots", "shift_patterns", "calendar_exceptions"),
     ),
@@ -584,6 +737,24 @@ REGISTRY: tuple[Module, ...] = (
         name="kpis",
         title="OEE and order KPIs",
         routers=(Mount("fsmes.api.routers.kpis", "/kpis", ("kpis",)),),
+        config_sections=(
+            ConfigSection(
+                domain="engineering",
+                key="min_observed_seconds",
+                label="The floor under every rate",
+                about="Below this much observed time, nothing is divided by it: "
+                      "the answer is unknown with the ledger saying why, rather "
+                      "than a figure measured over four seconds. Its sibling "
+                      "`[oee] coverage_floor` has been a plant's to set for "
+                      "months, and by the same argument so is this. It is an "
+                      "`[oee]` key listed here because a Configuration workspace "
+                      "is a place on a screen and a pack section is a table in a "
+                      "file, and those two do not have to share a name.",
+                href="/dashboard",
+                define="process.define",
+                edit_here=True,
+                pack_keys=("[oee] min_observed_seconds",)),
+        ),
     ),
     Module(
         name="line",
@@ -606,6 +777,44 @@ REGISTRY: tuple[Module, ...] = (
                     "Shift analysis: OEE losses, the state timeline, downtime pareto and "
                     "tag trends. Its own page because these are questions you sit down with, "
                     "not things you watch."),),
+        config_sections=(
+            ConfigSection(
+                domain="engineering",
+                key="default_report_hours",
+                label="The default reporting window",
+                about="The source called eight hours *a shift*. A plant working "
+                      "twelve-hour shifts answers 12, and every payload still "
+                      "states the hours it was actually given, so nothing "
+                      "downstream reads this as a fact about a window.",
+                href="/dashboard/analysis",
+                define="process.define",
+                edit_here=True,
+                pack_keys=("[process] default_report_hours",)),
+            ConfigSection(
+                domain="engineering",
+                key="report_windows",
+                label="The windows every screen offers",
+                about="The list behind every time picker in the product, in "
+                      "hours. A plant whose people work twelve-hour shifts and "
+                      "think in weeks offers a different five. A viewer who has "
+                      "chosen a window of their own keeps it whatever this says.",
+                href="/dashboard/analysis",
+                define="process.define",
+                edit_here=True,
+                pack_keys=("[process] report_windows",)),
+            ConfigSection(
+                domain="engineering",
+                key="gantt_screenful",
+                label="How many machines a Gantt draws",
+                about="A six-station cell and a 108-station plant want different "
+                      "screenfuls. The payload states how many machines it drew "
+                      "beside how many the plant has, so moving this hides "
+                      "nothing.",
+                href="/dashboard/analysis",
+                define="process.define",
+                edit_here=True,
+                pack_keys=("[process] gantt_screenful",)),
+        ),
     ),
     Module(
         name="erp",
@@ -711,6 +920,33 @@ REGISTRY: tuple[Module, ...] = (
         pages=(Page("/dashboard/triggers", "triggers.html",
                     "Engineering: what the plant does when a signal crosses a line - "
                     "drafted, approved, withdrawn, and every firing."),),
+        config_sections=(
+            ConfigSection(
+                domain="engineering",
+                key="trigger_reload_seconds",
+                label="How fast an approval lands",
+                about="A trigger approved on screen reaches the running agent "
+                      "without a restart; this is how fast. A plant that stops a "
+                      "line on an SPC signal wants five seconds, and one with "
+                      "two hundred machines on one endpoint may not.",
+                href="/dashboard/triggers",
+                define="signals.define",
+                edit_here=True,
+                pack_keys=("[controls] trigger_reload_seconds",)),
+            ConfigSection(
+                domain="engineering",
+                key="trigger_default_cooldown_seconds",
+                label="A new trigger's cooldown",
+                about="How long a newly drafted trigger stays quiet after firing "
+                      "when nobody says otherwise. Five minutes of silence is "
+                      "right on a continuous line and wrong on a station with "
+                      "forty-second cycles. Each trigger's own cooldown is the "
+                      "engineer's and is unaffected.",
+                href="/dashboard/triggers",
+                define="signals.define",
+                edit_here=True,
+                pack_keys=("[controls] trigger_default_cooldown_seconds",)),
+        ),
         tools=("fsmes.mcp.triggers",),
         tables=("triggers", "trigger_firings"),
     ),
@@ -815,6 +1051,20 @@ def config_sections(domain: str, served: tuple[Module, ...] | None = None
                  for module in modules
                  for section in module.config_sections
                  if section.domain == domain)
+
+
+def module_of_section(section: ConfigSection) -> Module | None:
+    """Which module put one section on a Configuration page.
+
+    The section itself does not carry its module's name - it is reached
+    through the module's own registry entry, so a name on it would be a second
+    copy of a fact the structure already holds. This reads it back for the one
+    caller that needs it: the page, which groups eighteen rows by the module
+    each belongs to and has to be able to print the heading it claims to be
+    sorted by.
+    """
+    return next((module for module in REGISTRY
+                 if section in module.config_sections), None)
 
 
 def config_domains_with_sections() -> tuple[ConfigDomain, ...]:

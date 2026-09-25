@@ -345,6 +345,20 @@ td.code { font-family: var(--mono); font-size: 13px; }
    belongs next to the box. */
 .setting-save .refused { color: var(--down); font-size: var(--fs-sm); max-width: 34ch; }
 
+/* A group heading inside a table body: one module's sections together, on a
+   Configuration page long enough that the order it states has to be visible.
+   A `th` spanning the row rather than a styled `td`, so a screen reader hears
+   a heading for the group and not a cell with a word in it. */
+tbody tr.group th {
+  text-align: left;
+  padding: var(--s2) 10px var(--s1);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: .02em;
+  border-bottom: 1px solid rgba(38,48,64,.5);
+}
+
 .pill {
   font-size: 11px;
   font-weight: 600;

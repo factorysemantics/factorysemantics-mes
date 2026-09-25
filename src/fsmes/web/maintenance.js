@@ -36,12 +36,20 @@ function fillMachines(select, keepAny) {
 
 /* ---------- due ---------- */
 
-function bar(fraction) {
+/* How far through a plan's interval, coloured by the plant's own judgment.
+
+   It takes the whole row rather than the fraction, because the server has
+   already decided: `due` and `due_soon` are on every plan it returns, computed
+   from `[process] maintenance_due_soon_fraction`. The eight tenths that used
+   to be written here was the second copy of that judgment, so a plant that
+   warned at 70% got a bar that turned amber at 80% and a sentence beside it
+   that said *due soon* ten per cent earlier. */
+function bar(p) {
   const wrap = el("div", "bar");
   const fill = el("i");
-  fill.style.width = `${Math.min(100, fraction * 100)}%`;
-  if (fraction >= 1) fill.style.background = "var(--down)";
-  else if (fraction >= 0.8) fill.style.background = "var(--idle)";
+  fill.style.width = `${Math.min(100, p.fraction * 100)}%`;
+  if (p.due) fill.style.background = "var(--down)";
+  else if (p.due_soon) fill.style.background = "var(--idle)";
   wrap.append(fill);
   return wrap;
 }
@@ -55,7 +63,7 @@ function planRow(p) {
   what.append(el("div", "muted small", `${fmt.qty(p.used)} of ${fmt.qty(p.interval)} ${p.unit}` +
     (p.due ? " — due" : p.due_soon ? " — due soon" : "") +
     ` · ~${fmt.qty(p.expected_minutes)} min down` + (p.document ? ` · ${p.document}` : "")));
-  what.append(bar(p.fraction));
+  what.append(bar(p));
   li.append(what);
   return li;
 }
@@ -64,6 +72,14 @@ async function loadDue() {
   const d = await api("/maintenance/due");
   $("#kpi-due").textContent = d.due.length;
   $("#kpi-soon").textContent = d.due_soon.length;
+  /* Say what "soon" means here. The counting is the server's, from
+     `[process] maintenance_due_soon_fraction`; this only prints the number the
+     count was made with, so a plant that warns at 70% reads 70% rather than
+     having to know. */
+  const said = await FS.screens;
+  const soon = said && said.maintenance_due_soon_fraction;
+  $("#kpi-soon-sub").textContent = soon
+    ? `past ${Math.round(soon * 100)}% of the interval` : "";
   $("#kpi-open").textContent = d.backlog.open;
   $("#kpi-open-split").textContent = `${d.backlog.preventive} preventive · ${d.backlog.corrective} corrective`;
   $("#kpi-downtime").textContent = `${d.backlog.expected_downtime_hours} h`;
@@ -187,7 +203,7 @@ function drawPlans() {
     tr.append(el("td", "code", `${p.plan} ${p.name}`));
     const where = el("td"); where.append(FS.link("machine", p.equipment)); tr.append(where);
     tr.append(el("td", "muted", p.trigger.replace("_", " ")));
-    const prog = el("td"); prog.append(bar(p.fraction)); tr.append(prog);
+    const prog = el("td"); prog.append(bar(p)); tr.append(prog);
     tr.append(el("td", "num", `${fmt.qty(p.used)} ${p.unit}`));
     tr.append(el("td", "num", fmt.qty(p.interval)));
     tr.append(el("td", "muted small", p.last_done_at ? fmt.stamp(p.last_done_at) : "never"));
@@ -205,7 +221,12 @@ function wirePlans() {
       const out = await api("/maintenance/plans", { method: "POST", body: {
         code: $("#plan-code").value.trim(), name: $("#plan-name").value.trim(),
         equipment: $("#plan-machine").value, trigger: $("#plan-trigger").value,
-        interval: Number($("#plan-interval").value), expected_minutes: Number($("#plan-minutes").value || 30),
+        interval: Number($("#plan-interval").value),
+        /* Left blank, this plant's own default for a new plan stands. The
+           thirty that used to be here was the product's, and sending it would
+           have overruled a plant that had chosen forty-five without anybody
+           meaning to. */
+        expected_minutes: $("#plan-minutes").value === "" ? null : Number($("#plan-minutes").value),
         document_code: $("#plan-document").value.trim() || null } });
       toast(`${out.plan} created on ${out.equipment}`);
       $("#plan-form").reset();

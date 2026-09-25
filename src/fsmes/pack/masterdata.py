@@ -332,7 +332,7 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
     )
     from fsmes.domain.common import VocabularyStatus
     from fsmes.services import calendar as calendar_service
-    from fsmes.services import workorders
+    from fsmes.services import maintenance, workorders
 
     data = read(directory)
     cycles = cycles or {}
@@ -460,11 +460,18 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
         if session.scalar(select(MaintenancePlan.id).where(MaintenancePlan.code == code)):
             count("maintenance_plans", made=False)
             continue
+        # A plan that says nothing about how long it takes gets this plant's
+        # own house default rather than the product's thirty - the same
+        # `[process] maintenance_plan_default_minutes` a person editing a plan
+        # on the screen gets, because a pack and a screen creating the same
+        # plan should not produce two different plans.
+        stated = row.get("expected_minutes")
         session.add(MaintenancePlan(
             code=code, name=row["name"], equipment=equipment[row["equipment"]],
             trigger=TriggerKind(row["trigger"]), interval=float(row["interval"]),
             instructions=row.get("instructions"), document_code=row.get("document_code"),
-            expected_minutes=float(row.get("expected_minutes", 30.0))))
+            expected_minutes=(float(stated) if stated is not None
+                              else maintenance.plan_default_minutes(session))))
         count("maintenance_plans", made=True)
 
     # The vocabulary a plant starts with. It arrives **in force**, not as a
@@ -504,9 +511,22 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
         if session.scalar(select(ShiftPattern.id).where(ShiftPattern.code == code)):
             count("shifts", made=False)
             continue
+        # A pack that says nothing about which days a shift runs gets **this
+        # plant's own working week**, not the product's Monday-to-Friday.
+        #
+        # The configuration audit of 2026-09-21 read this line and said the
+        # honest fix might be to refuse rather than to seed silently, because
+        # seeding five days was a guess about somebody else's plant. Since
+        # 2026-09-25 it is not a guess: `[process] working_week_mask` is the
+        # plant's own stated answer, and filling a missing field in from what
+        # the plant has said is what every other default in this seeder does.
+        # So it is not refused - refusing would break every pack that leaves
+        # `days` out to mean *the usual week here* and would buy nothing the
+        # key does not already buy.
         session.add(ShiftPattern(
             code=code, name=row["name"], starts=time.fromisoformat(row["starts"]),
-            ends=time.fromisoformat(row["ends"]), days=row.get("days", "1111100"),
+            ends=time.fromisoformat(row["ends"]),
+            days=row.get("days") or calendar_service.working_week_mask(session),
             # A shift with no equipment belongs to the whole site, which is
             # the column's own meaning for null - not a missing value.
             equipment=equipment.get(row["equipment"]) if row.get("equipment") else None))

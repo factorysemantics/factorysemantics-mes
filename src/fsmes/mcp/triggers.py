@@ -40,7 +40,7 @@ def register(mcp, call, write, identify) -> dict:
     @mcp.tool()
     def draft_trigger(plant: str, code: str, name: str, tag: str, condition: str, threshold: float,
                       machine: str | None = None, sustained_seconds: float = 0.0,
-                      cooldown_seconds: float = 300.0, action: str = "log_event",
+                      cooldown_seconds: float | None = None, action: str = "log_event",
                       action_params: dict | None = None, note: str | None = None,
                       dry_run: bool = False, on_behalf_of: str | None = None,
                       client_ref: str | None = None) -> dict:

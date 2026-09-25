@@ -258,14 +258,18 @@ def write(session: Session, *, domain: str, key: str, written: str, actor: str) 
 
     judge = getattr(checker, f"{section}_numbers", None)
     if judge is not None:
-        # The whole table with this one value changed, so a pair is judged
-        # against what the plant is already running on for its other half
-        # rather than against the product's default. Found by the section's
-        # own name rather than listed here, because the checker is where a
-        # pack section's rules live and a second list of which sections have
-        # rules would be a list that drifts - `[quality]` has
-        # `quality_numbers` and `[erp]` has `erp_numbers`, and a section with
-        # neither is a section whose keys the type check alone judges.
+        # The whole table with this one value changed, so a key that is half of
+        # a pair - the two Cpk bars, the gauge ratio and its floor, the UNS
+        # backoff and its ceiling - is judged against what the plant is
+        # already running on for the other half rather than against the
+        # product's default.
+        #
+        # Found by name rather than by an `if` per section, because the rule is
+        # *one wording for one rule, whichever door the value came in by*: a
+        # section that gains a checker in `fsmes.pack.check` gains it here, and
+        # a section with none is validated by `fmt.parse` alone, which is the
+        # honest answer for a key whose only wrong values are ones that are not
+        # the kind of thing at all.
         proposed_table = {**table(session, section), name: proposed}
         problems = [p for p in judge(proposed_table)
                     if p.where == f"[{section}] {name}"]

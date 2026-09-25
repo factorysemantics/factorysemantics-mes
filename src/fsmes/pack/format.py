@@ -73,7 +73,7 @@ class Key:
 
     name: str
     kind: str
-    """`str`, `int`, `float`, `bool`, `path`, `paths`, `ints`, `strs`.
+    """`str`, `int`, `float`, `bool`, `path`, `paths`, `ints`, `strs`, `floats`.
 
     `ints` is a TOML array of whole numbers - `hold_rules = [1, 2]`. It
     compiles to a comma-separated string, because a setting is an environment
@@ -86,7 +86,11 @@ class Key:
     string with commas inside it would have been a second way of saying list
     in one file. Commas separate, and a value that needs a comma inside it
     is the one thing this kind cannot carry - said out loud here rather than
-    discovered by a plant whose ERP has a status called `Hold, pending QA`."""
+    discovered by a plant whose ERP has a status called `Hold, pending QA`.
+
+    `floats` is the same thing for measurements - `report_windows =
+    [0.25, 1, 8]`, a list of window lengths in hours, where a quarter of an
+    hour is a real answer and a whole number is not enough to say it."""
     about: str
     becomes: str | None = None
     """The `MES_*` setting this compiles to, or None when the key is read by
@@ -254,6 +258,16 @@ SCHEMA: tuple[Section, ...] = (
             "MES_INBOUND_MQTT_MODE"),
     )),
     Section("oee", "What this plant asks of a KPI before it will report one.", (
+        Key("min_observed_seconds", "float",
+            "The least observed time this MES will divide by. Below it no rate, "
+            "no OEE and no availability is reported for a window at all, and "
+            "the answer is unknown with the ledger saying why rather than a "
+            "figure measured over four seconds. Ten seconds by default, which "
+            "is the literal this product shipped. `coverage_floor`'s sibling "
+            "and beside it on purpose: both are this plant saying how little "
+            "evidence is too little, and the argument that made one of them a "
+            "key makes the other one too.",
+            "MES_OEE_MIN_OBSERVED_SECONDS"),
         Key("coverage_floor", "float",
             "How much of a window this MES must have watched before it reports a "
             "KPI for it, between 0 and 1. Leave it out and every figure prints "
@@ -344,6 +358,154 @@ SCHEMA: tuple[Section, ...] = (
             "stops a containment walk running away, so the product keeps a "
             "hard ceiling of twelve above whatever is written here.",
             "MES_QUALITY_CONTAINMENT_MAX_DEPTH"),
+    )),
+    Section("process",
+            "What this plant assumes when nothing has told it otherwise, and "
+            "how much of itself one screen shows. Every key here ships the "
+            "value that was in the product's source, so a plant that writes "
+            "none of them behaves exactly as it does now.", (
+        Key("maintenance_due_soon_fraction", "float",
+            "How far through a maintenance plan's own interval counts as "
+            "coming due, between 0 and 1. 0.8 by default. It is a fraction of "
+            "each plan's interval rather than a number of hours, so it already "
+            "scales from a weekly filter change to an annual overhaul; what "
+            "differs between plants is how long a spare takes to arrive.",
+            "MES_PROCESS_MAINTENANCE_DUE_SOON_FRACTION"),
+        Key("default_cycle_seconds", "float",
+            "What one unit is assumed to cost at a station with no rated cycle "
+            "time, in seconds. 3.0 by default. Real cycle times are seeded onto "
+            "the machine from the tag map and always win; this only keeps a "
+            "plan possible for a plant that has not commissioned its machines "
+            "yet, and a schedule built on it says so - `uses_default_cycle` "
+            "reports it rather than hiding it. A filling line and a CNC cell "
+            "want different guesses.",
+            "MES_PROCESS_DEFAULT_CYCLE_SECONDS"),
+        Key("default_job_minutes", "float",
+            "How long a maintenance job with no plan behind it is assumed to "
+            "take, in minutes. 60.0 by default. It sizes the backlog's downtime "
+            "figure and the block the scheduler reserves, so a supervisor "
+            "deciding whether tonight is the night is reading it.",
+            "MES_PROCESS_DEFAULT_JOB_MINUTES"),
+        Key("maintenance_plan_default_minutes", "float",
+            "The expected duration a new maintenance plan gets when nobody "
+            "says otherwise, in minutes. 30.0 by default. Each plan's own "
+            "figure is the engineer's and is unaffected; this is only the "
+            "plant's house default.",
+            "MES_PROCESS_MAINTENANCE_PLAN_DEFAULT_MINUTES"),
+        Key("default_report_hours", "float",
+            "How long a window is when a caller asks for none, in hours. 8.0 "
+            "by default, which the source called *a shift*. A plant working "
+            "twelve-hour shifts answers 12 and every payload still states the "
+            "`requested_hours` it was actually given, so nothing downstream "
+            "reads the default as a fact.",
+            "MES_PROCESS_DEFAULT_REPORT_HOURS"),
+        Key("report_windows", "floats",
+            "The window lengths every screen with a time picker offers, in "
+            "hours, as a list. `[0.25, 1, 8, 24, 168]` by default - the list "
+            "the browser held as a literal until 2026-09-25. A plant whose "
+            "people work in twelve-hour shifts and think in weeks offers a "
+            "different five. `default_report_hours` is which of them a screen "
+            "opens on, and a viewer who has chosen a window of their own keeps "
+            "it whatever this says.",
+            "MES_PROCESS_REPORT_WINDOWS"),
+        Key("gantt_screenful", "int",
+            "How many machines one Gantt draws before it stops, as a count. "
+            "12 by default. A six-station cell and a 108-station plant want "
+            "different screenfuls; the payload states `machines_shown` beside "
+            "`machines_total` either way, so moving this hides nothing.",
+            "MES_PROCESS_GANTT_SCREENFUL"),
+        Key("previous_shift_horizon_days", "int",
+            "How far back `shift=previous` will look for a shift that has "
+            "ended, in days. 14 by default - two weeks covers a plant that ran "
+            "nothing over a shutdown. A seasonal plant with a six-week shutdown "
+            "answers differently, and the refusal sentence quotes whatever this "
+            "says rather than a number nobody chose.",
+            "MES_PROCESS_PREVIOUS_SHIFT_HORIZON_DAYS"),
+        Key("working_week_mask", "str",
+            "The working week a shift pattern gets when it names no days: "
+            "seven characters of 0 or 1, Monday first. `1111100` by default. "
+            "The *format* is the product's and always will be - Monday first, "
+            "seven flags - and which mask is the default is this plant's, "
+            "because Sunday to Thursday is a real working week.",
+            "MES_PROCESS_WORKING_WEEK_MASK"),
+        Key("schedule_default_horizon_hours", "float",
+            "How far ahead the schedule board looks when nobody says, in "
+            "hours. 24.0 by default. A job shop planning a fortnight and a "
+            "line planning a shift want different boards.",
+            "MES_PROCESS_SCHEDULE_DEFAULT_HORIZON_HOURS"),
+    )),
+    Section("controls",
+            "How hard this plant's own processes argue with the systems they "
+            "talk to, and how densely they sample. Not *where* those systems "
+            "are - that is `[serve]`, `[uns]` and `[inbound]`, one line of "
+            "plumbing each - but how long to keep trying and how much to "
+            "store, which is the controls engineer's tuning. Every key here "
+            "ships the value that was in the product's source.", (
+        Key("opc_book_attempts", "int",
+            "How many times the OPC agent will retry booking a batch of "
+            "readings before it gives up on them, as a count. 4 by default. "
+            "Its sibling `sqlite_busy_timeout_ms` has been a setting for "
+            "months; this was the half of the same argument left in code.",
+            "MES_CONTROLS_OPC_BOOK_ATTEMPTS"),
+        Key("opc_book_backoff_s", "float",
+            "The first wait between those attempts, in seconds, doubling each "
+            "time. 0.5 by default.",
+            "MES_CONTROLS_OPC_BOOK_BACKOFF_S"),
+        Key("uns_max_attempts", "int",
+            "How many times a namespace publication is attempted before it is "
+            "recorded dead, as a count. 8 by default. A broker restarted "
+            "nightly for twenty minutes kills every queued event at eight "
+            "attempts; dead is never deleted, so what this changes is how long "
+            "the plant keeps trying before a person has to decide.",
+            "MES_CONTROLS_UNS_MAX_ATTEMPTS"),
+        Key("uns_base_backoff_s", "int",
+            "The first wait before a failed publication is retried, in "
+            "seconds, doubling each attempt. 5 by default.",
+            "MES_CONTROLS_UNS_BASE_BACKOFF_S"),
+        Key("uns_max_backoff_s", "int",
+            "The ceiling that doubling curve is capped at, in seconds. 3600 by "
+            "default - an hour.",
+            "MES_CONTROLS_UNS_MAX_BACKOFF_S"),
+        Key("trigger_reload_seconds", "float",
+            "How often a running agent re-reads the approved triggers, in "
+            "seconds, which is how fast an approval on screen reaches the "
+            "machines. 30.0 by default. A plant that stops a line on an SPC "
+            "signal wants five.",
+            "MES_CONTROLS_TRIGGER_RELOAD_SECONDS"),
+        Key("trigger_default_cooldown_seconds", "float",
+            "How long a newly drafted trigger stays quiet after firing when "
+            "nobody says otherwise, in seconds. 300.0 by default. Each "
+            "trigger's own cooldown is the engineer's and is unaffected; five "
+            "minutes of silence is right on a continuous line and wrong on a "
+            "station with forty-second cycles.",
+            "MES_CONTROLS_TRIGGER_DEFAULT_COOLDOWN_SECONDS"),
+        Key("opc_history_ratio", "int",
+            "How many times slower than the semantic tags the rest of a "
+            "machine's tags are sampled, as a multiple of `opc_publish_ms`. 10 "
+            "by default. A ratio rather than a rate, so it already scales with "
+            "each plant's publish interval; what is left for a plant to answer "
+            "is how much history it wants to store. It takes effect when the "
+            "agent next subscribes, which is the honest answer for a "
+            "subscription interval a server holds.",
+            "MES_CONTROLS_OPC_HISTORY_RATIO"),
+        Key("opc_min_history_ms", "int",
+            "The floor under that sampling interval, in milliseconds. 1000 by "
+            "default. Like the ratio, it is read when the agent subscribes.",
+            "MES_CONTROLS_OPC_MIN_HISTORY_MS"),
+        Key("opc_order_sync_seconds", "float",
+            "How often the agent checks whether any machine's OrderCode has "
+            "changed, in seconds. 2.0 by default. Two hundred machines on one "
+            "endpoint is a hundred database reads a second to discover nothing "
+            "changed.",
+            "MES_CONTROLS_OPC_ORDER_SYNC_SECONDS"),
+        Key("opc_adjustment_poll_seconds", "float",
+            "How often the agent looks for approved setpoint adjustments to "
+            "write, in seconds. 5.0 by default. `POST /adjustments/{code}/"
+            "approve` promises a person that *the OPC agent writes within "
+            "seconds*, and this is the number that promise rests on - a plant "
+            "raising it past a few seconds is changing what it has told its "
+            "own operators.",
+            "MES_CONTROLS_OPC_ADJUSTMENT_POLL_SECONDS"),
     )),
     Section("floor", "The shop floor's own cadence, for a simulated plant.", (
         Key("inspect_every", "int", "Seconds between recorded quality checks.",
@@ -526,21 +688,25 @@ def parse(key: Key, written: str):
         if written.lower() in ("false", "no", "off", "0"):
             return False
         raise ValueError(f"{written!r} is not true or false.")
-    if key.kind == "ints":
-        # An empty list is a real answer for every key of this kind the
-        # product has - `hold_rules = []` is *draw every rule and hold on
-        # none of them* - so empty text parses to the empty list rather than
-        # refusing.
-        out: list[int] = []
+    if key.kind in ("ints", "floats"):
+        # An empty list is a real answer for `ints` - `hold_rules = []` is
+        # *draw every rule and hold on none of them* - so empty text parses to
+        # the empty list rather than refusing. Whether an empty list is a
+        # sensible answer for a particular key is `fsmes.pack.check`'s
+        # question: `report_windows = []` is a screen with no time picker on
+        # it, and the checker refuses that in its own sentence.
+        whole = key.kind == "ints"
+        word = "a whole number" if whole else "a number"
+        out: list = []
         for part in written.split(","):
             part = part.strip()
             if not part:
                 continue
             try:
-                out.append(int(part))
+                out.append(int(part) if whole else float(part))
             except ValueError:
                 raise ValueError(
-                    f"{part!r} is not a whole number. This key is a list of them, "
+                    f"{part!r} is not {word}. This key is a list of them, "
                     "written with commas between.") from None
         return out
     if key.kind == "strs":
@@ -566,6 +732,8 @@ def as_written(key: Key, value) -> str:
         return ",".join(str(int(item)) for item in value)
     if key.kind == "strs":
         return ",".join(str(item).strip() for item in value)
+    if key.kind == "floats":
+        return ",".join(str(float(item)) for item in value)
     return str(value)
 
 
@@ -591,17 +759,17 @@ def settings(pack: Pack) -> dict[str, str]:
                 value = pack.path(str(value)).as_posix()
             elif key.kind == "bool":
                 value = "true" if value else "false"
-            elif key.kind == "ints":
+            elif key.kind in ("ints", "floats", "strs"):
                 # A setting is text. The list is written as a comma list
                 # rather than as Python's own repr, so the value a person
                 # reads in `fsmes info` is the value they wrote in the pack.
                 if not isinstance(value, list):
                     continue  # already refused by the checker; never guessed at here
-                value = ",".join(str(int(item)) for item in value)
-            elif key.kind == "strs":
-                if not isinstance(value, list):
-                    continue  # already refused by the checker; never guessed at here
-                value = ",".join(str(item).strip() for item in value)
+                if key.kind == "strs":
+                    value = ",".join(str(item).strip() for item in value)
+                else:
+                    cast = int if key.kind == "ints" else float
+                    value = ",".join(str(cast(item)) for item in value)
             out[key.becomes] = str(value)
     out["MES_MODULES"] = module_spec(pack)
     if pack.table("words"):

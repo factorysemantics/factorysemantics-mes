@@ -244,7 +244,7 @@ function draw(page) {
   const many = page.total > SCREENFUL;
   $("#section-filter").classList.toggle("hidden", !many);
   $("#section-sort").textContent = many
-    ? `Sorted by the module each section belongs to, in the order this plant `
+    ? `Grouped by the module each section belongs to, in the order this plant `
       + `serves them — the same order on every load.`
     : "";
 
@@ -276,7 +276,24 @@ function redraw() {
 
   const body = $("#sections-table").querySelector("tbody");
   body.replaceChildren();
+  /* The grouping the sort line claims, drawn. Engineering carries eighteen
+     sections from six different modules, and an order a reader is told about
+     but cannot see is an order they have to take on trust between two
+     readings. One heading per module, only where there is more than one group
+     to tell apart, and it follows the filter: a search that leaves two rows
+     from one module says which module, not all six. */
+  let group = null;
+  const groups = new Set(shown.map((s) => s.module).filter(Boolean));
   for (const section of shown) {
+    if (groups.size > 1 && section.module && section.module !== group) {
+      group = section.module;
+      const heading = el("tr", "group");
+      const cell = el("th", null, group);
+      cell.colSpan = 5;
+      cell.scope = "colgroup";
+      heading.appendChild(cell);
+      body.appendChild(heading);
+    }
     const row = el("tr");
 
     const name = el("td");
