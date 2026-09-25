@@ -89,6 +89,76 @@ goes under Honesty with a migration line, so plant people can find it.
   No migration: the table these rows live in has been there since
   2026-09-24.
 
+- **This plant's own engineering numbers — seventeen settings, live on the same
+  seam.** Every plant-scope item the configuration audit found in process and
+  controls engineering becomes a box you type in on **Engineering ›
+  Configuration**: how far through a maintenance plan counts as coming due
+  (0.8), what one unit costs at a station with no rating (3 s), how long a job
+  with no plan takes (60 min), a new plan's duration (30 min), how long a window
+  is when nobody says (8 h — the source called it *a shift*), the five windows
+  every time picker offers, how many machines one Gantt draws (12), how far back
+  *the previous shift* reaches (14 days), the default working week (`1111100`),
+  the floor below which no rate is reported (10 s), the schedule board's horizon
+  (24 h) — and for controls, the OPC booking retry (4 × 0.5 s), the namespace
+  retry policy (8 attempts, 5 s to an hour), how fast an approved trigger
+  reaches the agent (30 s), a new trigger's cooldown (300 s), how densely tag
+  history is sampled (10× publish, floor 1000 ms), and the agent's two cadences
+  (2 s and 5 s). **Every default is the literal that was there, so a plant that
+  writes none of these keys behaves exactly as it did.** Seeded from `[process]`,
+  `[controls]` and `[oee]` in the pack, owned by the database after that, in
+  force when saved with no restart, audited as `plant_setting.set`. Two new pack
+  tables, a new `floats` key kind for the window list, and `fsmes pack check`
+  refuses from the page exactly what it refuses in a file, in the same
+  sentences. Reference: [this plant's own engineering numbers](docs/operate/engineering-numbers.md).
+
+- **`signals.define`, the capability controls engineering did not have.** Named
+  in decision 0035 §2 in September and added now that there is something to gate
+  on it: the six controls rows above. On the **admin** role; deliberately not on
+  the **agent** role, because an agent may draft a vocabulary for a person to
+  approve and retuning how hard the OPC agent retries a booking is not drafting.
+  Its pair `signals.approve` is still absent on purpose — nothing here has an
+  approval step, and a capability that gates nothing is a role saying something
+  untrue about itself.
+
+### Changed
+
+- **Nine `hours` and `limit` parameters no longer declare a default of their
+  own.** `GET /analysis/{oee,timeline,downtime,production,tag}`,
+  `GET /scheduling/board`, `GET /dashboard/summary`, `GET /kpis/oee/{code}` and
+  `GET /equipment/{code}/oee` had `8.0`, `24.0` or `12` in their signatures;
+  they take no value now and the service reads this plant's own
+  `[process] default_report_hours`, `schedule_default_horizon_hours` or
+  `gantt_screenful` at the moment of the request. **Answers do not change on a
+  plant that configures nothing** — the default is the same number — but the
+  OpenAPI schema no longer tells a twelve-hour plant that its own default is
+  eight hours. Every payload already stated the window it actually used.
+  `expected_minutes` on `POST /maintenance/plans`, `days` on
+  `POST /scheduling/calendar/shifts` and `cooldown_seconds` on
+  `POST /triggers` are optional the same way and for the same reason: sending
+  the product's number would overrule a plant that had chosen another.
+
+- **`fsmes pack apply` seeds `[process]`, `[controls]` and `[oee]` once and
+  never updates them**, the rule it already keeps for every masterdata kind and
+  for `[quality]`. A pack is how a new plant starts, not how a running one is
+  steered; `fsmes pack status` reports the difference. A pack that seeds a shift
+  and omits `days` now gets **this plant's** working week rather than the
+  product's five days.
+
+- **The browser stopped keeping its own copies of four of these numbers.** The
+  shared time picker held the window list and its eight hours as literals, the
+  maintenance bar turned amber at eight tenths of its own, the new-plan form
+  sent 30, the new-trigger form sent 300 (and `|| 0` for an empty box, which
+  asked for *fire on every reading*), and the shift form sent `1111100`. Each
+  now reads the plant's answer — from the payload it belongs to where one
+  exists, and from `GET /dashboard/screens` for the three controls that are
+  built before any payload has been asked for. A plant that warned at 70% used
+  to get a bar that disagreed with the sentence beside it.
+
+- **Engineering › Configuration is eighteen sections, so it draws the grouping
+  it already claimed.** The page said it was sorted by the module each section
+  belongs to and showed nothing to see it by; each row now carries its module
+  and the table draws one heading per group, following the search box.
+
 - **The assistant can draft the plant's own words, and never sign them.** Two
   agent tools that were missing while the API was already open to them:
   `draft_downtime_reason` and `draft_nc_severity`, with `downtime_reasons` and
