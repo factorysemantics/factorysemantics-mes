@@ -262,59 +262,6 @@ REGISTRY: tuple[Module, ...] = (
         title="Health, metrics and version",
         kernel=True,
         routers=(Mount("fsmes.api.routers.system", "", ("system",), public=True),),
-        config_sections=(
-            # IT's three plant-scope rows of the configuration audit. They are
-            # listed on the **Administration** page and gated on
-            # `users.manage`, because decision 0035 section 2 deliberately
-            # keeps IT outside the role model: it has no capability of its own
-            # and gets no `ConfigDomain`. A workspace of its own would need
-            # both, and the person who administers a plant's accounts is
-            # already the only person who can reach these.
-            #
-            # Their keys live in `[system]` rather than `[admin]` because a
-            # pack table is a table in a file and a Configuration workspace is
-            # a place on a screen - the distinction `plant_settings.owner`
-            # exists to keep - and these are the plant's plumbing rather than
-            # its administration.
-            ConfigSection(
-                domain="administration",
-                key="local_model",
-                label="Which local model answers",
-                about="Which model on this machine answers a question and "
-                      "drafts an instruction. Each document already records "
-                      "the model that wrote it, so nothing a record means "
-                      "changes when this does.",
-                href="/dashboard/ops",
-                define="users.manage",
-                edit_here=True,
-                pack_keys=("[system] local_model_name",)),
-            ConfigSection(
-                domain="administration",
-                key="log_rotation",
-                label="How much log history this plant keeps",
-                about="The size one component's log grows to before it "
-                      "rotates, and how many rotations are kept. Read when a "
-                      "process starts: logging is configured before this "
-                      "plant's database is open, so this one takes a restart "
-                      "and the page says so.",
-                href="/dashboard/ops",
-                define="users.manage",
-                pack_keys=("[system] log_rotation_max_bytes",
-                           "[system] log_rotation_backups")),
-            ConfigSection(
-                domain="administration",
-                key="fleet_probe",
-                label="How long the console waits for a plant to answer",
-                about="The fleet console's own number about every plant it "
-                      "watches, rather than any one plant's about itself, so "
-                      "it is read when the console starts. Too short reports "
-                      "a healthy plant unreachable. Listed on a plant because "
-                      "a plant's pack is where it is written; the console is "
-                      "not a screen this plant serves.",
-                href="/dashboard/ops",
-                define="users.manage",
-                pack_keys=("[system] fleet_health_probe_timeout",)),
-        ),
     ),
     Module(
         name="auth",
@@ -327,6 +274,12 @@ REGISTRY: tuple[Module, ...] = (
         title="People, roles and capabilities",
         kernel=True,
         routers=(Mount("fsmes.api.routers.admin", "/admin", ("administration",)),),
+        # Everything Setup > Configuration writes. `system_` is here rather
+        # than on the `system` module because this is the module that decides
+        # whether those rows are served, and they are listed on this page and
+        # gated on this module's capability - IT has neither a module nor a
+        # capability of its own, by decision 0035 section 2.
+        settings=("admin_", "screens_", "system_"),
         pages=(Page("/dashboard/admin", "admin.html",
                     "People, roles and routings. The screen gates itself on the "
                     "users.manage capability, as the API does."),),
@@ -547,6 +500,58 @@ REGISTRY: tuple[Module, ...] = (
                 define="users.manage",
                 edit_here=True,
                 pack_keys=("[admin] ai_rollup_stale_hours",)),
+
+            # IT's three plant-scope rows of the configuration audit. They are
+            # listed on the **Administration** page and gated on
+            # `users.manage`, because decision 0035 section 2 deliberately
+            # keeps IT outside the role model: it has no capability of its own
+            # and gets no `ConfigDomain`. A workspace of its own would need
+            # both, and the person who administers a plant's accounts is
+            # already the only person who can reach these.
+            #
+            # Their keys live in `[system]` rather than `[admin]` because a
+            # pack table is a table in a file and a Configuration workspace is
+            # a place on a screen - the distinction `plant_settings.owner`
+            # exists to keep - and these are the plant's plumbing rather than
+            # its administration.
+            ConfigSection(
+                domain="administration",
+                key="local_model",
+                label="Which local model answers",
+                about="Which model on this machine answers a question and "
+                      "drafts an instruction. Each document already records "
+                      "the model that wrote it, so nothing a record means "
+                      "changes when this does.",
+                href="/dashboard/ops",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[system] local_model_name",)),
+            ConfigSection(
+                domain="administration",
+                key="log_rotation",
+                label="How much log history this plant keeps",
+                about="The size one component's log grows to before it "
+                      "rotates, and how many rotations are kept. Read when a "
+                      "process starts: logging is configured before this "
+                      "plant's database is open, so this one takes a restart "
+                      "and the page says so.",
+                href="/dashboard/ops",
+                define="users.manage",
+                pack_keys=("[system] log_rotation_max_bytes",
+                           "[system] log_rotation_backups")),
+            ConfigSection(
+                domain="administration",
+                key="fleet_probe",
+                label="How long the console waits for a plant to answer",
+                about="The fleet console's own number about every plant it "
+                      "watches, rather than any one plant's about itself, so "
+                      "it is read when the console starts. Too short reports "
+                      "a healthy plant unreachable. Listed on a plant because "
+                      "a plant's pack is where it is written; the console is "
+                      "not a screen this plant serves.",
+                href="/dashboard/ops",
+                define="users.manage",
+                pack_keys=("[system] fleet_health_probe_timeout",)),
         ),
         tables=("roles", "personnel"),
     ),
