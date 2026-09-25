@@ -298,9 +298,15 @@ def test_the_admin_screen_stopped_keeping_its_own_toast():
 
 def test_it_has_no_configuration_workspace_of_its_own(admin):
     """Decision 0035 section 2 keeps IT outside the role model: no capability,
-    no domain. A workspace of its own would need both."""
+    no domain. A workspace of its own would need both.
+
+    Checked as "at least these three and never this one" rather than an exact
+    set: `supply_chain` landed the same day as this file did, on a sibling
+    branch, and an exact-equality assertion here would go stale every time a
+    fifth domain does too - the thing worth pinning is that IT stays out, not
+    how many domains there are on any given day."""
     assert "it" not in modules.DOMAIN_BY_SLUG
-    assert set(modules.DOMAIN_BY_SLUG) == {"engineering", "quality", "administration"}
+    assert {"engineering", "quality", "administration"} <= set(modules.DOMAIN_BY_SLUG)
 
 
 def test_its_three_settings_are_on_the_administration_page_and_gated_there(admin):
@@ -437,11 +443,18 @@ def test_a_ceiling_below_the_page_it_reads_is_refused_either_way_round(admin):
 
 def test_every_default_this_version_ships_is_inside_its_own_range():
     """A range that refused the shipped value would be a range that refused a
-    plant for behaving exactly as the product does."""
+    plant for behaving exactly as the product does.
+
+    Dispatched by `getattr(checker, f"{table}_numbers")` rather than a
+    `CHECKERS` registry: a second list of which tables have rules is a list
+    that drifts, and the checker every table's own live-setting write already
+    goes through (`plant_settings.write`) reads it the same way - see the
+    comment there for why."""
     from fsmes.pack import check as checker
 
     for table, ranges in (("admin", checker.ADMIN_RANGES),
                           ("screens", checker.SCREEN_RANGES),
                           ("system", checker.SYSTEM_RANGES)):
         shipped = {name: plant_settings.shipped(table, name) for name in ranges}
-        assert checker.CHECKERS[table](shipped) == [], table
+        judge = getattr(checker, f"{table}_numbers")
+        assert judge(shipped) == [], table

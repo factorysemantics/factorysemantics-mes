@@ -211,7 +211,7 @@ def check(directory: Path, *, version: str = __version__) -> Report:
     problems += _process_numbers(pack)
     problems += _controls_numbers(pack)
     problems += _admin_numbers(pack)
-    problems += _screen_numbers(pack)
+    problems += _screens_numbers(pack)
     problems += _system_numbers(pack)
     problems += _modules(pack)
     problems += _words(pack)
@@ -992,11 +992,11 @@ def admin_numbers(table: dict) -> list[Problem]:
     return out
 
 
-def _screen_numbers(pack: fmt.Pack) -> list[Problem]:
-    return screen_numbers(pack.table("screens"))
+def _screens_numbers(pack: fmt.Pack) -> list[Problem]:
+    return screens_numbers(pack.table("screens"))
 
 
-def screen_numbers(table: dict) -> list[Problem]:
+def screens_numbers(table: dict) -> list[Problem]:
     """`[screens]`'s cadences and page sizes."""
     out = _ranges(table, "screens", SCREEN_RANGES)
     out += _pair(table, "screens", "all_pages_limit", "all_pages_cap",
