@@ -54,7 +54,7 @@ DEFAULT_HORIZON_HOURS = 24.0
 def default_cycle_seconds(session: Session) -> float:
     """What this plant assumes one unit costs at a station with no rating.
 
-    A bottling line and a CNC cell want different guesses, and a plant that
+    A filling line and a CNC cell want different guesses, and a plant that
     has commissioned its machines never reads this at all.
     """
     return float(plant_settings.value(

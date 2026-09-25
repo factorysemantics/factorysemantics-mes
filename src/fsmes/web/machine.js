@@ -341,7 +341,9 @@ function onTab(name) {
   await FS.whoami().catch(() => {});
   FS.applyCapGates();
   wireCorrective();
-  FS.window.bind($("#hours"), () => onTab(FS.tabs.current()));
+  // Awaited before the first refresh: this plant's own window is what the
+  // first load should be drawn over, not the product's eight hours.
+  await FS.window.bind($("#hours"), () => onTab(FS.tabs.current()));
   $("#trend-tag").addEventListener("change", (e) => { trendTag = e.target.value; loadTrend().catch(fail); });
   await refreshNow();
   FS.tabs.init(document, onTab);

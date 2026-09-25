@@ -519,7 +519,7 @@ REGISTRY: tuple[Module, ...] = (
                 about="What one unit is assumed to cost at a station that has "
                       "not been commissioned. A machine's own rated cycle time "
                       "always wins, and a schedule built on this fallback says "
-                      "so rather than hiding it. A bottling line and a CNC cell "
+                      "so rather than hiding it. A filling line and a CNC cell "
                       "want different guesses.",
                 href="/dashboard/schedule",
                 define="process.define",

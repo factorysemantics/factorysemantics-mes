@@ -25,6 +25,26 @@ function fail(error) {
 
 /* ---------- board ---------- */
 
+/* The horizon picker, opened on this plant's own default.
+
+   The four options offered are the product's, because what this plant owns is
+   how far ahead the board looks and not which four windows a picker lists -
+   `[process] schedule_default_horizon_hours` is one number. A plant whose
+   horizon is not one of the four gets it added, the way the shared time picker
+   already handles a window somebody asked for by URL. */
+async function openBoardOn() {
+  const said = await FS.screens;
+  const wanted = said && said.schedule_default_horizon_hours > 0
+    ? said.schedule_default_horizon_hours : null;
+  const select = $("#horizon");
+  if (wanted === null) return;
+  const options = [...select.options];
+  if (!options.some((o) => Number(o.value) === wanted)) {
+    select.appendChild(new Option(`${FS.fmt.qty(wanted)} hours`, String(wanted)));
+  }
+  select.value = String(wanted);
+}
+
 async function loadBoard() {
   const hours = $("#horizon").value;
   const b = await api(`/scheduling/board?hours=${hours}`);
@@ -123,15 +143,32 @@ async function loadCalendar() {
   }
 }
 
+/* The new-shift form's days box, filled in from this plant's own working week
+   rather than from a `value="1111100"` in the HTML. The field stays editable
+   and required: what changed is which week it starts from. */
+async function openShiftFormOn() {
+  const said = await FS.screens;
+  if (said && /^[01]{7}$/.test(said.working_week_mask || "")) {
+    $("#shift-days").value = said.working_week_mask;
+  }
+}
+
 function wireCalendar() {
   $("#shift-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
       await api("/scheduling/calendar/shifts", { method: "POST", body: {
         code: $("#shift-code").value.trim().toUpperCase(), name: $("#shift-name").value.trim(),
-        starts: $("#shift-starts").value, ends: $("#shift-ends").value, days: $("#shift-days").value.trim() } });
+        starts: $("#shift-starts").value, ends: $("#shift-ends").value,
+        /* Left blank, this plant's own working week stands - the server fills
+           it in from `[process] working_week_mask`, the same number this form
+           was pre-filled from. */
+        days: $("#shift-days").value.trim() || null } });
       toast("Shift added.");
       $("#shift-form").reset();
+      // `reset()` empties the days box back to the HTML's blank, so the
+      // plant's own week goes back into it for the next shift somebody adds.
+      await openShiftFormOn().catch(() => {});
       await loadCalendar();
     } catch (err) { toast(err.message, "bad"); }
   });
@@ -161,7 +198,10 @@ function onTab(name) {
 (async function boot() {
   await FS.whoami().catch(() => {});
   FS.applyCapGates();
+  // Before anything loads the board, so the first draw is this plant's window.
+  await openBoardOn().catch(() => {});
   $("#horizon").addEventListener("change", () => loadBoard().catch(fail));
+  await openShiftFormOn().catch(() => {});
   wirePlan();
   wireCalendar();
   await loadPromises().catch(() => {});

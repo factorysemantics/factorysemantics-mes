@@ -120,6 +120,14 @@ DONE = "Built 2026-09-22: it is `[quality] %s`, shipping the literal that was he
 #: against the pattern the quality ones established.
 DONE_ERP = "Built 2026-09-25: it is `[erp] %s`, shipping the literal that was here."
 
+#: The same sentence for the seventeen Engineering rows built on 2026-09-25, on
+#: the mechanism §11 of the design page wrote down after Quality's. Its shape is
+#: deliberately identical: a reader scanning this file should be able to see
+#: which rows are answered without reading two different wordings for it.
+LIVE = ("Built 2026-09-25: it is `[%s] %s`, shipping the literal that was here, "
+        "and it is edited on Engineering's Configuration page - seeded by the "
+        "pack, owned by the database, in force when it is saved.")
+
 
 CURATED: tuple[Curated, ...] = (
 
@@ -294,74 +302,120 @@ CURATED: tuple[Curated, ...] = (
     Curated(
         "P1", "process", "plant",
         'The maintenance "coming due" warning at 80% of an interval',
-        "services/maintenance.py", 92, '"due_soon": 0.8 <= fraction',
+        "config.py", 430, "process_maintenance_due_soon_fraction: float = 0.8",
         why="Eighty per cent is a fraction of each plan's own interval, so it "
             "already scales: a weekly greasing and a yearly overhaul do not "
             "need different fractions. What differs between plants is how "
-            "much warning their spares lead time needs."),
+            "much warning their spares lead time needs.",
+        settled=LIVE % ("process", "maintenance_due_soon_fraction")
+                + " The browser had its own copy in web/maintenance.js, colouring "
+                + "the bar amber at eight tenths; it reads the server's due_soon "
+                + "now, so the bar and the sentence beside it cannot disagree."),
     Curated(
         "P2", "process", "plant",
         "Fallback cycle time when a machine has no rating",
-        "services/scheduling.py", 37, "DEFAULT_CYCLE_SECONDS = 3.0",
+        "config.py", 436, "process_default_cycle_seconds: float = 3.0",
         why="The per-object answer already exists - it is the machine's own "
             "cycle rating. What is hard-coded is the guess a plant makes for "
             "a machine nobody has rated yet, and a filling line and a "
-            "machine shop guess differently."),
+            "machine shop guess differently.",
+        settled=LIVE % ("process", "default_cycle_seconds")),
     Curated(
         "P3", "process", "plant",
         "How long a maintenance job with no plan is assumed to take",
-        "services/maintenance.py", 284, "o.plan.expected_minutes if o.plan else 60.0",
+        "config.py", 437, "process_default_job_minutes: float = 60.0",
         why="Same shape as P2: the per-job estimate is the planner's, and the "
-            "hour is the plant's fallback when there is none."),
+            "hour is the plant's fallback when there is none.",
+        settled=LIVE % ("process", "default_job_minutes")
+                + " Both call sites read the one key - the backlog's cost line and "
+                + "the block the scheduler reserves."),
     Curated(
         "P4", "process", "plant",
         "Default expected duration of a new maintenance plan",
-        "services/maintenance.py", 227, "expected_minutes: float = 30.0",
-        why="The per-plan column exists; only the house default is in code."),
+        "config.py", 441, "process_maintenance_plan_default_minutes: float = 30.0",
+        why="The per-plan column exists; only the house default is in code.",
+        settled=LIVE % ("process", "maintenance_plan_default_minutes")
+                + " All three copies went: the service resolves it, the API field "
+                + "and the browser form send nothing, and a pack that omits it gets "
+                + "the plant's own number rather than the product's thirty."),
     Curated(
         "P5", "process", "plant",
         'The default reporting window - eight hours, "a shift"',
-        "services/analysis.py", 196, "hours: float = 8.0",
+        "config.py", 448, "process_default_report_hours: float = 8.0",
         why="Shift length. The plant already states it, in shift_patterns; "
-            "this is the same fact written a second time in code."),
+            "this is the same fact written a second time in code.",
+        settled=LIVE % ("process", "default_report_hours")
+                + " The accessor lives in services/calendar rather than "
+                + "services/analysis, because this page's own argument for the key "
+                + "is that a plant already states its shift length in "
+                + "shift_patterns - and because the OEE path in services/equipment "
+                + "reads the same number, which analysis cannot lend it without "
+                + "importing its own caller."),
     Curated(
         "P6", "process", "plant",
         "The fixed list of windows every screen offers",
-        "web/common.js", 484, "const WINDOWS = ",
+        "config.py", 449, 'process_report_windows: str = "0.25,1,8,24,168"',
         why="The same judgment as P5 one level up: which windows a plant's "
-            "people work in. Its own shifts are the honest source."),
+            "people work in. Its own shifts are the honest source.",
+        settled=LIVE % ("process", "report_windows")
+                + " The list was in the browser, so the browser reads it from GET "
+                + "/dashboard/screens and builds each label from the number itself. "
+                + "A viewer who has chosen a window of their own keeps it whatever "
+                + "the plant says. Same item as A8, built once."),
     Curated(
         "P7", "process", "plant",
         "How many machines a Gantt draws",
-        "services/analysis.py", 440, "limit: int = 12, shift",
+        "config.py", 453, "process_gantt_screenful: int = 12",
         why="A six-station cell and a 108-station plant want different "
-            "screenfuls, and one plant wants one answer for all its screens."),
+            "screenfuls, and one plant wants one answer for all its screens.",
+        settled=LIVE % ("process", "gantt_screenful")),
     Curated(
         "P8", "process", "plant",
         'How far back "the previous shift" may reach',
-        "services/calendar.py", 52, "PREVIOUS_HORIZON_DAYS = 14",
+        "config.py", 459, "process_previous_shift_horizon_days: int = 14",
         why="A seasonal plant with a six-week shutdown answers differently "
             "from a continuous one. Inside a plant it is one answer, and the "
-            "refusal sentence it produces is the plant's own."),
+            "refusal sentence it produces is the plant's own.",
+        settled=LIVE % ("process", "previous_shift_horizon_days")
+                + " The refusal sentence quotes the plant's own number now rather "
+                + "than a fortnight nobody chose."),
     Curated(
         "P9", "process", "plant",
         "The default working week",
-        "services/calendar.py", 469, 'days: str = "1111100"',
+        "config.py", 464, 'process_working_week_mask: str = "1111100"',
         why="The mask format is a product fact; which mask a plant starts "
-            "from is the plant's calendar."),
+            "from is the plant's calendar.",
+        settled=LIVE % ("process", "working_week_mask")
+                + " A pack that omits a shift's days gets this plant's week rather "
+                + "than being refused, which is the question this row asked: "
+                + "seeding five days was a guess about somebody else's plant and is "
+                + "now the plant's own stated answer, so there is nothing left to "
+                + "refuse. The column default in domain/calendar.py stays the "
+                + "product's - a column default cannot read a plant's settings - "
+                + "and says so. Same item as A25, built once."),
     Curated(
         "P10", "process", "plant",
         "The floor below which no rate is reported at all",
-        "services/coverage.py", 285, "MIN_OBSERVED_SECONDS = 10.0",
+        "config.py", 335, "oee_min_observed_seconds: float = 10.0",
         why="Its sibling suppression threshold is already a pack key - "
             "[oee] coverage_floor - which is a plant-level answer, argued "
-            "that way when it was made one."),
+            "that way when it was made one.",
+        settled=LIVE % ("oee", "min_observed_seconds")
+                + " In [oee] beside coverage_floor, which is where this row said it "
+                + "belonged. Carried on coverage.Ledger and coverage.Totals as a "
+                + "field rather than read inside availability, because a frozen "
+                + "account of one window must not answer the same question two "
+                + "ways."),
     Curated(
         "P11", "process", "plant",
         "The schedule board's default horizon",
-        "services/scheduling.py", 210, "hours: float = 24.0)",
+        "config.py", 467, "process_schedule_default_horizon_hours: float = 24.0",
         why="A job shop planning a fortnight and a line planning a shift want "
-            "different boards; each plant wants one board."),
+            "different boards; each plant wants one board.",
+        settled=LIVE % ("process", "schedule_default_horizon_hours")
+                + " The board states the window it drew, and the picker opens on the "
+                + "plant's horizon - adding it to the four offered when it is none "
+                + "of them, rather than rounding it to one of them."),
     Curated(
         "P12", "process", "object",
         "What counts as a good yield",
@@ -395,11 +449,17 @@ CURATED: tuple[Curated, ...] = (
     Curated(
         "C3", "controls", "plant",
         "Booking retry count and backoff before readings are given up",
-        "integrations/opc/agent.py", 519, "BOOK_ATTEMPTS = 4",
+        "config.py", 480, "controls_opc_book_attempts: int = 4",
         why="This is the agent arguing with its own database, not with a "
             "machine: the same contention policy applies to every tag it "
             "books. Its sibling sqlite_busy_timeout_ms is already a plant "
-            "setting."),
+            "setting.",
+        settled=LIVE % ("controls", "opc_book_attempts")
+                + " Its pair opc_book_backoff_s goes with it, so the half of this "
+                + "argument that was already configurable - sqlite_busy_timeout_ms "
+                + "- is no longer the only half. Read off self rather than the "
+                + "class, so a test or a subclass that sets one still has it "
+                + "honoured."),
     Curated(
         "C4", "controls", "object",
         "Inspection-group grace and timeout",
@@ -439,36 +499,60 @@ CURATED: tuple[Curated, ...] = (
     Curated(
         "C8", "controls", "plant",
         "Unified-namespace delivery retry policy",
-        "services/uns.py", 30, "MAX_ATTEMPTS = 8",
+        "config.py", 492, "controls_uns_max_attempts: int = 8",
         why="One broker per plant, one retry policy. uns_qos, uns_batch, "
             "uns_inflight and uns_poll_seconds are already plant settings; "
-            "this is the piece left behind."),
+            "this is the piece left behind.",
+        settled=LIVE % ("controls", "uns_max_attempts")
+                + " All three numbers, as uns_max_attempts, uns_base_backoff_s and "
+                + "uns_max_backoff_s. The identical three in services/erp.py are "
+                + "deliberately not merged with them: one plant's broker and one "
+                + "plant's ERP have different maintenance windows, so one policy "
+                + "would make one of the two wrong."),
     Curated(
         "C9", "controls", "plant",
         "How often an approved trigger reaches the running agent",
-        "services/triggers.py", 260, "reload_seconds: float = 30.0",
+        "config.py", 499, "controls_trigger_reload_seconds: float = 30.0",
         why="One agent, one reload cadence. A plant that stops a line on an "
-            "SPC signal wants five seconds for all its triggers, not for one."),
+            "SPC signal wants five seconds for all its triggers, not for one.",
+        settled=LIVE % ("controls", "trigger_reload_seconds")
+                + " Read inside the session the evaluator's reload already opens, so "
+                + "the docstring's promise that an approval reaches the agent "
+                + "without a restart now holds for the cadence itself."),
     Curated(
         "C10", "controls", "plant",
         "Default cooldown on a new trigger",
-        "services/triggers.py", 131, "cooldown_seconds: float = 300.0",
+        "config.py", 500, "controls_trigger_default_cooldown_seconds: float = 300.0",
         why="The per-trigger cooldown is already the engineer's. Only the "
             "default a new trigger inherits is hard-coded, and that is the "
-            "plant's house answer."),
+            "plant's house answer.",
+        settled=LIVE % ("controls", "trigger_default_cooldown_seconds")
+                + " All three copies went. web/triggers.js sent `|| 0` for an empty "
+                + "box, which meant a blank field asked for fire on every reading - "
+                + "the one thing nobody typing nothing intends; it sends null now."),
     Curated(
         "C11", "controls", "plant",
         "Process-value history sampling ratio and floor",
-        "integrations/opc/agent.py", 76, "HISTORY_RATIO = 10",
+        "config.py", 507, "controls_opc_history_ratio: int = 10",
         why="It is a ratio against each tag's own publish rate, so it already "
             "scales per tag. What is left is how much history the plant is "
-            "willing to store, which is one answer beside tag_retention_days."),
+            "willing to store, which is one answer beside tag_retention_days.",
+        settled=LIVE % ("controls", "opc_history_ratio")
+                + " With its floor opc_min_history_ms. Both are read when the agent "
+                + "subscribes rather than on every pass, which is the honest answer "
+                + "for a sampling interval an OPC server holds for the life of a "
+                + "subscription - and the page and the pack key both say so."),
     Curated(
         "C12", "controls", "plant",
         "Order-code write cadence and adjustment dispatch cadence",
-        "integrations/opc/agent.py", 67, "_ORDER_SYNC_SECONDS = 2.0",
+        "config.py", 513, "controls_opc_order_sync_seconds: float = 2.0",
         why="Agent-wide cadences against one database. Two hundred machines "
-            "on one endpoint is a plant-sized problem, not a tag's."),
+            "on one endpoint is a plant-sized problem, not a tag's.",
+        settled=LIVE % ("controls", "opc_adjustment_poll_seconds")
+                + " With opc_order_sync_seconds, which is the one named here. The "
+                + "user-facing promise at api/routers/adjustments.py now names the "
+                + "key it rests on, because a plant raising it past a few seconds "
+                + "is changing what it has told its own operators."),
     Curated(
         "C13", "controls", "object",
         "Container member retry count",
@@ -630,9 +714,15 @@ CURATED: tuple[Curated, ...] = (
     Curated(
         "A8", "administration", "plant",
         "The fixed list of time windows, and its default",
-        "web/common.js", 493, "saved > 0 ? saved : 8",
+        "config.py", 449, 'process_report_windows: str = "0.25,1,8,24,168"',
         why="The same item as P6 seen from administration: the plant's own "
-            "shifts, with a literal in front of them."),
+            "shifts, with a literal in front of them.",
+        settled=LIVE % ("process", "report_windows")
+                + " The same item as P6 and built once, in Engineering's domain, by "
+                + "agreement between the two executors that were working on "
+                + "Administration and Engineering at the same time. "
+                + "Administration's Configuration page adds no key of its own for "
+                + "it; the browser reads the one key from GET /dashboard/screens."),
     Curated(
         "A9", "administration", "plant",
         "FS.allPages ceiling",
@@ -757,10 +847,14 @@ CURATED: tuple[Curated, ...] = (
     Curated(
         "A25", "administration", "plant",
         "Default shift day-mask when a pack omits one",
-        "pack/masterdata.py", 451, 'row.get("days", "1111100")',
+        "config.py", 464, 'process_working_week_mask: str = "1111100"',
         why="The same answer as P9 from the pack's side: the plant's own "
             "calendar. The honest fix here may be to refuse rather than "
-            "default, so a seven-day plant is never silently seeded five."),
+            "default, so a seven-day plant is never silently seeded five.",
+        settled=LIVE % ("process", "working_week_mask")
+                + " The same item as P9 and built once, in Engineering's domain, by "
+                + "the same agreement. pack/masterdata.py fills a missing days "
+                + "field in from it rather than refusing, and the reason is on P9."),
 
     # -------------------------------------------------------------------- IT
 

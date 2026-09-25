@@ -377,7 +377,7 @@ SCHEMA: tuple[Section, ...] = (
             "the machine from the tag map and always win; this only keeps a "
             "plan possible for a plant that has not commissioned its machines "
             "yet, and a schedule built on it says so - `uses_default_cycle` "
-            "reports it rather than hiding it. A bottling line and a CNC cell "
+            "reports it rather than hiding it. A filling line and a CNC cell "
             "want different guesses.",
             "MES_PROCESS_DEFAULT_CYCLE_SECONDS"),
         Key("default_job_minutes", "float",

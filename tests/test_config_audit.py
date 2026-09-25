@@ -308,13 +308,55 @@ def test_every_curated_candidate_still_points_at_real_code():
 
 
 def test_a_curated_line_carries_its_scope_on_the_scanned_candidate():
+    """A row a person kept and the scan still finds carries both judgments.
+
+    Named on `C5`, the order cache a station trusts, rather than on the
+    maintenance warning it used to name: `P1` was built on 2026-09-25 and its
+    anchor moved to `[process] maintenance_due_soon_fraction`'s own default in
+    `config.py`, which the scan deliberately does not treat as a candidate - a
+    setting is already configuration, and reporting one as a thing to make
+    configurable would be the tool arguing with itself.
+
+    So a built row is *expected* to stop meeting the scan here, and this test
+    holds the seam on a row that is still a question. `test_every_built_row_
+    anchors_on_its_key` below is the other half: a built row still has to point
+    at real code.
+    """
     run = config_audit.scan()
     tagged = [c for c in run.candidates if c.curated_id]
     assert tagged, "the scan and the curated list have to meet somewhere"
     assert all(c.scope for c in tagged)
-    assert any(c.curated_id == "P1" for c in tagged), (
-        "the maintenance warning at 80% is one a person kept and the scan "
-        "finds, so it should carry both")
+    assert any(c.curated_id == "C5" for c in tagged), (
+        "how long a station's current order is trusted is one a person kept "
+        "and the scan finds, so it should carry both")
+
+
+def test_a_row_that_became_a_pack_key_anchors_on_that_keys_own_default():
+    """A row that became a `plant.toml` key points at the key's default.
+
+    The other half of the seam above. Nineteen rows became keys on 2026-09-25 -
+    seventeen Engineering's and the two Administration rows that were the same
+    item as two of them - and each one's anchor moved from the code that held
+    the literal to the `Settings` field its key compiles to. A `settled`
+    sentence with an anchor still on the old line would be this list claiming a
+    change it had not checked.
+
+    Only the rows that became *keys*: a row that became a database-backed
+    vocabulary or a column on an object - `Q3`'s severities, `Q7`'s per-gauge
+    warning, `Q9`'s counted-in-pieces flag - has no `Settings` field to anchor
+    on, and pretending otherwise would be this test having an opinion about
+    where an answer has to live.
+    """
+    live = [c for c in config_audit.CURATED
+            if c.settled and "2026-09-25" in c.settled]
+    assert len(live) == 19, (
+        "seventeen Engineering rows plus A8 and A25, which are P6 and P9 under "
+        "another domain's numbering - said out loud so the count cannot drift"
+    )
+    off = [c.id for c in live if c.path != "config.py"]
+    assert not off, (
+        "a row that became a key anchors on that key's own default in "
+        f"config.py, so moving the old code cannot stale it: {off}")
 
 
 def test_a_candidate_nobody_curated_claims_no_scope():

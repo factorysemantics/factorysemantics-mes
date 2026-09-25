@@ -72,6 +72,14 @@ async function loadDue() {
   const d = await api("/maintenance/due");
   $("#kpi-due").textContent = d.due.length;
   $("#kpi-soon").textContent = d.due_soon.length;
+  /* Say what "soon" means here. The counting is the server's, from
+     `[process] maintenance_due_soon_fraction`; this only prints the number the
+     count was made with, so a plant that warns at 70% reads 70% rather than
+     having to know. */
+  const said = await FS.screens;
+  const soon = said && said.maintenance_due_soon_fraction;
+  $("#kpi-soon-sub").textContent = soon
+    ? `past ${Math.round(soon * 100)}% of the interval` : "";
   $("#kpi-open").textContent = d.backlog.open;
   $("#kpi-open-split").textContent = `${d.backlog.preventive} preventive · ${d.backlog.corrective} corrective`;
   $("#kpi-downtime").textContent = `${d.backlog.expected_downtime_hours} h`;
