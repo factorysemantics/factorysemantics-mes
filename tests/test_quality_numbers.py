@@ -389,6 +389,23 @@ def test_the_configuration_screen_searches_only_once_the_list_passes_twelve():
     assert "#section-sort" in script
 
 
+def test_one_setting_can_be_pointed_at_by_name_in_the_address():
+    """A page of boxes needs a way to say *this* box. The assistant's walk and
+    the "what is it now" link after a change both arrive at
+    `?setting=<key>`, and only the box that query names carries the anchor they
+    point at - so a person who came here by hand sees the page they always saw.
+    """
+    from pathlib import Path
+
+    script = (Path(__file__).resolve().parents[1] / "src" / "fsmes" / "web"
+              / "config.js").read_text(encoding="utf-8")
+    assert 'URLSearchParams(window.location.search).get("setting")' in script
+    # The box, and the Save of the section it belongs to: the walk ends on the
+    # button, and one Save serves one section.
+    assert 'if (key.name === FOCUS) field.dataset.assist = "setting-in-focus";' in script
+    assert 'button.dataset.assist = "setting-save-in-focus";' in script
+
+
 @pytest.mark.parametrize("bad, expect", [
     ({"spc_min_points": 1}, "at least two readings"),
     ({"spc_history": 0}, "at least one reading"),
