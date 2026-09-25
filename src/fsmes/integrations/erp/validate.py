@@ -47,7 +47,33 @@ NEVER_NEGATIVE = ("input_qty", "good_qty", "scrap_qty", "ordered_qty", "over_qty
 TOLERANCE = 1e-6
 #: A second of slack between `machine_seconds` and the times it is derived
 #: from, because a file can carry whole seconds where the MES had more.
+#:
+#: The literal this product ships. A plant whose files round harder says so in
+#: `[erp] confirmation_seconds_tolerance`, and `seconds_tolerance()` below
+#: reads it. It is the one `[erp]` setting the Configuration page does **not**
+#: offer a box for, and the reason is this module's first sentence: `fsmes erp
+#: validate` reads files and nothing else - no ERP, no connector, no database.
+#: A plant's ERP team runs it on a folder of shadow-mode output, often on a
+#: laptop that has never had an MES database on it. There is no session to
+#: read a live row through, so a row saying *in force the moment it is saved*
+#: would have been false, and the honest answer is the one the page already
+#: has words for: it changes when the pack is applied and the plant restarts.
 SECONDS_TOLERANCE = 1.0
+
+
+def seconds_tolerance() -> float:
+    """How far `machine_seconds` may differ from the time the step was open.
+
+    The compiled setting, then the literal. Two layers rather than three, for
+    the reason above: there is no database in this command by design.
+    """
+    from fsmes.config import get_settings
+
+    try:
+        return float(getattr(get_settings(), "erp_confirmation_seconds_tolerance",
+                             SECONDS_TOLERANCE))
+    except (TypeError, ValueError):  # pragma: no cover - the checker refuses these
+        return SECONDS_TOLERANCE
 
 
 @dataclass(frozen=True)
@@ -227,7 +253,7 @@ def _operation_rules(c: OperationConfirmation, started, completed) -> list[Findi
                     "one machine count that carried the line past the order."))
     if c.machine_seconds is not None and started and completed:
         measured = (completed - started).total_seconds()
-        if abs(c.machine_seconds - measured) > SECONDS_TOLERANCE:
+        if abs(c.machine_seconds - measured) > seconds_tolerance():
             findings.append(Finding(
                 "problem", f"machine_seconds is {c.machine_seconds:g}, but the step was open "
                            f"from {started.isoformat()} to {completed.isoformat()}, which is "

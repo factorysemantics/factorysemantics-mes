@@ -19,6 +19,7 @@ import structlog
 
 from fsmes.db import session_scope
 from fsmes.domain import ErpMessage
+from fsmes.integrations.erp import base
 from fsmes.integrations.erp.base import ErpAdapter
 from fsmes.integrations.erp.contract import parse_confirmation
 from fsmes.services import erp
@@ -29,6 +30,15 @@ log = structlog.get_logger("erp.sync")
 def cycle(adapter: ErpAdapter, scope) -> None:
     """One sync pass. `scope` is a callable returning a session context manager
     (session_scope in production; tests inject their own)."""
+    # What this plant currently asks of the link, handed to the transport
+    # before anything is sent. One short read, closed before the first HTTP
+    # call, so the rule above still holds: no transaction spans a call to an
+    # ERP. A setting saved on the Configuration page is in force on this
+    # cycle or the next one - seconds, with nothing restarted.
+    with scope() as session:
+        policy = erp.policy(session)
+    base.configure(adapter, policy)
+
     for request in adapter.fetch_orders():
         with scope() as session:
             message = erp.process_inbound(session, request)
@@ -50,7 +60,8 @@ def cycle(adapter: ErpAdapter, scope) -> None:
             refused = bool(getattr(exc, "permanent", False))
             with scope() as session:
                 stored = session.get(ErpMessage, message_id)
-                message = erp.mark_refused(stored, exc) if refused else erp.mark_error(stored, exc)
+                message = (erp.mark_refused(stored, exc) if refused
+                           else erp.mark_error(session, stored, exc))
                 status, attempts = message.status.value, message.attempts
             log.warning("confirmation refused by the ERP" if refused else "confirmation delivery failed",
                         order=payload.get("order"), kind=payload.get("kind"),

@@ -41,6 +41,10 @@ from fsmes.integrations.erp.contract import ProductionRequest, as_payload
 log = structlog.get_logger("erp.erpnext")
 
 # Only orders that are released for production and not yet taken by the MES.
+# The shipped list, and the fallback for a connector nobody has handed a
+# policy: which statuses this plant actually takes an order in is
+# `fsmes.services.erp.Policy.open_statuses`, which the sync worker reads from
+# the plant's own settings once per cycle and hands over.
 _OPEN_STATUSES = ("Not Started", "In Process")
 
 MAKE_STOCK_ENTRY = "erpnext.manufacturing.doctype.work_order.work_order.make_stock_entry"
@@ -106,6 +110,9 @@ class ErpNextClient:
             headers["Authorization"] = f"token {api_key}:{api_secret}"
         self.base_url = base_url.rstrip("/")
         self.site = site
+        #: How long one request may take. Settable while the worker runs -
+        #: `ErpNextAdapter.configure` moves it when the plant's setting moves.
+        self.timeout = timeout
         self._client = client or httpx.Client(base_url=self.base_url, headers=headers, timeout=timeout)
         self._token_auth = bool(api_key and api_secret)
         self._user, self._password = user, password
@@ -118,6 +125,12 @@ class ErpNextClient:
             raise ErpNextError(f"ERPNext login failed for {self._user!r}: HTTP {response.status_code}")
 
     def _request(self, method: str, path: str, **kwargs) -> httpx.Response:
+        # Per request, not per client, because how long this plant waits on a
+        # bench it does not own is a setting somebody edits while the sync
+        # worker is running. `httpx` takes a timeout per request; the client's
+        # own stays as the fallback for anything that never sets one.
+        if self.timeout is not None:
+            kwargs.setdefault("timeout", self.timeout)
         response = self._client.request(method, path, **kwargs)
         if response.status_code in (401, 403) and not self._token_auth and self._user:
             # Sessions expire; one silent re-login beats failing the cycle.
@@ -190,7 +203,7 @@ def _esc(name: str) -> str:
     return quote(str(name), safe="")
 
 
-def _same(sent, returned) -> bool:
+def _same(sent, returned, *, rel_tol: float = 1e-3, abs_tol: float = 0.01) -> bool:
     """Did the ERP keep the value the MES sent?
 
     Deliberately forgiving about form and strict about substance. Frappe
@@ -198,10 +211,16 @@ def _same(sent, returned) -> bool:
     precision, which is two decimals on some sites, so a number that agrees
     to a hundredth agrees. Anything else is compared as text, where an empty
     string and a null are the same absence.
+
+    **On some sites** is the whole reason the two tolerances are arguments
+    now: a site on float precision 4 counting in grams has real disagreements
+    that a hundredth hides. The defaults are what this product shipped, and
+    what this plant is running on is `[erp] float_rel_tol` and
+    `[erp] float_abs_tol`, carried in on the policy.
     """
     if isinstance(sent, (int, float)) and not isinstance(sent, bool):
         try:
-            return math.isclose(float(sent), float(returned), rel_tol=1e-3, abs_tol=0.01)
+            return math.isclose(float(sent), float(returned), rel_tol=rel_tol, abs_tol=abs_tol)
         except (TypeError, ValueError):
             return False
     return str(sent or "") == str(returned or "")
@@ -245,7 +264,9 @@ def from_settings(settings) -> "ErpNextAdapter":
     MES_ERP_MODE that selects it. A connector shipped as a separate package
     registers the same way and needs nothing changed here.
     """
-    return ErpNextAdapter(
+    from fsmes.services import erp as erp_service
+
+    adapter = ErpNextAdapter(
         ErpNextClient(
             settings.erpnext_base_url,
             site=settings.erpnext_site,
@@ -253,10 +274,17 @@ def from_settings(settings) -> "ErpNextAdapter":
             password=settings.erpnext_password,
             api_key=settings.erpnext_api_key,
             api_secret=settings.erpnext_api_secret,
+            timeout=settings.erp_http_timeout,
         ),
         post_stock_entry=settings.erpnext_post_stock_entry,
         company=settings.erpnext_company,
     )
+    # The ninth `erp*` setting this reads, and the three beside it: what the
+    # pack compiled, in force from the moment the connector exists. The sync
+    # worker replaces this with what the plant's own database says, once a
+    # cycle, so an edit on the Configuration page needs no restart.
+    adapter.configure(erp_service.Policy.from_settings(settings))
+    return adapter
 
 
 class ErpNextAdapter(ErpConnector):
@@ -265,6 +293,11 @@ class ErpNextAdapter(ErpConnector):
     def __init__(self, client: ErpNextClient, *, post_stock_entry: bool = True, company: str = ""):
         self.client = client
         self.post_stock_entry = post_stock_entry
+        # What this plant asks of the link. The shipped answers until the
+        # sync worker hands over the plant's own, which it does once a cycle.
+        self.open_statuses: tuple[str, ...] = _OPEN_STATUSES
+        self.float_rel_tol = 1e-3
+        self.float_abs_tol = 0.01
         # Empty means every company on the site. A bench that serves more than
         # one company needs this set, or one company's MES runs another's
         # orders; a single-company site is right to leave it alone.
@@ -273,6 +306,20 @@ class ErpNextAdapter(ErpConnector):
     # ------------------------------------------------------------- the far side
     # `erpnext_setup` is imported inside these three because it imports this
     # module for its client.
+
+    def configure(self, policy) -> None:
+        """Take this plant's current ERP policy.
+
+        Called by the sync worker before each cycle, so a status list, a
+        read-back tolerance or a timeout edited on Supply chain's
+        Configuration page is in force within one poll interval and nothing
+        is restarted. Everything here has a shipped default, so a connector
+        nobody configures behaves as it always has.
+        """
+        self.open_statuses = tuple(policy.open_statuses)
+        self.float_rel_tol = policy.float_rel_tol
+        self.float_abs_tol = policy.float_abs_tol
+        self.client.timeout = policy.http_timeout
 
     def requirements(self) -> list[Requirement]:
         from fsmes.integrations.erp import erpnext_setup
@@ -293,7 +340,7 @@ class ErpNextAdapter(ErpConnector):
     def fetch_orders(self) -> list[ProductionRequest]:
         filters = [
             ["docstatus", "=", 1],
-            ["status", "in", list(_OPEN_STATUSES)],
+            ["status", "in", list(self.open_statuses)],
             ["custom_mes_synced", "=", 0],
         ]
         if self.company:
@@ -346,7 +393,8 @@ class ErpNextAdapter(ErpConnector):
         changed = [
             f"{name} was sent as {values[name]!r} and came back as {returned[name]!r}"
             for name in values
-            if not _same(values[name], returned[name])
+            if not _same(values[name], returned[name],
+                         rel_tol=self.float_rel_tol, abs_tol=self.float_abs_tol)
         ]
         if changed:
             raise ErpNextError(f"ERPNext did not store what the MES sent to {order}: " + "; ".join(changed))

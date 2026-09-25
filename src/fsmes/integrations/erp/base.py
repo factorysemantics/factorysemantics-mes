@@ -160,6 +160,21 @@ class ErpAdapter(Protocol):
         No side effects: `check` must be safe to run against production."""
         ...
 
+    def configure(self, policy) -> None:
+        """Take this plant's current ERP policy, before the next cycle.
+
+        `policy` is a `fsmes.services.erp.Policy`: which order statuses this
+        plant takes an order in, when a number read back is the number sent,
+        and how long to wait on one request. All four are settings a plant
+        administrator edits on Supply chain's Configuration page, and the sync
+        worker hands them over once per cycle so a change is in force in
+        seconds with nothing restarted.
+
+        Optional, like the three above it. A connector that has no such
+        tunables implements nothing and `configure()` below is a no-op for it.
+        """
+        ...
+
 
 class ErpConnector:
     """Optional base class carrying the defaults for the three new methods.
@@ -183,6 +198,20 @@ class ErpConnector:
         return CheckResult.of(
             ("unknown", f"{type(self).__name__} does not check anything; nothing here has been verified"),
         )
+
+
+def configure(adapter: object, policy) -> None:
+    """Hand one adapter this plant's current ERP policy, if it wants one.
+
+    Read off the object rather than required by the port, the same way
+    `check` is: a connector published on its own and written against the
+    older port has no `configure`, and the honest answer for it is to leave
+    it exactly as it was rather than to fail a sync cycle over a method
+    nobody promised.
+    """
+    method = getattr(adapter, "configure", None)
+    if callable(method):
+        method(policy)
 
 
 def requirements(adapter: object) -> list[Requirement]:
@@ -222,8 +251,13 @@ def _name(adapter: object) -> str:
 def make_adapter(settings: Settings) -> ErpAdapter | None:
     if settings.erp_mode == "rest":
         from fsmes.integrations.erp.rest_adapter import RestErpAdapter
+        from fsmes.services import erp as erp_service
 
-        return RestErpAdapter(settings.erp_base_url)
+        adapter = RestErpAdapter(settings.erp_base_url)
+        # What the pack compiled, before any sync cycle has run. The worker
+        # replaces it with what the plant's database says, once a cycle.
+        configure(adapter, erp_service.Policy.from_settings(settings))
+        return adapter
     if settings.erp_mode == "file":
         from fsmes.integrations.erp.file_adapter import FileErpAdapter
 

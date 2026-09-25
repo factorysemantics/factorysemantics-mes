@@ -6,21 +6,35 @@ import httpx
 from fsmes.integrations.erp.base import CheckResult, ErpConnector, Requirement
 from fsmes.integrations.erp.contract import Confirmation, ProductionRequest, as_payload
 
+#: How long this connector waits on one request. The literal this product
+#: shipped, and the fallback for an adapter nobody has handed a policy; what
+#: a plant is actually running on is `[erp] rest_timeout`, carried in by
+#: `configure` once per sync cycle.
+TIMEOUT = 10.0
+
 
 class RestErpAdapter(ErpConnector):
     def __init__(self, base_url: str, client: httpx.Client | None = None):
-        self.client = client or httpx.Client(base_url=base_url, timeout=10.0)
+        self.timeout = TIMEOUT
+        self.client = client or httpx.Client(base_url=base_url, timeout=TIMEOUT)
+
+    def configure(self, policy) -> None:
+        """Take this plant's current ERP policy - of which this connector
+        applies one part, how long it waits. Per request rather than on the
+        client, because the setting moves while the worker is running."""
+        self.timeout = policy.rest_timeout
 
     def fetch_orders(self) -> list[ProductionRequest]:
-        response = self.client.get("/orders", params={"status": "new"})
+        response = self.client.get("/orders", params={"status": "new"}, timeout=self.timeout)
         response.raise_for_status()
         return [ProductionRequest.from_payload(row) for row in response.json()]
 
     def acknowledge(self, order_code: str) -> None:
-        self.client.post(f"/orders/{order_code}/ack").raise_for_status()
+        self.client.post(f"/orders/{order_code}/ack", timeout=self.timeout).raise_for_status()
 
     def send_confirmation(self, confirmation: Confirmation) -> None:
-        self.client.post("/confirmations", json=as_payload(confirmation)).raise_for_status()
+        self.client.post("/confirmations", json=as_payload(confirmation),
+                         timeout=self.timeout).raise_for_status()
 
     # ------------------------------------------------------------- the far side
     def requirements(self) -> list[Requirement]:
