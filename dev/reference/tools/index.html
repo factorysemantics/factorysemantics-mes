@@ -3267,10 +3267,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#product-89-tools" class="md-nav__link">
+  <a href="#product-93-tools" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Product (89 tools)
+        Product (93 tools)
       
     </span>
   </a>
@@ -3617,10 +3617,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#product-89-tools" class="md-nav__link">
+  <a href="#product-93-tools" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Product (89 tools)
+        Product (93 tools)
       
     </span>
   </a>
@@ -3665,7 +3665,7 @@
 
 <h1 id="mcp-tools-reference">MCP tools reference<a class="headerlink" href="#mcp-tools-reference" title="Permanent link">&para;</a></h1>
 <p>Generated from the two servers' registries at build time. <code>?</code> marks an optional argument.</p>
-<h2 id="product-89-tools">Product (89 tools)<a class="headerlink" href="#product-89-tools" title="Permanent link">&para;</a></h2>
+<h2 id="product-93-tools">Product (93 tools)<a class="headerlink" href="#product-93-tools" title="Permanent link">&para;</a></h2>
 <p>The MES as tools. Everything goes through a plant's HTTP API as the <code>AGENT</code> role; writes accept <code>dry_run</code>, <code>on_behalf_of</code> and <code>client_ref</code> (see the write discipline).</p>
 <ul>
 <li><strong><code>add_bom_component</code></strong> — Put a component on a material's bill, with the operation it<br />
@@ -3722,7 +3722,13 @@
   no arguments</li>
 <li><strong><code>downtime</code></strong> — Downtime pareto over the window: which reasons cost what, and how much<br />
   no arguments</li>
+<li><strong><code>downtime_reasons</code></strong> — The plant's whole downtime vocabulary in code order, with its total:<br />
+  no arguments</li>
+<li><strong><code>draft_downtime_reason</code></strong> — Draft one downtime reason for this plant. It changes nothing on the<br />
+  no arguments</li>
 <li><strong><code>draft_instruction</code></strong> — Draft a work instruction. It arrives unapproved.<br />
+  no arguments</li>
+<li><strong><code>draft_nc_severity</code></strong> — Draft one non-conformance severity for this plant. It grades nothing<br />
   no arguments</li>
 <li><strong><code>draft_trigger</code></strong> — Draft a trigger: when <code>tag</code> on <code>machine</code> (or any machine) meets<br />
   no arguments</li>
@@ -3771,6 +3777,8 @@
 <li><strong><code>maintenance_work</code></strong> — Maintenance orders, newest first: due, in progress, or done, with<br />
   no arguments</li>
 <li><strong><code>materials</code></strong> — Every material with its unit and type (raw, intermediate, finished);<br />
+  no arguments</li>
+<li><strong><code>nc_severities</code></strong> — The plant's whole severity vocabulary in code order, with its total:<br />
   no arguments</li>
 <li><strong><code>nonconformance</code></strong> — One non-conformance with every step it has been through: who raised it,<br />
   no arguments</li>

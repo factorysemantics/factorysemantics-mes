@@ -3295,6 +3295,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#defining-is-not-approving-and-the-vocabularies-are-the-case-that-shows-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Defining is not approving, and the vocabularies are the case that shows it
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-this-is-not" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3617,6 +3628,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#defining-is-not-approving-and-the-vocabularies-are-the-case-that-shows-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Defining is not approving, and the vocabularies are the case that shows it
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-this-is-not" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3686,6 +3708,25 @@ That single design choice gives four properties for free:</p>
 </ol>
 <p>Tools stay thin: argument parsing and one API call. Anything smarter belongs
 in the product, where a person's screen gets it too — the dogfood rule.</p>
+<h2 id="defining-is-not-approving-and-the-vocabularies-are-the-case-that-shows-it">Defining is not approving, and the vocabularies are the case that shows it<a class="headerlink" href="#defining-is-not-approving-and-the-vocabularies-are-the-case-that-shows-it" title="Permanent link">&para;</a></h2>
+<p>Rule 1 above says master data is not the agent's. The plant's own
+<em>vocabularies</em> — what a stop is called, what a serious finding is called —
+are the one place that needs saying more precisely, because the <code>agent</code> role
+does hold <code>process.define</code> and <code>quality.define</code>.</p>
+<p>So an agent may <strong>draft</strong> a downtime reason (<code>draft_downtime_reason</code>) or a
+non-conformance severity (<code>draft_nc_severity</code>). A draft is a row with
+<code>status = draft</code>: it is on no operator's screen and grades no finding. It
+reaches the floor only when a person holding <code>process.approve</code> or
+<code>quality.approve</code> signs it, and neither capability is in the <code>agent</code> role, so
+there is no tool for either — a tool for it would be a tool that always
+refuses (decision
+<a href="../../design/config-assistance/">0035</a>).</p>
+<p>Retiring a word is on the same endpoint and is deliberately not offered as a
+tool. A person is told how many recorded intervals, or how many
+non-conformances, already carry a code <em>before</em> they take it off the list —
+the vocabulary read carries that count for exactly that reason — and a tool
+that dropped a word without putting the number in front of somebody would be
+a worse version of the screen.</p>
 <h2 id="what-this-is-not">What this is not<a class="headerlink" href="#what-this-is-not" title="Permanent link">&para;</a></h2>
 <p>It is not a sandbox. An agent with the <code>AGENT</code> credentials can release
 orders and book output on any plant the server reaches. Treat the MCP
