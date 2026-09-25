@@ -73,12 +73,20 @@ class Key:
 
     name: str
     kind: str
-    """`str`, `int`, `float`, `bool`, `path`, `paths`, `ints`.
+    """`str`, `int`, `float`, `bool`, `path`, `paths`, `ints`, `strs`.
 
     `ints` is a TOML array of whole numbers - `hold_rules = [1, 2]`. It
     compiles to a comma-separated string, because a setting is an environment
     variable and an environment variable is text; the product parses it back
-    where it reads it, and states what it parsed."""
+    where it reads it, and states what it parsed.
+
+    `strs` is the same shape for words - `open_statuses = ["Not Started", "In
+    Process"]`. It exists because a list of the ERP's own status names is a
+    list in the same sense a list of rule numbers is, and writing one as a
+    string with commas inside it would have been a second way of saying list
+    in one file. Commas separate, and a value that needs a comma inside it
+    is the one thing this kind cannot carry - said out loud here rather than
+    discovered by a plant whose ERP has a status called `Hold, pending QA`."""
     about: str
     becomes: str | None = None
     """The `MES_*` setting this compiles to, or None when the key is read by
@@ -163,8 +171,74 @@ SCHEMA: tuple[Section, ...] = (
             "A directory of this plant's equipment, materials, routings and "
             "specifications, as data. `fsmes pack apply` seeds from it."),
     )),
-    Section("erp", "The ERP boundary.", (
+    Section("erp",
+            "The ERP boundary: which connector, and what this plant asks of "
+            "the link between itself and a system it does not own. Every key "
+            "below ships the value that was in the product's source, so a "
+            "plant that writes none of them behaves exactly as it does now.", (
         Key("mode", "str", "off, file, rest or erpnext.", "MES_ERP_MODE"),
+
+        # --- how long this plant keeps trying to deliver a confirmation ---
+        Key("max_attempts", "int",
+            "How many times one confirmation is offered to the ERP before it "
+            "is dead and a person decides. An ERP with a four-hour weekly "
+            "maintenance window kills a shift of confirmations at eight.",
+            "MES_ERP_MAX_ATTEMPTS"),
+        Key("base_backoff_s", "int",
+            "The wait before the second attempt, in seconds. It doubles after "
+            "each failure.", "MES_ERP_BASE_BACKOFF_S"),
+        Key("max_backoff_s", "int",
+            "The longest this plant waits between two attempts at one "
+            "confirmation, in seconds. The doubling stops here.",
+            "MES_ERP_MAX_BACKOFF_S"),
+
+        # --- what this plant's ERP means by an order it has not started ---
+        Key("open_statuses", "strs",
+            "Which ERP order statuses this MES will take an order in, as the "
+            "ERP's own words. ERPNext ships `Not Started` and `In Process` and "
+            "sites customise the list; this is an order-release policy and it "
+            "is the plant's, not the product's.",
+            "MES_ERP_OPEN_STATUSES"),
+
+        # --- when a number the ERP read back counts as the number sent ---
+        Key("float_rel_tol", "float",
+            "How far a number the ERP hands back may differ from the number "
+            "sent, as a fraction of it, and still be the same number. Frappe "
+            "rounds a Float to the site's own float precision.",
+            "MES_ERP_FLOAT_REL_TOL"),
+        Key("float_abs_tol", "float",
+            "The same agreement as an absolute amount, for numbers near zero. "
+            "A site on float precision 4 counting in grams has real "
+            "disagreements hidden by a hundredth.",
+            "MES_ERP_FLOAT_ABS_TOL"),
+
+        # --- how long this plant waits on a system it does not own ---
+        Key("http_timeout", "float",
+            "How long the ERPNext connector waits on one request, in seconds. "
+            "A bench across a VPN posting a Manufacture entry against a large "
+            "bill of material routinely exceeds thirty, and every one of those "
+            "burns an attempt.", "MES_ERP_HTTP_TIMEOUT"),
+        Key("rest_timeout", "float",
+            "The same, for the plain REST connector, in seconds.",
+            "MES_ERP_REST_TIMEOUT"),
+
+        # --- what an order that carries no priority inherits ---
+        Key("default_order_priority", "int",
+            "The priority an order arriving from the ERP is given when the ERP "
+            "sends none - lower is more urgent. ERPNext Work Order has no "
+            "priority field at all. On a plant that dispatches on a 1-9 scale, "
+            "50 sorts every ERP order behind everything a person typed.",
+            "MES_ERP_DEFAULT_ORDER_PRIORITY"),
+
+        # --- read by `fsmes erp validate`, which reads no database ---
+        Key("confirmation_seconds_tolerance", "float",
+            "How far `machine_seconds` in a confirmation file may differ from "
+            "the time the step was open, in seconds, before `fsmes erp "
+            "validate` calls the document wrong. A file can carry whole "
+            "seconds where the MES had more. This one is read at start-up and "
+            "not on the Configuration page: the command that reads it is "
+            "defined to read files and no database.",
+            "MES_ERP_CONFIRMATION_SECONDS_TOLERANCE"),
     )),
     Section("uns", "The unified namespace boundary.", (
         Key("mode", "str", "off, log or mqtt.", "MES_UNS_MODE"),
@@ -469,6 +543,11 @@ def parse(key: Key, written: str):
                     f"{part!r} is not a whole number. This key is a list of them, "
                     "written with commas between.") from None
         return out
+    if key.kind == "strs":
+        # Same rule as `ints`, and the same reason for it: an empty list is a
+        # real answer, and the text between commas is trimmed because a person
+        # writing a list by hand puts a space after the comma.
+        return [part.strip() for part in written.split(",") if part.strip()]
     return written
 
 
@@ -485,6 +564,8 @@ def as_written(key: Key, value) -> str:
         return "true" if value else "false"
     if key.kind == "ints":
         return ",".join(str(int(item)) for item in value)
+    if key.kind == "strs":
+        return ",".join(str(item).strip() for item in value)
     return str(value)
 
 
@@ -517,6 +598,10 @@ def settings(pack: Pack) -> dict[str, str]:
                 if not isinstance(value, list):
                     continue  # already refused by the checker; never guessed at here
                 value = ",".join(str(int(item)) for item in value)
+            elif key.kind == "strs":
+                if not isinstance(value, list):
+                    continue  # already refused by the checker; never guessed at here
+                value = ",".join(str(item).strip() for item in value)
             out[key.becomes] = str(value)
     out["MES_MODULES"] = module_spec(pack)
     if pack.table("words"):

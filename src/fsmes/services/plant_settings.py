@@ -256,12 +256,18 @@ def write(session: Session, *, domain: str, key: str, written: str, actor: str) 
     except ValueError as exc:
         raise Invalid(f"[{section}] {name}: {exc}") from None
 
-    if section == "quality":
-        # The whole table with this one value changed, so the two pairs are
-        # judged against what the plant is already running on for their other
-        # half rather than against the product's default.
+    judge = getattr(checker, f"{section}_numbers", None)
+    if judge is not None:
+        # The whole table with this one value changed, so a pair is judged
+        # against what the plant is already running on for its other half
+        # rather than against the product's default. Found by the section's
+        # own name rather than listed here, because the checker is where a
+        # pack section's rules live and a second list of which sections have
+        # rules would be a list that drifts - `[quality]` has
+        # `quality_numbers` and `[erp]` has `erp_numbers`, and a section with
+        # neither is a section whose keys the type check alone judges.
         proposed_table = {**table(session, section), name: proposed}
-        problems = [p for p in checker.quality_numbers(proposed_table)
+        problems = [p for p in judge(proposed_table)
                     if p.where == f"[{section}] {name}"]
         if problems:
             raise Invalid(str(problems[0]))
