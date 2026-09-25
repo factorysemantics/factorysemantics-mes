@@ -201,11 +201,26 @@ def test_a_conversation_keeps_the_agent_budget_it_opened_with(session):
     agent.forget(opened.id)
 
 
-def test_the_ai_panel_reads_this_plants_own_idea_of_late(session):
+def test_the_ai_panel_reads_this_plants_own_idea_of_late(session, tmp_path, monkeypatch):
     """Forty hours was chosen for one encrypted laptop that sleeps overnight.
     A server that never sleeps answers differently, and the panel is asked
-    rather than told."""
+    rather than told.
+
+    `ai_status.consumers()` only varies with `stale_after` through the
+    nightly-rollup row, which reads a real note file's mtime - so this test
+    gives it one of its own rather than trust whatever the machine running
+    the suite happens to have under ~/.local/share/fsmes/reports (a fresh
+    CI runner has nothing there at all, which is what made the two calls
+    compare equal on 2026-09-25: both windows found no note and both said
+    "unknown", never reaching the comparison this test is named for)."""
     from fsmes.services import ai_status
+
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    (reports / "2026-09-24.md").write_text("nightly rollup\n")
+    monkeypatch.setattr(ai_status, "REPORTS", reports)
+    monkeypatch.setattr(ai_status, "RUNS_DB", tmp_path / "runs.db")
+    monkeypatch.setattr(ai_status, "DESIGN_DB", tmp_path / "design.db")
 
     assert ai_status.consumers(timedelta(hours=0)) != ai_status.consumers(timedelta(days=3650))
 
