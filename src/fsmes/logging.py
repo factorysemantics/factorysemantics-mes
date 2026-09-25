@@ -91,8 +91,24 @@ def setup_logging(level: str = "INFO", log_dir: Path = Path("logs"), component: 
         ],
     )
 
+    # `[system] log_rotation_max_bytes` and `log_rotation_backups`; five
+    # megabytes and five backups by default, which is what was written here.
+    #
+    # **Read from the settings, not from the plant's own table.** Logging is
+    # configured before this plant's database is open - it is the thing that
+    # reports a database that will not open - so the three layers cannot be
+    # read here and the pack's compiled setting is the last word. Setup >
+    # Configuration lists the pair without an input and says a change takes a
+    # restart, which is the honest answer rather than a box that appears to
+    # work.
+    from fsmes.config import get_settings
+
+    rotation = get_settings()
     file_handler = logging.handlers.RotatingFileHandler(
-        log_dir / f"{component}.jsonl", maxBytes=5_000_000, backupCount=5, encoding="utf-8"
+        log_dir / f"{component}.jsonl",
+        maxBytes=rotation.system_log_rotation_max_bytes,
+        backupCount=rotation.system_log_rotation_backups,
+        encoding="utf-8",
     )
     file_handler.setFormatter(json_formatter)
     console_handler = logging.StreamHandler()

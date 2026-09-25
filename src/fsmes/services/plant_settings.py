@@ -190,6 +190,39 @@ def value(session: Session, section: str, key: str, fallback):
         return fallback
 
 
+def setting(session: Session, section: str, key: str):
+    """What this plant is running on for one setting, typed, with the literal
+    the product ships as the last layer.
+
+    The same three layers `value` reads, without the caller having to hand in
+    the shipped default: it is read off the `Settings` field the key compiles
+    to, which is the one place the product writes each of these numbers down.
+    `value` keeps its explicit `fallback` for the quality services, which each
+    hold a module-level constant of their own; the administration settings
+    arrived forty at a time on 2026-09-25 and forty second copies of a number
+    is forty places for one to drift.
+    """
+    from fsmes.pack import format as fmt
+
+    schema = fmt.key_named(section, key)
+    if schema is None:  # pragma: no cover - callers name keys this version has
+        raise Unknown(f"this version has no pack key called [{section}] {key}")
+    return value(session, section, key, _shipped(schema))
+
+
+def shipped(section: str, key: str):
+    """The literal this version ships for one key, typed. For the handful of
+    readers that run before a plant's database is open - logging, the fleet
+    console, the list envelope's own OpenAPI bounds - and so cannot have the
+    row or the session that the three layers need."""
+    from fsmes.pack import format as fmt
+
+    schema = fmt.key_named(section, key)
+    if schema is None:  # pragma: no cover
+        raise Unknown(f"this version has no pack key called [{section}] {key}")
+    return _shipped(schema)
+
+
 def field_name(schema) -> str:
     """The `Settings` field a pack key compiles to — `MES_QUALITY_SPC_MIN_POINTS`
     is `quality_spc_min_points`. Read off the pack schema rather than written
@@ -258,21 +291,27 @@ def write(session: Session, *, domain: str, key: str, written: str, actor: str) 
 
     judge = getattr(checker, f"{section}_numbers", None)
     if judge is not None:
-        # The whole table with this one value changed, so a key that is half of
-        # a pair - the two Cpk bars, the gauge ratio and its floor, the UNS
-        # backoff and its ceiling - is judged against what the plant is
-        # already running on for the other half rather than against the
-        # product's default.
+        # Found by the section's own name rather than a registry, because the
+        # checker is where a pack section's rules live and a second list of
+        # which sections have rules would be a list that drifts - `[quality]`
+        # has `quality_numbers`, `[erp]` has `erp_numbers`, `[process]` has
+        # `process_numbers`, `[controls]` has `controls_numbers`, `[admin]`
+        # has `admin_numbers`, and so on; a section with none is validated by
+        # `fmt.parse` alone, which is the honest answer for a key whose only
+        # wrong values are ones that are not the kind of thing at all.
         #
-        # Found by name rather than by an `if` per section, because the rule is
-        # *one wording for one rule, whichever door the value came in by*: a
-        # section that gains a checker in `fsmes.pack.check` gains it here, and
-        # a section with none is validated by `fmt.parse` alone, which is the
-        # honest answer for a key whose only wrong values are ones that are not
-        # the kind of thing at all.
-        proposed_table = {**table(session, section), name: proposed}
-        problems = [p for p in judge(proposed_table)
-                    if p.where == f"[{section}] {name}"]
+        # Judged against everything this edit *broke*, rather than against
+        # everything wrong with the whole table. Two reasons, and the second
+        # is a bug #100 shipped: a plant already out of range on some other
+        # key would otherwise be unable to save anything at all, and a pair
+        # rule reports at whichever of its two keys reads best, so lowering
+        # `cpk_capable` under `cpk_marginal` was accepted while raising
+        # `cpk_marginal` over `cpk_capable` was refused - the same
+        # crossing-over, refused one way round and not the other.
+        running = table(session, section)
+        proposed_table = {**running, name: proposed}
+        before = {str(problem) for problem in judge(running)}
+        problems = [p for p in judge(proposed_table) if str(p) not in before]
         if problems:
             raise Invalid(str(problems[0]))
 

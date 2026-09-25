@@ -568,6 +568,122 @@ class Settings(BaseSettings):
     controls_opc_order_sync_seconds: float = 2.0
     controls_opc_adjustment_poll_seconds: float = 5.0
 
+    # --- This plant's own administration numbers (fsmes.services.auth,
+    # --- .walkthroughs, .agent, .assistant, .design, .drafting, .ai_status,
+    # --- fsmes.api.paging) -----------------------------------------------
+    # The plant-scope administration rows of the configuration audit of
+    # 2026-09-21, and **every default below is the literal that was there**,
+    # so a plant that writes none of them behaves exactly as it did. They
+    # arrive as `[admin]` keys in plant.toml and all but two of them are
+    # edited on Setup > Configuration and in force the moment they are saved;
+    # `fsmes pack check` validates their ranges offline.
+    #
+    # What is not here, deliberately: the seven the audit called `general`
+    # (the PBKDF2 iteration count, the assistant's four-sentence house style,
+    # the chip counts, the lexical guide-match threshold, the GPU priority
+    # list, the line-list cache and the downtime-code length). Those are the
+    # product's own answers, and a plant that set one differently would be a
+    # plant the product speaks to in a different voice.
+
+    # The role an account created without one is given.
+    admin_default_new_account_role: str = "operator"
+
+    # The list envelope's default size and its hard ceiling. These two are
+    # read once, when the process starts: they are published in this plant's
+    # own OpenAPI document as the default and the `le=` bound of every list
+    # endpoint, and a ceiling that moved under a caller holding that document
+    # would make the document a lie. Editing them is a pack change and a
+    # restart, and the Configuration page says exactly that.
+    admin_list_default_limit: int = 50
+    admin_list_max_limit: int = 500
+
+    # The approvals panel's own page size. Not the number above: the panel has
+    # no pager, so item twenty-one is simply not on the screen.
+    admin_pending_approvals_page_size: int = 20
+
+    # A recorded walkthrough's limits: how many steps, and the four lengths at
+    # which the plant's own words are shortened.
+    admin_walkthrough_max_steps: int = 60
+    admin_walkthrough_title_chars: int = 120
+    admin_walkthrough_body_chars: int = 1000
+    admin_walkthrough_fill_chars: int = 200
+    admin_walkthrough_tab_chars: int = 60
+
+    # What a recorded walkthrough asks of a viewer when nobody says otherwise.
+    admin_walkthrough_default_capability: str = "plant.read"
+
+    # What one conversation with the floor agent may spend.
+    admin_agent_max_rounds: int = 12
+    admin_agent_session_ttl_seconds: int = 30 * 60
+    admin_agent_result_limit: int = 6000
+
+    # How much of this plant reaches a model: the assistant's facts, and the
+    # design chat's three budgets.
+    admin_assistant_context_chars: int = 3000
+    admin_design_compress_budget: int = 2500
+    admin_design_compress_source_chars: int = 12000
+    admin_design_source_budget: int = 14000
+
+    # The six local-model timeouts, named one per thing waited for. They were
+    # six anonymous numbers in five files until 2026-09-25; a plant on a
+    # slower GPU raises all six, and can see which one it just raised.
+    admin_assistant_timeout_seconds: float = 60.0
+    admin_drafting_timeout_seconds: float = 180.0
+    admin_design_generate_timeout_seconds: float = 120.0
+    admin_design_classify_timeout_seconds: float = 45.0
+    admin_design_compress_timeout_seconds: float = 90.0
+    admin_design_chat_timeout_seconds: float = 240.0
+
+    # The shape a drafted work instruction takes. The clauses that keep the
+    # draft honest are NOT here and cannot be edited away - they are in
+    # `fsmes.services.drafting.INVARIANTS` and are added to whatever this
+    # says. An operator is never told to adjust a reading toward the middle.
+    admin_document_house_style: str = (
+        "- Markdown. A one-line Purpose, then numbered Steps, then a short\n"
+        '  "If it fails" section.\n'
+        "- Six to ten steps. Each step is one action, in the imperative.\n"
+        "- No preamble, no closing remarks, no headings above the Purpose line."
+    )
+
+    # When the AI panel calls a daily rollup late. Generous on purpose: the
+    # machine it was chosen for is encrypted and regularly off overnight, so
+    # "late" usually means "the machine slept", and the message says so.
+    admin_ai_rollup_stale_hours: int = 40
+
+    # --- What this plant's own screens run at (`[screens]`) ---------------
+    # Read by the browser, once per page load, from /dashboard/ui-settings.
+    # Every default is the literal that was in the JavaScript, and the
+    # JavaScript now carries no second copy of any of them: the server is the
+    # one place that says what this plant's screens are set to.
+    screens_floor_refresh_ms: int = 2000
+    screens_floor_pending_refresh_ms: int = 30000
+    screens_admin_refresh_ms: int = 8000
+    screens_floor_machine_page: int = 24
+    screens_floor_order_page: int = 10
+    screens_floor_spec_choices: int = 200
+    screens_admin_user_page_size: int = 25
+    screens_admin_routing_page_size: int = 25
+    screens_all_pages_limit: int = 500
+    screens_all_pages_cap: int = 2000
+    # 3500, which is common.js's. admin.js said 4000 in a `toast()` of its own
+    # that common.js exists to replace; that copy is gone, so the product has
+    # one answer rather than two files disagreeing.
+    screens_toast_ms: int = 3500
+    screens_input_debounce_ms: int = 250
+    screens_assistant_log_entries: int = 60
+    screens_assistant_fill_attempts: int = 20
+    screens_assistant_fill_wait_ms: int = 150
+
+    # --- This plant's plumbing (`[system]`) -------------------------------
+    # The IT rows of the audit. Decision 0035 section 2 keeps IT outside the
+    # role model - no capability, no domain - so these are listed on the
+    # Administration page and written by whoever holds `users.manage`. Two of
+    # the four are read once when a process starts, for reasons the keys say.
+    system_fleet_health_probe_timeout: float = 3.0
+    system_log_rotation_max_bytes: int = 5_000_000
+    system_log_rotation_backups: int = 5
+    system_local_model_name: str = "qwen3:8b"
+
     # --- The judgment model (fsmes.integrations.jev) ----------------------
     # A hosted model that answers fixed, typed questions about state it is
     # given and writes no text. Used in the development build loop only: the

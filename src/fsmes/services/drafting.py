@@ -25,23 +25,53 @@ from fsmes.domain import QualitySpec, Routing
 from fsmes.services import documents
 
 OLLAMA = "http://127.0.0.1:11434"
+#: The model this product ships with, and the default of `[system]
+#: local_model_name`.
 MODEL = "qwen3:8b"
+#: How long this plant waits for it. `[admin] drafting_timeout_seconds`, and
+#: the literal that was here - the longest of the six, because it is the one
+#: writing prose.
+TIMEOUT = 180.0
 
-HOUSE_STYLE = """Write a work instruction for a factory operator.
+#: The opening line, which names what is being written and is not a style.
+OPENING = "Write a work instruction for a factory operator."
 
-Rules:
-- Markdown. A one-line Purpose, then numbered Steps, then a short
+#: The structure a drafted instruction takes. This much **is** the plant's -
+#: a plant whose quality system mandates Scope / Hazards / Steps / Records is
+#: getting the wrong shape today - and is the default of `[admin]
+#: document_house_style`.
+HOUSE_STYLE = """- Markdown. A one-line Purpose, then numbered Steps, then a short
   "If it fails" section.
 - Six to ten steps. Each step is one action, in the imperative.
-- Use only the facts given. Never invent a tolerance, a tool, or a machine.
+- No preamble, no closing remarks, no headings above the Purpose line."""
+
+#: What no plant may edit away, added to whatever the plant writes above.
+#:
+#: The middle clause is the reason this is a separate constant rather than
+#: three more lines of a setting: **an operator must never be told to adjust a
+#: reading toward the middle.** That is not a house style - it is the
+#: difference between a measurement and a fiction, and a plant that could edit
+#: it out of the prompt would be a plant whose own drafted procedures quietly
+#: taught its people to falsify a reading. The two around it are the same kind
+#: of thing one step down: a drafted document that invented a tolerance or a
+#: tool would be a controlled document made of nothing.
+INVARIANTS = """- Use only the facts given. Never invent a tolerance, a tool, or a machine.
 - Say what to do when the reading is out of tolerance: record it as measured.
-  An operator must never be told to adjust a reading toward the middle.
-- No preamble, no closing remarks, no headings above the Purpose line.
-"""
+  An operator must never be told to adjust a reading toward the middle."""
 
 
-def _ask(prompt: str, timeout: float = 180.0) -> str | None:
-    payload = {"model": MODEL, "prompt": prompt, "stream": False, "think": False}
+def instructions(session: Session) -> str:
+    """The whole brief handed to the model: this plant's structure, and the
+    clauses no plant may edit away, in that order."""
+    from fsmes.services import plant_settings
+
+    style = str(plant_settings.setting(session, "admin", "document_house_style"))
+    return f"{OPENING}\n\nRules:\n{style}\n{INVARIANTS}\n"
+
+
+def _ask(prompt: str, timeout: float | None = None, model: str | None = None) -> str | None:
+    payload = {"model": model or MODEL, "prompt": prompt, "stream": False, "think": False}
+    timeout = TIMEOUT if timeout is None else timeout
     try:
         req = urllib.request.Request(
             f"{OLLAMA}/api/generate", data=json.dumps(payload).encode(),
@@ -123,20 +153,27 @@ def draft_one(session: Session, proposal: dict, actor: str = "system") -> dict:
         return {"code": proposal["code"], "skipped": "already exists",
                 "revisions": len(existing)}
 
+    from fsmes.services import plant_settings
+
+    model = str(plant_settings.setting(session, "system", "local_model_name"))
     body = _ask(
-        f"{HOUSE_STYLE}\n"
+        f"{instructions(session)}\n"
         f"Plant facts:\n{json.dumps(proposal['facts'], indent=1, default=str)}\n\n"
         f"Instruction title: {proposal['title']}\n\n"
-        f"Write the instruction now."
+        f"Write the instruction now.",
+        timeout=float(plant_settings.setting(session, "admin", "drafting_timeout_seconds")),
+        model=model,
     )
     if not body:
         return {"code": proposal["code"], "error": "the local model did not answer"}
 
+    # The model that actually wrote it, not the one the product ships: the
+    # column is `drafted_by_model` and it has to be true of this document.
     doc = documents.create(
         session, code=proposal["code"], title=proposal["title"], body=body,
-        anchors=proposal["anchors"], actor=actor, drafted_by_model=MODEL)
+        anchors=proposal["anchors"], actor=actor, drafted_by_model=model)
     return {"code": doc.code, "revision": doc.revision, "title": doc.title,
-            "status": doc.status.value, "drafted_by_model": MODEL,
+            "status": doc.status.value, "drafted_by_model": model,
             "words": len(body.split())}
 
 

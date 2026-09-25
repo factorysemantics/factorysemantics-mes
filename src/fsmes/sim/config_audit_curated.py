@@ -124,9 +124,28 @@ DONE_ERP = "Built 2026-09-25: it is `[erp] %s`, shipping the literal that was he
 #: the mechanism §11 of the design page wrote down after Quality's. Its shape is
 #: deliberately identical: a reader scanning this file should be able to see
 #: which rows are answered without reading two different wordings for it.
+#: Takes `(section, key)` - two placeholders, unlike `LIVE_ADMIN` below, which
+#: was written the same day for a row set that already carries its own
+#: brackets in one string.
 LIVE = ("Built 2026-09-25: it is `[%s] %s`, shipping the literal that was here, "
         "and it is edited on Engineering's Configuration page - seeded by the "
         "pack, owned by the database, in force when it is saved.")
+
+#: The same sentence for the administration and IT rows, built three days
+#: later. `%s` is the whole key, `[admin] x` or `[screens] x` or `[system] x`,
+#: because these three tables were added together and a reader should be able
+#: to see at a glance which table a row landed in. Named `_ADMIN` rather than
+#: reusing `LIVE` above: that one takes `(section, key)` as two placeholders,
+#: this one takes the whole bracketed key as one - two rows written the same
+#: day, by two people, and neither wrong, so the name carries the difference
+#: rather than the format string being silently wrong for half its callers.
+LIVE_ADMIN = ("Built 2026-09-25: it is `%s`, shipping the literal that was here, "
+              "editable on Setup > Configuration and in force when it is saved.")
+
+#: And for the three that are keys but are read when a process starts, which
+#: the page says out loud rather than offering an input that half works.
+AT_START = ("Built 2026-09-25: it is `%s`, shipping the literal that was here. "
+            "Read when the process starts rather than live, because ")
 
 
 CURATED: tuple[Curated, ...] = (
@@ -667,9 +686,12 @@ CURATED: tuple[Curated, ...] = (
     Curated(
         "A1", "administration", "plant",
         "Default role a new account gets",
-        "services/auth.py", 170, 'role: str = "operator"',
+        "config.py", 421, 'admin_default_new_account_role: str = "operator"',
         why="One plant onboards everyone as viewer and grants up; another "
-            "starts them on the floor. The role codes stay the product's."),
+            "starts them on the floor. The role codes stay the product's.",
+        settled=LIVE_ADMIN % "[admin] default_new_account_role" + " `create_user` "
+                "takes `role=None` now, which means *this plant's answer* - the "
+                "router no longer keeps a second copy of the word."),
     Curated(
         "A2", "administration", "general",
         "PBKDF2 iteration count - the product's entire password policy",
@@ -682,35 +704,55 @@ CURATED: tuple[Curated, ...] = (
     Curated(
         "A3", "administration", "plant",
         "Default page size and hard ceiling for every list endpoint",
-        "api/paging.py", 28, "DEFAULT_LIMIT = 50",
+        "config.py", 429, "admin_list_default_limit: int = 50",
         why="A plant with three thousand characteristics and one with fifty "
             "want different ceilings. The envelope shape stays the "
-            "product's; the number in it does not."),
+            "product's; the number in it does not.",
+        settled=AT_START % "[admin] list_default_limit` and `list_max_limit"
+                + "both are published in this plant's own OpenAPI document as "
+                "the default and the `le=` bound of every list endpoint, and a "
+                "ceiling that moved under a caller holding that document would "
+                "make the document a lie. The machine grid's own copy of 500 is "
+                "gone: it reads `paging.MAX_LIMIT` rather than matching it."),
     Curated(
         "A4", "administration", "plant",
         "Pending-approvals panel page size - its own number, different from A3",
-        "api/routers/dashboard.py", 378, "limit: int = Query(20",
+        "config.py", 434, "admin_pending_approvals_page_size: int = 20",
         why="How many waiting drafts fit on one plant's screen. The panel has "
-            "no pager, so item 21 is simply not there."),
+            "no pager, so item 21 is simply not there.",
+        settled=LIVE_ADMIN % "[admin] pending_approvals_page_size" + " The endpoint "
+                "takes no default of its own: a caller that names no limit gets "
+                "the plant's."),
     Curated(
         "A5", "administration", "plant",
         "Admin screen page sizes",
-        "web/admin.js", 23, "const userPageSize = 25",
+        "config.py", 496, "screens_admin_user_page_size: int = 25",
         why="Three hundred employees is one plant's ordinary; twenty-five "
-            "rows is one plant's answer to it."),
+            "rows is one plant's answer to it.",
+        settled=LIVE_ADMIN % "[screens] admin_user_page_size` and "
+                "`admin_routing_page_size" + " The browser reads them from "
+                "/dashboard/ui-settings and keeps no copy of either."),
     Curated(
         "A6", "administration", "plant",
         "Floor dashboard page sizes and refresh clocks",
-        "web/app.js", 20, "const REFRESH_MS = 2000",
+        "config.py", 490, "screens_floor_refresh_ms: int = 2000",
         why="A plant on a thin WAN link wants a ten-second poll where a plant "
             "on a switched floor network wants two. The file's own header "
-            "says it was tuned against one plant."),
+            "says it was tuned against one plant.",
+        settled=LIVE_ADMIN % "[screens] floor_refresh_ms" + " Its four neighbours in "
+                "app.js went with it: `floor_pending_refresh_ms`, "
+                "`floor_machine_page`, `floor_order_page` and "
+                "`floor_spec_choices`."),
     Curated(
         "A7", "administration", "plant",
         "Admin screen refresh - a third, inconsistent clock",
-        "web/admin.js", 400, "setInterval(refresh, 8000)",
+        "config.py", 492, "screens_admin_refresh_ms: int = 8000",
         why="Same answer as A6, given a third time by a different file. The "
-            "plant should say it once."),
+            "plant should say it once.",
+        settled=LIVE_ADMIN % "[screens] admin_refresh_ms" + " It says it once: the "
+                "three clocks are one section on the Configuration page, and "
+                "they stay three numbers because a screen watching machines and "
+                "a screen listing employees are not one cadence."),
     Curated(
         "A8", "administration", "plant",
         "The fixed list of time windows, and its default",
@@ -726,31 +768,51 @@ CURATED: tuple[Curated, ...] = (
     Curated(
         "A9", "administration", "plant",
         "FS.allPages ceiling",
-        "web/common.js", 297, "cap = 2000",
+        "config.py", 499, "screens_all_pages_cap: int = 2000",
         why="Where the ceiling sits is the plant's size. It returns "
             "complete: false, so nothing lies today - but a plant with three "
-            "thousand characteristics meets it every day."),
+            "thousand characteristics meets it every day.",
+        settled=LIVE_ADMIN % "[screens] all_pages_limit` and `all_pages_cap"
+                + " `fsmes pack check` refuses a ceiling below the page size, "
+                "which would read one page and call every list incomplete."),
     Curated(
         "A10", "administration", "plant",
         "Maximum steps in a recorded walkthrough, and four silent truncations",
         "services/walkthroughs.py", 50, "MAX_STEPS = 60",
         why="A plant with a ninety-step changeover procedure is refused for a "
             "reason nothing outside that plant cares about, and the four "
-            "truncations quietly shorten the plant's own words."),
+            "truncations quietly shorten the plant's own words.",
+        settled=LIVE_ADMIN % "[admin] walkthrough_max_steps" + " The four "
+                "truncations went with it as named keys rather than as four "
+                "numbers in one sentence: `walkthrough_title_chars`, "
+                "`walkthrough_body_chars`, `walkthrough_fill_chars` and "
+                "`walkthrough_tab_chars`. The refusal names the number it "
+                "refused by, whichever plant's it is."),
     Curated(
         "A11", "administration", "plant",
         "Default capability a recorded walkthrough requires",
-        "services/walkthroughs.py", 105, 'needs or "plant.read"',
+        "config.py", 445, 'admin_walkthrough_default_capability: str = "plant.read"',
         why="A plant that wants every recorded walkthrough gated to at least "
             "production.book says so once. Capability names stay the "
-            "product's."),
+            "product's.",
+        settled=LIVE_ADMIN % "[admin] walkthrough_default_capability" + " A "
+                "capability this version does not have is refused by "
+                "`fsmes pack check` and by the input alike: a walkthrough gated "
+                "on a word nothing grants is one nobody can play."),
     Curated(
         "A12", "administration", "plant",
         "Floor-agent round budget, session lifetime and result cap",
         "services/agent.py", 45, "MAX_ROUNDS = 12",
         why="SESSION_TTL is a session-lifetime policy exactly like "
             "token_ttl_seconds, which is already the plant's. One plant, one "
-            "budget."),
+            "budget.",
+        settled=LIVE_ADMIN % "[admin] agent_max_rounds`, `agent_session_ttl_seconds` "
+                "and `agent_result_limit" + " A conversation reads all three "
+                "when it opens and keeps what it opened with: a budget that "
+                "moved under a turn already in flight would cut somebody off "
+                "mid-sentence for somebody else's save. The sweep asks each "
+                "conversation for its own lifetime rather than one global "
+                "number."),
     Curated(
         "A13", "administration", "general",
         '"At most four sentences" - the assistant\'s house style, stated twice',
@@ -777,16 +839,28 @@ CURATED: tuple[Curated, ...] = (
     Curated(
         "A16", "administration", "plant",
         "Context truncation before the model is asked",
-        "services/assistant.py", 836, "default=str)[:3000]",
+        "config.py", 454, "admin_assistant_context_chars: int = 3000",
         why="How much of the plant's own facts reach the answer, on the "
             "plant's own hardware. A plant running a larger local model can "
-            "afford more."),
+            "afford more.",
+        settled=LIVE_ADMIN % "[admin] assistant_context_chars" + " The design chat's "
+                "three budgets are beside it in the same section: "
+                "`design_compress_budget`, `design_compress_source_chars` and "
+                "`design_source_budget`."),
     Curated(
         "A17", "administration", "plant",
         "Local-model timeouts - six of them, all different, none shared",
-        "services/assistant.py", 730, "timeout: float = 60.0",
+        "config.py", 462, "admin_assistant_timeout_seconds: float = 60.0",
         why="A plant on a slower GPU needs longer everywhere, and there is "
-            "one GPU per plant to say it about."),
+            "one GPU per plant to say it about.",
+        settled=LIVE_ADMIN % "[admin] assistant_timeout_seconds" + " All six are "
+                "keys, named one per thing waited for rather than left as six "
+                "anonymous numbers: `drafting_timeout_seconds`, "
+                "`design_generate_timeout_seconds`, "
+                "`design_classify_timeout_seconds`, "
+                "`design_compress_timeout_seconds` and "
+                "`design_chat_timeout_seconds`. A plant raises all six and can "
+                "see which one it just raised."),
     Curated(
         "A18", "administration", "plant",
         "The work-instruction house style",
@@ -795,14 +869,25 @@ CURATED: tuple[Curated, ...] = (
             "gets the wrong shape today, and that shape is the plant's "
             "document standard. One clause is not configurable and must not "
             "become so: an operator must never be told to adjust a reading "
-            "toward the middle - that is a product invariant."),
+            "toward the middle - that is a product invariant.",
+        settled=LIVE_ADMIN % "[admin] document_house_style" + " The key carries the "
+                "structure and nothing else. The clauses that keep the draft "
+                "honest are `drafting.INVARIANTS`, added to whatever a plant "
+                "writes and not editable from anywhere - including the one this "
+                "row named, which stayed in the source exactly as the audit "
+                "asked."),
     Curated(
         "A19", "administration", "plant",
         "Rollup-staleness threshold on the AI panel",
         "services/ai_status.py", 56, "ROLLUP_STALE = timedelta(hours=40)",
         why="The comment names the single machine it was chosen for - one "
             "that is encrypted and regularly off overnight. A plant's server "
-            "that never sleeps answers differently."),
+            "that never sleeps answers differently.",
+        settled=LIVE_ADMIN % "[admin] ai_rollup_stale_hours" + " The panel itself "
+                "stays machine-wide - one Ollama and one GPU serve every plant "
+                "on the box - so two plants on one machine may disagree about "
+                "when their own screen says stale, and each is right about its "
+                "own server."),
     Curated(
         "A20", "administration", "general",
         "The standing GPU priority order",
@@ -814,21 +899,34 @@ CURATED: tuple[Curated, ...] = (
     Curated(
         "A21", "administration", "plant",
         "Assistant log ring size and fill-retry budget",
-        "web/assist.js", 59, "entries.slice(-60)",
+        "config.py", 505, "screens_assistant_log_entries: int = 60",
         why="How long a walkthrough waits for a control to appear is the "
             "plant's slowest PC, which is the plant's own answer.",
         unsure="The row holds two judgments. The 60-entry log ring beside it "
                "is a product shape and would be general on its own; if this "
-               "is ever built, it should be split in two."),
+               "is ever built, it should be split in two.",
+        settled=LIVE_ADMIN % "[screens] assistant_log_entries`, "
+                "`assistant_fill_attempts` and `assistant_fill_wait_ms"
+                + " Split in three, as the `unsure` line asked - and the ring "
+                "was made a key beside the other two rather than left general, "
+                "because a plant that lengthens its conversation and a plant "
+                "that does not are both answering about their own people. It "
+                "costs nothing to let them."),
     Curated(
         "A22", "administration", "plant",
         "Toast durations and typing debounces, inconsistent across screens",
-        "web/common.js", 235, 'node.classList.add("hidden"), 3500',
+        "config.py", 503, "screens_toast_ms: int = 3500",
         why="How long a confirmation lingers is an accessibility answer a "
             "plant gives for its own people.",
         unsure="Before it is a plant's, it is the product's: 3500 in one file "
                "and 4000 in another is two files disagreeing, and settling "
-               "on one number is a general decision that should come first."),
+               "on one number is a general decision that should come first.",
+        settled=LIVE_ADMIN % "[screens] toast_ms` and `input_debounce_ms" + " The "
+                "`unsure` line was right and was answered first, by deletion "
+                "rather than by choosing: admin.js's 4000 was in a `toast()` of "
+                "its own that common.js exists to replace, so the copy went and "
+                "3500 - what every other screen already used - is the shipped "
+                "default."),
     Curated(
         "A23", "administration", "general",
         "Line-list cache lifetime on the floor screen",
@@ -861,17 +959,27 @@ CURATED: tuple[Curated, ...] = (
     Curated(
         "I1", "it", "plant",
         "Fleet health-probe timeout",
-        "fleet/observe.py", 32, "TIMEOUT = 3.0",
+        "config.py", 514, "system_fleet_health_probe_timeout: float = 3.0",
         why="Two fleets with different link quality answer differently, and "
             "getting it wrong reports a healthy plant as unreachable. It is "
-            "one answer per fleet, not per plant probed."),
+            "one answer per fleet, not per plant probed.",
+        settled=AT_START % "[system] fleet_health_probe_timeout"
+                + "this row's own last sentence is why: it is the console's "
+                "number about every plant it watches rather than any one "
+                "plant's about itself, and the console has no plant database to "
+                "read a row from."),
     Curated(
         "I2", "it", "plant",
         "Rotating log size and backup count",
-        "logging.py", 95, "maxBytes=5_000_000",
+        "config.py", 515, "system_log_rotation_max_bytes: int = 5_000_000",
         why="Twenty-five megabytes of history per component is a retention "
             "policy, one file away from tag_retention_days, which is already "
-            "the plant's."),
+            "the plant's.",
+        settled=AT_START % "[system] log_rotation_max_bytes` and "
+                "`log_rotation_backups" + "logging is configured before this "
+                "plant's database is open - it is the thing that reports a "
+                "database that will not open - so the three layers cannot be "
+                "read there and the pack's compiled setting is the last word."),
     Curated(
         "I3", "it", "general",
         "Retention prune cadence",
@@ -886,7 +994,11 @@ CURATED: tuple[Curated, ...] = (
         why="Which model drafts a plant's work instructions is the plant's "
             "hardware and its choice, and it is already recorded on the "
             "document as drafted_by_model, so the field's meaning does not "
-            "change."),
+            "change.",
+        settled=LIVE_ADMIN % "[system] local_model_name" + " And the field got "
+                "*truer*: a draft records the model that actually wrote it "
+                "rather than the one the product ships, which is what "
+                "`drafted_by_model` always claimed to mean."),
 )
 
 

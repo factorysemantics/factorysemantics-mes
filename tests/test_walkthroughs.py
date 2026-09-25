@@ -99,11 +99,11 @@ def test_a_revision_keeps_the_old_one_in_force_until_approved(session):
 def test_how_do_i_routes_to_a_recorded_walk(session, monkeypatch):
     record(session)
     documents.approve(session, "SWI-CORR", 1, actor="ADMIN")
-    monkeypatch.setattr(assistant, "_ask_model", lambda prompt, timeout=60.0: "doc:swi-corr")
+    monkeypatch.setattr(assistant, "_ask_model", lambda prompt, timeout=None, model=None: "doc:swi-corr")
     caps = {"plant.read", "maintenance.perform"}
     found = assistant.route("how do I raise corrective work?", caps, session)
     assert found and found["id"] == "doc:SWI-CORR"
-    monkeypatch.setattr(assistant, "_ask_model", lambda prompt, timeout=60.0: None)
+    monkeypatch.setattr(assistant, "_ask_model", lambda prompt, timeout=None, model=None: None)
     found = assistant.route("show me raising corrective work", caps, session)
     assert found and found["id"] == "doc:SWI-CORR"
 

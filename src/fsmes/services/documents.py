@@ -51,12 +51,21 @@ def draft(session: Session, code: str) -> Document | None:
         .limit(1))
 
 
-def _walk_kwargs(kind: str, steps: list[dict] | None, needs: str | None) -> dict:
-    """The walkthrough columns, validated - or the instruction's empty ones."""
+def _walk_kwargs(session: Session, kind: str, steps: list[dict] | None,
+                 needs: str | None) -> dict:
+    """The walkthrough columns, validated - or the instruction's empty ones.
+
+    Takes the session so the limits and the default gate are this plant's own
+    (`[admin] walkthrough_*`) rather than the five literals that used to be in
+    `fsmes.services.walkthroughs`.
+    """
     from fsmes.services import walkthroughs
     if kind == "walkthrough":
-        return {"kind": kind, "steps": walkthroughs.dumps(walkthroughs.validate_steps(steps)),
-                "needs": walkthroughs.validate_needs(needs)}
+        return {"kind": kind,
+                "steps": walkthroughs.dumps(
+                    walkthroughs.validate_steps(steps, walkthroughs.limits(session))),
+                "needs": walkthroughs.validate_needs(
+                    needs, walkthroughs.default_needs(session))}
     if kind != "instruction":
         raise Invalid(f"unknown document kind {kind!r}: instruction or walkthrough")
     if steps:
@@ -74,7 +83,7 @@ def create(session: Session, *, code: str, title: str, body: str,
     doc = Document(code=code, revision=1, title=title, body=body,
                    status=DocumentStatus.DRAFT, created_by=actor,
                    drafted_by_model=drafted_by_model, **_anchor_kwargs(anchors),
-                   **_walk_kwargs(kind, steps, needs))
+                   **_walk_kwargs(session, kind, steps, needs))
     session.add(doc)
     session.flush()
     audit.record(session, actor=actor, action="document.drafted",
@@ -109,7 +118,7 @@ def revise(session: Session, code: str, *, title: str | None = None,
             for field, value in _anchor_kwargs(anchors).items():
                 setattr(open_draft, field, value)
         if steps is not None or needs is not None:
-            walk = _walk_kwargs(open_draft.kind, steps if steps is not None else open_draft.steps_list(),
+            walk = _walk_kwargs(session, open_draft.kind, steps if steps is not None else open_draft.steps_list(),
                                 needs if needs is not None else open_draft.needs)
             open_draft.steps, open_draft.needs = walk["steps"], walk["needs"]
         session.flush()
@@ -126,7 +135,7 @@ def revise(session: Session, code: str, *, title: str | None = None,
         status=DocumentStatus.DRAFT, created_by=actor,
         **(_anchor_kwargs(anchors) if anchors is not None
            else {f"anchor_{k}": getattr(base, f"anchor_{k}") for k in ANCHOR_FIELDS}),
-        **_walk_kwargs(base.kind, steps if steps is not None else base.steps_list(),
+        **_walk_kwargs(session, base.kind, steps if steps is not None else base.steps_list(),
                        needs if needs is not None else base.needs),
     )
     session.add(doc)

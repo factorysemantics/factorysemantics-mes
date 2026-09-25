@@ -14,6 +14,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from fsmes import modules
+from fsmes.api import paging
 from fsmes.api.deps import ActorDep, DbDep, ReadDbDep, UserDep
 from fsmes.config import get_settings
 from fsmes.domain import (
@@ -53,9 +54,11 @@ _CACHE_TTL_SECONDS = 1.0
 # must not grow it without end. Nothing here is precious - it is one second of
 # a repeated question.
 _CACHE_MAX_ENTRIES = 64
-# A page of machines is a screen's worth, not a plant's. The ceiling matches
-# fsmes.api.paging.MAX_LIMIT so no list in this API has a different one.
-MACHINE_MAX_LIMIT = 500
+# A page of machines is a screen's worth, not a plant's. The ceiling *is*
+# fsmes.api.paging.MAX_LIMIT rather than matching it, so no list in this API
+# has a different one - it was a second copy of 500 until the plant started
+# saying what its ceiling is.
+MACHINE_MAX_LIMIT = paging.MAX_LIMIT
 _cache: dict[float, tuple[float, tuple, dict]] = {}
 _cache_lock = threading.Lock()
 
@@ -380,7 +383,7 @@ PENDING_KINDS: dict[str, str] = review_service.capabilities()
 
 @router.get("/pending-approvals")
 def pending_approvals(db: ReadDbDep, user: UserDep,
-                      limit: int = Query(20, ge=1, le=100)) -> dict:
+                      limit: int | None = Query(None, ge=1, le=100)) -> dict:
     """What is waiting that *this caller* may act on, counted, with its total.
 
     The step the three lifecycles in this product were missing. A document
@@ -404,6 +407,15 @@ def pending_approvals(db: ReadDbDep, user: UserDep,
     A draft nobody acts on waits, visibly. It does not expire, it does not go
     live by itself, and nothing here drops it.
     """
+    from fsmes.services import plant_settings
+
+    if limit is None:
+        # This plant's own answer, not the product's, and read now rather than
+        # written into the signature: `[admin] pending_approvals_page_size`.
+        # It is deliberately a different number from the list envelope's
+        # default - this panel has no pager, so item twenty-one is not on the
+        # screen at all rather than on a second page.
+        limit = int(plant_settings.setting(db, "admin", "pending_approvals_page_size"))
     mine = _kinds_for(db, user)
 
     items: list[dict] = []
@@ -533,6 +545,44 @@ def _read_only_key(written: str) -> dict:
         "default": "" if default is None else str(default),
         "is_default": value == default,
         "set_by": None,
+    }
+
+
+@router.get("/ui-settings")
+def ui_settings(db: ReadDbDep, user: UserDep) -> dict:
+    """What this plant's own screens run at, for the browser.
+
+    Half of the administration audit's rows were literals in the JavaScript -
+    three refresh clocks, four page sizes, a ceiling, a toast duration, a
+    debounce, and how much of the assistant survives a page change. A setting
+    the server owns and the browser hard-codes is not a setting, so the
+    browser asks for them: once per page load, through `FS.settings()`, before
+    anything that uses one is drawn.
+
+    **The `[screens]` pack table is the list.** There is no second enumeration
+    here of which keys the browser reads - a table in the pack schema says it,
+    `fsmes pack check` validates it, Setup > Configuration prints it, and this
+    answers with exactly its keys typed as the schema declares them. A key
+    added to that table reaches the browser with no change to this function.
+
+    **It gates on nothing beyond being signed in.** These decide how a screen
+    is drawn, not what it may show, and every one of them is already visible
+    to anybody who can open Setup > Configuration - which, like the other two
+    Configuration pages, lists itself to everyone and offers an input to
+    nobody without the capability.
+    """
+    from fsmes.pack import format as fmt
+    from fsmes.services import plant_settings
+
+    table = fmt.BY_SECTION["screens"]
+    values = {key.name: plant_settings.setting(db, "screens", key.name)
+              for key in table.keys}
+    return {
+        "settings": values,
+        # Every list states its total, even one a screen reads as an object:
+        # a browser that got eleven of fifteen because something went wrong
+        # upstream should be able to tell.
+        "total": len(values),
     }
 
 

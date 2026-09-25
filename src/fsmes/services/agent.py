@@ -42,6 +42,13 @@ from typing import Any
 
 MODEL = os.environ.get("MES_AGENT_MODEL", "claude-sonnet-5")
 EFFORT = os.environ.get("MES_AGENT_EFFORT", "low")
+# What one conversation may spend. These three were literals here until the
+# configuration audit of 2026-09-21 named them; they are now `[admin]
+# agent_max_rounds`, `agent_session_ttl_seconds` and `agent_result_limit`, and
+# every default below is the number that was here. A conversation reads them
+# once, when it is opened, and keeps what it opened with - a budget that moved
+# under a turn already in flight would be a conversation cut off mid-sentence
+# by somebody else's save.
 MAX_ROUNDS = 12            # model turns per person message before it must stop
 SESSION_TTL = 30 * 60      # seconds a conversation lives without a message
 RESULT_LIMIT = 6000        # characters of a tool result the model sees
@@ -355,6 +362,13 @@ class Session:
     touched: float = field(default_factory=time.monotonic)
     primed: bool = False
 
+    #: The budget this conversation opened with - `[admin] agent_max_rounds`,
+    #: `agent_session_ttl_seconds` and `agent_result_limit` as this plant had
+    #: them at that moment.
+    max_rounds: int = MAX_ROUNDS
+    ttl: int = SESSION_TTL
+    result_limit: int = RESULT_LIMIT
+
     @property
     def tool_by_name(self) -> dict[str, dict]:
         return {t["name"]: t for t in self.tools}
@@ -366,13 +380,27 @@ _sessions_lock = threading.Lock()
 
 def _sweep() -> None:
     now = time.monotonic()
-    for sid in [s for s, sess in _sessions.items() if now - sess.touched > SESSION_TTL]:
+    # Each conversation against its own lifetime, not one global number: a
+    # plant that lengthens the lifetime should not reach back and revive the
+    # conversations that opened under the old one.
+    for sid in [s for s, sess in _sessions.items() if now - sess.touched > sess.ttl]:
         _sessions.pop(sid, None)
 
 
-def open_session(user: str, plant: str, capabilities: set[str]) -> Session:
+def open_session(user: str, plant: str, capabilities: set[str], *,
+                 max_rounds: int = MAX_ROUNDS, ttl: int = SESSION_TTL,
+                 result_limit: int = RESULT_LIMIT) -> Session:
+    """Start a conversation, on this plant's budget.
+
+    The three budgets are passed in rather than read here: this module holds no
+    database session by design - it is a conversation and a model, and the one
+    thing that must never happen is a plant's write lock held across a model
+    call. The caller has a short read open already and hands them over.
+    """
     sess = Session(id=uuid.uuid4().hex[:12], user=user, plant=plant,
-                   capabilities=set(capabilities), tools=catalogue(capabilities))
+                   capabilities=set(capabilities), tools=catalogue(capabilities),
+                   max_rounds=int(max_rounds), ttl=int(ttl),
+                   result_limit=int(result_limit))
     with _sessions_lock:
         _sweep()
         _sessions[sess.id] = sess
@@ -434,10 +462,10 @@ def _usage_of(response: Any) -> dict:
             "cache_write": getattr(u, "cache_creation_input_tokens", 0) or 0}
 
 
-def _tool_result(tool_use_id: str, payload: Any) -> dict:
+def _tool_result(tool_use_id: str, payload: Any, limit: int = RESULT_LIMIT) -> dict:
     text = payload if isinstance(payload, str) else json.dumps(payload, default=str)
-    if len(text) > RESULT_LIMIT:
-        text = text[:RESULT_LIMIT] + " …(truncated)"
+    if len(text) > limit:
+        text = text[:limit] + " …(truncated)"
     block = {"type": "tool_result", "tool_use_id": tool_use_id, "content": text}
     if isinstance(payload, dict) and "error" in payload:
         block["is_error"] = True
@@ -490,7 +518,7 @@ def _drive(sess: Session) -> dict:
     ok, why = available()
     if not ok:
         return _reply(sess, "unavailable", f"The cloud brain is not available: {why}.")
-    for _ in range(MAX_ROUNDS):
+    for _ in range(sess.max_rounds):
         try:
             response = _call_model(sess)
         except Exception as exc:  # reported to the person, never a 500
@@ -512,12 +540,12 @@ def _drive(sess: Session) -> dict:
             spec = sess.tool_by_name.get(block.name)
             if spec is None:
                 payload = {"error": f"no tool named {block.name!r} is available to this person"}
-                sess.results[block.id] = _tool_result(block.id, payload)
+                sess.results[block.id] = _tool_result(block.id, payload, sess.result_limit)
                 sess.transcript.append({"tool": block.name, "args": args, "ok": False, "summary": payload["error"]})
             elif spec["write"]:
                 preview = execute(block.name, args, plant=sess.plant, on_behalf_of=sess.user, dry_run=True)
                 if isinstance(preview, dict) and "error" in preview:
-                    sess.results[block.id] = _tool_result(block.id, preview)
+                    sess.results[block.id] = _tool_result(block.id, preview, sess.result_limit)
                     sess.transcript.append({"tool": block.name, "args": args, "ok": False,
                                             "summary": _summary(preview)})
                     continue
@@ -528,7 +556,7 @@ def _drive(sess: Session) -> dict:
                 sess.pending[prop.id] = prop
             else:
                 payload = execute(block.name, args, plant=sess.plant)
-                sess.results[block.id] = _tool_result(block.id, payload)
+                sess.results[block.id] = _tool_result(block.id, payload, sess.result_limit)
                 sess.transcript.append({"tool": block.name, "args": args,
                                         "ok": not (isinstance(payload, dict) and "error" in payload),
                                         "summary": _summary(payload)})
@@ -550,7 +578,8 @@ def _resolve(sess: Session, proposal_id: str, payload: Any, *, declined: str | N
     prop = sess.pending.pop(proposal_id)
     if declined is not None:
         payload = {"declined": declined, "would": prop.preview.get("would") if isinstance(prop.preview, dict) else None}
-    sess.results[prop.tool_use_id] = _tool_result(prop.tool_use_id, payload)
+    sess.results[prop.tool_use_id] = _tool_result(
+        prop.tool_use_id, payload, sess.result_limit)
     ok = not (isinstance(payload, dict) and ("error" in payload or "declined" in payload))
     sess.transcript.append({"tool": prop.tool, "args": prop.args, "ok": ok, "summary": _summary(payload),
                             "write": True, "declined": declined is not None})

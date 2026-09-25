@@ -39,6 +39,12 @@
   };
 
   let me = null;
+  /* How much of this conversation survives a page change, and how long a
+     walkthrough keeps looking for a control that has not appeared yet:
+     `[screens] assistant_log_entries`, `assistant_fill_attempts` and
+     `assistant_fill_wait_ms`, read once in boot(). They were three literals
+     buried at two places in this file. */
+  let ui = {};
   let guides = [];
   let agent = { available: false };
   let panel = null;
@@ -56,7 +62,9 @@
   }
 
   function saveEntries() {
-    try { sessionStorage.setItem(LOG_KEY, JSON.stringify(entries.slice(-60))); } catch (e) { /* private mode */ }
+    try {
+      sessionStorage.setItem(LOG_KEY, JSON.stringify(entries.slice(-ui.assistant_log_entries)));
+    } catch (e) { /* private mode */ }
   }
 
   function remember(entry) {
@@ -500,7 +508,9 @@
     if (target.tagName === "SELECT") {
       const has = [...target.options].some((o) => o.value === value);
       if (!has) {
-        if (attempt < 20) setTimeout(() => applyFill(target, step, attempt + 1), 150);
+        if (attempt < ui.assistant_fill_attempts) {
+          setTimeout(() => applyFill(target, step, attempt + 1), ui.assistant_fill_wait_ms);
+        }
         return;
       }
     }
@@ -701,6 +711,11 @@
       me = await api("/auth/me");
     } catch (err) {
       return;  // not signed in: the login screen has no use for an assistant
+    }
+    try {
+      ui = await window.FS.settings();
+    } catch (err) {
+      return;  // without the plant's numbers this panel would invent its own
     }
     try {
       guides = (await api("/assist/guides")).guides || [];

@@ -551,7 +551,7 @@ def test_status_and_a_message_without_a_key(admin, monkeypatch):
 
 
 def test_how_do_i_still_gets_a_guide(admin, monkeypatch):
-    monkeypatch.setattr(assistant, "_ask_model", lambda prompt, timeout=60.0: "record-check")
+    monkeypatch.setattr(assistant, "_ask_model", lambda prompt, timeout=None, model=None: "record-check")
     out = admin.post("/assist/agent", json={"message": "how do I record an inspection?"}).json()
     assert out["kind"] == "guide" and out["guide"]["id"] == "record-check"
 

@@ -210,6 +210,9 @@ def check(directory: Path, *, version: str = __version__) -> Report:
     problems += _erp_numbers(pack)
     problems += _process_numbers(pack)
     problems += _controls_numbers(pack)
+    problems += _admin_numbers(pack)
+    problems += _screens_numbers(pack)
+    problems += _system_numbers(pack)
     problems += _modules(pack)
     problems += _words(pack)
     files, file_problems, file_unknowns = _files(pack)
@@ -842,6 +845,183 @@ def oee_numbers(table: dict) -> list[Problem]:
         "nothing is divided by zero seconds, which is the whole reason this "
         "floor exists")
     return [problem] if problem else []
+
+
+ADMIN_RANGES: dict[str, tuple[float, float | None, str]] = {
+    "list_default_limit": (0, None, "a page has at least one row in it"),
+    "list_max_limit": (0, None, "a ceiling of nothing lets no caller read anything"),
+    "pending_approvals_page_size": (
+        0, None, "the panel has no pager, so a size of nothing is a panel that "
+                 "shows nothing while the count above it says otherwise"),
+    "walkthrough_max_steps": (0, None, "a walkthrough has at least one step"),
+    "walkthrough_title_chars": (0, None, "a step with no title is a step nobody can follow"),
+    "walkthrough_body_chars": (0, None, "a step's explanation is allowed to say something"),
+    "walkthrough_fill_chars": (0, None, "a step that types nothing into a control types nothing"),
+    "walkthrough_tab_chars": (0, None, "a tab name is at least one character"),
+    "agent_max_rounds": (0, None, "an agent given no turns cannot answer at all"),
+    "agent_session_ttl_seconds": (
+        0, None, "a conversation that expires immediately is a conversation "
+                 "nobody can have a second turn of"),
+    "agent_result_limit": (
+        0, None, "a tool result the model is shown none of is a tool call it "
+                 "cannot reason from"),
+    "assistant_context_chars": (
+        0, None, "an answer built from none of this plant's facts is an answer "
+                 "about no plant"),
+    "design_compress_budget": (0, None, "a summary is at least one character"),
+    "design_compress_source_chars": (0, None, "a summary of nothing summarises nothing"),
+    "design_source_budget": (0, None, "a chat that reads none of the screen reads no screen"),
+    "assistant_timeout_seconds": (0, None, "a model given no time to answer never answers"),
+    "drafting_timeout_seconds": (0, None, "a model given no time to answer never answers"),
+    "design_generate_timeout_seconds": (0, None, "a model given no time to answer never answers"),
+    "design_classify_timeout_seconds": (0, None, "a model given no time to answer never answers"),
+    "design_compress_timeout_seconds": (0, None, "a model given no time to answer never answers"),
+    "design_chat_timeout_seconds": (0, None, "a model given no time to answer never answers"),
+    "ai_rollup_stale_hours": (
+        0, None, "a rollup is late the instant it is written if the threshold "
+                 "is nothing, and the panel would never say anything else"),
+}
+
+SCREEN_RANGES: dict[str, tuple[float, float | None, str]] = {
+    "floor_refresh_ms": (
+        0, None, "a screen that re-reads the plant every nought milliseconds "
+                 "is a screen re-reading it without stopping"),
+    "floor_pending_refresh_ms": (0, None, "same: a poll has an interval"),
+    "admin_refresh_ms": (0, None, "same: a poll has an interval"),
+    "floor_machine_page": (0, None, "a page of the grid shows at least one machine"),
+    "floor_order_page": (0, None, "a page of orders shows at least one order"),
+    "floor_spec_choices": (0, None, "a picker offering nothing cannot be picked from"),
+    "admin_user_page_size": (0, None, "a page of people shows at least one person"),
+    "admin_routing_page_size": (0, None, "a page of routings shows at least one routing"),
+    "all_pages_limit": (0, None, "a page has at least one row in it"),
+    "all_pages_cap": (0, None, "a ceiling of nothing reads no rows at all"),
+    "toast_ms": (
+        0, None, "a confirmation nobody has time to read is a confirmation "
+                 "that did not happen"),
+    "input_debounce_ms": (0, None, "a debounce of nothing does not debounce"),
+    "assistant_log_entries": (0, None, "a log keeping nothing keeps nothing"),
+    "assistant_fill_attempts": (
+        0, None, "a walkthrough that never looks for a control never finds one"),
+    "assistant_fill_wait_ms": (0, None, "a wait of nothing is a busy loop"),
+}
+
+SYSTEM_RANGES: dict[str, tuple[float, float | None, str]] = {
+    "fleet_health_probe_timeout": (
+        0, None, "a probe given no time reports every plant unreachable"),
+    "log_rotation_max_bytes": (
+        0, None, "a log file rotated at nothing bytes keeps no line of itself"),
+    "log_rotation_backups": (
+        -1, None, "zero is a real answer - rotate and keep nothing - and a "
+                  "negative count is not"),
+}
+
+
+def _ranges(table: dict, where: str, ranges: dict) -> list[Problem]:
+    """The same range check `quality_numbers` runs, over one table.
+
+    Factored out when `[admin]`, `[screens]` and `[system]` arrived on
+    2026-09-25 rather than written a fourth time: four copies of *is it
+    between these two numbers* would be four places for the sentence to drift.
+    """
+    out: list[Problem] = []
+    for name, (low, high, why) in ranges.items():
+        value = table.get(name)
+        if value is None or isinstance(value, bool) or not isinstance(value, int | float):
+            continue  # absent, or already refused by the type check
+        if value <= low or (high is not None and value > high):
+            bound = f"above {low}" if high is None else f"between {low} and {high}"
+            out.append(Problem(f"[{where}] {name}", f"is {value}, and it has to be {bound}: {why}."))
+    return out
+
+
+def _pair(table: dict, where: str, lower: str, upper: str, sentence: str) -> list[Problem]:
+    """Two numbers that are one judgment, in the order they have to be in."""
+    low_value, high_value = table.get(lower), table.get(upper)
+    if not all(isinstance(v, int | float) and not isinstance(v, bool)
+               for v in (low_value, high_value)):
+        return []
+    if low_value > high_value:
+        return [Problem(f"[{where}] {upper}", (
+            f"is {high_value} and `{lower}` is {low_value}. "
+            f"{sentence[0].upper()}{sentence[1:]}."))]
+    return []
+
+
+def _admin_numbers(pack: fmt.Pack) -> list[Problem]:
+    """`[admin]` as a pack file carries it."""
+    return admin_numbers(pack.table("admin"))
+
+
+def admin_numbers(table: dict) -> list[Problem]:
+    """`[admin]`'s counts, lengths and timeouts, and the two names in it that
+    have to be things this version has.
+
+    Takes the table rather than the pack for the reason `quality_numbers`
+    does: **one setting edited on the Configuration page is judged by exactly
+    the rules a pack file is judged by, in the same words.**
+    """
+    from fsmes.services.capabilities import BUILTIN_ROLES, CAPABILITIES
+
+    out = _ranges(table, "admin", ADMIN_RANGES)
+    out += _pair(table, "admin", "list_default_limit", "list_max_limit",
+                 "a caller cannot be given a bigger page by default than the "
+                 "biggest one it is allowed to ask for")
+
+    role = table.get("default_new_account_role")
+    if isinstance(role, str) and role not in BUILTIN_ROLES:
+        out.append(Problem("[admin] default_new_account_role", (
+            f"is {role!r}, which is not a role this product ships. It has: "
+            f"{', '.join(sorted(BUILTIN_ROLES))}. A plant's own roles are "
+            "created on the Admin screen and may be given to an account there; "
+            "the role every new account starts with is one of these, because "
+            "it is applied on a plant whose own roles may not exist yet.")))
+
+    needs = table.get("walkthrough_default_capability")
+    if isinstance(needs, str) and needs not in CAPABILITIES:
+        out.append(Problem("[admin] walkthrough_default_capability", (
+            f"is {needs!r}, which is not a capability this version has. A "
+            "walkthrough gated on a word nothing grants is a walkthrough "
+            "nobody can play.")))
+
+    style = table.get("document_house_style")
+    if isinstance(style, str) and not style.strip():
+        out.append(Problem("[admin] document_house_style", (
+            "is empty. Leave the key out to use the product's own structure; "
+            "writing nothing here would ask the model for a document with no "
+            "shape at all.")))
+    return out
+
+
+def _screens_numbers(pack: fmt.Pack) -> list[Problem]:
+    return screens_numbers(pack.table("screens"))
+
+
+def screens_numbers(table: dict) -> list[Problem]:
+    """`[screens]`'s cadences and page sizes."""
+    out = _ranges(table, "screens", SCREEN_RANGES)
+    out += _pair(table, "screens", "all_pages_limit", "all_pages_cap",
+                 "a screen cannot stop at fewer rows than it reads in one "
+                 "page; it would read the first page and call the list "
+                 "incomplete every time")
+    return out
+
+
+def _system_numbers(pack: fmt.Pack) -> list[Problem]:
+    return system_numbers(pack.table("system"))
+
+
+def system_numbers(table: dict) -> list[Problem]:
+    """`[system]`'s timeouts, log retention and model name."""
+    out = _ranges(table, "system", SYSTEM_RANGES)
+    model = table.get("local_model_name")
+    if isinstance(model, str) and not model.strip():
+        out.append(Problem("[system] local_model_name", (
+            "is empty. Leave the key out to use the model this product ships "
+            "with; naming no model would ask this plant's own machine for an "
+            "answer from nothing.")))
+    return out
+
+
 
 def _modules(pack: fmt.Pack) -> list[Problem]:
     out: list[Problem] = []

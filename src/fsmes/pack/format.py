@@ -507,6 +507,261 @@ SCHEMA: tuple[Section, ...] = (
             "own operators.",
             "MES_CONTROLS_OPC_ADJUSTMENT_POLL_SECONDS"),
     )),
+    Section("admin",
+            "What this plant asks of its own administration: the role a new "
+            "account starts with, how big an answer is, what one conversation "
+            "with a model may spend, and the shape a drafted document takes. "
+            "Every key here ships the value that was in the product's source, "
+            "so a plant that writes none of them behaves exactly as it does "
+            "now.", (
+        Key("default_new_account_role", "str",
+            "The role an account created without one is given. `operator` by "
+            "default. One plant onboards everyone as a viewer and grants "
+            "upward; another starts them on the floor. The role codes "
+            "themselves stay the product's, and a role this plant does not "
+            "have is refused rather than created.",
+            "MES_ADMIN_DEFAULT_NEW_ACCOUNT_ROLE"),
+        Key("list_default_limit", "int",
+            "How many rows a list endpoint returns when the caller asks for "
+            "no size. Fifty by default. Read once when the process starts, "
+            "because it is published in this plant's own OpenAPI document.",
+            "MES_ADMIN_LIST_DEFAULT_LIMIT"),
+        Key("list_max_limit", "int",
+            "The most rows a caller may ask one list for. Five hundred by "
+            "default, and it must not be below `list_default_limit`. Read "
+            "once when the process starts, for the same reason: it is the "
+            "ceiling this plant's OpenAPI document states, and a ceiling that "
+            "moved under a caller holding that document would make it a lie.",
+            "MES_ADMIN_LIST_MAX_LIMIT"),
+        Key("pending_approvals_page_size", "int",
+            "How many waiting items the Floor screen's approvals panel "
+            "answers with. Twenty by default. Its own number and not "
+            "`list_default_limit`: the panel has no pager, so item twenty-one "
+            "is simply not on the screen.",
+            "MES_ADMIN_PENDING_APPROVALS_PAGE_SIZE"),
+        Key("walkthrough_max_steps", "int",
+            "The most steps one recorded walkthrough may have. Sixty by "
+            "default. A plant with a ninety-step changeover procedure says so "
+            "here rather than being refused for a reason nothing outside it "
+            "cares about.",
+            "MES_ADMIN_WALKTHROUGH_MAX_STEPS"),
+        Key("walkthrough_title_chars", "int",
+            "How long one step's title may be before it is shortened. 120 by "
+            "default. It is the plant's own words being cut, which is why the "
+            "plant says where.",
+            "MES_ADMIN_WALKTHROUGH_TITLE_CHARS"),
+        Key("walkthrough_body_chars", "int",
+            "How long one step's explanation may be before it is shortened. "
+            "1000 by default.",
+            "MES_ADMIN_WALKTHROUGH_BODY_CHARS"),
+        Key("walkthrough_fill_chars", "int",
+            "How long a value a step types into a control may be. 200 by "
+            "default.",
+            "MES_ADMIN_WALKTHROUGH_FILL_CHARS"),
+        Key("walkthrough_tab_chars", "int",
+            "How long a step's tab or open-this name may be. 60 by default.",
+            "MES_ADMIN_WALKTHROUGH_TAB_CHARS"),
+        Key("walkthrough_default_capability", "str",
+            "The capability a recorded walkthrough asks of a viewer when "
+            "nobody says otherwise. `plant.read` by default. A plant that "
+            "wants every recording gated to at least `production.book` says "
+            "so once, here; the capability names themselves stay the "
+            "product's and one this version does not have is refused.",
+            "MES_ADMIN_WALKTHROUGH_DEFAULT_CAPABILITY"),
+        Key("agent_max_rounds", "int",
+            "How many turns the floor agent may take on one message before it "
+            "has to stop and say something. Twelve by default.",
+            "MES_ADMIN_AGENT_MAX_ROUNDS"),
+        Key("agent_session_ttl_seconds", "int",
+            "How long a conversation with the floor agent lives without a "
+            "message. Half an hour by default - a session lifetime exactly "
+            "like `token_ttl_seconds`, which is already the plant's.",
+            "MES_ADMIN_AGENT_SESSION_TTL_SECONDS"),
+        Key("agent_result_limit", "int",
+            "How many characters of one tool result the agent is shown. 6000 "
+            "by default; the rest is marked truncated rather than dropped "
+            "silently.",
+            "MES_ADMIN_AGENT_RESULT_LIMIT"),
+        Key("assistant_context_chars", "int",
+            "How much of the plant's own facts reach the local model when it "
+            "answers a question. 3000 characters by default. A plant running "
+            "a larger model on better hardware can afford more.",
+            "MES_ADMIN_ASSISTANT_CONTEXT_CHARS"),
+        Key("design_compress_budget", "int",
+            "How many characters the design chat's on-device summary of a "
+            "screen may run to. 2500 by default.",
+            "MES_ADMIN_DESIGN_COMPRESS_BUDGET"),
+        Key("design_compress_source_chars", "int",
+            "How much of a screen's text is handed to that summary in the "
+            "first place. 12000 by default.",
+            "MES_ADMIN_DESIGN_COMPRESS_SOURCE_CHARS"),
+        Key("design_source_budget", "int",
+            "How much of the screen's own source the design chat reads before "
+            "answering about it. 14000 characters by default.",
+            "MES_ADMIN_DESIGN_SOURCE_BUDGET"),
+        Key("assistant_timeout_seconds", "float",
+            "How long the floor assistant waits for the local model to answer "
+            "a question. 60 seconds by default. The six timeouts in this "
+            "table are named one per thing waited for, rather than left as "
+            "six anonymous numbers in five files: a plant on a slower GPU "
+            "raises all six, and can see which one it just raised.",
+            "MES_ADMIN_ASSISTANT_TIMEOUT_SECONDS"),
+        Key("drafting_timeout_seconds", "float",
+            "How long drafting a work instruction waits for the local model. "
+            "180 seconds by default - the longest of the six, because it is "
+            "the one writing prose.",
+            "MES_ADMIN_DRAFTING_TIMEOUT_SECONDS"),
+        Key("design_generate_timeout_seconds", "float",
+            "How long an ordinary design-chat generation waits. 120 seconds "
+            "by default.",
+            "MES_ADMIN_DESIGN_GENERATE_TIMEOUT_SECONDS"),
+        Key("design_classify_timeout_seconds", "float",
+            "How long the one-word question *is this a design question* "
+            "waits. 45 seconds by default, because it is the shortest thing "
+            "asked of the model anywhere.",
+            "MES_ADMIN_DESIGN_CLASSIFY_TIMEOUT_SECONDS"),
+        Key("design_compress_timeout_seconds", "float",
+            "How long an on-device compression of a screen waits. 90 seconds "
+            "by default.",
+            "MES_ADMIN_DESIGN_COMPRESS_TIMEOUT_SECONDS"),
+        Key("design_chat_timeout_seconds", "float",
+            "How long the design chat's own reply waits. 240 seconds by "
+            "default: it reads a screen's source and a conversation before it "
+            "starts writing.",
+            "MES_ADMIN_DESIGN_CHAT_TIMEOUT_SECONDS"),
+        Key("document_house_style", "str",
+            "The shape a drafted work instruction takes, as the instructions "
+            "handed to the model: a one-line Purpose, numbered Steps, a short "
+            "*If it fails*, six to ten steps, imperative, no preamble. A "
+            "plant whose quality system mandates Scope / Hazards / Steps / "
+            "Records writes its own here. **What is not in this key, and "
+            "cannot be:** the product always tells the model to use only the "
+            "facts given, to invent no tolerance or tool, and that an "
+            "operator is never told to adjust a reading toward the middle. "
+            "Those are product invariants, they are added to whatever this "
+            "says, and a plant cannot edit them away.",
+            "MES_ADMIN_DOCUMENT_HOUSE_STYLE"),
+        Key("ai_rollup_stale_hours", "int",
+            "How old a daily AI artifact gets before the panel calls it late. "
+            "Forty hours by default, which was chosen for one encrypted "
+            "laptop that is regularly off overnight; a plant's server that "
+            "never sleeps answers differently.",
+            "MES_ADMIN_AI_ROLLUP_STALE_HOURS"),
+    )),
+    Section("screens",
+            "The cadence and the page sizes this plant's own screens run at. "
+            "Everything in this table is read by the browser, which asks for "
+            "it once when a page loads, so a number saved here is in force on "
+            "the next page load and needs no rebuild and no restart. Every "
+            "key ships the literal that was in the JavaScript.", (
+        Key("floor_refresh_ms", "int",
+            "How often the Floor screen re-reads the plant, in milliseconds. "
+            "2000 by default, which was tuned against one plant on a switched "
+            "floor network; a plant on a thin WAN link answers differently.",
+            "MES_SCREENS_FLOOR_REFRESH_MS"),
+        Key("floor_pending_refresh_ms", "int",
+            "How often the Floor screen re-reads the approvals panel. 30000 "
+            "by default: this answer is per-caller and cannot be shared "
+            "between everybody watching, and a queue somebody signs off once "
+            "a week does not want a two-second poll.",
+            "MES_SCREENS_FLOOR_PENDING_REFRESH_MS"),
+        Key("admin_refresh_ms", "int",
+            "How often the Admin screen re-reads people and routings. 8000 by "
+            "default. A third number rather than a third opinion: it sits "
+            "beside the two above so a plant sets its three clocks in one "
+            "place, and they stay three because a screen watching machines "
+            "and a screen listing employees are not one cadence.",
+            "MES_SCREENS_ADMIN_REFRESH_MS"),
+        Key("floor_machine_page", "int",
+            "How many machine cards one page of the Floor grid shows. 24 by "
+            "default. The tiles above the grid still count the whole plant.",
+            "MES_SCREENS_FLOOR_MACHINE_PAGE"),
+        Key("floor_order_page", "int",
+            "How many work orders one page of the Floor card shows. 10 by "
+            "default.",
+            "MES_SCREENS_FLOOR_ORDER_PAGE"),
+        Key("floor_spec_choices", "int",
+            "How many characteristics the Floor screen's specification picker "
+            "offers before it says how many more there are. 200 by default.",
+            "MES_SCREENS_FLOOR_SPEC_CHOICES"),
+        Key("admin_user_page_size", "int",
+            "How many people one page of the Admin screen lists. 25 by "
+            "default. Three hundred employees is one plant's ordinary.",
+            "MES_SCREENS_ADMIN_USER_PAGE_SIZE"),
+        Key("admin_routing_page_size", "int",
+            "How many routings one page of the Admin screen lists. 25 by "
+            "default.",
+            "MES_SCREENS_ADMIN_ROUTING_PAGE_SIZE"),
+        Key("all_pages_limit", "int",
+            "How big each page is when a screen reads a whole bounded list "
+            "one page at a time. 500 by default.",
+            "MES_SCREENS_ALL_PAGES_LIMIT"),
+        Key("all_pages_cap", "int",
+            "How far such a read will go before it stops and says so. 2000 "
+            "rows by default. Nothing lies when it is met - the screen is "
+            "told the list is incomplete and says so - but a plant with three "
+            "thousand characteristics meets it every day.",
+            "MES_SCREENS_ALL_PAGES_CAP"),
+        Key("toast_ms", "int",
+            "How long a confirmation stays on screen, in milliseconds. 3500 "
+            "by default. How long a message lingers is an accessibility "
+            "answer a plant gives for its own people.",
+            "MES_SCREENS_TOAST_MS"),
+        Key("input_debounce_ms", "int",
+            "How long a screen waits for typing to settle before it searches. "
+            "250 by default.",
+            "MES_SCREENS_INPUT_DEBOUNCE_MS"),
+        Key("assistant_log_entries", "int",
+            "How many lines of the assistant's conversation survive a page "
+            "change. 60 by default.",
+            "MES_SCREENS_ASSISTANT_LOG_ENTRIES"),
+        Key("assistant_fill_attempts", "int",
+            "How many times a walkthrough looks again for a control that has "
+            "not appeared yet. 20 by default.",
+            "MES_SCREENS_ASSISTANT_FILL_ATTEMPTS"),
+        Key("assistant_fill_wait_ms", "int",
+            "How long it waits between those looks, in milliseconds. 150 by "
+            "default. Twenty attempts at 150 ms is three seconds, and the "
+            "plant's slowest PC is what the two of them are really about.",
+            "MES_SCREENS_ASSISTANT_FILL_WAIT_MS"),
+    )),
+    Section("system",
+            "This plant's own plumbing: how long the fleet console waits, how "
+            "much log history is kept, and which local model answers. "
+            "Decision 0035 section 2 keeps IT outside the role model, so "
+            "these have no capability and no workspace of their own - they "
+            "are listed on the Administration page and written by whoever "
+            "holds `users.manage`, which is already the only role that can "
+            "reach them.", (
+        Key("fleet_health_probe_timeout", "float",
+            "How long the fleet console waits for one plant to answer a "
+            "health check, in seconds. 3.0 by default: long enough for a "
+            "plant that is busy, short enough that a console polling a dozen "
+            "of them does not hang on the one that is off. Read once when the "
+            "console starts, because it is the console's number about every "
+            "plant it watches rather than any one plant's about itself.",
+            "MES_SYSTEM_FLEET_HEALTH_PROBE_TIMEOUT"),
+        Key("log_rotation_max_bytes", "int",
+            "How large one component's log file grows before it is rotated. "
+            "5,000,000 by default. Read once when the process starts: logging "
+            "is configured before this plant's database is open, so a value "
+            "saved on the screen is in force at the next restart and the "
+            "screen says so.",
+            "MES_SYSTEM_LOG_ROTATION_MAX_BYTES"),
+        Key("log_rotation_backups", "int",
+            "How many rotated log files are kept per component. Five by "
+            "default, so the shipped pair is twenty-five megabytes of history "
+            "- a retention policy, one file away from `tag_retention_days`, "
+            "which is already the plant's.",
+            "MES_SYSTEM_LOG_ROTATION_BACKUPS"),
+        Key("local_model_name", "str",
+            "Which model on this machine answers. `qwen3:8b` by default. "
+            "Which model drafts a plant's work instructions is the plant's "
+            "hardware and the plant's choice; it is already recorded on each "
+            "document as `drafted_by_model`, so nothing a record means "
+            "changes when this does.",
+            "MES_SYSTEM_LOCAL_MODEL_NAME"),
+    )),
     Section("floor", "The shop floor's own cadence, for a simulated plant.", (
         Key("inspect_every", "int", "Seconds between recorded quality checks.",
             "MES_OPS_INSPECT_EVERY"),

@@ -77,7 +77,11 @@ class UserIn(BaseModel):
     code: str
     name: str
     password: str
-    role: str = "operator"
+    role: str | None = None
+    """Left out means *this plant's own answer* - `[admin]
+    default_new_account_role`, which ships `operator`. It is not defaulted
+    here because a default written in two places is two answers, and this one
+    is the plant's."""
 
 
 @router.post("/users", status_code=201, dependencies=[require("users.manage")])

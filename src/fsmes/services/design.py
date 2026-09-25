@@ -41,8 +41,25 @@ from pathlib import Path
 STORE = Path(os.environ.get("MES_DESIGN_STORE")
              or Path.home() / ".local" / "share" / "fsmes" / "design.db")
 OLLAMA = "http://127.0.0.1:11434"
+#: The model this product ships with, and the default of `[system]
+#: local_model_name`. Every function that asks it takes the name, because this
+#: surface deliberately holds no plant session - the router reads the plant's
+#: answer in the one short read it opens and hands it over.
 LOCAL_MODEL = "qwen3:8b"
 CLAUDE_MODEL = "claude-opus-5"
+
+#: This chat's own budgets and timeouts, and the literals that were spread
+#: across five call sites in this file until the configuration audit named
+#: them: `[admin] design_compress_budget`, `design_compress_source_chars`,
+#: `design_source_budget`, and the four timeouts. Every default is the number
+#: that was there.
+COMPRESS_BUDGET = 2500
+COMPRESS_SOURCE_CHARS = 12000
+SOURCE_BUDGET = 14000
+GENERATE_TIMEOUT = 120.0
+CLASSIFY_TIMEOUT = 45.0
+COMPRESS_TIMEOUT = 90.0
+CHAT_TIMEOUT = 240.0
 
 # The web files that make each screen, so Claude can talk about what is
 # actually rendered rather than what it imagines might be.
@@ -157,14 +174,17 @@ def _ollama(path: str, payload: dict, timeout: float) -> dict | None:
         return None
 
 
-def local_generate(prompt: str, timeout: float = 120.0) -> str | None:
+def local_generate(prompt: str, timeout: float | None = None,
+                   model: str | None = None) -> str | None:
     out = _ollama("/api/generate",
-                  {"model": LOCAL_MODEL, "prompt": prompt,
-                   "stream": False, "think": False}, timeout)
+                  {"model": model or LOCAL_MODEL, "prompt": prompt,
+                   "stream": False, "think": False},
+                  GENERATE_TIMEOUT if timeout is None else timeout)
     return (out or {}).get("response", "").strip() or None
 
 
-def is_design_question(message: str) -> bool:
+def is_design_question(message: str, *, timeout: float | None = None,
+                      model: str | None = None) -> bool:
     """Design question, or an operator's question about running the plant?
 
     The on-device assistant answers the second kind well and for nothing. Only
@@ -180,7 +200,7 @@ def is_design_question(message: str) -> bool:
         "the current numbers are, what a procedure says.\n\n"
         f"Message: {message}\n\n"
         "Reply with one word, DESIGN or OPERATION.",
-        timeout=45.0)
+        timeout=CLASSIFY_TIMEOUT if timeout is None else timeout, model=model)
     if reply:
         return "DESIGN" in reply.upper()
     # Ollama down: assume design. This surface exists to be talked to about
@@ -188,20 +208,24 @@ def is_design_question(message: str) -> bool:
     return True
 
 
-def compress(text: str, what: str, budget: int = 2500) -> str:
+def compress(text: str, what: str, budget: int | None = None, *,
+             source_chars: int | None = None, timeout: float | None = None,
+             model: str | None = None) -> str:
     """Shrink a big page payload before it is sent anywhere.
 
     The local model earns its keep here: a floor screen's JSON is tens of
     kilobytes of repetition, and paying a frontier model to read all of it is
     a waste. Falls back to plain truncation, which is honest about what it did.
     """
+    budget = COMPRESS_BUDGET if budget is None else int(budget)
+    source_chars = COMPRESS_SOURCE_CHARS if source_chars is None else int(source_chars)
     if len(text) <= budget:
         return text
     summary = local_generate(
         f"Summarise this {what} from a manufacturing system for another "
         f"engineer. Keep concrete numbers, codes and counts - they are the "
-        f"point. No preamble, at most 200 words.\n\n{text[:12000]}",
-        timeout=90.0)
+        f"point. No preamble, at most 200 words.\n\n{text[:source_chars]}",
+        timeout=COMPRESS_TIMEOUT if timeout is None else timeout, model=model)
     if summary:
         return f"[summarised on-device from {len(text)} characters]\n{summary}"
     return text[:budget] + f"\n[...truncated from {len(text)} characters]"
@@ -209,8 +233,9 @@ def compress(text: str, what: str, budget: int = 2500) -> str:
 
 # ------------------------------------------------------------------- context
 
-def read_source(route: str, web_dir: Path, budget: int = 14000) -> str:
+def read_source(route: str, web_dir: Path, budget: int | None = None) -> str:
     """The code behind the screen, so suggestions can name real things."""
+    budget = SOURCE_BUDGET if budget is None else int(budget)
     files = SCREEN_SOURCE.get(route, ())
     chunks = []
     for name in files:
@@ -313,13 +338,21 @@ def ask_claude(system: str, messages: list[dict]) -> tuple[str, str]:
     return text.strip(), CLAUDE_MODEL
 
 
-def ask_local(system: str, messages: list[dict]) -> tuple[str, str]:
-    """The on-device model, when there is no key or Claude is unreachable."""
+def ask_local(system: str, messages: list[dict], *, timeout: float | None = None,
+              model: str | None = None) -> tuple[str, str]:
+    """The on-device model, when there is no key or Claude is unreachable.
+
+    Returns the model that answered rather than the one the product ships, so
+    a plant that changed `[system] local_model_name` sees its own name against
+    the reply and in the transcript.
+    """
     conversation = "\n\n".join(
         f"{'Scott' if m['role'] == 'user' else 'You'}: {m['content']}"
         for m in messages[-4:])
-    reply = local_generate(f"{system}\n\n{conversation}\n\nYou:", timeout=240.0)
-    return (reply or "Neither Claude nor the local model answered.", LOCAL_MODEL)
+    reply = local_generate(f"{system}\n\n{conversation}\n\nYou:",
+                           timeout=CHAT_TIMEOUT if timeout is None else timeout,
+                           model=model)
+    return (reply or "Neither Claude nor the local model answered.", model or LOCAL_MODEL)
 
 
 def claude_available() -> bool:
