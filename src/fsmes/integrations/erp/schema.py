@@ -319,8 +319,13 @@ FIELD_NOTES: dict[str, dict[str, FieldNote]] = {
         ),
         "priority": FieldNote(
             floor="Which order the dispatch list puts first; lower runs earlier.",
-            source="The ERP's priority, or 50 when the schedule does not say.",
-            absent="Never; the default is stated rather than left empty.",
+            source="The ERP's priority, exactly as the schedule gives it.",
+            absent="When the schedule does not say - which for an ERPNext Work Order is "
+                   "always, because that doctype has no priority field. The MES then "
+                   "gives the order the priority this plant chose for orders carrying "
+                   "none (`[erp] default_order_priority`, 50 unless the plant says "
+                   "otherwise). Null here means the ERP was silent, not that the order "
+                   "has no priority once it is in the MES.",
         ),
         "erp_reference": FieldNote(
             floor="The ERP's own key for this order, kept so every confirmation can carry "

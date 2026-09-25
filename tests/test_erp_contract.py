@@ -178,11 +178,18 @@ def test_a_refused_confirmation_dies_at_once_instead_of_retrying_for_an_hour(ses
     assert message.status is MessageStatus.SENT and message.error is None
 
 
-def test_backoff_grows_and_is_capped():
-    assert erp.backoff_seconds(1) == 5
-    assert erp.backoff_seconds(2) == 10
-    assert erp.backoff_seconds(4) == 40
-    assert erp.backoff_seconds(20) == erp.MAX_BACKOFF_SECONDS
+def test_backoff_grows_and_is_capped(session):
+    """The shape of the wait, on a plant that has configured nothing.
+
+    It takes a session because both numbers are the plant's since
+    2026-09-25 - `[erp] base_backoff_s` and `[erp] max_backoff_s` - and are
+    read through it. With no row and no compiled setting this is the literal
+    the product has always shipped, which is what this test pins.
+    """
+    assert erp.backoff_seconds(session, 1) == 5
+    assert erp.backoff_seconds(session, 2) == 10
+    assert erp.backoff_seconds(session, 4) == 40
+    assert erp.backoff_seconds(session, 20) == erp.MAX_BACKOFF_SECONDS
 
 
 def test_the_mock_erp_receives_both_kinds_through_the_rest_adapter(session, scope):

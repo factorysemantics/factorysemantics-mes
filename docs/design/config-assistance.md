@@ -154,9 +154,19 @@ row today — the downtime vocabulary.
    dropped: a workspace with one section and a workspace with one section and
    three switched off are different plants.
 
-One domain exists today, *engineering*. The rest of §2's six arrive as their
-first section does; naming a domain with nothing in it would serve a page that
-says nothing.
+Three domains exist today: *engineering* (#87 and the restructure above),
+*quality* (#97) and *supply chain* (2026-09-25). The rest of §2's six arrive
+as their first section does; naming a domain with nothing in it would serve a
+page that says nothing.
+
+**A domain does not have to invent a nav group.** Supply chain is the case
+that settled it: what it configures is the ERP link, and this product has no
+ERP screen - an order from the ERP lands in the order book and the outbox is a
+panel on Ops. So its one `Configuration` entry sits in the **Orders** group,
+beside the screens its settings are about, rather than in a group created to
+hold a settings page and nothing else. The rule stays *one Configuration entry
+per domain*; where that entry sits is wherever the domain's screens already
+are.
 
 
 ## 3. Three tiers
@@ -920,3 +930,69 @@ a running one is steered, and editing `plant.toml` and re-applying does not
 move a number the plant has taken ownership of. `fsmes pack status` reports
 the difference rather than resolving it, which is the same answer decision
 0022 gave about a routing an order has already run against.
+
+## 12. The second domain, and the first honest exception - 2026-09-25
+
+§11's claim was that a future section needs two lines. Supply chain is the
+test of it, and it held: five of its six sections are `edit_here=True` plus
+`erp.define`, and they needed no table, endpoint, migration or JavaScript of
+their own. What they did need was everything §11 does not cover, which is
+worth writing down because Process and Controls will meet the same two things.
+
+### A setting a *connector* applies, not a service
+
+Quality's eleven are read by services, which are handed the caller's session,
+so §11's "read through the caller's session" was the whole answer. Four of
+supply chain's are read by a **transport** - which order statuses to ask the
+ERP for, when a number read back is the number sent, how long to wait - and a
+transport is handed no unit of work **on purpose**: `integrations/erp/sync.py`
+keeps every database transaction short and never lets one span an HTTP call,
+so an adapter that opened a session to find out its own timeout would be the
+first thing to break that rule.
+
+So the worker reads them, not the adapter. `sync.cycle` builds a
+`services.erp.Policy` in one short transaction, closed before anything is
+sent, and hands it to the connector through an optional `configure` method -
+read off the object the way `check` already is, so a connector published on
+its own and written against the older port keeps the values it was built with
+and no cycle fails over a method nobody promised. A setting saved on the page
+is in force at the start of the next cycle: `MES_ERP_POLL_SECONDS`, five
+seconds by default, with nothing restarted.
+
+**The shape to reuse:** where the reader of a setting is an edge rather than a
+service, the answer is to carry the value to the edge from a caller that has a
+session, not to give the edge a database.
+
+### A setting that genuinely cannot be live, and says so
+
+`[erp] confirmation_seconds_tolerance` is read by `fsmes erp validate`, which
+reads a folder of files and **no database** - that is its contract, and a
+plant's ERP team runs it on a laptop that has never had an MES database on it.
+There is no session to read a live row through, so a box saying *in force the
+moment you save it* would have been false.
+
+It is a pack key and a setting with no `edit_here`, and it is the first
+section in this product to take that path. The page already had the words:
+*nobody - it changes when the pack is applied and the plant restarts*, which
+`config.js` kept on the day the live ones arrived precisely because "a setting
+that genuinely cannot move while a plant is running is a real thing a future
+section may be". It was.
+
+**The test to apply:** §11 asks whether anything stores the value a setting
+had at the moment it decided something. Ask a second question beside it -
+**is there a session where this value is read?** A no is not a reason to leave
+a judgment in the source; it is a reason for the row to say the other true
+sentence.
+
+### One audit row that was wrong, and what reading it settled
+
+S7 of the 2026-09-21 audit called this constant "arguably a bug rather than a
+new setting", because `incumbent.py` already reads a plant-supplied
+`tolerances` object it was never routed through. Reading both: they are two
+different comparisons. `incumbent.Mapping.tolerances` is the slack between
+this MES and an *incumbent MES's export*, and `scorecard.py` already reads it.
+`validate.py`'s constant is the slack between two numbers **inside one
+document this MES itself wrote**, and `fsmes erp validate` is handed no
+mapping at all. Nothing was missed; the audit row conflated them. The curated
+row says so now rather than the correction living only here.
+

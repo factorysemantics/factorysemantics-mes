@@ -206,6 +206,7 @@ def check(directory: Path, *, version: str = __version__) -> Report:
     problems += _identity(pack)
     problems += _coverage_floor(pack)
     problems += _quality_numbers(pack)
+    problems += _erp_numbers(pack)
     problems += _modules(pack)
     problems += _words(pack)
     files, file_problems, file_unknowns = _files(pack)
@@ -295,7 +296,7 @@ def _sections(pack: fmt.Pack) -> list[Problem]:
 
 
 _TYPES = {"str": str, "int": int, "float": (int, float), "bool": bool, "path": str,
-          "ints": list}
+          "ints": list, "strs": list}
 
 
 def _typed(where: str, key: fmt.Key, value) -> list[Problem]:
@@ -493,6 +494,127 @@ def quality_numbers(table: dict) -> list[Problem]:
         rules = table.get(name)
         if isinstance(rules, list):
             out += _rule_numbers(f"[quality] {name}", rules)
+    return out
+
+
+#: `[erp]` keys that are a count or a measurement, and the range each has to
+#: be in for the thing it decides to mean anything. Read exactly as
+#: `QUALITY_RANGES` is - `(low, high, why)`, `high` is None where the only
+#: wrong answer is a number at or below the floor - and every default the
+#: product ships is inside its own range, which a test holds.
+ERP_RANGES: dict[str, tuple[float, float | None, str]] = {
+    "max_attempts": (0, None,
+                     "a confirmation is offered at least once, or nothing is "
+                     "ever delivered and nothing is ever called dead"),
+    "base_backoff_s": (0, None,
+                       "a backoff is a wait, and a wait of nothing is a loop "
+                       "against an ERP that has just failed"),
+    "max_backoff_s": (0, None, "the ceiling on a wait is itself a wait"),
+    "float_rel_tol": (0, 1, "a relative agreement is a fraction of the number "
+                            "sent, so between nothing and the whole of it"),
+    "float_abs_tol": (0, None, "an absolute agreement is a positive amount"),
+    "http_timeout": (0, None, "a timeout is how long this plant waits, and "
+                              "waiting for no time is not trying"),
+    "rest_timeout": (0, None, "a timeout is how long this plant waits, and "
+                              "waiting for no time is not trying"),
+    "default_order_priority": (0, None,
+                               "priority is a positive number and lower is "
+                               "more urgent"),
+    "confirmation_seconds_tolerance": (0, None,
+                                       "a slack of nothing calls every file "
+                                       "wrong that carries whole seconds"),
+}
+
+
+def _erp_numbers(pack: fmt.Pack) -> list[Problem]:
+    """`[erp]`'s counts and measurements, as a pack file carries them."""
+    return erp_numbers(pack.table("erp"))
+
+
+def erp_numbers(table: dict) -> list[Problem]:
+    """`[erp]`'s counts and measurements, and the one pair that has to stay in
+    order.
+
+    Takes the table rather than the pack for the reason `quality_numbers`
+    does: **one setting edited on the Configuration page is judged by exactly
+    the rules a pack file is judged by, in the same words** - including the
+    pair, which can only be checked against the value the plant is already
+    running on for the other half.
+
+    Ranges rather than opinions. A plant that waits two minutes on its ERP, or
+    gives up after three attempts because somebody watches the outbox, is
+    answering its own question and is not second-guessed here.
+    """
+    out: list[Problem] = []
+
+    for name, (low, high, why) in ERP_RANGES.items():
+        value = table.get(name)
+        if value is None or isinstance(value, bool) or not isinstance(value, int | float):
+            continue  # absent, or already refused by the type check
+        if value <= low or (high is not None and value > high):
+            bound = f"above {low}" if high is None else f"between {low} and {high}"
+            out.append(Problem(f"[erp] {name}", f"is {value}, and it has to be {bound}: {why}."))
+
+    # The one pair. A first wait longer than the ceiling on a wait does not
+    # refuse anything - it quietly makes the ceiling the only wait there is,
+    # which is worse than being told.
+    base, ceiling = table.get("base_backoff_s"), table.get("max_backoff_s")
+    if (isinstance(base, int | float) and not isinstance(base, bool)
+            and isinstance(ceiling, int | float) and not isinstance(ceiling, bool)
+            and base > ceiling):
+        # Said under both names, not one. A pack file gets the same sentence
+        # twice for one mistake, which is a little noisy; the Configuration
+        # page keeps only the problems naming the key somebody just typed, so
+        # a pair reported under one name alone would let the other half of it
+        # be saved with nothing said.
+        said = (f"[erp] base_backoff_s is {base:g} and [erp] max_backoff_s is "
+                f"{ceiling:g}, so the first wait is already past the ceiling on a wait "
+                "and every attempt is the same distance apart. A backoff that never "
+                "backs off is a retry loop with extra words.")
+        out.append(Problem("[erp] base_backoff_s", said))
+        out.append(Problem("[erp] max_backoff_s", said))
+
+    statuses = table.get("open_statuses")
+    if isinstance(statuses, list):
+        out += _open_statuses(statuses)
+    return out
+
+
+def _open_statuses(statuses: list) -> list[Problem]:
+    """The ERP's own status names, as this plant writes them.
+
+    The words themselves are never judged: they are the ERP's vocabulary and
+    this MES does not hold a list of what ERPNext, SAP or Odoo may call a
+    status. What is judged is whether each one is a word at all, and whether
+    the list says anything - an empty list is *take no order in any status*,
+    which is a plant whose order book never fills, and is refused here rather
+    than discovered by a supervisor at the start of a shift.
+    """
+    out: list[Problem] = []
+    where = "[erp] open_statuses"
+    if not statuses:
+        out.append(Problem(where, (
+            "is empty, so no order in any status would ever be taken from the ERP and "
+            "the order book would never fill. Leave the key out to use what the product "
+            "ships (Not Started, In Process).")))
+        return out
+    seen: set[str] = set()
+    for item in statuses:
+        if not isinstance(item, str) or not item.strip():
+            out.append(Problem(where, (
+                f"holds {item!r}. It is a list of the ERP's own status names, each "
+                "written as the ERP writes it.")))
+            continue
+        if "," in item:
+            out.append(Problem(where, (
+                f"holds {item!r}, which has a comma in it. This list is carried to the "
+                "product as a comma-separated setting, so a status name with a comma "
+                "inside it cannot survive the trip and would arrive as two.")))
+        if item.strip() in seen:
+            out.append(Problem(where, (
+                f"names {item.strip()!r} twice. Once means the same thing, and a list a "
+                "person has to read twice is a list worth tidying.")))
+        seen.add(item.strip())
     return out
 
 

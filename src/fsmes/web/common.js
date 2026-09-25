@@ -38,6 +38,16 @@
     { group: "Orders", items: [
       { href: "/dashboard/orders", label: "Orders", cap: null },
       { href: "/dashboard/schedule", label: "Schedule", cap: null },
+      /* Supply chain's Configuration entry lives here rather than in a
+         group of its own. The domain is `supply_chain` and what it
+         configures is the ERP link - and this product has no ERP screen:
+         an order from the ERP lands in this order book, and the outbox is
+         a panel on Ops. Orders is the workspace those settings are about,
+         so a group holding one Configuration chip and nothing else would
+         have been a group invented for a settings page. §2a of
+         config-assistance.md allows exactly this: the domain gets one
+         Configuration entry, in the group its screens are already in. */
+      { href: "/dashboard/config/supply_chain", label: "Configuration", cap: null },
     ] },
     { group: "Quality", items: [
       { href: "/dashboard/quality", label: "Quality", cap: null },

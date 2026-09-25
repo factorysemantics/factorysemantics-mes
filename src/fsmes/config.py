@@ -202,6 +202,61 @@ class Settings(BaseSettings):
     erp_archive: Path = Path("erp_exchange/archive")
     erp_poll_seconds: float = 5.0
 
+    # --- What this plant asks of the link to its ERP ----------------------
+    # Every one of these was a literal in the source until the configuration
+    # audit of 2026-09-21 named it (rows S1-S4, S6 and S7), and **every
+    # default below is the literal that was there**, so a plant that writes
+    # none of them behaves exactly as it did. They arrive as `[erp]` keys in
+    # plant.toml; `fsmes pack check` validates their ranges.
+    #
+    # What is not here, deliberately: the ERP contract's own field names and
+    # shapes, and what the MES does with a refusal. Those are the product's -
+    # a plant that changed one would send a document meaning something nobody
+    # else means by it.
+    #
+    # The identical three retry numbers live again in `fsmes.services.uns`
+    # (audit row C8). They are not merged and must not be: the namespace
+    # broker on this site and the ERP across a VPN are two systems, two
+    # outages and two retry policies, and a plant that widened one because
+    # its ERP has a weekly maintenance window would not mean to widen the
+    # other.
+
+    # How many times one confirmation is offered before it is dead and a
+    # person decides, and the backoff between attempts.
+    erp_max_attempts: int = 8
+    erp_base_backoff_s: int = 5
+    erp_max_backoff_s: int = 3600
+
+    # Which ERP order statuses this MES will take an order in, as a comma
+    # list of the ERP's own words. ERPNext's vocabulary, which sites
+    # customise; the MES reading it as an order-release policy is what makes
+    # it the plant's.
+    erp_open_statuses: str = "Not Started,In Process"
+
+    # When a number the ERP hands back is the number that was sent. Frappe
+    # returns a Float rounded to the site's float precision, which is two
+    # decimals on some sites and four on others.
+    erp_float_rel_tol: float = 1e-3
+    erp_float_abs_tol: float = 0.01
+
+    # How long this plant waits on one request to a system it does not own.
+    erp_http_timeout: float = 30.0
+    erp_rest_timeout: float = 10.0
+
+    # The priority an ERP order that carries none inherits. Lower is more
+    # urgent. The ERPNext connector deliberately sends no priority, because
+    # inventing one at the edge would outrank this plant's own dispatch
+    # ordering with a number nobody set; this is where the number it gets
+    # instead is chosen.
+    erp_default_order_priority: int = 50
+
+    # The slack `fsmes erp validate` allows between `machine_seconds` and the
+    # time the step was open, in seconds. Read at start-up and not on the
+    # Configuration page: that command reads files and no database, so there
+    # is no session to read a live value through and nothing that could put
+    # one in force while it runs.
+    erp_confirmation_seconds_tolerance: float = 1.0
+
     # --- ERPNext (erp_mode=erpnext) ---------------------------------------
     # The bench serving this URL may host several sites; erpnext_site is sent
     # as the Host header to pick one. Leaving it empty uses the default site,

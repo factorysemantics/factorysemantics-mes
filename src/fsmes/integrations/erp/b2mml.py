@@ -77,14 +77,18 @@ def parse_production_schedule(xml_text: str) -> list[dict]:
         return node.text if node is not None else None
 
     for request in root.iter("ProductionRequest"):
-
+        # A document with no Priority element carries no priority, and says
+        # so. Reading 50 here was this MES's own number put into the schedule
+        # somebody else wrote; what an order carrying none inherits is the
+        # plant's, and `fsmes.services.erp.import_order` applies it.
+        priority = _text(request, "Priority")
         orders.append(
             {
                 "code": _text(request, "ID"),
                 "material": _text(request, "Product"),
                 "quantity": float(_text(request, "Quantity") or 0),
                 "due_date": _text(request, "DueDate"),
-                "priority": int(_text(request, "Priority") or 50),
+                "priority": None if priority is None or not priority.strip() else int(priority),
             }
         )
     return orders

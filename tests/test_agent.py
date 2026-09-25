@@ -455,9 +455,17 @@ def test_a_setting_is_offered_to_whoever_may_write_one_and_to_nobody_else():
     "you hold at least one of them" and the API decides the rest - and somebody
     who holds none of them never sees the tool, rather than being handed one
     that always refuses."""
+    from fsmes.services import plant_settings
+
     assert "write_plant_setting" not in agent.NEEDS
     assert agent.PER_CALL_NEEDS["write_plant_setting"]
-    assert agent.needs_any("write_plant_setting") == {"quality.define"}
+    # Read the same registry `needs_any` reads, not a fixed enumeration: this
+    # test would otherwise need editing every time another domain's settings
+    # go live, which is exactly the retrofit rule three exists to prevent.
+    live_defines = {section.define for section in plant_settings.live_sections()
+                    if section.define}
+    assert agent.needs_any("write_plant_setting") == live_defines
+    assert "quality.define" in live_defines
     assert agent.needs_any("record_check") is None
 
     engineer = {t["name"] for t in agent.catalogue({"plant.read", "quality.define"})}

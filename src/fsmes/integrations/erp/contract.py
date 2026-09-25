@@ -26,7 +26,18 @@ class ProductionRequest(BaseModel):
     material: str
     quantity: float
     due_date: datetime | None = None
-    priority: int = 50
+    priority: int | None = None
+    """What the ERP said this order's priority is, and `None` when the ERP
+    said nothing - which for an ERPNext Work Order is always, because that
+    doctype has no priority field.
+
+    `None` rather than 50 since 2026-09-25. Fifty was the MES's own answer
+    written into the border, so a request that had never carried a priority
+    and one that carried exactly fifty arrived here as the same document and
+    nothing downstream could tell them apart. What an order carrying none
+    inherits is this plant's decision (`[erp] default_order_priority`), and
+    `fsmes.services.erp.import_order` is where it is made.
+    """
     erp_reference: str | None = None
 
     @classmethod
@@ -41,11 +52,17 @@ class ProductionRequest(BaseModel):
         due = payload.get("due_date")
         if isinstance(due, str) and due.strip() == "":
             due = None
+        # An absent priority stays absent. `or` would have folded a real
+        # priority of zero in with a missing one, and zero is the most urgent
+        # number a plant that counts from one can write.
+        priority = payload.get("priority")
+        if isinstance(priority, str):
+            priority = priority.strip() or None
         return cls(
             code=str(code), material=str(material),
             quantity=float(payload.get("quantity") or 0),
             due_date=due,
-            priority=int(payload.get("priority") or 50),
+            priority=None if priority is None else int(priority),
             erp_reference=str(payload.get("erp_reference") or payload.get("id") or code),
         )
 

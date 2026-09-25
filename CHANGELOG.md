@@ -39,6 +39,56 @@ goes under Honesty with a migration line, so plant people can find it.
   anywhere near either tool, and nothing for one to do — a number that takes
   effect when it is saved has no pending state (decision 0035, rule three).
 
+- **Supply chain gets its Configuration page: what this plant asks of its ERP
+  link.** Ten `[erp]` keys, six sections, and a capability that had been named
+  since 2026-09-21 and used by nothing — `erp.define`. How many times a
+  confirmation is offered before a person has to look at it (8) and how long
+  this plant waits between attempts (5 s, doubling, capped at an hour); which
+  statuses its ERP puts an order in while it waits to be made (`Not Started`,
+  `In Process`); when a number the ERP hands back is the number that was sent
+  (a thousandth, or a hundredth of a unit); how long to wait on one request
+  (30 s for ERPNext, 10 s for plain REST); the priority an order arriving with
+  none inherits (50); and the slack `fsmes erp validate` allows between
+  `machine_seconds` and the time a step was open (1 s). **Every default is the
+  literal that was in the source, so a plant that writes none of these keys
+  behaves exactly as it did.** Nine of the ten are boxes you type in on
+  **Orders › Configuration**, gated on `erp.define`, audited, in force with no
+  restart. `fsmes pack check` reads them offline and refuses the same values
+  in the same sentences — a confirmation offered no times at all, an empty
+  list of open statuses, a first wait past the ceiling on a wait.
+
+  The nav entry sits in **Orders** rather than in a Supply chain group of its
+  own, because this product has no ERP screen: an order from the ERP lands in
+  the order book and the outbox is a panel on Ops, so a group holding one
+  Configuration chip and nothing else would have been a group invented for a
+  settings page.
+
+  Four of these are applied by the *connector* rather than by a service, and a
+  connector is handed no database session on purpose — the sync worker never
+  lets a transaction span an HTTP call. So the worker reads this plant's
+  policy once per cycle, in a transaction closed before anything is sent, and
+  hands it over. A change is in force at the start of the next cycle: five
+  seconds by default, with nothing restarted. A connector published on its own
+  and written against the older port takes no policy and behaves exactly as it
+  did.
+
+  One of the ten has no box, deliberately: `confirmation_seconds_tolerance` is
+  read by `fsmes erp validate`, which reads files and no database by design —
+  a plant's ERP team runs it on a shadow-mode outbox, often on a laptop that
+  has never had an MES database on it. Its row says what is true instead:
+  *nobody — it changes when the pack is applied and the plant restarts.* It is
+  the first section in this product to answer that way, and the page has had
+  the words for it since the day the live ones arrived.
+
+  The pack format grew a `strs` kind beside `ints` — a TOML array of words,
+  compiled to a comma-separated setting — because a list of the ERP's own
+  status names is a list in the same sense a list of rule numbers is. A status
+  name with a comma inside it is the one thing it cannot carry, and
+  `fsmes pack check` says so rather than splitting it into two.
+
+  No migration: the table these rows live in has been there since
+  2026-09-24.
+
 - **The assistant can draft the plant's own words, and never sign them.** Two
   agent tools that were missing while the API was already open to them:
   `draft_downtime_reason` and `draft_nc_severity`, with `downtime_reasons` and
@@ -334,6 +384,19 @@ goes under Honesty with a migration line, so plant people can find it.
   build-loop command: nothing in a plant runs it, and shadow mode refuses it.
 
 ### Changed
+
+- **An ERP order that carries no priority now says so.**
+  `ProductionRequest.priority` is `null` when the ERP sent nothing — which for
+  an ERPNext Work Order is always, since that doctype has no priority field —
+  rather than 50. Fifty was this MES's own answer written into the border, so
+  an order that had never carried a priority and one that carried exactly
+  fifty arrived as the same document. The MES applies
+  `[erp] default_order_priority` when it imports the order, which ships 50, so
+  **nothing about a plant that leaves that key alone changes** — and a plant
+  dispatching on a 1–9 scale can finally say what an ERP order should inherit.
+  The published JSON Schema and its field notes say this; anything reading
+  `priority` off a production request should read a null as *the ERP was
+  silent*, not as *no priority*.
 
 - **Eleven Quality settings move from the pack file to the plant's database,
   and the Configuration page edits them.** Scott, using the page: *"when I
