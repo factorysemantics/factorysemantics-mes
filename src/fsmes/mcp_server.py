@@ -156,11 +156,19 @@ def _call(plant: str, method: str, path: str, body: dict | None = None) -> Any:
     return r.json() if r.content else {"ok": True}
 
 
-def _write(plant: str, path: str, body: dict, dry_run: bool, would: str) -> dict:
+def _write(plant: str, path: str, body: dict, dry_run: bool, would: str, *,
+           method: str = "POST") -> dict:
+    """One write, previewed or performed, in the one shape every tool answers in.
+
+    `method` is a keyword because almost every write in this product is a POST
+    and the one that is not says so where it is called: putting a live setting
+    in force is a `PATCH` on the value that already exists, and a preview that
+    said POST would be describing a request nobody is going to send.
+    """
     if dry_run:
         return {"dry_run": True, "plant": plant, "would": would,
-                "request": {"method": "POST", "path": path, "body": body}}
-    result = _call(plant, "POST", path, body)
+                "request": {"method": method, "path": path, "body": body}}
+    result = _call(plant, method, path, body)
     if isinstance(result, dict) and "error" in result:
         return result
     out = {"done": would, "plant": plant, "response": result, "audited_as": AGENT_USER}
@@ -716,7 +724,7 @@ def _register_modules() -> list[str]:
 
 
 TOOL_MODULES: tuple[str, ...] = tuple(_register_modules())
-"""The modules whose tools this server registered, of the ten that ship one."""
+"""The modules whose tools this server registered, of the eleven that ship one."""
 
 
 def _allowed_hosts(host: str, port: int) -> list[str]:

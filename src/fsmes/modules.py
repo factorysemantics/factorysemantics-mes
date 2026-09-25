@@ -360,6 +360,10 @@ REGISTRY: tuple[Module, ...] = (
         # present: a plant that switches Quality off keeps the numbers it had
         # chosen, and they are what it reads again when Quality comes back.
         tables=("plant_settings",),
+        # Two tools for every domain's settings, for the same reason the table
+        # is here: one endpoint writes them all and reads the owning section
+        # per key, so a domain that becomes live needs no tool of its own.
+        tools=("fsmes.mcp.settings",),
     ),
 
     # -------------------------------------------------------- the modules

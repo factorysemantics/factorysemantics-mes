@@ -21,7 +21,11 @@ PAGE_FILES = {"/dashboard": "index.html", "/dashboard/quality": "quality.html",
               "/dashboard/station": "station.html", "/dashboard/orders": "orders.html",
               "/dashboard/maintenance": "maintenance.html",
               "/dashboard/reasons": "reasons.html",
-              "/dashboard/severities": "severities.html"}
+              "/dashboard/severities": "severities.html",
+              # One file serves every workspace's Configuration page and reads
+              # the workspace out of its own address, so the authored step
+              # names the template and the proposal fills it in.
+              "/dashboard/config/{domain}": "config.html"}
 
 
 
@@ -103,6 +107,17 @@ def scripted(monkeypatch, tmp_path):
             return {"done": f"draft the downtime reason {args['code']}", "audited_as": "AGENT",
                     "on_behalf_of": on_behalf_of,
                     "response": {"code": args["code"], "revision": 1, "status": "draft"}}
+        would = (f"set {args.get('key')} to {args.get('value')} in the "
+                 f"{args.get('domain')} configuration")
+        if name == "write_plant_setting" and dry_run:
+            return {"dry_run": True, "would": would,
+                    "request": {"method": "PATCH",
+                                "path": f"/dashboard/config/{args['domain']}/settings/{args['key']}",
+                                "body": {"value": args["value"]}}}
+        if name == "write_plant_setting":
+            return {"done": would, "audited_as": "AGENT", "on_behalf_of": on_behalf_of,
+                    "response": {"name": args["key"], "value": args["value"],
+                                 "is_default": False, "set_by": "AGENT"}}
         return {"machines": [{"code": "WASH01"}]}
 
     monkeypatch.setattr(agent, "_call_model", fake_model)
@@ -373,19 +388,35 @@ def test_no_key_means_off_with_a_reason(monkeypatch):
 
 # ------------------------------------------------------------- the surfaces
 
+def page_file(page: str) -> str:
+    """The file behind a step's page. A step may carry a query string - which
+    setting, which machine - and that is not part of which file serves it."""
+    return PAGE_FILES[page.split("?")[0]]
+
+
 def anchors_on(page: str) -> set[str]:
-    html = (WEB / PAGE_FILES[page]).read_text(encoding="utf-8")
-    return set(re.findall(r'data-assist="([^"]+)"', html))
+    """Every anchor a page actually has: the ones in its markup, and the ones
+    its own scripts put on controls they build. A page whose rows are drawn
+    from an API has no anchor in its HTML at all, and a check that only read
+    the HTML would call every one of those steps broken."""
+    html = (WEB / page_file(page)).read_text(encoding="utf-8")
+    found = set(re.findall(r'data-assist="([^"]+)"', html))
+    for script in re.findall(r'<script src="/static/([^"]+\.js)"', html):
+        source = (WEB / script).read_text(encoding="utf-8")
+        found |= set(re.findall(r'data-assist="([^"]+)"', source))
+        found |= set(re.findall(r'dataset\.assist\s*=\s*"([^"]+)"', source))
+    return found
 
 
 @pytest.mark.parametrize("tool", sorted(assistant.SURFACES))
 def test_every_surface_step_points_at_a_control_that_exists(tool):
     surface = assistant.SURFACES[tool]
     for i, step in enumerate([*surface["steps"], surface["evidence"]], 1):
-        assert step["page"] in PAGE_FILES, f"{tool} step {i}: unknown page {step['page']}"
+        assert step["page"].split("?")[0] in PAGE_FILES, (
+            f"{tool} step {i}: unknown page {step['page']}")
         assert step["anchor"] in anchors_on(step["page"]), (
             f"{tool} step {i} points at data-assist={step['anchor']!r} which "
-            f"{PAGE_FILES[step['page']]} does not have")
+            f"{page_file(step['page'])} does not have")
 
 
 @pytest.mark.parametrize("tool", sorted(assistant.SURFACES))
@@ -394,7 +425,7 @@ def test_every_page_a_walk_crosses_onto_carries_the_assistant(tool):
     that does not load it would take the person there and stop."""
     surface = assistant.SURFACES[tool]
     for step in [*surface["steps"], surface["evidence"]]:
-        html = (WEB / PAGE_FILES[step["page"]]).read_text(encoding="utf-8")
+        html = (WEB / page_file(step["page"])).read_text(encoding="utf-8")
         assert "/static/assist.js" in html, (
             f"{tool} walks to {step['page']}, which does not load assist.js")
 
@@ -403,8 +434,93 @@ def test_every_page_a_walk_crosses_onto_carries_the_assistant(tool):
 def test_every_surface_is_a_real_write_tool_with_a_known_capability(tool):
     names = {t.name for t in agent.registry_tools()}
     assert tool in names
-    assert assistant.SURFACES[tool]["needs"] in caps.CAPABILITIES
-    assert agent.NEEDS.get(tool) == assistant.SURFACES[tool]["needs"]
+    needs = assistant.SURFACES[tool]["needs"]
+    if needs is None:
+        # A surface whose capability is decided per call says so in one place
+        # and gives its reason there, and the one dict that cannot hold it does
+        # not pretend to: naming any single capability in NEEDS would be naming
+        # the wrong one for every other domain.
+        assert agent.PER_CALL_NEEDS.get(tool)
+        assert tool not in agent.NEEDS
+        assert agent.needs_any(tool) <= set(caps.CAPABILITIES)
+        assert agent.needs_any(tool), f"{tool} could be gated by nothing at all"
+    else:
+        assert needs in caps.CAPABILITIES
+        assert agent.NEEDS.get(tool) == needs
+
+
+def test_a_setting_is_offered_to_whoever_may_write_one_and_to_nobody_else():
+    """`write_plant_setting` is in no capability list, because there is no one
+    capability: it is the owning section's `define`, per key. So the offer is
+    "you hold at least one of them" and the API decides the rest - and somebody
+    who holds none of them never sees the tool, rather than being handed one
+    that always refuses."""
+    assert "write_plant_setting" not in agent.NEEDS
+    assert agent.PER_CALL_NEEDS["write_plant_setting"]
+    assert agent.needs_any("write_plant_setting") == {"quality.define"}
+    assert agent.needs_any("record_check") is None
+
+    engineer = {t["name"] for t in agent.catalogue({"plant.read", "quality.define"})}
+    assert "write_plant_setting" in engineer
+    # Reading is free, so the read tool is there either way.
+    viewer = {t["name"] for t in agent.catalogue({"plant.read"})}
+    assert "plant_settings" in viewer and "write_plant_setting" not in viewer
+
+
+def test_a_settings_walk_points_at_the_workspace_it_was_asked_about():
+    """One authored walk, every domain. The page carries the workspace and the
+    key it was asked about, and the words carry the section the key is listed
+    under - read from the registry the API reads, not written out per domain."""
+    s = assistant.surface_for("write_plant_setting",
+                              {"domain": "quality", "key": "cpk_capable", "value": "1.4"})
+    assert s["steps"][0]["page"] == "/dashboard/config/quality?setting=cpk_capable"
+    assert s["steps"][0]["anchor"] == "setting-in-focus"
+    assert s["steps"][0]["fill"] == {"value": "1.4"}
+    assert "Where a process is called capable" in s["steps"][0]["body"]
+    assert "[quality] cpk_capable" in s["steps"][0]["body"]
+    assert "quality.define" in s["steps"][1]["body"]
+    assert s["evidence"]["page"] == "/dashboard/config/quality?setting=cpk_capable"
+    # A key this version does not have still walks somewhere readable rather
+    # than raising on the way to the refusal the API is about to give.
+    blank = assistant.surface_for("write_plant_setting",
+                                  {"domain": "quality", "key": "not_a_key", "value": "1"})
+    assert blank["steps"][0]["page"] == "/dashboard/config/quality?setting=not_a_key"
+
+
+def test_a_setting_change_is_a_card_a_person_clicks_not_a_draft_to_sign(scripted):
+    """The same card `propose_adjustment` gets, for the same reason: the value is
+    in force the moment it is written, so it waits for a person rather than for
+    an approver. "Show me" has steps to walk, "Do it" runs it once on their
+    behalf, and the evidence afterwards is the box on the Configuration page."""
+    script, calls = scripted
+    script += [
+        response(block_tool("t1", "plant_settings", domain="quality"), stop="tool_use"),
+        response(block_text("It is 1.33, the product's default. I will set it to 1.4."),
+                 block_tool("t2", "write_plant_setting", domain="quality",
+                            key="cpk_capable", value="1.4"),
+                 stop="tool_use"),
+        response(block_text("Set: capable is now Cpk 1.4, in force now.")),
+    ]
+    sess = agent.open_session("R.OKON", "bottling", {"plant.read", "quality.define"})
+    out = agent.message(sess, "raise the capable Cpk bar to 1.4", name="R Okon", role="supervisor")
+
+    # The read ran free; the write was previewed and stopped.
+    assert out["kind"] == "proposals"
+    assert [c["dry_run"] for c in calls] == [None, True]
+    proposal = out["proposals"][0]
+    assert proposal["preview"]["request"]["method"] == "PATCH"
+    assert proposal["preview"]["request"]["body"] == {"value": "1.4"}
+    # Both buttons: "Do it" is always there, "Show me" needs steps to walk.
+    assert proposal["surface"]["steps"] and proposal["surface"]["evidence"]
+
+    done = agent.confirm(sess, proposal["id"])
+    assert done["kind"] == "reply"
+    written = [c for c in calls if c["dry_run"] is False]
+    assert len(written) == 1 and written[0]["name"] == "write_plant_setting"
+    assert written[0]["on_behalf_of"] == "R.OKON"
+    assert written[0]["client_ref"] == proposal["id"]
+    evidence = done["done"][0]["evidence"]
+    assert evidence["page"] == "/dashboard/config/quality?setting=cpk_capable"
 
 
 def test_surface_fills_come_from_the_proposal():

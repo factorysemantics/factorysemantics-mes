@@ -20,6 +20,14 @@ const { $, el, api } = window.FS;
    way machine.html reads a machine code out of its URL. */
 const DOMAIN = window.location.pathname.split("/").filter(Boolean).pop();
 
+/* One setting somebody was sent here for, named in the query string:
+   `?setting=cpk_capable`. The assistant's walk arrives this way, and so does
+   the "what is it now" link after a change is saved - both of them need to
+   point at one box on a page of them, and a path cannot say which. The box and
+   its section's Save carry an anchor the walk can find; a person who came here
+   by hand names no setting and sees exactly what they saw before. */
+const FOCUS = new URLSearchParams(window.location.search).get("setting");
+
 /* The header's live dot belongs to every screen, and a screen that never
    sets it says "connecting…" for as long as it is open. This page asks the
    server once, so the dot means exactly that: the list below came back. */
@@ -115,6 +123,7 @@ function valueCell(section) {
       field.setAttribute("aria-label", key.key);
       field.dataset.settingKey = key.name;
       field.title = key.about || key.key;
+      if (key.name === FOCUS) field.dataset.assist = "setting-in-focus";
       line.appendChild(field);
       line.append(" ");
       line.appendChild(el("code", "muted small", key.key));
@@ -140,6 +149,11 @@ function valueCell(section) {
 function saveRow(section, cell) {
   const row = el("div", "setting-save");
   const button = el("button", "small", "Save");
+  /* One Save per section, so it is this section's Save that a walk about one
+     of its keys has to end on. */
+  if (section.pack_keys.some((k) => k.name === FOCUS)) {
+    button.dataset.assist = "setting-save-in-focus";
+  }
   const said = el("span", "muted small");
   button.addEventListener("click", async () => {
     const fields = [...cell.querySelectorAll("input[data-setting-key]")];

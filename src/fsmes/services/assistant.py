@@ -433,7 +433,41 @@ GUIDE_BY_ID = {g["id"]: g for g in GUIDES}
 # person to the real button with the form already filled in; "Do it" runs the
 # tool and then walks them to the evidence. One mapping, both modes - and like
 # guides it is authored data, so the model never invents a selector.
+#
+# Two fields are allowed to vary per proposal, for the one tool that is not
+# about one screen. A step's `page`, `anchor` and `tab` are formatted with the
+# proposal's own arguments the way its `title` and `body` already were, so a
+# tool that serves every domain can point at the domain it was asked about;
+# and `needs` may be `None`, meaning the capability is decided per call and is
+# in `agent.PER_CALL_NEEDS` with its reason. `context` names a function that
+# adds values the steps may use beyond the arguments themselves, read from the
+# same registry the API reads.
 # --------------------------------------------------------------------------
+
+
+def _setting_context(args: dict) -> dict:
+    """What a settings proposal's steps know beyond their own arguments: the
+    section the key is listed under, and what kind of value it is. Looked up
+    per call from the registry, which is what makes one authored walk right for
+    every domain's settings instead of one walk per domain."""
+    from fsmes.services import plant_settings
+
+    try:
+        section, table, _schema = plant_settings.owner(args.get("domain") or "",
+                                                       args.get("key") or "")
+    except plant_settings.Unknown:
+        # The tool will be refused by the API for the same reason. A walk with
+        # blanks in it is better than a walk that raises on the way to saying so.
+        return {}
+    return {"section_label": section.label,
+            # The pack's own name for the key, which is the one name for a
+            # setting that the schema, `fsmes pack check` and the page all
+            # already agree on. The pack table is the section's, not the
+            # workspace's: they usually match and `[oee] coverage_floor` on an
+            # Engineering page is where they do not.
+            "pack_key": f"[{table}] {args.get('key')}",
+            "capability": section.define or "anybody who can see the screen"}
+
 
 SURFACES: dict[str, dict] = {
     "record_check": {
@@ -718,6 +752,59 @@ SURFACES: dict[str, dict] = {
                          "it on the Floor screen's Waiting for you panel."
                      )},
     },
+    # A setting, which is the other shape. The two walks above end at a draft
+    # somebody signs; this one ends at a number that is in force the moment
+    # Save is pressed, because nothing records the value that judged anything
+    # and there is nothing for a revision to protect (decision 0035, rule 3).
+    # So there is no approve step to point at, and no `approve` capability
+    # anywhere in it. One walk for every domain: the page is one file serving
+    # each workspace, and the step carries the workspace and the key it was
+    # asked about.
+    "write_plant_setting": {
+        "title": "Change one of this plant's own settings",
+        # Per call, from the section the key belongs to - see
+        # `agent.PER_CALL_NEEDS`. There is no one capability to name: the same
+        # tool writes a Quality number and, the day that section becomes live,
+        # an Engineering one.
+        "needs": None,
+        "context": _setting_context,
+        # The screen this walks onto, named the way its steps name it: one
+        # file serves every workspace, so it matches no single path and the
+        # example is offered wherever the rest of them are rather than first
+        # on one screen.
+        "pages": ["/dashboard/config/{domain}"],
+        # Quality is the only workspace with live settings today. It stays a
+        # true example when the next one arrives.
+        "example": "Set the Cpk bar for capable to 1.33",
+        "steps": [
+            {"page": "/dashboard/config/{domain}?setting={key}",
+             "anchor": "setting-in-focus",
+             "title": "The box this setting is changed in",
+             "fill": {"value": "{value}"},
+             "body": (
+                 "{section_label}, on the {domain} Configuration page. I have typed "
+                 "{value} into the box for {pack_key} - read it before you save, "
+                 "because there is no draft and nobody signs it after you."
+             )},
+            {"page": "/dashboard/config/{domain}?setting={key}",
+             "anchor": "setting-save-in-focus",
+             "title": "Press Save",
+             "body": (
+                 "You press it, not me - it is saved under your own name. It is in "
+                 "force on the next reading, everywhere, with no restart, and the "
+                 "audit trail keeps what it was so typing the old value back is the "
+                 "undo. Saving needs {capability}."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/config/{domain}?setting={key}",
+                     "anchor": "setting-in-focus",
+                     "title": "What your plant is set to now",
+                     "body": (
+                         "The box holds the value in force, and the line beside it "
+                         "says whether that is the product's default or this plant's "
+                         "own choice."
+                     )},
+    },
     "raise_corrective_maintenance": {
         "title": "Raise corrective work",
         "needs": "maintenance.perform",
@@ -758,16 +845,45 @@ def surface_for(tool: str, args: dict) -> dict | None:
     if surface is None:
         return None
     values = _Blank({k: v for k, v in args.items() if v is not None})
-    steps = []
-    for step in surface["steps"]:
-        rendered = {k: v for k, v in step.items() if k != "fill"}
-        rendered["title"] = step["title"].format_map(values)
-        rendered["body"] = step["body"].format_map(values)
-        if "fill" in step:
-            value = step["fill"]["value"].format_map(values)
-            rendered["fill"] = {"value": value or step["fill"].get("default", "")}
-        steps.append(rendered)
-    return {"title": surface["title"], "steps": steps, "evidence": dict(surface["evidence"])}
+    context = surface.get("context")
+    if context is not None:
+        values.update({k: v for k, v in context(args).items() if v is not None})
+    steps = [_render(step, values) for step in surface["steps"]]
+    return {"title": surface["title"], "steps": steps,
+            "evidence": _render(surface["evidence"], values)}
+
+
+def _render(step: dict, values: dict) -> dict:
+    """One authored step with this proposal's values in it.
+
+    `page`, `anchor` and `tab` are formatted along with the words, so a tool
+    that serves every domain can point at the one it was asked about. An
+    authored step that names no placeholder is unchanged by this.
+    """
+    rendered = {k: v for k, v in step.items() if k != "fill"}
+    for field in ("title", "body", "page", "anchor", "tab"):
+        if field in step:
+            rendered[field] = step[field].format_map(values)
+    if "fill" in step:
+        value = step["fill"]["value"].format_map(values)
+        rendered["fill"] = {"value": value or step["fill"].get("default", "")}
+    return rendered
+
+
+def may_propose(tool: str, capabilities: set[str]) -> bool:
+    """Whether this person could have this surface's tool used on their behalf.
+
+    One capability for almost every surface. `needs: None` means it is decided
+    per call, and then the question is whether they hold any of the capabilities
+    that could gate one - the same question the tool catalogue asks, asked in
+    one place so the panel and the catalogue cannot disagree.
+    """
+    needs = SURFACES[tool]["needs"]
+    if needs is not None:
+        return needs in capabilities
+    from fsmes.services import agent
+
+    return bool((agent.needs_any(tool) or set()) & capabilities)
 
 
 def suggestions(screen: str | None, capabilities: set[str], names: dict) -> list[str]:
@@ -781,7 +897,7 @@ def suggestions(screen: str | None, capabilities: set[str], names: dict) -> list
     fallback = _Blank({"machine": "a machine", "characteristic": "a check", "mid": "a value",
                        "order": "an order", "planned_order": "the next planned order", "lot": "a lot",
                        "material": "a material"})
-    allowed = [s for s in SURFACES.values() if s["needs"] in capabilities]
+    allowed = [s for tool, s in SURFACES.items() if may_propose(tool, capabilities)]
     here = sorted((s for s in allowed if screen in s.get("pages", [])), key=lambda s: s["pages"].index(screen))
     elsewhere = [s for s in allowed if s not in here]
     out: list[str] = []

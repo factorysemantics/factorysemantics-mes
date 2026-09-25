@@ -12,6 +12,33 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **One tool for every domain's live settings, not one per domain.** Two agent
+  tools: `plant_settings(plant, domain)` reads a whole Configuration workspace
+  — every setting a plant owns, what it is set to, whether that is the
+  product's default or this plant's own choice, what kind of value it is, and
+  the capability a write is gated on, with both totals (thirteen keys across
+  eleven sections in Quality, because two of those sections are one judgment
+  written as two numbers). `write_plant_setting(plant, domain, key, value)`
+  puts one value in force through the same
+  `PATCH /dashboard/config/{domain}/settings/{key}` a person's Save uses.
+  Neither knows a domain's name: both read the `ConfigSection` registry the
+  Configuration page reads, so **a section that becomes live is reachable
+  through the assistant with no tool written for it** — Quality's thirteen keys
+  today, the next domain's the moment its handoff lands. `dry_run` previews the
+  exact `PATCH` and sends nothing; `on_behalf_of` puts the person's name beside
+  the agent's in the audit trail; `client_ref` makes a double click one write.
+  Nothing is validated twice — a value the pack checker refuses (a marginal Cpk
+  bar at or above the capable one, judged against the bar this plant is
+  actually running on) and a caller whose role does not grant the owning
+  section's `define` both come back as the sentence the API answered with.
+  In the floor assistant it is `propose_adjustment`'s card, not
+  `draft_nc_severity`'s: there is no draft and nobody signs it, so it waits for
+  a click. **Show me** opens the owning workspace's Configuration page with the
+  box filled in and stops in front of Save; **Do it** writes it and walks back
+  to the same box to show the value in force. There is no approve capability
+  anywhere near either tool, and nothing for one to do — a number that takes
+  effect when it is saved has no pending state (decision 0035, rule three).
+
 - **The assistant can draft the plant's own words, and never sign them.** Two
   agent tools that were missing while the API was already open to them:
   `draft_downtime_reason` and `draft_nc_severity`, with `downtime_reasons` and

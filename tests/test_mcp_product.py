@@ -426,3 +426,148 @@ def test_a_repeated_vocabulary_draft_with_one_client_ref_runs_once(wired):
     assert first["response"] == again["response"]
     rows = [r for r in mcp_server.downtime_reasons("testplant")["reasons"] if r["code"] == "wash_cip"]
     assert len(rows) == 1 and rows[0]["revisions"] == 1
+
+
+# ------------------------------------- the settings a plant owns, any domain
+
+def test_the_agent_reads_every_live_setting_in_a_workspace_with_its_total(wired):
+    """One read for a whole workspace: what each setting is, what it is set to,
+    and which capability writes it. The gate is named per key rather than per
+    tool because it is the owning section's, which is what lets two tools serve
+    every domain there will ever be."""
+    out = mcp_server.plant_settings("testplant", "quality")
+    assert out["domain"] == "quality" and out["workspace"] == "Quality"
+    # Eleven sections, thirteen keys: two of those sections are one judgment
+    # written as two numbers. Both totals are said, because a screen that reads
+    # "eleven settings" and a list of thirteen rows is a screen nobody trusts.
+    assert out["total"] == len(out["settings"]) == 13
+    assert out["sections"] == 11
+    by_name = {s["name"]: s for s in out["settings"]}
+    capable = by_name["cpk_capable"]
+    assert capable["value"] == "1.33" and capable["kind"] == "float"
+    assert capable["is_default"] is True and capable["set_by"] is None
+    assert capable["needs"] == "quality.define" and capable["agent_may_write"] is True
+    assert capable["section"] == "cpk_bars"
+    assert by_name["hold_rules"]["kind"] == "ints" and by_name["hold_rules"]["value"] == "1,2,3,4"
+    # The other half of the list, stated even while nothing is in it: a key a
+    # workspace shows and nothing can change while the plant runs.
+    assert out["not_written_here_total"] == len(out["not_written_here"])
+
+
+def test_the_same_two_tools_answer_for_a_workspace_with_nothing_live_in_it(wired):
+    """Engineering has a Configuration page and no live settings yet. Nothing
+    domain-specific is asked of either tool, so the honest answer is a workspace
+    with a total of nothing - not an error, and not a guess."""
+    out = mcp_server.plant_settings("testplant", "engineering")
+    assert out["domain"] == "engineering" and out["total"] == 0
+
+    refused = mcp_server.write_plant_setting("testplant", "engineering",
+                                             key="cpk_capable", value="1.4")
+    assert "error" in refused and "404" in refused["error"]
+    assert "engineering" in refused["error"]
+
+
+def test_a_workspace_this_version_does_not_have_is_refused_by_name(wired):
+    out = mcp_server.plant_settings("testplant", "atlantis")
+    assert "error" in out and "404" in out["error"]
+    # The refusal lists what there is, so finding out is asking rather than guessing.
+    assert "engineering" in out["error"] and "quality" in out["error"]
+
+
+def test_a_dry_run_setting_write_previews_a_patch_and_changes_nothing(wired):
+    preview = mcp_server.write_plant_setting("testplant", "quality", key="cpk_capable",
+                                             value="1.5", dry_run=True)
+    assert preview["dry_run"] is True and "done" not in preview
+    assert preview["request"]["method"] == "PATCH"
+    assert preview["request"]["path"] == "/dashboard/config/quality/settings/cpk_capable"
+    assert preview["request"]["body"] == {"value": "1.5"}
+    assert "1.5" in preview["would"] and "cpk_capable" in preview["would"]
+    still = mcp_server.plant_settings("testplant", "quality")
+    assert next(s for s in still["settings"] if s["name"] == "cpk_capable")["value"] == "1.33"
+
+
+def test_a_setting_written_for_somebody_is_in_force_at_once_and_audited(wired, session):
+    """No draft and nothing to sign: the next read is the new value. The write
+    is the agent's, for the person who asked for it, and the audit row keeps
+    what it was so typing the old number back is the undo."""
+    auth.create_user(session, code="R.OKON", name="R Okon", password="x", role="supervisor")
+    session.flush()
+    done = mcp_server.write_plant_setting("testplant", "quality", key="cpk_capable",
+                                          value="1.5", on_behalf_of="r.okon")
+    assert done.get("audited_as") == "AGENT" and done.get("on_behalf_of") == "R.OKON", done
+    assert done["response"]["value"] == "1.5" and done["response"]["is_default"] is False
+    assert done["response"]["set_by"] == "AGENT"
+
+    now = mcp_server.plant_settings("testplant", "quality")
+    assert next(s for s in now["settings"] if s["name"] == "cpk_capable")["value"] == "1.5"
+
+    trail = mcp_server.audit("testplant", actor="AGENT")["audit"]
+    row = next(e for e in trail if e["action"] == "plant_setting.set")
+    assert row["on_behalf_of"] == "R.OKON" and row["entity_id"] == "[quality] cpk_capable"
+    assert row["after"]["value"] == "1.5"
+    # `before` is null and not "1.33": this plant had no row for the key, so
+    # the product's default was standing. Writing the shipped number in as the
+    # value somebody changed would be inventing a decision nobody made.
+    assert row["before"] is None
+
+    # The second write has a before, because now there is one.
+    mcp_server.write_plant_setting("testplant", "quality", key="cpk_capable", value="1.6")
+    trail = mcp_server.audit("testplant", actor="AGENT")["audit"]
+    again = next(e for e in trail if e["action"] == "plant_setting.set")
+    assert again["before"]["value"] == "1.5" and again["after"]["value"] == "1.6"
+
+
+def test_a_value_the_checker_refuses_comes_back_as_the_plants_own_sentence(wired):
+    """A marginal Cpk bar above the capable one is not a crash and not a silent
+    save: it is the sentence `fsmes pack check` prints for the same value in a
+    file, judged against the capable bar this plant is actually running on."""
+    out = mcp_server.write_plant_setting("testplant", "quality", key="cpk_marginal", value="1.5")
+    assert "error" in out and "422" in out["error"]
+    assert "marginal" in out["error"]
+    unchanged = mcp_server.plant_settings("testplant", "quality")
+    assert next(s for s in unchanged["settings"] if s["name"] == "cpk_marginal")["value"] == "1.0"
+
+
+def test_a_value_that_is_not_the_kind_of_thing_at_all_is_refused_too(wired):
+    out = mcp_server.write_plant_setting("testplant", "quality", key="spc_min_points",
+                                         value="a dozen")
+    assert "error" in out and "422" in out["error"] and "whole number" in out["error"]
+
+
+def test_a_setting_is_refused_when_the_role_does_not_grant_its_sections_capability(wired, session):
+    """The gate is the section's, so the refusal names the section's capability
+    and not this endpoint's - there is no such thing as this endpoint's."""
+    from sqlalchemy import select
+
+    from fsmes.domain import Role
+    role = session.scalar(select(Role).where(Role.code == "agent"))
+    role.capabilities = json.dumps([c for c in role.granted() if c != "quality.define"])
+    session.flush()
+
+    out = mcp_server.write_plant_setting("testplant", "quality", key="cpk_capable", value="1.4")
+    assert "error" in out and "403" in out["error"] and "quality.define" in out["error"]
+    # Reading is free: losing the capability to write one does not hide it.
+    listed = mcp_server.plant_settings("testplant", "quality")
+    assert listed["total"] == 13
+    assert all(s["agent_may_write"] is False for s in listed["settings"])
+
+
+def test_a_repeated_setting_write_with_one_client_ref_runs_once(wired):
+    """A double click on the proposal card writes one audit row, not two."""
+    first = mcp_server.write_plant_setting("testplant", "quality", key="spc_min_points",
+                                           value="20", client_ref="ref-min-points")
+    again = mcp_server.write_plant_setting("testplant", "quality", key="spc_min_points",
+                                           value="20", client_ref="ref-min-points")
+    assert first["response"] == again["response"]
+    trail = mcp_server.audit("testplant", actor="AGENT")["audit"]
+    rows = [e for e in trail if e["entity_id"] == "[quality] spc_min_points"]
+    assert len(rows) == 1
+
+
+def test_there_is_no_tool_that_approves_a_setting(wired):
+    """There is nothing to approve. A number in force the moment it is saved
+    has no pending state (decision 0035, rule three), so an approve tool here
+    would be a tool for a step that does not exist."""
+    names = {tool.name for tool in asyncio.run(mcp_server.mcp.list_tools())}
+    assert "write_plant_setting" in names and "plant_settings" in names
+    assert not [n for n in names if "setting" in n and "approve" in n]

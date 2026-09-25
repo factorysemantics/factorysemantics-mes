@@ -100,6 +100,39 @@ NEEDS: dict[str, str] = {
     "add_calendar_exception": "scheduling.plan",
 }
 
+#: Write tools whose capability is not one word, and why each is not in
+#: `NEEDS`. `NEEDS` is one capability per tool, read when the catalogue is
+#: built and before any argument exists; `write_plant_setting` is gated by the
+#: `define` of the `ConfigSection` the key belongs to, which is a property of
+#: an argument rather than of the tool. Naming any one capability here would
+#: be naming the wrong one for every other domain, so the tool is deliberately
+#: absent from `NEEDS` and listed here with the reason, and it is gated twice
+#: instead: offered only to somebody who holds at least one capability that
+#: could gate a setting (`needs_any` below), and refused key by key at the
+#: API, which reads the owning section exactly the same way.
+PER_CALL_NEEDS: dict[str, str] = {
+    "write_plant_setting":
+        "the capability is the `define` of the ConfigSection the key belongs "
+        "to - one tool serves every domain's live settings and no single "
+        "capability gates them all, so it is read per call from the registry",
+}
+
+
+def needs_any(tool: str) -> set[str] | None:
+    """For a tool in `PER_CALL_NEEDS`, the capabilities any one of which could
+    gate a call to it. `None` for every other tool, which is what tells the
+    catalogue that `NEEDS` is the whole answer.
+
+    Read from the registry the API reads, not written out again here, so the
+    next domain whose section becomes live is covered without a code change.
+    """
+    if tool not in PER_CALL_NEEDS:
+        return None
+    from fsmes.services import plant_settings
+
+    return {section.define for section in plant_settings.live_sections()
+            if section.define}
+
 SYSTEM = """You are the assistant inside FactorySemantics MES, a manufacturing execution system, \
 helping the person signed in at plant "{plant}".
 
@@ -240,6 +273,13 @@ def catalogue(capabilities: set[str]) -> list[dict]:
         write = "dry_run" in props
         need = NEEDS.get(tool.name)
         if need and need not in capabilities:
+            continue
+        # A tool whose capability is decided per call is offered to somebody
+        # who could write at least one setting, and refused at the API for any
+        # key they may not write. Offering it to somebody who holds none of
+        # them would be offering a tool that always refuses.
+        any_of = needs_any(tool.name)
+        if any_of is not None and not (any_of & capabilities):
             continue
         for hidden in ("plant", "dry_run", "on_behalf_of", "client_ref"):
             props.pop(hidden, None)

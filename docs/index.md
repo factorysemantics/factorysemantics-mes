@@ -45,7 +45,7 @@ Apache-2.0. Pre-alpha, running simulated plants only (as of 2026-09-07).
 </div>
 
 **Agents** get their own book: [connect an MCP client](agents/connect-mcp-client.md),
-the [89 tools](reference/tools.md), and [why every write takes `dry_run`](agents/write-discipline.md).
+the [95 tools](reference/tools.md), and [why every write takes `dry_run`](agents/write-discipline.md).
 
 ## Install
 
