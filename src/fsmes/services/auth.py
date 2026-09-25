@@ -167,10 +167,23 @@ def has_role(role: str, required: str) -> bool:
 
 
 def create_user(
-    session: Session, *, code: str, name: str, password: str, role: str = "operator", actor: str = "system"
+    session: Session, *, code: str, name: str, password: str, role: str | None = None,
+    actor: str = "system"
 ) -> Person:
-    from fsmes.domain import Role as RoleModel
+    """Make an account. `role=None` means *the role this plant starts people on*.
 
+    `None` rather than `"operator"`: one plant onboards everyone as a viewer
+    and grants upward, another starts them on the floor, and the literal that
+    was here decided it for both of them. `[admin] default_new_account_role`
+    is that answer, read through `fsmes.services.plant_settings` - the row this
+    plant's administrator saved, then the setting its pack compiled, then
+    `operator`, which is what this was before the setting existed.
+    """
+    from fsmes.domain import Role as RoleModel
+    from fsmes.services import plant_settings
+
+    if role is None:
+        role = str(plant_settings.setting(session, "admin", "default_new_account_role"))
     known = {r.code for r in session.scalars(select(RoleModel))} or set(ROLES)
     if role not in known:
         raise Invalid(f"unknown role {role!r} (expected one of {', '.join(sorted(known))})")

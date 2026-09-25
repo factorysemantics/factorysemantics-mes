@@ -103,8 +103,12 @@ def ask(body: AskIn, user: UserDep) -> dict:
         role = auth.current_role(db, user) or user["role"]
         capabilities = auth.capabilities_for(db, role)
         guides = assistant.visible_guides(capabilities, db)
+        timeout = _model_timeout(db, "assistant_timeout_seconds")
+        model = _local_model(db)
+        context_chars = _context_chars(db)
 
-    guide = assistant.route(body.question, capabilities, guides=guides)
+    guide = assistant.route(body.question, capabilities, guides=guides,
+                            timeout=timeout, model=model)
     if guide:
         return {
             "kind": "guide",
@@ -117,7 +121,9 @@ def ask(body: AskIn, user: UserDep) -> dict:
         facts = _facts(db, capabilities)
     return {
         "kind": "answer",
-        "say": assistant.answer(body.question, facts, capabilities),
+        "say": assistant.answer(body.question, facts, capabilities,
+                                context_chars=context_chars, timeout=timeout,
+                                model=model),
     }
 
 
@@ -150,6 +156,40 @@ def _ensure_local() -> str:
         agent.serve_locally(plant, f"http://{host}:{settings.api_port}")
         _local_ready = True
     return plant
+
+
+def _agent_budget(db) -> dict:
+    """What one conversation with the floor agent may spend on this plant -
+    `[admin] agent_max_rounds`, `agent_session_ttl_seconds` and
+    `agent_result_limit`, in the shape `agent.open_session` takes them."""
+    from fsmes.services import plant_settings
+
+    return {
+        "max_rounds": int(plant_settings.setting(db, "admin", "agent_max_rounds")),
+        "ttl": int(plant_settings.setting(db, "admin", "agent_session_ttl_seconds")),
+        "result_limit": int(plant_settings.setting(db, "admin", "agent_result_limit")),
+    }
+
+
+def _model_timeout(db, key: str) -> float:
+    """One of this plant's six local-model timeouts."""
+    from fsmes.services import plant_settings
+
+    return float(plant_settings.setting(db, "admin", key))
+
+
+def _local_model(db) -> str:
+    """Which model on this machine answers - `[system] local_model_name`."""
+    from fsmes.services import plant_settings
+
+    return str(plant_settings.setting(db, "system", "local_model_name"))
+
+
+def _context_chars(db) -> int:
+    """How much of this plant's own facts reach the model."""
+    from fsmes.services import plant_settings
+
+    return int(plant_settings.setting(db, "admin", "assistant_context_chars"))
 
 
 def _who(db, user: dict) -> tuple[str, set[str], str]:
@@ -223,7 +263,15 @@ def agent_message(body: AgentIn, user: UserDep) -> dict:
     with deps.short_read() as db:
         role, capabilities, name = _who(db, user)
         guides = assistant.visible_guides(capabilities, db)
-    guide = assistant.route(body.message, capabilities, guides=guides)
+        # This plant's own numbers, read in the short session that is already
+        # open and carried past it: everything after this line may call a
+        # model, and a session held across one holds SQLite's single write
+        # lock across it too.
+        budget = _agent_budget(db)
+        timeout = _model_timeout(db, "assistant_timeout_seconds")
+        model = _local_model(db)
+    guide = assistant.route(body.message, capabilities, guides=guides,
+                            timeout=timeout, model=model)
     if guide:
         return {
             "kind": "guide", "session": body.session,
@@ -231,7 +279,8 @@ def agent_message(body: AgentIn, user: UserDep) -> dict:
             "say": f"I can walk you through it — {guide['title'].lower()}. {len(guide['steps'])} steps.",
         }
     plant = _ensure_local()
-    sess = agent.get_session(body.session, user["sub"]) or agent.open_session(user["sub"], plant, capabilities)
+    sess = (agent.get_session(body.session, user["sub"])
+            or agent.open_session(user["sub"], plant, capabilities, **budget))
     return agent.message(sess, body.message, name=name, role=role)
 
 

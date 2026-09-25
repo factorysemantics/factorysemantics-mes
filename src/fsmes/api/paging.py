@@ -23,13 +23,34 @@ from sqlalchemy.sql import Select
 
 T = TypeVar("T")
 
+def _bounds() -> tuple[int, int]:
+    """This plant's page default and its ceiling, read once as this module is
+    imported.
+
+    **Read at start-up, and not live like the rest of `[admin]`.** These two
+    numbers are not only used - they are *published*: they are the default and
+    the `le=` bound of every list endpoint in this plant's own OpenAPI
+    document, which a client reads once and holds. A ceiling that moved under
+    a caller holding that document would make the document a lie, which is the
+    same class of thing as a truncated list presented as a whole one. So the
+    plant states them in its pack, the process reads them when it starts, and
+    Setup > Configuration says so rather than offering an input that would
+    only half work.
+    """
+    from fsmes.config import get_settings
+
+    settings = get_settings()
+    return settings.admin_list_default_limit, settings.admin_list_max_limit
+
+
 # A page nobody asked to size. Big enough that a shift's work fits, small
-# enough that no screen ever ships megabytes by accident.
-DEFAULT_LIMIT = 50
-MAX_LIMIT = 500
+# enough that no screen ever ships megabytes by accident. `[admin]
+# list_default_limit` and `list_max_limit`; fifty and five hundred by default,
+# which is what was written here.
+DEFAULT_LIMIT, MAX_LIMIT = _bounds()
 
 LimitQuery = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT,
-                   description="How many to return (max 500).")
+                   description=f"How many to return (max {MAX_LIMIT}).")
 OffsetQuery = Query(0, ge=0, description="How many to skip.")
 
 

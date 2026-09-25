@@ -58,6 +58,34 @@ def status(user: UserDep) -> dict:
     }
 
 
+def _numbers(db) -> dict:
+    """What this plant gives its design chat: three budgets, three timeouts
+    and the model's name.
+
+    Read through `fsmes.services.plant_settings` - the row this plant's
+    administrator saved, then the setting its pack compiled, then the literal
+    the product ships - and gathered into one dict so the endpoint reads them
+    all inside the single short session it is allowed to open.
+    """
+    from fsmes.services import plant_settings
+
+    def admin(key):
+        return plant_settings.setting(db, "admin", key)
+
+    return {
+        "compress": {
+            "budget": int(admin("design_compress_budget")),
+            "source_chars": int(admin("design_compress_source_chars")),
+            "timeout": float(admin("design_compress_timeout_seconds")),
+            "model": str(plant_settings.setting(db, "system", "local_model_name")),
+        },
+        "source_budget": int(admin("design_source_budget")),
+        "classify_timeout": float(admin("design_classify_timeout_seconds")),
+        "chat_timeout": float(admin("design_chat_timeout_seconds")),
+        "model": str(plant_settings.setting(db, "system", "local_model_name")),
+    }
+
+
 @router.post("/chat", dependencies=[require("audit.read")])
 def chat(body: ChatIn, user: UserDep) -> dict:
     """Discuss the screen the person is looking at.
@@ -76,6 +104,12 @@ def chat(body: ChatIn, user: UserDep) -> dict:
 
     with deps.short_read() as db:
         role = auth.current_role(db, user) or user["role"]
+        # This plant's own budgets, timeouts and model name, read inside the
+        # one short session this endpoint opens and carried past it. Nothing
+        # below this line may hold a database session: four model calls follow,
+        # and on SQLite a session held across them is the plant's single write
+        # lock held across them.
+        numbers = _numbers(db)
     settings = get_settings()
 
     # Big payloads get shrunk on-device before they go anywhere. Paying a
@@ -84,8 +118,8 @@ def chat(body: ChatIn, user: UserDep) -> dict:
         "route": body.route,
         "screen": body.screen or body.route,
         "filters": body.filters,
-        "visible": design.compress(body.visible or "", "screen's rendered text"),
-        "data": design.compress(body.data or "", "screen's underlying data"),
+        "visible": design.compress(body.visible or "", "screen's rendered text", **numbers["compress"]),
+        "data": design.compress(body.data or "", "screen's underlying data", **numbers["compress"]),
         "who": f"{user['sub']} ({role})",
     }
 
@@ -116,10 +150,12 @@ def chat(body: ChatIn, user: UserDep) -> dict:
     # is about to answer also picks the system prompt: Claude gets the
     # opinionated-collaborator brief, the on-device model gets the narrower
     # capture-only one - see design.build_prompt.
-    design_question = design.is_design_question(body.message)
+    design_question = design.is_design_question(
+        body.message, timeout=numbers["classify_timeout"], model=numbers["model"])
     use_claude = design_question and design.claude_available()
     system, messages = design.build_prompt(
-        body.message, context, past, design.read_source(body.route, WEB_DIR),
+        body.message, context, past,
+        design.read_source(body.route, WEB_DIR, numbers["source_budget"]),
         claude=use_claude)
 
     if use_claude:
@@ -129,10 +165,12 @@ def chat(body: ChatIn, user: UserDep) -> dict:
             text, model = (
                 f"Claude could not be reached ({type(exc).__name__}). "
                 f"Falling back to the on-device model.\n\n"
-                + design.ask_local(system, messages)[0],
-                design.LOCAL_MODEL)
+                + design.ask_local(system, messages, timeout=numbers["chat_timeout"],
+                                   model=numbers["model"])[0],
+                numbers["model"])
     else:
-        text, model = design.ask_local(system, messages)
+        text, model = design.ask_local(system, messages, timeout=numbers["chat_timeout"],
+                                       model=numbers["model"])
 
     design.add_turn(conversation, "assistant", text, model=model)
     return {

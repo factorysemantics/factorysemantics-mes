@@ -190,6 +190,39 @@ def value(session: Session, section: str, key: str, fallback):
         return fallback
 
 
+def setting(session: Session, section: str, key: str):
+    """What this plant is running on for one setting, typed, with the literal
+    the product ships as the last layer.
+
+    The same three layers `value` reads, without the caller having to hand in
+    the shipped default: it is read off the `Settings` field the key compiles
+    to, which is the one place the product writes each of these numbers down.
+    `value` keeps its explicit `fallback` for the quality services, which each
+    hold a module-level constant of their own; the administration settings
+    arrived forty at a time on 2026-09-25 and forty second copies of a number
+    is forty places for one to drift.
+    """
+    from fsmes.pack import format as fmt
+
+    schema = fmt.key_named(section, key)
+    if schema is None:  # pragma: no cover - callers name keys this version has
+        raise Unknown(f"this version has no pack key called [{section}] {key}")
+    return value(session, section, key, _shipped(schema))
+
+
+def shipped(section: str, key: str):
+    """The literal this version ships for one key, typed. For the handful of
+    readers that run before a plant's database is open - logging, the fleet
+    console, the list envelope's own OpenAPI bounds - and so cannot have the
+    row or the session that the three layers need."""
+    from fsmes.pack import format as fmt
+
+    schema = fmt.key_named(section, key)
+    if schema is None:  # pragma: no cover
+        raise Unknown(f"this version has no pack key called [{section}] {key}")
+    return _shipped(schema)
+
+
 def field_name(schema) -> str:
     """The `Settings` field a pack key compiles to — `MES_QUALITY_SPC_MIN_POINTS`
     is `quality_spc_min_points`. Read off the pack schema rather than written

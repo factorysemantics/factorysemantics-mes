@@ -288,8 +288,12 @@ def make_demo_feed(
 
 
 @app.command()
-def add_user(code: str, name: str, password: str, role: str = "operator") -> None:
-    """Create a sign-in account (roles: viewer, operator, supervisor, admin)."""
+def add_user(code: str, name: str, password: str, role: str | None = None) -> None:
+    """Create a sign-in account (roles: viewer, operator, supervisor, admin).
+
+    Leave `--role` out and the account gets the role this plant starts people
+    on - `[admin] default_new_account_role`, which ships `operator`.
+    """
     from fsmes.db import session_scope
     from fsmes.services import auth
 

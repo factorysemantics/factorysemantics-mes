@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from fsmes import identity
 from fsmes import shadow as shadow_mode
+from fsmes.api import deps
 from fsmes.api.deps import DbDep, ReadDbDep, require
 from fsmes.domain import AuditLog, ErpMessage, MessageStatus, OrderStatus, TagValue, WorkOrder
 from fsmes.services import connection as connection_service
@@ -224,9 +225,17 @@ def local_ai() -> dict:
     Machine-wide, not per-plant: one Ollama and one GPU serve every plant on
     the box, so both plants' Ops screens show the same panel. Reads only.
     """
-    from fsmes.services import ai_status
+    from datetime import timedelta
 
-    return ai_status.status()
+    from fsmes.services import ai_status, plant_settings
+
+    with deps.short_read() as db:
+        # This plant's own threshold for calling a daily artifact late -
+        # `[admin] ai_rollup_stale_hours`. The panel itself is machine-wide;
+        # when the box runs two plants they may disagree about when their own
+        # screen says "stale", and each is right about its own server.
+        hours = float(plant_settings.setting(db, "admin", "ai_rollup_stale_hours"))
+    return ai_status.status(timedelta(hours=hours))
 
 
 @router.get("/audit", dependencies=[require("audit.read")])

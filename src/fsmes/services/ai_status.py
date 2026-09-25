@@ -50,9 +50,11 @@ BUDGET = [
     "design chat",
 ]
 
-# Older than this and a daily artifact is flagged. Generous on purpose: main
-# is LUKS-encrypted and regularly off overnight, so "late" usually means
-# "the machine slept", and the message says so.
+# Older than this and a daily artifact is flagged. Generous on purpose: the
+# machine this was chosen for is LUKS-encrypted and regularly off overnight,
+# so "late" usually means "the machine slept", and the message says so. A
+# plant's server that never sleeps answers differently, which is why it is
+# `[admin] ai_rollup_stale_hours` and this is only its default.
 ROLLUP_STALE = timedelta(hours=40)
 
 
@@ -158,8 +160,15 @@ def _parse_ts(value) -> datetime | None:
     return ts if ts.tzinfo else ts.replace(tzinfo=UTC)
 
 
-def consumers() -> list[dict]:
-    """Every assigned job the local model has, one honest row each."""
+def consumers(stale_after: timedelta | None = None) -> list[dict]:
+    """Every assigned job the local model has, one honest row each.
+
+    `stale_after` is this plant's own threshold, read by the caller through the
+    session it has; `None` is the product's. A parameter rather than a read
+    here because this module is machine-wide - one Ollama and one GPU serve
+    every plant on the box - and has no plant of its own to ask.
+    """
+    stale_after = ROLLUP_STALE if stale_after is None else stale_after
     rows: list[dict] = []
     now = datetime.now(UTC)
 
@@ -192,7 +201,7 @@ def consumers() -> list[dict]:
     ts = _mtime(notes[0]) if notes else None
     if ts is None:
         state, note = "unknown", "no rollup note found"
-    elif now - ts > ROLLUP_STALE:
+    elif now - ts > stale_after:
         state = "stale"
         note = ("last note is old - was the machine off overnight? "
                 "The timer catches up on boot (Persistent=true).")
@@ -267,7 +276,7 @@ def consumers() -> list[dict]:
             "state": "idle", "last": None,
             "note": "has never run on this machine"})
     else:
-        stale = datetime.now(UTC) - last > ROLLUP_STALE
+        stale = datetime.now(UTC) - last > stale_after
         rows.append({
             "name": "Night shift", "trigger": "02:30 timer + fsmes autoloop",
             "output": f"{loop_dir} + morning note in reports/",
@@ -278,7 +287,7 @@ def consumers() -> list[dict]:
     return rows
 
 
-def status() -> dict:
+def status(stale_after: timedelta | None = None) -> dict:
     """Everything the panel and the CLI show. Reads only."""
     if not enabled():
         return {"enabled": False}
@@ -286,7 +295,7 @@ def status() -> dict:
         "enabled": True,
         "ollama": ollama(),
         "gpu": gpu(),
-        "consumers": consumers(),
+        "consumers": consumers(stale_after),
         "budget": BUDGET,
         "checked_at": datetime.now(UTC).isoformat(),
     }

@@ -14,6 +14,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from fsmes import modules
+from fsmes.api import paging
 from fsmes.api.deps import ActorDep, DbDep, ReadDbDep, UserDep
 from fsmes.config import get_settings
 from fsmes.domain import (
@@ -53,9 +54,11 @@ _CACHE_TTL_SECONDS = 1.0
 # must not grow it without end. Nothing here is precious - it is one second of
 # a repeated question.
 _CACHE_MAX_ENTRIES = 64
-# A page of machines is a screen's worth, not a plant's. The ceiling matches
-# fsmes.api.paging.MAX_LIMIT so no list in this API has a different one.
-MACHINE_MAX_LIMIT = 500
+# A page of machines is a screen's worth, not a plant's. The ceiling *is*
+# fsmes.api.paging.MAX_LIMIT rather than matching it, so no list in this API
+# has a different one - it was a second copy of 500 until the plant started
+# saying what its ceiling is.
+MACHINE_MAX_LIMIT = paging.MAX_LIMIT
 _cache: dict[float, tuple[float, tuple, dict]] = {}
 _cache_lock = threading.Lock()
 
@@ -380,7 +383,7 @@ PENDING_KINDS: dict[str, str] = review_service.capabilities()
 
 @router.get("/pending-approvals")
 def pending_approvals(db: ReadDbDep, user: UserDep,
-                      limit: int = Query(20, ge=1, le=100)) -> dict:
+                      limit: int | None = Query(None, ge=1, le=100)) -> dict:
     """What is waiting that *this caller* may act on, counted, with its total.
 
     The step the three lifecycles in this product were missing. A document
@@ -404,6 +407,15 @@ def pending_approvals(db: ReadDbDep, user: UserDep,
     A draft nobody acts on waits, visibly. It does not expire, it does not go
     live by itself, and nothing here drops it.
     """
+    from fsmes.services import plant_settings
+
+    if limit is None:
+        # This plant's own answer, not the product's, and read now rather than
+        # written into the signature: `[admin] pending_approvals_page_size`.
+        # It is deliberately a different number from the list envelope's
+        # default - this panel has no pager, so item twenty-one is not on the
+        # screen at all rather than on a second page.
+        limit = int(plant_settings.setting(db, "admin", "pending_approvals_page_size"))
     mine = _kinds_for(db, user)
 
     items: list[dict] = []

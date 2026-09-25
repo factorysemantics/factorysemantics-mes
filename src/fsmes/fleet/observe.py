@@ -27,9 +27,26 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 
+
+def _timeout() -> float:
+    """How long this console waits for one plant to answer.
+
+    `[system] fleet_health_probe_timeout`, read once as this module is
+    imported. Not one of the live settings, and deliberately: it is the
+    *console's* number about every plant it watches, not any one plant's about
+    itself, and the console has no plant database to read a row from. A fleet
+    on a poorer link writes it in the pack it builds its plants from and the
+    console picks it up when it starts.
+    """
+    from fsmes.config import get_settings
+
+    return float(get_settings().system_fleet_health_probe_timeout)
+
+
 #: Long enough for a plant that is busy, short enough that a console polling
-#: a dozen of them does not hang on the one that is off.
-TIMEOUT = 3.0
+#: a dozen of them does not hang on the one that is off. 3.0 by default, which
+#: is what was written here.
+TIMEOUT = _timeout()
 
 
 @dataclass(frozen=True)

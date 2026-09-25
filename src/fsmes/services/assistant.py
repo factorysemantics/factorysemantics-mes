@@ -30,7 +30,18 @@ import urllib.error
 import urllib.request
 
 OLLAMA = "http://127.0.0.1:11434"
+#: The model this product ships with, and the default of `[system]
+#: local_model_name`. Which model on this machine answers is the plant's
+#: hardware and the plant's choice, so every function that asks one takes the
+#: name rather than reading this - the caller has the session to read it
+#: through and this module deliberately has none.
 MODEL = "qwen3:8b"
+
+#: How much of this plant's own facts reach the model, and how long it is
+#: given to answer. `[admin] assistant_context_chars` and
+#: `assistant_timeout_seconds`; both defaults are the literals that were here.
+CONTEXT_CHARS = 3000
+TIMEOUT = 60.0
 
 # --------------------------------------------------------------------------
 # Guides. Each step names a `data-assist` anchor, which is stable in a way an
@@ -945,8 +956,10 @@ def _catalogue(guides: list[dict]) -> str:
     return "\n".join(f"{g['id']}: {g['title']} — {g['when']}" for g in guides)
 
 
-def _ask_model(prompt: str, timeout: float = 60.0) -> str | None:
-    payload = {"model": MODEL, "prompt": prompt, "stream": False, "think": False}
+def _ask_model(prompt: str, timeout: float | None = None,
+               model: str | None = None) -> str | None:
+    payload = {"model": model or MODEL, "prompt": prompt, "stream": False, "think": False}
+    timeout = TIMEOUT if timeout is None else timeout
     try:
         req = urllib.request.Request(
             f"{OLLAMA}/api/generate", data=json.dumps(payload).encode(),
@@ -1000,7 +1013,8 @@ def _lexical_match(question: str, guides: list[dict]) -> dict | None:
     return best if score >= 2 else None
 
 
-def route(question: str, capabilities: set[str], db=None, guides=None) -> dict | None:
+def route(question: str, capabilities: set[str], db=None, guides=None, *,
+          timeout: float | None = None, model: str | None = None) -> dict | None:
     """Which guide, if any, answers 'how do I…'.
 
     `guides` lets a caller read them first and close its database session
@@ -1010,6 +1024,7 @@ def route(question: str, capabilities: set[str], db=None, guides=None) -> dict |
     guides = visible_guides(capabilities, db) if guides is None else guides
     if not guides or not wants_showing(question):
         return None
+
 
     # A guide is for someone who wants to be shown where to click. Someone
     # asking what a procedure SAYS wants the answer, not a tour of the screen
@@ -1024,7 +1039,8 @@ def route(question: str, capabilities: set[str], db=None, guides=None) -> dict |
         "says, what the current numbers are, or anything answerable in "
         "words.\n\n"
         f"Guides:\n{_catalogue(guides)}\n\n"
-        f"Question: {question}\nId:"
+        f"Question: {question}\nId:",
+        timeout=timeout, model=model,
     )
     by_id = {g["id"]: g for g in guides}
     if reply:
@@ -1034,8 +1050,20 @@ def route(question: str, capabilities: set[str], db=None, guides=None) -> dict |
     return _lexical_match(question, guides)
 
 
-def answer(question: str, context: dict, capabilities: set[str]) -> str:
-    """Answer a question about this plant, from facts gathered by the caller."""
+def answer(question: str, context: dict, capabilities: set[str], *,
+           context_chars: int | None = None, timeout: float | None = None,
+           model: str | None = None) -> str:
+    """Answer a question about this plant, from facts gathered by the caller.
+
+    `context_chars`, `timeout` and `model` are this plant's own answers -
+    `[admin] assistant_context_chars`, `[admin] assistant_timeout_seconds` and
+    `[system] local_model_name` - read by the caller through the session it
+    already has. They are parameters rather than read here for the reason the
+    docstring above `route` gives: this function is one model call, and a
+    database session held across one holds SQLite's single write lock across it
+    too. `None` is the literal that was here.
+    """
+    chars = CONTEXT_CHARS if context_chars is None else int(context_chars)
     guides = visible_guides(capabilities)
     reply = _ask_model(
         "You are the assistant inside a Manufacturing Execution System, "
@@ -1051,10 +1079,11 @@ def answer(question: str, context: dict, capabilities: set[str]) -> str:
         # services, and a serialisation error here would take down the
         # whole answer for want of one date.
         f"Facts about this plant right now:\n"
-        f"{json.dumps(context, indent=1, default=str)[:3000]}\n\n"
+        f"{json.dumps(context, indent=1, default=str)[:chars]}\n\n"
         f"Things this person is able to do here: {', '.join(sorted(capabilities))}\n"
         f"Tasks you can walk them through: {', '.join(g['title'] for g in guides)}\n\n"
-        f"Question: {question}\nAnswer:"
+        f"Question: {question}\nAnswer:",
+        timeout=timeout, model=model,
     )
     if reply:
         return reply
