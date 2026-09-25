@@ -58,16 +58,28 @@ DEPTH_CEILING = 12
 SERIAL_DIGITS = 6
 
 
-def max_depth() -> int:
+def _number(session: Session, name: str, fallback):
+    """One of this plant's two serialization numbers, read when it is needed.
+
+    Read through `fsmes.services.plant_settings`: the row this plant's own
+    administrator edited on Quality's Configuration page, then the setting its
+    pack compiled, then the literal above. The session is the caller's own, so
+    the reading is one memoised query on a unit of work already open and a
+    number saved on the screen is in force on the next reading.
+    """
+    from fsmes.services import plant_settings
+
+    return plant_settings.value(session, "quality", name, fallback)
+
+
+def max_depth(session: Session) -> int:
     """How deep this plant's containment goes, never past the product's own
     ceiling."""
-    from fsmes.config import get_settings
-
-    written = int(getattr(get_settings(), "quality_containment_max_depth", MAX_DEPTH))
+    written = int(_number(session, "containment_max_depth", MAX_DEPTH))
     return max(1, min(written, DEPTH_CEILING))
 
 
-def serial_digits() -> int:
+def serial_digits(session: Session) -> int:
     """How many digits this plant's generated serials carry.
 
     The hyphen between prefix and number stays the product's: `next_serial`'s
@@ -75,9 +87,7 @@ def serial_digits() -> int:
     numbering had already got to, and a plant that changed the separator would
     start again at one over serials it had already issued.
     """
-    from fsmes.config import get_settings
-
-    return max(1, int(getattr(get_settings(), "quality_serial_digits", SERIAL_DIGITS)))
+    return max(1, int(_number(session, "serial_digits", SERIAL_DIGITS)))
 # How many units one batch may bring into existence.
 MAX_BATCH = 5_000
 
@@ -116,7 +126,7 @@ def next_serial(session: Session, prefix: str) -> str:
     number = row.next
     row.next = number + 1
     session.flush()
-    return f"{prefix}-{number:0{serial_digits()}d}"
+    return f"{prefix}-{number:0{serial_digits(session)}d}"
 
 
 # ---------------------------------------------------------------- one at a time
@@ -167,7 +177,7 @@ def _ancestors(session: Session, unit_id: int) -> list[int]:
     """The chain of containers above a unit, nearest first."""
     chain: list[int] = []
     cursor = session.scalar(select(SerialUnit.parent_id).where(SerialUnit.id == unit_id))
-    while cursor is not None and len(chain) < max_depth() + 1:
+    while cursor is not None and len(chain) < max_depth(session) + 1:
         chain.append(cursor)
         cursor = session.scalar(select(SerialUnit.parent_id).where(SerialUnit.id == cursor))
     return chain
@@ -333,7 +343,7 @@ def _descendants(session: Session, root_id: int, cap: int | None = None) -> tupl
     levels: list[list[tuple]] = []
     frontier = [root_id]
     truncated = False
-    for _ in range(max_depth()):
+    for _ in range(max_depth(session)):
         level: list[tuple] = []
         for chunk in _chunks(frontier):
             level.extend(session.execute(
@@ -357,7 +367,7 @@ def _descendant_ids(session: Session, root_ids: list[int]) -> list[int]:
     """Every unit beneath any of the roots, ids only."""
     out: list[int] = []
     frontier = list(root_ids)
-    for _ in range(max_depth()):
+    for _ in range(max_depth(session)):
         level: list[int] = []
         for chunk in _chunks(frontier):
             level.extend(session.scalars(select(SerialUnit.id).where(SerialUnit.parent_id.in_(chunk))))
@@ -558,7 +568,7 @@ def where_used(session: Session, lot_code: str) -> dict:
     # unit counts with it, until nothing has a parent.
     tops: Counter = Counter()
     frontier = counts
-    for _ in range(max_depth()):
+    for _ in range(max_depth(session)):
         if not frontier:
             break
         parent_of: dict[int, int | None] = {}

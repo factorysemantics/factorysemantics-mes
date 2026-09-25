@@ -40,6 +40,18 @@ EXCLUDED = {
         "putting the plant's own severities in front of every quality record is a "
         "human capability; the agent role is built without `quality.approve`, so a "
         "tool for it would be a tool that always refuses",
+    # a setting the plant owns: the agent holds `quality.define` and this
+    # endpoint is open to it, and the tool is the half of `config-agent-tools`
+    # that waits for this endpoint to exist. It is not the same shape as the two
+    # drafting tools that landed with #99: those propose a *word*, and this
+    # writes a *number* that is in force the moment it is written - so it wants
+    # the proposal card and a person's click, which is what that handoff builds.
+    "PATCH /dashboard/config/{domain}/settings/{key}":
+        "an agent may write one - it holds `quality.define` - and the tool lands "
+        "with `config-agent-tools`, which waited for this endpoint. A number that "
+        "takes effect when it is saved is a proposal a person clicks, not a draft "
+        "somebody signs later, so it wants `propose_adjustment`'s card rather than "
+        "the drafting shape draft_nc_severity has",
     # POST /equipment/downtime-reasons and POST /quality/severities came off this
     # list when draft_downtime_reason and draft_nc_severity landed. The approve
     # routes above stay: the agent role holds neither `process.approve` nor

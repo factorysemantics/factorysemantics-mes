@@ -48,6 +48,7 @@ from fsmes.domain.masterdata import (
     Routing,
     RoutingOperation,
 )
+from fsmes.domain.plant_settings import PlantSetting
 from fsmes.domain.quality import (
     CheckResult,
     NcDisposition,
@@ -117,6 +118,7 @@ __all__ = [
     "OperationStatus",
     "OrderStatus",
     "Person",
+    "PlantSetting",
     "ProductionLog",
     "ProductionSource",
     "QualityCheck",

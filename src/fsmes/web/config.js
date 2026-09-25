@@ -51,11 +51,17 @@ function whoCell(capability, held, noneMeans) {
   return cell;
 }
 
-/* A section that is keys in the plant's pack rather than a list somebody
-   edits on a screen. Neither capability column can say the truth about one:
-   nobody drafts it and nobody signs it. So both cells say where it lives and
-   what changing it takes, and the row still points at the screen its effect
-   is read on. */
+/* A pack-key section that is *not* edited here: nobody drafts it and nobody
+   signs it, so neither capability column can say the truth about one and both
+   cells say instead where it lives and what changing it takes.
+
+   Every section on this product answered this way until 2026-09-24, when the
+   eleven `[quality]` keys moved onto `plant_settings` and became live -
+   `edit_here` on the registry entry is what tells the two apart. No section
+   reaches this today. It is kept rather than deleted because a setting that
+   genuinely cannot move while a plant is running is a real thing a future
+   section may be, and this sentence is what such a section would owe a reader:
+   the same answer the server's `_read_only_key` gives, on the same case. */
 function packCell(keys, half) {
   const cell = el("td");
   if (half === "define") {
@@ -75,12 +81,21 @@ function packCell(keys, half) {
 
 /* What this plant is actually running on, and whether the plant chose it.
 
-   Two values, not three, and the page says only what it can know: by the time
-   a plant is serving, a pack key is an environment variable and the file it
-   was compiled from is not recorded anywhere this process can see. So the
-   honest answers are "the product's default, unchanged" and "this plant set
-   it" — naming a pack would be a guess, and this column exists so nobody has
-   to guess what their plant is set to. */
+   Two values, not three, and the page says only what it can know: **the
+   product's default, unchanged**, or **this plant set it**. Naming the pack
+   that wrote it would be a guess even now that the value is a row in this
+   plant's own database, because a row written by `fsmes pack apply` says which
+   door the value came in by and not which file - and this column exists so
+   that nobody has to guess what their plant is set to.
+
+   For a section its registry entry marks `edit_here`, the cell is where the
+   value is changed as well as read: one input per key, and one Save for the
+   section, because the Cpk bars and the gauge ratios are each one judgment
+   written as two numbers and a screen that saved half of one would be a screen
+   that made `marginal` unreachable for as long as it took to type the other
+   half. A person without the section's `define` capability reads the same
+   values and gets no input - the gate is the server's, and this only declines
+   to offer a control the server would refuse. */
 function valueCell(section) {
   const cell = el("td");
   if (!section.pack_keys.length) {
@@ -89,14 +104,102 @@ function valueCell(section) {
     cell.appendChild(el("span", "muted small", "—"));
     return cell;
   }
+  const live = section.edit_here && section.may_define;
   for (const key of section.pack_keys) {
-    const line = el("div");
-    line.appendChild(el("span", "code", key.value === "" ? "(nothing)" : key.value));
+    const line = el("div", live ? "setting-line" : null);
+    if (live) {
+      const field = el("input");
+      field.type = "text";
+      field.value = key.value;
+      field.size = Math.max(6, Math.min(24, (key.value || "").length + 4));
+      field.setAttribute("aria-label", key.key);
+      field.dataset.settingKey = key.name;
+      field.title = key.about || key.key;
+      line.appendChild(field);
+      line.append(" ");
+      line.appendChild(el("code", "muted small", key.key));
+    } else {
+      line.appendChild(el("span", "code", key.value === "" ? "(nothing)" : key.value));
+    }
     line.appendChild(el("span", "muted small",
                         key.is_default ? " — the product's default" : " — this plant set it"));
     cell.appendChild(line);
   }
+  if (live) cell.appendChild(saveRow(section, cell));
   return cell;
+}
+
+/* The one Save for one section, and the sentence it leaves behind.
+
+   There is no approve step and no draft to review: rule three of decision
+   0035 says a number a plant administrator edits and which takes effect when
+   saved has no pending state, and these have none - nothing anywhere records
+   the Cpk bar that was in force when it judged something, so there is nothing
+   for a revision to protect. Undo is typing the old number back; the audit
+   trail says what it was. */
+function saveRow(section, cell) {
+  const row = el("div", "setting-save");
+  const button = el("button", "small", "Save");
+  const said = el("span", "muted small");
+  button.addEventListener("click", async () => {
+    const fields = [...cell.querySelectorAll("input[data-setting-key]")];
+    const changed = fields.filter((f) => f.value !== originalOf(section, f.dataset.settingKey));
+    if (!changed.length) {
+      said.textContent = "nothing changed";
+      said.className = "muted small";
+      return;
+    }
+    button.disabled = true;
+    said.textContent = "saving…";
+    said.className = "muted small";
+    try {
+      const failed = await saveEach(changed);
+      /* One retry, and only for what was refused, because the two pairs are
+         judged against each other: moving both Cpk bars down means the first
+         save is refused by the second's old value, and refusing the person's
+         whole edit for the order they typed it in would be this page being
+         clever at their expense. Anything still refused after the other half
+         has landed is a real refusal, and its own sentence is what is shown. */
+      const stillFailed = failed.length ? await saveEach(failed.map((f) => f.field)) : [];
+      if (stillFailed.length) throw new Error(stillFailed[0].why);
+      FS.toast("saved — in force now, with no restart");
+      draw(await api(`/dashboard/config/${encodeURIComponent(DOMAIN)}/sections`));
+    } catch (error) {
+      said.textContent = error.message;
+      said.className = "refused";
+      button.disabled = false;
+    }
+  });
+  row.appendChild(button);
+  row.append(" ");
+  row.appendChild(said);
+  return row;
+}
+
+/* Each changed field, saved on its own: one setting is one row and one audit
+   entry, so a screen that posted four at once would be one record of four
+   decisions. Returns what was refused, with the server's own sentence. */
+async function saveEach(fields) {
+  const failed = [];
+  for (const field of fields) {
+    try {
+      const key = encodeURIComponent(field.dataset.settingKey);
+      await api(`/dashboard/config/${encodeURIComponent(DOMAIN)}/settings/${key}`,
+                { method: "PATCH", body: { value: field.value } });
+    } catch (error) {
+      failed.push({ field, why: error.message });
+    }
+  }
+  return failed;
+}
+
+/* What the server last said this key was, so Save sends only what moved. Read
+   from the listing rather than remembered in a variable of its own: the
+   listing is redrawn from the server after every save, which makes it the one
+   answer to *what is this plant set to* on this page. */
+function originalOf(section, name) {
+  const key = section.pack_keys.find((k) => k.name === name);
+  return key ? key.value : "";
 }
 
 /* Twelve, which is not this file's number: `services/analysis.py` already
@@ -109,7 +212,7 @@ let listed = null;
 function matches(section, q) {
   if (!q) return true;
   const parts = [section.label, section.about, section.define || "", section.approve || ""];
-  for (const key of section.pack_keys) parts.push(key.key, key.value, key.about || "");
+  for (const key of section.pack_keys) parts.push(key.key, key.name, key.value, key.about || "");
   return parts.join(" ").toLowerCase().includes(q);
 }
 
@@ -173,10 +276,14 @@ function redraw() {
 
     row.appendChild(el("td", "muted", section.about));
     row.appendChild(valueCell(section));
-    if (section.pack_keys.length) {
+    if (section.pack_keys.length && !section.edit_here) {
       row.appendChild(packCell(section.pack_keys, "define"));
       row.appendChild(packCell(section.pack_keys, "approve"));
     } else {
+      /* A live pack-key section answers both columns honestly with the
+         ordinary cells: somebody holding `define` writes it, and nobody signs
+         it because it is in force when it is saved. The keys themselves have
+         moved into the value cell, beside the input for each. */
       row.appendChild(whoCell(section.define, section.may_define,
                               "anybody who can see this screen"));
       row.appendChild(whoCell(section.approve, section.may_approve,

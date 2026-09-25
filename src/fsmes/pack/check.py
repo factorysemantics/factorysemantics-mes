@@ -205,7 +205,6 @@ def check(directory: Path, *, version: str = __version__) -> Report:
     problems += _sections(pack)
     problems += _identity(pack)
     problems += _coverage_floor(pack)
-    problems += _hold_rules(pack)
     problems += _quality_numbers(pack)
     problems += _modules(pack)
     problems += _words(pack)
@@ -358,12 +357,14 @@ def _coverage_floor(pack: fmt.Pack) -> list[Problem]:
     return []
 
 
-def _hold_rules(pack: fmt.Pack) -> list[Problem]:
-    """`[quality] hold_rules` names Western Electric rules, and there are four.
+def _rule_numbers(where: str, value: list) -> list[Problem]:
+    """A list of Western Electric rule numbers, checked. Two keys hold one -
+    which rules raise a hold, and which of those are major - and they are the
+    same list of four either way.
 
     The rule *numbers* are the product's and always will be: a plant that
     renumbered them would publish `SpcSignal.rule = 3` meaning something
-    nobody else means by rule 3. So this key may only ever narrow the set
+    nobody else means by rule 3. So either key may only ever narrow the set
     {1, 2, 3, 4}, and a number outside it is a typo rather than a preference.
 
     An empty list is allowed and is a real answer - *record and draw every
@@ -371,16 +372,6 @@ def _hold_rules(pack: fmt.Pack) -> list[Problem]:
     observation is a plant, not a mistake. It is never silent: the chart says
     which rules raise a hold on this plant whatever the list holds.
     """
-    value = pack.table("quality").get("hold_rules")
-    if value is None or not isinstance(value, list):
-        return []  # absent, or already refused by the type check
-    return _rule_numbers("[quality] hold_rules", value)
-
-
-def _rule_numbers(where: str, value: list) -> list[Problem]:
-    """A list of Western Electric rule numbers, checked. Two keys hold one -
-    which rules raise a hold, and which of those are major - and they are the
-    same list of four either way."""
     out: list[Problem] = []
     seen: set[int] = set()
     for item in value:
@@ -441,6 +432,11 @@ NC_PREFIX = re.compile(r"\A[A-Z][A-Z0-9]{0,9}\Z")
 
 
 def _quality_numbers(pack: fmt.Pack) -> list[Problem]:
+    """`[quality]`'s counts and measurements, as a pack file carries them."""
+    return quality_numbers(pack.table("quality"))
+
+
+def quality_numbers(table: dict) -> list[Problem]:
     """`[quality]`'s counts and measurements, and the two pairs that have to
     stay in order.
 
@@ -448,8 +444,14 @@ def _quality_numbers(pack: fmt.Pack) -> list[Problem]:
     thing it decides meaningless, and it refuses nothing else. A plant that
     wants twenty-five readings behind its limits, or a four-to-one gauge
     floor, is answering its own question and is not being second-guessed here.
+
+    Takes the table rather than the pack so that **one setting edited on the
+    Configuration page is judged by exactly the rules a pack file is judged
+    by, in the same words** - including the two pairs, which can only be
+    checked against the value the plant is already running on for the other
+    half. A second copy of these ranges behind an input would be a screen that
+    accepted a Cpk pair `fsmes pack check` refuses.
     """
-    table = pack.table("quality")
     out: list[Problem] = []
 
     for name, (low, high, why) in QUALITY_RANGES.items():
@@ -487,9 +489,10 @@ def _quality_numbers(pack: fmt.Pack) -> list[Problem]:
             "people, and the number's own width comes after it in a "
             "twenty-character column.")))
 
-    rules = table.get("major_rules")
-    if isinstance(rules, list):
-        out += _rule_numbers("[quality] major_rules", rules)
+    for name in ("hold_rules", "major_rules"):
+        rules = table.get(name)
+        if isinstance(rules, list):
+            out += _rule_numbers(f"[quality] {name}", rules)
     return out
 
 

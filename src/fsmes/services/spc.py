@@ -53,44 +53,58 @@ HISTORY = 200
 # figure moves: the Cpk is arithmetic and means the same on every plant.
 CPK_CAPABLE = 1.33
 CPK_MARGINAL = 1.0
+# Which of the four rules raise a hold, and which of those are a major finding.
+# `[quality] hold_rules` and `major_rules`; all four and rule 1 alone, which is
+# what this product has always done.
+HOLD_RULES = (1, 2, 3, 4)
+MAJOR_RULES = (1,)
 
 
-def _number(name: str, fallback):
+def _number(session: Session, name: str, fallback):
     """One of this plant's quality numbers, read at the moment it is needed.
 
-    Not at import: a plant that changes its pack and restarts gets the new
-    answer without this module having cached the old one, and a test that
-    asks what a different plant would do does not have to reload a module.
+    Read through `fsmes.services.plant_settings`, which is three layers: the
+    row this plant's own administrator edited, the setting its pack compiled,
+    and the literal above. So a number a person changes on Quality's
+    Configuration page is in force on the next reading with no restart, and a plant
+    that has changed none of them reads exactly what it read before the table
+    existed.
+
+    It takes the session its caller already has rather than opening one. A
+    setting owned by the database is read from the database, and the reading is
+    memoised on the unit of work (`plant_settings.rows`), so a screen that
+    draws four charts costs one query and none of it can go stale inside a
+    request.
     """
-    from fsmes.config import get_settings
+    from fsmes.services import plant_settings
 
-    return getattr(get_settings(), name, fallback)
+    return plant_settings.value(session, "quality", name, fallback)
 
 
-def min_points() -> int:
+def min_points(session: Session) -> int:
     """The fewest readings this plant draws control limits from."""
-    return int(_number("quality_spc_min_points", MIN_POINTS))
+    return int(_number(session, "spc_min_points", MIN_POINTS))
 
 
-def history() -> int:
+def history(session: Session) -> int:
     """How many readings back this plant's charts and rules look."""
-    return int(_number("quality_spc_history", HISTORY))
+    return int(_number(session, "spc_history", HISTORY))
 
 
-def cpk_bars() -> tuple[float, float]:
+def cpk_bars(session: Session) -> tuple[float, float]:
     """`(capable, marginal)` - where this plant draws the two words.
 
     Returned together because they are one judgment written as two numbers,
     and a caller that read one without the other could print *capable* and
     *not capable* for the same figure.
     """
-    return (float(_number("quality_cpk_capable", CPK_CAPABLE)),
-            float(_number("quality_cpk_marginal", CPK_MARGINAL)))
+    return (float(_number(session, "cpk_capable", CPK_CAPABLE)),
+            float(_number(session, "cpk_marginal", CPK_MARGINAL)))
 
 
 def _values(session: Session, material: str, characteristic: str,
             limit: int | None = None) -> tuple[QualitySpec, list[QualityCheck]]:
-    limit = history() if limit is None else limit
+    limit = history(session) if limit is None else limit
     mat = session.scalar(select(Material).where(Material.code == material))
     if mat is None:
         raise NotFound(f"no material {material}")
@@ -157,13 +171,14 @@ def _western_electric(values: list[float], centre: float, sigma: float) -> list[
     return [best[i] for i in sorted(best)]
 
 
-def capability(values: list[float], lower_spec: float | None, upper_spec: float | None) -> dict | None:
+def capability(values: list[float], lower_spec: float | None,
+               upper_spec: float | None, *, fewest: int) -> dict | None:
     """Cp, Cpk, Pp for a series against its specification, by the same
     arithmetic the SPC chart uses - sigma from the mean moving range, the
     overall spread from the sample standard deviation. None when there are
     too few readings, no limits, or no variation to divide by; the caller
     says why rather than printing a number nobody should trust."""
-    if len(values) < min_points() or lower_spec is None or upper_spec is None:
+    if len(values) < fewest or lower_spec is None or upper_spec is None:
         return None
     centre = sum(values) / len(values)
     moving = [abs(b - a) for a, b in itertools.pairwise(values)]
@@ -188,8 +203,8 @@ def capability(values: list[float], lower_spec: float | None, upper_spec: float 
 def chart(session: Session, material: str, characteristic: str,
           limit: int | None = None) -> dict:
     """An individuals chart with control limits, capability, and what fired."""
-    fewest = min_points()
-    capable, marginal = cpk_bars()
+    fewest = min_points(session)
+    capable, marginal = cpk_bars(session)
     spec, checks = _values(session, material, characteristic, limit)
     values = [c.value for c in checks]
     stamps = [c.ts for c in checks]
@@ -208,8 +223,8 @@ def chart(session: Session, material: str, characteristic: str,
         # than noticed: a screen that showed a firing with no hold and said
         # nothing about why is the chart lying by omission (decision 0036).
         "rules": sorted(RULE_WINDOW),
-        "hold_rules": list(hold_rules()),
-        "major_rules": list(major_rules()),
+        "hold_rules": list(hold_rules(session)),
+        "major_rules": list(major_rules(session)),
         # The numbers this plant judges by, beside the figures they judge.
         # The browser used to hold its own copy of the Cpk bar to pick the
         # verdict's colour, so a plant that moved the bar got a green figure
@@ -268,7 +283,7 @@ def chart(session: Session, material: str, characteristic: str,
         "signals": signals,
         "stable": stable,
         # The sentence that keeps the two questions apart.
-        "verdict": _verdict(stable, capability, signals),
+        "verdict": _verdict(stable, capability, signals, capable, marginal),
     }
 
 
@@ -283,7 +298,7 @@ def _acted_on(session: Session, spec: QualitySpec, signals: list[dict], ids: lis
     """
     if not signals:
         return []
-    holds_on = hold_rules()
+    holds_on = hold_rules(session)
     keys = {_window_key(ids, s["index"], s["rule"]): s["index"] for s in signals}
     rows = session.scalars(select(SpcSignal).where(
         SpcSignal.spec_id == spec.id, SpcSignal.window_key.in_(keys))).all()
@@ -304,7 +319,8 @@ def _acted_on(session: Session, spec: QualitySpec, signals: list[dict], ids: lis
     return out
 
 
-def _verdict(stable: bool, capability: dict | None, signals: list[dict]) -> str:
+def _verdict(stable: bool, capability: dict | None, signals: list[dict],
+             capable: float, marginal: float) -> str:
     if not stable:
         rules = sorted({s["rule"] for s in signals})
         # The process is out of control whether or not this plant raises a
@@ -315,7 +331,6 @@ def _verdict(stable: bool, capability: dict | None, signals: list[dict]) -> str:
     if capability is None:
         return "in control; capability needs both specification limits to compute"
     cpk = capability["cpk"]
-    capable, marginal = cpk_bars()
     if cpk >= capable:
         return f"in control and capable (Cpk {cpk})"
     if cpk >= marginal:
@@ -348,14 +363,12 @@ MAJOR = "major"
 MINOR = "minor"
 
 
-def major_rules() -> tuple[int, ...]:
+def major_rules(session: Session) -> tuple[int, ...]:
     """Which rules open a major non-conformance rather than a minor one."""
-    from fsmes.config import get_settings
-
-    return get_settings().major_rules()
+    return _rules(session, "major_rules", MAJOR_RULES)
 
 
-def hold_rules() -> tuple[int, ...]:
+def hold_rules(session: Session) -> tuple[int, ...]:
     """Which of the four rules raise a quality hold on this plant.
 
     Decision [0036](../../docs/decisions/0036-the-chart-draws-every-rule.md):
@@ -365,13 +378,25 @@ def hold_rules() -> tuple[int, ...]:
     somebody's morning. All four is the default and is what this product has
     always done.
 
-    Read at the moment it is needed rather than at import, so a plant that
-    changes its pack and restarts gets the new answer without this module
-    having cached the old one.
+    Read at the moment it is needed rather than at import, so a number changed
+    on Quality's Configuration page is in force on the next chart drawn.
     """
-    from fsmes.config import get_settings
+    return _rules(session, "hold_rules", HOLD_RULES)
 
-    return get_settings().hold_rules()
+
+def _rules(session: Session, name: str, fallback: tuple[int, ...]) -> tuple[int, ...]:
+    """One of the two rule lists, narrowed to the four rules this product has.
+
+    Parsed rather than trusted, exactly as `Settings._rule_list` was and for
+    the same reason: anything that is not one of the four is dropped, because
+    the alternative is a plant refusing to draw a chart over a typo in a list
+    that only ever narrows a set. `fsmes pack check` tells a person about the
+    typo offline, the write path on the Configuration page refuses it outright,
+    and the chart payload states what was actually parsed.
+    """
+    written = _number(session, name, list(fallback))
+    rules = [r for r in written if r in (1, 2, 3, 4)]
+    return tuple(sorted(dict.fromkeys(rules)))
 
 
 def _window_key(ids: list[int], index: int, rule: int) -> str:
@@ -419,9 +444,9 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
     checks = list(session.scalars(
         select(QualityCheck).where(QualityCheck.spec_id == spec.id)
         .order_by(QualityCheck.id.desc())
-        .limit(history() if limit is None else limit)))
+        .limit(history(session) if limit is None else limit)))
     checks.reverse()
-    if len(checks) < min_points():
+    if len(checks) < min_points(session):
         return []
 
     values = [c.value for c in checks]
@@ -456,8 +481,8 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
                                     SpcSignal.window_key.in_(keys)))
     }
 
-    holds_on = hold_rules()
-    majors = major_rules()
+    holds_on = hold_rules(session)
+    majors = major_rules(session)
     raised: list[dict] = []
     for signal in signals:
         key = _window_key(ids, signal["index"], signal["rule"])

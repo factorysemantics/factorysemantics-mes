@@ -80,20 +80,28 @@ def test_every_quality_key_ships_the_literal_that_was_in_the_source():
     assert shipped.quality_containment_max_depth == 6
 
 
-def test_the_services_agree_with_the_constants_they_replaced():
+def test_the_services_agree_with_the_constants_they_replaced(session):
     """Each service keeps the literal as its own named fallback, so the
     product still says what it does in one place even when nothing is
     configured. A drift between the two would be the setting quietly moving
-    a plant that never asked for it."""
-    assert spc.min_points() == spc.MIN_POINTS == 12
-    assert spc.history() == spc.HISTORY == 200
-    assert spc.cpk_bars() == (spc.CPK_CAPABLE, spc.CPK_MARGINAL) == (1.33, 1.0)
-    assert gauges.ratios() == (gauges.RATIO_ADEQUATE, gauges.RATIO_FLOOR) == (10.0, 4.0)
-    assert gauges.default_interval_days() == gauges.DEFAULT_INTERVAL_DAYS == 365
-    assert coa.serials_listed() == coa.SERIALS_LISTED == 200
-    assert serialization.max_depth() == serialization.MAX_DEPTH == 6
-    assert serialization.serial_digits() == serialization.SERIAL_DIGITS == 6
-    assert quality.nc_code_prefix() == quality.NC_CODE_PREFIX == "NC"
+    a plant that never asked for it.
+
+    Read with a session since 2026-09-24, because these are read from the
+    plant's own `plant_settings` table before the environment. On a plant with
+    no rows there - which is what this test's database is - every one of them
+    still answers the literal above, and that is the whole point of the test.
+    """
+    assert spc.min_points(session) == spc.MIN_POINTS == 12
+    assert spc.history(session) == spc.HISTORY == 200
+    assert spc.cpk_bars(session) == (spc.CPK_CAPABLE, spc.CPK_MARGINAL) == (1.33, 1.0)
+    assert spc.hold_rules(session) == spc.HOLD_RULES == (1, 2, 3, 4)
+    assert spc.major_rules(session) == spc.MAJOR_RULES == (1,)
+    assert gauges.ratios(session) == (gauges.RATIO_ADEQUATE, gauges.RATIO_FLOOR) == (10.0, 4.0)
+    assert gauges.default_interval_days(session) == gauges.DEFAULT_INTERVAL_DAYS == 365
+    assert coa.serials_listed(session) == coa.SERIALS_LISTED == 200
+    assert serialization.max_depth(session) == serialization.MAX_DEPTH == 6
+    assert serialization.serial_digits(session) == serialization.SERIAL_DIGITS == 6
+    assert quality.nc_code_prefix(session) == quality.NC_CODE_PREFIX == "NC"
 
 
 def test_every_shipped_default_is_inside_the_range_the_checker_enforces():
@@ -291,9 +299,12 @@ def test_a_plant_that_lists_fewer_serials_says_how_many_more_there_are(
     assert "BTL-5" in rendered and "more" not in rendered.split("## Serialised units")[1][:400]
 
     _set(monkeypatch, quality_coa_serials_listed=2)
-    assert coa.serials_listed() == 2
-    shorter = coa.render(data, issued_by="test", issued_at=utcnow(), revision=2,
-                         supersedes=1)
+    assert coa.serials_listed(session) == 2
+    # Re-gathered, because the number the certificate cut its list to is
+    # carried with the data rather than read again while rendering: a
+    # certificate says what was gathered.
+    shorter = coa.render(coa.gather(session, code), issued_by="test",
+                         issued_at=utcnow(), revision=2, supersedes=1)
     assert "BTL-0" in shorter and "BTL-5" not in shorter
     assert "… 4 more" in shorter
 
@@ -313,16 +324,16 @@ def test_a_plant_numbers_its_own_serials_and_the_separator_stays_the_products(
 
 
 def test_a_containment_depth_a_plant_chooses_is_never_past_the_products_ceiling(
-        monkeypatch):
+        session, monkeypatch):
     """It is the plant's packaging *and* the guard that stops a walk running
     away over a cycle in the data. A plant chooses the first; it does not get
     to switch off the second."""
     _set(monkeypatch, quality_containment_max_depth=7)
-    assert serialization.max_depth() == 7
+    assert serialization.max_depth(session) == 7
     _set(monkeypatch, quality_containment_max_depth=500)
-    assert serialization.max_depth() == serialization.DEPTH_CEILING == 12
+    assert serialization.max_depth(session) == serialization.DEPTH_CEILING == 12
     _set(monkeypatch, quality_containment_max_depth=0)
-    assert serialization.max_depth() == 1
+    assert serialization.max_depth(session) == 1
 
 
 def test_a_plant_that_calls_them_ncrs_calls_all_of_them_ncrs(session, monkeypatch):

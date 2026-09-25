@@ -814,3 +814,85 @@ stays true and is now scoped to the chart, which is what it was always about;
 *windows* — 2-of-3, 4-of-5, 8-in-a-row — are tier three either way: a plant
 that changed them would publish `SpcSignal.rule = 3` while meaning something
 nobody else means by rule 3.
+
+---
+
+## 11. How a plant-scope setting becomes editable — built 2026-09-24
+
+§3 said tier one is **seeded by the pack and owned by the database**, and
+named `shifts` as the shape that already worked. §10's audit then turned
+thirteen `[quality]` literals into pack keys (#98) — compiled into
+environment variables and read from there, which made each of them a row on
+Quality's Configuration page saying *nobody — it changes when the pack is
+applied and the plant restarts.*
+
+Scott clicked one on 2026-09-24 and asked the obvious question: *"when I click
+on stuff, it doesn't seem to take me to where I can actually make those
+changes. Shouldn't it?"* He was right, and the honest answer was that #98 had
+taken the fallback its handoff allowed. So the second half was built, and
+built **generically**, because Process, Controls and Supply chain each have
+the same gap waiting for them.
+
+### What a future section has to do
+
+Two things, and nothing else.
+
+1. **Set `edit_here=True` on its `ConfigSection`** in `fsmes/modules.py`.
+2. **Name the capability in that section's `define`**, and leave `approve`
+   as `None`.
+
+That is the whole opt-in. No table of its own, no endpoint of its own, no
+migration, no `KINDS` entry, no JavaScript. The page renders an input per key,
+`PATCH /dashboard/config/{domain}/settings/{key}` accepts it gated on that
+section's own `define`, and `fsmes pack apply` seeds it.
+
+A section that sets `edit_here` and names no `define` is refused by
+`test_live_plant_settings.py`, because *anybody who can see this screen may
+change this number* is exactly what `pack_keys` was invented to avoid saying.
+
+### The mechanism, in four sentences
+
+- **`plant_settings`** holds one row per setting a plant owns, keyed by the
+  pack's own `[section] key` and holding its value as text — the same string
+  the compiled setting would have carried, so the database and the environment
+  hold a value in the same shape. It belongs to the `dashboard` module, which
+  is kernel: a plant that switches Quality off keeps the numbers it chose.
+- **Three layers**, read in this order: the row, the setting the pack
+  compiled, the literal the product ships. So *a plant that configures nothing
+  behaves exactly as it did*, and the migration that added the table moves no
+  data — which is also why it does not try to read a plant's pack file from
+  inside a migration, something a migration cannot honestly do.
+- **Read through the caller's session**, memoised on `session.info` the way
+  `services/calendar` keeps shift patterns out of a hot loop. One query per
+  section per unit of work, no process cache and no refresh interval: a number
+  saved is in force on the next reading, in every process, with no restart.
+- **Validated by `fsmes pack check`'s own rules**, called on the table with
+  the one value changed — which is what lets `cpk_marginal` be judged against
+  the `cpk_capable` this plant is actually running on rather than against the
+  product's default. One wording for one rule, whichever door the value came
+  in by.
+
+### Why there is no approval step
+
+Rule three of this design, restated because this is the first thing built
+squarely on it: *a number a plant administrator edits and which takes effect
+when saved has no pending state.* Nothing in this MES records **the Cpk bar
+that was in force when I was judged** — a non-conformance stores its severity,
+and a chart is drawn fresh every time — so there is nothing for a revision to
+protect and nothing for an approver to sign. Undo is typing the old number
+back, and the audit row says what it was.
+
+That is the line between these eleven sections and the severity vocabulary
+sitting beside them on the same page, which keeps its full draft → approve →
+supersede → retire lifecycle: its words are written *onto records that outlive
+it*. **A setting is editable here when nothing stores the value it had at the
+moment it decided something.** That is the test to apply to the next one.
+
+### What is still the pack's
+
+`fsmes pack apply` seeds a key once and never updates it, exactly as it treats
+every masterdata kind. So a pack file is how a *new* plant starts and not how
+a running one is steered, and editing `plant.toml` and re-applying does not
+move a number the plant has taken ownership of. `fsmes pack status` reports
+the difference rather than resolving it, which is the same answer decision
+0022 gave about a routing an order has already run against.

@@ -301,6 +301,28 @@ def apply(directory: Path, *, into: Path | None = None, echo=print) -> dict:
     else:
         echo("      master data: this pack carries none, so nothing was seeded")
 
+    # The settings this plant takes ownership of. Not part of the masterdata
+    # block above, because these come from `plant.toml` itself rather than
+    # from the `masterdata/` directory, and a pack with no master data still
+    # has numbers of its own. Idempotent and never updating, exactly like
+    # every other kind: a key with a row already is left as it is, whether the
+    # pack wrote it last month or an administrator typed it this morning.
+    refuse_unless_at_head(pack)
+    with session_scope() as session:
+        from fsmes.services import plant_settings
+
+        owned = plant_settings.seed(session, pack)
+    if owned["made"] or owned["present"]:
+        # Reported as a kind only when the pack carried some, the way the
+        # master data seeder reports only the files it found: a kind on the
+        # receipt is a kind that was seeded, and re-applying finds it present.
+        seeded["settings"] = owned
+        echo(f"      settings this plant owns: {owned['made']} made, "
+             f"{owned['present']} already there")
+    else:
+        echo("      settings this plant owns: this pack writes none, so the "
+             "product's own defaults stand")
+
     accounts = _accounts(pack, auth, session_scope, echo)
 
     revision = current_revision()
