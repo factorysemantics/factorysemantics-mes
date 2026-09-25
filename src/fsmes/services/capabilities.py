@@ -62,6 +62,22 @@ CAPABILITIES: dict[str, str] = {
     # there is no `erp.approve` beside it because none of these has a pending
     # state to sign - rule three of that decision.
     "erp.define":        "Set what this plant asks of its ERP link: retries, open statuses, timeouts and tolerances",
+    # Controls engineering. Named in decision 0035 §2 on 2026-09-21 and added
+    # on 2026-09-25, when the first thing to gate on it existed: the numbers
+    # behind the OPC agent, the namespace outbox and the trigger evaluator, on
+    # Engineering's Configuration page. 0035 said adding this later would be
+    # cheap because a capability is a string and a role is a list of them, and
+    # it was.
+    #
+    # `signals.approve` is in that table too and is deliberately **not** here.
+    # There is nothing yet for it to approve: these numbers take effect when
+    # they are saved (rule three of 0035), and a capability a plant could grant
+    # that gates nothing is a role saying something untrue about itself. The
+    # day controls engineering has a vocabulary to put in force, it arrives
+    # with the thing it gates.
+    "signals.define":    "Set the numbers behind the plant's signals: how hard the OPC "
+                         "agent retries, how densely tags are sampled, how fast an "
+                         "approved trigger reaches a machine",
 }
 
 _VIEWER = ("plant.read",)
@@ -78,7 +94,14 @@ _ADMIN = (*_SUPERVISOR, "masterdata.write", "users.manage",
           "scheduling.plan", "triggers.approve", "adjustments.approve",
           "process.define", "process.approve",
           "quality.define", "quality.approve",
-          "erp.define")
+          "erp.define",
+          # The administrator holds everything, so a new capability lands here
+          # and a plant that has not redefined the role gets it on upgrade.
+          # It is deliberately not on `agent`: an agent may draft a vocabulary
+          # for somebody to approve, and retuning how hard the OPC agent
+          # retries a booking is not drafting - there is nobody in the loop
+          # after it.
+          "signals.define")
 
 # The built-ins. The first four are the old ladder expressed as bundles, so
 # nothing an existing account could do changes. They are protected from

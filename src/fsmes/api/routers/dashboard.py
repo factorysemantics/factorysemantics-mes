@@ -593,6 +593,14 @@ def set_setting(domain: str, key: str, body: SettingIn,
         raise HTTPException(422, str(exc)) from None
 
 
+def _module_title(section: modules.ConfigSection) -> str | None:
+    """The title of the module that put one section on a page, for the group
+    heading. `None` for a section whose module is not in the registry, which
+    cannot happen from the registry itself and is not guessed at here."""
+    module = modules.module_of_section(section)
+    return module.title if module else None
+
+
 @router.get("/config/{domain}/sections")
 def config_sections(domain: str, db: ReadDbDep, user: UserDep) -> dict:
     """Everything configurable in one workspace, with its total.
@@ -642,6 +650,11 @@ def config_sections(domain: str, db: ReadDbDep, user: UserDep) -> dict:
                 "key": section.key,
                 "label": section.label,
                 "about": section.about,
+                # Which module put this row here. Returned so the page can
+                # print the grouping it already says it is sorted by: with
+                # eighteen rows in one workspace, a stated order nobody can
+                # see is an order nobody can trust.
+                "module": _module_title(section),
                 "href": section.href,
                 "define": section.define,
                 "approve": section.approve,

@@ -840,7 +840,7 @@ def oee_numbers(table: dict) -> list[Problem]:
     problem = _range_problem(
         "[oee] min_observed_seconds", table.get("min_observed_seconds"), 0, None,
         "nothing is divided by zero seconds, which is the whole reason this "
-        "floor exists", False)
+        "floor exists")
     return [problem] if problem else []
 
 def _modules(pack: fmt.Pack) -> list[Problem]:
