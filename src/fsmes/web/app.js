@@ -17,11 +17,13 @@
    nobody sees. The tiles above still count the whole plant: a grid filtered
    to six machines must never read as a six-machine plant. */
 
-const REFRESH_MS = 2000;
-const PENDING_REFRESH_MS = 30000;
-const MACHINE_PAGE = 24;
-const ORDER_PAGE = 10;
-const SPEC_CHOICES = 200;
+/* What this plant's floor screen runs at. Five literals until 2026-09-25 -
+   two clocks, three page sizes - and now the `[screens]` pack table, read
+   once through FS.settings() before start() draws anything. There is no
+   default beside any of them here: the server is the one place that says
+   what this plant is set to, and a browser copy would be the second answer
+   the configuration audit kept finding. */
+let ui = {};
 
 let user = null;
 let summary = null;
@@ -121,6 +123,9 @@ async function start() {
   $("#user-role").textContent = user.role;
   // whoami is cached in common.js; the header made the first call.
   await FS.whoami();
+  // Before anything is drawn or any clock is started: the page sizes below
+  // are in the first request this screen makes.
+  ui = await FS.settings();
   FS.applyCapGates();
   readFilters();
   // Before the plant's own screens are drawn: a walk resuming from the
@@ -131,11 +136,11 @@ async function start() {
   await loadLines();
   await refresh();
   await refreshPending();
-  if (!timer) timer = setInterval(refresh, REFRESH_MS);
+  if (!timer) timer = setInterval(refresh, ui.floor_refresh_ms);
   // On its own, slower clock. This answer is per-caller, so unlike
   // /dashboard/summary it cannot be shared between everyone watching, and a
   // queue somebody signs off once a week does not need a two-second poll.
-  if (!pendingTimer) pendingTimer = setInterval(refreshPending, PENDING_REFRESH_MS);
+  if (!pendingTimer) pendingTimer = setInterval(refreshPending, ui.floor_pending_refresh_ms);
 }
 
 $("#login-form").addEventListener("submit", async (event) => {
@@ -187,14 +192,18 @@ async function loadLines() {
 /* ---------- refresh ---------- */
 
 let alarms = [];
-let orderPage = { items: [], total: 0, limit: ORDER_PAGE, offset: 0, has_more: false };
+/* Replaced wholesale by the first answer from /workorders, which states its
+   own limit. `null` rather than this plant's page size because this line
+   runs while the module is being parsed, before FS.settings() has been
+   asked anything - and an empty list has no page size worth claiming. */
+let orderPage = { items: [], total: 0, limit: null, offset: 0, has_more: false };
 
 /* The floor's machine grid, as the server's page. `line` is a scope - it
    changes which plant the tiles are about - and q/state are a filter on the
    grid alone. The API draws the same distinction. */
 function summaryQuery() {
   const params = new URLSearchParams({
-    machine_limit: String(MACHINE_PAGE), machine_offset: String(filters.offset) });
+    machine_limit: String(ui.floor_machine_page), machine_offset: String(filters.offset) });
   if (filters.line) params.set("line", filters.line);
   if (filters.q) params.set("machine_q", filters.q);
   if (filters.state) params.set("machine_state", filters.state);
@@ -202,7 +211,7 @@ function summaryQuery() {
 }
 
 function orderQuery() {
-  const params = new URLSearchParams({ limit: String(ORDER_PAGE), offset: String(filters.ooffset) });
+  const params = new URLSearchParams({ limit: String(ui.floor_order_page), offset: String(filters.ooffset) });
   // The API's status filter is repeatable, one value each - not a
   // comma list, which it answers with 422.
   for (const status of filters.ostatus.split(",").filter(Boolean)) params.append("status", status);
@@ -501,9 +510,9 @@ function renderMachines(machines, envelope) {
   // what matched the filter; `scope_total` is how many machines the tiles
   // above are counting.
   const info = envelope || { total: machines.length, scope_total: machines.length,
-                             limit: MACHINE_PAGE, offset: 0, has_more: false, filtered: false };
+                             limit: ui.floor_machine_page, offset: 0, has_more: false, filtered: false };
   filters.offset = info.offset;
-  const page = { items: machines, total: info.total, limit: info.limit || MACHINE_PAGE,
+  const page = { items: machines, total: info.total, limit: info.limit || ui.floor_machine_page,
                  offset: info.offset, has_more: info.has_more };
   const where = filters.line ? `on ${filters.line}` : "in the plant";
   $("#m-count").textContent = FS.countText(page, info.scope_total, where);
@@ -819,11 +828,11 @@ async function loadLots() {
 }
 
 /* The characteristics this form can record against. A plant with more than
-   SPEC_CHOICES of them gets the first page and is told so - a select that
+   floor_spec_choices of them gets the first page and is told so - a select that
    silently stops at five hundred is the kind of quiet truncation this
    product does not do. The Quality screen is where all of them live. */
 async function loadSpecs() {
-  const page = await api(`/quality/specs?limit=${SPEC_CHOICES}`).catch(() => ({ items: [], total: 0 }));
+  const page = await api(`/quality/specs?limit=${ui.floor_spec_choices}`).catch(() => ({ items: [], total: 0 }));
   const specs = page.items || [];
   const options = specs.map((spec) => [`${spec.material}::${spec.characteristic}`,
                                        `${spec.material} ${spec.characteristic} [${spec.min_value}–${spec.max_value}]`]);

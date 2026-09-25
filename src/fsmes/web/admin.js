@@ -20,13 +20,17 @@ let userHasMore = false;
 let userOffset = 0;
 let userFilterRole = "";
 let userFilterText = "";
-const userPageSize = 25;
 let equipment = [];
 let routings = [];
 let routingText = "";
 let routingMaterial = "";
 let routingOffset = 0;
-const routingPageSize = 25;
+
+/* This plant's own page sizes, refresh clock and debounce - `[screens]`,
+   read once in boot() through FS.settings(). Four literals here until
+   2026-09-25, one of which (a 4000 ms toast) disagreed with common.js's
+   3500 for no reason anybody could name. */
+let ui = {};
 
 async function api(path, options = {}) {
   const r = await fetch(path, {
@@ -40,13 +44,12 @@ async function api(path, options = {}) {
   return data;
 }
 
-function toast(message, kind = "good") {
-  const node = $("#toast");
-  node.textContent = message;
-  node.className = `toast ${kind}`;
-  clearTimeout(node._t);
-  node._t = setTimeout(() => node.classList.add("hidden"), 4000);
-}
+/* toast() was a copy of FS.toast with a different duration - 4000 here
+   against common.js's 3500, two files disagreeing about how long a
+   confirmation stays up. The copy is deleted rather than the disagreement
+   settled: common.js is the one that every other screen already uses, and
+   `[screens] toast_ms` is now the single number behind it. */
+const toast = (message, kind = "good") => window.FS.toast(message, kind);
 
 function live(ok) {
   $("#live-dot").className = "dot" + (ok ? "" : " bad");
@@ -213,7 +216,7 @@ function renderRoutings() {
   const matching = routings.filter((r) =>
     (!routingMaterial || r.material === routingMaterial)
     && (!q || `${r.code} ${r.name}`.toLowerCase().includes(q)));
-  const page = window.FS.clientPage(matching, routingOffset, routingPageSize);
+  const page = window.FS.clientPage(matching, routingOffset, ui.admin_routing_page_size);
   routingOffset = page.offset;
   const body = $("#routings tbody");
   body.textContent = "";
@@ -336,7 +339,7 @@ $("#form-routing").addEventListener("submit", async (event) => {
 
 async function refresh() {
   try {
-    const query = new URLSearchParams({ limit: String(userPageSize),
+    const query = new URLSearchParams({ limit: String(ui.admin_user_page_size),
                                         offset: String(userOffset) });
     if (userFilterRole) query.set("role", userFilterRole);
     if (userFilterText) query.set("q", userFilterText);
@@ -365,6 +368,8 @@ async function refresh() {
 
 (async function boot() {
   me = await api("/auth/me");
+  // Before any list is paged or any clock started.
+  ui = await window.FS.settings();
   const allowed = (me.capabilities || []).includes("users.manage");
   $("#denied-who").textContent = `${me.name} (${me.role})`;
   $("#denied").classList.toggle("hidden", allowed);
@@ -389,7 +394,8 @@ async function refresh() {
   let typing = null;
   $("#u-q").addEventListener("input", (e) => {
     clearTimeout(typing);
-    typing = setTimeout(() => { userFilterText = e.target.value.trim(); userOffset = 0; refresh(); }, 250);
+    typing = setTimeout(() => { userFilterText = e.target.value.trim(); userOffset = 0; refresh(); },
+      ui.input_debounce_ms);
   });
   $("#u-role").addEventListener("change", (e) => { userFilterRole = e.target.value; userOffset = 0; refresh(); });
   $("#r-q").addEventListener("input", (e) => { routingText = e.target.value.trim(); routingOffset = 0; renderRoutings(); });
@@ -397,5 +403,5 @@ async function refresh() {
   addOperationRow(10);
 
   await refresh();
-  setInterval(refresh, 8000);
+  setInterval(refresh, ui.admin_refresh_ms);
 })();

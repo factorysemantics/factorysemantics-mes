@@ -65,11 +65,14 @@ function whoCell(capability, held, noneMeans) {
 
    Every section on this product answered this way until 2026-09-24, when the
    eleven `[quality]` keys moved onto `plant_settings` and became live -
-   `edit_here` on the registry entry is what tells the two apart. No section
-   reaches this today. It is kept rather than deleted because a setting that
-   genuinely cannot move while a plant is running is a real thing a future
-   section may be, and this sentence is what such a section would owe a reader:
-   the same answer the server's `_read_only_key` gives, on the same case. */
+   `edit_here` on the registry entry is what tells the two apart. Three
+   sections reach it, all on Setup > Configuration, and they are what it was
+   kept for: the list envelope's default and ceiling are published in this
+   plant's own API document and cannot move under a caller holding it, logging
+   is configured before the plant's database is open, and the fleet probe is
+   the console's number rather than any one plant's. A box that appeared to
+   work and took effect at the next restart would be worse than this
+   sentence. */
 function packCell(keys, half) {
   const cell = el("td");
   if (half === "define") {

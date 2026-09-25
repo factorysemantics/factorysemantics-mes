@@ -224,6 +224,36 @@
 
   FS.can = (cap) => !!(me && (me.capabilities || []).includes(cap));
 
+  /* ---------- what this plant's screens are set to ----------
+     Three refresh clocks, four page sizes, a ceiling, a toast duration, a
+     debounce and the assistant's two: every one of them was a literal in
+     this file, app.js, admin.js or assist.js until 2026-09-25. They are the
+     `[screens]` pack table now, and this asks the server for them once per
+     page load.
+
+     **There is no copy of any default here, on purpose.** A browser default
+     beside a server default is the thing the configuration audit kept
+     finding - the same number in two places, drifting - so a page awaits
+     these before it uses one. `FS.settings()` is cached the way `FS.whoami()`
+     is: every caller on a page shares one request. */
+
+  let ui = null;
+  let uiPromise = null;
+
+  FS.settings = function settings() {
+    if (ui) return Promise.resolve(ui);
+    if (!uiPromise) {
+      uiPromise = FS.api("/dashboard/ui-settings").then((page) => {
+        ui = page.settings;
+        return ui;
+      }).catch((err) => {
+        uiPromise = null;
+        throw err;
+      });
+    }
+    return uiPromise;
+  };
+
   /* Hide everything marked data-needs-cap that this person cannot use.
      Capabilities, never role names - the ladder is dead. */
   FS.applyCapGates = function applyCapGates(root = document) {
@@ -244,7 +274,15 @@
     node.textContent = message;
     node.className = `toast ${kind}`;
     clearTimeout(node._t);
-    node._t = setTimeout(() => node.classList.add("hidden"), 3500);
+    /* The message appears now and the clock that hides it is set when this
+       plant's answer arrives - which on every call but the first is the same
+       turn, because `FS.settings` is cached. Written this way round rather
+       than with a number in front of it: a fallback here would be the second
+       copy of 3500 that this key exists to delete. */
+    FS.settings().then((s) => {
+      clearTimeout(node._t);
+      node._t = setTimeout(() => node.classList.add("hidden"), s.toast_ms);
+    }).catch(() => { /* the toast stays up; a stuck message beats a lost one */ });
   };
 
   /* ---------- paging ----------
@@ -306,7 +344,10 @@
      never for a list that grows with time. It returns `complete`, so a
      screen that hit the ceiling says so instead of presenting a truncated
      list as the plant. */
-  FS.allPages = async function allPages(path, { limit = 500, cap = 2000 } = {}) {
+  FS.allPages = async function allPages(path, { limit, cap } = {}) {
+    const plant = await FS.settings();
+    if (limit === undefined) limit = plant.all_pages_limit;
+    if (cap === undefined) cap = plant.all_pages_cap;
     const join = path.includes("?") ? "&" : "?";
     let items = [];
     let total = 0;

@@ -383,7 +383,11 @@ def test_no_screen_asks_for_a_list_without_saying_how_much_of_it_it_wants():
     quality_js = (WEB / "quality.js").read_text(encoding="utf-8")
     masterdata_js = (WEB / "masterdata.js").read_text(encoding="utf-8")
 
-    assert "machine_limit: String(MACHINE_PAGE)" in app_js
+    # The name moved on 2026-09-25: the page size stopped being a literal in
+    # this file and became `[screens] floor_machine_page`, which the browser
+    # reads from the server. What the ratchet is about is unchanged - the
+    # request names a limit, whoever decided it.
+    assert "machine_limit: String(ui.floor_machine_page)" in app_js
     assert "machine_offset" in app_js
     # The floor no longer downloads the equipment tree to label its cards.
     assert "/equipment/tree" not in app_js
