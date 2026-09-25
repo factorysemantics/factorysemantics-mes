@@ -1148,6 +1148,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operate/administration-numbers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — this plant's own administration numbers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operate/packs/" class="md-nav__link">
         
   
@@ -2418,6 +2446,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-the-fourth-domain-and-what-it-taught-2026-09-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. The fourth domain, and what it taught — 2026-09-25
+      
+    </span>
+  </a>
   
 </li>
       
@@ -4441,6 +4480,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#14-the-fourth-domain-and-what-it-taught-2026-09-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. The fourth domain, and what it taught — 2026-09-25
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -5584,6 +5634,42 @@ is keyed by <code>[section] key</code> with no room for a third name — deliber
 a table that could hold <em>per object</em> rows would be a second object model. Those
 belong on the object's own row, and <code>C14</code> in particular waits on the bulk-edit
 design §9 opened.</p>
+<h2 id="14-the-fourth-domain-and-what-it-taught-2026-09-25">14. The fourth domain, and what it taught — 2026-09-25<a class="headerlink" href="#14-the-fourth-domain-and-what-it-taught-2026-09-25" title="Permanent link">&para;</a></h2>
+<p>Administration's eighteen plant-scope rows and IT's three went onto this seam
+the same day as the second and third. The claim above — <em>two things, and
+nothing else</em> — held: sixteen sections, forty-four keys, one flag and one
+<code>define</code> each. What needed writing was everything around the seam rather than
+the seam itself, and three of those are worth keeping.</p>
+<p><strong>A section may honestly say no.</strong> <code>edit_here=False</code> was written as a
+placeholder that no section reached. Three reach it now, and all three are
+real: the list envelope's default and ceiling are <em>published</em> in this plant's
+own OpenAPI document, so a ceiling that moved under a caller holding that
+document would make the document a lie; logging is configured before the
+plant's database is open, because it is the thing that reports a database that
+will not open; the fleet probe is the console's number about every plant it
+watches and the console has no plant to read a row from. For these the page
+says <em>nobody — it changes when the pack is applied and the plant restarts</em>,
+which is better than a box that appears to work.</p>
+<p><strong>The browser is a reader like any other.</strong> Half of administration's rows were
+literals in JavaScript, and the mechanism said nothing about them. It does not
+need to: <code>GET /dashboard/ui-settings</code> answers with the <code>[screens]</code> table typed,
+the browser asks once per page load through <code>FS.settings()</code>, and <strong>no default
+is written in the browser at all</strong> — because a browser default beside a server
+default is precisely the drift the audit kept finding. The pack table <em>is</em> the
+list of what the browser reads; nothing enumerates it a second time.</p>
+<p><strong>The pack table is not the workspace.</strong> <code>[admin]</code>, <code>[screens]</code> and <code>[system]</code>
+are three tables on one Configuration page. That is not an accident of
+tidiness: a pack table is a table in a file and a workspace is a place on a
+screen, and <code>plant_settings.owner</code> was written to keep them apart. It is what
+lets IT's settings sit on Administration's page without IT getting a
+<code>ConfigDomain</code> that decision 0035 §2 deliberately denies it.</p>
+<p>And one thing this found rather than added: <code>write</code> refused what was <em>wrong
+with the table</em> rather than what the edit <em>broke</em>. Since a pair rule reports at
+whichever of its two keys reads best, raising <code>cpk_marginal</code> over <code>cpk_capable</code>
+was refused while lowering <code>cpk_capable</code> under <code>cpk_marginal</code> — the same
+crossing-over — was accepted. It now judges the difference between the table
+before and after, which also stops a plant that is out of range on one key from
+being unable to save any of the others.</p>
 
 
 
