@@ -18,7 +18,12 @@ class PlanIn(BaseModel):
     equipment: str
     trigger: str = "runtime_hours"
     interval: float
-    expected_minutes: float = 30.0
+    # Left out, this plant's own house default stands - `[process]
+    # maintenance_plan_default_minutes`, read at the moment the plan is
+    # created. A number here would be a second copy of it, and a screen that
+    # sent the product's thirty would overrule the plant that had chosen
+    # forty-five without anybody meaning to.
+    expected_minutes: float | None = None
     instructions: str | None = None
     document_code: str | None = None
 

@@ -45,13 +45,15 @@ def register(mcp, call, write, identify) -> dict:
     @mcp.tool()
     def create_maintenance_plan(plant: str, code: str, name: str, machine: str,
                                 trigger: str = "runtime_hours", interval: float = 200.0,
-                                expected_minutes: float = 30.0, document_code: str | None = None,
+                                expected_minutes: float | None = None,
+                                document_code: str | None = None,
                                 dry_run: bool = False, on_behalf_of: str | None = None,
                                 client_ref: str | None = None) -> dict:
         """Define a preventive plan on a machine. trigger is runtime_hours,
-        produced_qty or calendar_days; interval is in that unit. Needs the
-        maintenance.plan capability, which the agent role does not hold by
-        default - an admin grants it per plant."""
+        produced_qty or calendar_days; interval is in that unit.
+        expected_minutes left out takes this plant's own default for a new
+        plan. Needs the maintenance.plan capability, which the agent role does
+        not hold by default - an admin grants it per plant."""
         identify(on_behalf_of, client_ref)
         body = {"code": code, "name": name, "equipment": machine, "trigger": trigger,
                 "interval": interval, "expected_minutes": expected_minutes,

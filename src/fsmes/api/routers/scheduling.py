@@ -18,7 +18,11 @@ class ShiftIn(BaseModel):
     name: str
     starts: time
     ends: time
-    days: str = "1111100"
+    # Left out, this plant's own default working week stands - `[process]
+    # working_week_mask`. A literal here would be a second copy of it, and a
+    # screen that sent Monday-to-Friday would overrule a plant whose week runs
+    # Sunday to Thursday without anybody meaning to.
+    days: str | None = None
     equipment: str | None = None
 
 
@@ -63,9 +67,15 @@ def add_exception(body: ExceptionIn, db: DbDep, actor: ActorDep) -> dict:
 
 
 @router.get("/board")
-def board(db: DbDep, equipment: str | None = None, hours: float = 24.0) -> dict:
+def board(db: DbDep, equipment: str | None = None, hours: float | None = None) -> dict:
     """The schedule machine by machine, with maintenance blocks alongside the
-    work so the day reads as one thing rather than two lists."""
+    work so the day reads as one thing rather than two lists.
+
+    `hours` left out is *this plant's own horizon* - `[process]
+    schedule_default_horizon_hours`, editable on Engineering's Configuration
+    page - rather than the twenty-four this parameter used to declare. The
+    payload states the `hours` it actually used either way, so nothing reading
+    it has to know which of the two happened."""
     return scheduling.board(db, equipment_code=equipment, hours=hours)
 
 

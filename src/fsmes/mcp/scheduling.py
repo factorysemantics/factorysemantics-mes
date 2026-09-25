@@ -19,11 +19,15 @@ def register(mcp, call, write, identify) -> dict:
         return {"plant": plant, **call(plant, "GET", "/scheduling/calendar")}
 
     @mcp.tool()
-    def schedule_board(plant: str, machine: str | None = None, hours: float = 24.0) -> dict:
+    def schedule_board(plant: str, machine: str | None = None,
+                       hours: float | None = None) -> dict:
         """The schedule machine by machine over the next `hours`: production
         slots with their order and operation, and the maintenance placed
-        before them."""
-        path = f"/scheduling/board?hours={hours}" + (f"&equipment={machine}" if machine else "")
+        before them. `hours` left out is the plant's own horizon, and the
+        answer states the window it covered."""
+        query = "" if hours is None else f"?hours={hours}"
+        join = "&" if query else "?"
+        path = f"/scheduling/board{query}" + (f"{join}equipment={machine}" if machine else "")
         return {"plant": plant, **call(plant, "GET", path)}
 
     @mcp.tool()
@@ -50,11 +54,13 @@ def register(mcp, call, write, identify) -> dict:
         return write(plant, "/scheduling/plan", {"start": start}, dry_run, "plan every open order")
 
     @mcp.tool()
-    def add_shift(plant: str, code: str, name: str, starts: str, ends: str, days: str = "1111100",
+    def add_shift(plant: str, code: str, name: str, starts: str, ends: str,
+                  days: str | None = None,
                   machine: str | None = None, dry_run: bool = False,
                   on_behalf_of: str | None = None, client_ref: str | None = None) -> dict:
         """Add a shift pattern: starts/ends as HH:MM, days as seven 1/0 flags
-        Monday to Sunday, optionally for one machine only."""
+        Monday to Sunday, optionally for one machine only. `days` left out
+        takes this plant's own default working week."""
         identify(on_behalf_of, client_ref)
         return write(plant, "/scheduling/calendar/shifts",
                      {"code": code, "name": name, "starts": starts, "ends": ends, "days": days,

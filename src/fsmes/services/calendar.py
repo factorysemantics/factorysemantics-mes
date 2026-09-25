@@ -36,7 +36,7 @@ from sqlalchemy.orm import Session
 
 from fsmes import identity
 from fsmes.domain import CalendarException, ExceptionKind, ShiftPattern
-from fsmes.services import Conflict, Invalid, audit
+from fsmes.services import Conflict, Invalid, audit, plant_settings
 
 # Scheduling walks forward in steps; a minute is fine for a plant and keeps
 # the arithmetic exact rather than approximating with fractions of an hour.
@@ -48,8 +48,53 @@ MAX_HORIZON_DAYS = 120
 # How far back `shift=previous` will look for a shift that has ended. Two weeks
 # covers a plant that ran nothing over a shutdown; past that, asking for "the
 # previous shift" is asking a question with no useful answer, and saying so
-# beats returning a fortnight-old window as if it were the last one.
+# beats returning a fortnight-old window as if it were the last one. A seasonal
+# plant with a six-week shutdown answers differently, which is why this is the
+# literal the product ships rather than the whole answer - see
+# `previous_horizon_days` below.
 PREVIOUS_HORIZON_DAYS = 14
+
+# The working week a pattern gets when it names no days. The *format* is the
+# product's and always will be - seven flags, Monday first - and which mask is
+# the default is the plant's, because Sunday to Thursday is a real working week.
+WORKING_WEEK_MASK = "1111100"
+
+
+# How long a reporting window is when a caller asks for none. The source called
+# it *a shift*, which is an assumption about somebody else's plant: a plant on
+# twelve-hour shifts wants 12.
+#
+# It lives here, beside the shift patterns, rather than in `services.analysis`
+# where it was read most, because the audit's own argument for making it a key
+# is that a plant already states its shift length in `shift_patterns` - so the
+# question is a calendar question. Practically, it is also the one place both
+# `analysis` and `equipment` can read it from: `analysis` imports `equipment`,
+# so a second accessor in `analysis` would have made the OEE path import its
+# own caller.
+DEFAULT_REPORT_HOURS = 8.0
+
+
+def default_report_hours(session: Session) -> float:
+    """How long a window is on this plant when nobody says.
+
+    Every payload states the `requested_hours` it was actually given, so
+    nothing downstream reads this as a fact about a window - only as the
+    question that was asked when nobody asked one.
+    """
+    return float(plant_settings.value(
+        session, "process", "default_report_hours", DEFAULT_REPORT_HOURS))
+
+
+def previous_horizon_days(session: Session) -> int:
+    """How far back this plant looks for the shift before this one."""
+    return int(plant_settings.value(
+        session, "process", "previous_shift_horizon_days", PREVIOUS_HORIZON_DAYS))
+
+
+def working_week_mask(session: Session) -> str:
+    """This plant's own default working week, as seven flags, Monday first."""
+    return str(plant_settings.value(
+        session, "process", "working_week_mask", WORKING_WEEK_MASK))
 
 #: `shift=` on an analysis window: a named shift on a named plant-local day.
 NAMED_SHIFT = re.compile(r"\A(\d{4})-(\d{2})-(\d{2})/(?P<code>.+)\Z")
@@ -352,14 +397,15 @@ def resolve_shift(session: Session, spec: str, equipment_id: int | None = None,
         return shift
 
     if spec == "previous":
-        earliest = moment - timedelta(days=PREVIOUS_HORIZON_DAYS)
+        horizon = previous_horizon_days(session)
+        earliest = moment - timedelta(days=horizon)
         current = shift_for(session, moment, equipment_id, zone=zone)
         cutoff = current.starts_at if current else moment
         ended = [s for s in occurrences(session, earliest, cutoff, equipment_id, zone=zone)
                  if s.ends_at <= cutoff]
         if not ended:
             raise Invalid(
-                f"no shift has ended in the last {PREVIOUS_HORIZON_DAYS} days, "
+                f"no shift has ended in the last {horizon} days, "
                 "so there is no previous shift to report")
         return ended[-1]
 
@@ -466,11 +512,15 @@ def working_minutes(session: Session, start: datetime, end: datetime,
 
 
 def create_pattern(session: Session, *, code: str, name: str, starts: time,
-                   ends: time, days: str = "1111100",
+                   ends: time, days: str | None = None,
                    equipment_code: str | None = None,
                    actor: str = "system") -> ShiftPattern:
     if session.scalar(select(ShiftPattern).where(ShiftPattern.code == code)):
         raise Conflict(f"shift {code} already exists")
+    # None means *this plant's own working week*, resolved here rather than in
+    # the signature so a caller gets what the plant is running on now.
+    if days is None:
+        days = working_week_mask(session)
     if len(days) != 7 or set(days) - {"0", "1"}:
         raise Invalid("days must be seven characters of 0 or 1, Monday first")
 

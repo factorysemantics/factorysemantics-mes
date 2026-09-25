@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 @router.get("/oee/{equipment_code}")
-def oee(equipment_code: str, db: DbDep, hours: float = 8.0) -> dict:
+def oee(equipment_code: str, db: DbDep, hours: float | None = None) -> dict:
     return equipment.oee(db, equipment_code=equipment_code, hours=hours)
 
 

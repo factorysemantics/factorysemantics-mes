@@ -84,7 +84,11 @@ def _plant_version(db: Session) -> tuple:
 @router.get("/summary")
 def summary(
     db: ReadDbDep,
-    oee_hours: float = 8.0,
+    # No default of its own: left out, the OEE tiles are drawn over this
+    # plant's own reporting window - `[process] default_report_hours` - read at
+    # the moment of the request. The eight hours that used to be here was the
+    # product's assumption that a shift is eight hours long.
+    oee_hours: float | None = None,
     line: str | None = Query(None, description="Only this line's machines, at any depth beneath it."),
     machine_q: str | None = Query(None, description="Match a machine code or name."),
     machine_state: str | None = Query(
@@ -192,7 +196,7 @@ def _matching(machines: list[Equipment], open_states: dict, q: str | None,
     return out
 
 
-def _build_summary(db: Session, oee_hours: float, line: str | None = None,
+def _build_summary(db: Session, oee_hours: float | None, line: str | None = None,
                    machine_q: str | None = None, machine_state: str | None = None,
                    machine_limit: int | None = None, machine_offset: int = 0) -> dict:
     scope = _machines(db, line)

@@ -136,6 +136,29 @@ NO_FLOOR = "this plant's pack sets no coverage floor, so nothing is withheld"
 # ---------------------------------------------------------------- the ledger
 
 
+#: Below this much observed time, nothing is divided by it. The same threshold
+#: `equipment` and `analysis` already used, in one place now - and the literal
+#: the product ships rather than the whole answer since 2026-09-25: it is
+#: `[oee] min_observed_seconds`, beside `coverage_floor`, because the argument
+#: that made that one a plant's to set is the argument for this one. What a
+#: plant is running on is `min_observed_seconds()` below.
+MIN_OBSERVED_SECONDS = 10.0
+
+
+def min_observed_seconds(session: Session) -> float:
+    """The least observed time this plant will divide by.
+
+    Read through the caller's session, like every other live setting; the two
+    dataclasses below carry the answer as a field rather than reading it from a
+    property, because a property on a frozen account of one window should not
+    be able to give two different answers on two readings of the same object.
+    """
+    from fsmes.services import plant_settings
+
+    return float(plant_settings.value(
+        session, "oee", "min_observed_seconds", MIN_OBSERVED_SECONDS))
+
+
 @dataclass(frozen=True)
 class Interval:
     """One stretch of the window, with one disposition and nothing implied."""
@@ -193,6 +216,11 @@ class Ledger:
     intervals: tuple[Interval, ...] = ()
     #: Where `sample_interval_seconds` came from, named rather than assumed.
     sample_interval_source: str | None = None
+    #: The least observed time this plant divides by, carried on the account
+    #: rather than read from a setting inside `availability` - so one ledger
+    #: cannot answer the same question two ways, and a ledger built in a test
+    #: with no plant behind it still has the product's own floor.
+    min_observed: float = MIN_OBSERVED_SECONDS
 
     @property
     def window_seconds(self) -> float:
@@ -240,7 +268,7 @@ class Ledger:
         observed time to divide by — never zero, which would say the machine
         stood still rather than that nobody watched it."""
         observed = self.observed_seconds
-        if observed < MIN_OBSERVED_SECONDS:
+        if observed < self.min_observed:
             return None
         return self.running_seconds / observed
 
@@ -280,11 +308,6 @@ class Ledger:
         }
 
 
-#: Below this much observed time, nothing is divided by it. The same threshold
-#: `equipment` and `analysis` already used, in one place now.
-MIN_OBSERVED_SECONDS = 10.0
-
-
 @dataclass
 class Totals:
     """The same account as a `Ledger`, summed in the database instead of
@@ -296,6 +319,8 @@ class Totals:
     observed_stopped_labelled: float = 0.0
     observed_stopped_unlabelled: float = 0.0
     not_observed_by_cause: dict[str, float] = field(default_factory=dict)
+    #: As on `Ledger` above, and for the same reason.
+    min_observed: float = MIN_OBSERVED_SECONDS
 
     @property
     def observed_seconds(self) -> float:
@@ -314,7 +339,7 @@ class Totals:
 
     @property
     def availability(self) -> float | None:
-        if self.observed_seconds < MIN_OBSERVED_SECONDS:
+        if self.observed_seconds < self.min_observed:
             return None
         return self.observed_running / self.observed_seconds
 
@@ -580,10 +605,13 @@ def ledger(session: Session, *, equipment_code: str, equipment_id: int, start: d
     if first_seen is None:
         first_seen = equipment_service.first_seen(session, [equipment_id]).get(equipment_id)
     cadence, cadence_source = sample_interval()
+    # Read once, here, and carried on the account: an accessor called from
+    # `availability` could answer differently on two readings of one ledger.
+    least = min_observed_seconds(session)
 
     if end <= start:
         return Ledger(equipment=equipment_code, start=start, end=end,
-                      sample_interval_source=cadence_source)
+                      sample_interval_source=cadence_source, min_observed=least)
 
     watching_from = max(start, first_seen) if first_seen is not None else end
     latest = last_record(session, [equipment_id]).get(equipment_id, first_seen)
@@ -660,7 +688,8 @@ def ledger(session: Session, *, equipment_code: str, equipment_id: int, start: d
     intervals = _tile(start, end, observed_pieces,
                       lambda lo, hi: unobserved(lo, hi, disconnections))
     return Ledger(equipment=equipment_code, start=start, end=end,
-                  intervals=tuple(intervals), sample_interval_source=cadence_source)
+                  intervals=tuple(intervals), sample_interval_source=cadence_source,
+                  min_observed=least)
 
 
 def totals_many(session: Session, equipment_ids: list[int], start: datetime,
@@ -676,7 +705,9 @@ def totals_many(session: Session, equipment_ids: list[int], start: datetime,
     from fsmes.services import equipment as equipment_service
 
     window = max(0.0, (end - start).total_seconds())
-    out = {equipment_id: Totals(window_seconds=window) for equipment_id in equipment_ids}
+    least = min_observed_seconds(session)
+    out = {equipment_id: Totals(window_seconds=window, min_observed=least)
+           for equipment_id in equipment_ids}
     if not equipment_ids or window <= 0:
         return out
 

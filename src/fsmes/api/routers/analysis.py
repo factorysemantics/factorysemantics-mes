@@ -24,7 +24,19 @@ from fsmes.services import analysis
 
 router = APIRouter()
 
-_HOURS = Query(8.0, gt=0, le=720, description="Window size in hours (max 30 days).")
+#: Window size, and **no default of its own**. Left out, the service reads this
+#: plant's `[process] default_report_hours` at the moment of the request, which
+#: is what makes it editable on Engineering's Configuration page with no
+#: restart. The eight hours that used to be declared here was the product's
+#: assumption that a shift is eight hours long, and a twelve-hour plant reading
+#: this schema was being told its own default was somebody else's.
+#:
+#: The ceiling stays: thirty days is the most any window control in this
+#: product will draw, and `fsmes pack check` refuses a plant default above it
+#: so the two cannot disagree.
+_HOURS = Query(None, gt=0, le=720,
+               description="Window size in hours (max 30 days). Left out, this "
+                           "plant's own default reporting window.")
 _LINE = Query(None, description="Work centre code; omitted means the line with the most machines.")
 _SHIFT = Query(
     None,
@@ -49,7 +61,7 @@ def shifts(
 
 
 @router.get("/oee")
-def oee(line: str | None = _LINE, hours: float = _HOURS, shift: str | None = _SHIFT,
+def oee(line: str | None = _LINE, hours: float | None = _HOURS, shift: str | None = _SHIFT,
         db: Session = Depends(get_read_db)) -> dict:
     """OEE per station with each loss named in units and seconds."""
     return analysis.oee_breakdown(db, line_code=line, hours=hours, shift=shift)
@@ -59,10 +71,13 @@ def oee(line: str | None = _LINE, hours: float = _HOURS, shift: str | None = _SH
 def timeline(
     db: Session = Depends(get_read_db),
     line: str | None = _LINE,
-    hours: float = _HOURS,
+    hours: float | None = _HOURS,
     shift: str | None = _SHIFT,
     equipment: str | None = Query(None, description="Comma-separated machine codes."),
-    limit: int = Query(12, ge=1, le=60, description="How many machines to draw."),
+    # No default here either: left out, it is this plant's own screenful.
+    limit: int | None = Query(None, ge=1, le=60,
+                              description="How many machines to draw. Left out, "
+                                          "this plant's own screenful."),
 ) -> dict:
     """Every state interval per machine - the shift drawn as a Gantt.
 
@@ -77,7 +92,7 @@ def timeline(
 
 
 @router.get("/downtime")
-def downtime(line: str | None = _LINE, hours: float = _HOURS, shift: str | None = _SHIFT,
+def downtime(line: str | None = _LINE, hours: float | None = _HOURS, shift: str | None = _SHIFT,
              db: Session = Depends(get_read_db)) -> dict:
     """Downtime by reason, worst first. Unlabelled stops are reported as such."""
     return analysis.downtime_pareto(db, line_code=line, hours=hours, shift=shift)
@@ -86,7 +101,7 @@ def downtime(line: str | None = _LINE, hours: float = _HOURS, shift: str | None 
 @router.get("/production")
 def production(
     line: str | None = _LINE,
-    hours: float = _HOURS,
+    hours: float | None = _HOURS,
     shift: str | None = _SHIFT,
     buckets: int = Query(60, ge=2, le=600),
     db: Session = Depends(get_read_db),
@@ -99,7 +114,7 @@ def production(
 def tag(
     equipment_code: str,
     tag: str | None = Query(None, description="Tag name; omitted means the machine's process value."),
-    hours: float = _HOURS,
+    hours: float | None = _HOURS,
     shift: str | None = _SHIFT,
     buckets: int = Query(240, ge=2, le=2000),
     db: Session = Depends(get_read_db),
