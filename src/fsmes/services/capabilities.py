@@ -55,6 +55,13 @@ CAPABILITIES: dict[str, str] = {
     # four severities should not mean being administrator of the whole plant.
     "quality.define":    "Draft the plant's quality vocabulary: the severities a non-conformance is raised at",
     "quality.approve":   "Put a quality vocabulary in force - what every non-conformance from now on is graded with",
+    # Supply chain: what this plant asks of the link to its ERP - how long it
+    # keeps trying to deliver a confirmation, which order statuses it will
+    # take an order in, and how long it waits on a system it does not own.
+    # Named in decision 0035 §2 on 2026-09-21 and unused until 2026-09-25;
+    # there is no `erp.approve` beside it because none of these has a pending
+    # state to sign - rule three of that decision.
+    "erp.define":        "Set what this plant asks of its ERP link: retries, open statuses, timeouts and tolerances",
 }
 
 _VIEWER = ("plant.read",)
@@ -70,7 +77,8 @@ _ADMIN = (*_SUPERVISOR, "masterdata.write", "users.manage",
           "documents.approve", "maintenance.plan",
           "scheduling.plan", "triggers.approve", "adjustments.approve",
           "process.define", "process.approve",
-          "quality.define", "quality.approve")
+          "quality.define", "quality.approve",
+          "erp.define")
 
 # The built-ins. The first four are the old ladder expressed as bundles, so
 # nothing an existing account could do changes. They are protected from

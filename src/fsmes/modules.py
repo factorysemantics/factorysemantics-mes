@@ -192,6 +192,13 @@ CONFIG_DOMAINS: tuple[ConfigDomain, ...] = (
         "What this plant's quality records are written in, and the numbers "
         "its charts and certificates are judged against. The words are the "
         "plant's; the arithmetic behind them is the product's."),
+    ConfigDomain(
+        "supply_chain", "Supply chain",
+        "What this plant asks of the link between itself and an ERP it does "
+        "not own: how long it keeps trying to deliver a confirmation, which "
+        "order statuses it will take an order in, how long it waits, and "
+        "when a number read back is the number sent. The contract itself is "
+        "the product's; what this plant asks of the link is the plant's."),
 )
 
 DOMAIN_BY_SLUG: dict[str, ConfigDomain] = {d.slug: d for d in CONFIG_DOMAINS}
@@ -604,6 +611,95 @@ REGISTRY: tuple[Module, ...] = (
         name="erp",
         title="The ERP connector",
         routers=(Mount("fsmes.api.routers.erp", "/erp", ("erp",)),),
+        # Supply chain's Configuration page, and the first domain built from
+        # nothing since #92 made a domain possible. Every section here is a
+        # `[erp]` pack key, and five of the six are live: `edit_here` plus
+        # `erp.define` is the whole opt-in, per config-assistance.md §11.
+        #
+        # There is no ERP screen in this product, so `href` points at the
+        # screen where each value's *effect* is visible - the outbox on Ops,
+        # the order book on Orders - which is what `href` has always meant.
+        config_sections=(
+            ConfigSection(
+                domain="supply_chain",
+                key="erp_retries",
+                label="ERP delivery retries",
+                about="How many times a confirmation is offered to the ERP "
+                      "before it is dead and a person decides, and how long "
+                      "this plant waits between attempts. An ERP with a "
+                      "four-hour maintenance window is why the ceiling moves.",
+                href="/dashboard/ops",
+                define="erp.define",
+                edit_here=True,
+                pack_keys=("[erp] max_attempts", "[erp] base_backoff_s",
+                           "[erp] max_backoff_s")),
+            ConfigSection(
+                domain="supply_chain",
+                key="erp_open_statuses",
+                label="Which ERP statuses are open",
+                about="The statuses this plant's ERP puts an order in while "
+                      "it is waiting to be made. The words are the ERP's and "
+                      "sites customise them; reading them as an order-release "
+                      "policy is what makes the list this plant's.",
+                href="/dashboard/orders",
+                define="erp.define",
+                edit_here=True,
+                pack_keys=("[erp] open_statuses",)),
+            ConfigSection(
+                domain="supply_chain",
+                key="erp_readback",
+                label="When a number read back is the number sent",
+                about="Two numbers, because it is one judgment: how far a "
+                      "value the ERP hands back may differ as a fraction, and "
+                      "how far it may differ outright. A site rounding to two "
+                      "decimals and one rounding to four disagree about this.",
+                href="/dashboard/ops",
+                define="erp.define",
+                edit_here=True,
+                pack_keys=("[erp] float_rel_tol", "[erp] float_abs_tol")),
+            ConfigSection(
+                domain="supply_chain",
+                key="erp_timeouts",
+                label="How long this plant waits on its ERP",
+                about="One request to a system this plant does not own, in "
+                      "seconds - the ERPNext connector and the plain REST "
+                      "one. A bench across a VPN posting a large bill of "
+                      "material exceeds thirty seconds routinely, and every "
+                      "one of those burns an attempt.",
+                href="/dashboard/ops",
+                define="erp.define",
+                edit_here=True,
+                pack_keys=("[erp] http_timeout", "[erp] rest_timeout")),
+            ConfigSection(
+                domain="supply_chain",
+                key="erp_default_priority",
+                label="Priority an ERP order inherits",
+                about="What an order arriving with no priority is given - "
+                      "lower is more urgent. ERPNext Work Order has no "
+                      "priority field at all, so on this plant it is always "
+                      "this number.",
+                href="/dashboard/orders",
+                define="erp.define",
+                edit_here=True,
+                pack_keys=("[erp] default_order_priority",)),
+            # The one that is not live, and the first section in this product
+            # to answer that way. `fsmes erp validate` reads a folder of files
+            # and no database - that is its contract, and a plant's ERP team
+            # runs it on a laptop that has never had an MES database on it -
+            # so there is no session to read a live row through and a box
+            # saying *in force when you save it* would have been false.
+            ConfigSection(
+                domain="supply_chain",
+                key="erp_confirmation_tolerance",
+                label="Confirmation time agreement",
+                about="How far machine_seconds in a confirmation file may "
+                      "differ from the time the step was open before the "
+                      "fsmes erp validate command calls the document wrong. "
+                      "Read at start-up, because that command reads a folder "
+                      "of files and no database.",
+                href="/dashboard/ops",
+                pack_keys=("[erp] confirmation_seconds_tolerance",)),
+        ),
         tools=("fsmes.mcp.erp",),
         settings=("erp_", "erpnext_"),
         tables=("erp_messages",),
