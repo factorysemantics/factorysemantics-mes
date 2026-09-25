@@ -116,6 +116,10 @@ class Curated:
 #: answered and which are still questions.
 DONE = "Built 2026-09-22: it is `[quality] %s`, shipping the literal that was here."
 
+#: The same sentence for the six supply-chain rows, built three days later
+#: against the pattern the quality ones established.
+DONE_ERP = "Built 2026-09-25: it is `[erp] %s`, shipping the literal that was here."
+
 
 CURATED: tuple[Curated, ...] = (
 
@@ -495,27 +499,43 @@ CURATED: tuple[Curated, ...] = (
     Curated(
         "S1", "supply-chain", "plant",
         "ERP delivery retry policy",
-        "services/erp.py", 41, "MAX_ATTEMPTS = 8",
-        why="One ERP per plant, one maintenance window, one retry policy."),
+        "config.py", 199, "erp_max_attempts: int = 8",
+        why="One ERP per plant, one maintenance window, one retry policy.",
+        settled=DONE_ERP % "max_attempts" + " With `[erp] base_backoff_s` and "
+                "`[erp] max_backoff_s` beside it, as one section: they are one "
+                "policy written as three numbers. `services/uns.py` keeps its "
+                "own three (C8), deliberately - two systems, two outages."),
     Curated(
         "S2", "supply-chain", "plant",
         "Which ERP order statuses the MES will take",
-        "integrations/erp/erpnext_adapter.py", 44, "_OPEN_STATUSES = (",
+        "config.py", 209, 'erp_open_statuses: str = "Not Started,In Process"',
         why="The site's own ERPNext customisation. It belongs beside "
-            "erpnext_company, which is already the plant's."),
+            "erpnext_company, which is already the plant's.",
+        settled=DONE_ERP % "open_statuses" + " A list, which needed the pack "
+                "format's `ints` kind to grow a `strs` twin: a list of the "
+                "ERP's own words is a list in the same sense a list of rule "
+                "numbers is."),
     Curated(
         "S3", "supply-chain", "plant",
         "ERP read-back agreement tolerance",
-        "integrations/erp/erpnext_adapter.py", 204, "rel_tol=1e-3, abs_tol=0.01",
+        "config.py", 214, "erp_float_rel_tol: float = 1e-3",
         why="The comment already contains the two-plants test: float "
             "precision is 'two decimals on some sites'. One site, one "
-            "precision."),
+            "precision.",
+        settled=DONE_ERP % "float_rel_tol" + " With `[erp] float_abs_tol` "
+                "beside it: one agreement written as two numbers. The sync "
+                "worker hands both to the connector once a cycle, because a "
+                "transport is given no database session on purpose."),
     Curated(
         "S4", "supply-chain", "plant",
         "ERP HTTP timeouts",
-        "integrations/erp/erpnext_adapter.py", 97, "timeout: float = 30.0",
+        "config.py", 218, "erp_http_timeout: float = 30.0",
         why="One link between this plant and its ERP. A bench across a VPN "
-            "and one on the same switch answer differently."),
+            "and one on the same switch answer differently.",
+        settled=DONE_ERP % "http_timeout" + " With `[erp] rest_timeout` "
+                "beside it for the plain REST connector. Applied per request "
+                "rather than when the client is built, so it moves while the "
+                "sync worker is running."),
     Curated(
         "S5", "supply-chain", "object",
         "Material shortage threshold - zero buffer",
@@ -527,17 +547,36 @@ CURATED: tuple[Curated, ...] = (
     Curated(
         "S6", "supply-chain", "plant",
         "Default priority for an ERP order that carries none",
-        "integrations/erp/contract.py", 29, "priority: int = 50",
+        "config.py", 226, "erp_default_order_priority: int = 50",
         why="Priority is already per order. Only the number an order without "
             "one inherits is hard-coded, and a plant on a 1-to-9 scale wants "
-            "a different one."),
+            "a different one.",
+        settled=DONE_ERP % "default_order_priority" + " The contract now "
+                "reports silence as silence - `ProductionRequest.priority` is "
+                "null when the ERP sent none - and the MES applies this key "
+                "when it imports the order, which is where the decision was "
+                "always the plant's."),
     Curated(
         "S7", "supply-chain", "plant",
         "Confirmation time-agreement tolerance",
         "integrations/erp/validate.py", 50, "SECONDS_TOLERANCE = 1.0",
         why="A fact about one plant's incumbent system. incumbent.py already "
             "reads a plant-supplied tolerances object; this constant is the "
-            "one that was not routed through it."),
+            "one that was not routed through it.",
+        unsure="The 'not routed through tolerances' reading turned out to be "
+               "wrong when somebody read both. `incumbent.Mapping.tolerances` "
+               "is the slack between this MES and an incumbent MES's export, "
+               "and `scorecard.py` already reads it; this constant is the "
+               "slack between two numbers inside one document the MES itself "
+               "wrote, and `fsmes erp validate` is handed no mapping. They "
+               "are two comparisons, not one that was missed.",
+        settled="Built 2026-09-25: it is `[erp] confirmation_seconds_"
+                "tolerance`, shipping the literal that was here - and it is "
+                "the one `[erp]` key with no box on the Configuration page. "
+                "`fsmes erp validate` reads files and no database by design, "
+                "so there is no session to read a live row through and the "
+                "page says what is true: it changes when the pack is applied "
+                "and the plant restarts."),
 
     # ------------------------------------------------------ plant administration
 
