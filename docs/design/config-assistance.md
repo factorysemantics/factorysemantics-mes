@@ -1056,3 +1056,45 @@ is keyed by `[section] key` with no room for a third name — deliberately, sinc
 a table that could hold *per object* rows would be a second object model. Those
 belong on the object's own row, and `C14` in particular waits on the bulk-edit
 design §9 opened.
+
+## 14. The fourth domain, and what it taught — 2026-09-25
+
+Administration's eighteen plant-scope rows and IT's three went onto this seam
+the same day as the second and third. The claim above — *two things, and
+nothing else* — held: sixteen sections, forty-four keys, one flag and one
+`define` each. What needed writing was everything around the seam rather than
+the seam itself, and three of those are worth keeping.
+
+**A section may honestly say no.** `edit_here=False` was written as a
+placeholder that no section reached. Three reach it now, and all three are
+real: the list envelope's default and ceiling are *published* in this plant's
+own OpenAPI document, so a ceiling that moved under a caller holding that
+document would make the document a lie; logging is configured before the
+plant's database is open, because it is the thing that reports a database that
+will not open; the fleet probe is the console's number about every plant it
+watches and the console has no plant to read a row from. For these the page
+says *nobody — it changes when the pack is applied and the plant restarts*,
+which is better than a box that appears to work.
+
+**The browser is a reader like any other.** Half of administration's rows were
+literals in JavaScript, and the mechanism said nothing about them. It does not
+need to: `GET /dashboard/ui-settings` answers with the `[screens]` table typed,
+the browser asks once per page load through `FS.settings()`, and **no default
+is written in the browser at all** — because a browser default beside a server
+default is precisely the drift the audit kept finding. The pack table *is* the
+list of what the browser reads; nothing enumerates it a second time.
+
+**The pack table is not the workspace.** `[admin]`, `[screens]` and `[system]`
+are three tables on one Configuration page. That is not an accident of
+tidiness: a pack table is a table in a file and a workspace is a place on a
+screen, and `plant_settings.owner` was written to keep them apart. It is what
+lets IT's settings sit on Administration's page without IT getting a
+`ConfigDomain` that decision 0035 §2 deliberately denies it.
+
+And one thing this found rather than added: `write` refused what was *wrong
+with the table* rather than what the edit *broke*. Since a pair rule reports at
+whichever of its two keys reads best, raising `cpk_marginal` over `cpk_capable`
+was refused while lowering `cpk_capable` under `cpk_marginal` — the same
+crossing-over — was accepted. It now judges the difference between the table
+before and after, which also stops a plant that is out of range on one key from
+being unable to save any of the others.

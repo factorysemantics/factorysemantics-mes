@@ -159,6 +159,54 @@ goes under Honesty with a migration line, so plant people can find it.
   belongs to and showed nothing to see it by; each row now carries its module
   and the table draws one heading per group, following the search box.
 
+- **This plant's own administration numbers — forty-four keys across three
+  tables, and where IT's settings live.** The role a new account starts with,
+  how big a list answer is, how often each of the three screens re-reads the
+  plant, how many rows the Floor and Admin screens page at, how far a screen
+  reads a whole list, how long a recorded walkthrough may be and what it asks
+  of a viewer, what one conversation with the floor agent may spend, how much
+  of the plant reaches a model, six local-model timeouts named one per thing
+  waited for, the shape a drafted work instruction takes, when the AI panel
+  calls a rollup late, how long a confirmation stays on screen, how much of
+  the assistant survives a page change — each was a literal in the source, and
+  **every default is the literal that was there**, so a plant that writes none
+  of them behaves exactly as it did. They arrive as `[admin]`, `[screens]` and
+  `[system]` keys in `plant.toml`, and are edited on a new **Setup ›
+  Configuration** page by somebody holding `users.manage`, in force the moment
+  they are saved. `fsmes pack check` reads all three offline. Reference:
+  [this plant's own administration numbers](https://docs.factorysemantics.com/operate/administration-numbers/).
+
+  IT's three settings — the fleet probe, log rotation and which local model
+  answers — are on that page too, gated on the same capability. IT gets no
+  Configuration workspace of its own: decision 0035 §2 keeps it outside the
+  role model, so a workspace would need a capability that does not exist, and
+  the person who administers a plant's accounts is already the only person who
+  can reach these.
+
+  Five of the forty-four are read when a process starts rather than live, and
+  the page says so instead of offering an input that would half work: the list
+  default and ceiling are published in this plant's own OpenAPI document and a
+  ceiling that moved under a caller holding it would make that document a lie;
+  log rotation is configured before the plant's database is open; the fleet
+  probe is the console's number about every plant it watches.
+
+  **The browser keeps no copy of any of them.** Fifteen were literals in
+  `app.js`, `admin.js`, `assist.js` and `common.js`; each page now reads
+  `GET /dashboard/ui-settings` once in its own boot, before it draws anything
+  or starts a clock, and carries no fallback — a browser default beside a
+  server default is how the same number comes to exist twice and drift. That
+  settles one such drift by deletion: `admin.js` had its own `toast()` at
+  4000 ms against `common.js`'s 3500. The copy is gone and `[screens] toast_ms`
+  ships 3500, which is what every other screen already used.
+
+  What a plant may **not** edit: the clauses that keep a drafted work
+  instruction honest. `document_house_style` carries the structure — a plant
+  whose quality system mandates Scope / Hazards / Steps / Records writes its
+  own — and *use only the facts given*, *never invent a tolerance, a tool or a
+  machine*, and **an operator is never told to adjust a reading toward the
+  middle** are added to whatever it says, from the source, reachable by no
+  setting.
+
 - **The assistant can draft the plant's own words, and never sign them.** Two
   agent tools that were missing while the API was already open to them:
   `draft_downtime_reason` and `draft_nc_severity`, with `downtime_reasons` and
@@ -467,6 +515,22 @@ goes under Honesty with a migration line, so plant people can find it.
   The published JSON Schema and its field notes say this; anything reading
   `priority` off a production request should read a null as *the ERP was
   silent*, not as *no priority*.
+
+- **A setting a plant edits is refused by what the edit breaks, not by what is
+  wrong with the table.** A pair rule — `cpk_marginal` against `cpk_capable`,
+  `gauge_ratio_floor` against its adequate ratio, and now `all_pages_limit`
+  against its cap — reports at whichever of its two keys reads best in the
+  sentence. The write path only refused a problem reported *at the key being
+  written*, so raising `cpk_marginal` over `cpk_capable` was refused while
+  lowering `cpk_capable` under `cpk_marginal` — the same crossing-over, making
+  *marginal* just as unreachable — was accepted. Both are refused now. It also
+  means a plant already out of range on one key can still save the others,
+  rather than having every input on the page refuse until that one is fixed.
+
+- **A drafted work instruction records the model that actually wrote it.**
+  `drafted_by_model` carried the model the product ships rather than the one
+  that answered, which was the same string until `[system] local_model_name`
+  existed and is not any more.
 
 - **Eleven Quality settings move from the pack file to the plant's database,
   and the Configuration page edits them.** Scott, using the page: *"when I
