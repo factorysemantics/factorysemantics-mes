@@ -24,6 +24,29 @@ That single design choice gives four properties for free:
 Tools stay thin: argument parsing and one API call. Anything smarter belongs
 in the product, where a person's screen gets it too — the dogfood rule.
 
+## Defining is not approving, and the vocabularies are the case that shows it
+
+Rule 1 above says master data is not the agent's. The plant's own
+*vocabularies* — what a stop is called, what a serious finding is called —
+are the one place that needs saying more precisely, because the `agent` role
+does hold `process.define` and `quality.define`.
+
+So an agent may **draft** a downtime reason (`draft_downtime_reason`) or a
+non-conformance severity (`draft_nc_severity`). A draft is a row with
+`status = draft`: it is on no operator's screen and grades no finding. It
+reaches the floor only when a person holding `process.approve` or
+`quality.approve` signs it, and neither capability is in the `agent` role, so
+there is no tool for either — a tool for it would be a tool that always
+refuses (decision
+[0035](../design/config-assistance.md)).
+
+Retiring a word is on the same endpoint and is deliberately not offered as a
+tool. A person is told how many recorded intervals, or how many
+non-conformances, already carry a code *before* they take it off the list —
+the vocabulary read carries that count for exactly that reason — and a tool
+that dropped a word without putting the number in front of somebody would be
+a worse version of the screen.
+
 ## What this is not
 
 It is not a sandbox. An agent with the `AGENT` credentials can release
