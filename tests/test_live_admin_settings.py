@@ -19,7 +19,8 @@ This file pins what the change has to be true of, in order:
    a plant writes into its house style.
 """
 
-from datetime import timedelta
+import os
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -212,12 +213,24 @@ def test_the_ai_panel_reads_this_plants_own_idea_of_late(session, tmp_path, monk
     the suite happens to have under ~/.local/share/fsmes/reports (a fresh
     CI runner has nothing there at all, which is what made the two calls
     compare equal on 2026-09-25: both windows found no note and both said
-    "unknown", never reaching the comparison this test is named for)."""
+    "unknown", never reaching the comparison this test is named for).
+
+    The note's mtime is set five minutes into the past rather than left as
+    "whenever write_text finished" - a windows-latest runner failed the same
+    way a second time with a freshly-written file, because a `delta` of a
+    few milliseconds can round to exactly `timedelta(hours=0)` on a
+    filesystem or clock with coarser resolution than Linux's, which made
+    both windows read "ok" and compare equal again. Five minutes is
+    unambiguously more than a zero-hour window and unambiguously less than
+    3650 days on every platform this suite runs on."""
     from fsmes.services import ai_status
 
     reports = tmp_path / "reports"
     reports.mkdir()
-    (reports / "2026-09-24.md").write_text("nightly rollup\n")
+    note = reports / "2026-09-24.md"
+    note.write_text("nightly rollup\n")
+    five_minutes_ago = (datetime.now(UTC) - timedelta(minutes=5)).timestamp()
+    os.utime(note, (five_minutes_ago, five_minutes_ago))
     monkeypatch.setattr(ai_status, "REPORTS", reports)
     monkeypatch.setattr(ai_status, "RUNS_DB", tmp_path / "runs.db")
     monkeypatch.setattr(ai_status, "DESIGN_DB", tmp_path / "design.db")
