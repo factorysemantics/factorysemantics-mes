@@ -14,12 +14,8 @@ module nobody wired up, not to prove a button works. (`POST /quality/specs`
 has no form yet, but the Quality screen reads the path; phase 5.)
 """
 
-import re
-from pathlib import Path
-
 from fsmes.api.app import create_app
-
-WEB = Path(__file__).resolve().parents[1] / "src" / "fsmes" / "web"
+from fsmes.assist_coverage import page_scripts, screen_pattern
 
 # Routes no screen calls, and why. Reasons name the plan phase that closes
 # them, so this list is also the work queue. Plan: 2026-09-02 surfaces.
@@ -86,30 +82,16 @@ def api_routes() -> list[tuple[str, str]]:
     return sorted((method.upper(), path) for path, ops in paths.items() for method in ops)
 
 
-def page_scripts() -> str:
-    text = []
-    for path in sorted(WEB.glob("*.js")) + sorted((WEB / "line").glob("*.js")):
-        text.append(path.read_text(encoding="utf-8"))
-    joined = "\n".join(text)
-    # `${anything}` stands for one path segment of any value.
-    return re.sub(r"\$\{[^}]*\}", "X", joined)
-
-
-def _pattern(path: str) -> re.Pattern:
-    parts = []
-    for segment in path.strip("/").split("/"):
-        if segment.startswith("{"):
-            parts.append(r"[^/\"'`?\s]+")
-        else:
-            parts.append("(?:" + re.escape(segment) + "|X)")
-    # A path may be followed by a quote, a query string, or an interpolated
-    # tail (`/analysis/oee${query}` normalises to `/analysis/oeeX`).
-    return re.compile(r"[\"'`]/" + "/".join(parts) + r"(?=[\"'`?\sX])")
+# `page_scripts` and `screen_pattern` are imported rather than written here,
+# where they used to live. The sibling ratchet - every write route has a tool
+# or a reason - reports *which* screen calls a route, and must count a route as
+# reached in exactly the way this test does; two copies of the rule would be
+# two answers to "does a screen call it".
 
 
 def test_every_route_has_a_screen_or_a_reason():
     scripts = page_scripts()
-    covered = {f"{m} {p}" for m, p in api_routes() if _pattern(p).search(scripts)}
+    covered = {f"{m} {p}" for m, p in api_routes() if screen_pattern(p).search(scripts)}
     every = {f"{m} {p}" for m, p in api_routes()}
 
     unexplained = sorted(every - covered - set(EXCLUDED))
