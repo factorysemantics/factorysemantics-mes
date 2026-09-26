@@ -14,6 +14,12 @@ For the person who changes it.
   what a plant is today with file paths, what a pack should be, and what the
   console should and should not do. Designed before it is built; the three
   decisions it turns on are proposed, not accepted.
+- [Where the kernel ends and a module begins](../design/kernel-and-modules.md)
+  — a test for the boundary, what a module may declare, how a module and the
+  kernel say which versions of each other they need, and where themes and
+  reports belong. Designed before it is built; the decision it turns on,
+  [0037](../decisions/0037-where-the-kernel-ends-and-a-module-begins.md), is
+  proposed and carries the commercial question unanswered.
 - [Decisions](../decisions/index.md) — why things are the way they are.
 - [CONTRIBUTING](https://github.com/factorysemantics/factorysemantics-mes/blob/main/CONTRIBUTING.md)
   — DCO, the six house rules, the provenance rule.

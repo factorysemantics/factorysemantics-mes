@@ -45,3 +45,4 @@ Declined ideas stay, so nobody re-proposes them without new facts.
 | [0034](0034-a-count-is-owed-until-it-is-booked.md) | A count the machine made is owed until it is booked, and a reading that fails is retried rather than forgotten | 2026-09-18 |
 | [0035](0035-configuration-is-authored-by-roles-and-selected-by-operators.md) | Accepted — configuration is authored by the role that owns it, and selected by the operator | 2026-09-18, amended by 0036 |
 | [0036](0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md) | The chart draws and records every SPC rule; which of them raise a quality hold is the plant's, and defaults to all four | 2026-09-22 |
+| [0037](0037-where-the-kernel-ends-and-a-module-begins.md) | *Proposed* — where the kernel ends, what a module may do and how it declares the kernel it needs; and, in two alternatives for the maintainer to choose between, whether a module may be sold | 2026-09-26 |
