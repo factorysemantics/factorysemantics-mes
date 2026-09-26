@@ -415,7 +415,10 @@ def execute(name: str, args: dict, *, plant: str, on_behalf_of: str | None = Non
     try:
         result = asyncio.run(mcp_server.mcp.call_tool(name, call))
     except Exception as exc:  # a tool failure is a fact for the model, not a crash
-        return {"error": f"{type(exc).__name__}: {exc}"}
+        # The class is the fact; the message and the trace are for the plant's
+        # own log, not for a browser (CodeQL py/stack-trace-exposure, #109).
+        LOGGER.warning("agent: tool %s failed (%s)", name, type(exc).__name__, exc_info=exc)
+        return {"error": f"{type(exc).__name__}: the tool failed; the plant's log has the detail"}
     payload = _result_payload(result)
     if getattr(result, "is_error", False) and isinstance(payload, dict) and "error" not in payload:
         payload = {"error": payload.get("text") or "tool failed", **payload}
