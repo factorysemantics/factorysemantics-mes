@@ -900,13 +900,15 @@ moment it decided something.** That is the test to apply to the next one.
 
 ### And the assistant already has it — do not write a tool per domain
 
-There are **two** agent tools for every live setting there will ever be, and
-they landed with the mechanism above: `plant_settings(plant, domain)` reads a
-whole workspace, and `write_plant_setting(plant, domain, key, value)` puts one
-value in force through the same `PATCH` a person's Save uses. Both read the
-registry rather than a list of their own, so the two steps at the top of this
-section are still the whole opt-in: **a section that becomes live is reachable
-through the assistant with no tool written for it.**
+There are **three** agent tools for every live setting there will ever be
+(two when this was written; `setting_changes` joined them on 2026-09-26, and
+the subsection below says why). `plant_settings` reads — a workspace, a search
+across all of them, or one setting in full; `write_plant_setting(plant,
+domain, key, value)` puts one value in force through the same `PATCH` a
+person's Save uses; `setting_changes` reads the audit trail for settings. All
+three read the registry rather than a list of their own, so the two steps at
+the top of this section are still the whole opt-in: **a section that becomes
+live is reachable through the assistant with no tool written for it.**
 
 So the drafting story for a live setting is this tool, not a new one. Nobody
 should add another file under `src/fsmes/mcp/` for the next domain's numbers —
@@ -930,6 +932,62 @@ a running one is steered, and editing `plant.toml` and re-applying does not
 move a number the plant has taken ownership of. `fsmes pack status` reports
 the difference rather than resolving it, which is the same answer decision
 0022 gave about a routing an order has already run against.
+
+### And the list has to fit in the answer — 2026-09-26
+
+The two tools above were right and too big for the mouth that has to speak
+them. Scott asked the assistant for *"the default reporting window"* and was
+told **no workspace holds that setting**. It does: `[process]
+default_report_hours`, on the Engineering page, section label *The default
+reporting window* — item 17 of 22. `plant_settings` returned every key with
+its full `about` paragraph, about 11,100 characters for that one workspace,
+and the agent loop shows a model the first `RESULT_LIMIT` characters of a
+tool result — 6,000, cut mid-string. The model saw eleven of twenty-two, had
+no way to know the list went on, and reported half a list as the whole.
+
+Four things changed, and the first of them is the rule for every list a tool
+will ever return.
+
+**A list must fit, and a list that cannot fit must say so in itself.** A row
+is now the ten compact fields in `fsmes.mcp.settings.ROW` and no paragraph —
+including the owning section's **label**, which is what a person calls a
+setting and which the row did not carry at all. Even compact, Administration's
+thirty-nine rows are about 10,900 characters, so the tool pages: as many whole
+rows as fit six tenths of the result limit, `total` for what the plant has,
+`showing` for what is here, and `more` naming the call that reaches the rest.
+`tests/test_every_settings_list_fits_in_one_tool_result.py` measures every
+workspace of every pack this repository ships and fails if any of them
+crosses the line. **Raising the limit was refused as a fix**: a bigger number
+hides the same failure behind the next longer list.
+
+**Found by what a person calls it.** `plant_settings(plant, find="reporting
+window")` searches every workspace's names, labels and paragraphs at once and
+answers with the matching rows and the workspace each is in — one call, no
+workspace named. `key=` returns one setting in full, paragraph included, so
+nothing was lost by taking `about` out of the list. `GET /dashboard/config`
+is the index the search walks: until it existed, the only way to learn the
+workspaces from outside was to name one that does not exist and read the 404.
+
+**Truncation tells the truth.** `services/agent._tool_result` no longer cuts
+JSON mid-string. A payload carrying a list loses whole trailing items from
+whichever list is carrying the bulk and gains a `truncated` line — *showing
+10 of 22 settings; the rest were dropped … do not report these as all there
+are*. A plain string still gets cut, and now says how many characters went
+missing.
+
+**Look before saying what is recorded.** `setting_changes(plant, key,
+domain, limit)` reads `GET /audit?entity_type=plant_setting` and answers who
+set what, from what, to what, when. It exists because the second half of that
+morning was Scott changing the value himself, saying so, and being told *"I
+don't see any change recorded"* by an assistant that had made no call at all
+and had no tool it could have made. The prompt now carries the rule in plain
+words: *when the person says they changed something, read the plant again
+before you answer.*
+
+And one wording fix beside them. The assistant had written *"Updating it
+now"* over a proposal card that had changed nothing. The prompt forbids it,
+but a prompt is a request — so the card itself now opens with **Nothing has
+changed yet**, which is the screen's own sentence and not the model's.
 
 ## 12. The second domain, and the first honest exception - 2026-09-25
 

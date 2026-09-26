@@ -6,6 +6,7 @@ with the proposal as its idempotency key. The model is scripted here - the
 loop's discipline is what matters, not the model's judgement.
 """
 
+import json
 import re
 from datetime import UTC, datetime
 from pathlib import Path
@@ -58,6 +59,114 @@ def test_every_need_names_a_real_write_tool():
     names = {t.name for t in agent.registry_tools()}
     missing = sorted(set(agent.NEEDS) - names)
     assert not missing, f"NEEDS names tools that do not exist: {missing}"
+
+
+# ------------------------------------------- what the model is actually shown
+
+def a_settings_payload(n: int) -> dict:
+    """A list shaped like the one that broke: a workspace, its rows, and the
+    totals around them."""
+    return {"plant": "bottling", "domain": "engineering", "workspace": "Engineering",
+            "settings": [{"name": f"setting_{i}", "label": f"The {i}th number",
+                          "value": "8.0", "default": "8.0", "is_default": True,
+                          "set_by": None, "kind": "float", "section": f"sec_{i}",
+                          "needs": "process.define", "agent_may_write": True}
+                         for i in range(n)],
+            "total": n, "sections": n}
+
+
+def test_a_result_that_fits_reaches_the_model_untouched():
+    block = agent._tool_result("t1", a_settings_payload(3), limit=6000)
+    assert json.loads(block["content"]) == a_settings_payload(3)
+    assert "truncated" not in block["content"]
+
+
+def test_a_long_list_loses_whole_items_and_says_how_many_of_how_many():
+    """Scott, 2026-09-26: the assistant was handed twenty-two settings, shown
+    the first six thousand characters of them, and told Scott the seventeenth
+    did not exist. The cut landed inside the eleventh row - the JSON did not
+    even parse - and the only sign of it was the word `…(truncated)`.
+
+    What the model sees now is a shorter list that says it is shorter."""
+    block = agent._tool_result("t1", a_settings_payload(22), limit=2000)
+    shown = json.loads(block["content"])                 # it still parses: whole items
+    assert 0 < len(shown["settings"]) < 22
+    assert shown["total"] == 22                          # the plant's number, not the page's
+    assert shown["truncated"].startswith(
+        f"showing {len(shown['settings'])} of 22 settings")
+    assert "do not report these as all there are" in shown["truncated"]
+    assert len(block["content"]) <= 2000
+    # Whole rows, from the front, in order - not a sample and not the tail.
+    assert [row["name"] for row in shown["settings"]] == [
+        f"setting_{i}" for i in range(len(shown["settings"]))]
+
+
+def test_the_longest_list_is_the_one_that_gives_way():
+    """A payload with two lists drops from the one carrying the bulk, so the
+    short list beside it survives whole."""
+    payload = {"changes": [{"name": f"c{i}", "from": "1.0", "to": "2.0",
+                            "who": "ADMIN", "when": "2026-09-26T10:12:40Z"}
+                           for i in range(60)],
+               "switched_off": ["Recipes", "Serialisation"]}
+    shown = json.loads(agent._tool_result("t1", payload, limit=1500)["content"])
+    assert shown["switched_off"] == ["Recipes", "Serialisation"]
+    assert 0 < len(shown["changes"]) < 60
+    assert "changes" in shown["truncated"]
+
+
+def test_a_result_that_is_not_a_list_still_cuts_but_says_what_it_dropped():
+    """Some answers are one long string, and there is nothing whole to drop
+    from them. The cut stays; what is new is that the marker is a number
+    rather than a shrug."""
+    block = agent._tool_result("t1", "x" * 9000, limit=1000)
+    assert len(block["content"]) <= 1000
+    assert "characters not shown" in block["content"]
+    assert "9,000" in block["content"] or "9000" in block["content"]
+
+
+def test_an_error_is_still_marked_an_error_after_being_shortened():
+    payload = {"error": "no", "items": [{"a": "x" * 80} for _ in range(50)]}
+    block = agent._tool_result("t1", payload, limit=900)
+    assert block["is_error"] is True
+    assert json.loads(block["content"])["error"] == "no"
+
+
+# ------------------------------------------------- what the model is told to do
+
+def test_the_prompt_says_a_proposal_is_not_a_change_already_under_way():
+    """Seen 2026-09-25 22:40: *"Found it in Engineering: `default_job_minutes`
+    is currently 60.0 (the default). Updating it now."* Nothing was being
+    updated - a card was waiting for him to press "Do it". The prompt now
+    says so, and the card says it too, in words the model cannot overrule."""
+    assert '"Do it"' in agent.SYSTEM
+    assert "never \"updating it now\"" in agent.SYSTEM
+    assert "A proposal is not a change." in agent.SYSTEM
+    card = (WEB / "assist.js").read_text(encoding="utf-8")
+    assert "Nothing has changed yet." in card
+
+
+def test_the_prompt_says_to_read_the_plant_again_before_saying_what_is_recorded():
+    """The second half of 2026-09-26: he said he had changed it, and the
+    assistant answered *"I don't see any change recorded"* having made no tool
+    call at all."""
+    assert "read the plant again before you answer" in agent.SYSTEM
+    assert "no change is recorded" in agent.SYSTEM
+    assert "setting_changes" in agent.SYSTEM
+
+
+def test_the_prompt_says_a_part_of_a_list_is_not_the_whole_plant():
+    assert "truncated" in agent.SYSTEM and "showing" in agent.SYSTEM
+    assert "Never answer that the plant has no such thing" in agent.SYSTEM
+
+
+def test_reading_what_was_recorded_needs_no_capability_beyond_seeing_the_plant():
+    """`setting_changes` is a read, and a read a person cannot make is a
+    question they cannot answer about their own plant."""
+    viewer = {t["name"]: t for t in agent.catalogue({"plant.read"})}
+    assert "setting_changes" in viewer and viewer["setting_changes"]["write"] is False
+    assert "plant_settings" in viewer
+    for hidden in ("plant", "dry_run", "on_behalf_of", "client_ref"):
+        assert hidden not in viewer["setting_changes"]["input_schema"]["properties"]
 
 
 # ---------------------------------------------------------------- the loop
@@ -118,6 +227,21 @@ def scripted(monkeypatch, tmp_path):
             return {"done": would, "audited_as": "AGENT", "on_behalf_of": on_behalf_of,
                     "response": {"name": args["key"], "value": args["value"],
                                  "is_default": False, "set_by": "AGENT"}}
+        if name == "setting_changes":
+            return {"plant": plant, "changes": [
+                {"when": "2026-09-26T10:12:40Z", "who": "ADMIN", "as": "ADMIN",
+                 "setting": "[process] default_report_hours",
+                 "name": "default_report_hours", "from": None, "to": "10.0"}],
+                "total": 1, "showing": 1, "audit_rows_read": 1}
+        if name == "plant_settings":
+            return {"plant": plant, "find": args.get("find"), "total": 1, "showing": 1,
+                    "settings": [{"name": "default_report_hours",
+                                  "label": "The default reporting window",
+                                  "value": "10.0", "default": "8.0", "is_default": False,
+                                  "set_by": "ADMIN", "kind": "float",
+                                  "section": "default_report_hours",
+                                  "needs": "process.define", "agent_may_write": True,
+                                  "domain": "engineering"}]}
         return {"machines": [{"code": "WASH01"}]}
 
     monkeypatch.setattr(agent, "_call_model", fake_model)
@@ -158,6 +282,34 @@ def test_reads_run_free_and_writes_pause_until_confirmed(scripted):
     results = sess.history[-2]["content"]
     assert [r["tool_use_id"] for r in results] == ["t2"]
     assert sess.history[2]["content"][0]["tool_use_id"] == "t1"
+
+
+def test_when_the_person_says_they_changed_it_the_answer_comes_from_a_fresh_read(scripted):
+    """Scott, 2026-09-26: he changed `default_report_hours` to 10 on the
+    Configuration page, said so, and asked for it back. The assistant made no
+    tool call and answered *"I don't see any change recorded"* out of a
+    conversation whose only read had been cut in half.
+
+    The tool that reads the record exists now and the prompt says to use it.
+    What is pinned here is the rest of it: the read runs free, it runs before
+    anything is proposed, and what it returns is what the person is told."""
+    script, calls = scripted
+    script += [
+        response(block_tool("t1", "setting_changes", key="default_report_hours"),
+                 stop="tool_use"),
+        response(block_text("ADMIN set the default reporting window to 10.0 at 10:12 UTC; "
+                            "it was on the product's 8.0 before that.")),
+    ]
+    sess = agent.open_session("SCOTT", "bottling", {"plant.read", "process.define"})
+    out = agent.message(sess, "I just changed it to 10 - put it back to 8")
+
+    assert [c["name"] for c in calls] == ["setting_changes"]
+    assert calls[0]["dry_run"] is None               # a read: no permission asked
+    assert out["kind"] == "reply" and "10.0" in out["say"]
+    # The model answered with the record in front of it, not from memory.
+    handed_back = json.loads(sess.history[2]["content"][0]["content"])
+    assert handed_back["changes"][0]["to"] == "10.0"
+    assert out["transcript"][0]["tool"] == "setting_changes"
 
 
 def test_drafting_a_reason_is_the_same_card_and_lands_on_the_drafters_own_screen(scripted):

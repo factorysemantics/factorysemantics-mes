@@ -148,6 +148,19 @@ characteristics, orders and specifications before you act - never invent a code.
 changes the plant, the person sees a preview and decides; the tool result tells you whether it \
 was confirmed or declined, so never claim something was done until the result says so.
 
+A proposal is not a change. When you offer one, say what you are about to change and that you \
+are waiting for them to press "Do it" - never "updating it now", never any words that describe \
+the write as already happening or under way. Nothing has changed until a tool result says it has.
+
+A list is only what it says it is. If a result carries "total", "showing", "more" or \
+"truncated", it is part of a longer list: say so, and call again - with a narrower search or \
+the offset it names - rather than treating what you were shown as everything there is. \
+Never answer that the plant has no such thing when all you have seen is part of a list.
+
+When the person says they have changed something, or asks what is recorded, read the plant \
+again before you answer. Never say "no change is recorded" without having just read the record \
+in this turn - settings have setting_changes, which reads the audit trail.
+
 Speak plainly, in at most four sentences, to someone standing at a machine. State the numbers \
 you found. If you cannot do what was asked, say what you can do instead."""
 
@@ -462,10 +475,75 @@ def _usage_of(response: Any) -> dict:
             "cache_write": getattr(u, "cache_creation_input_tokens", 0) or 0}
 
 
+def _longest_list(payload: dict) -> str | None:
+    """The field of a payload that is carrying the bulk of it, if that field
+    is a list. `None` when nothing in it is a list worth dropping from."""
+    lists = [(len(json.dumps(v, default=str)), k) for k, v in payload.items()
+             if isinstance(v, list) and v]
+    if not lists:
+        return None
+    return max(lists)[1]
+
+
+def _dropping_whole_items(payload: dict, field: str, limit: int) -> str | None:
+    """`payload` with trailing items dropped from `field` until it fits, and a
+    `truncated` line saying how many of how many are shown.
+
+    Whole items, never half of one. A JSON document cut at a character count
+    is not shortened, it is broken: what the model saw on 2026-09-26 was a
+    list of twenty-two settings ending mid-way through the eleventh, with
+    nothing anywhere saying a list had been cut - so it read eleven as the
+    whole and told Scott his setting did not exist.
+
+    `None` when even an empty list does not fit, which leaves the caller its
+    honest last resort.
+    """
+    items = payload[field]
+    total = len(items)
+
+    def built(keep: int) -> str:
+        shown = {**payload, field: items[:keep]}
+        shown["truncated"] = (
+            f"showing {keep} of {total} {field}; the rest were dropped because this "
+            f"answer was too long. Ask again, more narrowly, for the ones you need - "
+            f"do not report these as all there are.")
+        return json.dumps(shown, default=str)
+
+    if len(built(0)) > limit:
+        return None
+    low, high = 0, total          # low always fits, high may not
+    while low < high:
+        middle = (low + high + 1) // 2
+        if len(built(middle)) <= limit:
+            low = middle
+        else:
+            high = middle - 1
+    return built(low)
+
+
 def _tool_result(tool_use_id: str, payload: Any, limit: int = RESULT_LIMIT) -> dict:
+    """One tool's answer, as the model will see it - shortened honestly when
+    it does not fit.
+
+    A list loses whole trailing items and gains a line saying how many of how
+    many are shown; anything else is cut and says how many characters went
+    missing. What never happens again is the silent `…(truncated)` glued into
+    the middle of a JSON string, which told the model nothing and left it
+    reading half a list as a whole one.
+    """
     text = payload if isinstance(payload, str) else json.dumps(payload, default=str)
     if len(text) > limit:
-        text = text[:limit] + " …(truncated)"
+        shorter = None
+        if isinstance(payload, dict):
+            field = _longest_list(payload)
+            if field is not None:
+                shorter = _dropping_whole_items(payload, field, limit)
+        if shorter is not None:
+            text = shorter
+        else:
+            marker = " …(truncated: {} of {} characters not shown)"
+            keep = max(0, limit - len(marker.format(len(text), len(text))))
+            text = text[:keep] + marker.format(len(text) - keep, len(text))
     block = {"type": "tool_result", "tool_use_id": tool_use_id, "content": text}
     if isinstance(payload, dict) and "error" in payload:
         block["is_error"] = True
