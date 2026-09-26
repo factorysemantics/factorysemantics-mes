@@ -69,6 +69,13 @@ EXCLUDED = {
     "GET /coa/pallet/{serial}/data": "the screen renders the pallet's certificate; the data route serves the "
                                      "pallet_certificate tool",
     "GET /workorders/{code}/wip": "shown per line on the Line page; the Order page shows it in phase 4",
+    "GET /dashboard/config": "the index of the Configuration workspaces. The nav bar draws them "
+                             "from FS.NAV, which is checked against the registry by "
+                             "test_ui_nav; this route exists so that something outside the "
+                             "browser - the assistant searching every workspace for the setting "
+                             "somebody described in their own words - can ask which workspaces "
+                             "there are instead of naming one that does not exist and reading "
+                             "the 404",
 }
 
 
