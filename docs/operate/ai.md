@@ -117,7 +117,7 @@ them apart without anybody guessing:
 ```
 fsmes ai conversations --since 7      # every conversation of the last week
 fsmes ai show <session>               # one conversation, turn by turn
-fsmes ai status                       # which brains are on, and why the rest are not
+fsmes ai-status                       # which brains are on, and why the rest are not
 ```
 
 `fsmes ai show` prints the same turns the screen does, including the audit

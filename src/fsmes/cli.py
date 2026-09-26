@@ -1657,7 +1657,9 @@ def restore(
 # ----------------------------------------------------------------- the AI
 
 ai_app = typer.Typer(
-    help="What this plant's AI has been asked, what it did, and what it cost.")
+    help="What this plant's AI has been asked, what it did, and what it cost. "
+         "(`fsmes ai-status` is the other half: which brains are on, and why "
+         "the rest are not.)")
 app.add_typer(ai_app, name="ai")
 
 
@@ -1760,29 +1762,6 @@ def ai_show(
         if turn["said"]:
             for line in textwrap.wrap(turn["said"], 88) or [""]:
                 typer.echo(f"    < {line}")
-
-
-@ai_app.command("status")
-def ai_status_command() -> None:
-    """Which brains this plant has on, and why the others are off."""
-    from datetime import timedelta
-
-    from fsmes.db import session_scope
-    from fsmes.services import agent as floor_agent
-    from fsmes.services import ai_status, plant_settings
-
-    with session_scope() as session:
-        hours = float(plant_settings.setting(session, "admin", "ai_rollup_stale_hours"))
-    state = ai_status.status(timedelta(hours=hours))
-    if not state.get("enabled"):
-        typer.echo("The local AI layer is switched off on this machine (MES_LOCAL_AI=0).")
-        return
-    on, why = floor_agent.available()
-    typer.echo(f"Floor agent: {'on' if on else 'off'} — "
-               + (f"{floor_agent.MODEL}, ${floor_agent.spend_this_month():.2f} of "
-                  f"${floor_agent.monthly_cap_usd():.0f} this month" if on else why))
-    for row in state["consumers"]:
-        typer.echo(f"  {row['name']:<22}{row['state']:<8}{row['last'] or '—':<10}{row['note']}")
 
 
 pack_app = typer.Typer(
