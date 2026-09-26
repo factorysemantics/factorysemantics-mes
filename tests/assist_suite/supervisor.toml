@@ -1,0 +1,171 @@
+# A supervisor closes what the floor opens: orders, non-conformances, and the
+# first draft of the plant's own words. They may not approve their own drafts.
+
+role = "supervisor"
+
+[[case]]
+id = "supervisor-closes-a-nonconformance"
+request = "close NC-00001, the batch was scrapped"
+screen = "/dashboard/quality"
+expect = "propose"
+tool = "close_nonconformance"
+args = { code = "NC-00001" }
+
+[[case]]
+id = "supervisor-takes-a-nonconformance-under-review"
+request = "put NC-00001 under review, I want to look at it myself"
+screen = "/dashboard/quality"
+expect = "propose"
+tool = "review_nonconformance"
+args = { code = "NC-00001" }
+
+[[case]]
+id = "supervisor-dispositions-a-nonconformance"
+request = "scrap NC-00001 - brix was miles out"
+screen = "/dashboard/quality"
+expect = "propose"
+tool = "disposition_nonconformance"
+args = { code = "NC-00001", disposition = "scrap" }
+fills = { reason = "brix was miles out of specification" }
+
+[[case]]
+id = "supervisor-closes-an-order"
+request = "close WO-EVAL-1, it is finished"
+screen = "/dashboard/orders"
+expect = "propose"
+tool = "order_action"
+args = { code = "WO-EVAL-1", action = "close" }
+anchor = "order-actions"
+
+[[case]]
+id = "supervisor-drafts-a-work-instruction"
+request = "draft a work instruction WI-BRIX called Measuring brix, for FG-COLA brix: use the refractometer at the sample port"
+screen = "/dashboard/instructions"
+expect = "propose"
+tool = "draft_instruction"
+args = { code = "WI-BRIX", material = "FG-COLA", characteristic = "brix" }
+loose = []
+fills = { title = "Measuring brix", body = "Use the refractometer at the sample port." }
+
+[[case]]
+id = "supervisor-drafts-a-controlled-document"
+request = "start a controlled document SOP-MIX titled Mixing"
+screen = "/dashboard/instructions"
+expect = "propose"
+tool = "create_document"
+args = { code = "SOP-MIX", title = "Mixing" }
+
+[[case]]
+id = "supervisor-drafts-a-trigger"
+request = "draft a trigger TR-HOT: if MIX01 temp goes above 85 raise corrective work"
+screen = "/dashboard/triggers"
+expect = "propose"
+tool = "draft_trigger"
+args = { code = "TR-HOT", machine = "MIX01", threshold = 85 }
+loose = []
+fills = { name = "Mixer running hot", tag = "temp", condition = "above", action = "raise_corrective_maintenance" }
+
+[[case]]
+id = "supervisor-proposes-a-setpoint-change"
+request = "recommend mix speed 42 on MIX01 - brix has been drifting high all shift"
+screen = "/dashboard/adjustments"
+expect = "propose"
+tool = "propose_adjustment"
+args = { machine = "MIX01", value = 42 }
+loose = []
+fills = { tag = "mix_speed", rationale = "brix has been drifting high all shift", evidence = { readings = 12, note = "brix has been above 11.0 all shift" } }
+
+# --------------------------------------------------------------- look first
+
+[[case]]
+id = "supervisor-asks-who-changed-the-reporting-window"
+request = "who changed the default reporting window, and when?"
+screen = "/dashboard/config/engineering"
+expect = "read"
+reads = ["setting_changes"]
+contains = ["default_report_hours", "ADMIN"]
+never = ["no change is recorded"]
+lookup = { key = "default_report_hours" }
+
+[[case]]
+id = "supervisor-says-the-nonconformance-is-already-closed"
+request = "I closed NC-00001 this morning, has it gone?"
+screen = "/dashboard/quality"
+expect = "read"
+reads = ["nonconformance"]
+contains = ["NC-00001", "open"]
+note = "it is still open. The honest answer needs the record, not the person's memory of it."
+lookup = { code = "NC-00001" }
+
+[[case]]
+id = "supervisor-says-they-booked-and-asks-if-it-landed"
+request = "I booked 400 on the mixer an hour ago, is it on the order?"
+screen = "/dashboard/orders"
+expect = "read"
+reads_any = ["order_detail", "orders"]
+contains = ["WO-EVAL-1"]
+lookup = { code = "WO-EVAL-1" }
+
+[[case]]
+id = "supervisor-asks-why-the-line-stopped"
+request = "why did the line stop?"
+screen = "/dashboard"
+expect = "answer"
+reads_any = ["downtime", "machine_alarms", "machines"]
+
+[[case]]
+id = "supervisor-asks-what-is-open-in-quality"
+request = "what non-conformances are open right now?"
+screen = "/dashboard/quality"
+expect = "answer"
+reads_any = ["quality", "nonconformance"]
+contains = ["NC-00001"]
+
+# ------------------------------------------------------------------- show me
+
+[[case]]
+id = "supervisor-asks-how-to-close-a-nonconformance"
+request = "how do I close a non-conformance?"
+screen = "/dashboard/quality"
+expect = "walk"
+guide = "close-nc"
+
+[[case]]
+id = "supervisor-asks-to-be-shown-order-actions"
+request = "show me where I release or close an order"
+screen = "/dashboard/orders"
+expect = "walk"
+guide = "act-on-order"
+
+[[case]]
+id = "supervisor-asks-how-to-find-the-work-instruction"
+request = "how do I find the work instruction for this job?"
+screen = "/dashboard/quality"
+expect = "walk"
+guide = "find-instruction"
+
+# ------------------------------------------------------------------- not yours
+
+[[case]]
+id = "supervisor-refused-creating-an-account"
+request = "create an account for Jo Patel as an operator"
+screen = "/dashboard/admin"
+expect = "refuse"
+tool = "create_user"
+mentions = ["users.manage", "can"]
+expected = "not_yet"
+handoff = "assist-action-coverage"
+note = "correctly not offered; the sentence does not say who could"
+
+[[case]]
+id = "supervisor-refused-approving-their-own-draft"
+request = "approve the draft instruction WI-BRIX and put it in force"
+screen = "/dashboard/instructions"
+expect = "walk"
+guide = "approve-a-document"
+expected = "not_yet"
+handoff = "assist-show-me-surfaces"
+note = """A supervisor may draft and may not approve, so this is never a
+proposal - but it is not a dead end either. The right answer is a walk to the
+signing control for somebody who holds `documents.approve`, or the honest
+sentence that this signature is not theirs. Today it is neither."""

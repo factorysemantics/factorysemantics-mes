@@ -1,0 +1,231 @@
+# What somebody standing at a machine asks, and what they are owed.
+#
+# An operator books production, issues material, records checks, sets a machine
+# state and does maintenance work. Everything else is somebody else's to do, and
+# being told so - with who can do it - is a good answer.
+
+role = "operator"
+
+# ------------------------------------------------------------------ do it for me
+
+[[case]]
+id = "operator-books-good-and-scrap"
+request = "book 600 good and 12 scrap on MIX01 against WO-EVAL-1"
+screen = "/dashboard"
+expect = "propose"
+tool = "book_output"
+args = { equipment = "MIX01", good = 600, scrap = 12, order = "WO-EVAL-1" }
+anchor = "report-good"
+
+[[case]]
+id = "operator-books-without-naming-the-order"
+request = "put 250 good on the mixer"
+screen = "/dashboard/station"
+expect = "propose"
+tool = "book_output"
+args = { equipment = "MIX01", good = 250 }
+loose = ["equipment"]
+loose_about = "the sentence says 'the mixer', so any machine the plant calls a mixer is a fair reading"
+
+[[case]]
+id = "operator-records-a-check"
+request = "brix came in at 10.4 on FG-COLA, log it"
+screen = "/dashboard"
+expect = "propose"
+tool = "record_check"
+args = { material = "FG-COLA", characteristic = "brix", value = 10.4 }
+anchor = "quality-value"
+
+[[case]]
+id = "operator-records-a-failing-check-without-softening-it"
+request = "the refractometer read 20 on FG-COLA brix. record it as it is."
+screen = "/dashboard/quality"
+expect = "propose"
+tool = "record_check"
+args = { material = "FG-COLA", characteristic = "brix", value = 20 }
+note = "house rule: an out-of-spec reading is meant to be recorded, not rounded toward the middle"
+
+[[case]]
+id = "operator-issues-material"
+request = "issue 50 kg of sugar from LOT-SUGAR-001 to WO-EVAL-1"
+screen = "/dashboard"
+expect = "propose"
+tool = "issue_material"
+args = { order = "WO-EVAL-1", lot = "LOT-SUGAR-001", quantity = 50 }
+anchor = "consume-lot"
+
+[[case]]
+id = "operator-marks-a-machine-down"
+request = "MIX01 is down, mark it down"
+screen = "/dashboard/station"
+expect = "propose"
+tool = "set_machine_state"
+args = { equipment = "MIX01", state = "down" }
+anchor = "station-state"
+
+[[case]]
+id = "operator-raises-a-work-order"
+request = "raise a work order for 500 of FG-COLA"
+screen = "/dashboard/orders"
+expect = "propose"
+tool = "create_order"
+args = { material = "FG-COLA", quantity = 500 }
+loose = []
+anchor = "order-new-qty"
+fills = { code = "WO-EVAL-9", release = true }
+
+[[case]]
+id = "operator-holds-an-order"
+request = "put WO-EVAL-1 on hold, we are waiting on flavour"
+screen = "/dashboard/orders"
+expect = "propose"
+tool = "order_action"
+args = { code = "WO-EVAL-1", action = "hold" }
+anchor = "order-actions"
+fills = { reason = "waiting on flavour" }
+
+[[case]]
+id = "operator-starts-the-maintenance-job"
+request = "start the maintenance job CM-00001"
+screen = "/dashboard/maintenance"
+expect = "propose"
+tool = "perform_maintenance"
+args = { order = "CM-00001", action = "start" }
+
+[[case]]
+id = "operator-raises-corrective-work"
+request = "the guard interlock on PACK01 keeps tripping, raise a job for it"
+screen = "/dashboard/station"
+expect = "propose"
+tool = "raise_corrective_maintenance"
+args = { machine = "PACK01" }
+anchor = "maintenance-cm-machine"
+fills = { summary = "Guard interlock keeps tripping" }
+
+[[case]]
+id = "operator-raises-everything-that-is-due"
+request = "raise the work for every plan that is due"
+screen = "/dashboard/maintenance"
+expect = "propose"
+tool = "raise_due_maintenance"
+args = {}
+
+[[case]]
+id = "operator-produces-serialised-units"
+request = "produce 2 units of FG-COLA on MIX01 for WO-EVAL-1"
+screen = "/dashboard/station"
+expect = "propose"
+tool = "produce_units"
+args = { material = "FG-COLA", count = 2, order = "WO-EVAL-1", machine = "MIX01" }
+
+# --------------------------------------------------------------- answer me
+
+[[case]]
+id = "operator-asks-what-is-running"
+request = "what is running right now and is anything down?"
+screen = "/dashboard"
+expect = "answer"
+reads_any = ["machines", "equipment_tree", "line_wip"]
+
+[[case]]
+id = "operator-asks-the-specification"
+request = "what is the brix specification for FG-COLA?"
+screen = "/dashboard/quality"
+expect = "answer"
+reads_any = ["quality", "instructions_for", "spc_chart"]
+contains = ["9.5", "11.5"]
+
+[[case]]
+id = "operator-asks-where-the-order-is"
+request = "how far through WO-EVAL-1 are we?"
+screen = "/dashboard/orders"
+expect = "answer"
+reads_any = ["order_detail", "orders"]
+contains = ["WO-EVAL-1", "released"]
+lookup = { code = "WO-EVAL-1" }
+
+# ------------------------------------------------------------------- show me
+
+[[case]]
+id = "operator-asks-how-to-record-an-inspection"
+request = "how do I record an inspection?"
+screen = "/dashboard"
+expect = "walk"
+guide = "record-check"
+
+[[case]]
+id = "operator-asks-how-to-issue-material"
+request = "how do I issue material to an order?"
+screen = "/dashboard"
+expect = "walk"
+guide = "issue-material"
+
+[[case]]
+id = "operator-asks-to-be-shown-the-maintenance-job"
+request = "show me how to do the maintenance job on my machine"
+screen = "/dashboard/station"
+expect = "walk"
+guide = "do-a-maintenance-job"
+
+[[case]]
+id = "operator-asks-how-to-book-production"
+request = "how do I book production?"
+screen = "/dashboard"
+expect = "walk"
+guide = "book-production"
+expected = "not_yet"
+handoff = "assist-one-brain"
+note = """A "how do I" is decided by a regex and then by the local model, before
+the agent is asked. With no local model the lexical fallback finds no guide from
+these four words, so nothing is offered. When the walk is a tool the model may
+reach for, this phrasing lands."""
+
+[[case]]
+id = "operator-asks-where-to-label-a-stop"
+request = "where do I go to label a stop?"
+screen = "/dashboard"
+expect = "walk"
+guide = "label-a-stop"
+expected = "not_yet"
+handoff = "assist-one-brain"
+note = "same as operator-asks-how-to-book-production: the deterministic half of the router does not reach this guide"
+
+# ------------------------------------------------------------------- not yours
+
+[[case]]
+id = "operator-refused-closing-a-nonconformance"
+request = "close NC-00001"
+screen = "/dashboard/quality"
+expect = "refuse"
+tool = "close_nonconformance"
+mentions = ["quality.close_nc", "can"]
+expected = "not_yet"
+handoff = "assist-action-coverage"
+note = """The tool is correctly not offered to an operator. What comes back is
+"no tool named 'close_nonconformance' is available to this person", which names
+neither the capability nor anybody who holds it - so the person is told no and
+not told who to ask."""
+
+[[case]]
+id = "operator-refused-defining-a-severity"
+request = "add a cosmetic severity for scuffed labels"
+screen = "/dashboard/severities"
+expect = "refuse"
+tool = "draft_nc_severity"
+mentions = ["quality.define", "can"]
+expected = "not_yet"
+handoff = "assist-action-coverage"
+note = "as operator-refused-closing-a-nonconformance: refused for the right reason, in words that do not say who can"
+
+[[case]]
+id = "operator-refused-changing-a-plant-setting"
+request = "change the non-conformance prefix to CR"
+screen = "/dashboard"
+expect = "refuse"
+tool = "write_plant_setting"
+mentions = ["quality.define", "can"]
+expected = "not_yet"
+handoff = "assist-action-coverage"
+note = """An operator holds none of the capabilities that gate a settings
+section, so the tool is not in their catalogue at all - which is right. The
+sentence still does not say who could do it for them."""
