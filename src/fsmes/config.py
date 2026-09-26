@@ -650,6 +650,14 @@ class Settings(BaseSettings):
     # "late" usually means "the machine slept", and the message says so.
     admin_ai_rollup_stale_hours: int = 40
 
+    # How long this plant keeps the trace of what its AI did - every turn, on
+    # the AI screen, behind `audit.read`. Ninety days, which is the shortest
+    # window that still spans a quarter's worth of "why did it do that in
+    # August"; a plant that wants the whole history sets 0 and keeps
+    # everything, and one on a small disk shortens it. Pruned as rows are
+    # written, so the horizon is real rather than a policy nobody runs.
+    admin_ai_trace_days: int = 90
+
     # --- What this plant's own screens run at (`[screens]`) ---------------
     # Read by the browser, once per page load, from /dashboard/ui-settings.
     # Every default is the literal that was in the JavaScript, and the

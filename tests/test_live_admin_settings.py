@@ -86,6 +86,7 @@ def test_a_plant_that_configures_nothing_reads_exactly_what_it_read_before(sessi
     assert plant_settings.setting(session, "admin", "assistant_context_chars") == 3000
     assert plant_settings.setting(session, "admin", "assistant_timeout_seconds") == 60.0
     assert plant_settings.setting(session, "admin", "ai_rollup_stale_hours") == 40
+    assert plant_settings.setting(session, "admin", "ai_trace_days") == 90
     assert walkthroughs.limits(session) == {
         "max_steps": 60, "title_chars": 120, "body_chars": 1000,
         "fill_chars": 200, "tab_chars": 60}
@@ -128,15 +129,16 @@ def test_a_role_this_product_does_not_ship_is_refused_before_it_is_saved(admin):
 
 
 def test_every_administration_number_that_can_move_is_edited_on_this_page(admin):
-    """What this change is, counted. Nineteen sections: sixteen with an input
+    """What this change is, counted. Twenty sections: seventeen with an input
     and three read at start-up, and every one of them gated on the one
-    capability this domain has."""
+    capability this domain has. (The twentieth arrived on 2026-09-26 with the
+    AI workspace - how long this plant keeps the trace of what its AI did.)"""
     page = admin.get("/dashboard/config/administration/sections").json()
     live = [row for row in page["items"] if row["edit_here"]]
     read_only = [row for row in page["items"] if not row["edit_here"]]
 
-    assert page["total"] == 19
-    assert len(live) == 16
+    assert page["total"] == 20
+    assert len(live) == 17
     assert {row["key"] for row in read_only} == {"list_paging", "log_rotation", "fleet_probe"}
     assert all(row["define"] == "users.manage" for row in page["items"])
     assert all(row["approve"] is None for row in page["items"])
@@ -324,7 +326,7 @@ def test_somebody_without_users_manage_reads_these_and_writes_none(client):
     """The page lists itself to everybody, as the other two Configuration
     pages do, and the gate is the server's rather than the screen's."""
     page = client.get("/dashboard/config/administration/sections").json()
-    assert page["total"] == 19
+    assert page["total"] == 20
     assert all(row["may_define"] is False for row in page["items"])
 
     refused = client.patch("/dashboard/config/administration/settings/toast_ms",

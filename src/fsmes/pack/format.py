@@ -647,6 +647,14 @@ SCHEMA: tuple[Section, ...] = (
             "laptop that is regularly off overnight; a plant's server that "
             "never sleeps answers differently.",
             "MES_ADMIN_AI_ROLLUP_STALE_HOURS"),
+        Key("ai_trace_days", "int",
+            "How many days of the AI trace this plant keeps - every turn of "
+            "every conversation the assistant and the design chat have had, "
+            "on the AI screen. Ninety by default. Zero keeps everything, "
+            "which is a plant's to choose; rows past the horizon are deleted "
+            "as new ones are written, so what the screen shows is what the "
+            "plant has.",
+            "MES_ADMIN_AI_TRACE_DAYS"),
     )),
     Section("screens",
             "The cadence and the page sizes this plant's own screens run at. "
