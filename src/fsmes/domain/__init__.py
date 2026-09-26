@@ -1,6 +1,7 @@
 """Domain model — importing this package registers every table on Base.metadata."""
 
 from fsmes.domain.adjustments import AdjustmentStatus, RecommendedAdjustment
+from fsmes.domain.ai_turns import BRAINS, AiTurn
 from fsmes.domain.audit import AuditLog
 from fsmes.domain.calendar import (
     CalendarException,
@@ -74,7 +75,9 @@ from fsmes.domain.uns import UnsPublication
 from fsmes.domain.workorders import OperationStatus, OrderStatus, WorkOrder, WorkOrderOperation
 
 __all__ = [
+    "BRAINS",
     "AdjustmentStatus",
+    "AiTurn",
     "AuditLog",
     "BomItem",
     "CalendarException",
