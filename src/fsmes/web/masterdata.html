@@ -46,19 +46,19 @@
         <h2>Add equipment</h2>
         <form id="eq-form" class="stack" data-assist="masterdata-equipment-form">
           <div class="row">
-            <input id="eq-code" placeholder="Code" required>
-            <input id="eq-name" placeholder="Name" required>
-            <select id="eq-level" aria-label="Level">
+            <input id="eq-code" placeholder="Code" required data-assist="masterdata-equipment-code">
+            <input id="eq-name" placeholder="Name" required data-assist="masterdata-equipment-name">
+            <select id="eq-level" aria-label="Level" data-assist="masterdata-equipment-level">
               <option value="work_unit">machine (work unit)</option>
               <option value="work_center">line (work center)</option>
               <option value="area">area</option>
               <option value="site">site</option>
               <option value="enterprise">enterprise</option>
             </select>
-            <select id="eq-parent" aria-label="Parent"><option value="">no parent</option></select>
-            <input id="eq-cycle" type="number" step="any" placeholder="Rated cycle (s)">
-            <input id="eq-cc" placeholder="Cost center">
-            <button id="eq-submit">Add</button>
+            <select id="eq-parent" aria-label="Parent" data-assist="masterdata-equipment-parent"><option value="">no parent</option></select>
+            <input id="eq-cycle" type="number" step="any" placeholder="Rated cycle (s)" data-assist="masterdata-equipment-cycle">
+            <input id="eq-cc" placeholder="Cost center" data-assist="masterdata-equipment-cost-center">
+            <button id="eq-submit" data-assist="masterdata-equipment-submit">Add</button>
           </div>
         </form>
       </div>
@@ -75,7 +75,7 @@
             <option value="enterprise">enterprise</option>
           </select>
         </div>
-        <div class="table-wrap"><table id="eq-table">
+        <div class="table-wrap"><table id="eq-table" data-assist="masterdata-equipment-table">
           <thead><tr><th>Code</th><th>Name</th><th>Level</th><th>Parent</th><th class="num">Rated cycle</th><th>Cost center</th></tr></thead>
           <tbody></tbody>
         </table></div>
@@ -88,13 +88,13 @@
         <h2>Add a material</h2>
         <form id="mat-form" class="stack" data-assist="masterdata-material-form">
           <div class="row">
-            <input id="mat-code" placeholder="Code" required>
-            <input id="mat-name" placeholder="Name" required>
-            <input id="mat-unit" placeholder="Unit" value="ea">
-            <select id="mat-type" aria-label="Type">
+            <input id="mat-code" placeholder="Code" required data-assist="masterdata-material-code">
+            <input id="mat-name" placeholder="Name" required data-assist="masterdata-material-name">
+            <input id="mat-unit" placeholder="Unit" value="ea" data-assist="masterdata-material-unit">
+            <select id="mat-type" aria-label="Type" data-assist="masterdata-material-type">
               <option value="raw">raw</option><option value="intermediate">intermediate</option><option value="finished">finished</option>
             </select>
-            <button id="mat-submit">Add</button>
+            <button id="mat-submit" data-assist="masterdata-material-submit">Add</button>
           </div>
         </form>
       </div>
@@ -109,7 +109,7 @@
             <option value="finished">finished</option>
           </select>
         </div>
-        <div class="table-wrap"><table id="mat-table" class="row-select">
+        <div class="table-wrap"><table id="mat-table" class="row-select" data-assist="masterdata-material-table">
           <thead><tr><th>Code</th><th>Name</th><th>Unit</th><th>Type</th></tr></thead>
           <tbody></tbody>
         </table></div>
@@ -117,16 +117,16 @@
       </div>
       <div class="panel">
         <h2>Bill of material <span id="bom-title" class="muted">— pick a material</span></h2>
-        <div class="table-wrap"><table id="bom-table">
+        <div class="table-wrap"><table id="bom-table" data-assist="masterdata-bom-table">
           <thead><tr><th>Component</th><th class="num">Quantity</th><th>Enters at operation</th></tr></thead>
           <tbody></tbody>
         </table></div>
-        <form id="bom-form" class="stack" data-needs-cap="masterdata.write">
+        <form id="bom-form" class="stack" data-needs-cap="masterdata.write" data-assist="masterdata-bom-form">
           <div class="row">
-            <select id="bom-component" aria-label="Component"></select>
-            <input id="bom-qty" type="number" step="any" min="0" placeholder="Quantity per unit" required>
-            <input id="bom-seq" type="number" step="10" placeholder="Operation seq (optional)">
-            <button id="bom-submit">Add component</button>
+            <select id="bom-component" aria-label="Component" data-assist="masterdata-bom-component"></select>
+            <input id="bom-qty" type="number" step="any" min="0" placeholder="Quantity per unit" required data-assist="masterdata-bom-quantity">
+            <input id="bom-seq" type="number" step="10" placeholder="Operation seq (optional)" data-assist="masterdata-bom-seq">
+            <button id="bom-submit" data-assist="masterdata-bom-submit">Add component</button>
           </div>
         </form>
       </div>
@@ -137,12 +137,12 @@
         <h2>Add a specification</h2>
         <form id="spec-form" class="stack" data-assist="masterdata-spec-form">
           <div class="row">
-            <select id="spec-material" aria-label="Material"></select>
-            <input id="spec-char" placeholder="Characteristic" required>
-            <input id="spec-unit" placeholder="Unit">
-            <input id="spec-min" type="number" step="any" placeholder="Min">
-            <input id="spec-max" type="number" step="any" placeholder="Max">
-            <button id="spec-submit">Add</button>
+            <select id="spec-material" aria-label="Material" data-assist="masterdata-spec-material"></select>
+            <input id="spec-char" placeholder="Characteristic" required data-assist="masterdata-spec-characteristic">
+            <input id="spec-unit" placeholder="Unit" data-assist="masterdata-spec-unit">
+            <input id="spec-min" type="number" step="any" placeholder="Min" data-assist="masterdata-spec-min">
+            <input id="spec-max" type="number" step="any" placeholder="Max" data-assist="masterdata-spec-max">
+            <button id="spec-submit" data-assist="masterdata-spec-submit">Add</button>
           </div>
         </form>
       </div>
@@ -152,7 +152,7 @@
           <input id="spec-q" type="search" placeholder="Material or characteristic" aria-label="Material or characteristic">
           <select id="spec-filter-material" aria-label="Material"><option value="">Any material</option></select>
         </div>
-        <div class="table-wrap"><table id="spec-table">
+        <div class="table-wrap"><table id="spec-table" data-assist="masterdata-spec-table">
           <thead><tr><th>Material</th><th>Characteristic</th><th class="num">Min</th><th class="num">Max</th><th>Unit</th><th></th></tr></thead>
           <tbody></tbody>
         </table></div>

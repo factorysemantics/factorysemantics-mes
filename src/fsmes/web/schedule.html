@@ -53,7 +53,7 @@
             <option value="8">8 hours</option><option value="24" selected>24 hours</option>
             <option value="72">3 days</option><option value="168">7 days</option></select></label>
         </h2>
-        <div id="board" class="chart"></div>
+        <div id="board" class="chart" data-assist="schedule-board"></div>
         <p class="legend">
           <span><i class="sw" style="background:var(--running)"></i>production</span>
           <span><i class="sw" style="background:var(--setup)"></i>maintenance placed before it</span>
@@ -66,8 +66,8 @@
           a plan through a service the machine owes is a prediction that something will go wrong.</p>
         <div class="row">
           <button id="plan-all" data-assist="schedule-plan-all">Plan every open order</button>
-          <input id="plan-order" placeholder="WO-… (one order)">
-          <button id="plan-one" class="ghost">Plan this order</button>
+          <input id="plan-order" placeholder="WO-… (one order)" data-assist="schedule-plan-order">
+          <button id="plan-one" class="ghost" data-assist="schedule-plan-one">Plan this order</button>
         </div>
       </div>
     </section>
@@ -75,7 +75,7 @@
     <section class="tab-panel" data-panel="promises">
       <div class="panel">
         <h2>What the plan promises <span id="promise-count" class="muted"></span></h2>
-        <div class="table-wrap"><table id="promises-table">
+        <div class="table-wrap"><table id="promises-table" data-assist="schedule-promises">
           <thead><tr><th>Order</th><th>Material</th><th>Status</th><th>Due</th><th>Plan says</th><th>Verdict</th></tr></thead>
           <tbody></tbody>
         </table></div>
@@ -86,35 +86,35 @@
       <div class="panel">
         <h2>Shifts <span class="muted">— every promised date rests on these</span></h2>
         <p id="calendar-note" class="muted small"></p>
-        <div class="table-wrap"><table id="shifts-table">
+        <div class="table-wrap"><table id="shifts-table" data-assist="schedule-shifts">
           <thead><tr><th>Shift</th><th>Starts</th><th>Ends</th><th>Days</th><th>Applies to</th></tr></thead>
           <tbody></tbody>
         </table></div>
         <form id="shift-form" class="stack" data-needs-cap="scheduling.plan" data-assist="schedule-shift-form">
           <h3>Add a shift</h3>
           <div class="row">
-            <input id="shift-code" placeholder="Code (DAY)" required>
-            <input id="shift-name" placeholder="Name" required>
-            <input id="shift-starts" type="time" value="06:00" required>
-            <input id="shift-ends" type="time" value="14:00" required>
-            <input id="shift-days" placeholder="Days Mon→Sun, e.g. 1111100" pattern="[01]{7}" required>
-            <button id="shift-submit">Add shift</button>
+            <input id="shift-code" placeholder="Code (DAY)" required data-assist="schedule-shift-code">
+            <input id="shift-name" placeholder="Name" required data-assist="schedule-shift-name">
+            <input id="shift-starts" type="time" value="06:00" required data-assist="schedule-shift-starts">
+            <input id="shift-ends" type="time" value="14:00" required data-assist="schedule-shift-ends">
+            <input id="shift-days" placeholder="Days Mon→Sun, e.g. 1111100" pattern="[01]{7}" required data-assist="schedule-shift-days">
+            <button id="shift-submit" data-assist="schedule-shift-submit">Add shift</button>
           </div>
         </form>
       </div>
       <div class="panel">
         <h2>Exceptions <span class="muted">— shutdown days remove capacity, overtime days add it</span></h2>
-        <div class="table-wrap"><table id="exceptions-table">
+        <div class="table-wrap"><table id="exceptions-table" data-assist="schedule-exceptions">
           <thead><tr><th>Day</th><th>Kind</th><th>Reason</th><th>Applies to</th></tr></thead>
           <tbody></tbody>
         </table></div>
-        <form id="exception-form" class="stack" data-needs-cap="scheduling.plan">
+        <form id="exception-form" class="stack" data-needs-cap="scheduling.plan" data-assist="schedule-exception-form">
           <h3>Add an exception</h3>
           <div class="row">
-            <input id="exc-day" type="date" required>
-            <select id="exc-kind" aria-label="Kind"><option value="shutdown">shutdown</option><option value="overtime">overtime</option></select>
-            <input id="exc-reason" placeholder="Reason" required>
-            <button id="exc-submit">Add</button>
+            <input id="exc-day" type="date" required data-assist="schedule-exc-day">
+            <select id="exc-kind" aria-label="Kind" data-assist="schedule-exc-kind"><option value="shutdown">shutdown</option><option value="overtime">overtime</option></select>
+            <input id="exc-reason" placeholder="Reason" required data-assist="schedule-exc-reason">
+            <button id="exc-submit" data-assist="schedule-exc-submit">Add</button>
           </div>
         </form>
       </div>

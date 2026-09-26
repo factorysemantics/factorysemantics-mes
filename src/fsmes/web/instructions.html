@@ -52,11 +52,11 @@
       <form id="form-doc" class="stack" data-needs-cap="documents.write" data-assist="instruction-new">
         <h3 class="mt">New document</h3>
         <div class="row">
-          <input name="code" placeholder="Code (WI-…)" required>
-          <input name="title" placeholder="Title" required>
+          <input name="code" placeholder="Code (WI-…)" required data-assist="instruction-new-code">
+          <input name="title" placeholder="Title" required data-assist="instruction-new-title">
         </div>
-        <textarea name="body" rows="4" placeholder="The procedure, in markdown. It arrives as a draft; a person approves it."></textarea>
-        <div class="row"><button>Create draft</button></div>
+        <textarea name="body" rows="4" placeholder="The procedure, in markdown. It arrives as a draft; a person approves it." data-assist="instruction-new-body"></textarea>
+        <div class="row"><button data-assist="instruction-new-create">Create draft</button></div>
       </form>
     </section>
 
@@ -72,12 +72,12 @@
           <span class="muted" id="doc-rev">—</span>
           <span class="muted" id="doc-approval">—</span>
         </div>
-        <div id="doc-anchors" class="anchors"></div>
+        <div id="doc-anchors" class="anchors" data-assist="instruction-anchors"></div>
         <div id="doc-model" class="drafted hidden"></div>
 
         <article id="doc-body" class="doc-body" data-assist="instruction-body"></article>
 
-        <div class="doc-actions" id="doc-actions"></div>
+        <div class="doc-actions" id="doc-actions" data-assist="instruction-actions"></div>
 
         <h3 class="mt">Revision history</h3>
         <div class="table-wrap">

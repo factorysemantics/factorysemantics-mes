@@ -23,6 +23,14 @@ PAGE_FILES = {"/dashboard": "index.html", "/dashboard/quality": "quality.html",
               "/dashboard/maintenance": "maintenance.html",
               "/dashboard/reasons": "reasons.html",
               "/dashboard/severities": "severities.html",
+              "/dashboard/masterdata": "masterdata.html",
+              "/dashboard/admin": "admin.html",
+              "/dashboard/instructions": "instructions.html",
+              "/dashboard/triggers": "triggers.html",
+              "/dashboard/adjustments": "adjustments.html",
+              "/dashboard/schedule": "schedule.html",
+              "/dashboard/trace": "trace.html",
+              "/dashboard/machines": "machines.html",
               # One file serves every workspace's Configuration page and reads
               # the workspace out of its own address, so the authored step
               # names the template and the proposal fills it in.
@@ -800,9 +808,16 @@ def test_a_message_over_an_open_proposal_is_a_history_the_api_will_take(scripted
     # The second call happened at all, and what it was handed is well-formed.
     assert len(shapes) == 2, "the second message never reached the model"
     assert "assistant[text,tool_use] user[tool_result] user[text]" in shapes[1], shapes[1]
-    # The decline is what the model was told, in the person's own words.
+    # The decline is what the model was told, in the person's own words - and
+    # what happened is that they typed, which is not the same as walking away.
+    # When the card had a walk behind it the result says where that walk is,
+    # because "could you show me where?" is one of the things a person types
+    # over a card, and it used to be answered with "there isn't a walkthrough
+    # for that".
     answer = json.loads(sess.history[2]["content"][0]["content"])
-    assert answer["declined"] == "the person moved on without confirming"
+    assert answer["declined"].startswith(
+        "the person typed something else instead of deciding")
+    assert f"show_guide('{agent.PROPOSAL_WALK}')" in answer["declined"]
 
 
 def test_a_conversation_already_broken_repairs_itself_on_the_next_message(scripted, monkeypatch):
@@ -1084,8 +1099,40 @@ def test_surface_titles_and_defaults_render_from_the_proposal():
 
 def test_every_surface_names_pages_that_exist_and_an_example():
     for tool, surface in assistant.SURFACES.items():
-        assert surface["pages"] and all(p in PAGE_FILES or p == "/dashboard/machines" for p in surface["pages"]), tool
+        assert surface["pages"] and all(p in PAGE_FILES for p in surface["pages"]), tool
         assert surface["example"], tool
+
+
+def test_every_write_tool_the_agent_may_propose_has_a_walk_onto_the_real_form():
+    """The ratchet. A person who is offered "Do it" is offered "Show me" too -
+    for every write tool, not the ten that happened to be written first.
+
+    Keyed on `NEEDS` and `PER_CALL_NEEDS`, which is where a new write tool
+    announces itself, so the next tool added without a surface fails here
+    rather than shipping a card with one button on it. Scott, 2026-09-24:
+    *"it would even be possible for the Assistant to take me to that page with
+    those actions performed, correct?"* - yes, and this is what keeps it true
+    of all of them.
+    """
+    proposable = set(agent.NEEDS) | set(agent.PER_CALL_NEEDS)
+    assert set(assistant.SURFACES) == proposable, (
+        f"no surface for: {sorted(proposable - set(assistant.SURFACES))}; "
+        f"surface for something that is not a proposable write tool: "
+        f"{sorted(set(assistant.SURFACES) - proposable)}")
+
+
+@pytest.mark.parametrize("tool", sorted(assistant.SURFACES))
+def test_a_surface_renders_with_nothing_but_the_arguments_it_is_given(tool):
+    """Every placeholder in every authored step resolves, and no step leaves a
+    brace behind. A surface is filled with `format_map`, so one stray `{` in a
+    sentence is a card that raises on the way to the person's screen - and it
+    would raise in front of exactly the person who asked to be shown."""
+    rendered = assistant.surface_for(tool, {})
+    assert rendered is not None
+    for step in [*rendered["steps"], rendered["evidence"]]:
+        for field in ("title", "body", "page", "anchor"):
+            assert "{" not in step[field] and "}" not in step[field], (tool, field, step)
+        assert step["title"].strip() and step["body"].strip()
 
 
 def test_suggestions_put_this_screen_first_and_use_real_names():

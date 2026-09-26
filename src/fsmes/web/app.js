@@ -326,7 +326,13 @@ function pendingRow(item) {
   row.append(el("td", null, waited(item.waiting_seconds)));
   // Not an approve button. Signing from a row is signing blind: the row says
   // a draft exists, and nothing about what it would do to the plant.
-  row.append(cellWith(button("Review", () => openReview(item))));
+  const review = button("Review", () => openReview(item));
+  // The step a walk to a signing control stands on. Every row carries it, so
+  // a walk rings the first waiting draft and the card names the one it means;
+  // the person presses Review on that row. Filling it in for them is not on
+  // offer - choosing which draft to open is the first half of deciding.
+  review.dataset.assist = "pending-review";
+  row.append(cellWith(review));
   return row;
 }
 

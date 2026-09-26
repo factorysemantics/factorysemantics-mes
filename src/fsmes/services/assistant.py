@@ -509,6 +509,41 @@ def _saving_line(needs: str | None, capabilities: set[str] | None) -> str:
             "press Save, or a plant administrator can grant it.")
 
 
+def _routing_context(args: dict, capabilities: set[str] | None) -> dict:
+    """What a routing proposal's steps know beyond their own arguments.
+
+    `operations` is a list of dicts, and a list of dicts formatted into a
+    sentence by `str.format` reads like a stack trace. The routing form has no
+    control per operation either - it grows rows as you press Add operation -
+    so the one honest thing a step can do is name them in the plant's own
+    words and let the person type the rows. That is what this writes.
+    """
+    rows = args.get("operations") or []
+    written = []
+    for row in rows:
+        if not isinstance(row, dict):
+            written.append(str(row))
+            continue
+        seq, name = row.get("seq"), row.get("name") or row.get("operation") or ""
+        where = row.get("equipment") or row.get("machine") or ""
+        written.append(" ".join(str(part) for part in (seq, name, where and f"on {where}") if part))
+    return {"operations_line": "; ".join(written) or "none given",
+            "operation_count": str(len(rows))}
+
+
+def _role_context(args: dict, capabilities: set[str] | None) -> dict:
+    """A role proposal's capability list, as a line a person can tick against.
+
+    Same reason as the routing one: `capabilities` is a list, the screen draws
+    one checkbox per capability the product knows, and none of those boxes can
+    be addressed by an authored anchor. So the step rings the grid and the
+    card says exactly which words to find in it.
+    """
+    wanted = args.get("capabilities") or []
+    return {"capabilities_line": ", ".join(str(c) for c in wanted) or "none",
+            "capability_count": str(len(wanted))}
+
+
 SURFACES: dict[str, dict] = {
     "record_check": {
         "title": "Record a quality inspection",
@@ -878,6 +913,1009 @@ SURFACES: dict[str, dict] = {
         "evidence": {"page": "/dashboard/maintenance", "tab": "work", "anchor": "maintenance-work",
                      "title": "It is in the open work",
                      "body": "The new job is listed here until someone starts and completes it."},
+    },
+
+    # ---------------------------------------------------------------- quality
+    # The three non-conformance verbs. None of them has a box for the code:
+    # the screen picks a finding by drawing a button on its row, so the first
+    # step of each is the search box with the code typed into it. That is not
+    # a detour - it is what narrows the list to one row, which is what makes
+    # the row button on the next step the right one rather than the first one.
+    "review_nonconformance": {
+        "title": "Take a non-conformance under review",
+        "needs": "quality.close_nc",
+        "pages": ["/dashboard/quality"],
+        "example": "Take NC-00001 under review",
+        "steps": [
+            {"page": "/dashboard/quality", "anchor": "nc-search",
+             "fill": {"value": "{code}"},
+             "title": "Find {code}",
+             "body": (
+                 "There is no box to type a finding's code into on this screen - you "
+                 "reach one by narrowing the list to it. I have typed {code} in here, "
+                 "so the row below should be the only one left."
+             )},
+            {"page": "/dashboard/quality", "anchor": "nc-review",
+             "needs": "quality.close_nc",
+             "title": "Press Take under review",
+             "body": (
+                 "This says somebody is looking at {code}, and stops two people "
+                 "deciding it twice. It does not decide anything yet."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/quality", "anchor": "nc-list",
+                     "title": "It says who is on it",
+                     "body": "The row now reads under review, with your name and the time."},
+    },
+    "disposition_nonconformance": {
+        "title": "Decide what happens to a non-conformance",
+        "needs": "quality.close_nc",
+        "pages": ["/dashboard/quality"],
+        "example": "Scrap NC-00001 - the batch is out of spec",
+        "steps": [
+            {"page": "/dashboard/quality", "anchor": "nc-search",
+             "fill": {"value": "{code}"},
+             "title": "Find {code}",
+             "body": (
+                 "Typed in for you, so the list is down to the one finding. The next "
+                 "step opens the decision box on this row and not on somebody else's."
+             )},
+            {"page": "/dashboard/quality", "anchor": "nc-decide",
+             "needs": "quality.close_nc",
+             "title": "Press Decide",
+             "body": "This opens the decision box underneath, for {code}."},
+            {"page": "/dashboard/quality", "anchor": "nc-disposition-choice",
+             "open": "nc-decide", "needs": "quality.close_nc",
+             "fill": {"value": "{disposition}"},
+             "title": "What happens to the material",
+             "body": (
+                 "{disposition}. Use as is, rework, scrap or return - four words, "
+                 "because a decision nobody can name is a decision nobody can count."
+             )},
+            {"page": "/dashboard/quality", "anchor": "nc-disposition-reason",
+             "open": "nc-decide", "needs": "quality.close_nc",
+             "fill": {"value": "{reason}"},
+             "title": "Why",
+             "body": (
+                 "{reason}. This is the sentence somebody reads in six months when "
+                 "the same defect comes back, so it is worth more than the choice above."
+             )},
+            {"page": "/dashboard/quality", "anchor": "nc-disposition-save",
+             "open": "nc-decide", "needs": "quality.close_nc",
+             "title": "Press Record the decision",
+             "body": (
+                 "You press it, not me - it is recorded under your own name. The "
+                 "button stays dead until both boxes have something in them."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/quality", "anchor": "nc-list",
+                     "title": "The decision is on the record",
+                     "body": "The row carries the disposition and your reason under it."},
+    },
+    "close_nonconformance": {
+        "title": "Close a non-conformance",
+        "needs": "quality.close_nc",
+        "pages": ["/dashboard/quality"],
+        "example": "Close NC-00001",
+        "steps": [
+            {"page": "/dashboard/quality", "anchor": "nc-search",
+             "fill": {"value": "{code}"},
+             "title": "Find {code}",
+             "body": "Typed in for you, so the row below is the one you mean.",
+             },
+            {"page": "/dashboard/quality", "anchor": "nc-close",
+             "needs": "quality.close_nc",
+             "title": "Press Close",
+             "body": (
+                 "Closing says the finding is dealt with. It does not erase it: the "
+                 "record stays, and the chart still counts it."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/quality", "anchor": "nc-filters",
+                     "title": "Where a closed finding goes",
+                     "body": (
+                         "The list shows open work by default, so {code} has left it. "
+                         "Set the status filter here to closed to see it again."
+                     )},
+    },
+    # ------------------------------------------------------------ maintenance
+    "perform_maintenance": {
+        "title": "Start or complete a maintenance job",
+        "needs": "maintenance.perform",
+        "pages": ["/dashboard/maintenance", "/dashboard/station"],
+        "example": "Complete CM-00001 - replaced the belt",
+        "steps": [
+            {"page": "/dashboard/maintenance", "tab": "work",
+             "anchor": "maintenance-work", "needs": "maintenance.perform",
+             "title": "Find {order} in the open work",
+             "body": (
+                 "Press {action} on that row. The ring is round the whole list rather "
+                 "than one button: every row has the same button, and pointing at the "
+                 "first one would be pointing at the wrong job."
+             )},
+            {"page": "/dashboard/maintenance", "tab": "work",
+             "anchor": "maintenance-complete-findings",
+             "needs": "maintenance.perform",
+             "fill": {"value": "{findings}", "default": ""},
+             "title": "What you found",
+             "body": (
+                 "Only for Complete - pressing it opens this box. Starting a job "
+                 "needs nothing more than the button. What you write here is the "
+                 "history the next fitter reads before opening the guard."
+             )},
+            {"page": "/dashboard/maintenance", "tab": "work",
+             "anchor": "maintenance-complete-confirm",
+             "needs": "maintenance.perform",
+             "title": "Press Complete job",
+             "body": "Under your name, with the minutes it actually took."},
+        ],
+        "evidence": {"page": "/dashboard/maintenance", "tab": "history",
+                     "anchor": "maintenance-history",
+                     "title": "It is in the history",
+                     "body": "Completed work lands here with the findings beside it."},
+    },
+    "raise_due_maintenance": {
+        "title": "Raise the maintenance work that is due",
+        "needs": "maintenance.perform",
+        "pages": ["/dashboard/maintenance"],
+        "example": "Raise the maintenance that is due",
+        "steps": [
+            {"page": "/dashboard/maintenance", "tab": "due",
+             "anchor": "maintenance-raise", "needs": "maintenance.perform",
+             "title": "Press Raise due work",
+             "body": (
+                 "One press turns every plan that has come due into a job somebody "
+                 "can pick up. Nothing is due twice: a plan with an open job is "
+                 "skipped."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/maintenance", "tab": "work",
+                     "anchor": "maintenance-work",
+                     "title": "The jobs it raised",
+                     "body": "They are in the open work now, waiting for a fitter."},
+    },
+    "create_maintenance_plan": {
+        "title": "Write a maintenance plan",
+        "needs": "maintenance.plan",
+        "pages": ["/dashboard/maintenance"],
+        "example": "Plan a belt check on {machine} every 200 running hours",
+        "steps": [
+            {"page": "/dashboard/maintenance", "tab": "plans",
+             "anchor": "maintenance-plan-code", "needs": "maintenance.plan",
+             "fill": {"value": "{code}"},
+             "title": "The plan's code",
+             "body": "{code}. Every job this plan raises carries it."},
+            {"page": "/dashboard/maintenance", "tab": "plans",
+             "anchor": "maintenance-plan-name", "needs": "maintenance.plan",
+             "fill": {"value": "{name}"},
+             "title": "What it is",
+             "body": "{name} - the line a fitter reads on the job."},
+            {"page": "/dashboard/maintenance", "tab": "plans",
+             "anchor": "maintenance-plan-machine", "needs": "maintenance.plan",
+             "fill": {"value": "{machine}"},
+             "title": "Which machine",
+             "body": "{machine}. A plan belongs to one machine, so its hours are that machine's."},
+            {"page": "/dashboard/maintenance", "tab": "plans",
+             "anchor": "maintenance-plan-trigger", "needs": "maintenance.plan",
+             "fill": {"value": "{trigger}"},
+             "title": "What makes it due",
+             "body": (
+                 "{trigger}. Running hours, units made, or days on the calendar - "
+                 "three different ideas of wear, and the plant picks the one that "
+                 "matches the part."
+             )},
+            {"page": "/dashboard/maintenance", "tab": "plans",
+             "anchor": "maintenance-plan-interval", "needs": "maintenance.plan",
+             "fill": {"value": "{interval}"},
+             "title": "How often",
+             "body": "{interval}, in whatever the trigger above counts."},
+            {"page": "/dashboard/maintenance", "tab": "plans",
+             "anchor": "maintenance-plan-minutes", "needs": "maintenance.plan",
+             "fill": {"value": "{expected_minutes}", "default": ""},
+             "title": "How long it should take",
+             "body": (
+                 "Left empty this takes the plant's own default rather than a number "
+                 "I made up. It is what the schedule reserves, so a wrong one shows "
+                 "up as a line that never runs on time."
+             )},
+            {"page": "/dashboard/maintenance", "tab": "plans",
+             "anchor": "maintenance-plan-document", "needs": "maintenance.plan",
+             "fill": {"value": "{document_code}", "default": ""},
+             "title": "The procedure, if there is one",
+             "body": (
+                 "A controlled document code. The job then carries the approved "
+                 "revision, so the fitter is not reading last year's copy."
+             )},
+            {"page": "/dashboard/maintenance", "tab": "plans",
+             "anchor": "maintenance-plan-submit", "needs": "maintenance.plan",
+             "title": "Press Create plan",
+             "body": "Under your name. It starts counting from now."},
+        ],
+        "evidence": {"page": "/dashboard/maintenance", "tab": "plans",
+                     "anchor": "maintenance-plans",
+                     "title": "The plan is in the list",
+                     "body": "With what it watches and when it next comes due."},
+    },
+
+    # ------------------------------------------------------------ master data
+    # Four things one screen makes, each behind its own tab. Every step carries
+    # the tab, because a person who is already on this page may be standing on
+    # another one of them.
+    "create_material": {
+        "title": "Add a material",
+        "needs": "masterdata.write",
+        "pages": ["/dashboard/masterdata"],
+        "example": "Add a material CAP-28MM, bottle cap, counted in pieces",
+        "steps": [
+            {"page": "/dashboard/masterdata", "tab": "materials",
+             "anchor": "masterdata-material-code", "needs": "masterdata.write",
+             "fill": {"value": "{code}"},
+             "title": "The code",
+             "body": (
+                 "{code}. This is what orders, lots and the ERP all say, so it "
+                 "outlives the name beside it."
+             )},
+            {"page": "/dashboard/masterdata", "tab": "materials",
+             "anchor": "masterdata-material-name", "needs": "masterdata.write",
+             "fill": {"value": "{name}"},
+             "title": "What a person calls it",
+             "body": "{name}."},
+            {"page": "/dashboard/masterdata", "tab": "materials",
+             "anchor": "masterdata-material-unit", "needs": "masterdata.write",
+             "fill": {"value": "{unit}", "default": "ea"},
+             "title": "What it is counted in",
+             "body": (
+                 "{unit}. Getting this wrong is not cosmetic - every quantity in "
+                 "the plant is read in this unit afterwards."
+             )},
+            {"page": "/dashboard/masterdata", "tab": "materials",
+             "anchor": "masterdata-material-type", "needs": "masterdata.write",
+             "fill": {"value": "{type}", "default": "raw"},
+             "title": "Raw, intermediate or finished",
+             "body": "{type}. It decides where the material can appear in a bill of materials."},
+            {"page": "/dashboard/masterdata", "tab": "materials",
+             "anchor": "masterdata-material-submit", "needs": "masterdata.write",
+             "title": "Press Add",
+             "body": "Created under your own name."},
+        ],
+        "evidence": {"page": "/dashboard/masterdata", "tab": "materials",
+                     "anchor": "masterdata-material-table",
+                     "title": "It is in the materials",
+                     "body": "Your new material is in this list."},
+    },
+    "create_equipment": {
+        "title": "Add a machine or a line",
+        "needs": "masterdata.write",
+        "pages": ["/dashboard/masterdata", "/dashboard/machines"],
+        "example": "Add a work unit CAP01 under LINE1",
+        "steps": [
+            {"page": "/dashboard/masterdata", "tab": "equipment",
+             "anchor": "masterdata-equipment-code", "needs": "masterdata.write",
+             "fill": {"value": "{code}"},
+             "title": "The code",
+             "body": "{code}. Every event, every stop and every count is filed under it."},
+            {"page": "/dashboard/masterdata", "tab": "equipment",
+             "anchor": "masterdata-equipment-name", "needs": "masterdata.write",
+             "fill": {"value": "{name}"},
+             "title": "What it is called on the floor",
+             "body": "{name}."},
+            {"page": "/dashboard/masterdata", "tab": "equipment",
+             "anchor": "masterdata-equipment-level", "needs": "masterdata.write",
+             "fill": {"value": "{level}", "default": "work_unit"},
+             "title": "What kind of thing it is",
+             "body": (
+                 "{level}. A work unit is a machine; the levels above it are how the "
+                 "plant adds up - a number on a line is the sum of its units."
+             )},
+            {"page": "/dashboard/masterdata", "tab": "equipment",
+             "anchor": "masterdata-equipment-parent", "needs": "masterdata.write",
+             "fill": {"value": "{parent}", "default": ""},
+             "title": "What it sits under",
+             "body": (
+                 "Left empty it hangs off nothing and appears in no line's figures. "
+                 "That is occasionally right and usually a mistake."
+             )},
+            {"page": "/dashboard/masterdata", "tab": "equipment",
+             "anchor": "masterdata-equipment-cycle", "needs": "masterdata.write",
+             "fill": {"value": "{ideal_cycle_seconds}", "default": ""},
+             "title": "Its ideal cycle, in seconds",
+             "body": (
+                 "This is the denominator of performance. Empty is honest when nobody "
+                 "knows it; a guessed number quietly rewrites every OEE figure this "
+                 "machine will ever report."
+             )},
+            {"page": "/dashboard/masterdata", "tab": "equipment",
+             "anchor": "masterdata-equipment-cost-center", "needs": "masterdata.write",
+             "fill": {"value": "{cost_center}", "default": ""},
+             "title": "Its cost centre",
+             "body": "What finance calls this machine, when finance calls it anything."},
+            {"page": "/dashboard/masterdata", "tab": "equipment",
+             "anchor": "masterdata-equipment-submit", "needs": "masterdata.write",
+             "title": "Press Add",
+             "body": "Created under your own name."},
+        ],
+        "evidence": {"page": "/dashboard/masterdata", "tab": "equipment",
+                     "anchor": "masterdata-equipment-table",
+                     "title": "It is in the equipment",
+                     "body": "With its level and what it hangs off."},
+    },
+    "create_spec": {
+        "title": "Write a specification",
+        "needs": "masterdata.write",
+        "pages": ["/dashboard/masterdata", "/dashboard/quality"],
+        "example": "Specify fill weight on {material} between 495 and 505",
+        "steps": [
+            {"page": "/dashboard/masterdata", "tab": "specs",
+             "anchor": "masterdata-spec-material", "needs": "masterdata.write",
+             "fill": {"value": "{material}"},
+             "title": "Which material",
+             "body": "{material}. A specification belongs to the thing being made."},
+            {"page": "/dashboard/masterdata", "tab": "specs",
+             "anchor": "masterdata-spec-characteristic", "needs": "masterdata.write",
+             "fill": {"value": "{characteristic}"},
+             "title": "What is measured",
+             "body": (
+                 "{characteristic}. Spell it the way the gauge label does - this is "
+                 "the word an inspector picks from a list at the machine."
+             )},
+            {"page": "/dashboard/masterdata", "tab": "specs",
+             "anchor": "masterdata-spec-unit", "needs": "masterdata.write",
+             "fill": {"value": "{unit}", "default": ""},
+             "title": "In what unit",
+             "body": "{unit}."},
+            {"page": "/dashboard/masterdata", "tab": "specs",
+             "anchor": "masterdata-spec-min", "needs": "masterdata.write",
+             "fill": {"value": "{min_value}", "default": ""},
+             "title": "The bottom of the band",
+             "body": (
+                 "Empty means there is no lower limit, which is different from a "
+                 "lower limit of zero. Leave it empty rather than inventing one."
+             )},
+            {"page": "/dashboard/masterdata", "tab": "specs",
+             "anchor": "masterdata-spec-max", "needs": "masterdata.write",
+             "fill": {"value": "{max_value}", "default": ""},
+             "title": "The top of the band",
+             "body": (
+                 "A reading outside these two raises a non-conformance by itself, "
+                 "so the band is a decision about what the plant stops for."
+             )},
+            {"page": "/dashboard/masterdata", "tab": "specs",
+             "anchor": "masterdata-spec-submit", "needs": "masterdata.write",
+             "title": "Press Add",
+             "body": "The characteristic can be measured from the next shift on."},
+        ],
+        "evidence": {"page": "/dashboard/masterdata", "tab": "specs",
+                     "anchor": "masterdata-spec-table",
+                     "title": "It is in the specifications",
+                     "body": "With its band, ready to judge a reading against."},
+    },
+    "add_bom_component": {
+        "title": "Add a component to a bill of materials",
+        "needs": "masterdata.write",
+        "pages": ["/dashboard/masterdata"],
+        "example": "Put 2 of a component into {material}",
+        "steps": [
+            {"page": "/dashboard/masterdata", "tab": "materials",
+             "anchor": "masterdata-material-table", "needs": "masterdata.write",
+             "title": "Click {material} in this list",
+             "body": (
+                 "There is no box for the parent material: the bill of materials "
+                 "form below works on whichever row is selected here. Click {material} "
+                 "and the form takes its name."
+             )},
+            {"page": "/dashboard/masterdata", "tab": "materials",
+             "anchor": "masterdata-bom-component", "needs": "masterdata.write",
+             "fill": {"value": "{component}"},
+             "title": "What goes into it",
+             "body": "{component}."},
+            {"page": "/dashboard/masterdata", "tab": "materials",
+             "anchor": "masterdata-bom-quantity", "needs": "masterdata.write",
+             "fill": {"value": "{quantity}"},
+             "title": "How much, per one made",
+             "body": (
+                 "{quantity}, in the component's own unit. This is the number that "
+                 "decides what a thousand units will consume, so it is worth reading twice."
+             )},
+            {"page": "/dashboard/masterdata", "tab": "materials",
+             "anchor": "masterdata-bom-seq", "needs": "masterdata.write",
+             "fill": {"value": "{operation_seq}", "default": ""},
+             "title": "At which operation",
+             "body": (
+                 "Empty means it is not tied to a step of the routing. Naming the "
+                 "operation is what lets the floor issue it at the right machine."
+             )},
+            {"page": "/dashboard/masterdata", "tab": "materials",
+             "anchor": "masterdata-bom-submit", "needs": "masterdata.write",
+             "title": "Press Add component",
+             "body": "It joins the bill under your name."},
+        ],
+        "evidence": {"page": "/dashboard/masterdata", "tab": "materials",
+                     "anchor": "masterdata-bom-table",
+                     "title": "The bill of materials",
+                     "body": "Your component is in it, with the quantity per unit made."},
+    },
+    # ----------------------------------------------------------- administration
+    "create_user": {
+        "title": "Create a sign-in",
+        "needs": "users.manage",
+        "pages": ["/dashboard/admin"],
+        "example": "Create a sign-in for a new operator",
+        "steps": [
+            {"page": "/dashboard/admin", "anchor": "user-new-code",
+             "needs": "users.manage", "fill": {"value": "{code}"},
+             "title": "The sign-in code",
+             "body": (
+                 "{code}. It is what the audit trail carries for everything this "
+                 "person does, so it should be recognisable a year from now."
+             )},
+            {"page": "/dashboard/admin", "anchor": "user-new-name",
+             "needs": "users.manage", "fill": {"value": "{name}"},
+             "title": "Their name",
+             "body": "{name}."},
+            {"page": "/dashboard/admin", "anchor": "user-new-password",
+             "needs": "users.manage", "fill": {"value": "{password}"},
+             "title": "A first password",
+             "body": (
+                 "Change it to something you are willing to say out loud once, "
+                 "because that is how it reaches them. It is visible here on purpose - "
+                 "a password nobody can read is a password nobody can hand over."
+             )},
+            {"page": "/dashboard/admin", "anchor": "user-new-role",
+             "needs": "users.manage", "fill": {"value": "{role}", "default": "operator"},
+             "title": "Their role",
+             "body": (
+                 "{role}. The role is the whole of what they may do - there is no "
+                 "second permission screen behind this one."
+             )},
+            {"page": "/dashboard/admin", "anchor": "user-new-create",
+             "needs": "users.manage",
+             "title": "Press Create",
+             "body": "The sign-in exists from this moment; nobody signs it off after you."},
+        ],
+        "evidence": {"page": "/dashboard/admin", "anchor": "user-table",
+                     "title": "They are in the people list",
+                     "body": "With the role they were given."},
+    },
+    "create_role": {
+        "title": "Define a role",
+        "needs": "users.manage",
+        "context": _role_context,
+        "pages": ["/dashboard/admin"],
+        "example": "Define a line-lead role that can release orders",
+        "steps": [
+            {"page": "/dashboard/admin", "anchor": "role-new-code",
+             "needs": "users.manage", "fill": {"value": "{code}"},
+             "title": "The role's code",
+             "body": "{code}. Every sign-in given this role inherits it whole."},
+            {"page": "/dashboard/admin", "anchor": "role-new-name",
+             "needs": "users.manage", "fill": {"value": "{name}"},
+             "title": "What it is called",
+             "body": "{name}."},
+            {"page": "/dashboard/admin", "anchor": "role-new-description",
+             "needs": "users.manage", "fill": {"value": "{description}", "default": ""},
+             "title": "What the role is for",
+             "body": (
+                 "One line. It is what the next administrator reads before deciding "
+                 "whether to put somebody in it."
+             )},
+            {"page": "/dashboard/admin", "anchor": "cap-checks",
+             "needs": "users.manage",
+             "title": "Tick {capability_count} capabilities",
+             "body": (
+                 "Tick these, and nothing else: {capabilities_line}. I cannot tick "
+                 "them for you - there is one box per capability the product knows "
+                 "and no authored step can name a box that is drawn from a list. "
+                 "Read the sentence beside each one; that is what it actually allows."
+             )},
+            {"page": "/dashboard/admin", "anchor": "role-save",
+             "needs": "users.manage",
+             "title": "Press Create role",
+             "body": "It is available to assign from now on."},
+        ],
+        "evidence": {"page": "/dashboard/admin", "anchor": "role-list",
+                     "title": "The role and what it holds",
+                     "body": "Its card lists every capability it carries."},
+    },
+    "update_role": {
+        "title": "Change what a role may do",
+        "needs": "users.manage",
+        "context": _role_context,
+        "pages": ["/dashboard/admin"],
+        "example": "Let the line-lead role hold orders as well",
+        "steps": [
+            {"page": "/dashboard/admin", "anchor": "role-list",
+             "needs": "users.manage",
+             "title": "Press Edit on {code}",
+             "body": (
+                 "The ring is round all the roles rather than one card: every card "
+                 "has the same Edit button, and pointing at the first would be "
+                 "pointing at the wrong role. Press the one on {code}."
+             )},
+            {"page": "/dashboard/admin", "anchor": "role-new-name",
+             "needs": "users.manage", "fill": {"value": "{name}"},
+             "title": "Its name",
+             "body": "{name}. The code above is fixed once a role exists."},
+            {"page": "/dashboard/admin", "anchor": "role-new-description",
+             "needs": "users.manage", "fill": {"value": "{description}", "default": ""},
+             "title": "What it is for",
+             "body": "Worth rewriting when what it may do has changed."},
+            {"page": "/dashboard/admin", "anchor": "cap-checks",
+             "needs": "users.manage",
+             "title": "The ticks are the whole answer",
+             "body": (
+                 "What is ticked when you save is what the role holds - this replaces "
+                 "the list, it does not add to it. It should end up as exactly: "
+                 "{capabilities_line}. Everybody already in this role gets the change "
+                 "on their next page load."
+             )},
+            {"page": "/dashboard/admin", "anchor": "role-save",
+             "needs": "users.manage",
+             "title": "Press Save",
+             "body": "Under your own name, and in force at once."},
+        ],
+        "evidence": {"page": "/dashboard/admin", "anchor": "role-list",
+                     "title": "What the role holds now",
+                     "body": "The card's chips are the capabilities as they now stand."},
+    },
+    "assign_role": {
+        "title": "Put somebody in a role",
+        "needs": "users.manage",
+        "pages": ["/dashboard/admin"],
+        "example": "Put a person into the supervisor role",
+        "steps": [
+            {"page": "/dashboard/admin", "anchor": "user-filter-text",
+             "needs": "users.manage", "fill": {"value": "{user}"},
+             "title": "Find {user}",
+             "body": (
+                 "Typed in for you, so the table below narrows to the one person. "
+                 "There is no form for this - the change is made on their row."
+             )},
+            {"page": "/dashboard/admin", "anchor": "user-role-select",
+             "needs": "users.manage",
+             "title": "Choose {role} on their row",
+             "body": (
+                 "I have deliberately not set this for you: this dropdown saves the "
+                 "moment it changes, with no button after it, so filling it in would "
+                 "be making the change rather than showing you where it is made."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/admin", "anchor": "user-table",
+                     "title": "Their role now",
+                     "body": "The Role column on their row is what they hold from the next page load."},
+    },
+    "create_routing": {
+        "title": "Create a routing",
+        "needs": "masterdata.write",
+        "context": _routing_context,
+        "pages": ["/dashboard/admin"],
+        "example": "Create a routing for {material} through mixing and packing",
+        "steps": [
+            {"page": "/dashboard/admin", "anchor": "routing-new-code",
+             "needs": "masterdata.write", "fill": {"value": "{code}"},
+             "title": "The routing's code",
+             "body": "{code}."},
+            {"page": "/dashboard/admin", "anchor": "routing-new-name",
+             "needs": "masterdata.write", "fill": {"value": "{name}"},
+             "title": "What it is called",
+             "body": "{name}."},
+            {"page": "/dashboard/admin", "anchor": "routing-new-material",
+             "needs": "masterdata.write", "fill": {"value": "{material}"},
+             "title": "What it makes",
+             "body": (
+                 "{material}. An order for this material follows these operations, "
+                 "in this order, on these machines."
+             )},
+            {"page": "/dashboard/admin", "anchor": "routing-ops",
+             "needs": "masterdata.write",
+             "title": "The {operation_count} operations",
+             "body": (
+                 "Type them here, in order: {operations_line}. The rows are added as "
+                 "you go with Add operation, so there is no fixed box for me to fill - "
+                 "and the sequence numbers are what decide which machine runs first."
+             )},
+            {"page": "/dashboard/admin", "anchor": "routing-create",
+             "needs": "masterdata.write",
+             "title": "Press Create routing",
+             "body": "Orders planned after this follow it."},
+        ],
+        "evidence": {"page": "/dashboard/admin", "anchor": "routing-list",
+                     "title": "It is in the routings",
+                     "body": "With the material it makes and how many operations it has."},
+    },
+    # -------------------------------------------------------------- documents
+    # Two tools, one form: `create_document` writes a controlled document and
+    # `draft_instruction` writes one already tied to a material and a
+    # characteristic. The screen has no box for that tie, and the walk says so
+    # rather than quietly dropping half the proposal.
+    "create_document": {
+        "title": "Draft a controlled document",
+        "needs": "documents.write",
+        "pages": ["/dashboard/instructions"],
+        "example": "Draft a work instruction for the changeover",
+        "steps": [
+            {"page": "/dashboard/instructions", "anchor": "instruction-new-code",
+             "needs": "documents.write", "fill": {"value": "{code}"},
+             "title": "The document's code",
+             "body": (
+                 "{code}. Typing a code that already exists drafts its next revision "
+                 "rather than a second document, which is how a procedure keeps its "
+                 "history."
+             )},
+            {"page": "/dashboard/instructions", "anchor": "instruction-new-title",
+             "needs": "documents.write", "fill": {"value": "{title}"},
+             "title": "Its title",
+             "body": "{title}."},
+            {"page": "/dashboard/instructions", "anchor": "instruction-new-body",
+             "needs": "documents.write", "fill": {"value": "{body}", "default": ""},
+             "title": "The text itself",
+             "body": (
+                 "Read it before you save. Once this revision is approved it is what "
+                 "the plant is held to, and what the assistant quotes instead of "
+                 "answering from its own idea of the job."
+             )},
+            {"page": "/dashboard/instructions", "anchor": "instruction-new-create",
+             "needs": "documents.write",
+             "title": "Press Create draft",
+             "body": (
+                 "A draft is in force nowhere. Somebody holding documents.approve "
+                 "puts this revision in force - never me."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/instructions", "anchor": "instruction-list",
+                     "title": "It is in the catalogue, as a draft",
+                     "body": "Open the row to read it and to see which revision is in force."},
+    },
+    "draft_instruction": {
+        "title": "Draft a work instruction for a check",
+        "needs": "documents.write",
+        "pages": ["/dashboard/instructions", "/dashboard/quality"],
+        "example": "Write an instruction for measuring {characteristic}",
+        "steps": [
+            {"page": "/dashboard/instructions", "anchor": "instruction-new-code",
+             "needs": "documents.write", "fill": {"value": "{code}"},
+             "title": "The document's code",
+             "body": "{code}. An existing code drafts its next revision."},
+            {"page": "/dashboard/instructions", "anchor": "instruction-new-title",
+             "needs": "documents.write", "fill": {"value": "{title}"},
+             "title": "Its title",
+             "body": "{title}."},
+            {"page": "/dashboard/instructions", "anchor": "instruction-new-body",
+             "needs": "documents.write", "fill": {"value": "{body}"},
+             "title": "The procedure",
+             "body": (
+                 "This is what an inspector reads beside the gauge, so it is worth "
+                 "reading as one."
+             )},
+            {"page": "/dashboard/instructions", "anchor": "instruction-anchors",
+             "needs": "documents.write",
+             "title": "What it is about: {material} {characteristic}",
+             "body": (
+                 "This form has no box for that. Tying a document to a material and "
+                 "a characteristic is what makes it appear beside the check on the "
+                 "quality screen, and today only a tool can set it - a document "
+                 "drafted by hand here is untied until somebody adds the tie. These "
+                 "chips are where it shows once it is set."
+             )},
+            {"page": "/dashboard/instructions", "anchor": "instruction-new-create",
+             "needs": "documents.write",
+             "title": "Press Create draft",
+             "body": "Drafted under your name; somebody holding documents.approve signs it."},
+        ],
+        "evidence": {"page": "/dashboard/instructions", "anchor": "instruction-list",
+                     "title": "It is in the catalogue, as a draft",
+                     "body": "With the revision it would become if it is approved."},
+    },
+
+    # --------------------------------------------------------------- triggers
+    "draft_trigger": {
+        "title": "Draft a trigger",
+        "needs": "triggers.write",
+        "pages": ["/dashboard/triggers"],
+        "example": "Draft a trigger for a wash temperature above 80",
+        "steps": [
+            {"page": "/dashboard/triggers", "tab": "triggers",
+             "anchor": "trigger-code", "needs": "triggers.write",
+             "fill": {"value": "{code}"},
+             "title": "The trigger's code",
+             "body": "{code}. Every firing is filed under it."},
+            {"page": "/dashboard/triggers", "tab": "triggers",
+             "anchor": "trigger-name", "needs": "triggers.write",
+             "fill": {"value": "{name}"},
+             "title": "What it is watching for",
+             "body": "{name}, in the words somebody woken by it would want to read."},
+            {"page": "/dashboard/triggers", "tab": "triggers",
+             "anchor": "trigger-machine", "needs": "triggers.write",
+             "fill": {"value": "{machine}", "default": ""},
+             "title": "On which machine",
+             "body": (
+                 "Empty means any machine publishing this tag. That is right for a "
+                 "plant-wide rule and wrong for a rule about one line."
+             )},
+            {"page": "/dashboard/triggers", "tab": "triggers",
+             "anchor": "trigger-tag", "needs": "triggers.write",
+             "fill": {"value": "{tag}"},
+             "title": "Which tag",
+             "body": (
+                 "{tag}. The list beside the box is what this plant actually "
+                 "publishes - a tag nobody publishes is a trigger that never fires."
+             )},
+            {"page": "/dashboard/triggers", "tab": "triggers",
+             "anchor": "trigger-condition", "needs": "triggers.write",
+             "fill": {"value": "{condition}"},
+             "title": "The comparison",
+             "body": "{condition}."},
+            {"page": "/dashboard/triggers", "tab": "triggers",
+             "anchor": "trigger-threshold", "needs": "triggers.write",
+             "fill": {"value": "{threshold}"},
+             "title": "The number it is compared against",
+             "body": "{threshold}."},
+            {"page": "/dashboard/triggers", "tab": "triggers",
+             "anchor": "trigger-sustained", "needs": "triggers.write",
+             "fill": {"value": "{sustained_seconds}", "default": "0"},
+             "title": "How long it must hold",
+             "body": (
+                 "Zero fires on the first reading. A few seconds is what stops one "
+                 "noisy sample waking somebody at three in the morning."
+             )},
+            {"page": "/dashboard/triggers", "tab": "triggers",
+             "anchor": "trigger-cooldown", "needs": "triggers.write",
+             "fill": {"value": "{cooldown_seconds}", "default": ""},
+             "title": "How long before it may fire again",
+             "body": "Empty takes this plant's own default rather than a number I chose."},
+            {"page": "/dashboard/triggers", "tab": "triggers",
+             "anchor": "trigger-action", "needs": "triggers.write",
+             "fill": {"value": "{action}"},
+             "title": "What it does when it fires",
+             "body": (
+                 "{action}. Only actions this product catalogues are on the list; a "
+                 "trigger cannot be taught to do something new from this screen."
+             )},
+            {"page": "/dashboard/triggers", "tab": "triggers",
+             "anchor": "trigger-params", "needs": "triggers.write",
+             "fill": {"value": "{action_params}", "default": ""},
+             "title": "What the action needs to know",
+             "body": (
+                 "The action's own settings, as JSON. The help line under the form "
+                 "says what the chosen action expects."
+             )},
+            {"page": "/dashboard/triggers", "tab": "triggers",
+             "anchor": "trigger-submit", "needs": "triggers.write",
+             "title": "Press Save draft",
+             "body": (
+                 "A draft watches nothing. Somebody holding triggers.approve puts it "
+                 "in force, and the OPC agent picks it up within half a minute."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/triggers", "tab": "triggers",
+                     "anchor": "trigger-list",
+                     "title": "It is in the list, as a draft",
+                     "body": "With how often it has fired, which for a draft is never."},
+    },
+    # ------------------------------------------------------------ adjustments
+    "propose_adjustment": {
+        "title": "Propose a setpoint change",
+        "needs": "adjustments.propose",
+        "pages": ["/dashboard/adjustments"],
+        "example": "Propose taking the wash setpoint down two degrees",
+        "steps": [
+            {"page": "/dashboard/adjustments", "anchor": "adjustment-machine",
+             "needs": "adjustments.propose", "fill": {"value": "{machine}"},
+             "title": "Which machine",
+             "body": (
+                 "{machine}. Only machines publishing a writable setpoint are listed, "
+                 "because nothing else can be changed from here."
+             )},
+            {"page": "/dashboard/adjustments", "anchor": "adjustment-tag",
+             "needs": "adjustments.propose", "fill": {"value": "{tag}"},
+             "title": "Which setpoint",
+             "body": (
+                 "{tag}. This list is rebuilt from the machine above, so it is the "
+                 "second thing to set and not the first."
+             )},
+            {"page": "/dashboard/adjustments", "anchor": "adjustment-value",
+             "needs": "adjustments.propose", "fill": {"value": "{value}"},
+             "title": "The new value",
+             "body": (
+                 "{value}. The line under the box gives the bounds this tag allows "
+                 "and what is driving it now - read it before you propose."
+             )},
+            {"page": "/dashboard/adjustments", "anchor": "adjustment-rationale",
+             "needs": "adjustments.propose", "fill": {"value": "{rationale}"},
+             "title": "Why",
+             "body": (
+                 "{rationale}. This is the whole of what the person approving it will "
+                 "have to go on, so it is the field that decides whether it is approved."
+             )},
+            {"page": "/dashboard/adjustments", "anchor": "adjustment-submit",
+             "needs": "adjustments.propose",
+             "title": "Press Propose",
+             "body": (
+                 "A proposal reaches no machine. Somebody holding adjustments.approve "
+                 "decides, and only then does a PLC see it."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/adjustments", "anchor": "adjustment-queue",
+                     "title": "It is in the queue",
+                     "body": "Waiting for a decision, with your reason in the Why column."},
+    },
+    # -------------------------------------------------------------- scheduling
+    "plan_order": {
+        "title": "Plan one order",
+        "needs": "scheduling.plan",
+        "pages": ["/dashboard/schedule", "/dashboard/orders"],
+        "example": "Plan {planned_order}",
+        "steps": [
+            {"page": "/dashboard/schedule", "tab": "board",
+             "anchor": "schedule-plan-order", "needs": "scheduling.plan",
+             "fill": {"value": "{order}"},
+             "title": "Which order",
+             "body": (
+                 "{order}. There is no box for a start time on this screen - planning "
+                 "by hand always starts from now and from what the machines are "
+                 "already promised."
+             )},
+            {"page": "/dashboard/schedule", "tab": "board",
+             "anchor": "schedule-plan-one", "needs": "scheduling.plan",
+             "title": "Press Plan this order",
+             "body": (
+                 "It is laid onto the machines its routing names, after whatever they "
+                 "are already committed to."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/schedule", "tab": "board",
+                     "anchor": "schedule-board",
+                     "title": "Where it landed",
+                     "body": "The board shows the operations and when each machine picks them up."},
+    },
+    "plan_all_orders": {
+        "title": "Plan every open order",
+        "needs": "scheduling.plan",
+        "pages": ["/dashboard/schedule"],
+        "example": "Plan every open order",
+        "steps": [
+            {"page": "/dashboard/schedule", "tab": "board",
+             "anchor": "schedule-plan-all", "needs": "scheduling.plan",
+             "title": "Press Plan every open order",
+             "body": (
+                 "This replans the whole book, so promises already made can move. "
+                 "There is no start-time box: it plans from now."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/schedule", "tab": "promises",
+                     "anchor": "schedule-promises",
+                     "title": "What was promised",
+                     "body": "One row per order, with the date the plan now says."},
+    },
+    "add_shift": {
+        "title": "Add a shift",
+        "needs": "scheduling.plan",
+        "pages": ["/dashboard/schedule"],
+        "example": "Add a night shift from 22:00 to 06:00",
+        "steps": [
+            {"page": "/dashboard/schedule", "tab": "calendar",
+             "anchor": "schedule-shift-code", "needs": "scheduling.plan",
+             "fill": {"value": "{code}"},
+             "title": "The shift's code",
+             "body": "{code}."},
+            {"page": "/dashboard/schedule", "tab": "calendar",
+             "anchor": "schedule-shift-name", "needs": "scheduling.plan",
+             "fill": {"value": "{name}"},
+             "title": "What it is called",
+             "body": "{name}."},
+            {"page": "/dashboard/schedule", "tab": "calendar",
+             "anchor": "schedule-shift-starts", "needs": "scheduling.plan",
+             "fill": {"value": "{starts}"},
+             "title": "When it starts",
+             "body": "{starts}, on the plant's own clock."},
+            {"page": "/dashboard/schedule", "tab": "calendar",
+             "anchor": "schedule-shift-ends", "needs": "scheduling.plan",
+             "fill": {"value": "{ends}"},
+             "title": "When it ends",
+             "body": (
+                 "{ends}. An end earlier than the start is a shift that crosses "
+                 "midnight, which is allowed and is usually what a night shift means."
+             )},
+            {"page": "/dashboard/schedule", "tab": "calendar",
+             "anchor": "schedule-shift-days", "needs": "scheduling.plan",
+             "fill": {"value": "{days}", "default": ""},
+             "title": "Which days",
+             "body": (
+                 "Seven characters, Monday first, one for a working day. Left as it "
+                 "came it is this plant's own working week rather than a week I chose."
+             )},
+            {"page": "/dashboard/schedule", "tab": "calendar",
+             "anchor": "schedule-shift-submit", "needs": "scheduling.plan",
+             "title": "Press Add shift",
+             "body": (
+                 "A shift added here is the whole plant's - this form has no machine "
+                 "box, so a shift for one line only is not something the screen can "
+                 "express today."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/schedule", "tab": "calendar",
+                     "anchor": "schedule-shifts",
+                     "title": "The shifts this plant works",
+                     "body": "Yours is in the list, with the days it applies to."},
+    },
+    "add_calendar_exception": {
+        "title": "Add a shutdown or an overtime day",
+        "needs": "scheduling.plan",
+        "pages": ["/dashboard/schedule"],
+        "example": "Mark next Monday a shutdown for the annual service",
+        "steps": [
+            {"page": "/dashboard/schedule", "tab": "calendar",
+             "anchor": "schedule-exc-day", "needs": "scheduling.plan",
+             "fill": {"value": "{day}"},
+             "title": "Which day",
+             "body": "{day}."},
+            {"page": "/dashboard/schedule", "tab": "calendar",
+             "anchor": "schedule-exc-kind", "needs": "scheduling.plan",
+             "fill": {"value": "{kind}"},
+             "title": "Shutdown or overtime",
+             "body": (
+                 "{kind}. A shutdown takes the day out of the plan; overtime puts a "
+                 "non-working day into it."
+             )},
+            {"page": "/dashboard/schedule", "tab": "calendar",
+             "anchor": "schedule-exc-reason", "needs": "scheduling.plan",
+             "fill": {"value": "{reason}"},
+             "title": "Why",
+             "body": (
+                 "{reason}. A day missing from the plan with no reason beside it is "
+                 "the row somebody argues about at the end of the month."
+             )},
+            {"page": "/dashboard/schedule", "tab": "calendar",
+             "anchor": "schedule-exc-submit", "needs": "scheduling.plan",
+             "title": "Press Add",
+             "body": (
+                 "Like shifts, an exception from this screen is the whole plant's: "
+                 "there is no machine box on the form."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/schedule", "tab": "calendar",
+                     "anchor": "schedule-exceptions",
+                     "title": "The exceptions",
+                     "body": "Your day is in the list, and the board plans around it."},
+    },
+    # ------------------------------------------------------------- serial units
+    "produce_units": {
+        "title": "Produce serialised units",
+        "needs": "production.book",
+        "pages": ["/dashboard/trace"],
+        "example": "Produce 5 serialised units of {material}",
+        "steps": [
+            {"page": "/dashboard/trace", "anchor": "trace-produce-material",
+             "needs": "production.book", "fill": {"value": "{material}"},
+             "title": "What is being made",
+             "body": "{material}."},
+            {"page": "/dashboard/trace", "anchor": "trace-produce-order",
+             "needs": "production.book", "fill": {"value": "{order}", "default": ""},
+             "title": "Against which order",
+             "body": (
+                 "Empty makes units that belong to no order. That is occasionally "
+                 "right - a sample - and is otherwise the thing that makes a count "
+                 "disagree with the order book."
+             )},
+            {"page": "/dashboard/trace", "anchor": "trace-produce-machine",
+             "needs": "production.book", "fill": {"value": "{machine}", "default": ""},
+             "title": "On which machine",
+             "body": "What the unit's own history will say it was made on."},
+            {"page": "/dashboard/trace", "anchor": "trace-produce-count",
+             "needs": "production.book", "fill": {"value": "{count}", "default": "1"},
+             "title": "How many",
+             "body": (
+                 "{count}. Each one gets its own serial, minted by the plant - there "
+                 "is no box to name a serial here, and a serial somebody types is a "
+                 "serial that can already exist."
+             )},
+            {"page": "/dashboard/trace", "anchor": "trace-produce-submit",
+             "needs": "production.book",
+             "title": "Press Produce",
+             "body": "The units exist from this moment, each traceable on its own."},
+        ],
+        "evidence": {"page": "/dashboard/trace", "anchor": "trace-produce-result",
+                     "title": "The serials it minted",
+                     "body": "Each is a link: following one shows that unit's whole history."},
     },
 }
 
