@@ -36,7 +36,7 @@ import time
 import pytest
 from sqlalchemy.orm import Session
 
-pytestmark = pytest.mark.slow
+pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
 #: The setting Scott was trying to change, and the section it is listed under.
 SETTING = "default_job_minutes"

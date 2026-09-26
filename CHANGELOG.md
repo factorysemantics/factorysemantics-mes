@@ -12,6 +12,23 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **CI runs the browser tests.** Every Chromium-driven test in the suite is
+  marked `browser` as well as `slow`, and a new `browser` job runs
+  `pytest -m browser` on Ubuntu and one Python on every pull request — twenty-six
+  tests, about twenty seconds of testing after Chromium is installed. They
+  existed before and nothing ran them: they are `slow`, the default selection
+  is `-m 'not slow'`, and every CI job used the default, so the whole tier was
+  opt-in — and opt-in tests rot. The proof is in *Fixed* below. The rest of the
+  slow tier runs in the same job (`slow and not browser and not erpnext_live`),
+  which is four tests and four seconds; the ERPNext round trip keeps its own
+  workflow, because it needs a real ERPNext. `tests/test_every_browser_test_is_in_the_browser_tier.py`
+  fails if a test file that reaches Playwright is missing the marker, so the
+  next browser test cannot be added outside the tier by accident. **House rule
+  6 in CONTRIBUTING** now says the other half of it: a look on `127.0.0.1`
+  proves the logic and not the experience, and anything timing-shaped is
+  verified against an artificial delay or a real remote client, or is described
+  as "looked at on loopback only".
+
 - **One tool for every domain's live settings, not one per domain.** Two agent
   tools: `plant_settings(plant, domain)` reads a whole Configuration workspace
   — every setting a plant owns, what it is set to, whether that is the
@@ -119,6 +136,26 @@ goes under Honesty with a migration line, so plant people can find it.
   Its pair `signals.approve` is still absent on purpose — nothing here has an
   approval step, and a capability that gates nothing is a role saying something
   untrue about itself.
+
+### Fixed
+
+- **The Configuration page's section count is read from the registry.** The
+  browser test asserting Engineering's Configuration page lists sections pinned
+  the number one; the page has listed eighteen since the Engineering settings
+  landed, and the test had been red on `main` ever since, unseen, because
+  nothing in CI ran it. It now reads `modules.config_sections("engineering")`
+  and asserts the page shows every section the registry holds, in the
+  registry's order, with that total in the count line — identity and a live
+  source, never a number that was true on one day. Nothing about the page
+  changed; the test was the thing that was wrong.
+
+- **The KEPSim replay end-to-end is declared red rather than quietly
+  unrun.** Bringing the slow tier into CI found it failing three runs out of
+  three on its analog tag-history assertion (`RD01.MotorTemp`): production and
+  equipment states arrive from the replayed line, the analog history does not.
+  It is marked `xfail` with the reason and the two candidate causes written into
+  the test, so it runs on every pull request and reports rather than hides. It
+  is not skipped, not strict, and not loosened — and it is not fixed here.
 
 ### Changed
 

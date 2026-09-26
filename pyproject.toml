@@ -171,6 +171,15 @@ testpaths = ["tests"]
 addopts = "-q -m 'not slow'"
 markers = [
     "slow: tests that start real servers or drive a simulated plant end to end",
+    # Every test that drives Chromium. A subset of `slow` - each of these
+    # starts a real server too - selected on purpose by CI's `browser` job:
+    # `pytest -m browser`. It exists because "run the slow tier" and "run the
+    # browser tier" are not the same ask: the slow tier also holds the ERPNext
+    # round trip, which needs a live ERPNext, and the KEPSim replay, which is
+    # red (see its own marker). Those two must not be able to keep a browser
+    # regression from going red. `tests/test_every_browser_test_is_in_the_browser_tier.py`
+    # fails if a file that imports Playwright is missing this marker.
+    "browser: tests that drive Chromium through Playwright",
     # Deselected by default like every slow test, and selected on purpose by
     # the erpnext-live workflow: `pytest -m erpnext_live`. These need a real
     # ERPNext and fail, rather than skip, when there is not one.

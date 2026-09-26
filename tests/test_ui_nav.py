@@ -19,7 +19,8 @@ and a click on every crumb to prove each one goes somewhere.
 Marked slow, like everything here that starts a real server: it seeds a
 database, serves it on a loopback port of the operating system's choosing,
 and drives Chromium. Nothing here touches a plant anyone else is running.
-Run it with `pytest -m slow tests/test_ui_nav.py`.
+Marked `browser` as well, which is what CI's `browser` job selects on.
+Run it with `pytest -m browser tests/test_ui_nav.py`.
 """
 
 import socket
@@ -29,7 +30,7 @@ from urllib.parse import urlparse
 import pytest
 from sqlalchemy.orm import Session
 
-pytestmark = pytest.mark.slow
+pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
 DEMO_MACHINE = "MIX01"
 # What the demo plant's hierarchy says above MIX01, outermost first - the
@@ -306,17 +307,48 @@ def test_a_configurable_thing_is_a_row_in_configuration_not_a_chip_of_its_own(
 def test_the_configuration_page_lists_what_is_configurable_and_states_its_total(
         browser, plant):
     """A list of sections that happens to be short today, not a single screen
-    wearing a plural name - so it says how many, even when it is one."""
+    wearing a plural name - so it says how many, even when it is one.
+
+    The number is read from the registry, never written down here. This test
+    asserted "one section" and went red the day Engineering gained seventeen
+    more (PR #104), and nobody saw it, because nothing in CI ran it. A count
+    that was true on one day is not a promise; that the page shows everything
+    the registry holds, and says how many that is, is.
+    """
+    from fsmes import modules
+
+    # The plant fixture serves every module this version has (no MES_MODULES
+    # in its environment), so the registry unfiltered is what the page should
+    # be showing. A plant with modules switched off would show fewer, and the
+    # endpoint states that separately.
+    expected = modules.config_sections("engineering")
+    labels = [section.label for section in expected]
+
     page = _open(browser, plant, "/dashboard/config/engineering")
     try:
         page.wait_for_selector("#sections-table tbody tr", timeout=15000)
-        rows = page.locator("#sections-table tbody tr")
-        assert rows.count() == 1
-        assert "1 section" in page.locator("#section-count").inner_text()
-        assert urlparse(page.locator("#sections-table tbody tr a").first
-                        .get_attribute("href")).path == "/dashboard/reasons"
+        # Group headings are rows too - one per module, with the module's
+        # title - so the sections are the rows that are not headings.
+        rows = page.locator("#sections-table tbody tr:not(.group)")
+        assert rows.count() == len(expected), (
+            f"the page shows {rows.count()} sections; "
+            f"the registry holds {len(expected)}")
+        assert [name.strip() for name in
+                page.locator("#sections-table tbody tr:not(.group) a.obj")
+                .all_inner_texts()] == labels
+
+        noun = "section" if len(expected) == 1 else "sections"
+        assert f"{len(expected)} {noun}" in page.locator("#section-count").inner_text()
+
+        # The vocabulary that was a top-level chip until 2026-09-21 is a row
+        # here, and its row opens the screen the registry says it opens.
+        vocabulary = next(s for s in expected if s.key == "downtime_reasons")
+        href = (page.locator("#sections-table tbody tr:not(.group)")
+                .nth(labels.index(vocabulary.label))
+                .locator("a.obj").get_attribute("href"))
+        assert urlparse(href).path == urlparse(vocabulary.href).path
         # The page says where the door is; it does not move who may open it.
-        assert "process.define" in page.locator("#sections-table").inner_text()
+        assert vocabulary.define in page.locator("#sections-table").inner_text()
     finally:
         page.close()
 

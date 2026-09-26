@@ -29,7 +29,7 @@ Same shape as `test_ui_nav.py` and `test_ui_oee_above_rated.py`, and marked
 slow for the same reason: it seeds a database, serves it on a loopback port
 the operating system picks, and drives Chromium. It touches no plant anyone
 else is running. Run it with
-`pytest -m slow tests/test_the_station_redraws_only_what_changed.py`.
+`pytest -m browser tests/test_the_station_redraws_only_what_changed.py`.
 """
 
 import socket
@@ -40,7 +40,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-pytestmark = pytest.mark.slow
+pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
 MACHINE = "MIX01"           # the demo line's mixer: operation 10 of RT-COLA
 MATERIAL = "FG-COLA"
