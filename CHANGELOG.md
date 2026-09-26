@@ -33,6 +33,37 @@ goes under Honesty with a migration line, so plant people can find it.
   thirty turns reached the model?* — could not be answered from anything on
   the machine. (It was five.) `docs/ai/OBSERVABILITY.md` carries it.
 
+- **A written suite of requests that says whether the floor assistant does what
+  people ask — 93 cases, scored two ways.** `tests/assist_suite/` holds one TOML
+  file per role in the words people actually type, each with one expectation:
+  propose *this* tool with *these* arguments, walk them to *that* control, answer
+  from the plant, look before answering, or refuse and say who can. Scoring is
+  strict on identity — the tool name, the argument keys, and the values the
+  sentence named, so `1.33` is `"1.33"` and `55` is not `56` — and loose on
+  prose. `fsmes assist eval --scripted` runs the whole suite against the real
+  guide router, the real per-role tool catalogue, the real tools on a real
+  seeded plant and the real surfaces, with the model replaced by a stand-in; it
+  is deterministic, needs no key, takes about two seconds, and
+  `tests/test_assist_suite_scripted.py` puts it on every pull request.
+  `fsmes assist eval --live --plant <url> --user <code>` asks the other half —
+  whether the real model chooses right — through the same `POST /assist/agent`
+  the assistant panel uses, declining every proposal so a scored plant is an
+  unchanged plant, stopping at `--max-usd` (default $1.00) and writing
+  `docs/ai/assist-eval/<date>.md` the way a calibration run is written. Every
+  one of the 33 write tools the agent may propose has a case; so does every
+  approval a person signs, which an agent must never perform. Scott's own two
+  conversations are in the suite word for word, typing included. Nothing in the
+  repository would have caught either of the two failures he found this week;
+  `docs/ai/ASSIST-EVAL.md` says how to read a result and why a bug becomes a
+  case before it becomes a fix.
+
+- **`GET /assist/agent/status` reports tokens as well as dollars.**
+  `tokens_this_month` carries the month's input, output, cache-read and
+  cache-write counts. The dollars are an estimate against a price list kept in
+  this repository; the tokens are the bill's own unit, and a faithfulness run
+  that reported only dollars would show a price change as a change in how much
+  the assistant does.
+
 - **The assistant can find a setting by what a person calls it, and read what
   has been written to one.** `plant_settings(plant, find="reporting window")`
   searches every Configuration workspace's names, labels and descriptions in

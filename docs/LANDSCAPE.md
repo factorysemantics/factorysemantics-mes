@@ -32,6 +32,8 @@ Siemens Opcenter is the MOM umbrella: **Execution** (sold as industry variants �
 - **Bosch**: Shopfloor Agent in own plants since late 2025 (~€850k/plant/yr claimed), now sold externally. **Decisyon** literally markets "Agentic MES". ABI frames Hannover Messe 2026 as agentic-MES's coming-out party.
 - **MCP layer**: Tulip shipped an official MCP server; Ignition's module lands later in 2026; small OSS OPC UA/Modbus MCP servers exist ([kukapay/opcua-mcp](https://github.com/kukapay/opcua-mcp), [OPCUA4MCP](https://github.com/mikakaraila/OPCUA4MCP) — same asyncua+FastMCP stack as this project); the OPC Foundation has its own UA-for-AI prototype.
 
+- **What nobody publishes (checked 2026-09-25)**: a score for whether the assistant *does what a named role asks*. Every vendor above announces capability — how many agents, how many integrations, which copilot — and none of them publishes a rerunnable suite of the requests a person actually types, scored per role, with the failures listed. Tool counts are inventory; faithfulness is the thing a plant is buying. This project publishes the suite and the score: see [does the assistant do what people ask?](ai/ASSIST-EVAL.md).
+
 **Every incumbent bolts agents onto a closed platform; every OSS project predates the agent era. No open-source "MES-as-MCP" exists.** The MCP *wrapper* is commoditizing within ~18 months — the durable position is the agent-operable *core* (permissioned writes, on-behalf-of identity, event-sourced audit), which is a data-model decision, not a wrapper.
 
 ## Standards adopted (and how far)

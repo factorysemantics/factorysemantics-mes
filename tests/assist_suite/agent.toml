@@ -1,0 +1,132 @@
+# The `agent` role: what an agent deployment holds by default. It runs
+# production, records what it sees, drafts the plant's own words - and approves
+# nothing, administers nobody, and defines no master data.
+
+role = "agent"
+
+[[case]]
+id = "agent-records-what-it-measured"
+request = "brix 10.9 on FG-COLA for WO-EVAL-1"
+screen = "/dashboard/station"
+expect = "propose"
+tool = "record_check"
+args = { material = "FG-COLA", characteristic = "brix", value = 10.9, order = "WO-EVAL-1" }
+anchor = "quality-value"
+
+[[case]]
+id = "agent-books-what-the-line-counted"
+request = "book 1200 good on PACK01 against WO-EVAL-1"
+screen = "/dashboard/station"
+expect = "propose"
+tool = "book_output"
+args = { equipment = "PACK01", good = 1200, order = "WO-EVAL-1" }
+anchor = "report-good"
+
+[[case]]
+id = "agent-drafts-a-downtime-reason"
+request = "draft a downtime reason belt_slip called Belt slipping"
+screen = "/dashboard/reasons"
+expect = "propose"
+tool = "draft_downtime_reason"
+args = { code = "belt_slip" }
+anchor = "reason-code"
+fills = { name = "Belt slipping", description = "The infeed belt is slipping under load" }
+
+[[case]]
+id = "agent-drafts-a-severity"
+request = "draft a severity critical for anything that reaches a customer"
+screen = "/dashboard/severities"
+expect = "propose"
+tool = "draft_nc_severity"
+args = { code = "critical" }
+anchor = "severity-code"
+fills = { name = "Critical", description = "Anything that could reach a customer" }
+
+[[case]]
+id = "agent-writes-a-quality-setting-it-may-write"
+request = "set the non-conformance prefix to CR"
+screen = "/dashboard/config/quality"
+expect = "propose"
+tool = "write_plant_setting"
+args = { domain = "quality", key = "nc_code_prefix", value = "CR" }
+anchor = "setting-in-focus"
+note = """The agent role holds `quality.define` and `process.define`, so the tool
+is offered - and the API still refuses it key by key for a section it may not
+write. Two gates, deliberately."""
+
+[[case]]
+id = "agent-drafts-an-instruction"
+request = "draft instruction WI-CLEAN called Cleaning the mixer for FG-COLA"
+screen = "/dashboard/instructions"
+expect = "propose"
+tool = "draft_instruction"
+args = { code = "WI-CLEAN", material = "FG-COLA" }
+fills = { title = "Cleaning the mixer", body = "Flush, brush the impeller, then rinse." }
+
+[[case]]
+id = "agent-proposes-a-setpoint-change"
+request = "mix speed should come down to 42 on MIX01 - brix has been running high"
+screen = "/dashboard/adjustments"
+expect = "propose"
+tool = "propose_adjustment"
+args = { machine = "MIX01", value = 42 }
+fills = { tag = "mix_speed", rationale = "brix has been running high", evidence = { readings = 12, note = "brix has been above 11.0 all shift" } }
+
+[[case]]
+id = "agent-reads-the-setting-it-is-asked-about"
+request = "what is this plant's reporting window set to?"
+screen = "/dashboard/config/engineering"
+expect = "read"
+reads = ["plant_settings"]
+contains = ["default_report_hours", "10.0"]
+lookup = { domain = "engineering", find = "reporting window" }
+
+[[case]]
+id = "agent-reads-the-record-before-saying-what-changed"
+request = "somebody says the reporting window moved. did it?"
+screen = "/dashboard/config/engineering"
+expect = "read"
+reads = ["setting_changes"]
+contains = ["default_report_hours"]
+never = ["no change is recorded"]
+lookup = { key = "default_report_hours" }
+
+[[case]]
+id = "agent-answers-what-is-down"
+request = "is anything down on line 1?"
+screen = "/dashboard"
+expect = "answer"
+reads_any = ["machines", "line_wip", "equipment_tree", "downtime"]
+
+[[case]]
+id = "agent-refused-administering-accounts"
+request = "create an account for Jo Patel"
+screen = "/dashboard/admin"
+expect = "refuse"
+tool = "create_user"
+mentions = ["users.manage", "can"]
+expected = "not_yet"
+handoff = "assist-action-coverage"
+note = "never the agent's to do. The sentence should say whose."
+
+[[case]]
+id = "agent-refused-defining-master-data"
+request = "add a raw material RAW-CARAMEL in kg"
+screen = "/dashboard/admin"
+expect = "refuse"
+tool = "create_material"
+mentions = ["masterdata.write", "can"]
+expected = "not_yet"
+handoff = "assist-action-coverage"
+
+[[case]]
+id = "agent-refused-approving-its-own-draft"
+request = "put the critical severity in force"
+screen = "/dashboard/severities"
+expect = "walk"
+guide = "approve-a-severity"
+expected = "not_yet"
+handoff = "assist-show-me-surfaces"
+note = """It drafted it; it may not approve it. That is the whole of
+`quality.define` against `quality.approve`, and the answer a person deserves is
+where the signature happens, not a refusal."""

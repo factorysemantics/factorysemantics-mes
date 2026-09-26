@@ -78,6 +78,7 @@ extra:
 
 not_in_nav: |
   ai/*
+  !ai/ASSIST-EVAL.md
   design/backlog/*
   onboarding/README.md
 
@@ -183,6 +184,7 @@ nav:
       - Reference — tools: reference/tools.md
       - Explanation — the write discipline: agents/write-discipline.md
       - Explanation — evals: agents/evals.md
+      - Explanation — does the assistant do what people ask: ai/ASSIST-EVAL.md
   - Releases:
       - releases/index.md
       - 0.2.0: releases/0.2.0.md
