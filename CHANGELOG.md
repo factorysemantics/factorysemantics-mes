@@ -12,6 +12,48 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **Every action a person can take on a screen, the assistant can take for
+  them — or the code says why not.** A ratchet, a report and four missing
+  tools. `tests/test_every_write_route_has_a_tool_or_a_reason.py` walks every
+  route that changes the plant (POST, PUT, PATCH, DELETE — sixty-eight of them)
+  and fails unless an MCP write tool sends it or a line says why none does; the
+  list of reasons may only shrink. It is the sibling of `test_route_coverage`,
+  which has ratcheted screens against routes since 2026-09-02, and it
+  **replaces `tests/test_mcp_parity.py`**, which made the same claim from
+  2026-09-08 without being able to keep it: that one matched the tool source
+  with the method thrown away, so the read tool `lots()` counted as covering
+  `POST /execution/lots`, and three of its reasons were plan phases rather than
+  rules ("no operation start/complete tools yet"). A reason containing *not
+  yet*, *later* or *phase* now fails a test of its own — that is how a list
+  which may only shrink starts growing, and it is why the person who found the
+  assistant's two gaps this week was the maintainer, twice.
+  `fsmes assist coverage [--role operator|supervisor|admin|agent]` prints the
+  table — route, the screen that calls it, the tool or the reason, the
+  capability the route gates on, whether the tool has a "Show me" walk, and
+  whether each role holds it — with a summary line per role, and
+  `docs/operate/assistant-coverage.md` is that command's output, checked for
+  staleness by a test.
+
+  Four write routes had neither a tool nor a reason, three of them the most
+  basic thing an operator does. New tools, each reading the plant first so its
+  preview sentence carries the from and the to: **`start_operation`** and
+  **`complete_operation`** (`order_action` released, held, resumed, closed and
+  cancelled a whole order and stopped there — the step in front of somebody had
+  no tool at all), **`create_lot`** (booking a delivery in, in the material's
+  own unit), and **`revise_document`** (the next revision of an instruction, as
+  a draft, saying whether it is editing an open draft or copying the revision
+  in force). An admin can now propose 51 of the 66 screen actions rather than
+  47; an operator 16 rather than 13; the `agent` role 23 rather than 19.
+
+  Nothing was given an approval tool, and a test now asserts that nothing
+  reaches a route gated on a `*.approve` capability: decision 0035 read from
+  the other end — an approval is the person's signature, and "Do it" runs as
+  the AGENT account on their behalf, so a tool that approved would sign their
+  name. The same for passwords and for signing somebody out. `DELETE
+  /admin/roles/{code}` is a judgement call and the table says so: defining what
+  a role grants is reversible from the screen that did it, and deleting a role
+  is not.
+
 - **The assistant can find a setting by what a person calls it, and read what
   has been written to one.** `plant_settings(plant, find="reporting window")`
   searches every Configuration workspace's names, labels and descriptions in
