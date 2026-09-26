@@ -303,6 +303,69 @@ def order_action(plant: str, code: str, action: str, reason: str | None = None,
                   f"{action} order {code}" + (f" ({reason})" if reason else ""))
 
 
+def _operation(plant: str, order: str, seq: int) -> dict | None:
+    """One step of an order, as the plant has it now, or None if it cannot say.
+
+    Read before a step is started or completed, so the sentence a person
+    confirms carries the step's name and the state it is in rather than a bare
+    sequence number. Failing to read it is not fatal: the write is still
+    describable, and the API refuses a step that is not there in its own words.
+    """
+    detail = _call(plant, "GET", f"/workorders/{order}")
+    if not isinstance(detail, dict) or "error" in detail:
+        return None
+    for op in detail.get("operations") or []:
+        if op.get("seq") == seq:
+            return {**op, "order_status": detail.get("status")}
+    return None
+
+
+def _step_words(op: dict | None, seq: int) -> str:
+    """How a step is named in a sentence: its own name, when the plant answered."""
+    if op is None:
+        return f"step {seq}"
+    return f"step {seq} ({op.get('name')}) on {op.get('equipment')}"
+
+
+@mcp.tool()
+def start_operation(plant: str, order: str, seq: int, dry_run: bool = False,
+                    on_behalf_of: str | None = None, client_ref: str | None = None) -> dict:
+    """Start one step of a work order - the operator's most basic act.
+
+    `order_action` releases, holds, resumes, closes and cancels a whole order;
+    this is the step in front of somebody. The plant refuses a step that is
+    already running or done, and refuses any step of an order it has not
+    released, in its own words.
+
+    The step's current state is read first, so the preview names the step and
+    says what it is doing now rather than repeating a sequence number.
+    """
+    _identity.set((on_behalf_of.upper() if on_behalf_of else None, client_ref))
+    op = _operation(plant, order, seq)
+    now = f", which is {op['status']} now" if op else ""
+    return _write(plant, f"/workorders/{order}/operations/{seq}/start", {}, dry_run,
+                  f"start {_step_words(op, seq)} of {order}{now}")
+
+
+@mcp.tool()
+def complete_operation(plant: str, order: str, seq: int, dry_run: bool = False,
+                       on_behalf_of: str | None = None,
+                       client_ref: str | None = None) -> dict:
+    """Complete one step of a work order.
+
+    Completing the last step completes the order, and every completion queues
+    the per-operation confirmation the ERP posts labour and consumption
+    against - so the preview says what has been booked on the step so far,
+    because counts arriving after it is done are counts against the next step.
+    """
+    _identity.set((on_behalf_of.upper() if on_behalf_of else None, client_ref))
+    op = _operation(plant, order, seq)
+    booked = (f", with {op.get('good_qty')} good and {op.get('scrap_qty')} scrap booked"
+              if op else "")
+    return _write(plant, f"/workorders/{order}/operations/{seq}/complete", {}, dry_run,
+                  f"complete {_step_words(op, seq)} of {order}{booked}")
+
+
 # ------------------------------------------------------------------ quality
 
 @mcp.tool()
@@ -399,6 +462,35 @@ def lots(plant: str) -> dict:
         return out
     return {"plant": plant, "lots": out.get("items", []),
             "total": out.get("total")}
+
+
+@mcp.tool()
+def create_lot(plant: str, code: str, material: str, quantity: float,
+               dry_run: bool = False, on_behalf_of: str | None = None,
+               client_ref: str | None = None) -> dict:
+    """Book a material lot in: a delivery arriving, or a quantity somebody
+    counted, that the plant can then issue to orders.
+
+    The material must already exist - a lot of a material this plant has never
+    heard of is a typo, not a delivery, and the API refuses it by name. The
+    material's own unit is what the quantity is in; `materials` says which.
+
+    A lot code is the plant's own label on a physical thing, so it is not
+    generated here: it is the number on the pallet or the certificate, and
+    inventing one breaks the link this record exists to keep.
+    """
+    _identity.set((on_behalf_of.upper() if on_behalf_of else None, client_ref))
+    # The material's own unit, read first, so the sentence says "240 kg of
+    # RM-SUGAR" rather than a number with nothing on it. A lookup that fails
+    # leaves the unit off; it does not stop the write being described.
+    unit = ""
+    known = _call(plant, "GET", f"/masterdata/materials?q={quote(material, safe='')}")
+    for row in known if isinstance(known, list) else []:
+        if isinstance(row, dict) and row.get("code") == material and row.get("unit"):
+            unit = f" {row['unit']}"
+    return _write(plant, "/execution/lots",
+                  {"code": code, "material": material, "quantity": quantity}, dry_run,
+                  f"book in lot {code}: {quantity:g}{unit} of {material}")
 
 
 @mcp.tool()
@@ -575,6 +667,61 @@ def draft_instruction(plant: str, code: str, title: str, body: str,
     body_json = {"code": code, "title": title, "body": body, "anchors": anchors}
     return _write(plant, "/documents", body_json, dry_run,
                   f"draft instruction {code} (unapproved)")
+
+
+@mcp.tool()
+def revise_document(plant: str, code: str, title: str | None = None,
+                    body: str | None = None, material: str | None = None,
+                    characteristic: str | None = None, dry_run: bool = False,
+                    on_behalf_of: str | None = None,
+                    client_ref: str | None = None) -> dict:
+    """Change an instruction that already exists: the next revision, as a draft.
+
+    An approved revision is never edited in place - the version somebody signed
+    stays exactly as they signed it - so this opens the next revision instead,
+    copying the one in force and changing only what is named here. If a draft
+    is already open, this edits that draft: nobody is following it yet.
+
+    It arrives unapproved either way, and approving is never a tool
+    (documents.approve is the approver's own signature). Read the instruction
+    first with `instruction` and say what the text is changing from.
+    """
+    _identity.set((on_behalf_of.upper() if on_behalf_of else None, client_ref))
+    # What the plant has now, so the sentence carries the from and the to. The
+    # answer decides which of two different things this write does, and a
+    # person confirming "revise DOC-7" deserves to be told which.
+    history = _call(plant, "GET", f"/documents/{code}/revisions")
+    revisions = history if isinstance(history, list) else []
+    draft = next((d for d in revisions if d.get("status") == "draft"), None)
+    in_force = next((d for d in revisions if d.get("status") == "approved"), None)
+    if draft is not None:
+        would = (f"edit the open draft revision {draft.get('revision')} of {code}"
+                 f" - still unapproved")
+    elif revisions:
+        latest = max(int(d.get("revision") or 0) for d in revisions)
+        from_words = (f", copying revision {in_force.get('revision')} which is in force"
+                      if in_force else ", copying the latest revision")
+        would = f"open revision {latest + 1} of {code} as a draft{from_words}"
+    else:
+        # No answer, or no such document. Say what is being asked rather than
+        # a revision number that would be a guess; the API refuses by name.
+        would = f"revise instruction {code} into a new draft revision"
+    changing = [name for name, value in
+                (("title", title), ("text", body), ("material", material),
+                 ("characteristic", characteristic)) if value is not None]
+    if changing:
+        would += f", changing its {' and '.join(changing)}"
+    anchors = {k: v for k, v in
+               {"material": material, "characteristic": characteristic}.items()
+               if v is not None}
+    payload: dict = {}
+    if title is not None:
+        payload["title"] = title
+    if body is not None:
+        payload["body"] = body
+    if anchors:
+        payload["anchors"] = anchors
+    return _write(plant, f"/documents/{code}/revise", payload, dry_run, would)
 
 
 # --------------------------------------------------------- people and roles

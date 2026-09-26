@@ -78,7 +78,12 @@ NEEDS: dict[str, str] = {
     "disposition_nonconformance": "quality.close_nc",
     "produce_units": "production.book",
     "book_output": "production.book",
+    # Starting and completing a step of an order: the operator's most basic
+    # act, and gated by the route on the same capability booking output is.
+    "start_operation": "production.book",
+    "complete_operation": "production.book",
     "issue_material": "production.consume",
+    "create_lot": "production.consume",
     "set_machine_state": "equipment.state",
     "create_order": "orders.create",
     "order_action": "orders.release",
@@ -97,6 +102,7 @@ NEEDS: dict[str, str] = {
     "assign_role": "users.manage",
     "create_document": "documents.write",
     "draft_instruction": "documents.write",
+    "revise_document": "documents.write",
     "draft_trigger": "triggers.write",
     "draft_downtime_reason": "process.define",
     "draft_nc_severity": "quality.define",
