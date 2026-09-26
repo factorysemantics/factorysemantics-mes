@@ -708,3 +708,141 @@ def test_there_is_no_tool_that_approves_a_setting(wired):
     names = {tool.name for tool in asyncio.run(mcp_server.mcp.list_tools())}
     assert "write_plant_setting" in names and "plant_settings" in names
     assert not [n for n in names if "setting" in n and "approve" in n]
+
+
+# ------------------------------------------------- the operator's own actions
+# `order_action` released, held, resumed, closed and cancelled an order and
+# stopped there, so the assistant could do everything to an order except the
+# thing somebody standing at a machine actually does: start the step in front
+# of them and say it is done. Found on 2026-09-26 by measuring the tools
+# against the write routes rather than by anybody asking.
+
+def test_the_agent_starts_and_completes_a_step_of_an_order(wired):
+    mcp_server.create_order("testplant", code="WO-STEP", material="FG-COLA", quantity=10)
+
+    started = mcp_server.start_operation("testplant", order="WO-STEP", seq=10)
+    assert started.get("audited_as") == "AGENT", started
+    detail = mcp_server.order_detail("testplant", "WO-STEP")
+    step = next(o for o in detail["order"]["operations"] if o["seq"] == 10)
+    assert step["status"] == "running"
+
+    done = mcp_server.complete_operation("testplant", order="WO-STEP", seq=10)
+    assert done.get("audited_as") == "AGENT", done
+    detail = mcp_server.order_detail("testplant", "WO-STEP")
+    step = next(o for o in detail["order"]["operations"] if o["seq"] == 10)
+    assert step["status"] == "done"
+
+
+def test_the_preview_of_a_step_names_the_step_and_says_what_it_is_doing_now(wired):
+    """A person confirming "start step 10" is being asked about a sequence
+    number. The tool reads the step first, so the sentence says which step,
+    on which machine, and what state it is in."""
+    mcp_server.create_order("testplant", code="WO-WORDS", material="FG-COLA", quantity=4)
+    out = mcp_server.start_operation("testplant", order="WO-WORDS", seq=20, dry_run=True)
+    assert out["dry_run"] is True
+    assert out["would"] == ("start step 20 (Pack) on PACK01 of WO-WORDS, "
+                            "which is pending now")
+    assert out["request"]["path"] == "/workorders/WO-WORDS/operations/20/start"
+
+    # Counts land on the first step that has been started, so the step that
+    # gets the booking is the one the preview must talk about.
+    mcp_server.start_operation("testplant", order="WO-WORDS", seq=10)
+    booked = mcp_server.book_output("testplant", equipment="MIX01", good=3, scrap=1,
+                                    order="WO-WORDS")
+    assert "error" not in booked, booked
+    finishing = mcp_server.complete_operation("testplant", order="WO-WORDS", seq=10,
+                                              dry_run=True)
+    assert finishing["would"] == ("complete step 10 (Mix) on MIX01 of WO-WORDS, "
+                                  "with 3.0 good and 1.0 scrap booked")
+
+
+def test_a_step_the_plant_will_not_start_is_refused_in_the_plants_own_words(wired):
+    mcp_server.create_order("testplant", code="WO-TWICE", material="FG-COLA", quantity=2)
+    mcp_server.start_operation("testplant", order="WO-TWICE", seq=10)
+    again = mcp_server.start_operation("testplant", order="WO-TWICE", seq=10)
+    assert "error" in again and "already running" in again["error"]
+
+
+def test_a_step_of_an_order_nobody_has_heard_of_is_still_describable(wired):
+    """The read that makes the sentence better must not be the thing that
+    breaks it. With no order to read, the preview says less and still says
+    what would be sent."""
+    out = mcp_server.start_operation("testplant", order="WO-NOPE", seq=10, dry_run=True)
+    assert out["would"] == "start step 10 of WO-NOPE"
+    assert out["request"]["path"] == "/workorders/WO-NOPE/operations/10/start"
+
+
+def test_the_agent_books_in_a_lot_in_the_materials_own_unit(wired):
+    out = mcp_server.create_lot("testplant", code="LOT-SUGAR-002",
+                                material="RAW-SUGAR", quantity=240, dry_run=True)
+    assert out["would"] == "book in lot LOT-SUGAR-002: 240 kg of RAW-SUGAR"
+    assert out["request"]["path"] == "/execution/lots"
+
+    done = mcp_server.create_lot("testplant", code="LOT-SUGAR-002",
+                                 material="RAW-SUGAR", quantity=240)
+    assert done.get("audited_as") == "AGENT", done
+    lots = mcp_server.lots("testplant")["lots"]
+    booked = next(lot for lot in lots if lot["code"] == "LOT-SUGAR-002")
+    assert booked["quantity"] == 240
+
+    # And it can then be issued, which is the point of booking it in.
+    mcp_server.create_order("testplant", code="WO-USES-LOT", material="FG-COLA", quantity=5)
+    issued = mcp_server.issue_material("testplant", order="WO-USES-LOT",
+                                       lot="LOT-SUGAR-002", quantity=10)
+    assert "error" not in issued, issued
+
+
+def test_a_lot_of_a_material_the_plant_never_heard_of_is_refused(wired):
+    out = mcp_server.create_lot("testplant", code="LOT-GHOST", material="RAW-GHOST",
+                                quantity=1)
+    assert "error" in out and "RAW-GHOST" in out["error"]
+
+
+def test_revising_an_instruction_opens_the_next_revision_as_a_draft(wired):
+    mcp_server.draft_instruction("testplant", code="WI-REV", title="Changeover",
+                                 body="Old text.")
+    out = mcp_server.revise_document("testplant", code="WI-REV", body="New text.",
+                                     dry_run=True)
+    # Nothing is approved yet, so this edits the draft rather than opening one.
+    assert out["would"] == ("edit the open draft revision 1 of WI-REV - still "
+                            "unapproved, changing its text")
+    assert out["request"]["path"] == "/documents/WI-REV/revise"
+
+    done = mcp_server.revise_document("testplant", code="WI-REV", body="New text.")
+    assert done.get("audited_as") == "AGENT", done
+    assert mcp_server.instruction("testplant", "WI-REV")["instruction"]["body"] == "New text."
+
+
+def test_revising_an_approved_instruction_says_what_it_is_copying(wired, session):
+    """The from and the to, in the sentence. An approved revision is never
+    edited in place, so this is a different act from editing a draft and the
+    preview has to say which one it is."""
+    from sqlalchemy import select
+
+    from fsmes.domain import Role
+
+    mcp_server.draft_instruction("testplant", code="WI-FORCE", title="Cleaning",
+                                 body="Rev one.")
+    role = session.scalar(select(Role).where(Role.code == "agent"))
+    role.capabilities = json.dumps([*role.granted(), "documents.approve"])
+    session.flush()
+    approved = mcp_server._call("testplant", "POST", "/documents/WI-FORCE/approve/1")
+    assert "error" not in approved, approved
+
+    out = mcp_server.revise_document("testplant", code="WI-FORCE", title="Cleaning v2",
+                                     dry_run=True)
+    assert out["would"] == ("open revision 2 of WI-FORCE as a draft, copying "
+                            "revision 1 which is in force, changing its title")
+
+
+def test_revising_a_document_that_does_not_exist_is_refused_by_name(wired):
+    out = mcp_server.revise_document("testplant", code="WI-NOPE", body="x")
+    assert "error" in out and "WI-NOPE" in out["error"]
+
+
+def test_there_is_still_no_tool_that_approves_a_document(wired):
+    """`revise_document` drafts; putting a revision in force stays the
+    approver's own signature (decision 0035)."""
+    names = {tool.name for tool in asyncio.run(mcp_server.mcp.list_tools())}
+    assert {"revise_document", "create_document", "draft_instruction"} <= names
+    assert not [n for n in names if "approve" in n or "withdraw" in n]

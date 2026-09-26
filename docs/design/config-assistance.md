@@ -1156,3 +1156,85 @@ was refused while lowering `cpk_capable` under `cpk_marginal` — the same
 crossing-over — was accepted. It now judges the difference between the table
 before and after, which also stops a plant that is out of range on one key from
 being unable to save any of the others.
+
+## 15. The ratchet: every action a person can take, measured — 2026-09-26
+
+The four domains above each shipped with the tools a person could use them
+through, and nothing checked that claim against the screens. Twice in two days
+the check was Scott: on 2026-09-25 the assistant could not find
+`default_job_minutes`, and on 2026-09-26 it said no workspace held "the default
+reporting window" and then that no change was recorded when he had just made
+one. Both were real, both were fixed (#105, #108), and both were found by the
+maintainer because **nothing measured what the assistant can do against what a
+person can do**.
+
+`tests/test_route_coverage.py` has ratcheted *screens* against routes since
+2026-09-02 — every API route has a screen, or a written reason not to. This is
+its sibling, and reads like it:
+
+> **Every write route has an MCP tool, or a written reason not to.**
+> `tests/test_every_write_route_has_a_tool_or_a_reason.py`
+
+A write route is one with method POST, PUT, PATCH or DELETE. A tool *sends* a
+route when the tool's own source says so: every `@mcp.tool()` in
+`mcp_server.py` and `mcp/*.py` is parsed, and each call it makes to the
+server's `write()` or `call()` helper gives the method and the path template it
+sends — so the answer cannot drift from the code, and a tool whose path ends in
+an argument it only accepts a closed set of values for (`order_action`'s
+`action`) is expanded into them rather than reported as a shape. The list of
+exceptions may only shrink: a route named there that has grown a tool fails the
+test.
+
+`fsmes assist coverage [--role operator|supervisor|admin|agent]` prints the
+same table, and `docs/operate/assistant-coverage.md` **is** that command's
+output — a test regenerates it and fails if the page differs.
+
+### What a reason may say
+
+A reason is a rule, never work somebody has not done — a test refuses a reason
+containing *not yet*, *later* or *phase*, because that is how a list which may
+only shrink starts growing. Three rules cover all seventeen:
+
+- **An approval is the person's signature**, which is decision 0035 read from
+  the other end. The `agent` role holds every `*.define` and no `*.approve`,
+  and a confirmed "Do it" runs as the AGENT account *on behalf of* the person —
+  so a tool that approved would be signing their name. There is a test that
+  nothing reaches a route gated on a `*.approve` capability at all. The honest
+  answer to "approve it for me" is a walk to the control, which is what
+  `SURFACES` is for.
+- **An agent never holds a password.** `/auth/users/{code}/password` is a
+  person at a keyboard, and a password that passed through a model's context is
+  a password to rotate.
+- **Plumbing is not an action.** `/assist/*` and `/design/*` are how the
+  assistant is *spoken to*; a tool for them would be the assistant calling
+  itself.
+
+One route is a judgement call rather than a rule, and the table says so:
+`DELETE /admin/roles/{code}` is kept from the assistant while `create_role` and
+`update_role` are not, because defining what a role grants is reversible from
+the screen that did it and deleting a role is not — every account holding it
+loses every capability at once, and what it granted is gone with the row.
+
+### What it measured on the day it was written
+
+Four write routes had neither a tool nor a reason, and three of them were the
+most basic thing an operator does: `POST /workorders/{code}/operations/{seq}/start`
+and `…/complete` (`order_action` covered the whole order and stopped there),
+`POST /execution/lots`, and `POST /documents/{code}/revise`. They became
+`start_operation`, `complete_operation`, `create_lot` and `revise_document`,
+each reading the plant first so its `would` sentence carries the from and the
+to — which step, on which machine, in which state; which revision, copying
+which one in force.
+
+| Role | Screen actions it can propose, of 66 | Before |
+|---|---|---|
+| operator | 16 | 13 |
+| supervisor | 32 | 28 |
+| admin | 51 | 47 |
+| agent | 23 | 19 |
+
+Fifteen of the sixty-six are by written reason. Walks are the thinner half:
+`SURFACES` covers ten of the forty-seven write tools, so an admin who can
+propose 51 actions can be *shown* 14 of them, and none of the four tools added
+here has a surface yet. That is the sibling handoff's work, and the column is
+here so that it is countable rather than assumed.

@@ -417,7 +417,8 @@ def test_the_sentence_scott_typed_becomes_a_proposal_and_then_the_quality_call(s
                                 "value": 495.0, "order": "WO-7"}
     # What he is shown is the plant's preview of the write, not the model's
     # summary of it. The real preview is built by the MCP write helper; that
-    # it names this path is held by tests/test_mcp_parity.py.
+    # it names this path is held by
+    # tests/test_every_write_route_has_a_tool_or_a_reason.py.
     assert proposal["preview"]["request"]["path"] == "/quality/checks"
 
     done = agent.confirm(sess, proposal["id"])
