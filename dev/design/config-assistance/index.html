@@ -2355,6 +2355,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#and-the-list-has-to-fit-in-the-answer-2026-09-26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        And the list has to fit in the answer — 2026-09-26
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -4386,6 +4397,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#and-the-list-has-to-fit-in-the-answer-2026-09-26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        And the list has to fit in the answer — 2026-09-26
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -5501,13 +5523,15 @@ supersede → retire lifecycle: its words are written <em>onto records that outl
 it</em>. <strong>A setting is editable here when nothing stores the value it had at the
 moment it decided something.</strong> That is the test to apply to the next one.</p>
 <h3 id="and-the-assistant-already-has-it-do-not-write-a-tool-per-domain">And the assistant already has it — do not write a tool per domain<a class="headerlink" href="#and-the-assistant-already-has-it-do-not-write-a-tool-per-domain" title="Permanent link">&para;</a></h3>
-<p>There are <strong>two</strong> agent tools for every live setting there will ever be, and
-they landed with the mechanism above: <code>plant_settings(plant, domain)</code> reads a
-whole workspace, and <code>write_plant_setting(plant, domain, key, value)</code> puts one
-value in force through the same <code>PATCH</code> a person's Save uses. Both read the
-registry rather than a list of their own, so the two steps at the top of this
-section are still the whole opt-in: <strong>a section that becomes live is reachable
-through the assistant with no tool written for it.</strong></p>
+<p>There are <strong>three</strong> agent tools for every live setting there will ever be
+(two when this was written; <code>setting_changes</code> joined them on 2026-09-26, and
+the subsection below says why). <code>plant_settings</code> reads — a workspace, a search
+across all of them, or one setting in full; <code>write_plant_setting(plant,
+domain, key, value)</code> puts one value in force through the same <code>PATCH</code> a
+person's Save uses; <code>setting_changes</code> reads the audit trail for settings. All
+three read the registry rather than a list of their own, so the two steps at
+the top of this section are still the whole opt-in: <strong>a section that becomes
+live is reachable through the assistant with no tool written for it.</strong></p>
 <p>So the drafting story for a live setting is this tool, not a new one. Nobody
 should add another file under <code>src/fsmes/mcp/</code> for the next domain's numbers —
 the reason <code>write_plant_setting</code> is not in <code>agent.NEEDS</code> is exactly that no
@@ -5527,6 +5551,54 @@ a running one is steered, and editing <code>plant.toml</code> and re-applying do
 move a number the plant has taken ownership of. <code>fsmes pack status</code> reports
 the difference rather than resolving it, which is the same answer decision
 0022 gave about a routing an order has already run against.</p>
+<h3 id="and-the-list-has-to-fit-in-the-answer-2026-09-26">And the list has to fit in the answer — 2026-09-26<a class="headerlink" href="#and-the-list-has-to-fit-in-the-answer-2026-09-26" title="Permanent link">&para;</a></h3>
+<p>The two tools above were right and too big for the mouth that has to speak
+them. Scott asked the assistant for <em>"the default reporting window"</em> and was
+told <strong>no workspace holds that setting</strong>. It does: <code>[process]
+default_report_hours</code>, on the Engineering page, section label <em>The default
+reporting window</em> — item 17 of 22. <code>plant_settings</code> returned every key with
+its full <code>about</code> paragraph, about 11,100 characters for that one workspace,
+and the agent loop shows a model the first <code>RESULT_LIMIT</code> characters of a
+tool result — 6,000, cut mid-string. The model saw eleven of twenty-two, had
+no way to know the list went on, and reported half a list as the whole.</p>
+<p>Four things changed, and the first of them is the rule for every list a tool
+will ever return.</p>
+<p><strong>A list must fit, and a list that cannot fit must say so in itself.</strong> A row
+is now the ten compact fields in <code>fsmes.mcp.settings.ROW</code> and no paragraph —
+including the owning section's <strong>label</strong>, which is what a person calls a
+setting and which the row did not carry at all. Even compact, Administration's
+thirty-nine rows are about 10,900 characters, so the tool pages: as many whole
+rows as fit six tenths of the result limit, <code>total</code> for what the plant has,
+<code>showing</code> for what is here, and <code>more</code> naming the call that reaches the rest.
+<code>tests/test_every_settings_list_fits_in_one_tool_result.py</code> measures every
+workspace of every pack this repository ships and fails if any of them
+crosses the line. <strong>Raising the limit was refused as a fix</strong>: a bigger number
+hides the same failure behind the next longer list.</p>
+<p><strong>Found by what a person calls it.</strong> <code>plant_settings(plant, find="reporting
+window")</code> searches every workspace's names, labels and paragraphs at once and
+answers with the matching rows and the workspace each is in — one call, no
+workspace named. <code>key=</code> returns one setting in full, paragraph included, so
+nothing was lost by taking <code>about</code> out of the list. <code>GET /dashboard/config</code>
+is the index the search walks: until it existed, the only way to learn the
+workspaces from outside was to name one that does not exist and read the 404.</p>
+<p><strong>Truncation tells the truth.</strong> <code>services/agent._tool_result</code> no longer cuts
+JSON mid-string. A payload carrying a list loses whole trailing items from
+whichever list is carrying the bulk and gains a <code>truncated</code> line — <em>showing
+10 of 22 settings; the rest were dropped … do not report these as all there
+are</em>. A plain string still gets cut, and now says how many characters went
+missing.</p>
+<p><strong>Look before saying what is recorded.</strong> <code>setting_changes(plant, key,
+domain, limit)</code> reads <code>GET /audit?entity_type=plant_setting</code> and answers who
+set what, from what, to what, when. It exists because the second half of that
+morning was Scott changing the value himself, saying so, and being told <em>"I
+don't see any change recorded"</em> by an assistant that had made no call at all
+and had no tool it could have made. The prompt now carries the rule in plain
+words: <em>when the person says they changed something, read the plant again
+before you answer.</em></p>
+<p>And one wording fix beside them. The assistant had written <em>"Updating it
+now"</em> over a proposal card that had changed nothing. The prompt forbids it,
+but a prompt is a request — so the card itself now opens with <strong>Nothing has
+changed yet</strong>, which is the screen's own sentence and not the model's.</p>
 <h2 id="12-the-second-domain-and-the-first-honest-exception-2026-09-25">12. The second domain, and the first honest exception - 2026-09-25<a class="headerlink" href="#12-the-second-domain-and-the-first-honest-exception-2026-09-25" title="Permanent link">&para;</a></h2>
 <p>§11's claim was that a future section needs two lines. Supply chain is the
 test of it, and it held: five of its six sections are <code>edit_here=True</code> plus
