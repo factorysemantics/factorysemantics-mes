@@ -40,6 +40,42 @@ goes under Honesty with a migration line, so plant people can find it.
   *"really show that this is putting AI and Agents into this system as first
   class citizens."*
 
+- **Every change the assistant can make for you, it can show you how to make
+  yourself.** "Show me" sat on ten of the thirty-four write tools the
+  assistant may propose; it is now on all thirty-four. Press it on any
+  proposal card and the walk opens the real screen, opens the tab the control
+  is behind, types the proposed values into the real boxes and stops with your
+  finger over the real button — for a material, a machine, a specification, a
+  bill of materials, a routing, a sign-in, a role, a maintenance plan, a
+  trigger, a setpoint proposal, a shift, a shutdown day, a serialised unit, a
+  non-conformance decision, and the rest. A test keyed on the tool catalogue
+  fails if a write tool is ever added without one, so it stays true.
+
+  Where a tool takes something the screen has no box for — a serial the plant
+  mints, a shift that applies to one machine, a start time for a plan — the
+  step says so, rather than filling in three fields and quietly dropping the
+  fourth. One walk deliberately fills nothing: putting somebody in a role is a
+  dropdown that saves the instant it changes, so setting it for you would be
+  making the change rather than showing you where it is made.
+
+- **Asked to approve something, the assistant walks you to the signature.**
+  It approves nothing itself and never will (decision 0035) — but *"approve
+  the draft severity"* used to come back as "no tool named approve is
+  available to this person", which is true and useless. There are now five
+  walks, one per approvable kind: a downtime reason, a non-conformance
+  severity, a work instruction, a trigger, a setpoint adjustment. Each ends on
+  the control that actually signs it — the floor screen's review panel for the
+  two vocabularies, their own screens for the other three. Ask for one you are
+  not allowed to sign and it names the capability and what that capability is
+  for, so you know who to ask instead of being told no.
+
+- **"Could you show me where?" over an open proposal now shows you where.**
+  The walk behind a card's "Show me" is a walkthrough the model can hand over
+  by name, so a question typed under a proposal is answered with that
+  proposal's own walk instead of "there isn't a walkthrough for that". The
+  decline a typed message produces also stopped saying "the person moved on
+  without confirming", which was not what happened.
+
 - **The assistant can put a walk on your screen because it decided to, not
   because a regex did.** Two new tools when the cloud brain is on: `guides()`
   lists the walkthroughs this person is allowed to follow, and
@@ -271,6 +307,11 @@ goes under Honesty with a migration line, so plant people can find it.
   untrue about itself.
 
 ### Fixed
+
+- **A walkthrough could never have pointed at the trigger form's Save
+  button.** `triggers.html` carried `data-assist="trigger-submit"` on the
+  *closing* `</button>` tag, where the HTML parser throws it away — so the
+  anchor greps as present and has never existed in a rendered page.
 
 - **A regex answered the person three times while the model was never asked.**
   `POST /assist/agent` ran the guide router — `wants_showing()`, a fixed

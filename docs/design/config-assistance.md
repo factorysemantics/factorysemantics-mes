@@ -1238,3 +1238,87 @@ Fifteen of the sixty-six are by written reason. Walks are the thinner half:
 propose 51 actions can be *shown* 14 of them, and none of the four tools added
 here has a surface yet. That is the sibling handoff's work, and the column is
 here so that it is countable rather than assumed.
+
+The next section is that work.
+
+## 16. Every write tool has a surface — 2026-09-26
+
+### The rule
+
+**Every write tool the assistant may propose has a walk onto the real form,
+and a test says so.** "Show me" is not a feature of the tools that happened
+to get one first; it is what the card is, and a card with only "Do it" on it
+is half a card. `assistant.SURFACES` is keyed on `agent.NEEDS` plus
+`agent.PER_CALL_NEEDS`, a test asserts the two sets are equal, and the next
+write tool added without a surface goes red in CI.
+
+Measured before and after, on the same plant: **10 surfaces of 34 proposable
+write tools**, then 34 of 34. Seventy-odd `data-assist` anchors were added to
+the forms that had only a form-level one, and one was fixed: `triggers.html`
+carried `data-assist="trigger-submit"` on the *closing* tag, where HTML
+parsing discards it, so no walk could ever have pointed at Save draft.
+
+### What a step does when the screen has no box for an argument
+
+Some tools take something no form can express — a serial the plant mints, a
+document's tie to a material and a characteristic, a shift's machine, a
+start time for a plan. The step says so, in the words a person can act on,
+rather than dropping that part of the proposal in silence. The same rule
+covers the two arguments that are lists drawn from a registry (a routing's
+operations, a role's capabilities): the step rings the grid, and names what
+to type or tick, read out of the proposal by a `context` function.
+
+One walk deliberately fills nothing. `assign_role`'s control is a dropdown on
+a person's row that saves the moment it changes, with no button after it —
+so filling it in would be *making* the change rather than showing where it is
+made, which is the opposite of what "Show me" is for.
+
+### Approving is a walk, never a tool
+
+Decision 0035 says the agent never approves; `capabilities.py` says the same
+in the agent role's own description. That has always been right and has
+always been answered badly: *"approve the draft severity"* came back as "no
+tool named approve is available to this person", which is a true fact about
+the catalogue and no use to anybody standing at a machine.
+
+The faithful answer is a walk to the control they sign it on. There are five
+approvable kinds and now five signing walks — a downtime reason, a
+non-conformance severity, a work instruction, a trigger, a setpoint
+adjustment. Two of them (the vocabularies) are signed on the floor screen's
+own review panel, because only those two have a review built for them
+(`review.py`'s `KINDS`); the other three are signed on their own screens.
+Each walk ends on the control that is actually there.
+
+A signing walk is the **one** kind of walk offered to somebody who may not
+follow it. Every other guide is hidden from a person without its capability,
+because teaching a task that ends in a refusal is worse than saying it is not
+theirs. Here the name of who may sign *is* the answer, so the walk is listed
+with the capability and the product's own plain description of it, and
+`show_guide` refuses it with that sentence rather than walking somebody to a
+button their role is not shown.
+
+### The card's own walk, reachable by the model
+
+Seen live on 2026-09-26, after #109 had made the model the only brain: with a
+`write_plant_setting` proposal on screen, *"could you show me where?"*
+declined the card — any text over a proposal is a no, by design — and the
+model then called `guides()`, found fourteen walks about other tasks, and
+said, correctly, that there was no walkthrough for plant settings. The walk
+being asked for was on the card, two steps onto the very field.
+
+So the proposal's surface is now a walkthrough the model can hand over, under
+the id `proposal`: `guides()` lists it first while a proposal has been made in
+the conversation, and `show_guide("proposal")` puts it up. The alternative
+considered was to have the panel notice a question about the open card and
+answer it without asking the model — and that is a regex in front of a model
+that has the conversation in view, which is exactly the gate #109 removed
+after it answered Scott three times with the wrong walk. "How many did that
+book?" contains *how*. The model decides; what changed is that it now has
+something to decide with.
+
+Two other things landed with it, both at the point of need rather than in the
+prompt. The decline a typed message produces used to read "the person moved on
+without confirming" — which is not what happened — and now says they typed
+instead of deciding, and where the walk is if that is what they were asking
+for. And the prompt gained exactly two sentences: one saying every proposal
+carries a "Show me", one saying approvals are walks.

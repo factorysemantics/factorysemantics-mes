@@ -1056,7 +1056,13 @@ def _walks_on_offer(sess: Session) -> list[dict]:
                      "your values already typed into it, for them to check and press "
                      "the button themselves",
              "steps": sess.last_surface["steps"],
-             "evidence": sess.last_surface.get("evidence")},
+             "evidence": sess.last_surface.get("evidence"),
+             # It has an id so the model can name it and the turn log can
+             # record it, but no endpoint serves it: it is this proposal's
+             # arguments in this conversation. The screen saves such a walk
+             # whole when it crosses to another page, rather than saving the
+             # id and fetching a guide that does not exist there.
+             "ephemeral": True},
             *sess.guides]
 
 

@@ -432,6 +432,228 @@ GUIDES: list[dict] = [
                      )},
         ],
     },
+    # ----------------------------------------------------------- the signing walks
+    # Five things a person may put in force, and the agent may put in force
+    # none of them: decision 0035, and `capabilities.py` says the same in the
+    # agent role's own description. That makes "approve the draft severity" a
+    # request the assistant can answer perfectly - by walking the person to the
+    # control they sign it on - and the one it used to answer with "I cannot do
+    # that", which is true of the tool and useless to the person.
+    #
+    # `signing: True` is what lets a walk be *offered* to somebody who may not
+    # follow it (see `signing_guides`). Every other guide is hidden from a
+    # person who lacks its capability, because teaching a task that ends in a
+    # refusal is worse than saying so - but for these the name of who may sign
+    # is the answer, so the walk is listed and refused with that name.
+    #
+    # Two of the five are signed from the floor screen's own panel, because
+    # only the two vocabularies have a review built for them (`review.py`'s
+    # KINDS). The other three are signed on their own screens. Each walk ends
+    # on the control that is actually there.
+    {
+        "id": "approve-downtime-reason",
+        "title": "Sign off a downtime reason",
+        "when": (
+            "approving a downtime reason, putting a stop code in force, signing a "
+            "drafted reason, approving a retirement of a reason code, a reason "
+            "waiting for approval"
+        ),
+        "needs": "process.approve",
+        "signing": True,
+        "steps": [
+            {"page": "/dashboard", "anchor": "pending-approvals",
+             "needs": "process.approve",
+             "title": "What is waiting for you",
+             "body": (
+                 "Every draft that needs your signature, oldest wait first. A reason "
+                 "that has sat here for days is a stop the pareto still cannot name."
+             )},
+            {"page": "/dashboard", "anchor": "pending-review",
+             "needs": "process.approve",
+             "title": "Press Review on the reason you mean",
+             "body": (
+                 "Not Approve - there is deliberately no approve button on a row. A "
+                 "row says a draft exists and nothing about what it would do to the "
+                 "plant, and signing from it is signing blind."
+             )},
+            {"page": "/dashboard", "anchor": "review-changes",
+             "needs": "process.approve",
+             "title": "What it actually changes",
+             "body": (
+                 "The draft against what is in force now, line by line, in the "
+                 "plant's own words. Nothing here was written by a model."
+             )},
+            {"page": "/dashboard", "anchor": "review-coverage",
+             "needs": "process.approve",
+             "title": "How much it covers",
+             "body": (
+                 "How many stops this vocabulary can already name, and how many it "
+                 "leaves unlabelled. A word that covers nothing is not an improvement."
+             )},
+            {"page": "/dashboard", "anchor": "review-approve",
+             "needs": "process.approve",
+             "title": "Press Approve",
+             "body": (
+                 "You press it, not me - I hold no approve capability at all. From "
+                 "that moment it is the word on every operator's screen, and the "
+                 "revision it replaced stays in the history so it can be put back."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/reasons", "anchor": "reason-vocabulary",
+                     "title": "It is in force",
+                     "body": "The vocabulary now lists it as in force, with the revision you signed."},
+    },
+    {
+        "id": "approve-nc-severity",
+        "title": "Sign off a non-conformance severity",
+        "when": (
+            "approving a severity, putting a severity in force, signing a drafted "
+            "severity, approving how findings are graded, a severity waiting for "
+            "approval"
+        ),
+        "needs": "quality.approve",
+        "signing": True,
+        "steps": [
+            {"page": "/dashboard", "anchor": "pending-approvals",
+             "needs": "quality.approve",
+             "title": "What is waiting for you",
+             "body": (
+                 "Severities wait here beside downtime reasons. Both are vocabularies "
+                 "the whole plant then has to live with."
+             )},
+            {"page": "/dashboard", "anchor": "pending-review",
+             "needs": "quality.approve",
+             "title": "Press Review on the severity you mean",
+             "body": (
+                 "The row carries the code and how long it has waited; the review "
+                 "behind it carries what signing would do."
+             )},
+            {"page": "/dashboard", "anchor": "review-changes",
+             "needs": "quality.approve",
+             "title": "What it actually changes",
+             "body": (
+                 "Read the description most of all. It is what decides whether two "
+                 "inspectors grade the same defect the same way."
+             )},
+            {"page": "/dashboard", "anchor": "review-affected",
+             "needs": "quality.approve",
+             "title": "What it touches",
+             "body": (
+                 "Findings already graded at this severity keep the grading they were "
+                 "given - a typed history stays as it was typed."
+             )},
+            {"page": "/dashboard", "anchor": "review-approve",
+             "needs": "quality.approve",
+             "title": "Press Approve",
+             "body": (
+                 "Yours to press and never mine. From here on it is a grade an "
+                 "inspector can put on a non-conformance."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/severities", "anchor": "severity-vocabulary",
+                     "title": "It is in force",
+                     "body": "The severities list shows it in force, at the revision you signed."},
+    },
+    {
+        "id": "approve-instruction",
+        "title": "Put a work instruction in force",
+        "when": (
+            "approving a work instruction, putting a document in force, signing a "
+            "procedure, approving a revision, withdrawing a document"
+        ),
+        "needs": "documents.approve",
+        "signing": True,
+        "steps": [
+            {"page": "/dashboard/instructions", "anchor": "instruction-list",
+             "needs": "documents.approve",
+             "title": "Open the document",
+             "body": (
+                 "Documents are signed on their own screen rather than on the floor "
+                 "screen's panel: there is nothing to sign until you have read the "
+                 "revision, and the revision is here."
+             )},
+            {"page": "/dashboard/instructions", "anchor": "instruction-body",
+             "needs": "documents.approve",
+             "title": "Read the revision you are signing",
+             "body": (
+                 "All of it. Once it is in force this is what the plant is held to, "
+                 "and what the assistant quotes instead of answering for itself."
+             )},
+            {"page": "/dashboard/instructions", "anchor": "instruction-approve",
+             "needs": "documents.approve",
+             "title": "Press Approve revision",
+             "body": (
+                 "Under your own name. The revision it replaces stays readable in the "
+                 "history; Withdraw beside it takes a document out of force without "
+                 "deleting anything."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/instructions", "anchor": "instruction-list",
+                     "title": "Which revision is in force",
+                     "body": "The catalogue says in force against it, at the revision you signed."},
+    },
+    {
+        "id": "approve-trigger",
+        "title": "Put a trigger in force",
+        "when": (
+            "approving a trigger, putting a trigger in force, arming an alarm rule, "
+            "withdrawing a trigger, a trigger waiting for approval"
+        ),
+        "needs": "triggers.approve",
+        "signing": True,
+        "steps": [
+            {"page": "/dashboard/triggers", "tab": "triggers",
+             "anchor": "trigger-filters", "needs": "triggers.approve",
+             "title": "Find the draft",
+             "body": (
+                 "Filter by status draft to see only what is waiting. Triggers are "
+                 "signed here rather than on the floor screen's panel."
+             )},
+            {"page": "/dashboard/triggers", "tab": "triggers",
+             "anchor": "trigger-approve", "needs": "triggers.approve",
+             "title": "Press Approve on its row",
+             "body": (
+                 "Read the tag, the condition and the action first: this is logic "
+                 "against a live plant, and the OPC agent picks it up within half a "
+                 "minute. Withdraw beside it takes one back out."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/triggers", "tab": "triggers",
+                     "anchor": "trigger-list",
+                     "title": "It is watching now",
+                     "body": "The row says in force, and the fired count starts from zero."},
+    },
+    {
+        "id": "approve-adjustment",
+        "title": "Decide a proposed setpoint change",
+        "when": (
+            "approving an adjustment, approving a setpoint change, rejecting a "
+            "setpoint proposal, the human in the loop before a PLC write, a change "
+            "waiting for a decision"
+        ),
+        "needs": "adjustments.approve",
+        "signing": True,
+        "steps": [
+            {"page": "/dashboard/adjustments", "anchor": "adjustment-queue",
+             "needs": "adjustments.approve",
+             "title": "The queue of proposals",
+             "body": (
+                 "Each row is a number somebody wants written to a machine, with the "
+                 "reason they gave. Nothing here has reached a PLC."
+             )},
+            {"page": "/dashboard/adjustments", "anchor": "adjustment-approve",
+             "needs": "adjustments.approve",
+             "title": "Press Approve on the one you mean",
+             "body": (
+                 "This is the human in the loop, and it is the only thing standing "
+                 "between a proposal and a live setpoint. Reject beside it asks why, "
+                 "and the why is what the next proposal is written against."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/adjustments", "anchor": "adjustment-queue",
+                     "title": "What you decided",
+                     "body": "The row carries your decision and the time it was made."},
+    },
 ]
 
 GUIDE_BY_ID = {g["id"]: g for g in GUIDES}
@@ -2017,6 +2239,49 @@ def visible_guides(capabilities: set[str], db=None) -> list[dict]:
         out += [walkthroughs.as_guide(d) for d in documents.approved_walkthroughs(db)
                 if (d.needs or "plant.read") in capabilities]
     return out
+
+
+#: What a signing walk says to somebody who may not sign. The capability, and
+#: the product's own plain description of it - so "approve the draft severity"
+#: is answered with who signs it, which is the true answer, rather than with
+#: "no tool named approve is available to you", which is a fact about the
+#: catalogue and no use to anybody standing at a machine.
+SIGNING_NOTE = ("Signing this needs {needs} - {about} - which you do not hold. "
+                "Somebody who does presses it; the assistant never approves "
+                "anything, for anybody.")
+
+
+def signing_guides(capabilities: set[str]) -> list[dict]:
+    """The walks to a signing control that this person may *not* follow.
+
+    Every other guide is simply hidden from somebody who lacks its capability
+    (`visible_guides`), because teaching a task that ends in a refusal is
+    worse than saying it is not theirs. A signing walk is the exception: the
+    person asking to approve a draft is asking about a thing that exists and
+    is waiting, and the useful answer names who may sign it. So it is listed,
+    carrying that sentence, and refused if it is asked for.
+    """
+    from fsmes.services import capabilities as capability_names
+
+    out = []
+    for guide in GUIDES:
+        if not guide.get("signing") or guide["needs"] in capabilities:
+            continue
+        about = capability_names.CAPABILITIES.get(guide["needs"], "").rstrip(".")
+        out.append({**guide,
+                    "gated": SIGNING_NOTE.format(needs=guide["needs"], about=about)})
+    return out
+
+
+def listed_guides(capabilities: set[str], db=None) -> list[dict]:
+    """Every walk worth naming to this person: the ones they can follow, and
+    the signing walks they cannot, each saying who can.
+
+    This is what the agent's conversation is given. `visible_guides` is what
+    a screen is given, and what the facts brain routes over, because neither
+    of those can say "not yours, ask them" - they can only put a walk up.
+    """
+    return [*visible_guides(capabilities, db), *signing_guides(capabilities)]
 
 
 def guide_by_id(guide_id: str, capabilities: set[str], db=None) -> dict | None:

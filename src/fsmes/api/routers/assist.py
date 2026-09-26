@@ -82,7 +82,11 @@ def _facts(db, capabilities: set[str]) -> dict:
 
 def _guide_out(guide: dict) -> dict:
     out = {"id": guide["id"], "title": guide["title"], "steps": guide["steps"]}
-    for key in ("recorded_by", "revision", "approved_by", "kind"):
+    if guide.get("evidence"):
+        out["evidence"] = guide["evidence"]
+    # `ephemeral` has to survive: it is what tells the screen to carry the
+    # walk itself across a page rather than ask an endpoint for it by id.
+    for key in ("recorded_by", "revision", "approved_by", "kind", "ephemeral"):
         if guide.get(key) is not None:
             out[key] = guide[key]
     return out
@@ -341,6 +345,11 @@ def agent_message(body: AgentIn, user: UserDep) -> dict:
     with deps.short_read() as db:
         role, capabilities, name = _who(db, user)
         guides = assistant.visible_guides(capabilities, db)
+        # The agent is given more than the screens are: the signing walks this
+        # person may *not* follow, each carrying who may. It is the one brain
+        # that can say "not yours, and here is who" - a screen can only put a
+        # walk up or not (decision 0035; the agent approves nothing, ever).
+        offerable = assistant.listed_guides(capabilities, db)
         # This plant's own numbers, read in the short session that is already
         # open and carried past it: everything after this line may call a
         # model, and a session held across one holds SQLite's single write
@@ -359,7 +368,7 @@ def agent_message(body: AgentIn, user: UserDep) -> dict:
             }
     plant = _ensure_local()
     sess = (agent.get_session(body.session, user["sub"])
-            or agent.open_session(user["sub"], plant, capabilities, guides=guides, **budget))
+            or agent.open_session(user["sub"], plant, capabilities, guides=offerable, **budget))
     out = agent.message(sess, body.message, name=name, role=role)
     _record(sess)
     if out.get("kind") == "guide" and out.get("guide"):

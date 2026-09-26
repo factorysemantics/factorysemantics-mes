@@ -515,13 +515,16 @@
 
   function saveWalk(exact) {
     const g = walk.guide;
-    // A generated guide has an id for the audit trail's sake, but no endpoint
-    // serves it: it is saved whole, like a recording played from a draft.
+    // Some guides have an id for the audit trail's sake that no endpoint
+    // serves: a walk generated from a draft's own diff, and the walk behind a
+    // proposal card's "Show me", which is filled with that proposal's
+    // arguments and lives only in that conversation. Those are saved whole,
+    // and boot() picks them up from the save rather than fetching them.
     // Whole means whole - it used to be copied field by field, and the first
     // guide that crossed a screen boundary arrived on the other side having
     // quietly lost `generated`, so the card that says no model wrote this
     // stopped saying it exactly where it matters most.
-    const saved = (g.id && !g.generated)
+    const saved = (g.id && !g.generated && !g.ephemeral)
       ? { id: g.id, index: walk.index }
       : { walk: { ...g }, index: walk.index, exact, moved: movedFor };
     sessionStorage.setItem(KEY, JSON.stringify(saved));
