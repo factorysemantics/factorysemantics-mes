@@ -53,5 +53,9 @@ any threshold would need, and until it exists there is no threshold.
 
 ## See also
 
+- [Does the floor assistant do what people ask?](../ai/ASSIST-EVAL.md) — the
+  third question: not whether the MES told the truth, and not whether an agent
+  can find it, but whether the assistant does what the person in front of it
+  actually asked for.
 - [Tools reference](../reference/tools.md)
 - `fsmes agent-eval --help` in the [CLI reference](../reference/cli.md)

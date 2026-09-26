@@ -525,6 +525,23 @@ def test_usage_is_logged_and_the_cap_switches_the_brain_off(scripted, monkeypatc
     assert out["kind"] == "unavailable" and "budget" in out["say"]
 
 
+def test_the_month_is_counted_in_tokens_as_well_as_in_dollars(scripted):
+    """The dollars are this repository's price list; the tokens are the bill's
+    own unit. A faithfulness run reports both, because a price change would
+    otherwise read as a change in how much the assistant does."""
+    script, _ = scripted
+    script += [response(block_text("Hello.")), response(block_text("Hello again."))]
+    sess = agent.open_session("ADMIN", "bottling", {"plant.read"})
+    agent.message(sess, "hi")
+    agent.message(sess, "hi again")
+
+    tokens = agent.tokens_this_month()
+    assert tokens == {"input": 2000, "output": 100, "cache_read": 1600, "cache_write": 0}
+    assert agent.tokens_this_month(now=datetime(2000, 1, 1, tzinfo=UTC)) == \
+        dict.fromkeys(agent.TOKEN_KINDS, 0)
+    assert agent.status()["tokens_this_month"] == tokens
+
+
 def test_no_key_means_off_with_a_reason(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.setenv("MES_AGENT_BRAIN", "auto")

@@ -21,7 +21,9 @@ from fsmes.config import Settings, get_settings
 # typed again here: a Typer default is read at import time, and two spellings
 # of one port is how the console ended up inside the simulator's range.
 from fsmes.fleet.console import PORT as CONSOLE_PORT
+from fsmes.lab import assist_eval as assist_runs
 from fsmes.logging import setup_logging
+from fsmes.services import assist_eval
 
 # The labelled set's own defaults, from the module that states them rather
 # than typed a second time here: a Typer default is read at import time, and
@@ -3340,6 +3342,189 @@ def jev_calibrate(
     typer.echo(f"  {len(figures)} figure(s), {d1['pairs_total']} D1 condition(s) "
                f"({d1['labelled']} labelled, {d1['unlabelled']} unlabelled)")
     typer.echo("  No threshold was chosen. Decision 0031: a judgment is a proposal.")
+
+
+assist_app = typer.Typer(
+    help="The floor assistant: does it do what people actually ask? A written "
+         "suite of requests, scored two ways.",
+)
+app.add_typer(assist_app, name="assist")
+
+
+@assist_app.command("eval")
+def assist_eval_command(
+    scripted: bool = typer.Option(
+        False, "--scripted",
+        help="Run against the real plumbing with the model scripted. Fast, free, "
+             "deterministic; this is what CI runs."),
+    live: bool = typer.Option(
+        False, "--live",
+        help="Run against the real model on a running plant. Costs money."),
+    plant: str = typer.Option(
+        None, "--plant", help="The plant's base URL, for --live. e.g. http://127.0.0.1:9030"),
+    user: str = typer.Option(None, "--user", help="The account to sign in as, for --live."),
+    password: str = typer.Option(
+        None, "--password",
+        help="That account's password. Read from MES_ASSIST_EVAL_PASSWORD when not given."),
+    max_usd: float = typer.Option(
+        None, "--max-usd",
+        help=f"Stop a live run once it has cost this much. Default "
+             f"${assist_runs.DEFAULT_MAX_USD:.2f}."),
+    role: list[str] = typer.Option(
+        None, "--role", help="Only these roles. Repeat for several."),
+    case: str = typer.Option(None, "--case", help="Only the one case with this id."),
+    suite: Path = typer.Option(
+        None, "--suite", exists=True, file_okay=False,
+        help="Where the suite lives. Default: tests/assist_suite/."),
+    out: Path = typer.Option(
+        None, "--out",
+        help="Write the result file here instead of docs/ai/assist-eval/<date>.md. "
+             "A scripted run writes nothing unless you ask."),
+    as_json: Path = typer.Option(
+        None, "--json",
+        help="Also write the run as JSON here - the shape a next month compares against."),
+    plant_commit: str = typer.Option(
+        None, "--plant-commit",
+        help="The commit the plant is running. A plant does not report its own, and a "
+             "result nobody can date to a build cannot be compared to the next one."),
+    quiet: bool = typer.Option(False, "--quiet", help="Only the totals."),
+) -> None:
+    """Score the assistant against a written suite of requests.
+
+    Two modes, measuring two different things.
+
+    `--scripted` asks whether each expectation is *reachable*: the real guide
+    router, the real tool catalogue for that role, the real tools against a real
+    seeded plant, the real surfaces, the real conversation loop - with the model
+    replaced by a stand-in that plays the expectation. It cannot tell you whether
+    a model would choose right and does not claim to. It catches everything
+    around the choice, which is where every failure this week actually was.
+
+    `--live` asks whether the model chooses right: the real model, on a running
+    plant, through the same endpoint the assistant panel posts to. It needs a key
+    in the plant's environment, it costs money, and it stops at `--max-usd`.
+    Every proposal it opens is declined, so a scored plant is an unchanged plant.
+
+    A case the current code cannot pass yet is marked `not_yet` in the suite with
+    the handoff that will make it pass. Those are counted separately, and the
+    test wrapper fails if one of them starts passing - a ratchet that works both
+    ways.
+    """
+    if scripted == live:
+        typer.echo("Choose one: --scripted or --live.")
+        raise typer.Exit(2)
+
+    try:
+        cases = assist_eval.load(suite)
+    except assist_eval.Invalid as exc:
+        typer.echo("The suite itself is wrong:")
+        for line in str(exc).split("\n"):
+            typer.echo(f"  {line}")
+        raise typer.Exit(2) from exc
+
+    if role:
+        wanted = {r.lower() for r in role}
+        cases = tuple(c for c in cases if c.role.lower() in wanted)
+    if case:
+        cases = tuple(c for c in cases if c.id == case)
+    if not cases:
+        typer.echo("No cases matched.")
+        raise typer.Exit(2)
+
+    run: dict = {}
+    if scripted:
+        outcomes = assist_runs.run_scripted(cases)
+        model = None
+        plant_name = assist_eval.SCRIPTED_PLANT
+    else:
+        outcomes, run, model, plant_name = _live_run(cases, plant, user, password, max_usd,
+                                                     quiet=quiet)
+
+    counts = assist_eval.tally(outcomes)
+    if not quiet:
+        for outcome in outcomes:
+            if outcome.passed:
+                continue
+            mark = "FAIL" if outcome.counted else "not yet"
+            typer.echo(f"{mark:8} {outcome.case.id}  ({outcome.case.role})")
+            for why in outcome.why:
+                typer.echo(f"         {why}")
+    typer.echo("")
+    for name in sorted(counts["roles"]):
+        row = counts["roles"][name]
+        rate = f"{100 * row['passed'] / row['required']:.0f}%" if row["required"] else "—"
+        typer.echo(f"{name:12} {row['passed']:3}/{row['required']:<3} {rate:>5}"
+                   f"   not_yet {row['not_yet']}")
+    typer.echo(f"{'total':12} {counts['passed']:3}/{counts['required']:<3} "
+               f"      not_yet {counts['not_yet']}")
+    if counts["not_yet_passing"]:
+        typer.echo(f"{counts['not_yet_passing']} case(s) marked not_yet are passing now. "
+                   f"Take the mark off them and say so in the handoff.")
+    if run.get("usd"):
+        tokens = run.get("tokens") or {}
+        typer.echo(f"Cost ${run['usd']:.4f} of ${run.get('max_usd', 0):.2f}; "
+                   f"{sum(tokens.values()):,} token(s).")
+    if run.get("not_run"):
+        typer.echo(f"{len(run['not_run'])} case(s) were not run: the budget stopped first.")
+
+    if live or out is not None:
+        page = assist_eval.report(outcomes, mode="live" if live else "scripted",
+                                  model=model, plant=plant_name,
+                                  plant_commit=plant_commit, run=run)
+        if out is not None:
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(page, encoding="utf-8")
+            written = out
+        else:
+            written = assist_eval.write_report(page)
+        typer.echo(f"Written: {written}")
+    if as_json is not None:
+        as_json.parent.mkdir(parents=True, exist_ok=True)
+        as_json.write_text(assist_eval.as_json(outcomes) + "\n", encoding="utf-8")
+        typer.echo(f"Written: {as_json}")
+
+    if counts["passed"] < counts["required"] or counts["not_yet_passing"]:
+        raise typer.Exit(1)
+
+
+def _live_run(cases, plant, user, password, max_usd, *, quiet: bool):
+    """The live half, with the two refusals that have to happen before a call."""
+    import os
+
+    if not plant or not user:
+        typer.echo("--live needs --plant <url> and --user <code>.")
+        raise typer.Exit(2)
+    password = password or os.environ.get("MES_ASSIST_EVAL_PASSWORD")
+    if not password:
+        typer.echo("No password: pass --password or set MES_ASSIST_EVAL_PASSWORD.")
+        raise typer.Exit(2)
+    if not os.environ.get(assist_runs.KEY):
+        # The key is the plant's, not this command's - but a run with no key
+        # anywhere costs nothing and proves nothing, and saying so here is
+        # cheaper than a suite of "the cloud brain is not available".
+        typer.echo(f"No {assist_runs.KEY} in this environment. A live run needs the real "
+                   f"model; the plant reads the key from its own environment, so start the "
+                   f"plant with it and run this where it is set too.")
+        raise typer.Exit(2)
+
+    client = assist_runs.Plant(plant)
+    try:
+        client.sign_in(user, password)
+        identity = client.identity()
+        outcomes, run = assist_runs.run_live(
+            cases, client,
+            max_usd=assist_runs.DEFAULT_MAX_USD if max_usd is None else max_usd,
+            on_case=None if quiet else _say_case)
+    except assist_runs.LiveRefused as exc:
+        typer.echo(f"The live run stopped: {exc}")
+        raise typer.Exit(2) from exc
+    finally:
+        client.close()
+    return outcomes, run, run.get("model"), identity.get("plant") or plant
+
+
+def _say_case(outcome) -> None:
+    typer.echo(f"{'ok  ' if outcome.passed else 'FAIL'} {outcome.case.id}")
 
 
 def run() -> None:

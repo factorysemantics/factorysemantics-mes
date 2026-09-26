@@ -324,6 +324,27 @@ def spend_this_month(path: Path | None = None, now: datetime | None = None) -> f
     return round(sum(r.get("usd", 0.0) for r in usage_rows(path) if str(r.get("ts", "")).startswith(month)), 6)
 
 
+#: The four numbers a usage row carries, in the order a bill reads them.
+TOKEN_KINDS = ("input", "output", "cache_read", "cache_write")
+
+
+def tokens_this_month(path: Path | None = None, now: datetime | None = None) -> dict[str, int]:
+    """What the month's conversations have cost in tokens, not only dollars.
+
+    Dollars are an estimate against a price list; tokens are what actually
+    happened. A faithfulness run has to report both, because a month's price
+    change would otherwise look like a change in how much the assistant does.
+    """
+    month = (now or datetime.now(UTC)).strftime("%Y-%m")
+    out = dict.fromkeys(TOKEN_KINDS, 0)
+    for row in usage_rows(path):
+        if not str(row.get("ts", "")).startswith(month):
+            continue
+        for kind in TOKEN_KINDS:
+            out[kind] += int(row.get(kind, 0) or 0)
+    return out
+
+
 def last_used(path: Path | None = None) -> datetime | None:
     rows = usage_rows(path)
     if not rows:
@@ -1022,4 +1043,7 @@ def status() -> dict:
     ok, why = available()
     return {"available": ok, "reason": why, "model": MODEL, "brain": brain(),
             "spend_usd": spend_this_month(), "cap_usd": monthly_cap_usd(),
+            # Tokens beside the dollars, because the dollars are this file's
+            # price list and the tokens are the bill's own unit.
+            "tokens_this_month": tokens_this_month(),
             "last_used": last_used().isoformat(timespec="seconds") if last_used() else None}
