@@ -267,8 +267,12 @@ def test_the_settings_tab_says_the_horizon_and_lets_an_admin_move_it(admin, plan
     page = _open(admin, plant)
     page.wait_for_selector("#conv-table tbody tr", timeout=15000)
     page.locator('.tab[data-tab="settings"]').click()
-    page.wait_for_selector("#trace-days", timeout=15000)
-    assert page.locator("#trace-days").input_value() == "90"
+    # The box is drawn empty and filled when the administration sections
+    # arrive; reading it the instant it exists read "" on GitHub's runner
+    # (2026-09-26) and "90" on every loopback. Wait for the value, not the box.
+    page.wait_for_function(
+        "() => (document.querySelector('#trace-days') || {}).value === '90'",
+        timeout=15000)
 
     page.fill("#trace-days", "30")
     page.locator("#trace-save").click()
