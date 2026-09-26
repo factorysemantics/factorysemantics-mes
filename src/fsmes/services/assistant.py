@@ -128,8 +128,8 @@ GUIDES: list[dict] = [
         "id": "book-production",
         "title": "Book output",
         "when": (
-                 "booking output, reporting good parts, recording scrap, entering counts a "
-                 "machine made"
+                 "booking output, booking production, reporting good parts, recording "
+                 "scrap, entering counts a machine made"
                 ),
         "needs": "production.book",
         "steps": [
@@ -451,7 +451,7 @@ GUIDES: list[dict] = [
     # KINDS). The other three are signed on their own screens. Each walk ends
     # on the control that is actually there.
     {
-        "id": "approve-downtime-reason",
+        "id": "approve-a-downtime-reason",
         "title": "Sign off a downtime reason",
         "when": (
             "approving a downtime reason, putting a stop code in force, signing a "
@@ -504,7 +504,7 @@ GUIDES: list[dict] = [
                      "body": "The vocabulary now lists it as in force, with the revision you signed."},
     },
     {
-        "id": "approve-nc-severity",
+        "id": "approve-a-severity",
         "title": "Sign off a non-conformance severity",
         "when": (
             "approving a severity, putting a severity in force, signing a drafted "
@@ -555,11 +555,12 @@ GUIDES: list[dict] = [
                      "body": "The severities list shows it in force, at the revision you signed."},
     },
     {
-        "id": "approve-instruction",
+        "id": "approve-a-document",
         "title": "Put a work instruction in force",
         "when": (
-            "approving a work instruction, putting a document in force, signing a "
-            "procedure, approving a revision, withdrawing a document"
+            "approving a work instruction, putting a draft instruction in force, "
+            "signing a procedure, approving a document revision, withdrawing a "
+            "document"
         ),
         "needs": "documents.approve",
         "signing": True,
@@ -593,7 +594,7 @@ GUIDES: list[dict] = [
                      "body": "The catalogue says in force against it, at the revision you signed."},
     },
     {
-        "id": "approve-trigger",
+        "id": "approve-a-trigger",
         "title": "Put a trigger in force",
         "when": (
             "approving a trigger, putting a trigger in force, arming an alarm rule, "
@@ -624,7 +625,7 @@ GUIDES: list[dict] = [
                      "body": "The row says in force, and the fired count starts from zero."},
     },
     {
-        "id": "approve-adjustment",
+        "id": "approve-an-adjustment",
         "title": "Decide a proposed setpoint change",
         "when": (
             "approving an adjustment, approving a setpoint change, rejecting a "
@@ -2246,9 +2247,13 @@ def visible_guides(capabilities: set[str], db=None) -> list[dict]:
 #: is answered with who signs it, which is the true answer, rather than with
 #: "no tool named approve is available to you", which is a fact about the
 #: catalogue and no use to anybody standing at a machine.
-SIGNING_NOTE = ("Signing this needs {needs} - {about} - which you do not hold. "
-                "Somebody who does presses it; the assistant never approves "
-                "anything, for anybody.")
+#: The one sentence that must survive being read back leads it: a tool result
+#: is summarised to 160 characters in the turn record and in the transcript
+#: the panel shows, and the two facts worth keeping are that the assistant
+#: signs nothing and which capability does.
+SIGNING_NOTE = ("The assistant never approves anything, for anybody. {needs} - "
+                "{about} - is what signs this, and you do not hold it. Somebody "
+                "who does presses the button.")
 
 
 def signing_guides(capabilities: set[str]) -> list[dict]:
@@ -2351,21 +2356,35 @@ def wants_showing(question: str) -> bool:
     return bool(SHOW_ME.search(question))
 
 
-def _lexical_match(question: str, guides: list[dict]) -> dict | None:
+#: How much of two words has to agree for them to be the same word here. Four
+#: characters: `book` and `booking`, `approve` and `approving`, `draft` and
+#: `drafted`. Exact matching missed every one of those, and *"how do I book
+#: production?"* came back with no walk at all on a plant with no local model,
+#: which is the whole of what this fallback exists to prevent.
+STEM = 4
+
+
+def _stems(text: str) -> set[str]:
+    return {word[:STEM] for word in re.findall(rf"[a-z]{{{STEM},}}", text.lower())}
+
+
+def lexical_match(question: str, guides: list[dict]) -> dict | None:
     """The fallback when the model is unavailable or unhelpful.
 
     Crude on purpose: overlapping words between the question and a guide's
     'when' line. A wrong guide is recoverable - the person reads the title and
     closes it - but no assistant at all when Ollama is down is not.
+
+    Words agree on their first four characters rather than exactly, because
+    people type the verb and the `when` lines are written with the gerund.
     """
     # route() has already established that a guide is what was asked for.
-    words = set(re.findall(r"[a-z]{4,}", question.lower()))
+    words = _stems(question)
     if not words:
         return None
     best, score = None, 0
     for guide in guides:
-        hay = set(re.findall(r"[a-z]{4,}", (guide["when"] + " " + guide["title"]).lower()))
-        overlap = len(words & hay)
+        overlap = len(words & _stems(guide["when"] + " " + guide["title"]))
         if overlap > score:
             best, score = guide, overlap
     return best if score >= 2 else None
@@ -2405,7 +2424,7 @@ def route(question: str, capabilities: set[str], db=None, guides=None, *,
         token = reply.strip().split()[0].strip(".,:;\"'").lower()
         if token in by_id:
             return by_id[token]
-    return _lexical_match(question, guides)
+    return lexical_match(question, guides)
 
 
 def answer(question: str, context: dict, capabilities: set[str], *,

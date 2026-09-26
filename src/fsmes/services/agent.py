@@ -1094,8 +1094,8 @@ def _walk_me(sess: Session, tool: str, args: dict, *,
         # with who signs it instead of "I cannot do that" (decision 0035), and
         # it is refused here rather than put on their screen, because walking
         # somebody to a button their role is not shown is worse than saying so.
-        return already, {"shown": False, "why": guide["gated"],
-                         "needs": guide["needs"]}
+        return already, {"error": guide["gated"], "needs": guide["needs"],
+                         "shown": False}
     if already is not None:
         return already, {"shown": False,
                          "why": "one walkthrough at a time; the person is already being shown "

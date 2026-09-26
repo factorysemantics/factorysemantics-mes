@@ -1322,3 +1322,26 @@ without confirming" — which is not what happened — and now says they typed
 instead of deciding, and where the walk is if that is what they were asking
 for. And the prompt gained exactly two sentences: one saying every proposal
 carries a "Show me", one saying approvals are walks.
+
+### What the suite says now
+
+`assist-show-me-surfaces` owned ten cases in `tests/assist_suite/`. All ten
+pass and their `not_yet` marks are off: **77 of 77 required cases before, 87
+of 87 after, and 16 `not_yet` down to 6** — the six that remain belong to
+`assist-action-coverage`.
+
+Two of the ten were rewritten rather than made to pass as written. A person
+who may draft and may not sign — the agent role itself, and a supervisor —
+was down as owed a *walk* to the signing control. They are owed the
+*sentence* instead: the walk is listed to them, which is what lets the
+assistant name the capability rather than say "no tool named approve", and
+asking for it is refused with that capability, its plain description, and the
+fact that the assistant signs nothing for anybody. Walking somebody to a
+button their role is not shown is a worse answer than the refusal, not a
+better one.
+
+One thing the suite made visible that is not about approvals at all: without
+a local model, the walkthrough fallback matched whole words, so *"how do I
+book production?"* found nothing — the guide's own line says *booking*. Words
+now agree on their first four characters. On a plant with no model running
+that is the difference between an assistant and a shrug.

@@ -230,26 +230,28 @@ def _a_brain_that_is_on():
 def run_scripted_case(case: Case, plant: str) -> Turn:
     """One case against the real plumbing, with the model standing in.
 
-    The order of operations is the endpoint's own (`/assist/agent`): the guide
-    router is asked first and, if it answers, the agent is never opened. That
-    is the shape of the 2026-09-26 failure and it is not smoothed over here.
+    The order of operations is the endpoint's own (`/assist/agent`), and since
+    #109 that order is: **the agent answers**. The guide router in front of it
+    runs only when the cloud brain is off, so it does not run here - a regex
+    deciding "show me" before the model was asked is the 2026-09-26 failure
+    this suite exists to catch, and running it in scripted mode would have
+    baked the failure into the measurement.
+
+    The walks this person may be shown are handed to the conversation the way
+    the endpoint hands them over, signing walks included, so `guides()` and
+    `show_guide` answer here exactly as they do on the plant.
     """
     from fsmes.services import agent, assistant
 
     capabilities = capabilities_of(case.role)
-    guides = assistant.visible_guides(capabilities)
-    # No local model in scripted mode: `route` falls back to its lexical match,
-    # which is the deterministic half and the half CI can pin.
-    guide = assistant.route(case.request, capabilities, guides=guides, timeout=0.001)
+    guides = assistant.listed_guides(capabilities)
     tools = agent.catalogue(capabilities)
     offered = frozenset(t["name"] for t in tools)
     writes = frozenset(t["name"] for t in tools if t["write"])
-    if guide is not None:
-        return Turn(kind="guide", guide_id=guide["id"], offered=offered,
-                    say=f"I can walk you through it - {guide['title'].lower()}.")
 
     with _a_brain_that_is_on():
-        session = agent.open_session(case.role.upper(), plant, capabilities)
+        session = agent.open_session(case.role.upper(), plant, capabilities,
+                                     guides=guides)
         if case.over_proposal:
             agent._call_model = scripted_model(tuple(case.before))
             agent.message(session, case.before_request or "(the turn before)",

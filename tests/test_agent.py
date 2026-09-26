@@ -1028,18 +1028,18 @@ def test_a_signing_walk_is_offered_to_somebody_who_may_not_sign_and_says_who_may
     listed = {g["id"]: g for g in assistant.listed_guides(operator)}
     followable = {g["id"] for g in assistant.visible_guides(operator)}
 
-    gated = listed["approve-nc-severity"]
+    gated = listed["approve-a-severity"]
     assert gated["id"] not in followable, "a walk they may follow would not need the note"
     assert "quality.approve" in gated["gated"]
     # The product's own words for the capability, not a sentence invented here.
     assert caps.CAPABILITIES["quality.approve"].rstrip(".") in gated["gated"]
-    assert "the assistant never approves" in gated["gated"]
+    assert "never approves anything, for anybody" in gated["gated"]
 
     # Somebody who does hold it just gets the walk, unmarked.
     signer = {"plant.read", "quality.approve"}
     theirs = {g["id"]: g for g in assistant.listed_guides(signer)}
-    assert "gated" not in theirs["approve-nc-severity"]
-    assert "approve-nc-severity" in {g["id"] for g in assistant.visible_guides(signer)}
+    assert "gated" not in theirs["approve-a-severity"]
+    assert "approve-a-severity" in {g["id"] for g in assistant.visible_guides(signer)}
 
 
 def test_show_guide_refuses_a_signing_walk_rather_than_walking_them_to_it(scripted):
@@ -1047,7 +1047,7 @@ def test_show_guide_refuses_a_signing_walk_rather_than_walking_them_to_it(script
     not shown is worse than saying who presses it."""
     script, _calls = scripted
     script += [
-        response(block_tool("t1", "show_guide", id="approve-nc-severity"), stop="tool_use"),
+        response(block_tool("t1", "show_guide", id="approve-a-severity"), stop="tool_use"),
         response(block_text("That one is signed by somebody holding quality.approve.")),
     ]
     operator = {"plant.read", "quality.record"}
@@ -1058,7 +1058,9 @@ def test_show_guide_refuses_a_signing_walk_rather_than_walking_them_to_it(script
     refused = json.loads(sess.history[2]["content"][0]["content"])
     assert refused["shown"] is False
     assert refused["needs"] == "quality.approve"
-    assert caps.CAPABILITIES["quality.approve"].rstrip(".") in refused["why"]
+    # An `error` and not a note, so the turn records it as a refusal and the
+    # sentence is what a scorer - and a person - reads back.
+    assert caps.CAPABILITIES["quality.approve"].rstrip(".") in refused["error"]
 
 
 def test_every_approvable_kind_has_a_walk_to_the_control_that_signs_it():

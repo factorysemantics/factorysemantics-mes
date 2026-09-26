@@ -404,11 +404,11 @@ def test_a_walk_onto_a_form_whose_page_is_still_fetching_waits_for_it(admin, pla
 #: those two walks say `press` - the test presses the real Review button when
 #: the walk reaches it, which is exactly what the step tells the person to do.
 SIGNING_WALKS = {
-    "approve-downtime-reason": "pending-review",
-    "approve-nc-severity": "pending-review",
-    "approve-instruction": None,
-    "approve-trigger": None,
-    "approve-adjustment": None,
+    "approve-a-downtime-reason": "pending-review",
+    "approve-a-severity": "pending-review",
+    "approve-a-document": None,
+    "approve-a-trigger": None,
+    "approve-an-adjustment": None,
 }
 
 

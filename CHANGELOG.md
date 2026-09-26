@@ -69,6 +69,12 @@ goes under Honesty with a migration line, so plant people can find it.
   not allowed to sign and it names the capability and what that capability is
   for, so you know who to ask instead of being told no.
 
+- **The assistant finds a walkthrough from the words people actually type.**
+  Without a local model the fallback matched whole words, so *"how do I book
+  production?"* found nothing — the guide's own line says *booking*. Words now
+  agree on their first four characters, which is the difference between an
+  assistant and a shrug on a plant with no model running.
+
 - **"Could you show me where?" over an open proposal now shows you where.**
   The walk behind a card's "Show me" is a walkthrough the model can hand over
   by name, so a question typed under a proposal is answered with that
@@ -305,6 +311,18 @@ goes under Honesty with a migration line, so plant people can find it.
   Its pair `signals.approve` is still absent on purpose — nothing here has an
   approval step, and a capability that gates nothing is a role saying something
   untrue about itself.
+
+### Changed
+
+- **The faithfulness suite scores ten more requests, and stopped measuring an
+  order of operations the product no longer has.** Scripted mode ran the guide
+  router before the agent — the very pre-emption #109 removed — so the suite
+  was baking the 2026-09-26 failure into its own measurement. It now opens the
+  conversation the way the endpoint does. Ten cases came off `not_yet`: the
+  five approvals, the two requests to be shown a task, the two refusals to
+  sign somebody else's draft, and Scott's own *"could you show me where?"*.
+  **77 of 77 required cases before, 87 of 87 after; `not_yet` 16 → 6**, and
+  all six that remain belong to another handoff.
 
 ### Fixed
 
