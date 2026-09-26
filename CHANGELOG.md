@@ -12,6 +12,27 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **The assistant can put a walk on your screen because it decided to, not
+  because a regex did.** Two new tools when the cloud brain is on: `guides()`
+  lists the walkthroughs this person is allowed to follow, and
+  `show_guide(id)` starts one — the same walk, on the same real controls, that
+  "Show me" on a proposal card starts. The model chooses it with the whole
+  conversation in view, so *"I want you to show me how to do it"* typed over
+  an open proposal reaches the model that holds that proposal. One sentence in
+  the system prompt says that being asked to be shown is answered with a walk
+  and never with a description of the screen.
+
+- **Every turn of every conversation is written down.**
+  `~/.local/share/fsmes/agent-turns.jsonl`, one JSON line per turn beside the
+  bill in `agent-usage.jsonl`: plant, session, person, what kind of answer they
+  got (reply, proposals, guide, unavailable, error), which tools ran, which
+  proposals were opened and how each ended, the tokens, the dollars, and the
+  exception class when a turn failed. Nothing in it that is not already in the
+  transcript the panel shows the person. It exists because the only question
+  worth asking about the conversation of 2026-09-26 — *how many of those
+  thirty turns reached the model?* — could not be answered from anything on
+  the machine. (It was five.) `docs/ai/OBSERVABILITY.md` carries it.
+
 - **The assistant can find a setting by what a person calls it, and read what
   has been written to one.** `plant_settings(plant, find="reporting window")`
   searches every Configuration workspace's names, labels and descriptions in
@@ -149,6 +170,59 @@ goes under Honesty with a migration line, so plant people can find it.
   untrue about itself.
 
 ### Fixed
+
+- **A regex answered the person three times while the model was never asked.**
+  `POST /assist/agent` ran the guide router — `wants_showing()`, a fixed
+  `show me|how do i|…` pattern — in front of the agent for everybody. On
+  2026-09-26, mid-conversation about `nc_code_prefix`, *"could you show me
+  where?"* returned a walkthrough for finding a work instruction, and *"no
+  there should be a tool for you to show me how to do it on the quality
+  configuration tool"* returned one for recording a quality inspection,
+  twice. The agent — which held the proposal, the surface and a two-step walk
+  onto that very field — saw none of them. The router now runs **only when
+  the agent is off**, which is the case it was written for: a plant with no
+  key, a local model with no tools, and one message to judge on. When the
+  agent is on it gets every message and answers a request to be shown with
+  `show_guide`. `wants_showing`'s docstring says which brain it is the gate
+  for.
+
+- **A message typed over an open proposal broke the conversation for good.**
+  The decline was recorded but never committed to the history, which left an
+  assistant turn holding a `tool_use` beside the person's next sentence — a
+  shape the Messages API refuses. Every later message in that session came
+  back *"The cloud brain did not answer (BadRequestError)"*, in a third of a
+  second, with no model call and nothing in any log. The decline now reaches
+  the history before the person's words do, and **a session already in that
+  state repairs itself**: before every call, a `tool_use` nothing answered
+  gets its `tool_result` ("the person moved on"), so the next thing they type
+  works instead of failing until the conversation times out.
+
+- **A failed turn was a shrug, and it stuck.** `except Exception` returned
+  the class name to the person and dropped everything else — no log line, no
+  API message, nothing to find afterwards. A failure is now logged at WARNING
+  with the exception class, the API's own message, the session, and the shape
+  of the history (roles and block types — never the key, the prompt, or
+  anything about the plant); the person is told *"The assistant hit an error
+  on that one. Say it again and I will try afresh."*; the session is left
+  callable; and a transient failure (a dropped connection, a rate limit, a
+  5xx) is tried once more before any of that. A 400 is not retried: the same
+  wrong question costs the same money twice.
+
+- **One failed turn handed the rest of the afternoon to a brain that cannot
+  act.** The panel read any `unavailable` as "the agent is off", set
+  `agent.available = false` and sent every later message to `/assist/ask` —
+  the local facts brain, with no tools — without telling anybody. It then
+  answered fifteen requests to change things by improvising: *"check the
+  quality procedure document"*, *"consult the quality manager"*. Now a model
+  error is its own reply kind and leaves the agent on; only the reasons
+  `available()` names — no key, budget spent, shadow mode — hand the panel
+  over, and when the local brain is the one answering it says so once per
+  page (*"The plant's agent is off; I can answer from what is on screen but
+  cannot change anything"*) and is told to say it cannot make changes rather
+  than point at a document.
+  `tests/test_the_panel_keeps_one_brain_through_a_failed_turn.py` drives a
+  real Chromium through proposal → message over it → failed turn → next
+  message against a scripted model, in the `browser` tier.
 
 - **The assistant could not see a setting that exists, because the list was
   cut in half.** Asked to change "the default reporting window", it called

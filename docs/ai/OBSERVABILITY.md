@@ -11,7 +11,8 @@ when this document and the panel disagree, one of them has a bug.
 | Run triage | every scored run | qwen reads the run's logs for anomalies nobody asserted | `~/.local/share/fsmes/runs.db` (`triage_findings`, `triage_worst` columns; full detail inside the `scorecard` JSON) | `fsmes runs` or the panel |
 | Nightly rollup | 05:30 timer, `Persistent=true` (catches up after boot) | qwen narrates numbers computed from the store | `~/.local/share/fsmes/reports/*.md` → pulled to `Vault/Sims/Reports/` by `fsmes-reports` (laptop) | `systemctl --user list-timers fsmes-rollup.timer` |
 | Design chat | the Design button | qwen answers about the screen being looked at | `~/.local/share/fsmes/design.db` → `/design-triage` → `docs/design/backlog/` | `fsmes design-pending` |
-| Floor assistant | the Assistant button | routes questions, quotes procedure, picks guides | answers live; stores nothing (falls back to lexical matching when Ollama is down) | ask it something |
+| Floor assistant (local) | the Assistant button on a plant with no key | routes questions, quotes procedure, picks guides | answers live; stores nothing (falls back to lexical matching when Ollama is down) | ask it something |
+| Floor agent (cloud) | the Assistant button when `agent.available()` is true | a cloud model works the plant's own tools: reads freely, proposes every write, puts a walkthrough on the screen | `~/.local/share/fsmes/agent-turns.jsonl` (one line per turn) and `agent-usage.jsonl` (the bill) | `fsmes ai-status`, or read the turn log |
 | Instruction drafting | `fsmes draft-instructions` | qwen drafts work instructions from facts the plant holds | documents module, `drafted_by_model` set, **arriving unapproved** | the Instructions screen |
 | Embeddings | fleet job completion | nomic-embed-text embeds run summaries for semantic search | **`~/.local/share/fleet/fleet.db`** (the fleet platform — NOT the fsmes store) | `fleet ask` from the laptop |
 
@@ -37,6 +38,36 @@ declares a machine deliberately AI-free and hides the panel.
   embeddings exist only in the fleet database. Semantic search over *scored
   fsmes runs* therefore does not exist today — recorded as an open idea, not
   silently assumed.
+
+## The agent's turn log (2026-09-26)
+
+`MES_AGENT_TURN_FILE`, default `~/.local/share/fsmes/agent-turns.jsonl`. One
+JSON line per turn — per thing the person got back, not per model call:
+
+```json
+{"ts": "2026-09-26T19:55:02+00:00", "plant": "bottling", "session": "ea4a5a9da3c3",
+ "user": "ADMIN", "model": "claude-sonnet-5", "kind": "proposals",
+ "tools": ["plant_settings", "write_plant_setting"],
+ "proposals": [{"id": "956d7f527a29", "tool": "write_plant_setting", "outcome": "open"}],
+ "input": 2000, "output": 100, "cache_read": 1600, "cache_write": 0, "usd": 0.00532}
+```
+
+`kind` is one of `reply`, `proposals`, `guide`, `unavailable`, `error`; a
+proposal's `outcome` is `open`, `confirmed`, `declined` or `failed`; a failed
+turn carries `error` with the exception class. Nothing in the file that is not
+already in the transcript the panel shows the person — no message text, no
+plant rows, no key.
+
+**Why it exists.** On 2026-09-26 Scott had a thirty-turn conversation with the
+assistant and nothing on the machine could say how many of those turns reached
+the model. `agent-usage.jsonl` is the bill and only records calls that
+happened, so a turn answered by a regex, or one that failed before the call,
+left no trace at all. (The answer was five.) Read it with
+`agent.turn_rows()`, or `jq -r '.kind' agent-turns.jsonl | sort | uniq -c`.
+
+The rule of the house applies to it as much as to the rest: a turn missing
+from this file is *unknown*, not *did not happen* — the writer swallows
+`OSError` so a full disk loses the line rather than the answer.
 
 ## How to act on this from Claude Code
 
