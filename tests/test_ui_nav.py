@@ -19,7 +19,8 @@ and a click on every crumb to prove each one goes somewhere.
 Marked slow, like everything here that starts a real server: it seeds a
 database, serves it on a loopback port of the operating system's choosing,
 and drives Chromium. Nothing here touches a plant anyone else is running.
-Run it with `pytest -m slow tests/test_ui_nav.py`.
+Marked `browser` as well, which is what CI's `browser` job selects on.
+Run it with `pytest -m browser tests/test_ui_nav.py`.
 """
 
 import socket
