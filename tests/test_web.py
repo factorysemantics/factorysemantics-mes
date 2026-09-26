@@ -43,6 +43,7 @@ PAGES = [
     ("admin.html", "admin.js"),
     ("instructions.html", "instructions.js"),
     ("ops.html", "ops.js"),
+    ("ai.html", "ai.js"),
 ]
 ROUTES = ["/dashboard", "/dashboard/station", "/dashboard/orders", "/dashboard/quality",
           "/dashboard/line", "/dashboard/line/3d", "/dashboard/machines", "/dashboard/tags",
@@ -52,7 +53,7 @@ ROUTES = ["/dashboard", "/dashboard/station", "/dashboard/orders", "/dashboard/q
           "/dashboard/severities",
           "/dashboard/adjustments", "/dashboard/coa",
           "/dashboard/machine/MIX01", "/dashboard/analysis", "/dashboard/admin",
-          "/dashboard/instructions", "/dashboard/ops"]
+          "/dashboard/instructions", "/dashboard/ops", "/dashboard/ai"]
 # Screens reached by a link or a tab rather than the nav: an object page has
 # no nav entry because there is one per machine, and the 3D scene is a tab on
 # the Line page. Each must be reachable from somewhere that IS in the nav.

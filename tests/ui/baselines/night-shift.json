@@ -145,6 +145,48 @@
    "padding": "0px"
   }
  },
+ "/dashboard/ai": {
+  "header": {
+   "background-color": "rgb(26, 18, 10)",
+   "border": "",
+   "border-radius": "0px",
+   "color": "rgb(255, 207, 154)",
+   "display": "flex",
+   "font-size": "15px",
+   "font-weight": "400",
+   "padding": "12px 20px"
+  },
+  "panel": {
+   "background-color": "rgb(26, 18, 10)",
+   "border": "1px solid rgb(61, 42, 25)",
+   "border-radius": "10px",
+   "color": "rgb(255, 207, 154)",
+   "display": "none",
+   "font-size": "15px",
+   "font-weight": "400",
+   "padding": "24px"
+  },
+  "primary-button": {
+   "background-color": "rgba(0, 0, 0, 0)",
+   "border": "1px solid rgb(61, 42, 25)",
+   "border-radius": "8px",
+   "color": "rgb(181, 138, 94)",
+   "display": "block",
+   "font-size": "15px",
+   "font-weight": "500",
+   "padding": "9px 11px"
+  },
+  "table": {
+   "background-color": "rgba(0, 0, 0, 0)",
+   "border": "0px none rgb(255, 207, 154)",
+   "border-radius": "0px",
+   "color": "rgb(255, 207, 154)",
+   "display": "table",
+   "font-size": "14px",
+   "font-weight": "400",
+   "padding": "0px"
+  }
+ },
  "/dashboard/analysis": {
   "header": {
    "background-color": "rgb(26, 18, 10)",
