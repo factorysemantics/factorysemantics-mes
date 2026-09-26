@@ -335,8 +335,13 @@
       list.appendChild(el("dd", null, String(v)));
     }
     card.appendChild(list);
+    // The card says it, not only the model. On 2026-09-25 the assistant wrote
+    // "Updating it now" above an untouched setting: the sentence above a card
+    // is the model's and can be wrong, so the one sentence that says whether
+    // the plant has changed is the screen's own.
     card.appendChild(el("p", "note",
-      `Runs as the plant agent on behalf of ${me ? me.code : "you"}, and lands in the audit trail.`));
+      `Nothing has changed yet. "Do it" runs this as the plant agent on behalf of `
+      + `${me ? me.code : "you"}, and lands in the audit trail.`));
 
     const row = el("div", "row");
     const yes = el("button", null, "Do it");

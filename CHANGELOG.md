@@ -12,6 +12,17 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **The assistant can find a setting by what a person calls it, and read what
+  has been written to one.** `plant_settings(plant, find="reporting window")`
+  searches every Configuration workspace's names, labels and descriptions in
+  one call and says which workspace each answer is in; `key=` returns one
+  setting in full with the paragraph that describes it; calling it with
+  nothing lists the workspaces. `setting_changes(plant, key=, domain=)` reads
+  the audit trail for settings — who set what, from what, to what, when — so
+  *"no change is recorded"* is a sentence that can only be said after looking.
+  `GET /dashboard/config` indexes the workspaces, which until now could only
+  be learned by naming one that does not exist and reading the 404.
+
 - **CI runs the browser tests.** Every Chromium-driven test in the suite is
   marked `browser` as well as `slow`, and a new `browser` job runs
   `pytest -m browser` on Ubuntu and one Python on every pull request — twenty-six
@@ -138,6 +149,35 @@ goes under Honesty with a migration line, so plant people can find it.
   untrue about itself.
 
 ### Fixed
+
+- **The assistant could not see a setting that exists, because the list was
+  cut in half.** Asked to change "the default reporting window", it called
+  `plant_settings` five times and answered that no workspace holds such a
+  setting. `[process] default_report_hours` is item 17 of 22 on the
+  Engineering page and its section is labelled *The default reporting
+  window*. The list carried every key's full description — about 11,100
+  characters for that one workspace — and the agent loop cut tool results at
+  6,000 with a bare `…(truncated)` glued into the middle of the JSON, so the
+  model saw eleven items, could not know the list went on, and reported half
+  a list as the whole. Three changes, none of them a bigger limit: a row in a
+  list is now ten compact fields **including the section's label** and no
+  description; a list returns as many whole rows as fit, states the plant's
+  `total`, and names the call that reaches the rest
+  (`tests/test_every_settings_list_fits_in_one_tool_result.py` measures every
+  workspace of every shipped pack); and `_tool_result` drops whole trailing
+  items and says *showing 10 of 22* instead of cutting JSON mid-string.
+
+- **The assistant said "I don't see any change recorded" without having
+  looked.** Told that a setting had just been changed on the Configuration
+  page, it answered from an earlier, truncated read and made no tool call —
+  there was no tool through which it could have read the audit trail. There
+  is now (`setting_changes`), and the prompt says to use it: *when the person
+  says they changed something, read the plant again before you answer.*
+
+- **"Updating it now" over a proposal that had changed nothing.** A write is
+  a card waiting for "Do it", and the assistant described it as already under
+  way. The prompt forbids the wording, and the card no longer depends on the
+  model getting it right: it opens with **Nothing has changed yet**.
 
 - **The Configuration page's section count is read from the registry.** The
   browser test asserting Engineering's Configuration page lists sections pinned
