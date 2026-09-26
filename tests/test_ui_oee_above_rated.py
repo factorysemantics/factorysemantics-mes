@@ -36,7 +36,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-pytestmark = pytest.mark.slow
+pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
 MACHINE = "MIX01"          # the demo line's mixer, rated at 4.0 s a unit
 RATED_SECONDS = 4.0

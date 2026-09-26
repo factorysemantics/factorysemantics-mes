@@ -134,6 +134,70 @@ jobs:
             echo "| Suite on PostgreSQL 16.15 | ${PG_TEST_SECONDS:-—} |"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  browser:
+    # Every test that drives Chromium, on every pull request.
+    #
+    # Until 2026-09-25 this tier existed and nothing ran it. The browser tests
+    # are `slow`, the default selection is `-m 'not slow'`, and every job in
+    # this file uses the default - so the whole tier was opt-in, and opt-in
+    # tests rot. `test_ui_nav.py`'s Configuration-page count had been red on
+    # `main` since PR #104 merged, through a day of green checks, because
+    # nobody happened to type `pytest -m slow`.
+    #
+    # It is its own job rather than a step in `test` because it needs a
+    # browser binary, which is a ~170 MB download the other cells have no use
+    # for. One cell, Ubuntu, one Python: what a browser test catches is a
+    # rendered page, not a platform or interpreter difference, so multiplying
+    # the matrix would cost four browser downloads and catch nothing more.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,mcp,agent]"
+      # Chromium only. The suite drives no other engine, and installing the
+      # three Playwright ships would triple the download for nothing.
+      # `--with-deps` is what makes a headless browser work on a bare runner.
+      - name: Install Chromium for Playwright
+        run: python -m playwright install --with-deps chromium
+      - name: The browser tests
+        run: |
+          set -euo pipefail
+          started=$(date +%s)
+          python -m pytest -m browser
+          echo "BROWSER_SECONDS=$(( $(date +%s) - started ))" >> "$GITHUB_ENV"
+
+      # The rest of the slow tier, in the same job because it is four tests and
+      # seconds long, and because leaving it out would leave exactly the hole
+      # this job exists to close. Two exclusions, both stated rather than
+      # quietly dropped:
+      #
+      # - `erpnext_live` needs a real ERPNext and fails - deliberately, not
+      #   skips - without one. It has its own workflow, erpnext-live.yml.
+      # - The KEPSim replay end-to-end is red. It runs here and is marked
+      #   xfail with the reason in the test file; it is not skipped, and it is
+      #   not strict, so a day it starts passing shows up as XPASS rather than
+      #   as a red check on somebody else's pull request.
+      - name: The rest of the slow tier
+        run: |
+          set -euo pipefail
+          started=$(date +%s)
+          python -m pytest -m "slow and not browser and not erpnext_live" -rxXs
+          echo "SLOW_SECONDS=$(( $(date +%s) - started ))" >> "$GITHUB_ENV"
+
+      - name: What this run cost
+        if: always()
+        run: |
+          {
+            echo "| Step | Seconds |"
+            echo "|---|---|"
+            echo "| Browser tests, pytest -m browser | ${BROWSER_SECONDS:-—} |"
+            echo "| The rest of the slow tier | ${SLOW_SECONDS:-—} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   wheel-demo:
     # The check that would have caught 0.1.0. `test` above proves the source
     # works; this proves the *artifact* works — installed into a fresh venv in

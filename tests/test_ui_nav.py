@@ -29,7 +29,7 @@ from urllib.parse import urlparse
 import pytest
 from sqlalchemy.orm import Session
 
-pytestmark = pytest.mark.slow
+pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
 DEMO_MACHINE = "MIX01"
 # What the demo plant's hierarchy says above MIX01, outermost first - the
