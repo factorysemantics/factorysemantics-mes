@@ -9,7 +9,8 @@ prose-named test per path, so a failure names the thing that got out.
 The **ratchet** reads the package's own source for the primitives by which
 this process can reach past its own database - an OPC UA node write, an HTTP
 client, an MQTT publish, a socket - and fails on any call site the register
-does not cover. Same shape as `test_mcp_parity.py` for write routes: the
+does not cover. Same shape as the write-route ratchet
+(`test_every_write_route_has_a_tool_or_a_reason.py`): the
 point is that a new outbound path cannot be added without somebody deciding,
 in writing, what shadow mode does to it.
 

@@ -170,22 +170,23 @@ def test_a_module_that_is_off_registers_no_agent_tools():
 
 
 def test_a_write_route_that_is_not_mounted_needs_no_tool(with_modules):
-    """The parity ratchet (`test_mcp_parity.py`) asks every write route for a
-    tool or a written reason. A plant with a module off has fewer routes and
-    the same tool files, so the ratchet is satisfied by construction - but
-    "by construction" is the kind of claim that stops being true quietly."""
-    from test_mcp_parity import EXCLUDED, _pattern, tool_source
+    """The ratchet (`test_every_write_route_has_a_tool_or_a_reason.py`) asks
+    every write route for a tool or a written reason. A plant with a module off
+    has fewer routes and the same tool files, so the ratchet is satisfied by
+    construction - but "by construction" is the kind of claim that stops being
+    true quietly."""
+    from fsmes.assist_coverage import EXCLUDED, covering_tools, tool_writes
 
-    source = tool_source()
+    tools = tool_writes()
     paths = with_modules(WITHOUT_QUALITY).get("/openapi.json").json()["paths"]
-    writes = {f"{method.upper()} {path}" for path, ops in paths.items() for method in ops
+    writes = {(method.upper(), path) for path, ops in paths.items() for method in ops
               if method.upper() in {"POST", "PUT", "PATCH", "DELETE"}}
 
-    unexplained = sorted(w for w in writes
-                         if not _pattern(w.split(" ", 1)[1]).search(source)
-                         and w not in EXCLUDED)
+    unexplained = sorted(f"{m} {p}" for m, p in writes
+                         if not covering_tools(m, p, tools)
+                         and f"{m} {p}" not in EXCLUDED)
     assert not unexplained, unexplained
-    assert not [w for w in writes if w.startswith("POST /quality")], (
+    assert not [p for m, p in writes if p.startswith("/quality")], (
         "quality is off; its write routes should not be in this plant's document")
 
 
