@@ -12,7 +12,7 @@ when this document and the panel disagree, one of them has a bug.
 | Nightly rollup | 05:30 timer, `Persistent=true` (catches up after boot) | qwen narrates numbers computed from the store | `~/.local/share/fsmes/reports/*.md` → pulled to `Vault/Sims/Reports/` by `fsmes-reports` (laptop) | `systemctl --user list-timers fsmes-rollup.timer` |
 | Design chat | the Design button | qwen answers about the screen being looked at | `~/.local/share/fsmes/design.db` → `/design-triage` → `docs/design/backlog/` | `fsmes design-pending` |
 | Floor assistant (local) | the Assistant button on a plant with no key | routes questions, quotes procedure, picks guides | answers live; stores nothing (falls back to lexical matching when Ollama is down) | ask it something |
-| Floor agent (cloud) | the Assistant button when `agent.available()` is true | a cloud model works the plant's own tools: reads freely, proposes every write, puts a walkthrough on the screen | `~/.local/share/fsmes/agent-turns.jsonl` (one line per turn) and `agent-usage.jsonl` (the bill) | `fsmes ai-status`, or read the turn log |
+| Floor agent (cloud) | the Assistant button when `agent.available()` is true | a cloud model works the plant's own tools: reads freely, proposes every write, puts a walkthrough on the screen | the plant's own `ai_turns` table (the **AI** screen), plus `~/.local/share/fsmes/agent-turns.jsonl` (one line per turn) and `agent-usage.jsonl` (the bill) | the AI screen, `fsmes ai conversations`, or read the turn log |
 | Instruction drafting | `fsmes draft-instructions` | qwen drafts work instructions from facts the plant holds | documents module, `drafted_by_model` set, **arriving unapproved** | the Instructions screen |
 | Embeddings | fleet job completion | nomic-embed-text embeds run summaries for semantic search | **`~/.local/share/fleet/fleet.db`** (the fleet platform — NOT the fsmes store) | `fleet ask` from the laptop |
 
@@ -48,7 +48,9 @@ JSON line per turn — per thing the person got back, not per model call:
 {"ts": "2026-09-26T19:55:02+00:00", "plant": "bottling", "session": "ea4a5a9da3c3",
  "user": "ADMIN", "model": "claude-sonnet-5", "kind": "proposals",
  "tools": ["plant_settings", "write_plant_setting"],
- "proposals": [{"id": "956d7f527a29", "tool": "write_plant_setting", "outcome": "open"}],
+ "proposals": [{"id": "956d7f527a29", "tool": "write_plant_setting",
+                "args": {"domain": "quality", "key": "nc_code_prefix", "value": "CR"},
+                "outcome": "open"}],
  "input": 2000, "output": 100, "cache_read": 1600, "cache_write": 0, "usd": 0.00532}
 ```
 
@@ -57,6 +59,15 @@ proposal's `outcome` is `open`, `confirmed`, `declined` or `failed`; a failed
 turn carries `error` with the exception class. Nothing in the file that is not
 already in the transcript the panel shows the person — no message text, no
 plant rows, no key.
+
+**The same turn is also written into the plant's own database** (2026-09-26),
+as a row in `ai_turns`, and that is what the **AI** screen reads. The two are
+the same write: this file is the machine's copy and belongs to whoever
+administers the box; the table is the plant's, is behind `audit.read`, carries
+the words on both sides as well as the tool names, and is pruned to
+`[admin] ai_trace_days`. See
+[the AI screen](../operate/ai.md) for what it holds and what it deliberately
+does not.
 
 **Why it exists.** On 2026-09-26 Scott had a thirty-turn conversation with the
 assistant and nothing on the machine could say how many of those turns reached

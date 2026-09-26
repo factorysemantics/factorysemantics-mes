@@ -56,6 +56,7 @@ are listed on one page.
 | `design_chat_timeout_seconds` | `240` | The design chat's own reply |
 | `document_house_style` | Purpose / Steps / If it fails | The shape a drafted work instruction takes |
 | `ai_rollup_stale_hours` | `40` | How old a daily AI artifact gets before the panel calls it late |
+| `ai_trace_days` | `90` | How many days of the AI trace this plant keeps; `0` keeps everything |
 
 ### What `document_house_style` may not say
 
