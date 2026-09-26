@@ -100,6 +100,7 @@ nav:
       - How-to — read-only OPC UA commissioning: operate/opc-readonly.md
       - Explanation — losing sight of a machine: operate/opc-disconnections.md
       - Explanation — how much of the window did the MES see: operate/coverage.md
+      - Reference — what the floor assistant can do for you: operate/assistant-coverage.md
       - How-to — who names the downtime reasons: operate/who-names-the-reasons.md
       - How-to — who names the severities: operate/quality-severities.md
       - Reference — this plant's own quality numbers: operate/quality-numbers.md

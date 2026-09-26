@@ -12,7 +12,8 @@ kernel imports it: `MES_MODULES` can decline to mount a router, but it cannot
 un-import a package the kernel needs to start.
 
 Same shape as the other tests that read the source rather than run it - the
-shadow ratchet in `test_shadow_mode.py`, `test_mcp_parity.py`,
+shadow ratchet in `test_shadow_mode.py`,
+`test_every_write_route_has_a_tool_or_a_reason.py`,
 `test_route_coverage.py`. An AST walk over every file in `src/fsmes` collects
 every `fsmes` import, each is placed on the ladder below, and an import that
 goes upward must appear in one of the two allowance tables with a reason.
@@ -62,6 +63,12 @@ LADDER: tuple[tuple[str, tuple[str, ...]], ...] = (
         # an agent, a simulator, a migration runner, a seed script.
         "api", "integrations", "mcp", "mcp_server", "sim", "migrations",
         "seed", "seed_line", "seed_kepsim", "demo_feed", "backup",
+        # The measurement of those surfaces against each other: every write
+        # route, the MCP tool that sends it or the reason none does, and the
+        # screen that calls it. It reads the routes FastAPI publishes, the
+        # tools' own source and the browser's scripts, so it sits with the
+        # three things it reads - a service may import none of them.
+        "assist_coverage",
         # The plant pack: a format that reads a directory and writes a plant.
         # An edge, not a foundation, and deliberately so - checking a pack
         # means running each file's *own* validator (the tag map's, the

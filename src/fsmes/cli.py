@@ -2792,6 +2792,63 @@ def config_audit_cmd(
         typer.echo(line)
 
 
+assist_app = typer.Typer(
+    help="The floor assistant: what it can do for a person, measured.")
+app.add_typer(assist_app, name="assist")
+
+
+@assist_app.command("coverage")
+def assist_coverage_cmd(
+    role: str = typer.Option(
+        None, "--role",
+        help="Only this role's column: operator, supervisor, admin, agent - or "
+             "any role the product ships. Without it, all four."),
+    markdown: bool = typer.Option(
+        False, "--markdown",
+        help="The docs page, on stdout. docs/operate/assistant-coverage.md is "
+             "this output, and a test fails if the file differs."),
+    as_json: bool = typer.Option(
+        False, "--json", help="The whole run, for diffing against the next one."),
+) -> None:
+    """Every action a person can take, against what the assistant can take for them.
+
+    One row per write route in the API - POST, PUT, PATCH or DELETE - saying
+    which screen calls it, which MCP write tool sends it on somebody's behalf
+    (or why none does, and the reason is a rule rather than a to-do), the
+    capability the route itself gates on, whether the tool has a "Show me" walk,
+    and whether each role holds that capability.
+
+    The measurement exists because nothing measured it: twice in two days the
+    assistant could not do something the screens do, and both times the person
+    who found out was the maintainer.
+    `tests/test_every_write_route_has_a_tool_or_a_reason.py` is the ratchet.
+
+    Deterministic - no model, no network, no database, no plant. The routes come
+    from the app, the tools are read out of their own source, and the screens are
+    matched exactly as `test_route_coverage` matches them.
+    """
+    from fsmes import assist_coverage
+
+    if role is not None:
+        try:
+            assist_coverage.role_capabilities(role)
+        except KeyError:
+            from fsmes.services import capabilities as caps
+
+            typer.echo(f"unknown role {role!r}; "
+                       f"one of {', '.join(sorted(caps.BUILTIN_ROLES))}")
+            raise typer.Exit(2) from None
+    run = assist_coverage.scan()
+    if as_json:
+        typer.echo(assist_coverage.as_json(run))
+        return
+    if markdown:
+        typer.echo(assist_coverage.as_markdown(run))
+        return
+    for line in assist_coverage.as_text(run, role=role):
+        typer.echo(line)
+
+
 @app.command("autoloop")
 def autoloop_cmd(
     agent: bool = typer.Option(
