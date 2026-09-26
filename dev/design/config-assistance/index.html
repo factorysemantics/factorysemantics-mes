@@ -1008,6 +1008,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operate/assistant-coverage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference — what the floor assistant can do for you
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operate/who-names-the-reasons/" class="md-nav__link">
         
   
@@ -2468,6 +2496,45 @@
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-the-ratchet-every-action-a-person-can-take-measured-2026-09-26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. The ratchet: every action a person can take, measured — 2026-09-26
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="15. The ratchet: every action a person can take, measured — 2026-09-26">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-a-reason-may-say" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a reason may say
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-it-measured-on-the-day-it-was-written" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it measured on the day it was written
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -4541,6 +4608,45 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#15-the-ratchet-every-action-a-person-can-take-measured-2026-09-26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. The ratchet: every action a person can take, measured — 2026-09-26
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="15. The ratchet: every action a person can take, measured — 2026-09-26">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-a-reason-may-say" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a reason may say
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-it-measured-on-the-day-it-was-written" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it measured on the day it was written
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -5770,6 +5876,103 @@ was refused while lowering <code>cpk_capable</code> under <code>cpk_marginal</co
 crossing-over — was accepted. It now judges the difference between the table
 before and after, which also stops a plant that is out of range on one key from
 being unable to save any of the others.</p>
+<h2 id="15-the-ratchet-every-action-a-person-can-take-measured-2026-09-26">15. The ratchet: every action a person can take, measured — 2026-09-26<a class="headerlink" href="#15-the-ratchet-every-action-a-person-can-take-measured-2026-09-26" title="Permanent link">&para;</a></h2>
+<p>The four domains above each shipped with the tools a person could use them
+through, and nothing checked that claim against the screens. Twice in two days
+the check was Scott: on 2026-09-25 the assistant could not find
+<code>default_job_minutes</code>, and on 2026-09-26 it said no workspace held "the default
+reporting window" and then that no change was recorded when he had just made
+one. Both were real, both were fixed (#105, #108), and both were found by the
+maintainer because <strong>nothing measured what the assistant can do against what a
+person can do</strong>.</p>
+<p><code>tests/test_route_coverage.py</code> has ratcheted <em>screens</em> against routes since
+2026-09-02 — every API route has a screen, or a written reason not to. This is
+its sibling, and reads like it:</p>
+<blockquote>
+<p><strong>Every write route has an MCP tool, or a written reason not to.</strong>
+<code>tests/test_every_write_route_has_a_tool_or_a_reason.py</code></p>
+</blockquote>
+<p>A write route is one with method POST, PUT, PATCH or DELETE. A tool <em>sends</em> a
+route when the tool's own source says so: every <code>@mcp.tool()</code> in
+<code>mcp_server.py</code> and <code>mcp/*.py</code> is parsed, and each call it makes to the
+server's <code>write()</code> or <code>call()</code> helper gives the method and the path template it
+sends — so the answer cannot drift from the code, and a tool whose path ends in
+an argument it only accepts a closed set of values for (<code>order_action</code>'s
+<code>action</code>) is expanded into them rather than reported as a shape. The list of
+exceptions may only shrink: a route named there that has grown a tool fails the
+test.</p>
+<p><code>fsmes assist coverage [--role operator|supervisor|admin|agent]</code> prints the
+same table, and <code>docs/operate/assistant-coverage.md</code> <strong>is</strong> that command's
+output — a test regenerates it and fails if the page differs.</p>
+<h3 id="what-a-reason-may-say">What a reason may say<a class="headerlink" href="#what-a-reason-may-say" title="Permanent link">&para;</a></h3>
+<p>A reason is a rule, never work somebody has not done — a test refuses a reason
+containing <em>not yet</em>, <em>later</em> or <em>phase</em>, because that is how a list which may
+only shrink starts growing. Three rules cover all seventeen:</p>
+<ul>
+<li><strong>An approval is the person's signature</strong>, which is decision 0035 read from
+  the other end. The <code>agent</code> role holds every <code>*.define</code> and no <code>*.approve</code>,
+  and a confirmed "Do it" runs as the AGENT account <em>on behalf of</em> the person —
+  so a tool that approved would be signing their name. There is a test that
+  nothing reaches a route gated on a <code>*.approve</code> capability at all. The honest
+  answer to "approve it for me" is a walk to the control, which is what
+  <code>SURFACES</code> is for.</li>
+<li><strong>An agent never holds a password.</strong> <code>/auth/users/{code}/password</code> is a
+  person at a keyboard, and a password that passed through a model's context is
+  a password to rotate.</li>
+<li><strong>Plumbing is not an action.</strong> <code>/assist/*</code> and <code>/design/*</code> are how the
+  assistant is <em>spoken to</em>; a tool for them would be the assistant calling
+  itself.</li>
+</ul>
+<p>One route is a judgement call rather than a rule, and the table says so:
+<code>DELETE /admin/roles/{code}</code> is kept from the assistant while <code>create_role</code> and
+<code>update_role</code> are not, because defining what a role grants is reversible from
+the screen that did it and deleting a role is not — every account holding it
+loses every capability at once, and what it granted is gone with the row.</p>
+<h3 id="what-it-measured-on-the-day-it-was-written">What it measured on the day it was written<a class="headerlink" href="#what-it-measured-on-the-day-it-was-written" title="Permanent link">&para;</a></h3>
+<p>Four write routes had neither a tool nor a reason, and three of them were the
+most basic thing an operator does: <code>POST /workorders/{code}/operations/{seq}/start</code>
+and <code>…/complete</code> (<code>order_action</code> covered the whole order and stopped there),
+<code>POST /execution/lots</code>, and <code>POST /documents/{code}/revise</code>. They became
+<code>start_operation</code>, <code>complete_operation</code>, <code>create_lot</code> and <code>revise_document</code>,
+each reading the plant first so its <code>would</code> sentence carries the from and the
+to — which step, on which machine, in which state; which revision, copying
+which one in force.</p>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Screen actions it can propose, of 66</th>
+<th>Before</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>operator</td>
+<td>16</td>
+<td>13</td>
+</tr>
+<tr>
+<td>supervisor</td>
+<td>32</td>
+<td>28</td>
+</tr>
+<tr>
+<td>admin</td>
+<td>51</td>
+<td>47</td>
+</tr>
+<tr>
+<td>agent</td>
+<td>23</td>
+<td>19</td>
+</tr>
+</tbody>
+</table>
+<p>Fifteen of the sixty-six are by written reason. Walks are the thinner half:
+<code>SURFACES</code> covers ten of the forty-seven write tools, so an admin who can
+propose 51 actions can be <em>shown</em> 14 of them, and none of the four tools added
+here has a surface yet. That is the sibling handoff's work, and the column is
+here so that it is countable rather than assumed.</p>
 
 
 
