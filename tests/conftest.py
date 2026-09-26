@@ -59,6 +59,22 @@ TEST_DATABASE_URL = os.environ.get("MES_TEST_DATABASE_URL", "").strip()
 IN_MEMORY_SQLITE = not TEST_DATABASE_URL
 
 
+@pytest.fixture(autouse=True)
+def _the_suite_writes_no_agent_records_to_this_machine(tmp_path, monkeypatch):
+    """The agent's two append-only records go somewhere disposable.
+
+    Both default to `~/.local/share/fsmes/`, which on a developer's machine is
+    a real one: a suite that books a hundred imaginary dollars into the month's
+    spend would switch the cloud brain off on that machine for the rest of it.
+    Tests that are *about* these files point them somewhere of their own, and
+    that still wins - an autouse fixture is applied before the test's own.
+    """
+    from fsmes.services import agent
+
+    monkeypatch.setattr(agent, "USAGE_FILE", tmp_path / "agent-usage.jsonl")
+    monkeypatch.setattr(agent, "TURN_FILE", tmp_path / "agent-turns.jsonl")
+
+
 def _empty(engine: Engine) -> None:
     """Remove every row from every table the domain model declares."""
     if engine.dialect.name == "postgresql":

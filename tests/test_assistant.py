@@ -202,3 +202,34 @@ def test_the_gate_recognises_the_ways_people_actually_ask():
     for phrasing in ("what is the fill weight spec", "is the line running",
                      "what does the procedure say", "who approved WI-FILL"):
         assert not assistant.wants_showing(phrasing), phrasing
+
+
+def test_the_facts_brain_is_told_it_cannot_act_and_not_to_send_people_to_a_document(monkeypatch):
+    """Scott, 2026-09-26: with the agent switched off mid-conversation and
+    nobody told, this model was handed fifteen requests it has no tool for —
+    *"which spc rules are on hold"*, *"change the cpk to 2"* — and improvised:
+    *"There are no scrap quantities recorded"*, *"check the quality procedure
+    document"*, *"consult the quality manager"*.
+
+    It cannot change anything and it now says so. The words are the model's;
+    what is pinned here is that it is told, every time, and told what to say
+    instead of pointing at a document."""
+    seen = {}
+    monkeypatch.setattr(assistant, "_ask_model",
+                        lambda prompt, **k: seen.setdefault("prompt", prompt) and "fine")
+    assistant.answer("change the cpk to 2", {"oee": None}, {"plant.read"})
+    prompt = seen["prompt"]
+    assert "you cannot change anything in this plant" in prompt
+    assert "this plant's agent is off so you cannot make changes" in prompt
+    assert "name the screen where the person can do it themselves" in prompt
+    assert "Never send them to a document or to another person" in prompt
+
+
+def test_the_gate_says_which_brain_it_is_the_gate_for():
+    """The docstring is load-bearing: it is the sentence that was read as
+    licence to run this regex in front of the agent too, and it now says
+    plainly that it is the facts brain's gate and nobody else's."""
+    said = assistant.wants_showing.__doc__
+    assert "only for the facts brain" in said
+    assert "not the gate when the agent is on" in said
+    assert "show_guide" in said

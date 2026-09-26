@@ -734,6 +734,286 @@ def test_surface_fills_come_from_the_proposal():
     assert assistant.surface_for("machines", {}) is None
 
 
+# ------------------------------------------- one brain, and a history it can use
+#
+# Scott, 2026-09-26, bottling, ADMIN: thirty-odd turns, five model calls. A
+# message typed over an open proposal left the conversation in a shape the
+# Messages API refuses, every later message in it failed the same way, and the
+# panel quietly handed the rest of the afternoon to a model with no tools. The
+# four tests below are the three mechanisms and the record that would have
+# shown them.
+
+def _shapes_from(monkeypatch):
+    """Records the history shape the model was handed, call by call."""
+    seen: list[str] = []
+    scripted_model = agent._call_model
+
+    def watching(sess):
+        seen.append(agent.history_shape(sess))
+        return scripted_model(sess)
+
+    monkeypatch.setattr(agent, "_call_model", watching)
+    return seen
+
+
+def test_a_message_over_an_open_proposal_is_a_history_the_api_will_take(scripted, monkeypatch):
+    """The invariant, pinned where it broke: a `tool_use` is followed by its
+    `tool_result`, never by the person's next sentence.
+
+    Reproduced by the steward at 15:40 on 2026-09-26 — "Change nc_code_prefix
+    to CR" got a proposal, "set it to 4" came back *The cloud brain did not
+    answer (BadRequestError)*, and so did every message after it, in 0.3 s,
+    with no model call and nothing in any log.
+    """
+    script, _calls = scripted
+    script += [
+        response(block_text("I will set it."),
+                 block_tool("t1", "write_plant_setting", domain="quality",
+                            key="nc_code_prefix", value="CR"),
+                 stop="tool_use"),
+        response(block_text("Four it is — say the word and I will propose that instead.")),
+    ]
+    shapes = _shapes_from(monkeypatch)
+    sess = agent.open_session("ADMIN", "bottling", {"plant.read", "quality.define"})
+    assert agent.message(sess, "Change nc_code_prefix to CR")["kind"] == "proposals"
+
+    out = agent.message(sess, "set it to 4")
+    assert out["kind"] == "reply", out
+    # The second call happened at all, and what it was handed is well-formed.
+    assert len(shapes) == 2, "the second message never reached the model"
+    assert "assistant[text,tool_use] user[tool_result] user[text]" in shapes[1], shapes[1]
+    # The decline is what the model was told, in the person's own words.
+    answer = json.loads(sess.history[2]["content"][0]["content"])
+    assert answer["declined"] == "the person moved on without confirming"
+
+
+def test_a_conversation_already_broken_repairs_itself_on_the_next_message(scripted, monkeypatch):
+    """The sessions that were live when this shipped, and any that get there
+    another way. One unanswered `tool_use` is answered before the next call,
+    so the next thing the person says works instead of failing forever."""
+    script, _calls = scripted
+    script += [response(block_text("It is CR."))]
+    shapes = _shapes_from(monkeypatch)
+    sess = agent.open_session("ADMIN", "bottling", {"plant.read", "quality.define"})
+    # Exactly the shape `message()` used to leave behind.
+    sess.history += [
+        {"role": "user", "content": "Change nc_code_prefix to CR"},
+        {"role": "assistant",
+         "content": [block_tool("t9", "write_plant_setting", domain="quality",
+                                key="nc_code_prefix", value="CR")]},
+        {"role": "user", "content": "set it to 4"},
+    ]
+
+    out = agent.message(sess, "what is nc_code_prefix set to?")
+    assert out["kind"] == "reply" and out["say"] == "It is CR."
+    assert "assistant[tool_use] user[tool_result] user[text]" in shapes[0], shapes[0]
+
+
+def test_a_model_error_is_said_plainly_logged_and_gone_by_the_next_message(scripted, caplog):
+    """A failed turn is a failed turn. It says what happened in words a person
+    can act on, it leaves a line somebody can find afterwards, and the session
+    is still callable — `except Exception` returning the class name and
+    dropping the rest is how this went unexplained for an afternoon."""
+    script, _calls = scripted
+
+    class Refused(Exception):
+        status_code = 400
+
+    def once_broken(sess):
+        if script and script[0] == "boom":
+            script.pop(0)
+            raise Refused("messages.3: unexpected `tool_use` without `tool_result`")
+        return script.pop(0)
+
+    script += ["boom", response(block_text("Nc code prefix is CR."))]
+    import pytest as _pytest
+    with _pytest.MonkeyPatch.context() as patch:
+        patch.setattr(agent, "_call_model", once_broken)
+        sess = agent.open_session("ADMIN", "bottling", {"plant.read"})
+        with caplog.at_level("WARNING", logger="fsmes.services.agent"):
+            bad = agent.message(sess, "what is nc_code_prefix set to?")
+        assert bad["kind"] == "error" and bad["reason"] == "error"
+        assert bad["say"] == ("The assistant hit an error on that one. Say it again "
+                              "and I will try afresh.")
+        # What was logged: the class, the API's own message, the session, and
+        # the shape — never the key, the prompt, or a thing about the plant.
+        line = caplog.text
+        assert "Refused" in line and "unexpected `tool_use`" in line and sess.id in line
+        assert "user[text]" in line and "nc_code_prefix" not in line
+
+        # And it does not stick.
+        good = agent.message(sess, "ask again")
+        assert good["kind"] == "reply" and good["say"] == "Nc code prefix is CR."
+
+
+def test_a_dropped_connection_is_tried_once_more_and_a_bad_request_is_not(scripted):
+    """Retry what the line did to us, never what we asked for: a 400 retried
+    is the same wrong question and the same bill, twice."""
+    _script, _calls = scripted
+
+    class Dropped(Exception):
+        pass
+    Dropped.__name__ = "APIConnectionError"
+
+    class Refused(Exception):
+        status_code = 400
+
+    tries: list[str] = []
+
+    def flaky(sess):
+        tries.append("call")
+        if len(tries) == 1:
+            raise Dropped("the connection dropped")
+        return response(block_text("Cpk capable is 1.33."))
+
+    import pytest as _pytest
+    with _pytest.MonkeyPatch.context() as patch:
+        patch.setattr(agent, "_call_model", flaky)
+        sess = agent.open_session("ADMIN", "bottling", {"plant.read"})
+        out = agent.message(sess, "what is the capable cpk?")
+        assert out["kind"] == "reply" and len(tries) == 2
+
+        tries.clear()
+        patch.setattr(agent, "_call_model",
+                      lambda sess: (_ for _ in ()).throw(Refused("bad request")))
+        out = agent.message(sess, "again")
+        assert out["kind"] == "error" and len(tries) == 0
+
+
+def test_being_switched_off_is_an_unavailable_that_says_off(scripted, monkeypatch):
+    """The panel reads `reason`. Only the cases `available()` names — no key,
+    budget spent, shadow mode — hand it over to the local model; an error is
+    not one of them, and treating it as one is what put a model with no tools
+    in front of fifteen requests to change things."""
+    _script, _calls = scripted
+    sess = agent.open_session("ADMIN", "bottling", {"plant.read"})
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    out = agent.message(sess, "hello")
+    assert out["kind"] == "unavailable" and out["reason"] == "off"
+    assert "ANTHROPIC_API_KEY" in out["why"]
+
+
+# ------------------------------------------------- "show me" is the model's call
+
+def walks():
+    """Two of this plant's own built-in walkthroughs, as the router reads them."""
+    return assistant.visible_guides({"plant.read", "quality.record"})
+
+
+def test_the_walk_me_tools_are_offered_beside_the_plants_own(scripted):
+    sess = agent.open_session("ADMIN", "bottling", {"plant.read", "quality.record"},
+                              guides=walks())
+    by_name = sess.tool_by_name
+    assert "guides" in by_name and "show_guide" in by_name
+    assert by_name["show_guide"]["write"] is False
+    # A plant with no walkthroughs is not offered a tool that can only fail.
+    bare = agent.open_session("ADMIN", "bottling", {"plant.read"}, guides=[])
+    assert "show_guide" not in bare.tool_by_name
+
+
+def test_the_model_reads_the_catalogue_and_puts_a_walk_on_the_screen(scripted):
+    """What Scott asked for three times. The model has the conversation in
+    view, so "show me how to do it" is answered by the walk it picks — not by
+    whichever guide a regex and a word count landed on."""
+    script, _calls = scripted
+    script += [
+        response(block_tool("t1", "guides"), stop="tool_use"),
+        response(block_text("Here is how to do it yourself."),
+                 block_tool("t2", "show_guide", id="record-check"), stop="tool_use"),
+    ]
+    sess = agent.open_session("ADMIN", "bottling", {"plant.read", "quality.record"},
+                              guides=walks())
+    out = agent.message(sess, "show me how to record an inspection")
+
+    assert out["kind"] == "guide" and out["guide"]["id"] == "record-check"
+    assert out["say"] == "Here is how to do it yourself."
+    catalogue = json.loads(sess.history[2]["content"][0]["content"])
+    assert catalogue["total"] == len(walks()) and catalogue["total"] > 0
+    assert {"record-check"} <= {g["id"] for g in catalogue["guides"]}
+    # The walk's own tool_result is in the history: the conversation carries on.
+    shown = json.loads(sess.history[-1]["content"][0]["content"])
+    assert shown["shown"] is True and shown["guide"] == "record-check"
+
+
+def test_a_walk_the_person_may_not_follow_is_a_refusal_the_model_can_read(scripted):
+    script, _calls = scripted
+    script += [
+        response(block_tool("t1", "show_guide", id="no-such-walk"), stop="tool_use"),
+        response(block_text("I do not have a walkthrough for that one.")),
+    ]
+    sess = agent.open_session("ADMIN", "bottling", {"plant.read", "quality.record"},
+                              guides=walks())
+    out = agent.message(sess, "show me how to fly the plant")
+    assert out["kind"] == "reply"
+    refusal = json.loads(sess.history[2]["content"][0]["content"])
+    assert "no walkthrough" in refusal["error"] and refusal["available"]
+
+
+def test_a_proposal_and_a_walk_in_one_round_shows_the_card_and_says_so(scripted):
+    """The card is what the person is looking at, so the walk did not happen —
+    and the model is told that rather than left believing it did."""
+    script, _calls = scripted
+    script += [
+        response(block_tool("t1", "write_plant_setting", domain="quality",
+                            key="nc_code_prefix", value="CR"),
+                 block_tool("t2", "show_guide", id="record-check"), stop="tool_use"),
+    ]
+    sess = agent.open_session("ADMIN", "bottling", {"plant.read", "quality.define",
+                                                   "quality.record"}, guides=walks())
+    out = agent.message(sess, "change it and show me")
+    assert out["kind"] == "proposals"
+    assert json.loads(sess.results["t2"]["content"])["shown"] is False
+
+
+# ------------------------------------------------------------- the turn record
+
+def test_every_turn_is_written_down_the_way_the_bill_is(scripted, tmp_path, monkeypatch):
+    """One line per turn: who, what kind of answer, which tools, which
+    proposals and how they ended, the tokens and the dollars. The question
+    nobody could answer on 2026-09-26 was *how many of those turns reached the
+    model* — this is the file that answers it."""
+    monkeypatch.setattr(agent, "TURN_FILE", tmp_path / "turns.jsonl")
+    script, _calls = scripted
+    script += [
+        response(block_text("I will record it."),
+                 block_tool("t1", "record_check", material="COLA-500",
+                            characteristic="fill_weight", value=495.0),
+                 stop="tool_use"),
+        response(block_text("Recorded.")),
+    ]
+    sess = agent.open_session("ADMIN", "bottling", {"plant.read", "quality.record"})
+    out = agent.message(sess, "record fill weight 495")
+    agent.confirm(sess, out["proposals"][0]["id"])
+
+    rows = agent.turn_rows(tmp_path / "turns.jsonl")
+    assert len(rows) == 2, rows
+    offered, done = rows
+    assert offered["kind"] == "proposals" and offered["session"] == sess.id
+    assert offered["user"] == "ADMIN" and offered["plant"] == "bottling"
+    assert offered["tools"] == ["record_check"]
+    assert offered["proposals"][0]["outcome"] == "open"
+    assert offered["input"] == 1000 and offered["usd"] > 0
+    assert done["kind"] == "reply"
+    assert done["proposals"] == [{"id": out["proposals"][0]["id"],
+                                  "tool": "record_check", "outcome": "confirmed"}]
+    assert "error" not in offered
+
+
+def test_a_failed_turn_names_its_error_in_the_record(scripted, tmp_path, monkeypatch):
+    monkeypatch.setattr(agent, "TURN_FILE", tmp_path / "turns.jsonl")
+
+    class Refused(Exception):
+        status_code = 400
+
+    monkeypatch.setattr(agent, "_call_model",
+                        lambda sess: (_ for _ in ()).throw(Refused("no")))
+    sess = agent.open_session("ADMIN", "bottling", {"plant.read"})
+    agent.message(sess, "anything")
+    row = agent.turn_rows(tmp_path / "turns.jsonl")[-1]
+    assert row["kind"] == "error" and row["error"] == "Refused"
+    assert row["usd"] == 0 and row["input"] == 0
+
+
 # ------------------------------------------------------------------ the api
 
 def test_status_and_a_message_without_a_key(admin, monkeypatch):
@@ -811,3 +1091,92 @@ def test_create_order_surface_opens_the_form_and_ticks_release():
     assert s["steps"][4]["fill"] == {"value": "True"}
     s = assistant.surface_for("create_order", {"code": "WO-9", "material": "FG-BOTTLE", "quantity": 500})
     assert s["steps"][4]["fill"] == {"value": "true"}   # the form's default
+
+
+# ----------------------------------- the three sentences that never reached it
+
+#: Scott's own words, 2026-09-26 ~14:55 CDT, mid-conversation about
+#: `nc_code_prefix`, signed in as ADMIN at bottling. Each one matched
+#: `SHOW_ME`, so each one was answered by `assistant.route()` before the agent
+#: was asked: a walkthrough for "find the work instruction for a job", then
+#: "record a quality inspection" twice. The model that held the proposal, the
+#: surface and the two-step walk onto that very field never saw them.
+SHOW_ME_SENTENCES = [
+    "could you show me where?",
+    "no I want to change the it to CR but I don't want you to do it, "
+    "I want you to show me how to do it.",
+    "no there should be a tool for you to show me how to do it on the "
+    "quality configuration tool.",
+]
+
+
+@pytest.fixture()
+def agent_on(monkeypatch):
+    """The cloud brain, switched on and scripted, behind the real endpoint."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setenv("MES_AGENT_BRAIN", "claude")
+    monkeypatch.setattr(agent, "sdk_installed", lambda: True)
+    script: list = []
+    asked: list[str] = []
+
+    def fake_model(sess):
+        asked.append(agent.history_shape(sess))
+        return script.pop(0)
+
+    def fake_execute(name, args, *, plant, on_behalf_of=None, dry_run=None, client_ref=None):
+        would = f"set {args.get('key')} to {args.get('value')} in the quality configuration"
+        return {"dry_run": True, "would": would,
+                "request": {"method": "PATCH",
+                            "path": f"/dashboard/config/{args.get('domain')}/settings/"
+                                    f"{args.get('key')}",
+                            "body": {"value": args.get("value")}}}
+
+    monkeypatch.setattr(agent, "_call_model", fake_model)
+    monkeypatch.setattr(agent, "execute", fake_execute)
+    return script, asked
+
+
+def test_every_show_me_reaches_the_agent_while_it_is_the_brain(admin, agent_on, monkeypatch):
+    """The whole handoff in one test. The guide router does not run while the
+    agent is on, so all three sentences reach the model — and the last one is
+    answered by the walk the model chose, onto the field under discussion."""
+    script, asked = agent_on
+    # The router would have intercepted every one of these on its own.
+    assert all(assistant.wants_showing(sentence) for sentence in SHOW_ME_SENTENCES)
+
+    script += [
+        # "Change nc_code_prefix to CR" -> the proposal Scott was looking at.
+        response(block_text("I will change it."),
+                 block_tool("p1", "write_plant_setting", domain="quality",
+                            key="nc_code_prefix", value="CR"), stop="tool_use"),
+        response(block_text("The card is on screen; press Show me and I will point at the box.")),
+        response(block_text("Of course — it is yours to type.")),
+        response(block_text("Here it is on your own screen."),
+                 block_tool("g1", "show_guide", id="record-check"), stop="tool_use"),
+    ]
+
+    opened = admin.post("/assist/agent", json={"message": "Change nc_code_prefix to CR"}).json()
+    assert opened["kind"] == "proposals", opened
+    session = opened["session"]
+
+    replies = [admin.post("/assist/agent",
+                          json={"message": sentence, "session": session}).json()
+               for sentence in SHOW_ME_SENTENCES]
+
+    # Not one of them was intercepted: four messages, four model calls.
+    assert len(asked) == 4, asked
+    assert [r["kind"] for r in replies] == ["reply", "reply", "guide"]
+    assert replies[-1]["guide"]["id"] == "record-check"
+    assert replies[-1]["guide"]["steps"], "the walk came back without its steps"
+    assert all(r["session"] == session for r in replies)
+
+
+def test_with_the_agent_off_the_guide_router_answers_exactly_as_it_did(admin, monkeypatch):
+    """The other brain's path is untouched: a plant with no key gets the
+    regex, the local model and the lexical fallback, as it always has."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setenv("MES_AGENT_BRAIN", "auto")
+    monkeypatch.setattr(assistant, "_ask_model",
+                        lambda prompt, timeout=None, model=None: "record-check")
+    out = admin.post("/assist/agent", json={"message": SHOW_ME_SENTENCES[0]}).json()
+    assert out["kind"] == "guide" and out["guide"]["id"] == "record-check"
