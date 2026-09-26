@@ -138,6 +138,7 @@ nav:
       - Design — M8 packs and fleet: design/m8-packs-and-fleet.md
       - Design — configuration assistance: design/config-assistance.md
       - Design — the configuration audit: design/config-audit-2026-09-21.md
+      - Design — the kernel and its modules: design/kernel-and-modules.md
       - Decisions:
           - decisions/index.md
           - decisions/0001-apache-2-with-dco.md
@@ -176,6 +177,7 @@ nav:
           - decisions/0034-a-count-is-owed-until-it-is-booked.md
           - decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators.md
           - decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md
+          - decisions/0037-where-the-kernel-ends-and-a-module-begins.md
           - Template: decisions/TEMPLATE.md
   - Agents:
       - agents/index.md

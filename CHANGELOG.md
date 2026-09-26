@@ -12,6 +12,38 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **A design page for where the kernel ends and a module begins, and decision
+  0037 *proposed*.** Docs only; nothing is built from it. The page states a
+  test for the boundary — a thing is kernel if removing it makes the
+  production record untrue or unreadable, otherwise it is a plant pack if it
+  is data and a module if it is code — and applies it to the twenty-three
+  modules the registry holds, which moves `kpis` to the kernel and asks the
+  same question of `adjustments`. It then writes the contract a module would
+  have to keep (routers, screens, Configuration sections, agent tools,
+  settings prefixes, pack keys, and its own tables on its own Alembic branch,
+  with the existing promise that *off means not served, never not stored*
+  unchanged), and a versioning scheme that mirrors `[pack] requires` key for
+  key: a module declares the kernel range it needs, the kernel declares a
+  `MODULE_API` integer, and the three words *supported* / *contributed* /
+  *experimental* apply to modules as decision 0020 defines them for ERP
+  connectors. It answers the Floor and Maintenance Configuration question
+  both ways and recommends one: Maintenance becomes a fifth domain with its
+  own capability, the Floor does not become one because the floor selects and
+  never authors, and the real complaint behind it is met by splitting a
+  `screens.define` capability out of `users.manage`. Themes are separated into
+  three asks — a palette is a pack artefact, a layout is a module, and a
+  pluggable front end is refused for the reason decision 0023 refused
+  Grafana, that the honesty rules live in the UI. Reports get one rule: a
+  report declares a question and renders the kernel's own envelope, coverage
+  and totals attached, and a report surface that cannot express *unknown* is
+  refused at registration. The commercial question — private paid add-on
+  modules on an open kernel — is argued from both sides and **left
+  undecided**, with two alternative resolutions written into 0037 for the
+  maintainer to choose between. The page is honest about the starting point:
+  the word "module" means three different things today, the `fsmes.modules`
+  entry-point group loads nothing but ERP adapters, and the lifecycle hooks
+  the architecture page describes do not exist.
+
 - **CI runs the browser tests.** Every Chromium-driven test in the suite is
   marked `browser` as well as `slow`, and a new `browser` job runs
   `pytest -m browser` on Ubuntu and one Python on every pull request — twenty-six
