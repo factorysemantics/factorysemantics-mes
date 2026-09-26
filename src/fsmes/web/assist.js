@@ -212,10 +212,27 @@
     $("#assist-log").appendChild(start);
   }
 
+  /* Which brain is answering, said once per page when it is the local one.
+
+     On 2026-09-26 the panel switched from the agent to the facts brain on a
+     single failed turn and never said so. The person carried on asking for
+     changes for fifteen turns, and a model with no tools improvised an answer
+     to every one of them. Whatever else happens, the person is told which
+     assistant they are talking to. */
+  let saidWhichBrain = false;
+
+  function noteTheLocalBrain() {
+    if (saidWhichBrain) return;
+    saidWhichBrain = true;
+    say("The plant's agent is off; I can answer from what is on screen but cannot "
+        + "change anything.", "bot");
+  }
+
   async function askQuestion(question) {
     say(question, "you");
     clearSuggestions();
     if (agent.available) { await agentSend(question); return; }
+    noteTheLocalBrain();
     const pending = say("thinking…", "thinking");
     try {
       const out = await api("/assist/ask", {
@@ -286,9 +303,20 @@
     }
     if (out.transcript && out.transcript.length) renderTranscript(out.transcript);
     if (out.say) say(out.say, "bot");
+    if (out.kind === "error") {
+      /* The model failed on this turn. That is not the agent being off, and
+         switching the panel over to the facts brain because of it is how one
+         BadRequestError turned into fifteen improvised answers on 2026-09-26.
+         The agent stays on; the next message tries it again. */
+      return;
+    }
     if (out.kind === "unavailable") {
-      agent.available = false;
-      renderBrain();
+      /* Only the reasons `available()` names - no key, budget spent, shadow
+         mode - hand the panel to the local model. */
+      if (out.reason === "off") {
+        agent.available = false;
+        renderBrain();
+      }
       return;
     }
     if (out.kind === "proposals") {
