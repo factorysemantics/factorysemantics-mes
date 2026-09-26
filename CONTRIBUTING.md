@@ -75,7 +75,9 @@ These are load-bearing, not style preferences. Most exist because breaking them 
 3. **Unlabelled data is reported as unlabelled.** A downtime pareto that files unlabelled stops under "other" is how a plant convinces itself it has data it doesn't have.
 4. **Config, not code, at plant boundaries.** Which tags a machine exposes belongs in a tag map; what a site enables belongs in a plant pack. If adding a plant needs a code change, that's a bug.
 5. **Tests are prose.** Name a test after the behaviour it pins (`test_the_window_never_reaches_back_before_the_mes_was_watching`), not after the function it calls.
-6. **Charts get checked by looking at them.** A rendered chart can be completely convincing and completely wrong. If you add a visualisation, look at it with real data before you call it done, then pin what you saw with a test.
+6. **Charts get checked by looking at them.** A rendered chart can be completely convincing and completely wrong. If you add a visualisation, look at it with real data before you call it done, then pin what you saw with a test. And a look on `127.0.0.1` proves the logic, not the experience: the loopback page renders in single-digit milliseconds, and the same page over a network does not. Anything timing-shaped — a script that looks for an element another script is still drawing, a panel that appears after a fetch, a redirect that follows a save — is verified only against an **artificial delay** (a Playwright route intercept that holds the response back until after the moment under test) or a real remote client. If you did neither, say "looked at on loopback only" rather than "verified".
+
+   Browser tests carry both `slow` and `browser`, and CI's `browser` job runs `pytest -m browser` on every pull request. Run them yourself with `python -m playwright install chromium` and `python -m pytest -m browser`; without a browser binary they skip rather than fail, which is why the marker is checked by a test of its own.
 
 ## Provenance rule
 
