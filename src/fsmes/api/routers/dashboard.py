@@ -707,6 +707,42 @@ def _module_title(section: modules.ConfigSection) -> str | None:
     return module.title if module else None
 
 
+@router.get("/config")
+def config_workspaces(db: ReadDbDep, user: UserDep) -> dict:
+    """Every Configuration workspace this version has, with its total.
+
+    The same list the navigation carries a Configuration entry for, answered
+    by the plant rather than read off a hard-coded list in whatever is asking.
+    Until this existed the only way to learn the workspaces from outside was
+    to name one that does not exist and read the 404 - finding out by being
+    refused - which is not a way for an assistant to search every workspace
+    for the setting somebody described in their own words.
+
+    Counts, not contents: `sections` is what this plant serves in that
+    workspace and `settings` is how many of its keys are editable there, so a
+    reader can tell an empty workspace from a full one before fetching it.
+    Gates nothing, like the page it indexes.
+    """
+    served = get_settings().enabled_modules()
+    out = []
+    for known in modules.CONFIG_DOMAINS:
+        shown = modules.config_sections(known.slug, served)
+        if not shown:
+            # A workspace with nothing in it is served no page (`modules.
+            # config_domains_with_sections`), so listing it here would be
+            # naming an address that answers with nothing.
+            continue
+        out.append({
+            "domain": known.slug,
+            "title": known.title,
+            "about": known.about,
+            "href": f"/dashboard/config/{known.slug}",
+            "sections": len(shown),
+            "settings": sum(len(s.pack_keys) for s in shown if s.edit_here),
+        })
+    return {"workspaces": out, "total": len(out)}
+
+
 @router.get("/config/{domain}/sections")
 def config_sections(domain: str, db: ReadDbDep, user: UserDep) -> dict:
     """Everything configurable in one workspace, with its total.

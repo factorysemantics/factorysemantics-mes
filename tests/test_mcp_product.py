@@ -575,6 +575,132 @@ def test_a_repeated_setting_write_with_one_client_ref_runs_once(wired):
     assert len(rows) == 1
 
 
+# --------------------- finding one by what a person calls it, and its history
+
+def test_a_setting_is_found_by_the_words_a_person_uses_for_it(wired):
+    """Scott, 2026-09-26: *"I want to change the default reporting window to
+    10 hrs"*. He named the section's label word for word, and the old list
+    carried the key name and no label at all - so five calls later the
+    assistant said no workspace held such a setting.
+
+    One call now, no workspace named, and the answer is the key."""
+    found = mcp_server.plant_settings("testplant", find="reporting window")
+    assert found["total"] == 1 and found["showing"] == 1
+    row = found["settings"][0]
+    assert row["name"] == "default_report_hours" and row["domain"] == "engineering"
+    assert row["label"] == "The default reporting window"
+    assert row["value"] == "8.0" and row["agent_may_write"] is True
+    # It searched every workspace and says which, so "not found" is a
+    # statement about the whole plant rather than about one page.
+    assert found["searched_total"] == len(found["searched"]) >= 4
+
+
+def test_a_search_says_where_it_looked_when_nothing_matches(wired):
+    nothing = mcp_server.plant_settings("testplant", find="carburettor")
+    assert nothing["total"] == 0 and nothing["settings"] == []
+    assert "carburettor" in nothing["nothing_matched"] or "carburettor" in nothing["find"]
+    assert "engineering" in nothing["nothing_matched"]
+
+
+def test_one_setting_comes_back_in_full_with_the_paragraph_that_describes_it(wired):
+    """`about` is out of every list and one call away for the setting somebody
+    is actually reading - including when nobody said which workspace has it."""
+    one = mcp_server.plant_settings("testplant", key="default_report_hours")
+    assert one["domain"] == "engineering" and one["workspace"] == "Engineering"
+    assert one["setting"]["key"] == "[process] default_report_hours"
+    assert "hours" in one["setting"]["about"]
+    assert one["setting"]["kind"] == "float"
+
+    missing = mcp_server.plant_settings("testplant", key="carburettor_gap")
+    assert "error" in missing and "find=" in missing["error"]
+
+
+def test_a_long_workspace_holds_rows_back_and_says_how_many_it_has(wired):
+    """Administration has thirty-nine live settings, which is more text than
+    one tool result carries. The list that comes back is short, says it is
+    short, says how many there are, and names the call that reaches the rest -
+    which is the whole difference from the answer that told Scott the setting
+    did not exist."""
+    first = mcp_server.plant_settings("testplant", "administration")
+    assert first["total"] > first["showing"] > 0
+    assert str(first["total"]) in first["more"] and "offset=" in first["more"]
+
+    seen = [row["name"] for row in first["settings"]]
+    offset = first["showing"]
+    while offset < first["total"]:
+        page = mcp_server.plant_settings("testplant", "administration", offset=offset)
+        assert page["total"] == first["total"] and page["showing"] > 0
+        seen += [row["name"] for row in page["settings"]]
+        offset += page["showing"]
+    assert len(seen) == len(set(seen)) == first["total"]
+    assert "default_new_account_role" in seen
+
+
+def test_calling_it_with_no_workspace_lists_the_workspaces_and_their_totals(wired):
+    """The cheapest first move, and the one that used to be reachable only by
+    naming a workspace that does not exist and reading the 404."""
+    index = mcp_server.plant_settings("testplant")
+    by_slug = {w["domain"]: w for w in index["workspaces"]}
+    assert index["total"] == len(index["workspaces"]) >= 4
+    assert by_slug["quality"]["settings"] == 13
+    assert by_slug["administration"]["settings"] > by_slug["supply_chain"]["settings"]
+    assert by_slug["engineering"]["href"] == "/dashboard/config/engineering"
+
+
+def test_the_history_of_one_setting_says_who_set_it_from_what_to_what(wired, session):
+    """The second half of what went wrong: Scott changed the reporting window
+    himself and asked for it back, and the assistant answered *"I don't see
+    any change recorded"* without making a single tool call - because there
+    was no tool through which it could have looked. There is one now."""
+    auth.create_user(session, code="R.OKON", name="R Okon", password="x", role="supervisor")
+    session.flush()
+    mcp_server.write_plant_setting("testplant", "engineering",
+                                   key="default_report_hours", value="10",
+                                   on_behalf_of="r.okon")
+
+    seen = mcp_server.setting_changes("testplant", key="default_report_hours")
+    assert seen["total"] == 1
+    change = seen["changes"][0]
+    assert change["setting"] == "[process] default_report_hours"
+    assert change["name"] == "default_report_hours"
+    assert change["who"] == "R.OKON" and change["as"] == "AGENT"
+    # `from` is null because the plant had no row: the product's default was
+    # standing. Printing 8.0 here would be inventing a decision nobody made.
+    assert change["from"] is None and change["to"] == "10.0"
+
+    mcp_server.write_plant_setting("testplant", "engineering",
+                                   key="default_report_hours", value="8")
+    again = mcp_server.setting_changes("testplant", key="default_report_hours")
+    assert again["total"] == 2
+    assert again["changes"][0]["from"] == "10.0" and again["changes"][0]["to"] == "8.0"
+
+
+def test_the_history_of_a_workspace_says_how_much_of_the_trail_it_read(wired):
+    """A filtered list that does not say what it filtered from reads like the
+    whole trail. `/audit` has no filter for a set of keys, so the filtering is
+    this tool's and it says so."""
+    mcp_server.write_plant_setting("testplant", "quality", key="cpk_capable", value="1.4")
+    mcp_server.write_plant_setting("testplant", "engineering",
+                                   key="default_report_hours", value="10")
+
+    quality_only = mcp_server.setting_changes("testplant", domain="quality")
+    assert [c["name"] for c in quality_only["changes"]] == ["cpk_capable"]
+    assert quality_only["audit_rows_read"] >= 2
+
+    everything = mcp_server.setting_changes("testplant")
+    assert {c["name"] for c in everything["changes"]} == {"cpk_capable",
+                                                          "default_report_hours"}
+
+
+def test_a_setting_nobody_has_written_says_the_record_is_empty_not_that_it_looked(wired):
+    """*No change is recorded* is only an honest sentence after the record has
+    been read, and this is the sentence that has read it."""
+    quiet = mcp_server.setting_changes("testplant", key="cpk_capable")
+    assert quiet["total"] == 0 and quiet["changes"] == []
+    assert "cpk_capable" in quiet["nothing_recorded"]
+    assert "audit trail" in quiet["nothing_recorded"]
+
+
 def test_there_is_no_tool_that_approves_a_setting(wired):
     """There is nothing to approve. A number in force the moment it is saved
     has no pending state (decision 0035, rule three), so an approve tool here
