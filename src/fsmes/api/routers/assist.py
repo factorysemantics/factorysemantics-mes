@@ -84,6 +84,11 @@ def _guide_out(guide: dict) -> dict:
     return out
 
 
+def _walk_line(guide: dict) -> str:
+    return (f"I can walk you through it — {guide['title'].lower()}. "
+            f"{len(guide['steps'])} steps.")
+
+
 @router.post("/ask")
 def ask(body: AskIn, user: UserDep) -> dict:
     """Answer, or offer to walk the person through it.
@@ -113,8 +118,7 @@ def ask(body: AskIn, user: UserDep) -> dict:
         return {
             "kind": "guide",
             "guide": _guide_out(guide),
-            "say": f"I can walk you through it — {guide['title'].lower()}. "
-                   f"{len(guide['steps'])} steps.",
+            "say": _walk_line(guide),
         }
 
     with deps.short_read() as db:
@@ -253,8 +257,17 @@ def agent_status(user: UserDep) -> dict:
 
 @router.post("/agent")
 def agent_message(body: AgentIn, user: UserDep) -> dict:
-    """Say what you want. A 'how do I' still gets a guide; anything else goes
-    to the agent, which reads freely and proposes every change.
+    """Say what you want. One brain answers: when the agent is on, every
+    message reaches it, and it decides whether the answer is words, a proposal,
+    or a walk it puts on the screen with `show_guide`.
+
+    The guide router in front of this is the *other* brain's front door - the
+    one a plant without a key gets. It used to run first for everybody, and on
+    2026-09-26 it answered *"no there should be a tool for you to show me how
+    to do it on the quality configuration tool"* with a walkthrough about
+    recording a quality inspection, three times over, while the model that
+    held the proposal and the surface was never asked. A regex in front of a
+    model that has the conversation in view is a gate that can only be wrong.
 
     Like `/assist/ask`, it holds no request session: the agent's rounds are
     model calls, and the agent reaches the plant through this plant's own API
@@ -270,18 +283,27 @@ def agent_message(body: AgentIn, user: UserDep) -> dict:
         budget = _agent_budget(db)
         timeout = _model_timeout(db, "assistant_timeout_seconds")
         model = _local_model(db)
-    guide = assistant.route(body.message, capabilities, guides=guides,
-                            timeout=timeout, model=model)
-    if guide:
-        return {
-            "kind": "guide", "session": body.session,
-            "guide": _guide_out(guide),
-            "say": f"I can walk you through it — {guide['title'].lower()}. {len(guide['steps'])} steps.",
-        }
+    agent_on, _why = agent.available()
+    if not agent_on:
+        guide = assistant.route(body.message, capabilities, guides=guides,
+                                timeout=timeout, model=model)
+        if guide:
+            return {
+                "kind": "guide", "session": body.session,
+                "guide": _guide_out(guide), "say": _walk_line(guide),
+            }
     plant = _ensure_local()
     sess = (agent.get_session(body.session, user["sub"])
-            or agent.open_session(user["sub"], plant, capabilities, **budget))
-    return agent.message(sess, body.message, name=name, role=role)
+            or agent.open_session(user["sub"], plant, capabilities, guides=guides, **budget))
+    out = agent.message(sess, body.message, name=name, role=role)
+    if out.get("kind") == "guide" and out.get("guide"):
+        # `show_guide` handed back the walk itself. The reply the panel reads
+        # is the same shape the guide router makes, so a walk starts the same
+        # way whichever brain chose it.
+        chosen = out["guide"]
+        out["guide"] = _guide_out(chosen)
+        out["say"] = out.get("say") or _walk_line(chosen)
+    return out
 
 
 @router.post("/agent/confirm")

@@ -1028,12 +1028,22 @@ SHOW_ME = re.compile(
 def wants_showing(question: str) -> bool:
     """Does this person want a tour, or an answer?
 
-    Deterministic on purpose. Asked to make this judgement, the model kept
-    routing "what does our procedure say about an out-of-tolerance reading"
-    to a walkthrough, which reads as dodging the question. The model is an
-    optimisation on top of this gate, never the gate itself: it decides
-    *which* guide, once the phrasing has already established that a guide is
-    what was asked for.
+    **This is the gate only for the facts brain** - the local model a plant
+    without a key gets, which has no tools, no conversation and nothing but
+    one message to judge on. There, deterministic is right: asked to make this
+    judgement itself, qwen kept routing "what does our procedure say about an
+    out-of-tolerance reading" to a walkthrough, which reads as dodging the
+    question. The local model is an optimisation on top of this gate, never
+    the gate itself: it decides *which* guide, once the phrasing has
+    established that a guide is what was asked for.
+
+    **It is not the gate when the agent is on.** That was the 2026-09-26
+    mistake: `/assist/agent` ran `route()` first for everybody, so "no there
+    should be a tool for you to show me how to do it" never reached the model
+    that held the proposal - it matched `show me`, and the fallback picked a
+    walkthrough about quality inspections. The agent has the conversation in
+    view and a `show_guide` tool of its own; it is the gate now, and none of
+    this is called while it is available.
     """
     return bool(SHOW_ME.search(question))
 
@@ -1116,6 +1126,17 @@ def answer(question: str, context: dict, capabilities: set[str], *,
         "Answer in at most four sentences, plainly, using only the facts "
         "below. If the facts do not contain the answer, say so and suggest "
         "where in the system to look. Never invent a number.\n\n"
+        # 2026-09-26: with the agent switched off mid-conversation, this
+        # model was handed "change the cpk to 2" and "which spc rules are on
+        # hold" and improvised - "consult the quality manager", "check the
+        # quality procedure document". It cannot change anything and it did
+        # not say so, which is the one sentence the person needed.
+        "You can read and explain; you cannot change anything in this plant "
+        "and you have no tools. If you are asked to change, set, release, "
+        "record or book something, say plainly that this plant's agent is "
+        "off so you cannot make changes, and name the screen where the "
+        "person can do it themselves. Never send them to a document or to "
+        "another person instead of saying that.\n\n"
         "If the facts include an approved work instruction that covers the "
         "question, answer from it and name the document and revision. The "
         "plant's signed procedure outranks anything you would otherwise "
