@@ -3643,6 +3643,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-agents-turn-log-2026-09-26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The agent's turn log (2026-09-26)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#how-to-act-on-this-from-claude-code" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3738,11 +3749,18 @@ when this document and the panel disagree, one of them has a bug.</p>
 <td><code>fsmes design-pending</code></td>
 </tr>
 <tr>
-<td>Floor assistant</td>
-<td>the Assistant button</td>
+<td>Floor assistant (local)</td>
+<td>the Assistant button on a plant with no key</td>
 <td>routes questions, quotes procedure, picks guides</td>
 <td>answers live; stores nothing (falls back to lexical matching when Ollama is down)</td>
 <td>ask it something</td>
+</tr>
+<tr>
+<td>Floor agent (cloud)</td>
+<td>the Assistant button when <code>agent.available()</code> is true</td>
+<td>a cloud model works the plant's own tools: reads freely, proposes every write, puts a walkthrough on the screen</td>
+<td><code>~/.local/share/fsmes/agent-turns.jsonl</code> (one line per turn) and <code>agent-usage.jsonl</code> (the bill)</td>
+<td><code>fsmes ai-status</code>, or read the turn log</td>
 </tr>
 <tr>
 <td>Instruction drafting</td>
@@ -3782,6 +3800,29 @@ declares a machine deliberately AI-free and hides the panel.</p>
   fsmes runs</em> therefore does not exist today — recorded as an open idea, not
   silently assumed.</li>
 </ul>
+<h2 id="the-agents-turn-log-2026-09-26">The agent's turn log (2026-09-26)<a class="headerlink" href="#the-agents-turn-log-2026-09-26" title="Permanent link">&para;</a></h2>
+<p><code>MES_AGENT_TURN_FILE</code>, default <code>~/.local/share/fsmes/agent-turns.jsonl</code>. One
+JSON line per turn — per thing the person got back, not per model call:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="nt">"ts"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-09-26T19:55:02+00:00"</span><span class="p">,</span><span class="w"> </span><span class="nt">"plant"</span><span class="p">:</span><span class="w"> </span><span class="s2">"bottling"</span><span class="p">,</span><span class="w"> </span><span class="nt">"session"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ea4a5a9da3c3"</span><span class="p">,</span>
+<span class="w"> </span><span class="nt">"user"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ADMIN"</span><span class="p">,</span><span class="w"> </span><span class="nt">"model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"claude-sonnet-5"</span><span class="p">,</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"proposals"</span><span class="p">,</span>
+<span class="w"> </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"plant_settings"</span><span class="p">,</span><span class="w"> </span><span class="s2">"write_plant_setting"</span><span class="p">],</span>
+<span class="w"> </span><span class="nt">"proposals"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"956d7f527a29"</span><span class="p">,</span><span class="w"> </span><span class="nt">"tool"</span><span class="p">:</span><span class="w"> </span><span class="s2">"write_plant_setting"</span><span class="p">,</span><span class="w"> </span><span class="nt">"outcome"</span><span class="p">:</span><span class="w"> </span><span class="s2">"open"</span><span class="p">}],</span>
+<span class="w"> </span><span class="nt">"input"</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span><span class="w"> </span><span class="nt">"output"</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="nt">"cache_read"</span><span class="p">:</span><span class="w"> </span><span class="mi">1600</span><span class="p">,</span><span class="w"> </span><span class="nt">"cache_write"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"usd"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.00532</span><span class="p">}</span>
+</code></pre></div>
+<p><code>kind</code> is one of <code>reply</code>, <code>proposals</code>, <code>guide</code>, <code>unavailable</code>, <code>error</code>; a
+proposal's <code>outcome</code> is <code>open</code>, <code>confirmed</code>, <code>declined</code> or <code>failed</code>; a failed
+turn carries <code>error</code> with the exception class. Nothing in the file that is not
+already in the transcript the panel shows the person — no message text, no
+plant rows, no key.</p>
+<p><strong>Why it exists.</strong> On 2026-09-26 Scott had a thirty-turn conversation with the
+assistant and nothing on the machine could say how many of those turns reached
+the model. <code>agent-usage.jsonl</code> is the bill and only records calls that
+happened, so a turn answered by a regex, or one that failed before the call,
+left no trace at all. (The answer was five.) Read it with
+<code>agent.turn_rows()</code>, or <code>jq -r '.kind' agent-turns.jsonl | sort | uniq -c</code>.</p>
+<p>The rule of the house applies to it as much as to the rest: a turn missing
+from this file is <em>unknown</em>, not <em>did not happen</em> — the writer swallows
+<code>OSError</code> so a full disk loses the line rather than the answer.</p>
 <h2 id="how-to-act-on-this-from-claude-code">How to act on this from Claude Code<a class="headerlink" href="#how-to-act-on-this-from-claude-code" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>"Is the AI layer OK?"</strong> → <code>fsmes ai-status</code> (or the Ops panel). Check
