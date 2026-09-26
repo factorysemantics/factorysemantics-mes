@@ -174,7 +174,7 @@ screen = "/dashboard"
 expect = "walk"
 guide = "book-production"
 expected = "not_yet"
-handoff = "assist-one-brain"
+handoff = "assist-show-me-surfaces"
 note = """A "how do I" is decided by a regex and then by the local model, before
 the agent is asked. With no local model the lexical fallback finds no guide from
 these four words, so nothing is offered. When the walk is a tool the model may
@@ -187,7 +187,7 @@ screen = "/dashboard"
 expect = "walk"
 guide = "label-a-stop"
 expected = "not_yet"
-handoff = "assist-one-brain"
+handoff = "assist-show-me-surfaces"
 note = "same as operator-asks-how-to-book-production: the deterministic half of the router does not reach this guide"
 
 # ------------------------------------------------------------------- not yours

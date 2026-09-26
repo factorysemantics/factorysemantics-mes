@@ -73,7 +73,7 @@ not_guide = ["find-instruction", "record-check"]
 before_request = "I want a non-conformance to have a prefix CR instead of NC. Could you make that change?"
 source = "questions/2026-09-26.md, ~14:58 CDT, with the nc_code_prefix proposal open"
 expected = "not_yet"
-handoff = "assist-one-brain"
+handoff = "assist-show-me-surfaces"
 note = """He was answered with "find the work instruction for a job", then with
 "record a quality inspection", then with "record a quality inspection" again.
 The proposal on his screen had a two-step walk onto the very field. Two
@@ -94,8 +94,6 @@ expect = "answer"
 never = ["did not answer", "no longer open"]
 before_request = "I want a non-conformance to have a prefix CR instead of NC. Could you make that change?"
 source = "questions/2026-09-26.md, ~15:00 CDT, with a proposal open"
-expected = "not_yet"
-handoff = "assist-one-brain"
 note = """A fresh proposal, or a question about what he meant. What he got was
 "The cloud brain did not answer (BadRequestError). That proposal is no longer
 open." - and every turn after it went to a brain with no tools."""
