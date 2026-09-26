@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://docs.factorysemantics.com/dev/design/backlog/specifications-card-filtering/">
+        <link rel="canonical" href="https://docs.factorysemantics.com/dev/ai/assist-eval/2026-09-26-scripted/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>The specifications card needs filtering - FactorySemantics MES</title>
+        <title>Assistant faithfulness — 2026-09-26 - FactorySemantics MES</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#the-specifications-card-needs-filtering" class="md-skip">
+        <a href="#assistant-faithfulness-2026-09-26" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              The specifications card needs filtering
+              Assistant faithfulness — 2026-09-26
             
           </span>
         </div>
@@ -1929,7 +1929,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../STYLE/" class="md-nav__link">
+      <a href="../../../design/STYLE/" class="md-nav__link">
         
   
   
@@ -1957,7 +1957,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../m8-packs-and-fleet/" class="md-nav__link">
+      <a href="../../../design/m8-packs-and-fleet/" class="md-nav__link">
         
   
   
@@ -1985,7 +1985,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../config-assistance/" class="md-nav__link">
+      <a href="../../../design/config-assistance/" class="md-nav__link">
         
   
   
@@ -2013,7 +2013,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../config-audit-2026-09-21/" class="md-nav__link">
+      <a href="../../../design/config-audit-2026-09-21/" class="md-nav__link">
         
   
   
@@ -3364,7 +3364,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../ai/ASSIST-EVAL/" class="md-nav__link">
+      <a href="../../ASSIST-EVAL/" class="md-nav__link">
         
   
   
@@ -3649,10 +3649,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#what-was-asked" class="md-nav__link">
+  <a href="#per-role" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What was asked
+        Per role
       
     </span>
   </a>
@@ -3660,10 +3660,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-judgement" class="md-nav__link">
+  <a href="#required-cases-that-did-not-pass" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The judgement
+        Required cases that did not pass
       
     </span>
   </a>
@@ -3671,10 +3671,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#what-is-still-true" class="md-nav__link">
+  <a href="#marked-not_yet" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What is still true
+        Marked not_yet
       
     </span>
   </a>
@@ -3698,7 +3698,7 @@
 
 
   
-    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/design/backlog/specifications-card-filtering.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/ai/assist-eval/2026-09-26-scripted.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3706,30 +3706,210 @@
   
 
 
-<h1 id="the-specifications-card-needs-filtering">The specifications card needs filtering<a class="headerlink" href="#the-specifications-card-needs-filtering" title="Permanent link">&para;</a></h1>
-<p><strong>built</strong> — Already done by the plant-scale pass: server-side search, material filter and paging that states its total.</p>
-<h2 id="what-was-asked">What was asked<a class="headerlink" href="#what-was-asked" title="Permanent link">&para;</a></h2>
-<p>Same message: <em>"specifications needs filtering."</em></p>
-<h2 id="the-judgement">The judgement<a class="headerlink" href="#the-judgement" title="Permanent link">&para;</a></h2>
-<p>Right, and already done by the plant-scale pass. The Specifications card has a
-free-text box matching a material code or a characteristic, a material
-dropdown, server-side paging, and a count line saying which slice of the whole
-is on screen (<code>1–25 of 127</code>, not <code>25</code>). The filtering happens in
-<code>GET /quality/specs</code>, not in the browser, so it is the same at 127
-specifications and at 12,000.</p>
-<h2 id="what-is-still-true">What is still true<a class="headerlink" href="#what-is-still-true" title="Permanent link">&para;</a></h2>
-<p>There is no form on this screen for <em>creating</em> a specification — that is
-<code>POST /quality/specs</code>, which the API has and no screen calls. It is on the
-surfaces plan (phase 5) and is not part of this idea.</p>
+<h1 id="assistant-faithfulness-2026-09-26">Assistant faithfulness — 2026-09-26<a class="headerlink" href="#assistant-faithfulness-2026-09-26" title="Permanent link">&para;</a></h1>
+<p><em>scripted run, 2026-09-26T21:11:41+00:00. 76 of 76 required cases pass; 17 are marked <code>not_yet</code>.</em></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mode</td>
+<td>scripted</td>
+</tr>
+<tr>
+<td>Model</td>
+<td>none — the model is scripted</td>
+</tr>
+<tr>
+<td>Plant</td>
+<td>assist-eval</td>
+</tr>
+<tr>
+<td>Plant commit</td>
+<td>the same checkout as the suite — the plant is built in this process</td>
+</tr>
+<tr>
+<td>Suite commit</td>
+<td>e17e5d03</td>
+</tr>
+</tbody>
+</table>
+<h2 id="per-role">Per role<a class="headerlink" href="#per-role" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th style="text-align: right;">Required</th>
+<th style="text-align: right;">Pass</th>
+<th style="text-align: right;">Rate</th>
+<th style="text-align: right;">not_yet</th>
+<th style="text-align: right;">of those, passing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>admin</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">100%</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>agent</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">100%</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>operator</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">100%</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>supervisor</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">100%</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+</tr>
+</tbody>
+</table>
+<h2 id="required-cases-that-did-not-pass">Required cases that did not pass<a class="headerlink" href="#required-cases-that-did-not-pass" title="Permanent link">&para;</a></h2>
+<p>None.</p>
+<h2 id="marked-not_yet">Marked <code>not_yet</code><a class="headerlink" href="#marked-not_yet" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Role</th>
+<th>Waiting on</th>
+<th>Passing already</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>scott-asks-to-be-shown-where</code></td>
+<td>admin</td>
+<td><code>assist-one-brain</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>scott-types-a-value-over-an-open-proposal</code></td>
+<td>admin</td>
+<td><code>assist-one-brain</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>admin-approves-a-document</code></td>
+<td>admin</td>
+<td><code>assist-show-me-surfaces</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>admin-approves-a-severity</code></td>
+<td>admin</td>
+<td><code>assist-show-me-surfaces</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>admin-approves-a-downtime-reason</code></td>
+<td>admin</td>
+<td><code>assist-show-me-surfaces</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>admin-approves-a-trigger</code></td>
+<td>admin</td>
+<td><code>assist-show-me-surfaces</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>admin-approves-an-adjustment</code></td>
+<td>admin</td>
+<td><code>assist-show-me-surfaces</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>agent-refused-administering-accounts</code></td>
+<td>agent</td>
+<td><code>assist-action-coverage</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>agent-refused-defining-master-data</code></td>
+<td>agent</td>
+<td><code>assist-action-coverage</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>agent-refused-approving-its-own-draft</code></td>
+<td>agent</td>
+<td><code>assist-show-me-surfaces</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>operator-asks-how-to-book-production</code></td>
+<td>operator</td>
+<td><code>assist-one-brain</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>operator-asks-where-to-label-a-stop</code></td>
+<td>operator</td>
+<td><code>assist-one-brain</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>operator-refused-closing-a-nonconformance</code></td>
+<td>operator</td>
+<td><code>assist-action-coverage</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>operator-refused-defining-a-severity</code></td>
+<td>operator</td>
+<td><code>assist-action-coverage</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>operator-refused-changing-a-plant-setting</code></td>
+<td>operator</td>
+<td><code>assist-action-coverage</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>supervisor-refused-creating-an-account</code></td>
+<td>supervisor</td>
+<td><code>assist-action-coverage</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>supervisor-refused-approving-their-own-draft</code></td>
+<td>supervisor</td>
+<td><code>assist-show-me-surfaces</code></td>
+<td>no</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>Written by <code>fsmes assist eval</code>. A bug found in the assistant becomes a case in <code>tests/assist_suite/</code> before it becomes a fix — see <a href="../../ASSIST-EVAL/">ASSIST-EVAL.md</a>.</p>
 
 
 
 
 
 
-
-  
-  
 
 
 

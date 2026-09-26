@@ -3363,6 +3363,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ai/ASSIST-EVAL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — does the assistant do what people ask
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -3985,7 +4013,12 @@
 <ul>
 <li><strong>Siemens</strong>: Industrial Copilot in production (thyssenkrupp), CES 2026 announced nine industrial copilots + an "Industrial AI OS" with NVIDIA.</li>
 <li><strong>Bosch</strong>: Shopfloor Agent in own plants since late 2025 (~€850k/plant/yr claimed), now sold externally. <strong>Decisyon</strong> literally markets "Agentic MES". ABI frames Hannover Messe 2026 as agentic-MES's coming-out party.</li>
-<li><strong>MCP layer</strong>: Tulip shipped an official MCP server; Ignition's module lands later in 2026; small OSS OPC UA/Modbus MCP servers exist (<a href="https://github.com/kukapay/opcua-mcp">kukapay/opcua-mcp</a>, <a href="https://github.com/mikakaraila/OPCUA4MCP">OPCUA4MCP</a> — same asyncua+FastMCP stack as this project); the OPC Foundation has its own UA-for-AI prototype.</li>
+<li>
+<p><strong>MCP layer</strong>: Tulip shipped an official MCP server; Ignition's module lands later in 2026; small OSS OPC UA/Modbus MCP servers exist (<a href="https://github.com/kukapay/opcua-mcp">kukapay/opcua-mcp</a>, <a href="https://github.com/mikakaraila/OPCUA4MCP">OPCUA4MCP</a> — same asyncua+FastMCP stack as this project); the OPC Foundation has its own UA-for-AI prototype.</p>
+</li>
+<li>
+<p><strong>What nobody publishes (checked 2026-09-25)</strong>: a score for whether the assistant <em>does what a named role asks</em>. Every vendor above announces capability — how many agents, how many integrations, which copilot — and none of them publishes a rerunnable suite of the requests a person actually types, scored per role, with the failures listed. Tool counts are inventory; faithfulness is the thing a plant is buying. This project publishes the suite and the score: see <a href="../ai/ASSIST-EVAL/">does the assistant do what people ask?</a>.</p>
+</li>
 </ul>
 <p><strong>Every incumbent bolts agents onto a closed platform; every OSS project predates the agent era. No open-source "MES-as-MCP" exists.</strong> The MCP <em>wrapper</em> is commoditizing within ~18 months — the durable position is the agent-operable <em>core</em> (permissioned writes, on-behalf-of identity, event-sourced audit), which is a data-model decision, not a wrapper.</p>
 <h2 id="standards-adopted-and-how-far">Standards adopted (and how far)<a class="headerlink" href="#standards-adopted-and-how-far" title="Permanent link">&para;</a></h2>
