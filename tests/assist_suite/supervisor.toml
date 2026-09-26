@@ -169,3 +169,11 @@ note = """A supervisor may draft and may not approve, so this is never a
 proposal - but it is not a dead end either. The right answer is a walk to the
 signing control for somebody who holds `documents.approve`, or the honest
 sentence that this signature is not theirs. Today it is neither."""
+
+[[case]]
+id = "supervisor-revises-an-instruction"
+request = "revise WI-BRIX: change the title to Brix check at the mixer"
+screen = "/dashboard/instructions"
+expect = "propose"
+tool = "revise_document"
+args = { code = "WI-BRIX", title = "Brix check at the mixer" }

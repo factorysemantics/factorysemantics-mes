@@ -229,3 +229,28 @@ handoff = "assist-action-coverage"
 note = """An operator holds none of the capabilities that gate a settings
 section, so the tool is not in their catalogue at all - which is right. The
 sentence still does not say who could do it for them."""
+
+[[case]]
+id = "operator-starts-a-step"
+request = "start operation 10 on WO-EVAL-1"
+screen = "/dashboard/station"
+expect = "propose"
+tool = "start_operation"
+args = { order = "WO-EVAL-1", seq = 10 }
+note = "The operator's most basic act, and until #111 the one write the screens could do that no tool could."
+
+[[case]]
+id = "operator-completes-a-step"
+request = "operation 10 on WO-EVAL-1 is finished, complete it"
+screen = "/dashboard/station"
+expect = "propose"
+tool = "complete_operation"
+args = { order = "WO-EVAL-1", seq = 10 }
+
+[[case]]
+id = "operator-books-a-lot-in"
+request = "a delivery of 400 kg of sugar just came in as LOT-SUGAR-002, book it in"
+screen = "/dashboard"
+expect = "propose"
+tool = "create_lot"
+args = { code = "LOT-SUGAR-002", material = "RAW-SUGAR", quantity = 400 }
