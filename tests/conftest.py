@@ -153,6 +153,8 @@ def use_the_test_session(app, session, monkeypatch) -> None:
     and those endpoints wait on a network in between. A test that points only
     the first at its own session gets 401s from the gate, which would be
     looking for this test's accounts in a database that has none.
+    `deps.short_write` is its sibling, which those same endpoints use to
+    record what they did once the model has answered.
     """
 
     def _same_session():
@@ -163,9 +165,15 @@ def use_the_test_session(app, session, monkeypatch) -> None:
     def _same_session_read():
         yield session
 
+    @contextmanager
+    def _same_session_write():
+        yield session
+        session.flush()
+
     app.dependency_overrides[get_db] = _same_session
     app.dependency_overrides[get_read_db] = _same_session
     monkeypatch.setattr(deps, "short_read", _same_session_read)
+    monkeypatch.setattr(deps, "short_write", _same_session_write)
 
 
 @pytest.fixture()

@@ -1012,8 +1012,13 @@ def test_every_turn_is_written_down_the_way_the_bill_is(scripted, tmp_path, monk
     assert offered["proposals"][0]["outcome"] == "open"
     assert offered["input"] == 1000 and offered["usd"] > 0
     assert done["kind"] == "reply"
-    assert done["proposals"] == [{"id": out["proposals"][0]["id"],
-                                  "tool": "record_check", "outcome": "confirmed"}]
+    assert done["proposals"] == [
+        {"id": out["proposals"][0]["id"], "tool": "record_check",
+         # The arguments the card showed the person, so the line says what was
+         # proposed rather than only that something was. The AI screen reads
+         # the same shape out of the plant's own `ai_turns` table.
+         "args": {"material": "COLA-500", "characteristic": "fill_weight", "value": 495.0},
+         "outcome": "confirmed"}]
     assert "error" not in offered
 
 

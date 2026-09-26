@@ -63,6 +63,24 @@ def short_read() -> Iterator[Session]:
         yield session
 
 
+@contextmanager
+def short_write() -> Iterator[Session]:
+    """A write that opens, commits and closes inside the call that makes it.
+
+    `short_read`'s sibling, and there for the same endpoints: the ones that
+    spend seconds on a model and must hold no session while they do. An
+    endpoint that has finished waiting and now has one small thing to record -
+    a turn of a conversation, say - opens this, writes it, and is out of the
+    plant's single write lock in a millisecond, rather than having held it
+    open since before the model was called.
+
+    Reached through the module, like `short_read`, so the suite can point it
+    at the session a test is working in.
+    """
+    with session_scope() as session:
+        yield session
+
+
 def get_read_db() -> Iterator[Session]:
     """A unit of work for an endpoint that only reads.
 

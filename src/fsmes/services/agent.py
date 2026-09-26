@@ -495,6 +495,22 @@ class Session:
     turn_proposals: list[dict] = field(default_factory=list)
     turn_usage: dict = field(default_factory=dict)
     turn_error: str | None = None
+    turn_asked: str = ""
+    #: Where this turn's own tool calls start in `transcript`. The transcript
+    #: is cleared when the person says something and grows across a confirm
+    #: and the rounds that follow it, so a turn's calls are the tail from
+    #: here - without this the trace would show a confirm repeating every read
+    #: of the turn before it.
+    turn_from: int = 0
+
+    #: The turn that just finished, in full: the log line plus the words on
+    #: both sides and the tool calls the panel showed. The caller writes it to
+    #: this plant's own `ai_turns` table, which is what the AI screen reads -
+    #: built here rather than there because this is the only place that knows
+    #: what one turn was, and left for the caller to store because a service
+    #: holding a database session across a model call holds SQLite's single
+    #: write lock across it.
+    last_turn: dict | None = None
 
     #: The budget this conversation opened with - `[admin] agent_max_rounds`,
     #: `agent_session_ttl_seconds` and `agent_result_limit` as this plant had
@@ -711,11 +727,11 @@ def _prime(sess: Session, name: str, role: str) -> str:
 def _reply(sess: Session, kind: str, say: str, **extra: Any) -> dict:
     out = {"kind": kind, "session": sess.id, "say": say,
            "transcript": list(sess.transcript), "done": list(sess.done), **extra}
-    _record_turn(sess, kind, extra)
+    _record_turn(sess, kind, say, extra)
     return out
 
 
-def _record_turn(sess: Session, kind: str, extra: dict) -> None:
+def _record_turn(sess: Session, kind: str, say: str, extra: dict) -> None:
     """One line per turn, the way `log_usage` writes one line per model call.
 
     This is the record that would have answered the only question worth asking
@@ -731,17 +747,30 @@ def _record_turn(sess: Session, kind: str, extra: dict) -> None:
     if sess.turn_error:
         row["error"] = sess.turn_error
     log_turn(row)
+    # The same turn, with the words on both sides and the tool calls the panel
+    # showed, for the caller to write into this plant's own trace. The system
+    # prompt is not in it and cannot be: nothing here reads `SYSTEM`.
+    sess.last_turn = {
+        **row, "brain": "floor",
+        "asked": sess.turn_asked, "said": say,
+        "tools": [dict(entry) for entry in sess.transcript[sess.turn_from:]],
+        "guide_steps": (len(extra["guide"].get("steps") or [])
+                        if kind == "guide" and extra.get("guide") else None),
+    }
 
 
 def _zero_usage() -> dict:
     return {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0}
 
 
-def _begin_turn(sess: Session) -> None:
+def _begin_turn(sess: Session, asked: str = "") -> None:
     sess.turn_tools = []
     sess.turn_proposals = []
     sess.turn_usage = _zero_usage()
     sess.turn_error = None
+    sess.turn_asked = asked
+    sess.turn_from = len(sess.transcript)
+    sess.last_turn = None
 
 
 # ----------------------------------------------- a history the API will take
@@ -821,7 +850,7 @@ def _repair_history(sess: Session) -> int:
 
 def message(sess: Session, text: str, *, name: str = "", role: str = "") -> dict:
     """The person said something. Drive the model until it replies or pauses."""
-    _begin_turn(sess)
+    _begin_turn(sess, asked=text)
     if sess.pending:
         # A new message while proposals wait means the answer is no - and the
         # decline has to reach the history *before* the person's words do.
@@ -831,6 +860,7 @@ def message(sess: Session, text: str, *, name: str = "", role: str = "") -> dict
             _resolve(sess, pid, None, declined="the person moved on without confirming")
         _commit_results(sess)
     sess.transcript = []
+    sess.turn_from = 0
     sess.done = []
     sess.history.append({"role": "user", "content": _prime(sess, name, role) + text})
     return _drive(sess)
@@ -939,7 +969,8 @@ def _drive(sess: Session) -> dict:
                                                               sess.capabilities))
                 proposals.append(prop)
                 sess.pending[prop.id] = prop
-                sess.turn_proposals.append({"id": prop.id, "tool": prop.tool, "outcome": "open"})
+                sess.turn_proposals.append({"id": prop.id, "tool": prop.tool,
+                                            "args": dict(prop.args), "outcome": "open"})
             else:
                 payload = execute(block.name, args, plant=sess.plant)
                 sess.results[block.id] = _tool_result(block.id, payload, sess.result_limit)
@@ -1010,7 +1041,7 @@ def _resolve(sess: Session, proposal_id: str, payload: Any, *, declined: str | N
     sess.transcript.append({"tool": prop.tool, "args": prop.args, "ok": ok, "summary": _summary(payload),
                             "write": True, "declined": declined is not None})
     sess.turn_proposals.append(
-        {"id": prop.id, "tool": prop.tool,
+        {"id": prop.id, "tool": prop.tool, "args": dict(prop.args),
          "outcome": "declined" if declined is not None else ("confirmed" if ok else "failed")})
     return prop
 

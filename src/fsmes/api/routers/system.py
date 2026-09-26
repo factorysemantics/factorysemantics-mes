@@ -238,6 +238,72 @@ def local_ai() -> dict:
     return ai_status.status(timedelta(hours=hours))
 
 
+def _since(days: float | None):
+    """A `since` in days, as the instant it means, or None for everything."""
+    from datetime import timedelta
+
+    from fsmes.db import utcnow
+
+    return None if days is None or days <= 0 else utcnow() - timedelta(days=float(days))
+
+
+@router.get("/ai/conversations", dependencies=[require("audit.read")])
+def ai_conversations(db: ReadDbDep, person: str | None = None,
+                     since_days: float | None = None, limit: int = 50) -> dict:
+    """Every conversation this plant's AI has had: one row each.
+
+    Who asked, when it started and when it ended, how many turns it took, what
+    it proposed and what became of each proposal, how many turns failed, and
+    what it cost. The plant's own record, in the plant's own database - not the
+    browser's `sessionStorage`, which dies with the tab, and not the operator's
+    home directory, which a person on the floor cannot read.
+
+    Behind `audit.read`, which is the same gate the audit trail is behind and
+    for the same reason: this is the record of what was done in this plant and
+    by whom, and the person entitled to read one is entitled to read the other.
+    A capability of its own would be a second answer to a question decision
+    0035 has already answered.
+
+    `total` is every conversation the trace holds, `showing` is how many of
+    them are in this answer, and both are said because a list that does not
+    say its total is how the assistant came to report half of one as the whole.
+    """
+    from fsmes.services import ai_trace
+
+    return {**ai_trace.conversations(db, person=person, since=_since(since_days),
+                                     limit=limit),
+            "kept_days": _trace_days(db),
+            "spend_usd": ai_trace.spend(db, since=_since(since_days))}
+
+
+@router.get("/ai/turns", dependencies=[require("audit.read")])
+def ai_turns(db: ReadDbDep, session: str | None = None, person: str | None = None,
+             since_days: float | None = None, limit: int = 100) -> dict:
+    """The turns themselves - one conversation in the order it happened, or
+    the plant's most recent turns when no conversation is named.
+
+    Each turn carries what the person typed, what the assistant said back,
+    every tool it called with the one-line summary the panel showed, every
+    proposal with what became of it and the audit row a confirmed one wrote,
+    the walkthrough it put on the screen, the class of any error, and the cost.
+
+    What is **not** here, by design: the system prompt, the key, and the raw
+    payload of any tool call. The trace records what the person was shown, not
+    a second copy of the plant's data outside the tables that own it.
+    """
+    from fsmes.services import ai_trace
+
+    return {**ai_trace.turns(db, conversation=session, person=person,
+                             since=_since(since_days), limit=limit),
+            "kept_days": _trace_days(db)}
+
+
+def _trace_days(db) -> float:
+    from fsmes.services import plant_settings
+
+    return float(plant_settings.setting(db, "admin", "ai_trace_days"))
+
+
 @router.get("/audit", dependencies=[require("audit.read")])
 def audit_trail(
     db: DbDep,
