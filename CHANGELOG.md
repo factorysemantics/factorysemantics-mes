@@ -671,6 +671,32 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Fixed
 
+- **A walkthrough looked for its control once, 400 ms after the page loaded,
+  and called a miss a matter of the person's role.** The Configuration page
+  reads `/auth/me`, then its own sections, then renders every section before
+  the one input a walk was sent to exists. On loopback that chain finishes in
+  single-digit milliseconds and the single look always won; over a link with
+  real latency in it — a laptop, a phone, a VPN — it does not, and the walk gave
+  up while the page was still drawing the box. A missing control is now waited
+  for on the budget the plant already sets for exactly this
+  (`[screens] assistant_fill_attempts` x `assistant_fill_wait_ms`, three
+  seconds by default), watching the document so the ring is drawn the moment
+  the control appears rather than up to one poll later. The 400 ms is still
+  there as a head start; it is no longer the only chance a step gets.
+
+- **"That control is not on this screen for your role" named a cause the code
+  could not know.** One sentence covered "the page has not drawn it yet", "a
+  panel is hidden for this role" and "the thing it pointed at has been closed",
+  and to somebody who had just asked to change a setting it read as a refusal
+  of permission — reported by an administrator holding every capability the
+  step needed. The card now says what actually happened and how long it looked,
+  and names the role only where the step says which capability its control is
+  drawn for and the person does not hold it; a settings walk now carries that
+  capability on each of its steps, because the input and its Save are drawn
+  only for somebody who may define the section. The same walk's last step no
+  longer says only that saving needs a capability: built for a named person, it
+  says whether they hold it — and if they do not, what would change that.
+
 - **A pallet certificate computed capability only for materials numbered
   `UT-*`.** `services/coa.py` decided which materials were counted in pieces
   by testing the shape of their code, which is one plant's numbering
