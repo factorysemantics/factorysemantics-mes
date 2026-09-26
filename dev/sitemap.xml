@@ -2,542 +2,542 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://docs.factorysemantics.com/dev/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/ARCHITECTURE/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/LANDSCAPE/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/agents/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/agents/connect-mcp-client/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/agents/evals/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/agents/write-discipline/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/ai/BUDGET/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/ai/JEV-CALIBRATION/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/ai/JEV/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/ai/JUDGMENT-IN-THE-BUILD-LOOP/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/ai/OBSERVABILITY/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/ai/calibration/2026-09-17/full/calibration/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/ai/calibration/2026-09-17/stopped-not-why/calibration/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0001-apache-2-with-dco/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0002-kernel-and-modules/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0003-one-mcp-server/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0004-never-invent-production/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0005-plain-html-no-build-step/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0006-sqlite-laptop-postgresql-plant/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0007-fresh-public-history/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0008-erp-connectors-are-modules/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0009-organisation-not-personal-account/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0010-github-discussions-only/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0011-mkdocs-material-generated-reference/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0012-contributor-covenant-3/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0013-governance-is-one-page/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0014-first-public-version-is-0-1-0/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0015-mcp-registry-name/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0016-no-trademark-registration/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0017-one-public-demo-gated-and-bounded/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0018-public-on-2026-09-08-and-the-pre-tag-check/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0019-count-everything-the-machine-counted/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0020-what-supported-means-for-an-erp-connector/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0021-one-database-per-plant/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0022-what-a-plant-pack-may-contain/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0023-the-fleet-console-observes/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0024-a-nonconformance-has-a-life/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0025-performance-is-measured-not-capped/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0026-counts-that-outrun-the-run-time/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0027-an-spc-signal-raises-a-hold/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0028-which-shift-a-minute-belongs-to/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0029-an-order-does-not-finish-itself/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0030-a-lost-connection-is-unknown-time/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0031-a-judgment-is-a-proposal/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0032-a-hosted-judgment-and-the-shadow/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0033-availability-is-a-share-of-what-was-watched/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0034-a-count-is-owed-until-it-is-booked/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/decisions/TEMPLATE/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/STYLE/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/config-assistance/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/config-audit-2026-09-21/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/m8-packs-and-fleet/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/admin-edit-roles/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/analysis-cards-scaling/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/assistant-submits-an-inspection/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/book-output-explicit-order/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/clickable-kpi-tiles/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/clickable-machine-breadcrumbs/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/floor-machines-paginate-and-filter/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/measurements-card-filtering/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/measurements-characteristic-filter/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/nonconformance-lifecycle/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/opc-integration-suite/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/order-card-search-finds-a-material/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/order-lifecycle-actions/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/orders-creatable-materials/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/orders-supervisor-filters/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/persistent-header-menu/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/review-orders/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/review-station/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/scrap-reason-codes/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/shop-floor-actions-strip/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/sixty-machine-plant/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/spc-capability-withheld/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/specifications-card-filtering/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/specifications-server-paged/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/station-quality-card/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/station-spc/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/station-view/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/supervisor-drill-down/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/design/backlog/ui-style-drift-bc58fb4f8e4d/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/develop/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/develop/erp-connectors/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/develop/experiments/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/develop/your-first-module/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/history/private-era/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/onboarding/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/onboarding/GUIDE-ENGINEERING/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/onboarding/GUIDE-IT/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/administration-numbers/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/backup/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/compatibility/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/confirmation-files/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/coverage/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/deploy/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/engineering-numbers/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/erp-settings/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/erpnext/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/first-plant/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/first-week/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/fleet/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/inbound/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/modules/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/opc-disconnections/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/opc-readonly/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/packs/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/quality-numbers/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/quality-severities/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/registry/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/security/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/shadow-mode/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/shadow-scorecard/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/tls/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/uns/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/upgrade/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/operate/who-names-the-reasons/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/plant/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/plant/first-line/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/plant/never-invent-production/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/plant/quality-signals/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/plant/reading-oee/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/plant/shifts/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/reference/api/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/reference/cli/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/reference/erp-confirmations/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/reference/settings/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/reference/tools/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/releases/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/releases/0.2.0/</loc>
-         <lastmod>2026-09-25</lastmod>
+         <lastmod>2026-09-26</lastmod>
     </url>
 </urlset>
