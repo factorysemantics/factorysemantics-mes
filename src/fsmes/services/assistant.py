@@ -456,10 +456,11 @@ GUIDE_BY_ID = {g["id"]: g for g in GUIDES}
 # --------------------------------------------------------------------------
 
 
-def _setting_context(args: dict) -> dict:
+def _setting_context(args: dict, capabilities: set[str] | None) -> dict:
     """What a settings proposal's steps know beyond their own arguments: the
-    section the key is listed under, and what kind of value it is. Looked up
-    per call from the registry, which is what makes one authored walk right for
+    section the key is listed under, what kind of value it is, and whether the
+    person reading the card holds the capability that gates Save. Looked up per
+    call from the registry, which is what makes one authored walk right for
     every domain's settings instead of one walk per domain."""
     from fsmes.services import plant_settings
 
@@ -477,7 +478,35 @@ def _setting_context(args: dict) -> dict:
             # workspace's: they usually match and `[oee] coverage_floor` on an
             # Engineering page is where they do not.
             "pack_key": f"[{table}] {args.get('key')}",
-            "capability": section.define or "anybody who can see the screen"}
+            # The bare capability name, for the step to carry, so the screen
+            # can tell "not drawn yet" from "not yours to see" rather than
+            # guessing. Empty when the section gates nothing, which the screen
+            # reads as "unknown" and says nothing about.
+            "capability_key": section.define or "",
+            "saving": _saving_line(section.define, capabilities)}
+
+
+def _saving_line(needs: str | None, capabilities: set[str] | None) -> str:
+    """What the last step of a settings walk says about who may press Save.
+
+    It used to say only that saving needs a capability. Read by somebody who
+    held it, at the end of a walk that had just failed to find the box, that
+    sentence was half of "it said I didn't have permission" (Scott, 2026-09-25,
+    signed in as ADMIN, holding `process.define`). A card that knows the
+    person's capabilities - the same set the offer was filtered on - can say
+    which side of it they are on, so it does.
+    """
+    if not needs:
+        return ("Nothing gates saving this one: anybody who can see the screen "
+                "can press Save.")
+    if capabilities is None:
+        # Nobody asked on anyone's behalf. Say what is needed and claim nothing
+        # about a person who is not in the question.
+        return f"Saving needs {needs}."
+    if needs in capabilities:
+        return f"Saving needs {needs} - you hold it, so pressing Save is yours to do."
+    return (f"Saving needs {needs}, which you do not hold. Somebody who does can "
+            "press Save, or a plant administrator can grant it.")
 
 
 SURFACES: dict[str, dict] = {
@@ -788,8 +817,14 @@ SURFACES: dict[str, dict] = {
         # true example when the next one arrives.
         "example": "Set the Cpk bar for capable to 1.33",
         "steps": [
+            # Both steps carry the capability that gates the section, because
+            # both controls are only drawn for somebody who holds it: the page
+            # offers a reader the value and no input. That makes "the anchor is
+            # not here" answerable on the screen - not yet drawn, or not yours
+            # to see - instead of guessed at.
             {"page": "/dashboard/config/{domain}?setting={key}",
              "anchor": "setting-in-focus",
+             "needs": "{capability_key}",
              "title": "The box this setting is changed in",
              "fill": {"value": "{value}"},
              "body": (
@@ -799,16 +834,18 @@ SURFACES: dict[str, dict] = {
              )},
             {"page": "/dashboard/config/{domain}?setting={key}",
              "anchor": "setting-save-in-focus",
+             "needs": "{capability_key}",
              "title": "Press Save",
              "body": (
                  "You press it, not me - it is saved under your own name. It is in "
                  "force on the next reading, everywhere, with no restart, and the "
                  "audit trail keeps what it was so typing the old value back is the "
-                 "undo. Saving needs {capability}."
+                 "undo. {saving}"
              )},
         ],
         "evidence": {"page": "/dashboard/config/{domain}?setting={key}",
                      "anchor": "setting-in-focus",
+                     "needs": "{capability_key}",
                      "title": "What your plant is set to now",
                      "body": (
                          "The box holds the value in force, and the line beside it "
@@ -850,15 +887,22 @@ class _Blank(dict):
         return ""
 
 
-def surface_for(tool: str, args: dict) -> dict | None:
-    """The surface for a proposal, with the proposed arguments filled in."""
+def surface_for(tool: str, args: dict,
+                capabilities: set[str] | None = None) -> dict | None:
+    """The surface for a proposal, with the proposed arguments filled in.
+
+    `capabilities` is the person the proposal is for, when there is one, so a
+    step can say whether they hold what the control behind it needs rather than
+    only that something is needed. `None` means nobody is named, and then the
+    words claim nothing about anybody.
+    """
     surface = SURFACES.get(tool)
     if surface is None:
         return None
     values = _Blank({k: v for k, v in args.items() if v is not None})
     context = surface.get("context")
     if context is not None:
-        values.update({k: v for k, v in context(args).items() if v is not None})
+        values.update({k: v for k, v in context(args, capabilities).items() if v is not None})
     steps = [_render(step, values) for step in surface["steps"]]
     return {"title": surface["title"], "steps": steps,
             "evidence": _render(surface["evidence"], values)}
@@ -867,12 +911,13 @@ def surface_for(tool: str, args: dict) -> dict | None:
 def _render(step: dict, values: dict) -> dict:
     """One authored step with this proposal's values in it.
 
-    `page`, `anchor` and `tab` are formatted along with the words, so a tool
-    that serves every domain can point at the one it was asked about. An
-    authored step that names no placeholder is unchanged by this.
+    `page`, `anchor`, `tab` and `needs` are formatted along with the words, so a
+    tool that serves every domain can point at the one it was asked about, and
+    name the capability that domain's section is gated on. An authored step that
+    names no placeholder is unchanged by this.
     """
     rendered = {k: v for k, v in step.items() if k != "fill"}
-    for field in ("title", "body", "page", "anchor", "tab"):
+    for field in ("title", "body", "page", "anchor", "tab", "needs"):
         if field in step:
             rendered[field] = step[field].format_map(values)
     if "fill" in step:

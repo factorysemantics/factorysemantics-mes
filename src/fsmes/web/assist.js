@@ -460,6 +460,7 @@
   }
 
   function endWalk(finished) {
+    stopWaiting();
     sessionStorage.removeItem(KEY);
     if (ring) { ring.remove(); ring = null; }
     if (coach) { coach.remove(); coach = null; }
@@ -554,8 +555,98 @@
     return false;
   }
 
+  /* How long a walk keeps looking for a control that has not been rendered
+     yet, and who is allowed to finish the looking.
+
+     A step used to be given one look, and on the resume path that look came a
+     fixed 400 ms after the page load. The Configuration page reads /auth/me
+     and then its own sections before it draws a single input, so a walk that
+     lands on it arrives in the middle of two round trips and a render - on
+     loopback that is a few milliseconds and the single look always won, and
+     over a VPN from a laptop it is not, and the walk announced the control
+     was missing while the page was still drawing it (Scott, 2026-09-25,
+     holding every capability the step needed).
+
+     So a missing anchor is "not yet" until the plant's own budget for waiting
+     on a control is spent: `assistant_fill_attempts` x
+     `assistant_fill_wait_ms`, the same budget applyFill already waits on for
+     a select whose options have not arrived. Watching the document is what
+     makes it the moment the control appears rather than up to one poll later;
+     the timer is only the ceiling.
+
+     Nothing is painted while waiting. The page is visibly still loading -
+     that is the whole situation - and a card saying "looking for it" that is
+     replaced 80 ms later is noise in the common case. */
+  let waiting = null;    // the wait in flight: { observer, timer }
+  let lookId = 0;        // which showStep() owns it; a later one cancels it
+
+  function stopWaiting() {
+    if (!waiting) return;
+    waiting.observer.disconnect();
+    clearTimeout(waiting.timer);
+    waiting = null;
+  }
+
+  function waitBudgetMs() {
+    return Math.max(0, (ui.assistant_fill_attempts || 0) * (ui.assistant_fill_wait_ms || 0));
+  }
+
+  /* Look for this step's control until it appears or the budget is spent.
+     `mine` is the showStep() that asked; if another one has started since,
+     this wait has been overtaken and says nothing. */
+  function waitForTarget(step, mine, found, gaveUp) {
+    stopWaiting();
+    const budget = waitBudgetMs();
+    if (!budget) { gaveUp(0); return; }
+    const settle = (target) => {
+      if (mine !== lookId) return;
+      stopWaiting();
+      if (target) found(target); else gaveUp(budget);
+    };
+    const observer = new MutationObserver(() => {
+      const target = stepTarget(step);
+      if (target) settle(target);
+    });
+    const timer = setTimeout(() => settle(stepTarget(step)), budget);
+    waiting = { observer, timer };
+    observer.observe(document.body, {
+      childList: true, subtree: true, attributes: true, attributeFilter: ["data-assist"],
+    });
+  }
+
+  /* What to say when the control really is not there, after the waiting.
+
+     The sentence this replaces asserted a reason - "not on this screen for
+     your role" - that this code cannot know. It fired identically for "the
+     page had not drawn it yet", "a panel is hidden for this role" and "the
+     thing it pointed at has been closed", and the one person it was shown to
+     read it as a refusal of permission he had not been refused. So: say what
+     happened, say how long it waited, and name the role only where the step
+     says what it needs and the person does not hold it - which is knowable,
+     and is the one case where it is true. */
+  function absentNote(step, waited) {
+    if (step.nth !== undefined && step.nth !== null) {
+      return "That part of the review is no longer on the screen.";
+    }
+    // How long it looked, said out loud - unless it could not look at all,
+    // which is what a panel whose settings never arrived is left with, and
+    // "waited 0 s" would be a strange way to say so.
+    const seconds = (waited / 1000).toFixed(waited % 1000 ? 1 : 0);
+    const could = waited
+      ? `I could not find that control on this screen (waited ${seconds} s).`
+      : "I could not find that control on this screen.";
+    if (step.needs && !(me && (me.capabilities || []).includes(step.needs))) {
+      return `${could} It is behind ${step.needs}, which you do not hold, so this `
+        + "screen does not offer it to you. A plant administrator can change it, or grant it.";
+    }
+    return `${could} The page may not have finished loading; if the control is `
+      + "gated, your role may not see it.";
+  }
+
   function showStep() {
     if (!walk) return;
+    stopWaiting();
+    lookId += 1;
     const step = walk.guide.steps[walk.index];
 
     // A guide may cross screens. Remember where we are and let the next page
@@ -583,15 +674,19 @@
     }
     const target = stepTarget(step);
     if (!target) {
-      // The anchor is gone - for an authored step almost always because a
-      // panel is hidden for this person's role; for a generated one because
-      // the thing it was built from has been closed or signed. Say which
-      // rather than pointing at nothing.
-      paint(null, step, step.nth === undefined
-        ? "That control is not on this screen for your role."
-        : "That part of the review is no longer on the screen.");
+      // Not there *yet* is the common case and it is not a refusal: wait for
+      // it, and only say it is absent once the budget above is spent.
+      waitForTarget(step, lookId,
+                    (late) => standOn(late, step),
+                    (waited) => paint(null, step, absentNote(step, waited)));
       return;
     }
+    standOn(target, step);
+  }
+
+  /* Ring this control, fill it if the step carries a value, and put the card
+     beside it. */
+  function standOn(target, step) {
     // A control may sit in a popover that a button opens: press it first.
     if (step.open && target.offsetParent === null) {
       const opener = document.querySelector(`[data-assist="${step.open}"]`);
@@ -742,7 +837,12 @@
       document.body.appendChild(s);
     }
 
-    // Resume a walk that crossed a screen boundary.
+    /* Resume a walk that crossed a screen boundary.
+
+       The 400 ms below is a head start, not the chance: it lets a page that
+       renders on its own load settle before a ring is drawn on it. A page that
+       takes longer is waited for by showStep() itself, on the plant's budget.
+       Until showStep() learned to wait, this was the only look a step got. */
     const saved = sessionStorage.getItem(KEY);
     if (saved) {
       try {

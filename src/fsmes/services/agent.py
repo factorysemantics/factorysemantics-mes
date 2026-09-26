@@ -551,7 +551,12 @@ def _drive(sess: Session) -> dict:
                     continue
                 from fsmes.services import assistant
                 prop = Proposal(id=uuid.uuid4().hex[:12], tool_use_id=block.id, tool=block.name, args=args,
-                                preview=preview, surface=assistant.surface_for(block.name, args))
+                                preview=preview,
+                                # The person's own capabilities, so the walk's
+                                # words can say which side of the gate they are
+                                # on rather than only that there is a gate.
+                                surface=assistant.surface_for(block.name, args,
+                                                              sess.capabilities))
                 proposals.append(prop)
                 sess.pending[prop.id] = prop
             else:

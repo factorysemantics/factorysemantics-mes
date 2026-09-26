@@ -495,6 +495,49 @@ def test_a_settings_walk_points_at_the_workspace_it_was_asked_about():
     assert blank["steps"][0]["page"] == "/dashboard/config/quality?setting=not_a_key"
 
 
+def test_a_settings_walk_says_whether_this_person_may_press_save():
+    """Scott, 2026-09-25, as ADMIN: the walk's last step said "Saving needs
+    process.define." and the step before it had just failed to find the box, and
+    together he read the two as a refusal of permission he had not been refused.
+    A card that is built for a named person knows their capabilities - the same
+    set the offer was filtered on - so it says which side of the gate they are
+    on instead of leaving them to wonder."""
+    args = {"domain": "engineering", "key": "default_job_minutes", "value": "55"}
+
+    held = assistant.surface_for("write_plant_setting", args,
+                                 {"plant.read", "process.define"})
+    assert "Saving needs process.define - you hold it" in held["steps"][1]["body"]
+    assert "pressing Save is yours to do" in held["steps"][1]["body"]
+
+    without = assistant.surface_for("write_plant_setting", args, {"plant.read"})
+    assert "which you do not hold" in without["steps"][1]["body"]
+    # And it says what would change that, rather than stopping at the refusal.
+    assert "a plant administrator can grant it" in without["steps"][1]["body"]
+
+    # Nobody named: the words claim nothing about anybody, which is the shape
+    # every caller before this one relied on.
+    anonymous = assistant.surface_for("write_plant_setting", args)
+    assert anonymous["steps"][1]["body"].endswith("Saving needs process.define.")
+
+
+def test_a_settings_step_carries_the_capability_its_control_is_drawn_for():
+    """Both controls a settings walk points at are only drawn for somebody
+    holding the section's `define` capability - the page offers a reader the
+    value and no input. The step says which capability that is, so a screen that
+    cannot find the control can tell "not drawn yet" from "not yours to see"
+    rather than asserting one of them."""
+    s = assistant.surface_for("write_plant_setting",
+                              {"domain": "engineering", "key": "default_job_minutes",
+                               "value": "55"})
+    assert [step["needs"] for step in s["steps"]] == ["process.define"] * 2
+    assert s["evidence"]["needs"] == "process.define"
+    # A key this version does not have names no capability rather than a wrong
+    # one, and an empty string is what the screen reads as "unknown".
+    blank = assistant.surface_for("write_plant_setting",
+                                  {"domain": "engineering", "key": "not_a_key", "value": "1"})
+    assert blank["steps"][0]["needs"] == ""
+
+
 def test_a_setting_change_is_a_card_a_person_clicks_not_a_draft_to_sign(scripted):
     """The same card `propose_adjustment` gets, for the same reason: the value is
     in force the moment it is written, so it waits for a person rather than for
