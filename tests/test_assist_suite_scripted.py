@@ -23,6 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import pytest
 
 from fsmes.lab import assist_eval as assist_runs
+from fsmes.lab import assist_fixtures
 from fsmes.services import agent, assist_eval, assistant
 from fsmes.services import capabilities as caps
 
@@ -276,7 +277,11 @@ def test_a_conversation_whose_tool_calls_were_all_answered_is_accepted():
 class _Double(BaseHTTPRequestHandler):
     """A plant, as far as a live run can tell. Every reply is canned, so the
     HTTP path, the sign-in, the budget arithmetic, the declining of proposals
-    and the result file are all proven with no key and no money."""
+    and the result file are all proven with no key and no money.
+
+    It answers nothing about master data or orders, so the runs below pass
+    `arranging=False`: arranging a plant is proven further down, against a real
+    one on a real socket."""
 
     state: typing.ClassVar[dict] = {}
 
@@ -344,7 +349,7 @@ def test_a_live_run_scores_a_plant_over_its_own_http_api(doubled_plant):
     }
     plant = assist_runs.Plant(url)
     plant.sign_in("ADMIN", "a-password")
-    outcomes, run = assist_runs.run_live((case,), plant)
+    outcomes, run = assist_runs.run_live((case,), plant, arranging=False)
     plant.close()
 
     assert state["signed_in_as"] == "ADMIN"
@@ -359,27 +364,26 @@ def test_a_live_run_scores_a_plant_over_its_own_http_api(doubled_plant):
 def test_a_live_run_declines_every_proposal_it_opens(doubled_plant):
     """Scoring a plant must not change one."""
     url, state = doubled_plant
-    case = BY_ID["operator-books-good-and-scrap"]
+    case = BY_ID["operator-raises-everything-that-is-due"]
     state["replies"][case.request] = {
         "kind": "proposals", "session": "s1", "say": "",
-        "proposals": [{"id": "p9", "tool": "book_output",
-                       "args": {"equipment": "MIX01", "good": 600, "scrap": 12,
-                                "order": "WO-EVAL-1"},
-                       "surface": {"steps": [{"anchor": "report-good"}]}}],
+        "proposals": [{"id": "p9", "tool": "raise_due_maintenance", "args": {}}],
     }
     plant = assist_runs.Plant(url)
     plant.sign_in("SCOTT", "a-password")
-    assist_runs.run_live((case,), plant)
+    assist_runs.run_live((case,), plant, arranging=False)
     plant.close()
     assert state["declined"] == ["p9"]
 
 
 def test_a_live_run_stops_at_the_budget_it_was_given_and_says_what_it_did_not_run(doubled_plant):
     url, _state = doubled_plant
-    cases = tuple(c for c in SUITE if c.role == "operator")[:6]
+    # Cases that need nothing on the plant, so this is about the budget and
+    # nothing else: a canned double has no master data to be asked about.
+    cases = tuple(c for c in SUITE if not c.requires and not c.over_proposal)[:6]
     plant = assist_runs.Plant(url)
     plant.sign_in("SCOTT", "a-password")
-    outcomes, run = assist_runs.run_live(cases, plant, max_usd=1.00)
+    outcomes, run = assist_runs.run_live(cases, plant, max_usd=1.00, arranging=False)
     plant.close()
     # 40 cents a turn: the third takes it to 1.20, and the fourth never starts.
     assert len(outcomes) == 3
@@ -398,8 +402,25 @@ def test_a_live_run_on_a_plant_with_no_brain_says_so_rather_than_scoring_zero(do
     plant = Off(url)
     plant.sign_in("ADMIN", "a-password")
     with pytest.raises(assist_runs.LiveRefused, match="ANTHROPIC_API_KEY"):
-        assist_runs.run_live(SUITE[:1], plant)
+        assist_runs.run_live(SUITE[:1], plant, arranging=False)
     plant.close()
+
+
+def test_a_plant_that_cannot_be_read_reports_cases_not_arranged_rather_than_failed(
+        doubled_plant):
+    """The canned double answers nothing about master data. A run against it must
+    not conclude that the plant has no MIX01 and score the model down for saying
+    so - it must say it could not find out."""
+    url, _state = doubled_plant
+    case = BY_ID["operator-books-good-and-scrap"]
+    plant = assist_runs.Plant(url)
+    plant.sign_in("SCOTT", "a-password")
+    outcomes, run = assist_runs.run_live((case,), plant, arranging=False)
+    plant.close()
+    assert not outcomes[0].arranged
+    assert not outcomes[0].counted
+    assert any("could not be read" in m for m in outcomes[0].missing)
+    assert run["usd"] == 0.0, "an unaskable case must not be paid for"
 
 
 def test_a_live_result_file_says_the_model_the_plant_and_what_it_cost(tmp_path, doubled_plant):
@@ -413,7 +434,7 @@ def test_a_live_result_file_says_the_model_the_plant_and_what_it_cost(tmp_path, 
     }
     plant = assist_runs.Plant(url)
     plant.sign_in("ADMIN", "a-password")
-    outcomes, run = assist_runs.run_live((case,), plant)
+    outcomes, run = assist_runs.run_live((case,), plant, arranging=False)
     plant.close()
     page = assist_eval.report(outcomes, mode="live", model=run["model"], plant="doubled",
                               plant_commit="abc1234", run=run)
@@ -422,3 +443,289 @@ def test_a_live_result_file_says_the_model_the_plant_and_what_it_cost(tmp_path, 
     assert "test-model" in text and "doubled" in text and "abc1234" in text
     assert "$0.4000" in text and "input 100" in text
     assert "Assistant faithfulness" in text
+
+
+# ------------------------------------------------- the fixtures a case needs
+
+def test_every_requires_line_names_a_kind_the_fixtures_know():
+    """A typo in a `requires` line would otherwise be a case that quietly never
+    runs again - the worst failure a ratchet can have."""
+    assert not assist_fixtures.unknown_kinds(SUITE)
+
+
+def test_the_suite_says_what_it_needs_on_the_plant():
+    """Not every case needs anything - "what is running right now" needs a plant
+    and nothing on it. Most do, and a suite where none did would mean the
+    mechanism is wired up and unused."""
+    with_needs = [case for case in SUITE if case.requires]
+    assert len(with_needs) >= 30, f"only {len(with_needs)} case(s) say what they need"
+
+
+def test_a_case_that_drafts_a_code_and_a_case_that_approves_one_never_name_the_same_code():
+    """Drafting `changeover` needs the plant *not* to have one; approving a draft
+    needs it to have one. A run cannot arrange both of the same code, so the
+    drafts a run puts up carry the `EVAL-`/`eval_` prefix and the drafting cases
+    keep the word a person would type."""
+    drafts = {case.args.get("code") for case in SUITE
+              if case.tool in ("draft_downtime_reason", "draft_nc_severity",
+                               "draft_instruction", "draft_trigger")}
+    arranged = {assist_fixtures.split(r)[1] for r in assist_fixtures.ARRANGES}
+    assert not drafts & arranged, f"a run arranges a code a case drafts: {drafts & arranged}"
+
+
+def test_the_drafts_a_run_puts_up_say_they_are_ours():
+    """A person looking at their plant's vocabulary should not have to guess
+    which rows a faithfulness run left behind."""
+    ours = [assist_fixtures.INSTRUCTION, assist_fixtures.TRIGGER,
+            assist_fixtures.REASON, assist_fixtures.SEVERITY, assist_fixtures.ORDER]
+    for code in ours:
+        assert "EVAL" in code.upper(), code
+
+
+def test_the_scripted_run_arranges_every_fixture_the_suite_asks_for(scored):
+    """The whole point, measured: on the plant this suite is written about,
+    nothing is left not arranged. A case that starts coming back not arranged
+    here is a fixture that stopped being made."""
+    unmade = {o.case.id: o.missing for o in scored if not o.arranged}
+    assert not unmade, unmade
+
+
+def test_a_case_whose_fixture_is_missing_is_counted_apart_from_pass_and_fail():
+    case = BY_ID["operator-books-good-and-scrap"]
+    outcome = assist_eval.score(case, assist_eval.Turn(kind="not_asked", from_model=True,
+                                                       say="not asked"),
+                                ("machine:MIX01",))
+    assert not outcome.arranged
+    assert not outcome.counted          # out of the required number
+    assert not outcome.passed           # and not a pass either
+    counts = assist_eval.tally((outcome,))
+    assert counts["required"] == 0 and counts["not_arranged"] == 1
+
+
+def test_the_report_says_which_cases_were_not_arranged_and_why():
+    case = BY_ID["operator-books-good-and-scrap"]
+    outcome = assist_eval.score(case, assist_eval.Turn(kind="not_asked", say="not asked"),
+                                ("machine:MIX01",))
+    page = assist_eval.report((outcome,), mode="live", run={
+        "why_not": {"machine:MIX01": assist_fixtures.why_not("machine:MIX01")}})
+    assert "## Not arranged" in page
+    assert "machine:MIX01" in page
+    assert "master data is the plant's own" in page
+
+
+# ------------------------------------------- the three loosened expectations
+
+def test_the_hold_rules_are_the_same_four_rules_however_a_sentence_writes_them():
+    """2026-09-26 live: "all four … are configured as hold rules", read out of
+    `spc_chart`, scored as a failure because the case demanded `plant_settings`
+    and the literal `1,2,3,4`."""
+    case = BY_ID["scott-asks-which-spc-rules-are-on-hold"]
+    turn = assist_eval.Turn(
+        kind="reply", from_model=True,
+        say="All four of this plant's SPC rules are configured as hold rules.",
+        reads=("spc_chart",))
+    assert assist_eval.score(case, turn).passed
+
+
+def test_the_hold_rules_answered_off_the_settings_page_still_pass():
+    case = BY_ID["scott-asks-which-spc-rules-are-on-hold"]
+    turn = assist_eval.Turn(kind="reply", from_model=True,
+                            say="hold_rules is 1,2,3,4 — all of them raise a hold.",
+                            reads=("plant_settings",))
+    assert assist_eval.score(case, turn).passed
+
+
+def test_the_hold_rules_answered_from_a_procedure_document_still_do_not_pass():
+    """Loosening the rendering is not loosening the rule: an answer that never
+    looked, and sends somebody to a document, is the failure this case is for."""
+    case = BY_ID["scott-asks-which-spc-rules-are-on-hold"]
+    turn = assist_eval.Turn(kind="reply", from_model=True,
+                            say="Please consult the quality procedure for the hold rules.")
+    outcome = assist_eval.score(case, turn)
+    assert not outcome.passed
+    assert any("read none of" in why for why in outcome.why)
+
+
+def test_taking_somebody_to_the_form_where_scrap_is_booked_answers_take_me_to_scrap():
+    case = BY_ID["scott-asks-to-be-taken-to-scrap"]
+    turn = assist_eval.Turn(kind="guide", guide_id="book-production", from_model=True,
+                            say="Here is where scrap is booked.")
+    assert assist_eval.score(case, turn).passed
+
+
+def test_a_walk_this_request_is_not_about_still_does_not_answer_it():
+    case = BY_ID["scott-asks-to-be-taken-to-scrap"]
+    turn = assist_eval.Turn(kind="guide", guide_id="find-instruction", from_model=True)
+    assert not assist_eval.score(case, turn).passed
+
+
+def test_the_calendar_case_asks_for_a_kind_the_api_takes():
+    from fsmes.domain import ExceptionKind
+
+    case = BY_ID["admin-adds-a-calendar-exception"]
+    assert case.args["kind"] in {k.value for k in ExceptionKind}
+
+
+# ------------------------- the live arrangement, over a socket, twice running
+
+class _OverASocket(BaseHTTPRequestHandler):
+    """A real plant on a real port.
+
+    The canned double above proves the money and the declining. This one proves
+    the arrangement, and a canned reply would prove nothing about it: the whole
+    claim is that a live run builds its fixture *through the product's own API*,
+    so what is behind this socket is the product's own API - the same in-process
+    app a scripted run uses, reached over TCP instead of in memory.
+
+    Every request is forwarded whole, headers included, because the headers are
+    half the point: the bearer token the AGENT account signs in with, and the
+    `X-On-Behalf-Of` that puts a person's name on every audit row.
+    """
+
+    app: typing.ClassVar = None
+    calls: typing.ClassVar[list] = []
+
+    def log_message(self, *args):
+        pass
+
+    def _forward(self, method: str) -> None:
+        length = int(self.headers.get("Content-Length") or 0)
+        body = self.rfile.read(length) if length else None
+        pass_on = {name: value for name, value in self.headers.items()
+                   if name.lower() in ("authorization", "content-type",
+                                       "x-on-behalf-of", "idempotency-key")}
+        self.calls.append((method, self.path.split("?")[0]))
+        reply = self.app.request(method, self.path, content=body, headers=pass_on)
+        payload = reply.content
+        self.send_response(reply.status_code)
+        self.send_header("Content-Type",
+                         reply.headers.get("content-type", "application/json"))
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    def do_GET(self):
+        self._forward("GET")
+
+    def do_POST(self):
+        self._forward("POST")
+
+    def do_PATCH(self):
+        self._forward("PATCH")
+
+
+@pytest.fixture()
+def plant_on_a_port():
+    """The seeded plant, served over TCP, with the tool layer dialling it."""
+    from fsmes import mcp_server
+
+    with assist_runs.scripted_plant() as plant:
+        _OverASocket.app = plant.client
+        _OverASocket.calls = []
+        server = ThreadingHTTPServer(("127.0.0.1", 0), _OverASocket)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        url = f"http://127.0.0.1:{server.server_address[1]}"
+        try:
+            yield url, _OverASocket.calls
+        finally:
+            server.shutdown()
+            server.server_close()
+            mcp_server._local.pop(assist_runs.LIVE_PLANT, None)
+            client = mcp_server._clients.pop(assist_runs.LIVE_PLANT, None)
+            if client is not None:
+                client.close()
+
+
+def test_a_live_run_puts_the_suites_fixtures_on_a_real_plant_over_its_own_http_api(
+        plant_on_a_port):
+    url, calls = plant_on_a_port
+    out = assist_runs.arrange_live(url, on_behalf_of="ADMIN")
+
+    assert not out["refused"], out["refused"]
+    assert set(out["made"]) == set(assist_runs.ARRANGES)
+    assert any(method == "POST" for method, _ in calls), "nothing was written over the wire"
+
+    # And the fixtures really are on the plant, asked over the same socket.
+    view = assist_runs.live_view(url)
+    for requirement in assist_runs.ARRANGES:
+        assert view.has(requirement), requirement
+
+
+def test_arranging_a_plant_that_is_already_arranged_creates_nothing_twice(
+        plant_on_a_port):
+    """Idempotent, which is what makes it safe to point at a plant more than
+    once. The two fixtures the plant numbers itself - the non-conformance and
+    the corrective order - are the ones that would otherwise pile up, so they
+    are counted rather than taken on trust."""
+    from fsmes import mcp_server
+
+    url, calls = plant_on_a_port
+    first = assist_runs.arrange_live(url)
+    assert first["made"] and not first["refused"]
+
+    before = mcp_server.quality(assist_runs.LIVE_PLANT)["checks"]["checks"]
+    work_before = len(mcp_server.maintenance_work(
+        assist_runs.LIVE_PLANT, open_only=False)["work"])
+    calls.clear()
+
+    second = assist_runs.arrange_live(url)
+    assert second["made"] == [], f"a second run made {second['made']}"
+    assert set(second["already"]) == set(assist_runs.ARRANGES)
+    assert not second["refused"]
+    assert not [path for method, path in calls if method == "POST"
+                and path != "/auth/login"], "a second run wrote to the plant"
+
+    assert mcp_server.quality(assist_runs.LIVE_PLANT)["checks"]["checks"] == before
+    assert len(mcp_server.maintenance_work(
+        assist_runs.LIVE_PLANT, open_only=False)["work"]) == work_before
+
+
+def test_what_a_live_run_leaves_on_a_plant_is_audited_with_the_person_it_acted_for(
+        plant_on_a_port):
+    """The arrangement is not a back door. It goes through the API as the AGENT
+    account, and every row it writes says which person it was acting for - which
+    is the whole reason it may be pointed at a plant somebody uses."""
+    from fsmes import mcp_server
+
+    url, _calls = plant_on_a_port
+    assist_runs.arrange_live(url, on_behalf_of="ADMIN")
+    trail = mcp_server.audit(assist_runs.LIVE_PLANT, limit=50)["audit"]
+    ours = [row for row in trail if row.get("on_behalf_of") == "ADMIN"]
+    assert ours, "nothing the arrangement wrote names the person it acted for"
+    assert {row["actor"] for row in ours} == {"AGENT"}
+
+
+def test_no_arrange_leaves_the_plant_alone_and_says_which_cases_it_could_not_ask(
+        plant_on_a_port):
+    """`--no-arrange` against a plant nobody has arranged: the cases that name a
+    work order or a draft are reported not arranged, and no row is written."""
+    url, calls = plant_on_a_port
+    view = assist_runs.live_view(url)
+    unmet = assist_runs.missing(SUITE, view.plant, view=view)
+    # Not there because nobody arranged it...
+    assert unmet["operator-holds-an-order"] == ("order:WO-EVAL-1",)
+    assert "instruction:WI-EVAL-1" in unmet["admin-approves-a-document"]
+    # ...and there because it is the plant's own master data, which a run never
+    # arranges and never needs to.
+    assert "operator-records-a-check" not in unmet
+    assert not [path for method, path in calls
+                if method == "POST" and path != "/auth/login"]
+
+
+def test_a_case_the_plant_already_has_a_code_for_is_not_arranged_rather_than_failed(
+        plant_on_a_port):
+    """The 2026-09-26 failure in one assertion. Draft `changeover` on a plant
+    whose vocabulary already holds one is not a question, and the model saying
+    "it is already at revision 1, approved and in force" was right."""
+    from fsmes import mcp_server
+
+    url, _calls = plant_on_a_port
+    assist_runs.live_view(url)              # point the tool layer at this socket
+    mcp_server.draft_downtime_reason(assist_runs.LIVE_PLANT, code="changeover",
+                                     name="Changeover", dry_run=False,
+                                     on_behalf_of="ADMIN")
+    view = assist_runs.live_view(url)
+    view.seen.clear()
+    unmet = assist_runs.missing(SUITE, view.plant, view=view)
+    assert unmet.get("admin-drafts-a-downtime-reason") == ("no reason:changeover",)

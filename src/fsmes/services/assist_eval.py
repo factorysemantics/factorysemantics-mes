@@ -128,12 +128,22 @@ class Case:
     #: Guides this request must never be answered with. The three "show me"
     #: turns of 2026-09-26 were answered with two of these.
     not_guide: tuple[str, ...] = ()
+    #: Walks that answer this question as well as prose would. "take me to
+    #: scrap" has no tool that lists scrap; the form where scrap is booked is a
+    #: right answer, and a case that scored it as "offered a walk instead of
+    #: answering" was scoring the shape of the reply rather than its use.
+    or_walk: tuple[str, ...] = ()
     #: Tools that must be read in this turn, before the answer.
     reads: tuple[str, ...] = ()
     #: ... or any one of these, when several reads would be honest answers.
     reads_any: tuple[str, ...] = ()
     #: Loose on prose: substrings, matched case-insensitively.
     contains: tuple[str, ...] = ()
+    #: The same, for a fact a person may write down several honest ways. Each
+    #: group is a list, and one of its renderings has to appear: the hold rules
+    #: are "1,2,3,4" on the settings page and "1, 2, 3 and 4" in a sentence, and
+    #: a suite that demanded the first was scoring the typography.
+    contains_any: tuple[tuple[str, ...], ...] = ()
     #: Substrings that would make the answer wrong however it is phrased.
     never: tuple[str, ...] = ()
     #: refuse: what the refusal must say, so it names who can.
@@ -148,6 +158,13 @@ class Case:
     source: str | None = None
     note: str | None = None
     loose_about: str | None = None
+    #: What has to be on the plant before this sentence means anything, as
+    #: `"kind:code"` - or `"no kind:code"` where the sentence only makes sense
+    #: on a plant that has *not* got one. A run arranges what it may and reports
+    #: the rest as *not arranged*: counted apart from pass and fail, because a
+    #: model that says "there is no MIX01 here" is right.
+    #: `fsmes.lab.assist_fixtures` holds the kinds and what each one takes.
+    requires: tuple[str, ...] = ()
     file: str = ""
 
     @property
@@ -155,7 +172,10 @@ class Case:
         return bool(self.before_request or self.before)
 
 
-_LISTS = ("loose", "not_guide", "reads", "reads_any", "contains", "never", "mentions")
+_LISTS = ("loose", "not_guide", "or_walk", "reads", "reads_any", "contains", "never",
+          "mentions", "requires")
+#: Lists of lists: each group is a set of renderings, one of which must appear.
+_GROUPS = ("contains_any",)
 _FIELDS = {f for f in Case.__dataclass_fields__} | {"before", "plan"}
 
 
@@ -170,6 +190,8 @@ def _case(raw: dict, role: str, source_file: str, problems: list[str]) -> Case |
             continue
         if key in _LISTS:
             value = tuple(str(v) for v in value)
+        elif key in _GROUPS:
+            value = tuple(tuple(str(v) for v in group) for group in value)
         elif key in ("before", "plan"):
             value = tuple(dict(v) for v in value)
         kwargs[key] = value
@@ -203,6 +225,15 @@ def _case(raw: dict, role: str, source_file: str, problems: list[str]) -> Case |
         problems.append(f"{where}: a case with a turn before it must say what that turn "
                         f"did, as a [[case.before]] step - otherwise the proposal this "
                         f"request is typed over is not actually open")
+    for group in case.contains_any:
+        if not group:
+            problems.append(f"{where}: a contains_any group with nothing in it says nothing")
+    for requirement in case.requires:
+        bare = requirement[3:] if requirement.startswith("no ") else requirement
+        kind, _, code = bare.partition(":")
+        if not kind.strip() or not code.strip():
+            problems.append(f"{where}: requires {requirement!r} is not \"kind:code\" "
+                            f"(or \"no kind:code\")")
     for step in (*case.plan, *case.before):
         if not (step.get("read") or step.get("propose") or step.get("say")):
             problems.append(f"{where}: a step must read, propose or say something: {step}")
@@ -252,7 +283,7 @@ class Turn:
     """What the assistant did with one request, in the one shape both modes
     produce and the one shape the scorer reads."""
 
-    kind: str                               # guide | proposals | reply | unavailable
+    kind: str        # guide | proposals | reply | unavailable | not_asked
     say: str = ""
     guide_id: str | None = None
     #: The walk that was put on the screen, when one was - so a case can say
@@ -284,6 +315,10 @@ class Turn:
             return f"proposed {offered}"
         if self.kind == "unavailable":
             return f"the conversation went nowhere: {self.say}"
+        if self.kind == "not_asked":
+            # Never asked, so never paid for. A question a plant cannot be
+            # asked is not a question the model got wrong.
+            return self.say or "was not asked"
         read = ", ".join(self.reads) or "no tool"
         return f"read {read} and said: {self.say[:160]!r}"
 
@@ -324,17 +359,26 @@ class Outcome:
     passed: bool
     why: tuple[str, ...]
     turn: Turn
+    #: What the plant did not have. A case whose fixtures are not on the plant
+    #: was never asked a fair question, and is reported apart from pass and
+    #: fail rather than scored.
+    missing: tuple[str, ...] = ()
 
     @property
     def role(self) -> str:
         return self.case.role
 
     @property
+    def arranged(self) -> bool:
+        return not self.missing
+
+    @property
     def counted(self) -> bool:
         """Whether this case is in the required score. A `not_yet` case is
         counted on its own, so the required number never drifts because
-        somebody added a case for a thing that does not exist yet."""
-        return self.case.expected == "pass"
+        somebody added a case for a thing that does not exist yet; a case the
+        plant was not arranged for is counted on its own for the same reason."""
+        return self.case.expected == "pass" and self.arranged
 
 
 def _haystack(case: Case, turn: Turn) -> str:
@@ -349,13 +393,21 @@ def _haystack(case: Case, turn: Turn) -> str:
     return turn.facts
 
 
-def score(case: Case, turn: Turn) -> Outcome:
-    """Did this turn do what the case asked. Strict on identity, loose on prose."""
+def score(case: Case, turn: Turn, missing: tuple[str, ...] = ()) -> Outcome:
+    """Did this turn do what the case asked. Strict on identity, loose on prose.
+
+    `missing` is what the plant did not have. The turn is still scored - the
+    report says what it did either way - but the outcome is marked *not
+    arranged*, and `counted` keeps it out of the required number.
+    """
     why: list[str] = []
     hay = _haystack(case, turn).casefold()
 
     if turn.kind == "unavailable":
         why.append(f"the conversation could not continue: {turn.say}")
+    if turn.kind == "not_asked":
+        return Outcome(case=case, passed=False, turn=turn, missing=tuple(missing),
+                       why=(turn.say or "this plant has not got what the request names",))
 
     if case.expect == "propose":
         why += _score_propose(case, turn)
@@ -369,12 +421,17 @@ def score(case: Case, turn: Turn) -> Outcome:
     for want in case.contains:
         if want.casefold() not in hay:
             why.append(f"nothing in the reply carried {want!r}")
+    for group in case.contains_any:
+        if not any(want.casefold() in hay for want in group):
+            why.append("nothing in the reply carried any of "
+                       + ", ".join(repr(want) for want in group))
     for never in case.never:
         if never.casefold() in hay:
             why.append(f"the reply fell back on {never!r}")
     if case.not_guide and turn.guide_id in case.not_guide:
         why.append(f"it walked them through {turn.guide_id!r}, which this request is not about")
-    return Outcome(case=case, passed=not why, why=tuple(why), turn=turn)
+    return Outcome(case=case, passed=not why, why=tuple(why), turn=turn,
+                   missing=tuple(missing))
 
 
 def _score_propose(case: Case, turn: Turn) -> list[str]:
@@ -451,6 +508,11 @@ def _score_refuse(case: Case, turn: Turn) -> list[str]:
 def _score_answer(case: Case, turn: Turn) -> list[str]:
     why: list[str] = []
     if turn.kind == "guide":
+        if turn.guide_id in case.or_walk:
+            # A walk the case itself says is a right answer. There are no reads
+            # behind a walk and there is nothing missing: the person asked to be
+            # taken somewhere and was taken there.
+            return []
         why.append(f"it offered the {turn.guide_id!r} walk instead of answering")
     why += _score_reads(case, turn)
     return why
@@ -694,12 +756,16 @@ def turn_from_reply(reply: dict, session=None, *, offered=frozenset(),
 # ----------------------------------------------------------------- the report
 
 def tally(outcomes: tuple[Outcome, ...]) -> dict:
-    """Pass rate per role, required and not-yet counted apart."""
+    """Pass rate per role. Three buckets, and every case is in exactly one of
+    them: required, `not_yet`, and *not arranged* - the plant did not have what
+    the sentence names, so nothing about the model was measured."""
     roles: dict[str, dict] = {}
     for outcome in outcomes:
-        row = roles.setdefault(outcome.role, {"required": 0, "passed": 0,
-                                              "not_yet": 0, "not_yet_passing": 0})
-        if outcome.counted:
+        row = roles.setdefault(outcome.role, {"required": 0, "passed": 0, "not_yet": 0,
+                                              "not_yet_passing": 0, "not_arranged": 0})
+        if not outcome.arranged:
+            row["not_arranged"] += 1
+        elif outcome.counted:
             row["required"] += 1
             row["passed"] += int(outcome.passed)
         else:
@@ -710,6 +776,7 @@ def tally(outcomes: tuple[Outcome, ...]) -> dict:
     return {"roles": roles, "required": required, "passed": passed,
             "not_yet": sum(r["not_yet"] for r in roles.values()),
             "not_yet_passing": sum(r["not_yet_passing"] for r in roles.values()),
+            "not_arranged": sum(r["not_arranged"] for r in roles.values()),
             "total": len(outcomes)}
 
 
@@ -733,10 +800,15 @@ def report(outcomes: tuple[Outcome, ...], *, mode: str, model: str | None = None
     when = when or datetime.now(UTC)
     counts = tally(outcomes)
     run = run or {}
+    apart = counts["not_arranged"]
+    unarranged = "" if not apart else (
+        f" {apart} {'case was' if apart == 1 else 'cases were'} not arranged — this "
+        f"plant has not got what the request names, so "
+        f"{'it is' if apart == 1 else 'they are'} not scored.")
     lines = [f"# Assistant faithfulness — {when.date().isoformat()}", "",
              f"*{mode} run, {when.isoformat(timespec='seconds')}. "
              f"{counts['passed']} of {counts['required']} required cases pass; "
-             f"{counts['not_yet']} are marked `not_yet`.*", ""]
+             f"{counts['not_yet']} are marked `not_yet`.{unarranged}*", ""]
     lines += ["| | |", "|---|---|",
               f"| Mode | {mode} |",
               f"| Model | {model or 'none — the model is scripted'} |",
@@ -749,13 +821,16 @@ def report(outcomes: tuple[Outcome, ...], *, mode: str, model: str | None = None
                   f"(${run.get('month_usd', 0):.2f} of ${run.get('cap_usd', 0)} this month) |",
                   f"| Tokens | {', '.join(f'{k} {v:,}' for k, v in sorted(tokens.items())) or 'not reported'} |"]
     lines += ["", "## Per role", "",
-              "| Role | Required | Pass | Rate | not_yet | of those, passing |",
-              "|---|---:|---:|---:|---:|---:|"]
+              "| Role | Required | Pass | Rate | not_yet | of those, passing | not arranged |",
+              "|---|---:|---:|---:|---:|---:|---:|"]
     for role in sorted(counts["roles"]):
         row = counts["roles"][role]
         rate = f"{100 * row['passed'] / row['required']:.0f}%" if row["required"] else "—"
         lines.append(f"| {role} | {row['required']} | {row['passed']} | {rate} | "
-                     f"{row['not_yet']} | {row['not_yet_passing']} |")
+                     f"{row['not_yet']} | {row['not_yet_passing']} | {row['not_arranged']} |")
+
+    if mode == "live":
+        lines += ["", *arrangement(run)]
 
     failed = [o for o in outcomes if o.counted and not o.passed]
     lines += ["", "## Required cases that did not pass", ""]
@@ -769,7 +844,22 @@ def report(outcomes: tuple[Outcome, ...], *, mode: str, model: str | None = None
         lines += [f"- {why}" for why in outcome.why]
         lines.append("")
 
-    waiting = [o for o in outcomes if not o.counted]
+    unmade = [o for o in outcomes if not o.arranged]
+    if unmade:
+        # Why a fixture could not be arranged is the harness's knowledge, not
+        # this module's: it comes in on the run, so the scorer stays a scorer.
+        reasons = run.get("why_not") or {}
+        lines += ["## Not arranged", "",
+                  "These were not scored. The plant has not got what the request names, "
+                  "so nothing about the model's choice was measured either way.", "",
+                  "| Case | Role | The plant has not got | Why not |", "|---|---|---|---|"]
+        for outcome in unmade:
+            for requirement in outcome.missing:
+                lines.append(f"| `{outcome.case.id}` | {outcome.case.role} | "
+                             f"`{requirement}` | {reasons.get(requirement, '')} |")
+        lines.append("")
+
+    waiting = [o for o in outcomes if o.arranged and not o.counted]
     lines += ["## Marked `not_yet`", ""]
     if not waiting:
         lines.append("None.")
@@ -793,6 +883,32 @@ def _no_plant_commit(mode: str) -> str:
     if mode == "scripted":
         return "the same checkout as the suite — the plant is built in this process"
     return "not reported by the plant; pass --plant-commit"
+
+
+def arrangement(run: dict) -> list[str]:
+    """What a run put on the plant, as lines for the result file. Written even
+    when it put nothing there, because "nothing was arranged" is the fact a
+    reader most needs when every case comes back not arranged."""
+    made = run.get("made") or []
+    already = run.get("already") or []
+    refused = run.get("refused") or {}
+    lines = ["## What this run put on the plant", ""]
+    if not (made or already or refused):
+        lines += ["Nothing. This run was given `--no-arrange`.", ""]
+        return lines
+    lines += [f"- Put there by this run: {_codes(made) or 'nothing'}",
+              f"- Already there: {_codes(already) or 'nothing'}"]
+    for requirement, why in sorted(refused.items()):
+        lines.append(f"- Could not be arranged — `{requirement}`: {why}")
+    lines += ["", "Nothing here is removed afterwards: an MES does not delete an audited "
+                  "record, and neither does this. See "
+                  "[ASSIST-EVAL.md](../ASSIST-EVAL.md) for what a person does about each "
+                  "one.", ""]
+    return lines
+
+
+def _codes(requirements) -> str:
+    return ", ".join(f"`{r}`" for r in requirements)
 
 
 def _expectation(case: Case) -> str:
@@ -825,6 +941,7 @@ def as_json(outcomes: tuple[Outcome, ...]) -> str:
         {"tally": tally(outcomes),
          "cases": [{"id": o.case.id, "role": o.case.role, "expect": o.case.expect,
                     "expected": o.case.expected, "handoff": o.case.handoff,
+                    "arranged": o.arranged, "missing": list(o.missing),
                     "passed": o.passed, "why": list(o.why),
                     "observed": o.turn.observed()} for o in outcomes]},
         indent=1, default=str)

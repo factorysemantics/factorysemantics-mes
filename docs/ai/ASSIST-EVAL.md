@@ -89,6 +89,92 @@ Run it against a **synthetic** plant. The result file quotes what the model did,
 and that includes the arguments it chose; a real plant's codes are a real plant's
 business.
 
+## What a live run puts on the plant, and what it never will
+
+Almost every sentence in the suite names something: an order, a material, a
+machine, a draft waiting for a signature. Asked "book 600 good on MIX01 against
+WO-EVAL-1" on a plant that has neither, the right answer is *there is no MIX01
+here* — and on 2026-09-26 the first live run scored nine of its nineteen
+failures against a model that was saying exactly that. A run that does this is
+measuring the plant, not the model.
+
+So each case declares what it needs, and a live run **arranges the plant first**
+(`--no-arrange` turns that off):
+
+```toml
+requires = ["material:FG-COLA", "order:WO-EVAL-1", "no reason:changeover"]
+```
+
+`no kind:code` is a requirement that the plant has *not* got one: "draft a
+downtime reason `changeover`" is not a question you can put to a plant whose
+vocabulary already holds one.
+
+Anything the plant still has not got makes that case **not arranged** — it is
+not asked, not paid for and not scored, and it is listed in the result file with
+the reason. It is counted in its own column, apart from pass and fail, so the
+required number cannot quietly drift.
+
+### Arranged
+
+Written by the **AGENT** account, naming the person the run signed in as, through
+the product's own API — the same write path the suite is about, so a fixture that
+stops working is a tool that stopped working. Every row lands in the audit trail
+with both names on it.
+
+| What | Code | Notes |
+|---|---|---|
+| A setting put in force | `[process] default_report_hours` → `10.0` | So "who changed this, and when?" has something to find. |
+| A released work order | `WO-EVAL-1` | 1000 of `FG-COLA`. |
+| A non-conformance | `NC-00001` | Opened by the MES itself, from a brix check recorded at 20.0 against a 9.5–11.5 specification. |
+| A corrective maintenance order | `CM-00001` | On `MIX01`, summary *Infeed belt slipping (assist eval fixture)*. |
+| A **draft** work instruction | `WI-EVAL-1` | Unapproved. |
+| A **draft** trigger | `TR-EVAL-1` | Unapproved. |
+| A **draft** downtime reason | `eval_changeover` | Unapproved: nothing labels a stop with it. |
+| A **draft** non-conformance severity | `eval_cosmetic` | Unapproved: nothing is graded with it. |
+
+Four of those eight are **drafts**, and a draft changes nobody's screen until
+somebody signs it. Codes carry `EVAL-`/`eval_` wherever the code is ours to
+choose, so what a run left behind can be told from the plant's own work at a
+glance. The plant numbers the non-conformance and the maintenance order itself;
+if it numbers them something else, the cases that name them are reported not
+arranged with the code it did use.
+
+### Never arranged
+
+**Master data.** Materials, equipment, routings, lots and specifications are the
+plant's own, and an agent deployment does not define them — decision
+[0035](../decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators.md),
+and the AGENT account does not hold `masterdata.write` to do it with. A plant
+without `FG-COLA` and `MIX01` gets those cases reported *not arranged* rather
+than having a cola line invented on it.
+
+That is why the suite belongs against a plant built from the **demo pack**. Point
+it at a bottling plant and most of it comes back not arranged, which is the
+honest answer and not a useful run.
+
+### Removing it afterwards
+
+**It does not remove any of it, and there is no `--clean`.** An MES does not
+delete an audited record; that is most of what an MES is for. A run that tidied
+up after itself would have to reach round the write discipline the suite exists
+to measure, and the tidying would not be in the trail.
+
+What a person does instead, on a plant they want back:
+
+- the four **drafts** — retire them on their own screens (`/dashboard/reasons`,
+  `/dashboard/severities`, `/dashboard/instructions`, `/dashboard/triggers`).
+  They were never in force, so retiring one changes nothing that was running.
+- `WO-EVAL-1` — cancel or close it.
+- `CM-00001` — complete it, or leave it: it is a corrective job on a mixer with
+  the words *assist eval fixture* in its summary.
+- `NC-00001` — disposition and close it. It is a real non-conformance about a
+  real recorded check, and it stays in the record, as every non-conformance does.
+- `default_report_hours` — set it back to what it was. `setting_changes` says
+  what that was.
+
+Arranging is **idempotent**: a second run on an arranged plant creates nothing
+twice and fails nothing. Point it at the same plant as often as you like.
+
 ## Reading a result
 
 A live run writes `docs/ai/assist-eval/<date>.md`, the way a calibration run
@@ -99,7 +185,10 @@ writes `docs/ai/calibration/<date>/`:
 - a pass rate per role;
 - every required case that did not pass, with the expectation, **what it did
   instead**, and a sentence per thing that was wrong;
-- every case marked `not_yet`, and which handoff it is waiting on.
+- every case marked `not_yet`, and which handoff it is waiting on;
+- every case that was **not arranged**, what the plant has not got, and why —
+  followed by what the run put on the plant, what was already there, and
+  anything it could not arrange, in the plant's own words.
 
 A plant does not report the commit it is running, so `--plant-commit` is how that
 gets into the file. A result with no build behind it cannot be compared to next
@@ -148,11 +237,15 @@ than the thing the person asked for.
 7. Run `fsmes assist eval --scripted --case <id>`. If it cannot pass yet, mark it
    `not_yet` and name the handoff.
 
+8. Say what the plant has to have for the sentence to mean anything, in
+   `requires`. The kinds live in `fsmes.lab.assist_fixtures`, and a typo in one
+   fails the build rather than quietly retiring the case.
+
 The plant every case is asked about is the demo plant plus what
-`fsmes.services.assist_eval.arrange` puts on it — an order, a failed check that
-raised a non-conformance, a corrective maintenance job, and one setting somebody
-actually changed. It is built through the write tools themselves, so a fixture
-that stops working is a tool that stopped working.
+`fsmes.lab.assist_fixtures.arrange` puts on it — the eight rows in *What a live
+run puts on the plant* above. A scripted run arranges the same plant the same
+way, so the arrangement is exercised on every pull request rather than only when
+somebody spends money.
 
 ## Why this is worth shipping in the open
 

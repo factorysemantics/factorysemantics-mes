@@ -18,8 +18,15 @@ import contextlib
 import os
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
 
+from fsmes.lab.assist_fixtures import (
+    ARRANGES,
+    Plantview,
+    Unarrangeable,
+    arrange,
+    missing,
+    why_not,
+)
 from fsmes.services.assist_eval import (
     SCRIPTED_PLANT,
     Case,
@@ -40,73 +47,13 @@ DEFAULT_MAX_USD = 1.00
 KEY = "ANTHROPIC_API_KEY"
 
 
-# ------------------------------------------ enough of a plant to be asked about
-
-#: What `arrange` puts on the scripted plant, so a case can name a real order,
-#: a real non-conformance and a real maintenance job. The demo seed is a plant
-#: with nothing happening on it, and "release WO-EVAL-1" against a plant with no
-#: orders would fail for a reason that has nothing to do with the assistant.
-ARRANGED = {
-    "order": "WO-EVAL-1",
-    "material": "FG-COLA",
-    "characteristic": "brix",
-    "machine": "MIX01",
-    "second_machine": "PACK01",
-    "line": "LINE1",
-    "lot": "LOT-SUGAR-001",
-    "routing": "RT-COLA",
-    "changed_setting": "default_report_hours",
-}
-
-
-def arrange(plant: str) -> dict:
-    """Give the scripted plant an order, a failed check and a broken machine.
-
-    Through the tools themselves, as the plant agent, for real - so the fixture
-    is built by the same write path the suite is about, and a fixture that stops
-    working is a tool that stopped working.
-    """
-    from fsmes import mcp_server
-
-    made = dict(ARRANGED)
-    mcp_server.create_order(plant, code=ARRANGED["order"], material=ARRANGED["material"],
-                            quantity=1000, release=True, dry_run=False,
-                            on_behalf_of="ADMIN")
-    # Out of the specification on purpose: the MES raises the non-conformance
-    # itself, which is the only honest way to have one to close.
-    check = mcp_server.record_check(plant, material=ARRANGED["material"],
-                                    characteristic=ARRANGED["characteristic"],
-                                    value=20.0, order=ARRANGED["order"],
-                                    dry_run=False, on_behalf_of="ADMIN")
-    made["nonconformance"] = _first_code(check, "nonconformance") or "NC-00001"
-    # A setting somebody has actually changed, because "I just changed it, read
-    # it back" is only a question on a plant where something was changed. This
-    # is Scott's own change of 2026-09-26, made here so the read has a row.
-    mcp_server.write_plant_setting(plant, domain="engineering",
-                                   key="default_report_hours", value="10.0",
-                                   dry_run=False, on_behalf_of="ADMIN")
-    work = mcp_server.raise_corrective_maintenance(
-        plant, machine=ARRANGED["machine"], summary="Infeed belt slipping",
-        dry_run=False, on_behalf_of="ADMIN")
-    made["maintenance_order"] = _first_code(work, "order") or ""
-    return made
-
-
-def _first_code(payload: Any, hint: str) -> str | None:
-    """The code a write tool reported making, wherever it put it."""
-    if not isinstance(payload, dict):
-        return None
-    response = payload.get("response")
-    for holder in (response, payload):
-        if not isinstance(holder, dict):
-            continue
-        for key in (hint, f"{hint}_code", "code"):
-            value = holder.get(key)
-            if isinstance(value, str) and value:
-                return value
-            if isinstance(value, dict) and isinstance(value.get("code"), str):
-                return value["code"]
-    return None
+# The fixtures themselves, and the rule about which of them a run may put on a
+# plant, live in `assist_fixtures` and are re-exported here: what is in this
+# module is the two ways of reaching a plant to do it - in-process for a
+# scripted run, over its own HTTP API for a live one.
+__all__ = ["ARRANGES", "DEFAULT_MAX_USD", "KEY", "LiveRefused", "Plant", "Plantview",
+           "Unarrangeable", "arrange", "arrange_live", "missing", "run_live",
+           "run_scripted", "scripted_plant", "why_not"]
 
 
 # ---------------------------------------------------------- a plant to run on
@@ -270,7 +217,12 @@ def run_scripted_case(case: Case, plant: str) -> Turn:
 
 def run_scripted(cases: tuple[Case, ...]) -> tuple[Outcome, ...]:
     """The whole suite against the real plumbing. Deterministic, no network,
-    no model, no money."""
+    no model, no money.
+
+    The plant is arranged first, through the tools, exactly as a live run
+    arranges a real one - so the arrangement is exercised on every pull request
+    rather than only when somebody spends money.
+    """
     from fsmes.services import agent
 
     saved_call = agent._call_model
@@ -282,8 +234,11 @@ def run_scripted(cases: tuple[Case, ...]) -> tuple[Outcome, ...]:
             # in-process app instead. `scripted_plant` has already pointed the
             # client cache and the registry at it.
             arrange(plant.plant)
+            view = Plantview(plant.plant)
+            unmet = missing(cases, plant.plant, view=view)
             for case in cases:
-                out.append(score(case, run_scripted_case(case, plant.plant)))
+                out.append(score(case, run_scripted_case(case, plant.plant),
+                                 unmet.get(case.id, ())))
     finally:
         agent._call_model = saved_call
     return tuple(out)
@@ -363,25 +318,84 @@ def _token_delta(before: dict, after: dict) -> dict:
             for k in set(before) | set(after)}
 
 
+#: The name the tool layer dials a live plant by during an arrangement. It is
+#: a key into this process's own client cache and nothing else - the plant is
+#: reached at the base URL the run was given, with no registry lookup, the way
+#: a plant operating itself does.
+LIVE_PLANT = "assist-eval-live"
+
+
+def arrange_live(base_url: str, *, on_behalf_of: str = "ADMIN") -> dict:
+    """Put the suite's fixtures on a running plant, over its own HTTP API.
+
+    The same `arrange` a scripted run uses, reaching the plant the way the
+    assistant's own tools reach it: as the AGENT account, naming the person the
+    run signed in as, through the product's API. So the fixture is built by the
+    same write path the suite is about, it lands in the audit trail with a name
+    against it, and a fixture that stops working is a tool that stopped working.
+
+    Writes to somebody's plant. `docs/ai/ASSIST-EVAL.md` lists exactly what it
+    leaves there; nothing is removed afterwards, because an MES does not delete
+    an audited record.
+    """
+    from fsmes import mcp_server
+
+    mcp_server.serve_locally(LIVE_PLANT, base_url)
+    try:
+        # One read first, on purpose. `arrange` reports a fixture it could not
+        # make rather than raising, so without this a plant whose AGENT account
+        # cannot sign in would come back as eight separate refusals instead of
+        # the one sentence that is actually true of it.
+        mcp_server.materials(LIVE_PLANT)
+    except RuntimeError as exc:
+        raise LiveRefused(str(exc)) from exc
+    return arrange(LIVE_PLANT, on_behalf_of=on_behalf_of)
+
+
+def live_view(base_url: str) -> Plantview:
+    """A reader for the same plant, so `missing` asks it over HTTP too."""
+    from fsmes import mcp_server
+
+    mcp_server.serve_locally(LIVE_PLANT, base_url)
+    return Plantview(LIVE_PLANT)
+
+
 def run_live(cases: tuple[Case, ...], plant: Plant, *,
              max_usd: float = DEFAULT_MAX_USD,
-             on_case=None) -> tuple[tuple[Outcome, ...], dict]:
+             on_case=None, arranging: bool = True,
+             on_behalf_of: str = "ADMIN") -> tuple[tuple[Outcome, ...], dict]:
     """The suite against the real model, on a running plant.
 
-    Stops when the run has cost `max_usd`, and says which cases were not run
-    rather than reporting a short suite as a whole one. Every proposal is
-    declined on the way out, so a scored plant is an unchanged plant.
+    The plant is arranged first unless `arranging` is off, and every case the
+    plant still has not got what for is reported *not arranged* - not asked, not
+    scored, not paid for. Stops when the run has cost `max_usd`, and says which
+    cases were not run rather than reporting a short suite as a whole one. Every
+    proposal is declined on the way out, so a scored plant is an unchanged plant.
     """
     started = plant.brain()
     if not started.get("available"):
         raise LiveRefused(f"this plant's cloud brain is not available: "
                           f"{started.get('reason')}")
+    put_there: dict = {}
+    if arranging:
+        put_there = arrange_live(plant.base_url, on_behalf_of=on_behalf_of)
+    view = live_view(plant.base_url)
+    unmet = missing(cases, view.plant, view=view)
     spend_at_start = _spent(started)
     tokens_at_start = _tokens_of(started)
     outcomes: list[Outcome] = []
     not_run: list[Case] = []
     spent = 0.0
     for case in cases:
+        if case.id in unmet:
+            short = ", ".join(unmet[case.id])
+            outcomes.append(score(case, Turn(kind="not_asked", from_model=True,
+                                             say=f"not asked: this plant has not got "
+                                                 f"{short}"),
+                                  unmet[case.id]))
+            if on_case is not None:
+                on_case(outcomes[-1])
+            continue
         if spent >= max_usd:
             not_run.append(case)
             continue
@@ -411,5 +425,8 @@ def run_live(cases: tuple[Case, ...], plant: Plant, *,
     run = {"model": finished.get("model"), "usd": round(_spent(finished) - spend_at_start, 6),
            "tokens": _token_delta(tokens_at_start, _tokens_of(finished)),
            "not_run": tuple(not_run), "max_usd": max_usd,
-           "cap_usd": finished.get("cap_usd"), "month_usd": _spent(finished)}
+           "cap_usd": finished.get("cap_usd"), "month_usd": _spent(finished),
+           "made": put_there.get("made", []), "already": put_there.get("already", []),
+           "refused": put_there.get("refused", {}),
+           "why_not": {r: why_not(r) for reqs in unmet.values() for r in reqs}}
     return tuple(outcomes), run

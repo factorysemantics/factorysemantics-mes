@@ -12,6 +12,35 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **A live faithfulness run arranges the plant it scores, and says what it
+  could not.** `fsmes assist eval --live` used to ask a plant questions about
+  things that were not on it. Nine of the nineteen failures in the first live
+  run, on 2026-09-26, were the assistant *correctly* refusing to invent — *"there
+  is no material coded FG-COLA in this plant"*, *"there is no draft on
+  'changeover' — it is already at revision 1, approved and in force"* — scored as
+  though the model had got them wrong.
+
+  Each case in `tests/assist_suite/` now declares what the plant has to have for
+  its sentence to mean anything (`requires = ["material:FG-COLA",
+  "order:WO-EVAL-1", "no reason:changeover"]`), and a live run puts there what it
+  may: a released work order, the non-conformance a failed brix check opens, a
+  corrective maintenance order, one setting written so the audit trail has a row
+  in it, and four **drafts** — an instruction, a trigger, a downtime reason and a
+  severity, none of which changes anybody's screen until somebody signs. Written
+  by the AGENT account, naming the person the run signed in as, through the
+  product's own API, so the fixture is built by the write path the suite is
+  about. Idempotent: a second run on an arranged plant creates nothing twice.
+
+  **Master data is never arranged.** Materials, equipment, routings, lots and
+  specifications are the plant's own and an agent deployment does not define them
+  (decision 0035). A case the plant has not got what for is reported **not
+  arranged** — not asked, not paid for, not scored, counted in its own column and
+  listed in the result file with the reason. `--no-arrange` leaves the plant
+  alone and reports the same way. Nothing is removed afterwards and there is no
+  `--clean`: an MES does not delete an audited record.
+  `docs/ai/ASSIST-EVAL.md` lists every row a run leaves and what a person does
+  about each.
+
 - **AI is a workspace in the navigation bar, beside Setup, and it shows every
   conversation this plant's AI has had.** Three tabs behind `audit.read`:
   **Conversations** — one row per conversation with who, when, how many turns,
@@ -329,6 +358,26 @@ goes under Honesty with a migration line, so plant people can find it.
   untrue about itself.
 
 ### Changed
+
+- **`add_calendar_exception` says which kinds it takes.** Its docstring
+  described "a shutdown day or an overtime day" and named neither of the two
+  words the API actually accepts, so on 2026-09-26 the live model sent
+  `kind="shutdown"` for Christmas Day while the suite expected `kind="holiday"` —
+  both of which the plant would have refused. There are two kinds:
+  `non_working` (a holiday or a shutdown; the plant is dark) and `working` (an
+  overtime day that is normally dark). A tool description is the whole of what a
+  model knows about an argument, so both are named, with what each is for, and a
+  test keyed on the enum fails if a third is ever added to one and not the other.
+
+- **Three expectations in the assistant's request suite were stricter than the
+  truth, and are not any more.** "Which spc rules are on hold" accepts the answer
+  read out of `spc_chart` as well as out of `plant_settings`, and accepts "all
+  four" and "1, 2, 3 and 4" as the same four rules the settings page writes
+  `1,2,3,4` — the live model answered it correctly and was marked wrong on both
+  counts. "Take me to scrap" accepts the `book-production` walk: there is no
+  scrap screen, and the form where scrap is booked is where scrap is. What is
+  still scored is unchanged — an answer that never looked, or that sends somebody
+  to a procedure document, still fails.
 
 - **When your role does not let you do something, the assistant says which
   capability it needs and who holds it.** Asked to close a non-conformance, an

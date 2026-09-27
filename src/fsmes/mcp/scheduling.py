@@ -71,8 +71,19 @@ def register(mcp, call, write, identify) -> dict:
     def add_calendar_exception(plant: str, day: str, kind: str, reason: str, machine: str | None = None,
                                dry_run: bool = False, on_behalf_of: str | None = None,
                                client_ref: str | None = None) -> dict:
-        """A shutdown day (capacity removed) or an overtime day (capacity
-        added), for the plant or one machine. `day` is YYYY-MM-DD."""
+        """A day the calendar treats differently, for the plant or one machine.
+
+        `day` is YYYY-MM-DD. `kind` is one of exactly two words, and the API
+        refuses anything else:
+
+        - `non_working` - a holiday or a shutdown. The plant is dark and the
+          capacity a schedule would otherwise promise is removed.
+        - `working` - an overtime day that is normally dark. Capacity a planner
+          is counting on is added.
+
+        A holiday is `non_working`; so is a shutdown. There is no `holiday`
+        kind and no `shutdown` kind - the calendar records what happens to
+        capacity, and `reason` records what a person calls it."""
         identify(on_behalf_of, client_ref)
         return write(plant, "/scheduling/calendar/exceptions",
                      {"day": day, "kind": kind, "reason": reason, "equipment": machine},
