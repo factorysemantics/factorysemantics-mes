@@ -1354,8 +1354,11 @@ def test_the_routing_nobody_asked_for_is_what_lets_the_agents_order_exist(
 
     assist_runs.seed_live(plant)
     after = assist_runs.arrange_live(url, on_behalf_of="ADMIN")
-    assert not after["refused"], after["refused"]
-    assert set(after["made"]) | set(after["already"]) == set(assist_runs.ARRANGES)
+    # Everything but the setpoint recommendation, which wants a writable tag no
+    # manifest here declares and is refused the same way before and after.
+    assert set(after["refused"]) == {f"adjustment:{assist_fixtures.MACHINE}"}
+    assert set(after["made"]) | set(after["already"]) == \
+        set(assist_runs.ARRANGES) - set(after["refused"])
     plant.close()
 
 
