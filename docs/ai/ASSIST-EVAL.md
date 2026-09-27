@@ -89,6 +89,10 @@ Run it against a **synthetic** plant. The result file quotes what the model did,
 and that includes the arguments it chose; a real plant's codes are a real plant's
 business.
 
+A plant that was not built from the demo pack has almost none of what the suite's
+sentences name, so most of it comes back *not arranged*. `--seed-masterdata` puts
+that master data there as you, once — see below.
+
 ## What a live run puts on the plant, and what it never will
 
 Almost every sentence in the suite names something: an order, a material, a
@@ -139,7 +143,7 @@ glance. The plant numbers the non-conformance and the maintenance order itself;
 if it numbers them something else, the cases that name them are reported not
 arranged with the code it did use.
 
-### Never arranged
+### Never arranged by the agent
 
 **Master data.** Materials, equipment, routings, lots and specifications are the
 plant's own, and an agent deployment does not define them — decision
@@ -151,6 +155,70 @@ than having a cola line invented on it.
 That is why the suite belongs against a plant built from the **demo pack**. Point
 it at a bottling plant and most of it comes back not arranged, which is the
 honest answer and not a useful run.
+
+### `--seed-masterdata`: the same master data, put there by a person
+
+A person may define master data, and that is the whole difference. On 2026-09-27
+somebody put this on a plant by hand with ten `POST`s; `--seed-masterdata` is
+those ten `POST`s, made **as the account you signed in with**, over the plant's
+own API — `/masterdata/equipment`, `/masterdata/materials`,
+`/masterdata/routings`, `/quality/specs`, `/execution/lots`. Not through the
+assistant's tools, not as AGENT, and nothing in the database that the API did not
+put there.
+
+```bash
+fsmes assist eval --live --plant http://127.0.0.1:9030 --user ADMIN \
+    --seed-masterdata --plant-commit "$(git rev-parse --short HEAD)"
+```
+
+**Off unless you ask for it.** It writes master data to a real plant, and the
+run's result file lists every code that arrived, so whoever operates that plant
+can see what turned up and when.
+
+| What | Code | As the demo pack has it |
+|---|---|---|
+| A work centre | `LINE1` | Packaging Line 1. **No parent** — see below. |
+| A work unit | `MIX01` | Mixer 01, under `LINE1`, ideal cycle 4.0 s |
+| A work unit | `PACK01` | Packer 01, under `LINE1`, ideal cycle 3.0 s |
+| A raw material | `RAW-SUGAR` | Sugar, kg |
+| A raw material | `RAW-FLAVOR` | Cola Flavor Concentrate, l |
+| A finished material | `FG-COLA` | Cola Syrup 1L, ea |
+| A routing | `RT-COLA` | Make Cola Syrup, for `FG-COLA`: Mix 10 on `MIX01`, Pack 20 on `PACK01` |
+| A specification | `FG-COLA` / `brix` | 9.5–11.5 °Bx |
+| A lot | `LOT-SUGAR-001` | 500 kg of `RAW-SUGAR` |
+| A lot | `LOT-FLAVOR-001` | 100 l of `RAW-FLAVOR` |
+
+Those codes and those numbers are **not written down in the seeding**. They are
+read back out of `fsmes.seed.seed_demo_plant` — the one place the demo plant is
+defined — in a throwaway in-memory database, so what lands on a real plant is
+what the demo pack says and cannot drift from it.
+
+Three of the ten are not named by any case. `RT-COLA` is there because a work
+order cannot be created against a material with no routing, so `WO-EVAL-1` —
+which the AGENT account arranges — needs it first; `RAW-FLAVOR` and
+`LOT-FLAVOR-001` are there because the demo pack ships a lot per raw material and
+half a demo reads as a mistake to whoever finds it. Nothing else is seeded, and a
+test fails if that list grows a row with no reason written beside it.
+
+**`LINE1` arrives with no parent.** The demo pack hangs it under an area, under a
+site, under an enterprise; a run has no business inventing four levels of
+somebody else's hierarchy, so it lands as a root work centre with `MIX01` and
+`PACK01` beneath it. Move it under your own site if you want it there — by hand,
+because this does not.
+
+**It creates, and never updates.** Every code is looked for first, and one that
+is already there is reported *already there* and left exactly as the plant has
+it. If your `FG-COLA` is a different product measured in litres, it stays that;
+correcting somebody's master data to match a test suite is the last thing this
+should do. A second run on a seeded plant writes nothing at all.
+
+**It is refused, in one sentence, when the account may not do it.** The plant
+asks for `masterdata.write` before it will take nine of these ten, so an account
+without it is told that and nothing is written on the way to finding out. The two
+**lots** are stock rather than a definition, and this product guards those with
+`production.consume`; an account holding one capability and not the other gets
+the eight definitions and is told which capability the lots wanted. An admin
+holds both.
 
 ### Removing it afterwards
 
@@ -172,8 +240,24 @@ What a person does instead, on a plant they want back:
 - `default_report_hours` — set it back to what it was. `setting_changes` says
   what that was.
 
-Arranging is **idempotent**: a second run on an arranged plant creates nothing
-twice and fails nothing. Point it at the same plant as often as you like.
+And about the **master data**, honestly: **the API has no way to remove any of
+it.** There is no `DELETE` and no `PATCH` on `/masterdata/equipment`,
+`/masterdata/materials`, `/masterdata/routings`, `/quality/specs` or
+`/execution/lots` — not as an oversight this page is working round, but because
+nothing in this product has needed to unmake a definition yet, and a machine or a
+material with production booked against it is not a row anybody should be able to
+drop. So a plant that has been seeded keeps `LINE1`, `MIX01`, `PACK01`,
+`RAW-SUGAR`, `RAW-FLAVOR`, `FG-COLA`, `RT-COLA`, the brix specification and the
+two lots until somebody with database access removes them, or until the plant is
+rebuilt or restored from a backup taken before the run (`fsmes backup` /
+`fsmes restore`). Nor can the two lots be put beyond use: `LotStatus` has a
+`blocked` state and, as of 2026-09-27, nothing in this product sets it. The one
+thing that softens this is that the codes are the demo plant's, so what a person
+finds on their plant is recognisable rather than mysterious. **Seed a plant you
+are willing to rebuild.**
+
+Both halves are **idempotent**: a second run on an arranged, seeded plant creates
+nothing twice and fails nothing. Point it at the same plant as often as you like.
 
 ## Reading a result
 
@@ -188,7 +272,12 @@ writes `docs/ai/calibration/<date>/`:
 - every case marked `not_yet`, and which handoff it is waiting on;
 - every case that was **not arranged**, what the plant has not got, and why —
   followed by what the run put on the plant, what was already there, and
-  anything it could not arrange, in the plant's own words.
+  anything it could not arrange, in the plant's own words. That last part comes
+  in two halves, because two different accounts wrote them: what the **agent**
+  arranged through the assistant's tools, and what **master data** the person
+  seeded. When `--seed-masterdata` was not given, the file says so — an operator
+  reading a run against their plant should be able to see that its master data
+  was theirs.
 
 A plant does not report the commit it is running, so `--plant-commit` is how that
 gets into the file. A result with no build behind it cannot be compared to next

@@ -15,15 +15,20 @@ What this file cannot tell you is whether a real model would choose the right
 tool. `fsmes assist eval --live` asks that, on a running plant, for money.
 """
 
+import ast
 import json
+import pathlib
 import threading
 import typing
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
+from typer.testing import CliRunner
 
+from fsmes.cli import app
 from fsmes.lab import assist_eval as assist_runs
-from fsmes.lab import assist_fixtures
+from fsmes.lab import assist_fixtures, assist_seed
 from fsmes.services import agent, assist_eval, assistant
 from fsmes.services import capabilities as caps
 
@@ -279,9 +284,12 @@ class _Double(BaseHTTPRequestHandler):
     HTTP path, the sign-in, the budget arithmetic, the declining of proposals
     and the result file are all proven with no key and no money.
 
-    It answers nothing about master data or orders, so the runs below pass
-    `arranging=False`: arranging a plant is proven further down, against a real
-    one on a real socket."""
+    It answers nothing about orders, so the runs below pass `arranging=False`:
+    arranging a plant is proven further down, against a real one on a real
+    socket. It does keep a master-data table, because the other thing a live run
+    can be asked to do is put the demo plant's master data there as the person
+    signed in, and that is an HTTP path too - ten `POST`s and the reads that
+    decide whether to make them."""
 
     state: typing.ClassVar[dict] = {}
 
@@ -296,19 +304,62 @@ class _Double(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    #: Where each sort of master data lives on a plant, and whether that list
+    #: endpoint answers with a bare list or a paged envelope. Both shapes are
+    #: real, and a reader that assumed one would report an absence on the other.
+    LISTS: typing.ClassVar[dict] = {
+        "/masterdata/equipment": ("equipment", "bare"),
+        "/masterdata/materials": ("materials", "bare"),
+        "/masterdata/routings": ("routings", "bare"),
+        "/quality/specs": ("specs", "envelope"),
+        "/execution/lots": ("lots", "envelope"),
+    }
+
     def do_GET(self):
-        if self.path == "/health":
+        url = urlsplit(self.path)
+        query = {k: v[0] for k, v in parse_qs(url.query).items()}
+        if url.path == "/health":
             return self._send({"status": "ok", "plant": "doubled"})
-        if self.path == "/assist/agent/status":
+        if url.path == "/assist/agent/status":
             return self._send({"available": True, "reason": "ok", "model": "test-model",
                                "spend_usd": self.state["spend"], "cap_usd": 10.0,
                                "tokens_this_month": {"input": self.state["asks"] * 100,
                                                      "output": self.state["asks"] * 10}})
+        if url.path == "/auth/me":
+            return self._send({"code": self.state.get("signed_in_as"), "role": "admin",
+                               "name": "Doubled",
+                               "capabilities": sorted(self.state["capabilities"])})
+        if url.path in self.LISTS:
+            name, shape = self.LISTS[url.path]
+            rows = [row for row in self.state["masterdata"][name] if _matches(row, query)]
+            if shape == "bare":
+                return self._send(rows)
+            return self._send({"items": rows, "total": len(rows), "limit": 50,
+                               "offset": 0, "has_more": False})
         return self._send({"detail": "not found"}, 404)
+
+    #: What this plant asks for before it will take one, the way the real
+    #: routers do: everything but a lot wants `masterdata.write`, and a lot is
+    #: stock, so it wants the capability that books stock.
+    WANTS: typing.ClassVar[dict] = {
+        "/masterdata/equipment": ("equipment", "masterdata.write"),
+        "/masterdata/materials": ("materials", "masterdata.write"),
+        "/masterdata/routings": ("routings", "masterdata.write"),
+        "/quality/specs": ("specs", "masterdata.write"),
+        "/execution/lots": ("lots", "production.consume"),
+    }
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length") or 0)
         body = json.loads(self.rfile.read(length) or b"{}")
+        self.state["posted"].append(self.path)
+        if self.path in self.WANTS:
+            name, capability = self.WANTS[self.path]
+            if capability not in self.state["capabilities"]:
+                return self._send({"detail": f"needs {capability}"}, 403)
+            self.state["masterdata"][name].append(dict(body))
+            self.state["made"].append((self.path, dict(body)))
+            return self._send(dict(body), 201)
         if self.path == "/auth/login":
             self.state["signed_in_as"] = body.get("code")
             return self._send({"token": "a-token"})
@@ -325,9 +376,23 @@ class _Double(BaseHTTPRequestHandler):
         return self._send({"detail": "not found"}, 404)
 
 
+def _matches(row: dict, query: dict) -> bool:
+    """The filters this needs, and no more: `q` on a code, and the pair that
+    names a specification."""
+    if "q" in query and query["q"] not in str(row.get("code", "")):
+        return False
+    return all(row.get(field) == query[field]
+               for field in ("material", "characteristic") if field in query)
+
+
 @pytest.fixture()
 def doubled_plant():
-    _Double.state = {"spend": 0.0, "asks": 0, "asked": [], "declined": [], "replies": {}}
+    _Double.state = {"spend": 0.0, "asks": 0, "asked": [], "declined": [], "replies": {},
+                     "posted": [], "made": [],
+                     # An admin, which is who a live run signs in as.
+                     "capabilities": {"masterdata.write", "production.consume"},
+                     "masterdata": {"equipment": [], "materials": [], "routings": [],
+                                    "specs": [], "lots": []}}
     server = ThreadingHTTPServer(("127.0.0.1", 0), _Double)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -443,6 +508,277 @@ def test_a_live_result_file_says_the_model_the_plant_and_what_it_cost(tmp_path, 
     assert "test-model" in text and "doubled" in text and "abc1234" in text
     assert "$0.4000" in text and "input 100" in text
     assert "Assistant faithfulness" in text
+
+
+# ------------------------ the master data a person seeds, and never the agent
+
+#: What the suite's own `requires` lines name for master-data kinds: the ones a
+#: plant has to have, and the ones it has to be without.
+MASTER_KINDS = frozenset(assist_seed.RECIPES)
+
+
+def _named_by_a_case(*, absent: bool) -> set[str]:
+    wanted = set()
+    for case in SUITE:
+        for requirement in case.requires:
+            says_absent = requirement.startswith("no ")
+            bare = requirement[3:].strip() if says_absent else requirement
+            if assist_seed.split(bare)[0] in MASTER_KINDS and says_absent is absent:
+                wanted.add(bare)
+    return wanted
+
+
+def _signed_in(url: str, *, code: str = "ADMIN") -> assist_runs.Plant:
+    plant = assist_runs.Plant(url)
+    plant.sign_in(code, "a-password")
+    return plant
+
+
+def test_what_a_run_seeds_covers_every_piece_of_master_data_the_suite_asks_a_plant_for():
+    """The list is a judgment and lives in one place; this is what holds it to
+    the suite. A case that starts naming a material nobody seeds would otherwise
+    be a case that quietly comes back not arranged for ever."""
+    missing = _named_by_a_case(absent=False) - set(assist_seed.SEEDS)
+    assert not missing, f"the suite asks a plant for master data nothing seeds: {missing}"
+
+
+def test_nothing_seeded_is_something_a_case_needs_the_plant_not_to_have():
+    """`admin-drafts-a-routing` needs a plant with no `RT-DIET` on it. Seeding
+    one would not fail loudly - it would take that case out of the required
+    number and look like a smaller suite."""
+    clash = set(assist_seed.SEEDS) & _named_by_a_case(absent=True)
+    assert not clash, f"a run would seed what a case needs absent: {clash}"
+
+
+def test_nothing_is_put_on_somebodys_plant_without_a_reason_a_person_can_read():
+    """Two lists, and every code on the seeding list is on one of them: named by
+    a case, or written down with why. A tenth row nobody can account for is how a
+    suite starts redecorating plants."""
+    unaccounted = (set(assist_seed.SEEDS) - _named_by_a_case(absent=False)
+                   - set(assist_seed.BEYOND_THE_SUITE))
+    assert not unaccounted, unaccounted
+    stale = set(assist_seed.BEYOND_THE_SUITE) - set(assist_seed.SEEDS)
+    assert not stale, f"a reason for master data nothing seeds any more: {stale}"
+
+
+def test_the_codes_and_the_numbers_come_from_the_demo_pack_and_are_not_retyped():
+    """`seed_demo_plant` is where the demo plant is written down. These are the
+    numbers `docs/ai/ASSIST-EVAL.md` promises a person, read back out of it - so
+    a change to the demo pack turns this red rather than quietly putting a
+    different plant on somebody's floor."""
+    bodies = assist_seed.demo_master_data()
+    assert set(bodies) == set(assist_seed.SEEDS)
+    assert bodies["material:FG-COLA"] == {"code": "FG-COLA", "name": "Cola Syrup 1L",
+                                          "unit": "ea", "type": "finished",
+                                          "counted_in_pieces": False}
+    assert bodies["machine:MIX01"]["ideal_cycle_seconds"] == 4.0
+    assert bodies["machine:PACK01"]["ideal_cycle_seconds"] == 3.0
+    assert bodies["spec:FG-COLA/brix"] == {"material": "FG-COLA", "characteristic": "brix",
+                                          "unit": "\u00b0Bx", "min_value": 9.5,
+                                          "max_value": 11.5}
+    assert bodies["lot:LOT-SUGAR-001"]["quantity"] == 500
+    assert bodies["lot:LOT-FLAVOR-001"]["quantity"] == 100
+    assert bodies["routing:RT-COLA"]["operations"] == [
+        {"seq": 10, "name": "Mix", "equipment": "MIX01"},
+        {"seq": 20, "name": "Pack", "equipment": "PACK01"}]
+
+
+def test_a_line_seeded_onto_somebody_elses_plant_does_not_claim_a_parent_it_never_made():
+    """The demo pack hangs LINE1 under an area under a site under an enterprise.
+    A run has no business inventing four levels of another plant's hierarchy, so
+    LINE1 arrives parentless and the two machines arrive under it."""
+    bodies = assist_seed.demo_master_data()
+    assert bodies["machine:LINE1"]["parent"] is None
+    assert bodies["machine:LINE1"]["level"] == "work_center"
+    assert bodies["machine:MIX01"]["parent"] == "LINE1"
+    assert bodies["machine:PACK01"]["parent"] == "LINE1"
+
+
+def test_seeding_puts_the_demo_plants_master_data_there_over_the_plants_own_api(doubled_plant):
+    url, state = doubled_plant
+    plant = _signed_in(url)
+    seeded = assist_seed.seed(plant)
+    plant.close()
+
+    assert seeded["made"] == list(assist_seed.SEEDS)
+    assert seeded["already"] == [] and seeded["refused"] == {}
+    # Ten POSTs, the same ten a person made by hand on 2026-09-27, to the
+    # product's own endpoints - and not one of them to an assistant path.
+    assert [path for path, _ in state["made"]] == [
+        "/masterdata/equipment", "/masterdata/equipment", "/masterdata/equipment",
+        "/masterdata/materials", "/masterdata/materials", "/masterdata/materials",
+        "/masterdata/routings", "/quality/specs",
+        "/execution/lots", "/execution/lots"]
+    assert not any(path.startswith("/assist") for path in state["posted"])
+    assert state["signed_in_as"] == "ADMIN"
+
+
+def test_the_machines_go_on_before_the_routing_that_names_them(doubled_plant):
+    """Order is not a preference here: `create_routing` resolves every operation's
+    equipment by code and refuses a step with nowhere to happen."""
+    url, state = doubled_plant
+    plant = _signed_in(url)
+    assist_seed.seed(plant)
+    plant.close()
+    paths = [path for path, _ in state["made"]]
+    assert paths.index("/masterdata/routings") > max(
+        i for i, path in enumerate(paths) if path == "/masterdata/equipment")
+    assert paths.index("/masterdata/routings") > max(
+        i for i, path in enumerate(paths) if path == "/masterdata/materials")
+
+
+def test_seeding_the_same_plant_twice_puts_nothing_there_the_second_time(doubled_plant):
+    """Scott rebuilds the fleet when he likes; a person should be able to point
+    this at the same plant as often as they want."""
+    url, state = doubled_plant
+    plant = _signed_in(url)
+    assist_seed.seed(plant)
+    state["made"].clear()
+    again = assist_seed.seed(plant)
+    plant.close()
+
+    assert again["already"] == list(assist_seed.SEEDS)
+    assert again["made"] == [] and again["refused"] == {}
+    assert state["made"] == [], "a second run wrote to the plant"
+
+
+def test_a_code_that_is_already_there_is_left_exactly_as_the_plant_has_it(doubled_plant):
+    """Not updated, ever. A plant whose FG-COLA is measured in litres keeps its
+    own; a run that corrected somebody's master data to match a test suite would
+    be the worst thing in this repository."""
+    url, state = doubled_plant
+    state["masterdata"]["materials"].append(
+        {"code": "FG-COLA", "name": "Their cola", "unit": "l", "type": "finished"})
+    plant = _signed_in(url)
+    seeded = assist_seed.seed(plant)
+    plant.close()
+
+    assert "material:FG-COLA" in seeded["already"]
+    assert state["masterdata"]["materials"][0] == {
+        "code": "FG-COLA", "name": "Their cola", "unit": "l", "type": "finished"}
+    assert not any(body.get("code") == "FG-COLA" for _path, body in state["made"])
+
+
+def test_seeding_is_refused_plainly_when_the_account_may_not_define_master_data(doubled_plant):
+    """An operator may not, and should be told so in one sentence rather than
+    collecting ten refusals - and nothing should be written on the way to
+    finding out."""
+    url, state = doubled_plant
+    state["capabilities"] = {"production.book"}
+    plant = _signed_in(url, code="SCOTT")
+    with pytest.raises(assist_seed.Refused, match=r"masterdata\.write"):
+        assist_seed.seed(plant)
+    plant.close()
+    assert state["made"] == [] and state["posted"] == ["/auth/login"]
+
+
+def test_an_account_that_may_define_master_data_but_not_stock_says_what_the_lots_wanted(
+        doubled_plant):
+    """A lot is stock, not a definition, and this product asks for the capability
+    that books stock. The eight definitions still go on; the two lots come back
+    with the capability named, not with a shrug."""
+    url, state = doubled_plant
+    state["capabilities"] = {"masterdata.write"}
+    plant = _signed_in(url)
+    seeded = assist_seed.seed(plant)
+    plant.close()
+
+    assert len(seeded["made"]) == 8
+    assert set(seeded["refused"]) == {"lot:LOT-SUGAR-001", "lot:LOT-FLAVOR-001"}
+    for why in seeded["refused"].values():
+        assert "production.consume" in why
+    assert not any(path == "/execution/lots" for path in state["posted"])
+
+
+def test_a_plant_that_will_not_say_whether_it_has_something_is_not_written_to(doubled_plant):
+    """"I could not find out" and "it is not there" are different answers, and
+    only one of them is a reason to write."""
+    url, state = doubled_plant
+
+    class Deaf(assist_runs.Plant):
+        def read(self, path, **params):
+            if path == "/masterdata/materials":
+                raise assist_runs.LiveRefused("GET /masterdata/materials -> 500 boom")
+            return super().read(path, **params)
+
+    plant = Deaf(url)
+    plant.sign_in("ADMIN", "a-password")
+    seeded = assist_seed.seed(plant)
+    plant.close()
+
+    assert set(seeded["refused"]) == {"material:RAW-SUGAR", "material:RAW-FLAVOR",
+                                      "material:FG-COLA"}
+    for why in seeded["refused"].values():
+        assert "would not say whether it has this" in why and "500 boom" in why
+    assert not any(path == "/masterdata/materials" for path in state["posted"])
+
+
+def test_the_person_seeding_master_data_never_reaches_the_plant_as_the_agent():
+    """Decision 0035, held by the import graph. The AGENT account may not define
+    master data; this module is what a person does instead, so it must not be
+    able to reach the tool layer or the arrangement that uses it."""
+    tree = ast.parse(pathlib.Path(assist_seed.__file__).read_text(encoding="utf-8"))
+    imported = {node.module for node in ast.walk(tree)
+                if isinstance(node, ast.ImportFrom) and node.module}
+    imported |= {alias.name for node in ast.walk(tree) if isinstance(node, ast.Import)
+                 for alias in node.names}
+    assert not [name for name in imported if "mcp" in name], imported
+    assert not [name for name in imported if "assist_fixtures" in name], imported
+
+
+def test_a_live_run_seeds_the_master_data_before_it_arranges_anything(doubled_plant):
+    """Not a preference either. `WO-EVAL-1` is an order for FG-COLA routed over
+    MIX01, and the non-conformance is opened by a brix check failing against a
+    specification - all three have to be there first."""
+    url, state = doubled_plant
+    plant = _signed_in(url)
+    assist_runs.run_live(SUITE[:1], plant, seeding=True, arranging=True)
+    plant.close()
+
+    master = set(_Double.WANTS)
+    posted = [path for path in state["posted"] if path != "/auth/login"]
+    seeded_at = [i for i, path in enumerate(posted) if path in master]
+    other = [i for i, path in enumerate(posted) if path not in master]
+    assert seeded_at, "nothing was seeded"
+    assert not other or max(seeded_at) < min(other), posted
+
+
+def test_a_live_run_that_was_not_asked_to_seed_leaves_the_master_data_alone(doubled_plant):
+    url, state = doubled_plant
+    plant = _signed_in(url)
+    _outcomes, run = assist_runs.run_live(SUITE[:1], plant, arranging=False)
+    plant.close()
+    assert run["seeding"] is False and run["seeded"] == {}
+    assert state["made"] == []
+
+
+def test_the_result_file_says_what_master_data_arrived_and_that_nothing_removes_it():
+    page = assist_eval.report((), mode="live", run={
+        "seeding": True,
+        "seeded": {"made": ["material:FG-COLA"], "already": ["machine:MIX01"],
+                   "refused": {"lot:LOT-SUGAR-001": "this plant asks for "
+                                                    "'production.consume'"}}})
+    assert "### The master data, as the person signed in" in page
+    assert "`material:FG-COLA`" in page and "`machine:MIX01`" in page
+    assert "production.consume" in page
+    assert "no `DELETE` for equipment, materials, routings" in page
+    assert "rebuilt or restored from a backup" in page
+    assert "decision 0035" in page
+
+
+def test_a_result_file_says_plainly_when_master_data_was_never_asked_for():
+    """So an operator reading a run against their plant can see that its master
+    data was theirs, not a suite's."""
+    page = assist_eval.report((), mode="live", run={})
+    assert "`--seed-masterdata` was not given" in page
+
+
+def test_a_scripted_run_cannot_be_asked_to_seed_master_data():
+    """Its plant is built from the demo pack in-process and already has all of
+    it, so a person who typed this meant it for a real plant."""
+    result = CliRunner().invoke(app, ["assist", "eval", "--scripted", "--seed-masterdata"])
+    assert result.exit_code == 2
+    assert "--seed-masterdata is for --live" in result.stdout
 
 
 # ------------------------------------------------- the fixtures a case needs
@@ -635,6 +971,151 @@ def plant_on_a_port():
             client = mcp_server._clients.pop(assist_runs.LIVE_PLANT, None)
             if client is not None:
                 client.close()
+
+
+@pytest.fixture()
+def bare_plant_on_a_port():
+    """A plant with accounts and no master data, served over TCP.
+
+    What `--seed-masterdata` exists for, and the only fixture that can prove it:
+    a plant built from the demo pack already has every one of the ten codes, so
+    it can show you "already there" and never the request that creates one. Here
+    the real routers answer - the real paths, the real payload shapes, the real
+    capability names - which a canned double cannot.
+    """
+    from fsmes import mcp_server
+
+    with assist_runs.scripted_plant(seeded=False) as plant:
+        _OverASocket.app = plant.client
+        _OverASocket.calls = []
+        server = ThreadingHTTPServer(("127.0.0.1", 0), _OverASocket)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        url = f"http://127.0.0.1:{server.server_address[1]}"
+        try:
+            yield url, _OverASocket.calls
+        finally:
+            server.shutdown()
+            server.server_close()
+            mcp_server._local.pop(assist_runs.LIVE_PLANT, None)
+            client = mcp_server._clients.pop(assist_runs.LIVE_PLANT, None)
+            if client is not None:
+                client.close()
+
+
+def test_seeding_a_real_empty_plant_leaves_it_holding_all_ten_codes(bare_plant_on_a_port):
+    """The real routers, over a real socket, on a plant that had none of it: ten
+    `POST`s, ten rows, and the plant says so when it is asked afterwards."""
+    url, calls = bare_plant_on_a_port
+    plant = assist_runs.Plant(url)
+    plant.sign_in("ADMIN", "a-long-enough-password")
+    seeded = assist_runs.seed_live(plant)
+
+    assert seeded["refused"] == {}, seeded["refused"]
+    assert seeded["made"] == list(assist_seed.SEEDS)
+    written = [path for method, path in calls if method == "POST" and path != "/auth/login"]
+    assert written == ["/masterdata/equipment", "/masterdata/equipment",
+                       "/masterdata/equipment", "/masterdata/materials",
+                       "/masterdata/materials", "/masterdata/materials",
+                       "/masterdata/routings", "/quality/specs",
+                       "/execution/lots", "/execution/lots"]
+    for requirement in assist_seed.SEEDS:
+        kind, code = assist_seed.split(requirement)
+        assert assist_seed.RECIPES[kind].there(plant, code), requirement
+    plant.close()
+
+
+def test_what_lands_on_a_real_plant_is_the_demo_plant_and_not_a_near_miss(
+        bare_plant_on_a_port):
+    """"The code is there" is not the same claim as "the row says what the demo
+    pack says". A field named wrong is accepted by a router with a default behind
+    it - `FG-COLA` would arrive as a *raw* material, `MIX01` with no ideal cycle -
+    and every presence check in this file would still pass. So the rows are read
+    back off the plant and compared, field by field."""
+    url, _calls = bare_plant_on_a_port
+    plant = assist_runs.Plant(url)
+    plant.sign_in("ADMIN", "a-long-enough-password")
+    assist_runs.seed_live(plant)
+
+    def one(path, **params):
+        rows = plant.read(path, **params)
+        rows = rows.get("items") if isinstance(rows, dict) else rows
+        assert len(rows) == 1, (path, params, rows)
+        return rows[0]
+
+    cola = one("/masterdata/materials", q="FG-COLA")
+    assert (cola["name"], cola["unit"], cola["type"]) == ("Cola Syrup 1L", "ea", "finished")
+    sugar = one("/masterdata/materials", q="RAW-SUGAR")
+    assert (sugar["unit"], sugar["type"]) == ("kg", "raw")
+    flavor = one("/masterdata/materials", q="RAW-FLAVOR")
+    assert (flavor["unit"], flavor["type"]) == ("l", "raw")
+
+    line = one("/masterdata/equipment", q="LINE1")
+    assert (line["level"], line["parent"]) == ("work_center", None)
+    mixer = one("/masterdata/equipment", q="MIX01")
+    assert (mixer["level"], mixer["parent"], mixer["ideal_cycle_seconds"]) == (
+        "work_unit", "LINE1", 4.0)
+    packer = one("/masterdata/equipment", q="PACK01")
+    assert (packer["parent"], packer["ideal_cycle_seconds"]) == ("LINE1", 3.0)
+
+    routing = one("/masterdata/routings", q="RT-COLA")
+    assert routing["material"] == "FG-COLA"
+    assert routing["operations"] == [{"seq": 10, "name": "Mix", "equipment": "MIX01"},
+                                     {"seq": 20, "name": "Pack", "equipment": "PACK01"}]
+
+    spec = one("/quality/specs", material="FG-COLA", characteristic="brix")
+    assert (spec["unit"], spec["min_value"], spec["max_value"]) == ("°Bx", 9.5, 11.5)
+
+    assert one("/execution/lots", q="LOT-SUGAR-001")["quantity"] == 500
+    assert one("/execution/lots", q="LOT-FLAVOR-001")["quantity"] == 100
+    plant.close()
+
+
+def test_the_routing_nobody_asked_for_is_what_lets_the_agents_order_exist(
+        bare_plant_on_a_port):
+    """`routing:RT-COLA` is on the seeding list and no case names it. This is the
+    reason written beside it, measured against the real routers: with the machines
+    and the materials there and no routing, `workorders.create` refuses
+    `WO-EVAL-1` outright, and the agent's whole arrangement stops at its first
+    fixture."""
+    url, _calls = bare_plant_on_a_port
+    plant = assist_runs.Plant(url)
+    plant.sign_in("ADMIN", "a-long-enough-password")
+
+    bodies = assist_seed.demo_master_data()
+    for requirement in assist_seed.SEEDS:
+        if assist_seed.split(requirement)[0] in ("machine", "material"):
+            plant.write(assist_seed.RECIPES[assist_seed.split(requirement)[0]].where,
+                        bodies[requirement])
+
+    before = assist_runs.arrange_live(url, on_behalf_of="ADMIN")
+    assert "order:WO-EVAL-1" in before["refused"], before
+    assert "routing" in before["refused"]["order:WO-EVAL-1"].lower()
+
+    assist_runs.seed_live(plant)
+    after = assist_runs.arrange_live(url, on_behalf_of="ADMIN")
+    assert not after["refused"], after["refused"]
+    assert set(after["made"]) | set(after["already"]) == set(assist_runs.ARRANGES)
+    plant.close()
+
+
+def test_seeding_a_plant_built_from_the_demo_pack_finds_every_code_already_there(
+        plant_on_a_port):
+    """The other end of the same idempotency, against the real routers: the demo
+    pack's own plant already has all ten, so nothing is written to it at all."""
+    from fsmes.config import get_settings
+
+    url, calls = plant_on_a_port
+    plant = assist_runs.Plant(url)
+    plant.sign_in("ADMIN", get_settings().admin_password)
+    calls.clear()
+    seeded = assist_runs.seed_live(plant)
+    plant.close()
+
+    assert seeded["already"] == list(assist_seed.SEEDS)
+    assert seeded["made"] == [] and seeded["refused"] == {}
+    assert not [path for method, path in calls
+                if method == "POST" and path != "/auth/login"]
 
 
 def test_a_live_run_puts_the_suites_fixtures_on_a_real_plant_over_its_own_http_api(
