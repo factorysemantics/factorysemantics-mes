@@ -26,6 +26,7 @@ from urllib.parse import parse_qs, urlsplit
 import pytest
 from typer.testing import CliRunner
 
+from fsmes import cli as cli_module
 from fsmes.cli import app
 from fsmes.lab import assist_eval as assist_runs
 from fsmes.lab import assist_fixtures, assist_seed
@@ -304,6 +305,11 @@ class _Double(BaseHTTPRequestHandler):
     def log_message(self, *args):    # keep pytest output readable
         pass
 
+    def _who(self) -> str | None:
+        """The account behind this request, out of its own bearer token."""
+        token = (self.headers.get("Authorization") or "").removeprefix("Bearer ").strip()
+        return token.removeprefix("token-") or None
+
     def _send(self, payload: dict, code: int = 200) -> None:
         body = json.dumps(payload).encode()
         self.send_response(code)
@@ -370,11 +376,14 @@ class _Double(BaseHTTPRequestHandler):
             return self._send(dict(body), 201)
         if self.path == "/auth/login":
             self.state["signed_in_as"] = body.get("code")
-            return self._send({"token": "a-token"})
+            # A token per account, so who asked a question is a fact this double
+            # can report rather than one a test has to take on trust.
+            return self._send({"token": f"token-{body.get('code')}"})
         if self.path == "/assist/agent":
             self.state["asks"] += 1
             self.state["spend"] = round(self.state["spend"] + 0.40, 6)
             self.state["asked"].append(body.get("message"))
+            self.state["asked_by"].append((self._who(), body.get("message")))
             return self._send(self.state["replies"].get(
                 body.get("message"), {"kind": "reply", "session": "s1", "say": "I do not know.",
                                       "transcript": []}))
@@ -395,7 +404,7 @@ def _matches(row: dict, query: dict) -> bool:
 
 @pytest.fixture()
 def doubled_plant():
-    _Double.state = {"spend": 0.0, "asks": 0, "asked": [], "declined": [], "replies": {},
+    _Double.state = {"spend": 0.0, "asks": 0, "asked": [], "asked_by": [], "declined": [], "replies": {},
                      "posted": [], "made": [],
                      # An admin, which is who a live run signs in as.
                      "capabilities": {"masterdata.write", "production.consume"},
@@ -422,16 +431,109 @@ def test_a_live_run_scores_a_plant_over_its_own_http_api(doubled_plant):
     }
     plant = assist_runs.Plant(url)
     plant.sign_in("ADMIN", "a-password")
-    outcomes, run = assist_runs.run_live((case,), plant, arranging=False)
+    outcomes, run = assist_runs.run_live((case,), plant, accounts={"admin": plant},
+                                        arranging=False)
     plant.close()
 
     assert state["signed_in_as"] == "ADMIN"
+    assert run["asked_as"] == {"admin": "ADMIN"}
+    assert run["no_account"] == ()
     assert state["asked"] == [case.request]
     assert outcomes[0].passed, outcomes[0].why
     assert outcomes[0].turn.from_model is True
     assert run["model"] == "test-model"
     assert run["usd"] == pytest.approx(0.40)
     assert run["tokens"] == {"input": 100, "output": 10}
+
+
+# ------------------------------------------- one account per role, and no other
+
+def _two_roles(state) -> tuple:
+    """One administrator's case and one operator's, each with a canned reply
+    that would pass, so what these tests measure is who was asked."""
+    admin = BY_ID["scott-wants-the-nonconformance-prefix-to-be-cr"]
+    operator = BY_ID["operator-raises-everything-that-is-due"]
+    state["replies"][admin.request] = {
+        "kind": "proposals", "session": "s1", "say": "I can change it to CR.",
+        "proposals": [{"id": "p1", "tool": "write_plant_setting",
+                       "args": {"domain": "quality", "key": "nc_code_prefix",
+                                "value": "CR"},
+                       "surface": {"steps": [{"anchor": "setting-in-focus"}]}}]}
+    state["replies"][operator.request] = {
+        "kind": "proposals", "session": "s2", "say": "Here is the work that is due.",
+        "proposals": [{"id": "p2", "tool": "raise_due_maintenance", "args": {}}]}
+    return admin, operator
+
+
+def test_each_role_is_asked_as_an_account_that_holds_it(doubled_plant):
+    """Until 2026-09-27 one `--user` answered for every role, so a run of the
+    operator suite as ADMIN reported a number about the administrator. Two
+    accounts, two roles, and the double says which token each question arrived
+    on."""
+    url, state = doubled_plant
+    admin_case, operator_case = _two_roles(state)
+    as_admin, as_operator = assist_runs.Plant(url), assist_runs.Plant(url)
+    as_admin.sign_in("ADMIN", "a-password")
+    as_operator.sign_in("SCOTT", "a-password")
+
+    outcomes, run = assist_runs.run_live(
+        (admin_case, operator_case), as_admin,
+        accounts={"admin": as_admin, "operator": as_operator}, arranging=False)
+    as_admin.close()
+    as_operator.close()
+
+    assert state["asked_by"] == [("ADMIN", admin_case.request),
+                                 ("SCOTT", operator_case.request)]
+    assert run["asked_as"] == {"admin": "ADMIN", "operator": "SCOTT"}
+    assert all(o.passed for o in outcomes), [o.why for o in outcomes]
+
+
+def test_a_role_with_no_account_is_reported_rather_than_asked_as_somebody_else(
+        doubled_plant):
+    """The point of the whole thing: the operator's case is not asked at all, it
+    is not paid for, and it is out of the required number instead of being
+    scored against somebody else's session."""
+    url, state = doubled_plant
+    admin_case, operator_case = _two_roles(state)
+    as_admin = assist_runs.Plant(url)
+    as_admin.sign_in("ADMIN", "a-password")
+
+    outcomes, run = assist_runs.run_live(
+        (admin_case, operator_case), as_admin, accounts={"admin": as_admin},
+        arranging=False)
+    as_admin.close()
+
+    assert state["asked_by"] == [("ADMIN", admin_case.request)]
+    assert run["no_account"] == ("operator",)
+    unasked = [o for o in outcomes if o.no_account]
+    assert [o.case.id for o in unasked] == [operator_case.id]
+    assert not unasked[0].counted and not unasked[0].passed
+    assert "no account holding the operator role" in unasked[0].why[0]
+    counts = assist_eval.tally(outcomes)
+    assert counts["required"] == 1 and counts["passed"] == 1
+    assert counts["no_account"] == 1
+    assert counts["roles"]["operator"]["required"] == 0
+    assert run["usd"] == pytest.approx(0.40), "an unasked case must not be paid for"
+
+
+def test_a_result_file_says_which_account_answered_for_each_role(doubled_plant):
+    """A per-role number is about whoever was typing, so the file says who that
+    was - and names the roles nobody held rather than leaving a gap."""
+    url, state = doubled_plant
+    admin_case, operator_case = _two_roles(state)
+    as_admin = assist_runs.Plant(url)
+    as_admin.sign_in("ADMIN", "a-password")
+    outcomes, run = assist_runs.run_live(
+        (admin_case, operator_case), as_admin, accounts={"admin": as_admin},
+        arranging=False)
+    as_admin.close()
+
+    page = assist_eval.report(outcomes, mode="live", model=run["model"], plant="doubled",
+                              run=run)
+    assert "| admin | ADMIN |" in page
+    assert "| operator | nobody |" in page
+    assert "## Not asked — no account for the role" in page
+    assert operator_case.id in page
 
 
 def test_a_live_run_declines_every_proposal_it_opens(doubled_plant):
@@ -444,7 +546,7 @@ def test_a_live_run_declines_every_proposal_it_opens(doubled_plant):
     }
     plant = assist_runs.Plant(url)
     plant.sign_in("SCOTT", "a-password")
-    assist_runs.run_live((case,), plant, arranging=False)
+    assist_runs.run_live((case,), plant, accounts={"operator": plant}, arranging=False)
     plant.close()
     assert state["declined"] == ["p9"]
 
@@ -456,7 +558,9 @@ def test_a_live_run_stops_at_the_budget_it_was_given_and_says_what_it_did_not_ru
     cases = tuple(c for c in SUITE if not c.requires and not c.over_proposal)[:6]
     plant = assist_runs.Plant(url)
     plant.sign_in("SCOTT", "a-password")
-    outcomes, run = assist_runs.run_live(cases, plant, max_usd=1.00, arranging=False)
+    accounts = {role: plant for role in {c.role for c in cases}}
+    outcomes, run = assist_runs.run_live(cases, plant, accounts=accounts, max_usd=1.00,
+                                        arranging=False)
     plant.close()
     # 40 cents a turn: the third takes it to 1.20, and the fourth never starts.
     assert len(outcomes) == 3
@@ -475,7 +579,8 @@ def test_a_live_run_on_a_plant_with_no_brain_says_so_rather_than_scoring_zero(do
     plant = Off(url)
     plant.sign_in("ADMIN", "a-password")
     with pytest.raises(assist_runs.LiveRefused, match="ANTHROPIC_API_KEY"):
-        assist_runs.run_live(SUITE[:1], plant, arranging=False)
+        assist_runs.run_live(SUITE[:1], plant, accounts={SUITE[0].role: plant},
+                             arranging=False)
     plant.close()
 
 
@@ -488,7 +593,8 @@ def test_a_plant_that_cannot_be_read_reports_cases_not_arranged_rather_than_fail
     case = BY_ID["operator-books-good-and-scrap"]
     plant = assist_runs.Plant(url)
     plant.sign_in("SCOTT", "a-password")
-    outcomes, run = assist_runs.run_live((case,), plant, arranging=False)
+    outcomes, run = assist_runs.run_live((case,), plant, accounts={"operator": plant},
+                                        arranging=False)
     plant.close()
     assert not outcomes[0].arranged
     assert not outcomes[0].counted
@@ -507,7 +613,8 @@ def test_a_live_result_file_says_the_model_the_plant_and_what_it_cost(tmp_path, 
     }
     plant = assist_runs.Plant(url)
     plant.sign_in("ADMIN", "a-password")
-    outcomes, run = assist_runs.run_live((case,), plant, arranging=False)
+    outcomes, run = assist_runs.run_live((case,), plant, accounts={"admin": plant},
+                                        arranging=False)
     plant.close()
     page = assist_eval.report(outcomes, mode="live", model=run["model"], plant="doubled",
                               plant_commit="abc1234", run=run)
@@ -787,6 +894,61 @@ def test_a_scripted_run_cannot_be_asked_to_seed_master_data():
     result = CliRunner().invoke(app, ["assist", "eval", "--scripted", "--seed-masterdata"])
     assert result.exit_code == 2
     assert "--seed-masterdata is for --live" in result.stdout
+
+
+# -------------------------------- the command's own refusals about accounts
+
+def _cli(monkeypatch, *args):
+    """`fsmes assist eval` as a person types it, with a key in the environment
+    so the run gets as far as the accounts."""
+    monkeypatch.setenv(assist_runs.KEY, "not called: every run below stops first")
+    for role in ("ADMIN", "OPERATOR", "SUPERVISOR", "AGENT"):
+        monkeypatch.delenv(f"{cli_module.PASSWORD_VAR}_{role}", raising=False)
+    return CliRunner().invoke(app, ["assist", "eval", "--live", "--plant",
+                                    "http://127.0.0.1:1", "--user", "ADMIN",
+                                    "--password", "a-password", *args])
+
+
+def test_a_live_run_with_no_account_named_refuses_rather_than_asking_as_one_person(
+        monkeypatch):
+    """The 2026-09-27 harness signed in once and asked every role's questions as
+    that person. Naming nobody now stops the run instead, before any money."""
+    out = _cli(monkeypatch)
+    assert out.exit_code == 2
+    assert "no role has anybody to ask as" in out.output
+    assert "--account admin=ADMIN" in out.output
+
+
+def test_an_account_the_command_cannot_read_is_said_before_anything_is_asked(
+        monkeypatch):
+    out = _cli(monkeypatch, "--account", "operator=SCOTT")
+    assert out.exit_code == 2
+    assert "No password for SCOTT (operator)" in out.output
+    assert f"{cli_module.PASSWORD_VAR}_OPERATOR" in out.output
+
+
+def test_an_account_written_the_wrong_way_round_is_refused_with_the_shape_it_wants(
+        monkeypatch):
+    out = _cli(monkeypatch, "--account", "SCOTT")
+    assert out.exit_code == 2
+    assert "<role>=<code>" in out.output
+
+
+def test_each_role_reads_its_password_from_its_own_variable(monkeypatch):
+    monkeypatch.setenv(f"{cli_module.PASSWORD_VAR}_OPERATOR", "an-operators-password")
+    assert cli_module._accounts(["operator=SCOTT"], user="ADMIN",
+                                password="an-administrators-password") == \
+        {"operator": ("SCOTT", "an-operators-password")}
+
+
+def test_the_account_that_arranges_the_plant_does_not_need_its_password_twice(
+        monkeypatch):
+    """`--user ADMIN --account admin=ADMIN` is one account, and nobody should
+    have to put one password in two variables."""
+    monkeypatch.delenv(f"{cli_module.PASSWORD_VAR}_ADMIN", raising=False)
+    assert cli_module._accounts(["admin=ADMIN"], user="admin",
+                                password="a-password") == \
+        {"admin": ("ADMIN", "a-password")}
 
 
 # ------------------------------------------------- the fixtures a case needs

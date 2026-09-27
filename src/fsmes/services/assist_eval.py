@@ -363,6 +363,12 @@ class Outcome:
     #: was never asked a fair question, and is reported apart from pass and
     #: fail rather than scored.
     missing: tuple[str, ...] = ()
+    #: No account on this plant holds this case's role, so there was nobody to
+    #: ask as. Reported apart from pass and fail for the same reason: a live run
+    #: that asked an operator's questions as the administrator measured nothing
+    #: about an operator - its refusal cases cannot refuse - and a number that
+    #: counted them would be a number about nobody.
+    no_account: bool = False
 
     @property
     def role(self) -> str:
@@ -377,8 +383,9 @@ class Outcome:
         """Whether this case is in the required score. A `not_yet` case is
         counted on its own, so the required number never drifts because
         somebody added a case for a thing that does not exist yet; a case the
-        plant was not arranged for is counted on its own for the same reason."""
-        return self.case.expected == "pass" and self.arranged
+        plant was not arranged for, or had nobody to ask as, is counted on its
+        own for the same reason."""
+        return self.case.expected == "pass" and self.arranged and not self.no_account
 
 
 def _haystack(case: Case, turn: Turn) -> str:
@@ -393,12 +400,15 @@ def _haystack(case: Case, turn: Turn) -> str:
     return turn.facts
 
 
-def score(case: Case, turn: Turn, missing: tuple[str, ...] = ()) -> Outcome:
+def score(case: Case, turn: Turn, missing: tuple[str, ...] = (), *,
+          no_account: bool = False) -> Outcome:
     """Did this turn do what the case asked. Strict on identity, loose on prose.
 
     `missing` is what the plant did not have. The turn is still scored - the
     report says what it did either way - but the outcome is marked *not
-    arranged*, and `counted` keeps it out of the required number.
+    arranged*, and `counted` keeps it out of the required number. `no_account`
+    says the same thing about the other half of a fair question: nobody on this
+    plant holds the role, so nobody was asked.
     """
     why: list[str] = []
     hay = _haystack(case, turn).casefold()
@@ -407,6 +417,7 @@ def score(case: Case, turn: Turn, missing: tuple[str, ...] = ()) -> Outcome:
         why.append(f"the conversation could not continue: {turn.say}")
     if turn.kind == "not_asked":
         return Outcome(case=case, passed=False, turn=turn, missing=tuple(missing),
+                       no_account=no_account,
                        why=(turn.say or "this plant has not got what the request names",))
 
     if case.expect == "propose":
@@ -431,7 +442,7 @@ def score(case: Case, turn: Turn, missing: tuple[str, ...] = ()) -> Outcome:
     if case.not_guide and turn.guide_id in case.not_guide:
         why.append(f"it walked them through {turn.guide_id!r}, which this request is not about")
     return Outcome(case=case, passed=not why, why=tuple(why), turn=turn,
-                   missing=tuple(missing))
+                   missing=tuple(missing), no_account=no_account)
 
 
 def _score_propose(case: Case, turn: Turn) -> list[str]:
@@ -767,14 +778,18 @@ def turn_from_reply(reply: dict, session=None, *, offered=frozenset(),
 # ----------------------------------------------------------------- the report
 
 def tally(outcomes: tuple[Outcome, ...]) -> dict:
-    """Pass rate per role. Three buckets, and every case is in exactly one of
-    them: required, `not_yet`, and *not arranged* - the plant did not have what
-    the sentence names, so nothing about the model was measured."""
+    """Pass rate per role. Four buckets, and every case is in exactly one of
+    them: required, `not_yet`, *not arranged* - the plant did not have what the
+    sentence names - and *no account*, where this plant has nobody holding the
+    role. Nothing about the model was measured in either of the last two."""
     roles: dict[str, dict] = {}
     for outcome in outcomes:
         row = roles.setdefault(outcome.role, {"required": 0, "passed": 0, "not_yet": 0,
-                                              "not_yet_passing": 0, "not_arranged": 0})
-        if not outcome.arranged:
+                                              "not_yet_passing": 0, "not_arranged": 0,
+                                              "no_account": 0})
+        if outcome.no_account:
+            row["no_account"] += 1
+        elif not outcome.arranged:
             row["not_arranged"] += 1
         elif outcome.counted:
             row["required"] += 1
@@ -788,6 +803,7 @@ def tally(outcomes: tuple[Outcome, ...]) -> dict:
             "not_yet": sum(r["not_yet"] for r in roles.values()),
             "not_yet_passing": sum(r["not_yet_passing"] for r in roles.values()),
             "not_arranged": sum(r["not_arranged"] for r in roles.values()),
+            "no_account": sum(r["no_account"] for r in roles.values()),
             "total": len(outcomes)}
 
 
@@ -816,10 +832,15 @@ def report(outcomes: tuple[Outcome, ...], *, mode: str, model: str | None = None
         f" {apart} {'case was' if apart == 1 else 'cases were'} not arranged — this "
         f"plant has not got what the request names, so "
         f"{'it is' if apart == 1 else 'they are'} not scored.")
+    nobody = counts.get("no_account") or 0
+    unasked = "" if not nobody else (
+        f" {nobody} {'case was' if nobody == 1 else 'cases were'} not asked at all — "
+        f"this plant has no account holding the role, and asking somebody else's "
+        f"questions as the wrong person measures nobody.")
     lines = [f"# Assistant faithfulness — {when.date().isoformat()}", "",
              f"*{mode} run, {when.isoformat(timespec='seconds')}. "
              f"{counts['passed']} of {counts['required']} required cases pass; "
-             f"{counts['not_yet']} are marked `not_yet`.{unarranged}*", ""]
+             f"{counts['not_yet']} are marked `not_yet`.{unarranged}{unasked}*", ""]
     lines += ["| | |", "|---|---|",
               f"| Mode | {mode} |",
               f"| Model | {model or 'none — the model is scripted'} |",
@@ -831,14 +852,21 @@ def report(outcomes: tuple[Outcome, ...], *, mode: str, model: str | None = None
         lines += [f"| Cost | ${run['usd']:.4f} of a ${run.get('max_usd', 0):.2f} budget "
                   f"(${run.get('month_usd', 0):.2f} of ${run.get('cap_usd', 0)} this month) |",
                   f"| Tokens | {', '.join(f'{k} {v:,}' for k, v in sorted(tokens.items())) or 'not reported'} |"]
+    asked_as = (run.get("asked_as") or {}) if mode == "live" else {}
     lines += ["", "## Per role", "",
-              "| Role | Required | Pass | Rate | not_yet | of those, passing | not arranged |",
-              "|---|---:|---:|---:|---:|---:|---:|"]
+              "| Role | Asked as | Required | Pass | Rate | not_yet | of those, passing "
+              "| not arranged | no account |",
+              "|---|---|---:|---:|---:|---:|---:|---:|---:|"]
     for role in sorted(counts["roles"]):
         row = counts["roles"][role]
         rate = f"{100 * row['passed'] / row['required']:.0f}%" if row["required"] else "—"
-        lines.append(f"| {role} | {row['required']} | {row['passed']} | {rate} | "
-                     f"{row['not_yet']} | {row['not_yet_passing']} | {row['not_arranged']} |")
+        # Which account answered for this role. A run that signed in as one
+        # person for every role is a run whose per-role numbers are about one
+        # person, and that is the fact a reader needs first.
+        who = asked_as.get(role) or ("—" if mode != "live" else "nobody")
+        lines.append(f"| {role} | {who} | {row['required']} | {row['passed']} | {rate} | "
+                     f"{row['not_yet']} | {row['not_yet_passing']} | {row['not_arranged']} "
+                     f"| {row.get('no_account', 0)} |")
 
     if mode == "live":
         lines += ["", *arrangement(run)]
@@ -855,7 +883,7 @@ def report(outcomes: tuple[Outcome, ...], *, mode: str, model: str | None = None
         lines += [f"- {why}" for why in outcome.why]
         lines.append("")
 
-    unmade = [o for o in outcomes if not o.arranged]
+    unmade = [o for o in outcomes if not o.arranged and not o.no_account]
     if unmade:
         # Why a fixture could not be arranged is the harness's knowledge, not
         # this module's: it comes in on the run, so the scorer stays a scorer.
@@ -870,7 +898,18 @@ def report(outcomes: tuple[Outcome, ...], *, mode: str, model: str | None = None
                              f"`{requirement}` | {reasons.get(requirement, '')} |")
         lines.append("")
 
-    waiting = [o for o in outcomes if o.arranged and not o.counted]
+    unasked_cases = [o for o in outcomes if o.no_account]
+    if unasked_cases:
+        lines += ["## Not asked — no account for the role", "",
+                  "This plant has no account holding these roles, so these cases were "
+                  "not asked and nothing was spent on them. They were not asked as "
+                  "somebody else either: an operator's refusal cases cannot refuse when "
+                  "the administrator is typing.", "",
+                  "| Case | Role |", "|---|---|"]
+        lines += [f"| `{o.case.id}` | {o.case.role} |" for o in unasked_cases]
+        lines.append("")
+
+    waiting = [o for o in outcomes if o.arranged and not o.no_account and not o.counted]
     lines += ["## Marked `not_yet`", ""]
     if not waiting:
         lines.append("None.")
@@ -982,6 +1021,7 @@ def as_json(outcomes: tuple[Outcome, ...]) -> str:
          "cases": [{"id": o.case.id, "role": o.case.role, "expect": o.case.expect,
                     "expected": o.case.expected, "handoff": o.case.handoff,
                     "arranged": o.arranged, "missing": list(o.missing),
+                    "no_account": o.no_account,
                     "passed": o.passed, "why": list(o.why),
                     "observed": o.turn.observed()} for o in outcomes]},
         indent=1, default=str)

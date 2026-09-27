@@ -3528,10 +3528,19 @@ def assist_eval_command(
         help="Run against the real model on a running plant. Costs money."),
     plant: str = typer.Option(
         None, "--plant", help="The plant's base URL, for --live. e.g. http://127.0.0.1:9030"),
-    user: str = typer.Option(None, "--user", help="The account to sign in as, for --live."),
+    user: str = typer.Option(
+        None, "--user",
+        help="The account a --live run arranges the plant for, and whose budget it "
+             "reads. Also asks a role's cases when --account names it."),
     password: str = typer.Option(
         None, "--password",
         help="That account's password. Read from MES_ASSIST_EVAL_PASSWORD when not given."),
+    account: list[str] = typer.Option(
+        None, "--account", metavar="ROLE=CODE",
+        help="Which account asks a role's cases, e.g. --account operator=SCOTT. Repeat "
+             "for several. The password comes from MES_ASSIST_EVAL_PASSWORD_<ROLE>, or "
+             "from --password when the code is the same as --user. A role with no "
+             "account is reported 'no account' and never asked as somebody else."),
     max_usd: float = typer.Option(
         None, "--max-usd",
         help=f"Stop a live run once it has cost this much. Default "
@@ -3582,6 +3591,13 @@ def assist_eval_command(
     plant, through the same endpoint the assistant panel posts to. It needs a key
     in the plant's environment, it costs money, and it stops at `--max-usd`.
     Every proposal it opens is declined, so a scored plant is an unchanged plant.
+
+    **Each role is asked as an account that holds it**, named with `--account
+    <role>=<code>` - `--account admin=ADMIN --account operator=SCOTT`. A role
+    with no account is reported *no account*: not asked, not scored, not paid
+    for, and not asked as somebody else. One account answering for every role is
+    how the 2026-09-27 run came to score the operator suite as the
+    administrator, whose refusal cases cannot refuse.
 
     `--seed-masterdata` puts the demo plant's **master data** there first, and
     puts it there **as you**: the machines, the materials, the routing, the brix
@@ -3643,7 +3659,8 @@ def assist_eval_command(
         plant_name = assist_eval.SCRIPTED_PLANT
     else:
         outcomes, run, model, plant_name = _live_run(cases, plant, user, password, max_usd,
-                                                     quiet=quiet, arranging=not no_arrange,
+                                                     accounts=account or [], quiet=quiet,
+                                                     arranging=not no_arrange,
                                                      seeding=seed_masterdata)
 
     counts = assist_eval.tally(outcomes)
@@ -3668,6 +3685,11 @@ def assist_eval_command(
         typer.echo(f"{counts['not_arranged']} case(s) were not arranged: this plant has "
                    f"not got what the request names, so they were not asked and not "
                    f"scored. They are listed in the result file.")
+    if counts.get("no_account"):
+        short = ", ".join(run.get("no_account") or ())
+        typer.echo(f"{counts['no_account']} case(s) were not asked at all: this plant has "
+                   f"no account holding {short}. Name one with --account "
+                   f"<role>=<code>; nothing is asked as somebody else.")
     if run.get("seeding"):
         seeded = run.get("seeded") or {}
         typer.echo(f"Master data, as {(user or '').upper() or 'the account signed in'}: "
@@ -3709,17 +3731,53 @@ def assist_eval_command(
         raise typer.Exit(1)
 
 
-def _live_run(cases, plant, user, password, max_usd, *, quiet: bool, arranging: bool,
-              seeding: bool = False):
-    """The live half, with the two refusals that have to happen before a call."""
+#: Where a role's own account keeps its password. One variable per role, so
+#: `--account operator=SCOTT` needs no password on a command line and no second
+#: account's password in the same variable.
+PASSWORD_VAR = "MES_ASSIST_EVAL_PASSWORD"
+
+
+def _accounts(given: list[str], *, user: str,
+              password: str) -> dict[str, tuple[str, str]]:
+    """`["operator=SCOTT"]` -> `{"operator": ("SCOTT", "...")}`, with the
+    password each one signs in with.
+
+    Refused before anything is asked, because a run that discovers a typo after
+    it has spent money on the first role has spent it on half a measurement.
+    """
+    import os
+
+    out: dict[str, tuple[str, str]] = {}
+    for entry in given:
+        role, _, code = entry.partition("=")
+        role, code = role.strip().lower(), code.strip().upper()
+        if not role or not code:
+            typer.echo(f"--account wants <role>=<code>, not {entry!r}.")
+            raise typer.Exit(2)
+        variable = f"{PASSWORD_VAR}_{role.upper()}"
+        secret = os.environ.get(variable)
+        if not secret and code == (user or "").upper():
+            # The same account, so the same password: nobody should have to put
+            # one password in two variables.
+            secret = password
+        if not secret:
+            typer.echo(f"No password for {code} ({role}): set {variable}.")
+            raise typer.Exit(2)
+        out[role] = (code, secret)
+    return out
+
+
+def _live_run(cases, plant, user, password, max_usd, *, accounts, quiet: bool,
+              arranging: bool, seeding: bool = False):
+    """The live half, with the refusals that have to happen before a call."""
     import os
 
     if not plant or not user:
         typer.echo("--live needs --plant <url> and --user <code>.")
         raise typer.Exit(2)
-    password = password or os.environ.get("MES_ASSIST_EVAL_PASSWORD")
+    password = password or os.environ.get(PASSWORD_VAR)
     if not password:
-        typer.echo("No password: pass --password or set MES_ASSIST_EVAL_PASSWORD.")
+        typer.echo(f"No password: pass --password or set {PASSWORD_VAR}.")
         raise typer.Exit(2)
     if not os.environ.get(assist_runs.KEY):
         # The key is the plant's, not this command's - but a run with no key
@@ -3729,13 +3787,24 @@ def _live_run(cases, plant, user, password, max_usd, *, quiet: bool, arranging: 
                    f"model; the plant reads the key from its own environment, so start the "
                    f"plant with it and run this where it is set too.")
         raise typer.Exit(2)
+    wanted = _accounts(accounts, user=user, password=password)
+    if not wanted:
+        typer.echo("No --account was given, so no role has anybody to ask as. Name one "
+                   "per role, e.g. --account admin=ADMIN --account operator=SCOTT; a run "
+                   "does not ask one person's questions as another.")
+        raise typer.Exit(2)
 
     client = assist_runs.Plant(plant)
+    signed_in: dict = {}
     try:
         client.sign_in(user, password)
         identity = client.identity()
+        for role, (code, secret) in wanted.items():
+            asking = assist_runs.Plant(plant)
+            asking.sign_in(code, secret)
+            signed_in[role] = asking
         outcomes, run = assist_runs.run_live(
-            cases, client,
+            cases, client, accounts=signed_in,
             max_usd=assist_runs.DEFAULT_MAX_USD if max_usd is None else max_usd,
             on_case=None if quiet else _say_case,
             arranging=arranging, seeding=seeding, on_behalf_of=user.upper())
@@ -3743,12 +3812,19 @@ def _live_run(cases, plant, user, password, max_usd, *, quiet: bool, arranging: 
         typer.echo(f"The live run stopped: {exc}")
         raise typer.Exit(2) from exc
     finally:
+        for asking in signed_in.values():
+            asking.close()
         client.close()
     return outcomes, run, run.get("model"), identity.get("plant") or plant
 
 
 def _say_case(outcome) -> None:
-    mark = "ok  " if outcome.passed else ("----" if not outcome.arranged else "FAIL")
+    mark = ("ok  " if outcome.passed else
+            "nobd" if outcome.no_account else
+            "----" if not outcome.arranged else "FAIL")
+    if outcome.no_account:
+        return typer.echo(f"{mark} {outcome.case.id}   no account holds "
+                          f"{outcome.case.role}")
     typer.echo(f"{mark} {outcome.case.id}"
                + ("" if outcome.arranged
                   else f"   not arranged: {', '.join(outcome.missing)}"))
