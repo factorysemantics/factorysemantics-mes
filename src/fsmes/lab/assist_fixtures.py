@@ -24,9 +24,9 @@ where decision 0035 puts it:
 
 * **Arranged**: a work order and its first step started, the non-conformance a
   failed check opens, a corrective maintenance order, one setting taken to ten
-  and put back to eight so the audit trail has a row in it, and five drafts - an instruction, a
-  trigger, a downtime reason, a non-conformance severity and a recommended
-  setpoint change - none of which changes anybody's screen until somebody
+  and put back to eight so the audit trail has a row in it, and five drafts - an
+  instruction, a trigger, a downtime reason, a non-conformance severity and a
+  recommended setpoint change - none of which changes anybody's screen until somebody
   signs. Every one of them is about something no drafting case asks for, so
   that a case and the arrangement it runs on never describe the same thing.
 * **Never arranged**: master data. Materials, equipment, routings, lots and
@@ -576,11 +576,10 @@ KINDS: dict[str, Kind] = {k.name: k for k in (
 NONCONFORMANCE = "NC-00001"
 MAINTENANCE = "CM-00001"
 
-#: What a run puts on a plant, in the order it has to go on: the order before
-#: its own first step and before the check that fails against it, the machine's
-#: work after it. Everything
-#: here is arrangeable by an agent deployment; everything a case needs that is
-#: *not* here is master data, and is declared rather than made.
+#: What a run puts on a plant, in the order it has to go on: the order before its
+#: own first step and before the check that fails against it, the machine's work
+#: after it. Everything here is arrangeable by an agent deployment; everything a
+#: case needs that is *not* here is master data, and is declared rather than made.
 ARRANGES = (
     f"setting:{SETTING}",
     f"order:{ORDER}",

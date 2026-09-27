@@ -982,6 +982,31 @@ def test_the_suite_says_what_it_needs_on_the_plant():
     assert len(with_needs) >= 30, f"only {len(with_needs)} case(s) say what they need"
 
 
+def test_the_step_a_run_starts_is_not_the_step_a_case_asks_to_start():
+    """The one pairing in the fixtures that can be put back into conflict by an
+    edit to either side.
+
+    A run starts step 10 of `WO-EVAL-1` so that "produce 2 units of FG-COLA on
+    MIX01 for WO-EVAL-1" has one right answer rather than two - starting the step
+    was the other one, live on 2026-09-27. That only works while the case asking
+    to *start* a step names a different step, and asks for it to still be waiting:
+    a request to start something already running has no right answer at all, which
+    is the same fault the other way round.
+    """
+    fx = assist_fixtures
+    assert fx.STEP_STARTED != fx.STEP_WAITING
+    assert f"operation:{fx.ORDER}/{fx.STEP_STARTED}" in fx.ARRANGES
+    assert f"operation:{fx.ORDER}/{fx.STEP_WAITING}" not in fx.ARRANGES
+
+    starts = BY_ID["operator-starts-a-step"]
+    assert starts.args["seq"] == fx.STEP_WAITING
+    assert f"no operation:{fx.ORDER}/{fx.STEP_WAITING}" in starts.requires
+
+    for case_id in ("operator-produces-serialised-units", "operator-completes-a-step"):
+        case = BY_ID[case_id]
+        assert f"operation:{fx.ORDER}/{fx.STEP_STARTED}" in case.requires, case_id
+
+
 def test_a_case_that_drafts_a_code_and_a_case_that_approves_one_never_name_the_same_code():
     """Drafting `changeover` needs the plant *not* to have one; approving a draft
     needs it to have one. A run cannot arrange both of the same code, so the
