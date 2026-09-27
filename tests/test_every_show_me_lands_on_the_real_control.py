@@ -280,19 +280,27 @@ def _open_walk(context, base, walk, *, delay=None):
     return page
 
 
-def _coach(page, step_number=1, timeout=20000):
-    """The card as it stands on step `step_number`.
+def _coach(page, step_number=1, title=None, timeout=20000):
+    """The card as it stands on step `step_number`, with `title` on it.
 
-    Waited for by its own counter rather than by a sleep: pressing Next
-    scrolls the next control into view and repaints the card a quarter of a
-    second later, so reading it straight after the click reads the step
-    before."""
+    Waited for by what it is about to be asserted, never by a sleep: pressing
+    Next scrolls the next control into view and repaints the card a quarter of
+    a second later, so reading it straight after the click reads the step
+    before.
+
+    The counter alone is not that state. On 2026-09-26 this waited on the
+    number only, and on GitHub's runner read `Step 5 of 6` over step 4's words
+    - so when the caller knows which title it expects, the wait is for the
+    number *and* the title, and the test can only fail on what the words say
+    rather than on when they arrived."""
     page.wait_for_selector(".assist-coach", state="visible", timeout=timeout)
     page.wait_for_function(
-        """n => {
-            const el = document.querySelector('.assist-coach .step');
-            return el && el.textContent.trim().startsWith('Step ' + n + ' of');
-        }""", arg=step_number, timeout=timeout)
+        """([n, title]) => {
+            const card = document.querySelector('.assist-coach');
+            const counter = card && card.querySelector('.step');
+            if (!counter || !counter.textContent.trim().startsWith('Step ' + n + ' of')) return false;
+            return title === null || card.innerText.includes(title);
+        }""", arg=[step_number, title], timeout=timeout)
     return page.locator(".assist-coach").inner_text()
 
 
@@ -336,7 +344,7 @@ def test_show_me_lands_on_every_control_of_this_walk(tool, admin, plant):
     page = _open_walk(admin, plant, walk)
     try:
         for index, step in enumerate(walk["steps"]):
-            said = _coach(page, index + 1)
+            said = _coach(page, index + 1, step["title"])
             assert "could not find that control" not in said, (
                 f"{tool} step {index + 1} ({step['anchor']} on {step['page']}): {said}")
             assert step["title"] in said, f"{tool} step {index + 1}: {said}"
@@ -362,6 +370,70 @@ def test_show_me_lands_on_every_control_of_this_walk(tool, admin, plant):
         page.close()
 
 
+# ------------------------------ the counter and the words are one card
+
+def test_a_card_never_shows_one_steps_number_over_another_steps_words(admin, plant):
+    """The card cannot be caught saying "Step 5 of 6" over step 4's words.
+
+    It could, until 2026-09-26, and it was caught on GitHub's runner and never
+    once on loopback: `standOn()` scrolls the control into view and paints the
+    card a quarter of a second later, and that paint read the step from its own
+    closure and the *number* from `walk.index` as it stood when the timer fired.
+    Press Next inside that quarter second - which a test waiting only on the
+    counter does, because a scroll event paints the counter early - and the
+    stale paint lands under the new number.
+
+    Driven here deliberately: two Next presses in one synchronous script, so
+    the second one certainly lands inside the first one's pending paint. Every
+    card the walk ever draws is recorded as it is drawn, and each one has to
+    have its own step's title under its own step's number.
+    """
+    surface = assistant.surface_for("record_check", PROPOSED["record_check"])
+    walk = {"title": surface["title"], "steps": list(surface["steps"])}
+    titles = [step["title"] for step in walk["steps"]]
+    page = _open_walk(admin, plant, walk)
+    try:
+        # Every version of the card, recorded as it is painted. The card is
+        # rebuilt from nothing on each paint, so watching the body for added
+        # nodes sees every one of them.
+        page.evaluate("""() => {
+            window.__cards = [];
+            const look = () => {
+                const card = document.querySelector('.assist-coach');
+                const counter = card && card.querySelector('.step');
+                const title = card && card.querySelector('h4');
+                if (!counter || !title) return;
+                const seen = counter.textContent.trim() + ' | ' + title.textContent.trim();
+                if (window.__cards[window.__cards.length - 1] !== seen) window.__cards.push(seen);
+            };
+            new MutationObserver(look).observe(document.body,
+                {childList: true, subtree: true, characterData: true});
+            look();
+        }""")
+        _coach(page, 1, titles[0])
+        # Both presses inside one script: no timer can fire between them, so
+        # the walk is on step 3 while step 2's paint is still pending.
+        page.evaluate("""() => {
+            const next = [...document.querySelectorAll('.assist-coach button')]
+                .find((b) => b.textContent.trim() === 'Next');
+            next.click();
+            next.click();
+        }""")
+        _coach(page, 3, titles[2])
+        # Long enough for the pending paint to have landed if it was going to.
+        page.wait_for_timeout(600)
+
+        cards = page.evaluate("() => window.__cards")
+        for card in cards:
+            number, shown = (part.strip() for part in card.split("|", 1))
+            index = int(number.split()[1]) - 1
+            assert shown == titles[index], (
+                f"the card said {number!r} over {shown!r}, which is step "
+                f"{titles.index(shown) + 1}'s title: {cards}")
+    finally:
+        page.close()
+
+
 # ------------------------------- and once against a page that is still drawing
 
 def test_a_walk_onto_a_form_whose_page_is_still_fetching_waits_for_it(admin, plant):
@@ -381,7 +453,7 @@ def test_a_walk_onto_a_form_whose_page_is_still_fetching_waits_for_it(admin, pla
     walk = {"title": surface["title"], "steps": [step]}
     page = _open_walk(admin, plant, walk, delay="**/maintenance/plans*")
     try:
-        said = _coach(page, timeout=25000)
+        said = _coach(page, 1, step["title"], timeout=25000)
         assert "could not find that control" not in said, said
         assert step["title"] in said, said
         _ring_is_round(page, step["anchor"])
@@ -433,7 +505,7 @@ def test_a_signing_walk_ends_on_a_control_that_is_really_there(guide_id, admin, 
     page = _open_walk(admin, plant, walk)
     try:
         for index, step in enumerate(walk["steps"]):
-            said = _coach(page, index + 1)
+            said = _coach(page, index + 1, step["title"])
             assert "could not find that control" not in said, (
                 f"{guide_id} step {index + 1} ({step['anchor']} on {step['page']}): {said}")
             _ring_is_round(page, step["anchor"])
@@ -471,11 +543,11 @@ def test_a_proposals_own_walk_survives_crossing_a_screen(admin, plant):
             "steps": [surface["steps"][0], surface["evidence"]]}
     page = _open_walk(admin, plant, walk)
     try:
-        assert "The quality check panel" in _coach(page, 1)
+        assert "The quality check panel" in _coach(page, 1, "The quality check panel")
         page.locator(".assist-coach button", has_text="Next").click()
 
         # Over on the quality screen, still walking, still on the right step.
-        said = _coach(page, 2, timeout=25000)
+        said = _coach(page, 2, surface["evidence"]["title"], timeout=25000)
         # The page adds query parameters of its own, which are none of the
         # walk's business - `elsewhere()` compares only what the step names.
         assert page.evaluate("location.pathname") == "/dashboard/quality", page.url

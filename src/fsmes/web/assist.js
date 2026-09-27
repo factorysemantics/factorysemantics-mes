@@ -683,7 +683,12 @@
     if (!walk) return;
     stopWaiting();
     lookId += 1;
-    const step = walk.guide.steps[walk.index];
+    // The step being shown, and its own number. Both travel together from
+    // here: the card's counter is drawn from this `index` and never from
+    // `walk.index` as it stands whenever the paint happens to land, so a
+    // counter saying one step and a body saying another is not expressible.
+    const index = walk.index;
+    const step = walk.guide.steps[index];
 
     // A guide may cross screens. Remember where we are and let the next page
     // pick the walk back up.
@@ -691,7 +696,7 @@
       if (movedFor === walk.index) {
         // We already came here for this step and the screen is not what was
         // asked for. Say that, rather than reloading it again.
-        paint(null, step, "That screen did not come up as this step asked for it.");
+        paint(null, step, "That screen did not come up as this step asked for it.", index);
         return;
       }
       movedFor = walk.index;
@@ -713,16 +718,16 @@
       // Not there *yet* is the common case and it is not a refusal: wait for
       // it, and only say it is absent once the budget above is spent.
       waitForTarget(step, lookId,
-                    (late) => standOn(late, step),
-                    (waited) => paint(null, step, absentNote(step, waited)));
+                    (late) => standOn(late, step, index),
+                    (waited) => paint(null, step, absentNote(step, waited), index));
       return;
     }
-    standOn(target, step);
+    standOn(target, step, index);
   }
 
   /* Ring this control, fill it if the step carries a value, and put the card
      beside it. */
-  function standOn(target, step) {
+  function standOn(target, step, index) {
     // A control may sit in a popover that a button opens: press it first.
     if (step.open && target.offsetParent === null) {
       const opener = document.querySelector(`[data-assist="${step.open}"]`);
@@ -730,10 +735,21 @@
     }
     applyFill(target, step);
     target.scrollIntoView({ behavior: "smooth", block: "center" });
-    setTimeout(() => paint(target, step, null), 260);
+    // The ring is placed after the smooth scroll has settled, or it lands
+    // where the control used to be. That wait is long enough for somebody to
+    // press Next inside it, so the paint it schedules belongs to the step
+    // that asked for it: if a later showStep() has taken over, this one says
+    // nothing rather than writing a stale title under a moved-on counter.
+    // (Seen on GitHub's runner, 2026-09-26: `STEP 5 OF 6` over step 4's
+    // words. On loopback the gap is too small to see.)
+    const mine = lookId;
+    setTimeout(() => { if (mine === lookId) paint(target, step, null, index); }, 260);
   }
 
-  function paint(target, step, note) {
+  /* The whole card, in one go: counter, title, body and dots all from the one
+     step and the one index, so no part of it can be showing a different step
+     from another part. */
+  function paint(target, step, note, index) {
     if (!ring) { ring = el("div", "assist-ring"); document.body.appendChild(ring); }
     if (!coach) { coach = el("div", "assist-coach"); document.body.appendChild(coach); }
 
@@ -751,12 +767,12 @@
 
     coach.textContent = "";
     coach.appendChild(el("div", "step",
-      `Step ${walk.index + 1} of ${walk.guide.steps.length}`));
+      `Step ${index + 1} of ${walk.guide.steps.length}`));
     coach.appendChild(el("h4", null, step.title));
     coach.appendChild(el("p", null, note || step.body));
     if (walk.guide.steps.length > 1) {
       const dots = el("div", "dots");
-      walk.guide.steps.forEach((_, i) => dots.appendChild(el("i", i === walk.index ? "on" : (i < walk.index ? "done" : ""))));
+      walk.guide.steps.forEach((_, i) => dots.appendChild(el("i", i === index ? "on" : (i < index ? "done" : ""))));
       coach.appendChild(dots);
     }
     if (walk.guide.generated) {
@@ -828,7 +844,7 @@
     if (!walk || !ring || ring.style.display === "none") return;
     const step = walk.guide.steps[walk.index];
     const target = stepTarget(step);
-    if (target) paint(target, step, null);
+    if (target) paint(target, step, null, walk.index);
   }, { passive: true });
 
   document.addEventListener("keydown", (e) => {
