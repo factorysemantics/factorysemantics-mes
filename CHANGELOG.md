@@ -410,6 +410,41 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Changed
 
+- **The assistant reads before it says a thing does not exist or cannot be
+  changed.** Asked on 2026-09-27 to give a non-conformance the prefix `CR`, it
+  made no tool call and answered *"That's not something I can do here — NC codes
+  aren't configurable in this system; they're assigned automatically with a fixed
+  'NC' prefix."* `nc_code_prefix` is a Quality setting this product ships, and the
+  same request four hours earlier had found it in one `plant_settings(find=…)`.
+  Asked then to be shown where, it said *"there's no walkthrough for this because
+  it isn't a real control"* — one unread assertion costing two answers, because
+  having decided the control was not real there was nothing left to walk anybody
+  to. The prompt now says it: *"it isn't configurable"*, *"it doesn't exist"*,
+  *"the code generates it"* and *"it isn't a real control"* are denials, and a
+  denial is said only after looking — `plant_settings(find=…)` for anything that
+  sounds like a setting, the domain's own read otherwise. It is the sibling of the
+  *read before saying what is recorded* rule: one is about what changed, this one
+  is about what exists.
+
+  Held by a test over **every reply the request suite produces**, all four roles:
+  a denial never appears in a turn with no read of the plant behind it. Listing
+  the walkthroughs does not count as a read of the plant — a list of walks cannot
+  tell you whether a setting exists, which is exactly what went wrong the second
+  time.
+
+- **An optional argument is not a question.** *"MIX01 is down, mark it down"* was
+  answered *"I can set MIX01 to down, but I need a reason so it's tracked
+  properly… What's causing it?"* with nothing on the screen to press — a machine
+  still running in the plant's own record while somebody types. The machine and
+  the state are all `set_machine_state` requires; a reason is optional, the
+  station screen puts its picker beside the state control, and the card's own
+  "Show me" lands there. So when the request names everything the tool requires,
+  the assistant proposes, and anything optional the person did not give is left
+  for the card and the walk rather than asked for first. A test holds every
+  `propose` case in the suite to ending in a card and to never asking for an
+  argument the tool would have run without — and holds every one of those cases to
+  naming what its tool requires, which is what makes the rule fair.
+
 - **`add_calendar_exception` says which kinds it takes.** Its docstring
   described "a shutdown day or an overtime day" and named neither of the two
   words the API actually accepts, so on 2026-09-26 the live model sent
@@ -429,6 +464,21 @@ goes under Honesty with a migration line, so plant people can find it.
   scrap screen, and the form where scrap is booked is where scrap is. What is
   still scored is unchanged — an answer that never looked, or that sends somebody
   to a procedure document, still fails.
+
+- **"Which spc rules are on hold" scores the fact rather than the label, and a
+  request to produce has one right answer.** Two more expectations the third live
+  run found stricter than the truth. The rules case asked for the words
+  `hold_rules` or "hold rules" and was answered *"rules 1, 2, 3 and 4 are all set
+  to hold (open an NC) when they fire"* — the right four rules and the right thing
+  happening to them; what it asks for now is the four numbers and the word *hold*,
+  which is the fact. And *"produce 2 units of FG-COLA on MIX01 for WO-EVAL-1"* was
+  answered by starting step 10, which on a released order whose first step had not
+  begun is a defensible first move — so a run now starts step 10 as part of
+  arranging the plant, which leaves booking production the direct act. Three cases
+  moved with it and say so in their own notes: starting a step is asked of step 20,
+  the one still waiting; completing a step and asking how far through the order is
+  both need the started one; and "is it on the floor?" accepts *running* as well as
+  *released*, because both mean it is.
 
 - **When your role does not let you do something, the assistant says which
   capability it needs and who holds it.** Asked to close a non-conformance, an

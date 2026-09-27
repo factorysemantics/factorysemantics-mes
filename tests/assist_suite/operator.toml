@@ -68,6 +68,15 @@ tool = "set_machine_state"
 args = { equipment = "MIX01", state = "down" }
 anchor = "station-state"
 requires = ["machine:MIX01"]
+note = """The machine and the state are everything `set_machine_state` requires,
+so there is nothing here to ask about. `reason` is optional and deliberately not
+in `args`: he did not give one.
+
+The third live run, 2026-09-27 11:2x, answered *"I can set MIX01 to down, but I
+need a reason so it's tracked properly... What's causing it?"* and put no card up
+- a machine still running in the plant's own record while somebody types. The
+reason picker is beside the state control on the station screen and this card's
+own "Show me" lands on it, which is where an optional argument belongs."""
 
 [[case]]
 id = "operator-raises-a-work-order"
@@ -127,7 +136,15 @@ screen = "/dashboard/station"
 expect = "propose"
 tool = "produce_units"
 args = { material = "FG-COLA", count = 2, order = "WO-EVAL-1", machine = "MIX01" }
-requires = ["material:FG-COLA", "order:WO-EVAL-1", "machine:MIX01"]
+requires = ["material:FG-COLA", "order:WO-EVAL-1", "operation:WO-EVAL-1/10", "machine:MIX01"]
+note = """Step 10 has to be running for this sentence to have one right answer.
+
+Live on 2026-09-27 it was answered with `start_operation(WO-EVAL-1, 10)` on an
+order that was released and had not begun, and starting the step in front of
+somebody before booking against it is a defensible first move - so the case had
+two right answers and scored the model against one of them. A run starts step 10
+now, which leaves producing the direct act.
+"""
 
 # --------------------------------------------------------------- answer me
 
@@ -153,9 +170,14 @@ request = "how far through WO-EVAL-1 are we?"
 screen = "/dashboard/orders"
 expect = "answer"
 reads_any = ["order_detail", "orders"]
-contains = ["WO-EVAL-1", "released"]
+contains = ["WO-EVAL-1"]
+contains_any = [["running", "in progress", "started", "step 10", "mix"]]
 lookup = { code = "WO-EVAL-1" }
-requires = ["order:WO-EVAL-1"]
+requires = ["order:WO-EVAL-1", "operation:WO-EVAL-1/10"]
+note = """It used to ask for the word "released", which stopped being true on
+2026-09-27: a run starts step 10, and an order with a step running is *running*.
+The question is how far through the order is, so what the answer has to carry is
+where it has got to - however the model words it."""
 
 # ------------------------------------------------------------------- show me
 
@@ -241,14 +263,22 @@ capability to name, and the refusal counts them instead of picking one."""
 
 [[case]]
 id = "operator-starts-a-step"
-request = "start operation 10 on WO-EVAL-1"
+request = "start operation 20 on WO-EVAL-1"
 screen = "/dashboard/station"
 expect = "propose"
 tool = "start_operation"
-args = { order = "WO-EVAL-1", seq = 10 }
+args = { order = "WO-EVAL-1", seq = 20 }
 anchor = "station-queue"
-requires = ["order:WO-EVAL-1"]
-note = "The operator's most basic act, and until #111 the one write the screens could do that no tool could."
+requires = ["order:WO-EVAL-1", "no operation:WO-EVAL-1/20"]
+note = """The operator's most basic act, and until #111 the one write the screens
+could do that no tool could.
+
+Step 20, not step 10, since 2026-09-27: a run now starts step 10 so that
+`operator-produces-serialised-units` has one right answer, and asking to start a
+step that is already running has none. Step 20 is the one still waiting, and the
+requirement says so - on a plant where somebody has already started it, this case
+is reported not arranged rather than scored.
+"""
 
 [[case]]
 id = "operator-completes-a-step"
@@ -258,7 +288,11 @@ expect = "propose"
 tool = "complete_operation"
 args = { order = "WO-EVAL-1", seq = 10 }
 anchor = "station-queue"
-requires = ["order:WO-EVAL-1"]
+requires = ["order:WO-EVAL-1", "operation:WO-EVAL-1/10"]
+note = """A step is completed from running, so the requirement is the same
+started step 10 that `operator-produces-serialised-units` needs. Before a run
+started it, this sentence was asked on a plant where the plant itself would have
+refused the write."""
 
 [[case]]
 id = "operator-books-a-lot-in"
