@@ -158,6 +158,113 @@ def needs_any(tool: str) -> set[str] | None:
     return {section.define for section in plant_settings.live_sections()
             if section.define}
 
+# ------------------------------------------- what is not this person's to do
+
+
+def withheld(tool: str, capabilities: set[str], args: dict | None = None,
+             roles: dict[str, list[str]] | None = None) -> dict | None:
+    """Why one of the plant's write tools is not this person's to use, in words
+    that name who it belongs to. `None` when want of a capability is not the
+    reason - a tool they do hold, or a name that is not a tool at all.
+
+    The catalogue is filtered per capability, so the model is never shown a
+    tool the person cannot use. That is right, and it is also why a refusal
+    used to be useless: asked to close a non-conformance, an operator's
+    assistant reached for a tool that was not there and got back *"no tool
+    named 'close_nonconformance' is available to this person"* - a fact about
+    the catalogue, and no use to somebody standing in front of the
+    non-conformance. This is the same lookup the signing walks answer their
+    half of the question with (`assistant.signing_guides`), one sentence written
+    once in `capabilities.not_yours`.
+    """
+    from fsmes.services import capabilities as caps
+
+    need = NEEDS.get(tool)
+    if need is not None:
+        if need in capabilities:
+            return None
+        return {"error": caps.not_yours(need, roles=roles),
+                "capability": need, "held_by": caps.holders(need, roles)}
+    if tool in PER_CALL_NEEDS:
+        return _withheld_setting(tool, capabilities, args or {}, roles)
+    return None
+
+
+def _withheld_setting(tool: str, capabilities: set[str], args: dict,
+                      roles: dict[str, list[str]] | None) -> dict | None:
+    """The same answer for the one tool whose capability is an argument.
+
+    `write_plant_setting` is gated by the `define` of the `ConfigSection` the
+    key is listed under (`PER_CALL_NEEDS`), so the capability to name is read
+    per call from the same registry the API reads it from. A call that names no
+    key, or a key this version does not have, has no one capability behind it -
+    and then the honest answer counts the ones that gate a setting rather than
+    picking one of them.
+    """
+    from fsmes.services import capabilities as caps
+    from fsmes.services import plant_settings
+
+    try:
+        section, _table, _key = plant_settings.owner(args.get("domain") or "",
+                                                     args.get("key") or "")
+    except plant_settings.Unknown:
+        section = None
+    if section is not None and section.define:
+        if section.define in capabilities:
+            return None
+        return {"error": caps.not_yours(section.define, roles=roles),
+                "capability": section.define,
+                "held_by": caps.holders(section.define, roles)}
+    could = sorted(needs_any(tool) or ())
+    if [c for c in could if c in capabilities]:
+        return None
+    return {"error": (f"Changing a plant setting needs the capability of the section "
+                      f"its key is listed under, and you hold none of the {len(could)} "
+                      f"that gate one ({', '.join(could)}). Name the setting and I can "
+                      f"say who changes it."),
+            "capability": None, "held_by": []}
+
+
+def withheld_note(capabilities: set[str],
+                  roles: dict[str, list[str]] | None = None) -> str:
+    """Every write action this person is not offered, one line each, with the
+    capability it needs and who holds it.
+
+    This is the half a tool could not answer. A `who_can(action)` tool was the
+    other way to do it, and this is cheaper and cannot be forgotten: the model
+    only calls a tool it thinks of calling, and the moment it needs this is the
+    moment it has decided there is nothing to call. A few hundred tokens in the
+    cached prefix - which is already per-capability-set, because the catalogue
+    after it is - say it up front instead, and `withheld` above says it again at
+    call time for a model that reaches for the tool anyway.
+    """
+    if "plant.read" not in capabilities:
+        return ""
+    from fsmes.services import capabilities as caps
+
+    offered = {t["name"] for t in catalogue(capabilities)}
+    every = sorted(set(NEEDS) | set(PER_CALL_NEEDS))
+    lines = []
+    for tool in every:
+        if tool in offered:
+            continue
+        need = NEEDS.get(tool)
+        if need:
+            lines.append(f"- {tool}: needs {need} ({caps.describe(need)}) - "
+                         f"{caps.who_holds(need, roles)}")
+            continue
+        could = sorted(needs_any(tool) or ())
+        lines.append(f"- {tool}: needs the capability of the section a setting is "
+                     f"listed under, and they hold none of the {len(could)} that "
+                     f"gate one")
+    if not lines:
+        return ""
+    return ("\n\nNot theirs to do here, with who it belongs to - "
+            f"{len(lines)} of the {len(every)} actions the assistant can take for "
+            "somebody. Refuse from this list, by name; never say there is no tool "
+            "for it.\n" + "\n".join(lines))
+
+
 SYSTEM = """You are the assistant inside FactorySemantics MES, a manufacturing execution system, \
 helping the person signed in at plant "{plant}".
 
@@ -190,6 +297,9 @@ put that same walk on their screen with show_guide("proposal") rather than sayin
 You never approve anything: signing a draft reason, severity, document, trigger or adjustment \
 belongs to a person, so asked to approve one, show them the walk to the control they sign it on, \
 and if guides() says a signing walk is not theirs to follow, say which capability it needs.
+
+Asked for something that is not theirs to do, name the capability it needs and who holds \
+it, from the list below - never that no tool for it is available.
 
 Speak plainly, in at most four sentences, to someone standing at a machine. State the numbers \
 you found. If you cannot do what was asked, say what you can do instead."""
@@ -513,6 +623,19 @@ class Session:
     #: the two walk-me tools are not offered at all.
     guides: list[dict] = field(default_factory=list)
 
+    #: The plant's own roles and what each grants, read by the caller out of
+    #: the same short session, so a refusal can say who holds the capability
+    #: the person lacks even after an admin has redefined a role. Empty means
+    #: nobody asked a plant, and the answer falls back to the bundles the
+    #: product ships (`capabilities.holders`).
+    roles: dict[str, list[str]] = field(default_factory=dict)
+
+    #: Every write action this person is *not* offered, with the capability and
+    #: who holds it - one line each, appended to the cached system prompt.
+    #: Built when the conversation opens because it is a fact about a
+    #: capability set, and that does not change inside a conversation.
+    withheld: str = ""
+
     #: The surface of the last change proposed in this conversation - the walk
     #: behind the card's own "Show me" button. Kept after the card is settled,
     #: because the question that needs it comes *after*: "could you show me
@@ -576,7 +699,8 @@ def _sweep() -> None:
 def open_session(user: str, plant: str, capabilities: set[str], *,
                  max_rounds: int = MAX_ROUNDS, ttl: int = SESSION_TTL,
                  result_limit: int = RESULT_LIMIT,
-                 guides: list[dict] | None = None) -> Session:
+                 guides: list[dict] | None = None,
+                 roles: dict[str, list[str]] | None = None) -> Session:
     """Start a conversation, on this plant's budget.
 
     The three budgets are passed in rather than read here: this module holds no
@@ -595,7 +719,9 @@ def open_session(user: str, plant: str, capabilities: set[str], *,
     sess = Session(id=uuid.uuid4().hex[:12], user=user, plant=plant,
                    capabilities=set(capabilities), tools=tools,
                    max_rounds=int(max_rounds), ttl=int(ttl),
-                   result_limit=int(result_limit), guides=walks)
+                   result_limit=int(result_limit), guides=walks,
+                   roles=dict(roles or {}),
+                   withheld=withheld_note(set(capabilities), roles))
     with _sessions_lock:
         _sweep()
         _sessions[sess.id] = sess
@@ -640,8 +766,9 @@ def _call_model(sess: Session) -> Any:
     return client.messages.create(
         model=MODEL,
         max_tokens=4096,
-        system=[{"type": "text", "text": SYSTEM.format(plant=sess.plant),
-                 "cache_control": {"type": "ephemeral"}}],
+        system=[{"type": "text",
+                  "text": SYSTEM.format(plant=sess.plant) + sess.withheld,
+                  "cache_control": {"type": "ephemeral"}}],
         tools=_anthropic_tools(sess),
         messages=sess.history,
         thinking={"type": "adaptive"},
@@ -990,7 +1117,11 @@ def _drive(sess: Session) -> dict:
                                         "ok": "error" not in payload,
                                         "summary": _summary(payload)})
             elif spec is None:
-                payload = {"error": f"no tool named {block.name!r} is available to this person"}
+                # Not offered because they may not use it, or not a tool at all.
+                # The first is the common one and has a true answer; the second
+                # keeps the sentence it always had.
+                payload = withheld(block.name, sess.capabilities, args, sess.roles) or {
+                    "error": f"no tool named {block.name!r} is available to this person"}
                 sess.results[block.id] = _tool_result(block.id, payload, sess.result_limit)
                 sess.transcript.append({"tool": block.name, "args": args, "ok": False, "summary": payload["error"]})
             elif spec["write"]:

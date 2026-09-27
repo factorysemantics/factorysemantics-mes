@@ -349,7 +349,11 @@ def agent_message(body: AgentIn, user: UserDep) -> dict:
         # person may *not* follow, each carrying who may. It is the one brain
         # that can say "not yours, and here is who" - a screen can only put a
         # walk up or not (decision 0035; the agent approves nothing, ever).
-        offerable = assistant.listed_guides(capabilities, db)
+        # This plant's own roles, by name, so "who holds it" is true here and
+        # not only true of the roles the product ships. Read in the same short
+        # session, for the same reason the walks are.
+        roles = auth.role_bundles(db)
+        offerable = assistant.listed_guides(capabilities, db, roles)
         # This plant's own numbers, read in the short session that is already
         # open and carried past it: everything after this line may call a
         # model, and a session held across one holds SQLite's single write
@@ -368,7 +372,8 @@ def agent_message(body: AgentIn, user: UserDep) -> dict:
             }
     plant = _ensure_local()
     sess = (agent.get_session(body.session, user["sub"])
-            or agent.open_session(user["sub"], plant, capabilities, guides=offerable, **budget))
+            or agent.open_session(user["sub"], plant, capabilities, guides=offerable,
+                                  roles=roles, **budget))
     out = agent.message(sess, body.message, name=name, role=role)
     _record(sess)
     if out.get("kind") == "guide" and out.get("guide"):
