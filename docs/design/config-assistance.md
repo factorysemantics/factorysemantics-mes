@@ -1233,13 +1233,13 @@ which one in force.
 | admin | 51 | 47 |
 | agent | 23 | 19 |
 
-Fifteen of the sixty-six are by written reason. Walks are the thinner half:
-`SURFACES` covers ten of the forty-seven write tools, so an admin who can
-propose 51 actions can be *shown* 14 of them, and none of the four tools added
-here has a surface yet. That is the sibling handoff's work, and the column is
-here so that it is countable rather than assumed.
-
-The next section is that work.
+Fifteen of the sixty-six are by written reason. Walks were the thinner half on
+the day this was written: `SURFACES` covered ten of the forty-seven write tools,
+so an admin who could propose 51 actions could be *shown* 14 of them, and none
+of the four tools added here had a surface at all. The column was put here so
+that this would be countable rather than assumed, and the next section is that
+work: with it, an admin is shown **42** of the 51, an operator 14 of 16, and
+all four of the tools above are walkable.
 
 ## 16. Every write tool has a surface — 2026-09-26
 
@@ -1253,10 +1253,63 @@ is half a card. `assistant.SURFACES` is keyed on `agent.NEEDS` plus
 write tool added without a surface goes red in CI.
 
 Measured before and after, on the same plant: **10 surfaces of 34 proposable
-write tools**, then 34 of 34. Seventy-odd `data-assist` anchors were added to
-the forms that had only a form-level one, and one was fixed: `triggers.html`
-carried `data-assist="trigger-submit"` on the *closing* tag, where HTML
-parsing discards it, so no walk could ever have pointed at Save draft.
+write tools**, then 34 of 34 — and **38 of 38** once §15's four tools landed
+and this branch was rebased onto them. Seventy-odd `data-assist` anchors were
+added to the forms that had only a form-level one, and one was fixed:
+`triggers.html` carried `data-assist="trigger-submit"` on the *closing* tag,
+where HTML parsing discards it, so no walk could ever have pointed at Save
+draft.
+
+### A tool with no control to walk to is a hole in the screens
+
+The four tools of §15 were written against the routes the screens call, and
+writing their surfaces asked the narrower question — *which control does a
+person press to do this?* Two of them had no honest answer, and both are the
+same finding from different ends:
+
+- **Nothing on any screen booked a lot in.** Lots arrived here by production
+  booking one or by the ERP link sending one; a pallet on the dock, or a
+  quantity somebody counted, had nowhere to be recorded. The assistant could
+  do something no person could, which is the wrong way round. So the floor
+  page has a fourth form beside Book output, Issue material and Quality
+  check — lot code, material, quantity — gated on `production.consume`,
+  because booking stock in and issuing it are the same person's job at the
+  same bench.
+- **No screen changes what a revision says.** The instructions screen's Open
+  next revision posts an empty body: it opens the next revision as a
+  word-for-word copy, and there is no box anywhere for the new wording. That
+  one is left as it is and said out loud on the card, because the next
+  revision's text is what "Do it" writes; inventing an edit form for it is a
+  product decision and not a surface.
+
+**`test_route_coverage` cannot see either.** Its screen match is textual and
+method-blind on purpose — the question it asks is whether anything wired the
+module up — so a page that *reads* `/execution/lots` on every refresh reads as
+a page that calls it, and a screen that posts an empty body to a route reads as
+a screen that uses all of it. A ratchet is only as honest as the question it
+asks, and the question "does some script name this path" is not "can a person
+do this".
+
+### The card is painted in one piece
+
+A walk's card said `STEP 5 OF 6` over step 4's words, on GitHub's runner, never
+once on loopback. `standOn()` scrolls the control into view and paints the card
+260 ms later so the ring lands where the control ends up, and that delayed paint
+read the step from its own closure and the step *number* from `walk.index` as it
+stood when the timer fired. Press Next inside those 260 ms and the stale paint
+lands under the new number — which a test waiting on the counter alone does,
+because the smooth scroll fires scroll events and the scroll handler paints the
+counter early.
+
+A step's number now travels with the step, so a card showing two different
+steps at once is not expressible, and a paint that a later step has overtaken
+says nothing. This is the third timing-shaped bug in the walk in three days
+(#105's single sample, #112's read-before-render, this one) and they share a
+shape: **the browser is asked for a state that arrives in two pieces, and the
+code reads whichever piece is ready.** The rule that came out of it, and is now
+house rule 6 in `CONTRIBUTING.md`, is that a browser test waits for the thing it
+is about to assert — never for the element that will hold it, and never for a
+fixed number of milliseconds.
 
 ### What a step does when the screen has no box for an argument
 

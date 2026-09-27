@@ -46,6 +46,13 @@ PROPOSED: dict[str, dict] = {
     "record_check": {"material": "FG-COLA", "characteristic": "fill_weight", "value": 500},
     "book_output": {"equipment": "PACK01", "good": 10, "scrap": 1, "order": "WO-1001"},
     "issue_material": {"order": "WO-1001", "lot": "LOT-SUGAR-001", "quantity": 5},
+    # Step 10 of WO-1001 is on the demo plant's routing, so the queue this
+    # walk points into really has a row for it.
+    "start_operation": {"order": "WO-1001", "seq": 10},
+    "complete_operation": {"order": "WO-1001", "seq": 10},
+    # A whole number: the walk types the quantity into a real box and the box
+    # shows what was typed, so 240.0 would be asserting the wrong string.
+    "create_lot": {"code": "LOT-DOCK-002", "material": "RAW-SUGAR", "quantity": 240},
     "set_machine_state": {"equipment": "MIX01", "state": "down", "reason": "jam at the infeed"},
     "create_order": {"code": "WO-NEW-01", "material": "FG-COLA", "quantity": 500,
                      "release": True},
@@ -93,6 +100,8 @@ PROPOSED: dict[str, dict] = {
                                       {"seq": 20, "name": "Pack", "equipment": "PACK01"}]},
     "create_document": {"code": "WI-CHANGEOVER", "title": "Changeover",
                         "body": "Stop the line. Purge the hopper."},
+    "revise_document": {"code": "WI-CHANGEOVER", "title": "Changeover at the filler",
+                        "body": "Stop the line. Purge the hopper. Run three bottles off."},
     "draft_instruction": {"code": "WI-FILL", "title": "Measuring fill weight",
                           "body": "Take three bottles from the middle of the run.",
                           "material": "FG-COLA", "characteristic": "fill_weight"},
@@ -592,5 +601,43 @@ def test_a_proposals_own_walk_survives_crossing_a_screen(admin, plant):
         assert surface["evidence"]["title"] in said, said
         assert "could not find that control" not in said, said
         _ring_is_round(page, surface["evidence"]["anchor"])
+    finally:
+        page.close()
+
+
+# ------------------- the button a step names, on a document that has one
+
+def test_open_next_revision_is_a_control_a_walk_can_name(admin, plant):
+    """`revise_document`'s walk says "press Open next revision", and this is
+    the button.
+
+    Its step rings `instruction-actions`, the row the button sits in, because
+    that row is what is on the screen before anybody has pressed a document's
+    row - a walk points, it does not click for you. Which leaves the button
+    itself unchecked by that walk, and it had no `data-assist` at all until
+    now while both of its neighbours did. So it is checked here, on a document
+    that has a revision in force, which is the only state the screen offers it
+    in: created and approved through the API, then opened by pressing its row.
+    """
+    made = admin.request.post(
+        f"{plant}/documents",
+        data=json.dumps({"code": "WI-PURGE", "title": "Purge the hopper",
+                         "body": "Run the line dry, then purge."}),
+        headers={"Content-Type": "application/json"})
+    assert made.ok, f"could not draft WI-PURGE: {made.status} {made.text()}"
+    put = admin.request.post(f"{plant}/documents/WI-PURGE/approve/1")
+    assert put.ok, f"could not approve WI-PURGE: {put.status} {put.text()}"
+
+    page = admin.new_page()
+    try:
+        page.goto(f"{plant}/dashboard/instructions", wait_until="load", timeout=30000)
+        page.locator("#catalogue tbody tr", has_text="WI-PURGE").first.click()
+        button = page.locator('[data-assist="instruction-revise"]')
+        button.wait_for(state="visible", timeout=20000)
+        assert button.inner_text().strip() == "Open next revision", button.inner_text()
+        # Inside the row the walk's step rings, which is what makes the step's
+        # words and the ring the same instruction.
+        assert page.locator('[data-assist="instruction-actions"] '
+                            '[data-assist="instruction-revise"]').count() == 1
     finally:
         page.close()

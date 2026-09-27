@@ -767,6 +767,32 @@ def _role_context(args: dict, capabilities: set[str] | None) -> dict:
             "capability_count": str(len(wanted))}
 
 
+def _revision_context(args: dict, capabilities: set[str] | None) -> dict:
+    """What a revision proposal's steps say about the change itself.
+
+    Four things a revision may change and every one of them optional, so no
+    step can name them by placeholder without reading "its title to  and its
+    text to ". Worse, none of them has a box on the instructions screen: that
+    screen opens the next revision as a word-for-word copy and that is the
+    whole of what it can do. So the walk names what was asked for in one line
+    and says plainly that this part is not something the screen can express -
+    the same rule as a routing's operations, for the opposite reason.
+    """
+    named = [words for words, value in (
+        ("its title", args.get("title")),
+        ("its text", args.get("body")),
+        ("which material it is about", args.get("material")),
+        ("which characteristic it is about", args.get("characteristic")),
+    ) if value is not None]
+    if not named:
+        # Nothing named is a revision for its own sake, which is what the
+        # screen's own button does. "The wording" keeps the sentence a sentence.
+        return {"changing_line": "the wording"}
+    if len(named) == 1:
+        return {"changing_line": named[0]}
+    return {"changing_line": ", ".join(named[:-1]) + " and " + named[-1]}
+
+
 SURFACES: dict[str, dict] = {
     "record_check": {
         "title": "Record a quality inspection",
@@ -844,6 +870,119 @@ SURFACES: dict[str, dict] = {
         "evidence": {"page": "/dashboard/orders", "anchor": "order-list",
                      "title": "The order moved",
                      "body": "Its progress bar includes what you just booked."},
+    },
+    "start_operation": {
+        "title": "Start a step of an order",
+        "needs": "production.book",
+        # The station screen, and only the station screen. The Orders screen
+        # can finish a step (`finishCell`) and cannot start one: starting is
+        # the operator saying "this is what I am on now", and it is on the row
+        # for that step in their own machine's queue. Read off station.js's
+        # `renderQueue`, not assumed.
+        "pages": ["/dashboard/station", "/dashboard"],
+        "example": "Start the next step on {order}",
+        "steps": [
+            {"page": "/dashboard/station", "anchor": "station-machine",
+             "title": "The machine this step is on",
+             "body": (
+                 "The station shows one machine, and the queue below it is that machine's. "
+                 "I have deliberately not picked it: the proposal names {order} and step "
+                 "{seq}, not the machine, and choosing one for you would be choosing whose "
+                 "queue you are looking at."
+             )},
+            {"page": "/dashboard/station", "anchor": "station-queue",
+             "title": "Press Start on {order} \u00b7 op {seq}",
+             "body": (
+                 "One row per step waiting on this machine. Find {order} \u00b7 op {seq} and "
+                 "press Start. There is nothing to fill in - starting is one press - and the "
+                 "plant refuses it in its own words if the step is already running, already "
+                 "done, or belongs to an order the floor has not been given."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/orders", "anchor": "order-route",
+                     "title": "The step is running",
+                     "body": ("Open {order} here: its Route shows step {seq} as running, and "
+                              "what the station books from now on lands on that step.")},
+    },
+    "complete_operation": {
+        "title": "Finish a step of an order",
+        "needs": "production.book",
+        # Two screens really do this one - the station's queue and the Orders
+        # screen's Route table, which draws a Finish step button on a running
+        # step. The walk uses the station, because that is where the person who
+        # finished the work is standing and where its sibling `start_operation`
+        # is; the other one is named in the step rather than left to be found.
+        "pages": ["/dashboard/station", "/dashboard/orders", "/dashboard"],
+        "example": "Finish the step running on {order}",
+        "steps": [
+            {"page": "/dashboard/station", "anchor": "station-machine",
+             "title": "The machine this step is on",
+             "body": (
+                 "The queue below belongs to whichever machine is chosen here. I have not "
+                 "chosen it for you: the proposal names {order} and step {seq}, not the "
+                 "machine."
+             )},
+            {"page": "/dashboard/station", "anchor": "station-queue",
+             "title": "Press Complete on {order} \u00b7 op {seq}",
+             "body": (
+                 "Find {order} \u00b7 op {seq} and press Complete. What the step has booked so "
+                 "far is what it keeps: counts arriving after it is finished belong to the "
+                 "next step, which is why finishing is a person's act and not a counter "
+                 "reaching a number. Finishing the last step finishes the order. If you are "
+                 "looking at the order rather than the machine, the Orders screen's Route "
+                 "table carries the same button, as Finish step."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/orders", "anchor": "order-route",
+                     "title": "The step reads done",
+                     "body": ("Open {order}: step {seq} is done, with what it made and what it "
+                              "scrapped beside it, so a losing step is visible rather than "
+                              "averaged into the order.")},
+    },
+    "create_lot": {
+        "title": "Book a lot in",
+        "needs": "production.consume",
+        "pages": ["/dashboard"],
+        "example": "Book in lot {lot} of {material}",
+        "steps": [
+            {"page": "/dashboard", "anchor": "lot-form",
+             "title": "Book a lot in",
+             "body": (
+                 "This is where stock that has arrived - a delivery, or a quantity somebody "
+                 "counted - becomes a lot the plant can issue to orders. I have filled it in "
+                 "from what you asked; read it before you press Book in."
+             )},
+            {"page": "/dashboard", "anchor": "lot-code",
+             "title": "The lot's code",
+             "fill": {"value": "{code}"},
+             "body": (
+                 "{code}. This is the number on the pallet or the certificate, not one I "
+                 "invented: a code somebody makes up breaks the link between this record and "
+                 "the physical thing it is about, which is the only reason the record exists."
+             )},
+            {"page": "/dashboard", "anchor": "lot-material",
+             "title": "What is in it",
+             "fill": {"value": "{material}"},
+             "body": (
+                 "{material}. It has to be a material this plant already knows - a lot of "
+                 "something it has never heard of is a typo rather than a delivery, and it is "
+                 "refused by name rather than created quietly."
+             )},
+            {"page": "/dashboard", "anchor": "lot-quantity",
+             "title": "How much",
+             "fill": {"value": "{quantity}"},
+             "body": "{quantity}, in the material's own unit. Masterdata is where that unit is set.",
+             },
+            {"page": "/dashboard", "anchor": "lot-submit",
+             "title": "Press Book in",
+             "body": ("The lot exists from that moment, recorded against your name, and can be "
+                      "issued to an order."),
+             },
+        ],
+        "evidence": {"page": "/dashboard", "anchor": "consume-lot",
+                     "title": "It is stock now",
+                     "body": ("The lot is in the list the Issue material form draws from, with "
+                              "what is left of it beside the code.")},
     },
     "issue_material": {
         "title": "Issue material to an order",
@@ -1830,6 +1969,49 @@ SURFACES: dict[str, dict] = {
     },
 
     # --------------------------------------------------------------- triggers
+    "revise_document": {
+        "title": "Revise an instruction",
+        "needs": "documents.write",
+        "pages": ["/dashboard/instructions"],
+        "example": "Revise an instruction and say what changed",
+        "context": _revision_context,
+        "steps": [
+            {"page": "/dashboard/instructions", "anchor": "instruction-filter-text",
+             "title": "Find {code}",
+             "fill": {"value": "{code}"},
+             "body": ("Typed in for you, so the catalogue narrows to the one document. The "
+                      "revision in force is the one the floor is following right now."),
+             },
+            {"page": "/dashboard/instructions", "anchor": "instruction-list",
+             "title": "Open {code}",
+             "body": ("Press its row. There is no form for a revision - it is opened from the "
+                      "document itself, which is also where its history is."),
+             },
+            {"page": "/dashboard/instructions", "anchor": "instruction-actions",
+             "title": "Press Open next revision",
+             "body": (
+                 "An approved revision is never edited in place: the version somebody signed "
+                 "stays exactly as they signed it, so this opens the next one as a draft, "
+                 "copied from the one in force. If a draft is already open this button is not "
+                 "here - there is nothing to open, and that draft is what a change goes into, "
+                 "because nobody is following it yet."
+             )},
+            {"page": "/dashboard/instructions", "anchor": "instruction-body",
+             "title": "What it will say",
+             "body": (
+                 "The draft arrives word for word the same. Changing {changing_line} is the "
+                 "one part of this that the screen cannot do - there is no box for the wording "
+                 "on any screen, which is why \"Do it\" is the way that part gets written. "
+                 "Putting it in force is a person's signature either way: documents.approve, "
+                 "never mine."
+             )},
+        ],
+        "evidence": {"page": "/dashboard/instructions", "anchor": "instruction-history",
+                     "title": "The new revision",
+                     "body": ("A new draft row, drafted by you, with every earlier revision "
+                              "still readable beneath it - which is how \"what did it say in "
+                              "March\" stays answerable.")},
+    },
     "draft_trigger": {
         "title": "Draft a trigger",
         "needs": "triggers.write",

@@ -31,7 +31,8 @@
         old one readable, because “what did it say in March” is a question a
         plant has to be able to answer.</p>
       <div class="filter-bar" data-assist="instruction-filters">
-        <input id="doc-q" type="search" placeholder="Code or title" aria-label="Document code or title">
+        <input id="doc-q" type="search" placeholder="Code or title" aria-label="Document code or title"
+               data-assist="instruction-filter-text">
         <select id="doc-state" aria-label="State">
           <option value="">Any state</option>
           <option value="in_force">in force</option>
@@ -81,7 +82,7 @@
 
         <h3 class="mt">Revision history</h3>
         <div class="table-wrap">
-          <table id="history">
+          <table id="history" data-assist="instruction-history">
             <thead><tr><th>Rev</th><th>State</th><th>Drafted by</th><th>Approved by</th><th>When</th></tr></thead>
             <tbody></tbody>
           </table>

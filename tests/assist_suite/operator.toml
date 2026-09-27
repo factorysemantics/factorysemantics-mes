@@ -233,6 +233,7 @@ screen = "/dashboard/station"
 expect = "propose"
 tool = "start_operation"
 args = { order = "WO-EVAL-1", seq = 10 }
+anchor = "station-queue"
 note = "The operator's most basic act, and until #111 the one write the screens could do that no tool could."
 
 [[case]]
@@ -242,6 +243,7 @@ screen = "/dashboard/station"
 expect = "propose"
 tool = "complete_operation"
 args = { order = "WO-EVAL-1", seq = 10 }
+anchor = "station-queue"
 
 [[case]]
 id = "operator-books-a-lot-in"
@@ -250,3 +252,4 @@ screen = "/dashboard"
 expect = "propose"
 tool = "create_lot"
 args = { code = "LOT-SUGAR-002", material = "RAW-SUGAR", quantity = 400 }
+anchor = "lot-code"

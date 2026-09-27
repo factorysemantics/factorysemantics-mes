@@ -180,3 +180,4 @@ screen = "/dashboard/instructions"
 expect = "propose"
 tool = "revise_document"
 args = { code = "WI-BRIX", title = "Brix check at the mixer" }
+anchor = "instruction-actions"

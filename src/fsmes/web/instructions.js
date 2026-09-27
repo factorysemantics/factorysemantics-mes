@@ -252,6 +252,7 @@ async function openDoc() {
   }
   if (doc.status === "approved" && can("documents.write")) {
     const revise = el("button", "ghost", "Open next revision");
+    revise.dataset.assist = "instruction-revise";
     revise.addEventListener("click", async () => {
       try {
         const next = await api(`/documents/${selected}/revise`, { method: "POST", body: {} });

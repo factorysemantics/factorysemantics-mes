@@ -41,8 +41,8 @@ goes under Honesty with a migration line, so plant people can find it.
   class citizens."*
 
 - **Every change the assistant can make for you, it can show you how to make
-  yourself.** "Show me" sat on ten of the thirty-four write tools the
-  assistant may propose; it is now on all thirty-four. Press it on any
+  yourself.** "Show me" sat on ten of the thirty-eight write tools the
+  assistant may propose; it is now on all thirty-eight. Press it on any
   proposal card and the walk opens the real screen, opens the tab the control
   is behind, types the proposed values into the real boxes and stops with your
   finger over the real button — for a material, a machine, a specification, a
@@ -81,6 +81,22 @@ goes under Honesty with a migration line, so plant people can find it.
   proposal's own walk instead of "there isn't a walkthrough for that". The
   decline a typed message produces also stopped saying "the person moved on
   without confirming", which was not what happened.
+
+- **The four newest tools are four of those thirty-eight, and one of them
+  needed a screen before it could be shown at all.** Starting and finishing a
+  step of an order, booking a lot in, revising a work instruction: starting
+  and finishing are on the station's own queue, one row per step, which is
+  where the person who did the work is standing.
+
+- **The floor screen can book a lot in.** A delivery on the dock, or a
+  quantity somebody counted, had no form anywhere: lots only appeared by
+  production booking one or the ERP link sending one, so the assistant could
+  record stock arriving and a person could not. There is now a fourth form
+  beside Book output, Issue material and Quality check — lot code, material,
+  quantity — gated on `production.consume`, the same capability as issuing,
+  because both are the same person's job at the same bench. The lot code is
+  the label on the pallet and is never generated, and an unknown material is
+  refused by name.
 
 - **The assistant can put a walk on your screen because it decided to, not
   because a regex did.** Two new tools when the cloud brain is on: `guides()`
@@ -325,6 +341,15 @@ goes under Honesty with a migration line, so plant people can find it.
   all six that remain belong to another handoff.
 
 ### Fixed
+
+- **A walk's card could be caught showing one step's number over another
+  step's words.** It said `STEP 5 OF 6` while the body was still step 4's —
+  on a slow machine, never on loopback. The card is painted a quarter of a
+  second after the control is scrolled into view, so the ring lands where the
+  control ends up, and that late paint took its words from the step that asked
+  for it and its *number* from wherever the walk had got to by then. Press
+  Next inside that quarter second and the two disagree. A step's number now
+  travels with the step, and a paint a later step has overtaken says nothing.
 
 - **A walkthrough could never have pointed at the trigger form's Save
   button.** `triggers.html` carried `data-assist="trigger-submit"` on the
