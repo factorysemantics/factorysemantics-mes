@@ -25,10 +25,18 @@ The plant every case is asked about is the demo plant — machines `MIX01` and
 9.5–11.5 on `FG-COLA`, all of it master data a run never creates — plus the rows
 `arrange` puts on it: `[process] default_report_hours` taken to 10.0 and put back
 to 8.0, released order `WO-EVAL-1` (1000 of `FG-COLA`), non-conformance
-`NC-00001` (brix 20.0), corrective maintenance order `CM-00001` on `MIX01`, and
-five unapproved drafts — instruction `WI-EVAL-1`, trigger `TR-EVAL-1`, downtime
+`NC-00001` (brix 20.0), corrective maintenance order `CM-00001` on `MIX01`,
+identified units `SN-EVAL-1` and `SN-EVAL-CASE-1`, and five unapproved drafts — instruction `WI-EVAL-1`, trigger `TR-EVAL-1`, downtime
 reason `eval_awaiting_parts`, severity `eval_scuff`, and a recommended setpoint
 change on `MIX01` where the plant's tag manifest declares a writable setpoint.
+
+Two kinds are declared and never made, and each has a case that says so in its
+own note: a **gauge** is master data, so nothing can calibrate one here; and a
+**dead ERP message** is what a refusing ERP leaves behind, so nothing makes one.
+`calibrate_gauge` and `erp_retry` are in the suite as an operator being refused
+them, which is what this suite's rule of one case per write tool asks for and is
+also the thing that went wrong: both were offered to an operator until
+2026-09-27.
 
 **A case never describes the arrangement it runs on.** Drafting cases keep the
 code a person would type (`changeover`, `cosmetic`, `WI-BRIX`, `TR-HOT`); the

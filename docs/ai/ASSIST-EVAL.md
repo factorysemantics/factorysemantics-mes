@@ -164,6 +164,7 @@ with both names on it.
 | A **draft** downtime reason | `eval_awaiting_parts` | Unapproved: nothing labels a stop with it. |
 | A **draft** non-conformance severity | `eval_scuff` | Unapproved: nothing is graded with it. |
 | A **recommended** setpoint change | numbered by the plant | Unapproved: an engineer decides it and the agent never does. Only where the plant's tag manifest declares a writable setpoint with bounds on `MIX01` — a demo plant declares none, and then the case that needs one is reported *not arranged*. |
+| Two identified units | `SN-EVAL-1`, `SN-EVAL-CASE-1` | Serials of `FG-COLA`, for the cases that pack one into another and quarantine a pallet with everything in it. |
 
 Five of those are **drafts**, and a draft changes nobody's screen until somebody
 signs it. Codes carry `EVAL-`/`eval_` wherever the code is ours to choose, so
@@ -187,6 +188,17 @@ plant's own, and an agent deployment does not define them — decision
 and the AGENT account does not hold `masterdata.write` to do it with. A plant
 without `FG-COLA` and `MIX01` gets those cases reported *not arranged* rather
 than having a cola line invented on it.
+
+**The gauge register**, for the same reason and with a consequence worth naming.
+A gauge is master data, so a run cannot put one on a plant — which means there is
+no case proposing `calibrate_gauge`, only an operator being refused it. The demo
+pack seeds no gauges; a plant with a gauge register is what a proposal case for
+that tool is waiting on, not a code change.
+
+**A dead ERP message.** `erp_retry` puts one back in the queue, and a dead
+message is what an ERP that refused one leaves behind. A run that made one would
+have to break the plant's ERP link on purpose, so `erp_retry` is in the suite as
+an operator's refusal too.
 
 That is why the suite belongs against a plant built from the **demo pack**. Point
 it at a bottling plant and most of it comes back not arranged, which is the

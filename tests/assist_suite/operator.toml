@@ -269,3 +269,72 @@ tool = "create_lot"
 args = { code = "LOT-SUGAR-002", material = "RAW-SUGAR", quantity = 400 }
 anchor = "lot-code"
 requires = ["material:RAW-SUGAR", "no lot:LOT-SUGAR-002"]
+
+# ------------------------------------------- identified units, a serial at a time
+#
+# Both tools were offered to anybody holding plant.read until 2026-09-27, which
+# for these two was harmless - an operator holds production.book and the route
+# would have taken the call - and it is what put the other seven on an
+# operator's catalogue. Each is here because `agent.NEEDS` now names what the
+# route demands, and the suite's own rule is a case per named tool.
+
+[[case]]
+id = "operator-brings-a-printed-batch-of-serials-in"
+request = "the marker printed SN-0001 and SN-0002 of FG-COLA on PACK01 for WO-EVAL-1 - bring them in"
+screen = "/dashboard/trace"
+expect = "propose"
+tool = "produce_batch"
+args = { serials = ["SN-0001", "SN-0002"], material = "FG-COLA", machine = "PACK01", order = "WO-EVAL-1" }
+requires = ["material:FG-COLA", "machine:PACK01", "order:WO-EVAL-1", "no unit:SN-0001", "no unit:SN-0002"]
+note = """`produce_batch` is what a marker or a palletizer sends, and there is no
+screen that posts it - the Produce form on /dashboard/trace books `produce_units`,
+which mints serials the plant chooses. So the assistant is the only way a person
+gets serials they are holding in their hand into the MES, which is why the tool
+matters even though `assistant.WITHOUT_A_WALK` says it will never have a walk."""
+
+[[case]]
+id = "operator-packs-a-bottle-into-a-case"
+request = "pack SN-EVAL-1 into SN-EVAL-CASE-1"
+screen = "/dashboard/trace"
+expect = "propose"
+tool = "pack_unit"
+args = { serial = "SN-EVAL-1", into = "SN-EVAL-CASE-1" }
+requires = ["unit:SN-EVAL-1", "unit:SN-EVAL-CASE-1"]
+
+# ------------------------- two the catalogue used to offer them, now refused
+#
+# Both were in no `agent.NEEDS` entry until 2026-09-27, so the catalogue offered
+# them to anybody holding plant.read and the route refused the call when it
+# arrived - a card with "Do it" on it and then a refusal, for work that is not
+# an operator's. Now the tool is not in their catalogue at all and the refusal
+# names the capability and who holds it, which is what #114 built the sentence
+# for. These two are refusals rather than a supervisor's proposals because
+# neither object can be arranged: see each note.
+
+[[case]]
+id = "operator-refused-recording-a-gauge-calibration"
+request = "record the calibration of GA-BRIX01 as a pass"
+screen = "/dashboard/gauges"
+expect = "refuse"
+tool = "calibrate_gauge"
+mentions = ["quality.close_nc", "can"]
+note = """A supervisor's disposition: a failed calibration takes a gauge off the
+floor and invalidates every measurement taken with it since. There is no
+supervisor case proposing it because no run can put a gauge on a plant to
+calibrate - the register is master data and the AGENT account does not hold
+masterdata.write unless an admin granted it (decision 0035) - and the demo plant
+this suite is written about seeds no gauges. A plant with a gauge register is
+what that case is waiting on, not a code change."""
+
+[[case]]
+id = "operator-refused-retrying-a-dead-erp-message"
+request = "the confirmation that went dead on the ERP - put it back in the queue"
+screen = "/dashboard/ops"
+expect = "refuse"
+tool = "erp_retry"
+mentions = ["orders.close", "can"]
+note = """A supervisor's call, and the tool's own words say why: fix what killed
+the message first. There is no case proposing it because a dead message is what
+an ERP that refused one leaves behind, and a run that made one would have to
+break the plant's ERP link on purpose. Nothing here breaks a plant to have
+something to look at."""

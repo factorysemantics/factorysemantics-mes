@@ -489,6 +489,38 @@ goes under Honesty with a migration line, so plant people can find it.
   (`eval_awaiting_parts`, `eval_scuff`) rather than a case's word with a prefix,
   it recommends a setpoint change where the plant declares a writable one, and
   two tests fail if any fixture ever reads like the draft a case asks for.
+- **Nine write tools were offered to anyone who could sign in; each now names
+  the capability its route demands.** `add_person`, `register_gauge`,
+  `calibrate_gauge`, `issue_certificate`, `issue_pallet_certificate`,
+  `produce_batch`, `pack_unit`, `set_unit_status` and `erp_retry` were in
+  neither `agent.NEEDS` nor `agent.PER_CALL_NEEDS`, and the tool catalogue
+  filters on those two and nothing else — so the assistant offered all nine to
+  anybody holding `plant.read`: **seven of them to an operator**, two to a
+  supervisor, seven to the AGENT account itself.
+
+  Nothing was written. Every one of those routes refused the call with its own
+  `require(...)`, which is the second of the two gates decision 0035 asks for.
+  What a person got was worse than a refusal: their own assistant offered to
+  issue a certificate of analysis and then the plant said no. And
+  `docs/operate/assistant-coverage.md` — the page somebody reads instead of
+  trying it — said an operator may not issue one, because the page reads the
+  route. The page was right about the API and wrong about the assistant.
+
+  Each tool now names the capability **its own route demands**, read from the
+  route rather than chosen: `users.manage`, `masterdata.write`,
+  `quality.close_nc` (four of them), `production.book` (two) and `orders.close`.
+  An operator asking for any of the seven now gets the refusal that names the
+  capability and who holds it, rather than a card with "Do it" on it.
+
+  `tests/test_every_write_tool_names_the_capability_its_route_demands.py` is the
+  ratchet, keyed on the registry: a write tool in neither dictionary fails, a
+  named capability its route does not demand fails, and the catalogue and the
+  coverage page are made to agree about every role — the two readers that
+  disagreed. Nine cases went into the assistant's request suite (**107
+  scripted, up from 98**), and the "Show me" ratchet can see the nine for the
+  first time: what it sees is nine cards with a "Do it" and no walk, which is
+  what they have always been, recorded in `assistant.WITHOUT_A_WALK` with where
+  each control is. That list can only shrink.
 
 - **Asked for a change, the assistant proposes it — the card is the question.**
   *"I want a non-conformance to have a prefix CR instead of NC. Could you make

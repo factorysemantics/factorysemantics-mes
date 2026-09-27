@@ -108,6 +108,15 @@ DRAFTS = ((INSTRUCTION, INSTRUCTION_TITLE), (TRIGGER, TRIGGER_NAME),
 #: first run's work, so the plant does not collect one of these per run.
 MAINTENANCE_SUMMARY = "Infeed belt slipping (assist eval fixture)"
 
+#: The two identified units the packing and disposition cases name. Ours to
+#: choose, so they carry the prefix - a serial `SN-EVAL-1` in somebody's trace
+#: is recognisably a run's and not a bottle that left the plant.
+#:
+#: There is no gauge here, and that is the rule rather than an omission: see
+#: `_GAUGE` below.
+UNIT = "SN-EVAL-1"
+CONTAINER = "SN-EVAL-CASE-1"
+
 
 class Unarrangeable(Exception):
     """A fixture this run may not, or cannot, put on the plant."""
@@ -456,6 +465,42 @@ def _make_adjustment(plant: str, code: str, actor: str) -> None:
         dry_run=False, on_behalf_of=actor))
 
 
+_PERSON = ("who works at a plant is the plant's own record, like its materials and its "
+           "machines. A run declares this rather than adding somebody - and it is only "
+           "ever asked in the negative: \"add Jo Patel\" is a question you can put to a "
+           "plant that has not got a Jo Patel")
+
+
+def _has_person(plant: str, code: str) -> bool:
+    return any(p.get("code") == code
+               for p in _rows(_tools().people(plant, q=code), "people"))
+
+
+_GAUGE = ("the gauge register is master data, and the AGENT account does not hold "
+          "masterdata.write unless an admin has granted it (decision 0035) - so a run "
+          "cannot put a gauge on a plant, and only asks in the negative: \"register "
+          "GA-BRIX01\" is a question you can put to a plant that has not got one")
+
+
+def _has_gauge(plant: str, code: str) -> bool:
+    return any(g.get("code") == code for g in _rows(_tools().gauges(plant), "gauges"))
+
+
+def _has_unit(plant: str, code: str) -> bool:
+    return _found(_tools().unit(plant, serial=code))
+
+
+def _make_unit(plant: str, code: str, actor: str) -> None:
+    """One identified unit, minted with the serial the case names.
+
+    `produce_batch` is the tool that takes the serial, and it is one of the nine
+    this fixture's own cases are about - so the arrangement and the case under
+    test are the same call, which is true of the vocabulary fixtures above too.
+    """
+    _ok(_tools().produce_batch(plant, serials=[code], material=MATERIAL,
+                               dry_run=False, on_behalf_of=actor))
+
+
 KINDS: dict[str, Kind] = {k.name: k for k in (
     Kind("material", _has_material, cannot=_MASTER_DATA),
     Kind("machine", _has_machine, cannot=_MASTER_DATA),
@@ -472,6 +517,9 @@ KINDS: dict[str, Kind] = {k.name: k for k in (
     Kind("severity", _has_severity, _make_severity),
     Kind("adjustment", _has_adjustment, _make_adjustment,
          cannot=_NO_WRITABLE_SETPOINT),
+    Kind("person", _has_person, cannot=_PERSON),
+    Kind("gauge", _has_gauge, cannot=_GAUGE),
+    Kind("unit", _has_unit, _make_unit),
 )}
 
 
@@ -496,6 +544,8 @@ ARRANGES = (
     f"reason:{REASON}",
     f"severity:{SEVERITY}",
     f"adjustment:{MACHINE}",
+    f"unit:{UNIT}",
+    f"unit:{CONTAINER}",
 )
 
 

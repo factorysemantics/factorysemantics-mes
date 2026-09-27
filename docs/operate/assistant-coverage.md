@@ -19,7 +19,8 @@ A *screen action* is a write route some page script calls: the things a
 person can do by pointing at them. The route's own capability gate says
 whether a role may perform it, and a *walk* is a "Show me" surface in
 `services/assistant.py` - a tool without one can be proposed but not
-shown.
+shown, and is listed in `assistant.WITHOUT_A_WALK` with where its
+control is.
 
 ## Every write route
 
@@ -97,7 +98,13 @@ shown.
 ## Who holds what
 
 Whether each role may perform the route at all, from the route's own
-capability gate. A role that may not perform it is never offered the tool.
+capability gate. A role that may not perform it is never offered the
+tool either: what the assistant offers comes from `agent.NEEDS`, which
+is a second copy of the same answer, and
+`test_every_write_tool_names_the_capability_its_route_demands` fails if
+the two ever disagree about any role in this table. Until 2026-09-27
+they disagreed about nine tools, and this column was the half that was
+right.
 
 | Action | Capability | operator | supervisor | admin | agent |
 | --- | --- | --- | --- | --- | --- |

@@ -550,3 +550,36 @@ plant declares none, so this case is reported *not arranged* there rather than
 asked. The walk itself is still checked - it is listed to the administrator, and
 `test_an_administrator_is_shown_every_signing_walk_as_theirs_to_follow` fails if
 that stops being true."""
+
+# ---------------------------------- the two that only an admin was ever allowed
+#
+# `add_person` and `register_gauge` were offered to an operator and to a
+# supervisor until 2026-09-27, and the route refused both of them. They are an
+# admin's - the personnel register and master data - and these are the cases
+# that hold that.
+
+[[case]]
+id = "admin-adds-somebody-to-the-personnel-register"
+request = "add Jo Patel to the personnel list as an operator, code JPATEL"
+screen = "/dashboard/masterdata"
+expect = "propose"
+tool = "add_person"
+args = { code = "JPATEL", name = "Jo Patel", role = "operator" }
+requires = ["no person:JPATEL"]
+note = """`add_person` puts somebody on the register without a sign-in;
+`create_user` makes the account. Both are gated on users.manage, which is why
+this is an admin's file - and the register is what the plant may name as having
+done something, so being on it matters even without a password."""
+
+[[case]]
+id = "admin-registers-a-gauge"
+request = "register a refractometer GA-BRIX01 at the sample port, calibrated every 180 days"
+screen = "/dashboard/gauges"
+expect = "propose"
+tool = "register_gauge"
+args = { code = "GA-BRIX01", interval_days = 180 }
+fills = { name = "Refractometer", kind = "refractometer", location = "sample port" }
+requires = ["no gauge:GA-BRIX01"]
+note = """Master data, gated on masterdata.write, which the agent role holds only
+if an admin has granted it. The fixture gauge a run puts up is `GA-EVAL-1`; this
+case keeps the code a person would type, and needs the plant not to have it."""
