@@ -192,6 +192,35 @@ never = ["orders archive", "historical data section"]
 source = "questions/2026-09-26.md, ~15:02 CDT"
 note = "there is no archive and no historical data section. Sending somebody to one is worse than saying the tool only lists open orders."
 
+# ------------------------- Scott, 2026-09-26 evening (bottling, ADMIN): asked
+# to be shown, with nothing on his screen to be shown.
+
+[[case]]
+id = "scott-asks-to-be-shown-with-nothing-open"
+request = "could you show me where I change the non-conformance prefix to CR?"
+screen = "/dashboard"
+expect = "propose"
+tool = "write_plant_setting"
+args = { domain = "quality", key = "nc_code_prefix", value = "CR" }
+anchor = "setting-in-focus"
+not_guide = ["find-instruction", "record-check"]
+source = "questions/2026-09-26.md, ~21:2x CDT, nothing open"
+note = """The right answer is both halves in the one turn: the card, and the
+card's own "Show me" standing on `setting-in-focus` - which is what the `anchor`
+here scores. A walkthrough cannot be put on the screen in the same turn as a
+card, because the card is what the person is then looking at, so "show me" with
+nothing open is answered by proposing and leaving the walk one press away.
+
+What he got was neither: "I can propose the change now, and then
+show_guide(\"proposal\") will put the real form with 'CR' already filled in..."
+- a narration, with a tool name in it, and no card.
+
+The words he actually typed were "could you show me where?", which is
+`scott-asks-to-be-shown-where` above. That request carries no referent of its
+own, and in a live run the turn before it is answered by the model - which may
+well produce the card, and then this is that other case. So this one says in one
+sentence what his two said together, and is scored in both modes."""
+
 # ------------------------------------------ the administrator's own write tools
 
 [[case]]

@@ -581,6 +581,11 @@ def _walk_plan(case: Case) -> tuple[dict, ...]:
     asked - except over an open proposal, where the answer is that proposal's
     own walk, `show_guide("proposal")`.
 
+    The prompt's third arm - asked to be shown a change nothing has proposed
+    yet, propose it, because the card's own "Show me" *is* the walk - is not
+    here, and cannot be: it ends in a card, so such a case is a `propose` case
+    and `plan_for` sends it to the proposing branch below.
+
     Deliberately not `case.guide`. A stand-in handed the answer would score
     nothing: the question scripted mode asks is whether the walk this person
     asked for is *reachable* - listed for their role, and served by an id the
@@ -629,6 +634,12 @@ def plan_for(case: Case) -> tuple[dict, ...]:
         # asked for - and refused, by name, when it is not theirs to press.
         return _walk_plan(case)
     if case.expect in ("propose", "walk") and case.tool:
+        # A request for a change is a proposal, not a question: the plan ends in
+        # the card, and the sentence beside it neither asks for permission
+        # ("want me to go ahead?" - live, 2026-09-26 21:05) nor names the tool
+        # it is about to call. Those are two of the three rules the prompt gives
+        # the model, and `tests/test_the_assistant_proposes_rather_than_asking.py`
+        # holds every reply this stand-in produces to them.
         return (
             *(_read_step(tool, case) for tool in case.reads),
             {"propose": case.tool, "args": call,
