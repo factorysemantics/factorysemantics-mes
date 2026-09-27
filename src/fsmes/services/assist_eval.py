@@ -909,7 +909,9 @@ def arrangement(run: dict) -> list[str]:
     lines += _put_there(run.get("made") or [], run.get("already") or [],
                         run.get("refused") or {},
                         nothing="Nothing. This run was given `--no-arrange`.",
-                        verb="arranged")
+                        verb="arranged",
+                        closing="Nothing here is removed afterwards: an MES does not "
+                                "delete an audited record, and neither does this.")
     lines += ["### The master data, as the person signed in", ""]
     if not run.get("seeding"):
         lines += ["Nothing. `--seed-masterdata` was not given, so this run left the "
@@ -923,21 +925,25 @@ def arrangement(run: dict) -> list[str]:
     lines += _put_there(seeded.get("made") or [], seeded.get("already") or [],
                         seeded.get("refused") or {},
                         nothing="Nothing: every code was already there.",
-                        verb="put there")
+                        verb="put there",
+                        closing="This API has no way to remove any of it — there is no "
+                                "`DELETE` for equipment, materials, routings, "
+                                "specifications or lots — so a seeded plant keeps it "
+                                "until it is rebuilt or restored from a backup taken "
+                                "first.")
     return lines
 
 
-def _put_there(made, already, refused: dict, *, nothing: str, verb: str) -> list[str]:
+def _put_there(made, already, refused: dict, *, nothing: str, verb: str,
+               closing: str) -> list[str]:
     if not (made or already or refused):
         return [nothing, ""]
     lines = [f"- Put there by this run: {_codes(made) or 'nothing'}",
              f"- Already there, and left untouched: {_codes(already) or 'nothing'}"]
     for requirement, why in sorted(refused.items()):
         lines.append(f"- Could not be {verb} — `{requirement}`: {why}")
-    lines += ["", "Nothing here is removed afterwards: an MES does not delete an audited "
-                  "record, and neither does this. See "
-                  "[ASSIST-EVAL.md](../ASSIST-EVAL.md) for what a person does about each "
-                  "one.", ""]
+    lines += ["", f"{closing} See [ASSIST-EVAL.md](../ASSIST-EVAL.md) for what a person "
+                  f"does about each one.", ""]
     return lines
 
 

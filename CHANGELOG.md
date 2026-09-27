@@ -12,6 +12,43 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **A live faithfulness run can put the demo plant's master data on the plant it
+  scores — as the person, never as the agent.** `fsmes assist eval --live
+  --seed-masterdata` creates `LINE1`, `MIX01`, `PACK01`, `RAW-SUGAR`,
+  `RAW-FLAVOR`, `FG-COLA`, the routing `RT-COLA` (Mix 10 on `MIX01`, Pack 20 on
+  `PACK01`), the brix specification on `FG-COLA` (9.5–11.5 °Bx) and the lots
+  `LOT-SUGAR-001` (500 kg) and `LOT-FLAVOR-001` (100 l) — over the plant's own
+  API, on the session the run signed in with.
+
+  The arrangement added above stops at master data on purpose: an agent
+  deployment does not define materials, equipment, routings, lots or
+  specifications (decision 0035) and the AGENT account holds no
+  `masterdata.write`. A **person** may, and pointed at a plant that was not built
+  from the demo pack the suite had nothing to ask about. This is the ten `POST`s
+  somebody would otherwise type by hand, which a plant rebuilt on a fresh build
+  wipes every time.
+
+  Off unless asked for. It **creates and never updates**: a code that is already
+  there is reported *already there* and left exactly as the plant has it, so a
+  plant whose `FG-COLA` is a different product keeps its own, and a second run
+  writes nothing. It is refused in one sentence, before anything is written, when
+  the account signed in may not define master data; the two lots are guarded by
+  `production.consume` rather than `masterdata.write`, and an account holding one
+  and not the other is told which capability they wanted. The codes and the
+  numbers are read back out of `seed_demo_plant`, not copied into the seeding, so
+  the plant that lands is the demo pack's by construction. `LINE1` arrives
+  parentless — a run has no business inventing four levels of somebody else's
+  hierarchy. The result file lists every code that arrived, beside what the agent
+  arranged and apart from it, so a scored plant's operator can see which account
+  wrote what.
+
+  Honestly stated in [ASSIST-EVAL.md](docs/ai/ASSIST-EVAL.md): **this API cannot
+  remove any of it.** There is no `DELETE` or `PATCH` for equipment, materials,
+  routings, specifications or lots, and nothing in the product sets a lot to
+  `blocked`. A seeded plant keeps it until somebody reaches the database, or until
+  the plant is rebuilt or restored from a backup taken first. Seed a plant you are
+  willing to rebuild.
+
 - **A live faithfulness run arranges the plant it scores, and says what it
   could not.** `fsmes assist eval --live` used to ask a plant questions about
   things that were not on it. Nine of the nineteen failures in the first live

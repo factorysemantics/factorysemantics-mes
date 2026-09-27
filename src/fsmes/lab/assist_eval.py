@@ -60,7 +60,7 @@ __all__ = ["ARRANGES", "DEFAULT_MAX_USD", "KEY", "SEEDS", "LiveRefused", "Plant"
 # ---------------------------------------------------------- a plant to run on
 
 @contextlib.contextmanager
-def scripted_plant():
+def scripted_plant(*, seeded: bool = True):
     """A seeded plant, in memory, reachable by the real tools.
 
     The MCP tools work only through the API as a signed-in account - that is
@@ -69,6 +69,12 @@ def scripted_plant():
     pointed at the in-process app. Everything a tool does in scripted mode is a
     real HTTP request through the real gates; nothing leaves this process and
     nothing touches a file.
+
+    `seeded=False` leaves the demo pack out and builds the accounts only: an
+    empty plant, which is what a plant looks like before somebody has defined
+    any master data on it. Nothing in the product asks for that - it is what
+    `--seed-masterdata` has to be proven against, because a plant that already
+    has `FG-COLA` cannot show you the request that creates one.
     """
     from contextlib import contextmanager as _cm
 
@@ -103,7 +109,8 @@ def scripted_plant():
             s.commit()
 
     session = SASession(engine, expire_on_commit=False)
-    seed_demo_plant(session)
+    if seeded:
+        seed_demo_plant(session)
     auth.ensure_builtin_roles(session)
     auth.create_user(session, code=mcp_server.AGENT_USER, name="Plant Agent",
                      password=mcp_server.AGENT_PASSWORD, role="agent")

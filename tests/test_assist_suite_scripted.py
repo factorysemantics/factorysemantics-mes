@@ -761,7 +761,8 @@ def test_the_result_file_says_what_master_data_arrived_and_that_nothing_removes_
     assert "### The master data, as the person signed in" in page
     assert "`material:FG-COLA`" in page and "`machine:MIX01`" in page
     assert "production.consume" in page
-    assert "an MES does not delete an audited record" in page
+    assert "no `DELETE` for equipment, materials, routings" in page
+    assert "rebuilt or restored from a backup" in page
     assert "decision 0035" in page
 
 
@@ -970,6 +971,151 @@ def plant_on_a_port():
             client = mcp_server._clients.pop(assist_runs.LIVE_PLANT, None)
             if client is not None:
                 client.close()
+
+
+@pytest.fixture()
+def bare_plant_on_a_port():
+    """A plant with accounts and no master data, served over TCP.
+
+    What `--seed-masterdata` exists for, and the only fixture that can prove it:
+    a plant built from the demo pack already has every one of the ten codes, so
+    it can show you "already there" and never the request that creates one. Here
+    the real routers answer - the real paths, the real payload shapes, the real
+    capability names - which a canned double cannot.
+    """
+    from fsmes import mcp_server
+
+    with assist_runs.scripted_plant(seeded=False) as plant:
+        _OverASocket.app = plant.client
+        _OverASocket.calls = []
+        server = ThreadingHTTPServer(("127.0.0.1", 0), _OverASocket)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        url = f"http://127.0.0.1:{server.server_address[1]}"
+        try:
+            yield url, _OverASocket.calls
+        finally:
+            server.shutdown()
+            server.server_close()
+            mcp_server._local.pop(assist_runs.LIVE_PLANT, None)
+            client = mcp_server._clients.pop(assist_runs.LIVE_PLANT, None)
+            if client is not None:
+                client.close()
+
+
+def test_seeding_a_real_empty_plant_leaves_it_holding_all_ten_codes(bare_plant_on_a_port):
+    """The real routers, over a real socket, on a plant that had none of it: ten
+    `POST`s, ten rows, and the plant says so when it is asked afterwards."""
+    url, calls = bare_plant_on_a_port
+    plant = assist_runs.Plant(url)
+    plant.sign_in("ADMIN", "a-long-enough-password")
+    seeded = assist_runs.seed_live(plant)
+
+    assert seeded["refused"] == {}, seeded["refused"]
+    assert seeded["made"] == list(assist_seed.SEEDS)
+    written = [path for method, path in calls if method == "POST" and path != "/auth/login"]
+    assert written == ["/masterdata/equipment", "/masterdata/equipment",
+                       "/masterdata/equipment", "/masterdata/materials",
+                       "/masterdata/materials", "/masterdata/materials",
+                       "/masterdata/routings", "/quality/specs",
+                       "/execution/lots", "/execution/lots"]
+    for requirement in assist_seed.SEEDS:
+        kind, code = assist_seed.split(requirement)
+        assert assist_seed.RECIPES[kind].there(plant, code), requirement
+    plant.close()
+
+
+def test_what_lands_on_a_real_plant_is_the_demo_plant_and_not_a_near_miss(
+        bare_plant_on_a_port):
+    """"The code is there" is not the same claim as "the row says what the demo
+    pack says". A field named wrong is accepted by a router with a default behind
+    it - `FG-COLA` would arrive as a *raw* material, `MIX01` with no ideal cycle -
+    and every presence check in this file would still pass. So the rows are read
+    back off the plant and compared, field by field."""
+    url, _calls = bare_plant_on_a_port
+    plant = assist_runs.Plant(url)
+    plant.sign_in("ADMIN", "a-long-enough-password")
+    assist_runs.seed_live(plant)
+
+    def one(path, **params):
+        rows = plant.read(path, **params)
+        rows = rows.get("items") if isinstance(rows, dict) else rows
+        assert len(rows) == 1, (path, params, rows)
+        return rows[0]
+
+    cola = one("/masterdata/materials", q="FG-COLA")
+    assert (cola["name"], cola["unit"], cola["type"]) == ("Cola Syrup 1L", "ea", "finished")
+    sugar = one("/masterdata/materials", q="RAW-SUGAR")
+    assert (sugar["unit"], sugar["type"]) == ("kg", "raw")
+    flavor = one("/masterdata/materials", q="RAW-FLAVOR")
+    assert (flavor["unit"], flavor["type"]) == ("l", "raw")
+
+    line = one("/masterdata/equipment", q="LINE1")
+    assert (line["level"], line["parent"]) == ("work_center", None)
+    mixer = one("/masterdata/equipment", q="MIX01")
+    assert (mixer["level"], mixer["parent"], mixer["ideal_cycle_seconds"]) == (
+        "work_unit", "LINE1", 4.0)
+    packer = one("/masterdata/equipment", q="PACK01")
+    assert (packer["parent"], packer["ideal_cycle_seconds"]) == ("LINE1", 3.0)
+
+    routing = one("/masterdata/routings", q="RT-COLA")
+    assert routing["material"] == "FG-COLA"
+    assert routing["operations"] == [{"seq": 10, "name": "Mix", "equipment": "MIX01"},
+                                     {"seq": 20, "name": "Pack", "equipment": "PACK01"}]
+
+    spec = one("/quality/specs", material="FG-COLA", characteristic="brix")
+    assert (spec["unit"], spec["min_value"], spec["max_value"]) == ("°Bx", 9.5, 11.5)
+
+    assert one("/execution/lots", q="LOT-SUGAR-001")["quantity"] == 500
+    assert one("/execution/lots", q="LOT-FLAVOR-001")["quantity"] == 100
+    plant.close()
+
+
+def test_the_routing_nobody_asked_for_is_what_lets_the_agents_order_exist(
+        bare_plant_on_a_port):
+    """`routing:RT-COLA` is on the seeding list and no case names it. This is the
+    reason written beside it, measured against the real routers: with the machines
+    and the materials there and no routing, `workorders.create` refuses
+    `WO-EVAL-1` outright, and the agent's whole arrangement stops at its first
+    fixture."""
+    url, _calls = bare_plant_on_a_port
+    plant = assist_runs.Plant(url)
+    plant.sign_in("ADMIN", "a-long-enough-password")
+
+    bodies = assist_seed.demo_master_data()
+    for requirement in assist_seed.SEEDS:
+        if assist_seed.split(requirement)[0] in ("machine", "material"):
+            plant.write(assist_seed.RECIPES[assist_seed.split(requirement)[0]].where,
+                        bodies[requirement])
+
+    before = assist_runs.arrange_live(url, on_behalf_of="ADMIN")
+    assert "order:WO-EVAL-1" in before["refused"], before
+    assert "routing" in before["refused"]["order:WO-EVAL-1"].lower()
+
+    assist_runs.seed_live(plant)
+    after = assist_runs.arrange_live(url, on_behalf_of="ADMIN")
+    assert not after["refused"], after["refused"]
+    assert set(after["made"]) | set(after["already"]) == set(assist_runs.ARRANGES)
+    plant.close()
+
+
+def test_seeding_a_plant_built_from_the_demo_pack_finds_every_code_already_there(
+        plant_on_a_port):
+    """The other end of the same idempotency, against the real routers: the demo
+    pack's own plant already has all ten, so nothing is written to it at all."""
+    from fsmes.config import get_settings
+
+    url, calls = plant_on_a_port
+    plant = assist_runs.Plant(url)
+    plant.sign_in("ADMIN", get_settings().admin_password)
+    calls.clear()
+    seeded = assist_runs.seed_live(plant)
+    plant.close()
+
+    assert seeded["already"] == list(assist_seed.SEEDS)
+    assert seeded["made"] == [] and seeded["refused"] == {}
+    assert not [path for method, path in calls
+                if method == "POST" and path != "/auth/login"]
 
 
 def test_a_live_run_puts_the_suites_fixtures_on_a_real_plant_over_its_own_http_api(
