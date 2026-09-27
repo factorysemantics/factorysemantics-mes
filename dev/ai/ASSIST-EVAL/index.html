@@ -3541,6 +3541,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#what-a-live-run-puts-on-the-plant-and-what-it-never-will" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a live run puts on the plant, and what it never will
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What a live run puts on the plant, and what it never will">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#arranged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arranged
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#never-arranged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Never arranged
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removing-it-afterwards" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removing it afterwards
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reading-a-result" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3918,6 +3968,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#what-a-live-run-puts-on-the-plant-and-what-it-never-will" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a live run puts on the plant, and what it never will
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What a live run puts on the plant, and what it never will">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#arranged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arranged
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#never-arranged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Never arranged
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removing-it-afterwards" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removing it afterwards
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reading-a-result" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4094,6 +4194,116 @@ the plant's reason, not a page of zeroes.</p>
 <p>Run it against a <strong>synthetic</strong> plant. The result file quotes what the model did,
 and that includes the arguments it chose; a real plant's codes are a real plant's
 business.</p>
+<h2 id="what-a-live-run-puts-on-the-plant-and-what-it-never-will">What a live run puts on the plant, and what it never will<a class="headerlink" href="#what-a-live-run-puts-on-the-plant-and-what-it-never-will" title="Permanent link">&para;</a></h2>
+<p>Almost every sentence in the suite names something: an order, a material, a
+machine, a draft waiting for a signature. Asked "book 600 good on MIX01 against
+WO-EVAL-1" on a plant that has neither, the right answer is <em>there is no MIX01
+here</em> — and on 2026-09-26 the first live run scored nine of its nineteen
+failures against a model that was saying exactly that. A run that does this is
+measuring the plant, not the model.</p>
+<p>So each case declares what it needs, and a live run <strong>arranges the plant first</strong>
+(<code>--no-arrange</code> turns that off):</p>
+<div class="highlight"><pre><span></span><code><span class="n">requires</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"material:FG-COLA"</span><span class="p">,</span><span class="w"> </span><span class="s2">"order:WO-EVAL-1"</span><span class="p">,</span><span class="w"> </span><span class="s2">"no reason:changeover"</span><span class="p">]</span>
+</code></pre></div>
+<p><code>no kind:code</code> is a requirement that the plant has <em>not</em> got one: "draft a
+downtime reason <code>changeover</code>" is not a question you can put to a plant whose
+vocabulary already holds one.</p>
+<p>Anything the plant still has not got makes that case <strong>not arranged</strong> — it is
+not asked, not paid for and not scored, and it is listed in the result file with
+the reason. It is counted in its own column, apart from pass and fail, so the
+required number cannot quietly drift.</p>
+<h3 id="arranged">Arranged<a class="headerlink" href="#arranged" title="Permanent link">&para;</a></h3>
+<p>Written by the <strong>AGENT</strong> account, naming the person the run signed in as, through
+the product's own API — the same write path the suite is about, so a fixture that
+stops working is a tool that stopped working. Every row lands in the audit trail
+with both names on it.</p>
+<table>
+<thead>
+<tr>
+<th>What</th>
+<th>Code</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A setting put in force</td>
+<td><code>[process] default_report_hours</code> → <code>10.0</code></td>
+<td>So "who changed this, and when?" has something to find.</td>
+</tr>
+<tr>
+<td>A released work order</td>
+<td><code>WO-EVAL-1</code></td>
+<td>1000 of <code>FG-COLA</code>.</td>
+</tr>
+<tr>
+<td>A non-conformance</td>
+<td><code>NC-00001</code></td>
+<td>Opened by the MES itself, from a brix check recorded at 20.0 against a 9.5–11.5 specification.</td>
+</tr>
+<tr>
+<td>A corrective maintenance order</td>
+<td><code>CM-00001</code></td>
+<td>On <code>MIX01</code>, summary <em>Infeed belt slipping (assist eval fixture)</em>.</td>
+</tr>
+<tr>
+<td>A <strong>draft</strong> work instruction</td>
+<td><code>WI-EVAL-1</code></td>
+<td>Unapproved.</td>
+</tr>
+<tr>
+<td>A <strong>draft</strong> trigger</td>
+<td><code>TR-EVAL-1</code></td>
+<td>Unapproved.</td>
+</tr>
+<tr>
+<td>A <strong>draft</strong> downtime reason</td>
+<td><code>eval_changeover</code></td>
+<td>Unapproved: nothing labels a stop with it.</td>
+</tr>
+<tr>
+<td>A <strong>draft</strong> non-conformance severity</td>
+<td><code>eval_cosmetic</code></td>
+<td>Unapproved: nothing is graded with it.</td>
+</tr>
+</tbody>
+</table>
+<p>Four of those eight are <strong>drafts</strong>, and a draft changes nobody's screen until
+somebody signs it. Codes carry <code>EVAL-</code>/<code>eval_</code> wherever the code is ours to
+choose, so what a run left behind can be told from the plant's own work at a
+glance. The plant numbers the non-conformance and the maintenance order itself;
+if it numbers them something else, the cases that name them are reported not
+arranged with the code it did use.</p>
+<h3 id="never-arranged">Never arranged<a class="headerlink" href="#never-arranged" title="Permanent link">&para;</a></h3>
+<p><strong>Master data.</strong> Materials, equipment, routings, lots and specifications are the
+plant's own, and an agent deployment does not define them — decision
+<a href="../../decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators/">0035</a>,
+and the AGENT account does not hold <code>masterdata.write</code> to do it with. A plant
+without <code>FG-COLA</code> and <code>MIX01</code> gets those cases reported <em>not arranged</em> rather
+than having a cola line invented on it.</p>
+<p>That is why the suite belongs against a plant built from the <strong>demo pack</strong>. Point
+it at a bottling plant and most of it comes back not arranged, which is the
+honest answer and not a useful run.</p>
+<h3 id="removing-it-afterwards">Removing it afterwards<a class="headerlink" href="#removing-it-afterwards" title="Permanent link">&para;</a></h3>
+<p><strong>It does not remove any of it, and there is no <code>--clean</code>.</strong> An MES does not
+delete an audited record; that is most of what an MES is for. A run that tidied
+up after itself would have to reach round the write discipline the suite exists
+to measure, and the tidying would not be in the trail.</p>
+<p>What a person does instead, on a plant they want back:</p>
+<ul>
+<li>the four <strong>drafts</strong> — retire them on their own screens (<code>/dashboard/reasons</code>,
+  <code>/dashboard/severities</code>, <code>/dashboard/instructions</code>, <code>/dashboard/triggers</code>).
+  They were never in force, so retiring one changes nothing that was running.</li>
+<li><code>WO-EVAL-1</code> — cancel or close it.</li>
+<li><code>CM-00001</code> — complete it, or leave it: it is a corrective job on a mixer with
+  the words <em>assist eval fixture</em> in its summary.</li>
+<li><code>NC-00001</code> — disposition and close it. It is a real non-conformance about a
+  real recorded check, and it stays in the record, as every non-conformance does.</li>
+<li><code>default_report_hours</code> — set it back to what it was. <code>setting_changes</code> says
+  what that was.</li>
+</ul>
+<p>Arranging is <strong>idempotent</strong>: a second run on an arranged plant creates nothing
+twice and fails nothing. Point it at the same plant as often as you like.</p>
 <h2 id="reading-a-result">Reading a result<a class="headerlink" href="#reading-a-result" title="Permanent link">&para;</a></h2>
 <p>A live run writes <code>docs/ai/assist-eval/&lt;date&gt;.md</code>, the way a calibration run
 writes <code>docs/ai/calibration/&lt;date&gt;/</code>:</p>
@@ -4103,7 +4313,10 @@ writes <code>docs/ai/calibration/&lt;date&gt;/</code>:</p>
 <li>a pass rate per role;</li>
 <li>every required case that did not pass, with the expectation, <strong>what it did
   instead</strong>, and a sentence per thing that was wrong;</li>
-<li>every case marked <code>not_yet</code>, and which handoff it is waiting on.</li>
+<li>every case marked <code>not_yet</code>, and which handoff it is waiting on;</li>
+<li>every case that was <strong>not arranged</strong>, what the plant has not got, and why —
+  followed by what the run put on the plant, what was already there, and
+  anything it could not arrange, in the plant's own words.</li>
 </ul>
 <p>A plant does not report the commit it is running, so <code>--plant-commit</code> is how that
 gets into the file. A result with no build behind it cannot be compared to next
@@ -4141,14 +4354,21 @@ than the thing the person asked for.</p>
 <li>If the expectation needs a read narrowed to something, <code>lookup</code> says what.
    It is offered to every read the case names and filtered to the arguments that
    tool takes.</li>
-<li>Run <code>fsmes assist eval --scripted --case &lt;id&gt;</code>. If it cannot pass yet, mark it
-   <code>not_yet</code> and name the handoff.</li>
+<li>
+<p>Run <code>fsmes assist eval --scripted --case &lt;id&gt;</code>. If it cannot pass yet, mark it
+   <code>not_yet</code> and name the handoff.</p>
+</li>
+<li>
+<p>Say what the plant has to have for the sentence to mean anything, in
+   <code>requires</code>. The kinds live in <code>fsmes.lab.assist_fixtures</code>, and a typo in one
+   fails the build rather than quietly retiring the case.</p>
+</li>
 </ol>
 <p>The plant every case is asked about is the demo plant plus what
-<code>fsmes.services.assist_eval.arrange</code> puts on it — an order, a failed check that
-raised a non-conformance, a corrective maintenance job, and one setting somebody
-actually changed. It is built through the write tools themselves, so a fixture
-that stops working is a tool that stopped working.</p>
+<code>fsmes.lab.assist_fixtures.arrange</code> puts on it — the eight rows in <em>What a live
+run puts on the plant</em> above. A scripted run arranges the same plant the same
+way, so the arrangement is exercised on every pull request rather than only when
+somebody spends money.</p>
 <h2 id="why-this-is-worth-shipping-in-the-open">Why this is worth shipping in the open<a class="headerlink" href="#why-this-is-worth-shipping-in-the-open" title="Permanent link">&para;</a></h2>
 <p>The field publishes capability. A vendor announces how many agents, how many
 integrations, which copilot; checked on 2026-09-25, nobody publishes a rerunnable
