@@ -897,20 +897,43 @@ def _no_plant_commit(mode: str) -> str:
 
 
 def arrangement(run: dict) -> list[str]:
-    """What a run put on the plant, as lines for the result file. Written even
-    when it put nothing there, because "nothing was arranged" is the fact a
-    reader most needs when every case comes back not arranged."""
-    made = run.get("made") or []
-    already = run.get("already") or []
-    refused = run.get("refused") or {}
-    lines = ["## What this run put on the plant", ""]
-    if not (made or already or refused):
-        lines += ["Nothing. This run was given `--no-arrange`.", ""]
+    """What a run put on the plant, as lines for the result file.
+
+    Two halves, kept apart because two different accounts wrote them and the
+    operator of a scored plant is entitled to know which. Written even when
+    nothing was put there, because "nothing was arranged" is the fact a reader
+    most needs when every case comes back not arranged.
+    """
+    lines = ["## What this run put on the plant", "",
+             "### As the agent, through the assistant's own tools", ""]
+    lines += _put_there(run.get("made") or [], run.get("already") or [],
+                        run.get("refused") or {},
+                        nothing="Nothing. This run was given `--no-arrange`.",
+                        verb="arranged")
+    lines += ["### The master data, as the person signed in", ""]
+    if not run.get("seeding"):
+        lines += ["Nothing. `--seed-masterdata` was not given, so this run left the "
+                  "plant's own master data alone — materials, equipment, routings, "
+                  "lots and specifications are the plant's, not a suite's.", ""]
         return lines
-    lines += [f"- Put there by this run: {_codes(made) or 'nothing'}",
-              f"- Already there: {_codes(already) or 'nothing'}"]
+    seeded = run.get("seeded") or {}
+    lines += ["Put there over the plant's own API by the account this run signed in "
+              "as — not by the AGENT account, which may not define master data "
+              "(decision 0035).", ""]
+    lines += _put_there(seeded.get("made") or [], seeded.get("already") or [],
+                        seeded.get("refused") or {},
+                        nothing="Nothing: every code was already there.",
+                        verb="put there")
+    return lines
+
+
+def _put_there(made, already, refused: dict, *, nothing: str, verb: str) -> list[str]:
+    if not (made or already or refused):
+        return [nothing, ""]
+    lines = [f"- Put there by this run: {_codes(made) or 'nothing'}",
+             f"- Already there, and left untouched: {_codes(already) or 'nothing'}"]
     for requirement, why in sorted(refused.items()):
-        lines.append(f"- Could not be arranged — `{requirement}`: {why}")
+        lines.append(f"- Could not be {verb} — `{requirement}`: {why}")
     lines += ["", "Nothing here is removed afterwards: an MES does not delete an audited "
                   "record, and neither does this. See "
                   "[ASSIST-EVAL.md](../ASSIST-EVAL.md) for what a person does about each "

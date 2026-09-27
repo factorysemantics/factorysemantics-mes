@@ -3541,6 +3541,13 @@ def assist_eval_command(
         help="Do not put the suite's fixtures on the live plant. Every case the "
              "plant has not got what for is then reported 'not arranged' - not "
              "asked, not scored, not paid for."),
+    seed_masterdata: bool = typer.Option(
+        False, "--seed-masterdata",
+        help="Also put the demo plant's master data on the live plant - the "
+             "machines, materials, routing, brix specification and lots the "
+             "suite's sentences name - as the account you signed in as, through "
+             "the plant's own API. Off unless you ask: this is master data on a "
+             "real plant and there is no delete endpoint for most of it."),
     role: list[str] = typer.Option(
         None, "--role", help="Only these roles. Repeat for several."),
     case: str = typer.Option(None, "--case", help="Only the one case with this id."),
@@ -3576,6 +3583,16 @@ def assist_eval_command(
     in the plant's environment, it costs money, and it stops at `--max-usd`.
     Every proposal it opens is declined, so a scored plant is an unchanged plant.
 
+    `--seed-masterdata` puts the demo plant's **master data** there first, and
+    puts it there **as you**: the machines, the materials, the routing, the brix
+    specification and the lots, over the plant's own API, on the session this
+    command signed in with. Not as the AGENT account, which may not define master
+    data and should not (decision 0035). It is off unless you ask for it, it
+    creates nothing that is already there and updates nothing at all, and the
+    result file lists every code that arrived - because a plant rebuilt from a
+    fresh build has none of it, and a plant that has it is the only plant this
+    suite can honestly be scored on.
+
     A live run **arranges the plant first**: it puts the fixtures the suite's
     sentences name there, through the tools, as the AGENT account on behalf of
     the account you signed in as. That writes to the plant and lands in its
@@ -3592,6 +3609,14 @@ def assist_eval_command(
     """
     if scripted == live:
         typer.echo("Choose one: --scripted or --live.")
+        raise typer.Exit(2)
+    if seed_masterdata and scripted:
+        # Not a nicety. A scripted run's plant is built by `seed_demo_plant` in
+        # this process and already has every one of these codes, so obeying the
+        # flag would mean writing master data to a plant that has it - and a
+        # person who typed this on the wrong mode meant it for a real one.
+        typer.echo("--seed-masterdata is for --live. A scripted run's plant is built "
+                   "from the demo pack in this process and already has all of it.")
         raise typer.Exit(2)
 
     try:
@@ -3618,7 +3643,8 @@ def assist_eval_command(
         plant_name = assist_eval.SCRIPTED_PLANT
     else:
         outcomes, run, model, plant_name = _live_run(cases, plant, user, password, max_usd,
-                                                     quiet=quiet, arranging=not no_arrange)
+                                                     quiet=quiet, arranging=not no_arrange,
+                                                     seeding=seed_masterdata)
 
     counts = assist_eval.tally(outcomes)
     if not quiet:
@@ -3642,6 +3668,13 @@ def assist_eval_command(
         typer.echo(f"{counts['not_arranged']} case(s) were not arranged: this plant has "
                    f"not got what the request names, so they were not asked and not "
                    f"scored. They are listed in the result file.")
+    if run.get("seeding"):
+        seeded = run.get("seeded") or {}
+        typer.echo(f"Master data, as {(user or '').upper() or 'the account signed in'}: "
+                   f"{len(seeded.get('made') or [])} put there, "
+                   f"{len(seeded.get('already') or [])} already there, "
+                   f"{len(seeded.get('refused') or {})} could not be. None of it is "
+                   f"removed afterwards.")
     if run.get("made") or run.get("refused"):
         typer.echo(f"Arranged: {len(run.get('made') or [])} put there, "
                    f"{len(run.get('already') or [])} already there, "
@@ -3676,7 +3709,8 @@ def assist_eval_command(
         raise typer.Exit(1)
 
 
-def _live_run(cases, plant, user, password, max_usd, *, quiet: bool, arranging: bool):
+def _live_run(cases, plant, user, password, max_usd, *, quiet: bool, arranging: bool,
+              seeding: bool = False):
     """The live half, with the two refusals that have to happen before a call."""
     import os
 
@@ -3704,7 +3738,7 @@ def _live_run(cases, plant, user, password, max_usd, *, quiet: bool, arranging: 
             cases, client,
             max_usd=assist_runs.DEFAULT_MAX_USD if max_usd is None else max_usd,
             on_case=None if quiet else _say_case,
-            arranging=arranging, on_behalf_of=user.upper())
+            arranging=arranging, seeding=seeding, on_behalf_of=user.upper())
     except assist_runs.LiveRefused as exc:
         typer.echo(f"The live run stopped: {exc}")
         raise typer.Exit(2) from exc

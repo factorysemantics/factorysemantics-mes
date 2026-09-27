@@ -19,6 +19,7 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 
+from fsmes.lab import assist_seed
 from fsmes.lab.assist_fixtures import (
     ARRANGES,
     Plantview,
@@ -51,9 +52,9 @@ KEY = "ANTHROPIC_API_KEY"
 # plant, live in `assist_fixtures` and are re-exported here: what is in this
 # module is the two ways of reaching a plant to do it - in-process for a
 # scripted run, over its own HTTP API for a live one.
-__all__ = ["ARRANGES", "DEFAULT_MAX_USD", "KEY", "LiveRefused", "Plant", "Plantview",
-           "Unarrangeable", "arrange", "arrange_live", "missing", "run_live",
-           "run_scripted", "scripted_plant", "why_not"]
+__all__ = ["ARRANGES", "DEFAULT_MAX_USD", "KEY", "SEEDS", "LiveRefused", "Plant",
+           "Plantview", "Unarrangeable", "arrange", "arrange_live", "missing",
+           "run_live", "run_scripted", "scripted_plant", "seed_live", "why_not"]
 
 
 # ---------------------------------------------------------- a plant to run on
@@ -246,8 +247,15 @@ def run_scripted(cases: tuple[Case, ...]) -> tuple[Outcome, ...]:
 
 # ------------------------------------------------------------ the live run
 
-class LiveRefused(Exception):
-    """A live run that cannot honestly start."""
+class LiveRefused(assist_seed.Refused):
+    """A live run that cannot honestly start, or a plant that would not do what
+    it was asked.
+
+    A kind of `assist_seed.Refused`, so that the seeding - which is handed this
+    module's `Plant` as its way to reach a plant and knows nothing else about
+    this module - can catch a request that came back 4xx without importing back
+    into here.
+    """
 
 
 KEY = "ANTHROPIC_API_KEY"
@@ -277,11 +285,27 @@ class Plant:
         with contextlib.suppress(Exception):
             self.http.close()
 
-    def _json(self, method: str, path: str, **kwargs) -> dict:
+    def _call(self, method: str, path: str, **kwargs):
         response = self.http.request(method, path, **kwargs)
         if response.status_code >= 400:
             raise LiveRefused(f"{method} {path} -> {response.status_code} {response.text[:300]}")
         return response.json()
+
+    def _json(self, method: str, path: str, **kwargs) -> dict:
+        return self._call(method, path, **kwargs)
+
+    # The two methods `assist_seed.Api` asks for. Kept apart from `_json` for
+    # one reason: some of this product's list endpoints answer with a bare list
+    # and some with a paged envelope, so what comes back here is whatever the
+    # endpoint said rather than a dict this class promised on its behalf.
+    def read(self, path: str, **params):
+        """A GET, carrying the query this was given and nothing it was not."""
+        return self._call("GET", path,
+                          params={k: v for k, v in params.items() if v is not None})
+
+    def write(self, path: str, body: dict):
+        """A POST of one thing, as the account signed in."""
+        return self._call("POST", path, json=body)
 
     def sign_in(self, code: str, password: str) -> None:
         out = self._json("POST", "/auth/login", json={"code": code, "password": password})
@@ -352,6 +376,31 @@ def arrange_live(base_url: str, *, on_behalf_of: str = "ADMIN") -> dict:
     return arrange(LIVE_PLANT, on_behalf_of=on_behalf_of)
 
 
+#: Re-exported so a caller does not have to know which of these two modules
+#: holds which half of the plant a run needs.
+SEEDS = assist_seed.SEEDS
+
+
+def seed_live(plant: Plant) -> dict:
+    """Put the demo plant's master data on a running plant, as the person.
+
+    The other half of `arrange_live`, and the difference is who writes. This one
+    does not touch `mcp_server` and never sees the AGENT account: it posts to the
+    plant's own master-data, quality and execution endpoints over the session the
+    run signed in with, which is what a person does by hand. Decision 0035 stands
+    - an agent does not define master data - and a person still may.
+
+    Writes master data to somebody's plant. There is no delete endpoint for most
+    of it; `docs/ai/ASSIST-EVAL.md` says so and says what a person does instead.
+    """
+    try:
+        return assist_seed.seed(plant)
+    except LiveRefused:
+        raise
+    except assist_seed.Refused as exc:
+        raise LiveRefused(str(exc)) from exc
+
+
 def live_view(base_url: str) -> Plantview:
     """A reader for the same plant, so `missing` asks it over HTTP too."""
     from fsmes import mcp_server
@@ -362,7 +411,7 @@ def live_view(base_url: str) -> Plantview:
 
 def run_live(cases: tuple[Case, ...], plant: Plant, *,
              max_usd: float = DEFAULT_MAX_USD,
-             on_case=None, arranging: bool = True,
+             on_case=None, arranging: bool = True, seeding: bool = False,
              on_behalf_of: str = "ADMIN") -> tuple[tuple[Outcome, ...], dict]:
     """The suite against the real model, on a running plant.
 
@@ -371,11 +420,21 @@ def run_live(cases: tuple[Case, ...], plant: Plant, *,
     scored, not paid for. Stops when the run has cost `max_usd`, and says which
     cases were not run rather than reporting a short suite as a whole one. Every
     proposal is declined on the way out, so a scored plant is an unchanged plant.
+
+    `seeding` also puts the demo plant's **master data** there first, as the
+    person the run signed in as. Off by default and asked for by name: it is
+    master data on somebody's plant, and nothing removes it afterwards. It has to
+    come before the arrangement, not after - `WO-EVAL-1` is an order for
+    `FG-COLA` routed over `MIX01`, and the non-conformance is opened by a brix
+    check against a specification that has to exist to fail against.
     """
     started = plant.brain()
     if not started.get("available"):
         raise LiveRefused(f"this plant's cloud brain is not available: "
                           f"{started.get('reason')}")
+    seeded: dict = {}
+    if seeding:
+        seeded = seed_live(plant)
     put_there: dict = {}
     if arranging:
         put_there = arrange_live(plant.base_url, on_behalf_of=on_behalf_of)
@@ -428,5 +487,9 @@ def run_live(cases: tuple[Case, ...], plant: Plant, *,
            "cap_usd": finished.get("cap_usd"), "month_usd": _spent(finished),
            "made": put_there.get("made", []), "already": put_there.get("already", []),
            "refused": put_there.get("refused", {}),
+           # Said as a flag as well as a result, because "nothing was seeded"
+           # and "seeding was never asked for" are different facts about a
+           # plant and the result file has to be able to tell them apart.
+           "seeding": seeding, "seeded": seeded,
            "why_not": {r: why_not(r) for reqs in unmet.values() for r in reqs}}
     return tuple(outcomes), run
