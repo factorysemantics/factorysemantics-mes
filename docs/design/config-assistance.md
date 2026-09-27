@@ -1233,8 +1233,168 @@ which one in force.
 | admin | 51 | 47 |
 | agent | 23 | 19 |
 
-Fifteen of the sixty-six are by written reason. Walks are the thinner half:
-`SURFACES` covers ten of the forty-seven write tools, so an admin who can
-propose 51 actions can be *shown* 14 of them, and none of the four tools added
-here has a surface yet. That is the sibling handoff's work, and the column is
-here so that it is countable rather than assumed.
+Fifteen of the sixty-six are by written reason. Walks were the thinner half on
+the day this was written: `SURFACES` covered ten of the forty-seven write tools,
+so an admin who could propose 51 actions could be *shown* 14 of them, and none
+of the four tools added here had a surface at all. The column was put here so
+that this would be countable rather than assumed, and the next section is that
+work: with it, an admin is shown **42** of the 51, an operator 14 of 16, and
+all four of the tools above are walkable.
+
+## 16. Every write tool has a surface — 2026-09-26
+
+### The rule
+
+**Every write tool the assistant may propose has a walk onto the real form,
+and a test says so.** "Show me" is not a feature of the tools that happened
+to get one first; it is what the card is, and a card with only "Do it" on it
+is half a card. `assistant.SURFACES` is keyed on `agent.NEEDS` plus
+`agent.PER_CALL_NEEDS`, a test asserts the two sets are equal, and the next
+write tool added without a surface goes red in CI.
+
+Measured before and after, on the same plant: **10 surfaces of 34 proposable
+write tools**, then 34 of 34 — and **38 of 38** once §15's four tools landed
+and this branch was rebased onto them. Seventy-odd `data-assist` anchors were
+added to the forms that had only a form-level one, and one was fixed:
+`triggers.html` carried `data-assist="trigger-submit"` on the *closing* tag,
+where HTML parsing discards it, so no walk could ever have pointed at Save
+draft.
+
+### A tool with no control to walk to is a hole in the screens
+
+The four tools of §15 were written against the routes the screens call, and
+writing their surfaces asked the narrower question — *which control does a
+person press to do this?* Two of them had no honest answer, and both are the
+same finding from different ends:
+
+- **Nothing on any screen booked a lot in.** Lots arrived here by production
+  booking one or by the ERP link sending one; a pallet on the dock, or a
+  quantity somebody counted, had nowhere to be recorded. The assistant could
+  do something no person could, which is the wrong way round. So the floor
+  page has a fourth form beside Book output, Issue material and Quality
+  check — lot code, material, quantity — gated on `production.consume`,
+  because booking stock in and issuing it are the same person's job at the
+  same bench.
+- **No screen changes what a revision says.** The instructions screen's Open
+  next revision posts an empty body: it opens the next revision as a
+  word-for-word copy, and there is no box anywhere for the new wording. That
+  one is left as it is and said out loud on the card, because the next
+  revision's text is what "Do it" writes; inventing an edit form for it is a
+  product decision and not a surface.
+
+**`test_route_coverage` cannot see either.** Its screen match is textual and
+method-blind on purpose — the question it asks is whether anything wired the
+module up — so a page that *reads* `/execution/lots` on every refresh reads as
+a page that calls it, and a screen that posts an empty body to a route reads as
+a screen that uses all of it. A ratchet is only as honest as the question it
+asks, and the question "does some script name this path" is not "can a person
+do this".
+
+### The card is painted in one piece
+
+A walk's card said `STEP 5 OF 6` over step 4's words, on GitHub's runner, never
+once on loopback. `standOn()` scrolls the control into view and paints the card
+260 ms later so the ring lands where the control ends up, and that delayed paint
+read the step from its own closure and the step *number* from `walk.index` as it
+stood when the timer fired. Press Next inside those 260 ms and the stale paint
+lands under the new number — which a test waiting on the counter alone does,
+because the smooth scroll fires scroll events and the scroll handler paints the
+counter early.
+
+A step's number now travels with the step, so a card showing two different
+steps at once is not expressible, and a paint that a later step has overtaken
+says nothing. This is the third timing-shaped bug in the walk in three days
+(#105's single sample, #112's read-before-render, this one) and they share a
+shape: **the browser is asked for a state that arrives in two pieces, and the
+code reads whichever piece is ready.** The rule that came out of it, and is now
+house rule 6 in `CONTRIBUTING.md`, is that a browser test waits for the thing it
+is about to assert — never for the element that will hold it, and never for a
+fixed number of milliseconds.
+
+### What a step does when the screen has no box for an argument
+
+Some tools take something no form can express — a serial the plant mints, a
+document's tie to a material and a characteristic, a shift's machine, a
+start time for a plan. The step says so, in the words a person can act on,
+rather than dropping that part of the proposal in silence. The same rule
+covers the two arguments that are lists drawn from a registry (a routing's
+operations, a role's capabilities): the step rings the grid, and names what
+to type or tick, read out of the proposal by a `context` function.
+
+One walk deliberately fills nothing. `assign_role`'s control is a dropdown on
+a person's row that saves the moment it changes, with no button after it —
+so filling it in would be *making* the change rather than showing where it is
+made, which is the opposite of what "Show me" is for.
+
+### Approving is a walk, never a tool
+
+Decision 0035 says the agent never approves; `capabilities.py` says the same
+in the agent role's own description. That has always been right and has
+always been answered badly: *"approve the draft severity"* came back as "no
+tool named approve is available to this person", which is a true fact about
+the catalogue and no use to anybody standing at a machine.
+
+The faithful answer is a walk to the control they sign it on. There are five
+approvable kinds and now five signing walks — a downtime reason, a
+non-conformance severity, a work instruction, a trigger, a setpoint
+adjustment. Two of them (the vocabularies) are signed on the floor screen's
+own review panel, because only those two have a review built for them
+(`review.py`'s `KINDS`); the other three are signed on their own screens.
+Each walk ends on the control that is actually there.
+
+A signing walk is the **one** kind of walk offered to somebody who may not
+follow it. Every other guide is hidden from a person without its capability,
+because teaching a task that ends in a refusal is worse than saying it is not
+theirs. Here the name of who may sign *is* the answer, so the walk is listed
+with the capability and the product's own plain description of it, and
+`show_guide` refuses it with that sentence rather than walking somebody to a
+button their role is not shown.
+
+### The card's own walk, reachable by the model
+
+Seen live on 2026-09-26, after #109 had made the model the only brain: with a
+`write_plant_setting` proposal on screen, *"could you show me where?"*
+declined the card — any text over a proposal is a no, by design — and the
+model then called `guides()`, found fourteen walks about other tasks, and
+said, correctly, that there was no walkthrough for plant settings. The walk
+being asked for was on the card, two steps onto the very field.
+
+So the proposal's surface is now a walkthrough the model can hand over, under
+the id `proposal`: `guides()` lists it first while a proposal has been made in
+the conversation, and `show_guide("proposal")` puts it up. The alternative
+considered was to have the panel notice a question about the open card and
+answer it without asking the model — and that is a regex in front of a model
+that has the conversation in view, which is exactly the gate #109 removed
+after it answered Scott three times with the wrong walk. "How many did that
+book?" contains *how*. The model decides; what changed is that it now has
+something to decide with.
+
+Two other things landed with it, both at the point of need rather than in the
+prompt. The decline a typed message produces used to read "the person moved on
+without confirming" — which is not what happened — and now says they typed
+instead of deciding, and where the walk is if that is what they were asking
+for. And the prompt gained exactly two sentences: one saying every proposal
+carries a "Show me", one saying approvals are walks.
+
+### What the suite says now
+
+`assist-show-me-surfaces` owned ten cases in `tests/assist_suite/`. All ten
+pass and their `not_yet` marks are off: **77 of 77 required cases before, 87
+of 87 after, and 16 `not_yet` down to 6** — the six that remain belong to
+`assist-action-coverage`.
+
+Two of the ten were rewritten rather than made to pass as written. A person
+who may draft and may not sign — the agent role itself, and a supervisor —
+was down as owed a *walk* to the signing control. They are owed the
+*sentence* instead: the walk is listed to them, which is what lets the
+assistant name the capability rather than say "no tool named approve", and
+asking for it is refused with that capability, its plain description, and the
+fact that the assistant signs nothing for anybody. Walking somebody to a
+button their role is not shown is a worse answer than the refusal, not a
+better one.
+
+One thing the suite made visible that is not about approvals at all: without
+a local model, the walkthrough fallback matched whole words, so *"how do I
+book production?"* found nothing — the guide's own line says *booking*. Words
+now agree on their first four characters. On a plant with no model running
+that is the difference between an assistant and a shrug.

@@ -7,7 +7,6 @@ loop's discipline is what matters, not the model's judgement.
 """
 
 import json
-import re
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -16,19 +15,7 @@ import pytest
 
 from fsmes.services import agent, assistant
 from fsmes.services import capabilities as caps
-
-WEB = Path(__file__).resolve().parents[1] / "src" / "fsmes" / "web"
-PAGE_FILES = {"/dashboard": "index.html", "/dashboard/quality": "quality.html",
-              "/dashboard/station": "station.html", "/dashboard/orders": "orders.html",
-              "/dashboard/maintenance": "maintenance.html",
-              "/dashboard/reasons": "reasons.html",
-              "/dashboard/severities": "severities.html",
-              # One file serves every workspace's Configuration page and reads
-              # the workspace out of its own address, so the authored step
-              # names the template and the proposal fills it in.
-              "/dashboard/config/{domain}": "config.html"}
-
-
+from page_anchors import PAGE_FILES, WEB, anchors_on, page_file
 
 # ------------------------------------------------------------ the catalogue
 
@@ -558,26 +545,6 @@ def test_no_key_means_off_with_a_reason(monkeypatch):
 
 # ------------------------------------------------------------- the surfaces
 
-def page_file(page: str) -> str:
-    """The file behind a step's page. A step may carry a query string - which
-    setting, which machine - and that is not part of which file serves it."""
-    return PAGE_FILES[page.split("?")[0]]
-
-
-def anchors_on(page: str) -> set[str]:
-    """Every anchor a page actually has: the ones in its markup, and the ones
-    its own scripts put on controls they build. A page whose rows are drawn
-    from an API has no anchor in its HTML at all, and a check that only read
-    the HTML would call every one of those steps broken."""
-    html = (WEB / page_file(page)).read_text(encoding="utf-8")
-    found = set(re.findall(r'data-assist="([^"]+)"', html))
-    for script in re.findall(r'<script src="/static/([^"]+\.js)"', html):
-        source = (WEB / script).read_text(encoding="utf-8")
-        found |= set(re.findall(r'data-assist="([^"]+)"', source))
-        found |= set(re.findall(r'dataset\.assist\s*=\s*"([^"]+)"', source))
-    return found
-
-
 @pytest.mark.parametrize("tool", sorted(assistant.SURFACES))
 def test_every_surface_step_points_at_a_control_that_exists(tool):
     surface = assistant.SURFACES[tool]
@@ -800,9 +767,16 @@ def test_a_message_over_an_open_proposal_is_a_history_the_api_will_take(scripted
     # The second call happened at all, and what it was handed is well-formed.
     assert len(shapes) == 2, "the second message never reached the model"
     assert "assistant[text,tool_use] user[tool_result] user[text]" in shapes[1], shapes[1]
-    # The decline is what the model was told, in the person's own words.
+    # The decline is what the model was told, in the person's own words - and
+    # what happened is that they typed, which is not the same as walking away.
+    # When the card had a walk behind it the result says where that walk is,
+    # because "could you show me where?" is one of the things a person types
+    # over a card, and it used to be answered with "there isn't a walkthrough
+    # for that".
     answer = json.loads(sess.history[2]["content"][0]["content"])
-    assert answer["declined"] == "the person moved on without confirming"
+    assert answer["declined"].startswith(
+        "the person typed something else instead of deciding")
+    assert f"show_guide('{agent.PROPOSAL_WALK}')" in answer["declined"]
 
 
 def test_a_conversation_already_broken_repairs_itself_on_the_next_message(scripted, monkeypatch):
@@ -983,6 +957,127 @@ def test_a_proposal_and_a_walk_in_one_round_shows_the_card_and_says_so(scripted)
     assert json.loads(sess.results["t2"]["content"])["shown"] is False
 
 
+# ----------------------------- the card's own walk, reachable by the model
+
+def test_the_walk_behind_show_me_is_a_walkthrough_the_model_can_hand_over(scripted):
+    """Scott, 2026-09-26, live, after #109. With a `write_plant_setting`
+    proposal on his screen he typed *"could you show me where?"*. Typing over
+    a card declines it - that is the design - and the model then called
+    `guides()`, found fourteen walks about other tasks, and correctly said
+    there was no walkthrough for plant settings: press "Do it". The walk he
+    was asking for was on the card, two steps onto the very field, and nothing
+    let the model hand it over. Now `guides()` carries it and `show_guide`
+    puts it up.
+    """
+    script, _calls = scripted
+    script += [
+        response(block_tool("t1", "write_plant_setting", domain="quality",
+                            key="nc_code_prefix", value="CR"), stop="tool_use"),
+        response(block_tool("t2", "guides"), stop="tool_use"),
+        response(block_text("Here it is on the real screen."),
+                 block_tool("t3", "show_guide", id=agent.PROPOSAL_WALK), stop="tool_use"),
+    ]
+    sess = agent.open_session("ADMIN", "bottling", {"plant.read", "quality.define",
+                                                   "quality.record"}, guides=walks())
+    assert agent.message(sess, "change the NC prefix to CR")["kind"] == "proposals"
+
+    out = agent.message(sess, "could you show me where?")
+    assert out["kind"] == "guide", out
+    assert out["guide"]["id"] == agent.PROPOSAL_WALK
+    # It is the card's own surface: the real Configuration field, with CR in it.
+    anchors = [step["anchor"] for step in out["guide"]["steps"]]
+    assert "setting-in-focus" in anchors, anchors
+    assert any(step.get("fill", {}).get("value") == "CR" for step in out["guide"]["steps"])
+    # And not one of the walks a word count used to land on.
+    assert out["guide"]["id"] not in {"record-check", "find-instruction"}
+
+    # The model saw it in the catalogue, first, before the plant's own walks.
+    catalogue = json.loads(
+        next(block["content"] for turn in sess.history if turn["role"] == "user"
+             for block in (turn["content"] if isinstance(turn["content"], list) else [])
+             if isinstance(block, dict) and block.get("tool_use_id") == "t2"))
+    assert catalogue["guides"][0]["id"] == agent.PROPOSAL_WALK
+
+
+def test_there_is_no_proposal_walk_before_anything_has_been_proposed(scripted):
+    """`guides()` offers the card's walk only when there is a card. Otherwise
+    `show_guide("proposal")` is a refusal the model can read, not a crash."""
+    script, _calls = scripted
+    script += [
+        response(block_tool("t1", "show_guide", id=agent.PROPOSAL_WALK), stop="tool_use"),
+        response(block_text("I have not proposed anything yet.")),
+    ]
+    sess = agent.open_session("ADMIN", "bottling", {"plant.read", "quality.record"},
+                              guides=walks())
+    out = agent.message(sess, "show me that change")
+    assert out["kind"] == "reply"
+    refusal = json.loads(sess.history[2]["content"][0]["content"])
+    assert "no walkthrough" in refusal["error"]
+    assert agent.PROPOSAL_WALK not in refusal["available"]
+
+
+# ------------------------------------------- approving is a walk, never a tool
+
+def test_a_signing_walk_is_offered_to_somebody_who_may_not_sign_and_says_who_may():
+    """Decision 0035: the agent never approves. That makes "approve the draft
+    severity" a request it can answer *well* - by naming who signs it - and
+    the one it used to answer with "no tool named approve is available to this
+    person", which is a fact about the catalogue and no use to anybody.
+    """
+    operator = {"plant.read", "quality.record"}
+    listed = {g["id"]: g for g in assistant.listed_guides(operator)}
+    followable = {g["id"] for g in assistant.visible_guides(operator)}
+
+    gated = listed["approve-a-severity"]
+    assert gated["id"] not in followable, "a walk they may follow would not need the note"
+    assert "quality.approve" in gated["gated"]
+    # The product's own words for the capability, not a sentence invented here.
+    assert caps.CAPABILITIES["quality.approve"].rstrip(".") in gated["gated"]
+    assert "never approves anything, for anybody" in gated["gated"]
+
+    # Somebody who does hold it just gets the walk, unmarked.
+    signer = {"plant.read", "quality.approve"}
+    theirs = {g["id"]: g for g in assistant.listed_guides(signer)}
+    assert "gated" not in theirs["approve-a-severity"]
+    assert "approve-a-severity" in {g["id"] for g in assistant.visible_guides(signer)}
+
+
+def test_show_guide_refuses_a_signing_walk_rather_than_walking_them_to_it(scripted):
+    """Listed is not followable. Walking somebody to a button their role is
+    not shown is worse than saying who presses it."""
+    script, _calls = scripted
+    script += [
+        response(block_tool("t1", "show_guide", id="approve-a-severity"), stop="tool_use"),
+        response(block_text("That one is signed by somebody holding quality.approve.")),
+    ]
+    operator = {"plant.read", "quality.record"}
+    sess = agent.open_session("SCOTT", "bottling", operator,
+                              guides=assistant.listed_guides(operator))
+    out = agent.message(sess, "approve the draft severity")
+    assert out["kind"] == "reply"
+    refused = json.loads(sess.history[2]["content"][0]["content"])
+    assert refused["shown"] is False
+    assert refused["needs"] == "quality.approve"
+    # An `error` and not a note, so the turn records it as a refusal and the
+    # sentence is what a scorer - and a person - reads back.
+    assert caps.CAPABILITIES["quality.approve"].rstrip(".") in refused["error"]
+
+
+def test_every_approvable_kind_has_a_walk_to_the_control_that_signs_it():
+    """Five things a person may put in force, five walks. The agent holds none
+    of the five capabilities, and `capabilities.py` says so in as many words."""
+    signing = {g["needs"]: g for g in assistant.GUIDES if g.get("signing")}
+    assert set(signing) == {"process.approve", "quality.approve", "documents.approve",
+                            "triggers.approve", "adjustments.approve"}
+    agent_role = set(caps.BUILTIN_ROLES["agent"]["capabilities"])
+    for need, guide in signing.items():
+        assert need in caps.CAPABILITIES
+        assert need not in agent_role, f"the agent must never hold {need}"
+        # The last step is the control that signs, and it says whose press it is.
+        assert guide["steps"][-1]["needs"] == need
+        assert guide["evidence"]["anchor"]
+
+
 # ------------------------------------------------------------- the turn record
 
 def test_every_turn_is_written_down_the_way_the_bill_is(scripted, tmp_path, monkeypatch):
@@ -1084,8 +1179,40 @@ def test_surface_titles_and_defaults_render_from_the_proposal():
 
 def test_every_surface_names_pages_that_exist_and_an_example():
     for tool, surface in assistant.SURFACES.items():
-        assert surface["pages"] and all(p in PAGE_FILES or p == "/dashboard/machines" for p in surface["pages"]), tool
+        assert surface["pages"] and all(p in PAGE_FILES for p in surface["pages"]), tool
         assert surface["example"], tool
+
+
+def test_every_write_tool_the_agent_may_propose_has_a_walk_onto_the_real_form():
+    """The ratchet. A person who is offered "Do it" is offered "Show me" too -
+    for every write tool, not the ten that happened to be written first.
+
+    Keyed on `NEEDS` and `PER_CALL_NEEDS`, which is where a new write tool
+    announces itself, so the next tool added without a surface fails here
+    rather than shipping a card with one button on it. Scott, 2026-09-24:
+    *"it would even be possible for the Assistant to take me to that page with
+    those actions performed, correct?"* - yes, and this is what keeps it true
+    of all of them.
+    """
+    proposable = set(agent.NEEDS) | set(agent.PER_CALL_NEEDS)
+    assert set(assistant.SURFACES) == proposable, (
+        f"no surface for: {sorted(proposable - set(assistant.SURFACES))}; "
+        f"surface for something that is not a proposable write tool: "
+        f"{sorted(set(assistant.SURFACES) - proposable)}")
+
+
+@pytest.mark.parametrize("tool", sorted(assistant.SURFACES))
+def test_a_surface_renders_with_nothing_but_the_arguments_it_is_given(tool):
+    """Every placeholder in every authored step resolves, and no step leaves a
+    brace behind. A surface is filled with `format_map`, so one stray `{` in a
+    sentence is a card that raises on the way to the person's screen - and it
+    would raise in front of exactly the person who asked to be shown."""
+    rendered = assistant.surface_for(tool, {})
+    assert rendered is not None
+    for step in [*rendered["steps"], rendered["evidence"]]:
+        for field in ("title", "body", "page", "anchor"):
+            assert "{" not in step[field] and "}" not in step[field], (tool, field, step)
+        assert step["title"].strip() and step["body"].strip()
 
 
 def test_suggestions_put_this_screen_first_and_use_real_names():

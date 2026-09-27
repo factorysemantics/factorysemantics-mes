@@ -183,6 +183,14 @@ When someone asks to be shown - "show me how", "where do I click", "I want to do
 the answer is a proposal's "Show me" button or the show_guide tool, never a description of the \
 screen. Call guides() to see what walks this plant has; show_guide(id) puts one on their screen.
 
+Every change you propose comes with "Show me" beside "Do it", which walks them onto the real \
+form with your values already in it - so if they ask to be shown after you proposed something, \
+put that same walk on their screen with show_guide("proposal") rather than saying there is none.
+
+You never approve anything: signing a draft reason, severity, document, trigger or adjustment \
+belongs to a person, so asked to approve one, show them the walk to the control they sign it on, \
+and if guides() says a signing walk is not theirs to follow, say which capability it needs.
+
 Speak plainly, in at most four sentences, to someone standing at a machine. State the numbers \
 you found. If you cannot do what was asked, say what you can do instead."""
 
@@ -202,6 +210,21 @@ GUIDES_TOOL = "guides"
 SHOW_GUIDE_TOOL = "show_guide"
 GUIDE_TOOLS = (GUIDES_TOOL, SHOW_GUIDE_TOOL)
 
+#: The id of the walk behind a proposal card's own "Show me" button. It is not
+#: in `GUIDES` - it is authored per tool in `assistant.SURFACES` and filled
+#: with this proposal's arguments - but the model reaches it by id like any
+#: other, because the question it answers arrives as a sentence and not as a
+#: click.
+#:
+#: 2026-09-26, live, after #109: with a `write_plant_setting` proposal on his
+#: screen Scott typed "could you show me where?". Typing over a card declines
+#: it (that is the design), the model then called `guides()`, saw fourteen
+#: walks about other tasks and correctly reported that none of them was about
+#: plant settings - "there isn't a walkthrough for that; press Do it". The
+#: walk he was asking for was on the card, two steps onto the very field, and
+#: nothing let the model hand it over. Now it can.
+PROPOSAL_WALK = "proposal"
+
 
 def guide_tools() -> list[dict]:
     """The two walk-me tools, as Anthropic tool definitions."""
@@ -215,7 +238,8 @@ def guide_tools() -> list[dict]:
          "description": "Put a walkthrough on the person's screen: it highlights each real "
                         "control in turn and they do the task themselves. This is the answer "
                         "when somebody asks to be shown how, or says they want to do it "
-                        "rather than have it done.",
+                        f"rather than have it done. The id {PROPOSAL_WALK!r} is the walk for "
+                        "the change you last proposed - the real form with your values in it.",
          "input_schema": {"type": "object",
                           "properties": {"id": {"type": "string",
                                                 "description": "a guide id from guides()"}},
@@ -488,6 +512,14 @@ class Session:
     #: short session it already had open. Empty is a plant with none, and then
     #: the two walk-me tools are not offered at all.
     guides: list[dict] = field(default_factory=list)
+
+    #: The surface of the last change proposed in this conversation - the walk
+    #: behind the card's own "Show me" button. Kept after the card is settled,
+    #: because the question that needs it comes *after*: "could you show me
+    #: where?" typed over an open proposal declines the card, and then the
+    #: walk the person asked for is the one that just went off their screen.
+    #: See `PROPOSAL_WALK`.
+    last_surface: dict | None = None
 
     #: This turn only, for the turn log - reset when the person says something
     #: or settles a proposal, so a line is what that one exchange did.
@@ -857,7 +889,16 @@ def message(sess: Session, text: str, *, name: str = "", role: str = "") -> dict
         # Appending the text first left `assistant(tool_use)` beside
         # `user(text)`, which the API refuses; see `_repair_history`.
         for pid in list(sess.pending):
-            _resolve(sess, pid, None, declined="the person moved on without confirming")
+            # What they typed is not always a no. It is always a decline - the
+            # card is settled either way - but a decline reported as "moved on"
+            # is how "could you show me where?" became "there isn't a
+            # walkthrough for that" on 2026-09-26. So the result says what
+            # actually happened and where the walk they may be asking for is.
+            reason = "the person typed something else instead of deciding"
+            if sess.pending[pid].surface is not None:
+                reason += (f"; if they were asking to be shown, the walk onto this form is "
+                           f"{SHOW_GUIDE_TOOL}({PROPOSAL_WALK!r})")
+            _resolve(sess, pid, None, declined=reason)
         _commit_results(sess)
     sess.transcript = []
     sess.turn_from = 0
@@ -968,6 +1009,9 @@ def _drive(sess: Session) -> dict:
                                 surface=assistant.surface_for(block.name, args,
                                                               sess.capabilities))
                 proposals.append(prop)
+                if prop.surface is not None:
+                    # Kept past the card's life: "show me where?" comes after.
+                    sess.last_surface = prop.surface
                 sess.pending[prop.id] = prop
                 sess.turn_proposals.append({"id": prop.id, "tool": prop.tool,
                                             "args": dict(prop.args), "outcome": "open"})
@@ -998,6 +1042,30 @@ def _drive(sess: Session) -> dict:
     return _reply(sess, "reply", "I stopped after too many steps without finishing. Try a smaller ask.")
 
 
+def _walks_on_offer(sess: Session) -> list[dict]:
+    """Every walk this conversation can put on the screen right now.
+
+    The plant's own walkthroughs, and - while a proposal has been made in this
+    conversation - the card's own "Show me" under `PROPOSAL_WALK`. The
+    proposal's walk comes first: it is about the thing they are talking about.
+    """
+    if sess.last_surface is None:
+        return list(sess.guides)
+    return [{"id": PROPOSAL_WALK, "title": sess.last_surface["title"],
+             "when": "the change you proposed - the real form on the real screen with "
+                     "your values already typed into it, for them to check and press "
+                     "the button themselves",
+             "steps": sess.last_surface["steps"],
+             "evidence": sess.last_surface.get("evidence"),
+             # It has an id so the model can name it and the turn log can
+             # record it, but no endpoint serves it: it is this proposal's
+             # arguments in this conversation. The screen saves such a walk
+             # whole when it crosses to another page, rather than saving the
+             # id and fetching a guide that does not exist there.
+             "ephemeral": True},
+            *sess.guides]
+
+
 def _walk_me(sess: Session, tool: str, args: dict, *,
              already: dict | None) -> tuple[dict | None, dict]:
     """`guides()` and `show_guide(id)`: the conversation's own two tools.
@@ -1005,15 +1073,29 @@ def _walk_me(sess: Session, tool: str, args: dict, *,
     Returns the guide to put on the screen (or what was already going there)
     and the result the model sees. Nothing here touches the plant.
     """
+    walks = _walks_on_offer(sess)
     if tool == GUIDES_TOOL:
-        return already, {"guides": [{"id": g["id"], "title": g["title"], "when": g.get("when", "")}
-                                    for g in sess.guides],
-                         "total": len(sess.guides)}
-    guide = sess.guide_by_id.get(str(args.get("id") or ""))
+        return already, {"guides": [{k: v for k, v in
+                                     (("id", g["id"]), ("title", g["title"]),
+                                      ("when", g.get("when", "")),
+                                      ("you_may_not_follow_it", g.get("gated")))
+                                     if v is not None}
+                                    for g in walks],
+                         "total": len(walks)}
+    wanted = str(args.get("id") or "")
+    guide = {g["id"]: g for g in walks}.get(wanted)
     if guide is None:
-        return already, {"error": f"no walkthrough {args.get('id')!r} is available to this "
+        return already, {"error": f"no walkthrough {wanted!r} is available to this "
                                   f"person; call {GUIDES_TOOL} for the ones that are",
-                         "available": [g["id"] for g in sess.guides]}
+                         "available": [g["id"] for g in walks]}
+    if guide.get("gated"):
+        # A signing walk offered to somebody who may not sign. It is listed
+        # rather than hidden so that "approve the draft severity" is answered
+        # with who signs it instead of "I cannot do that" (decision 0035), and
+        # it is refused here rather than put on their screen, because walking
+        # somebody to a button their role is not shown is worse than saying so.
+        return already, {"error": guide["gated"], "needs": guide["needs"],
+                         "shown": False}
     if already is not None:
         return already, {"shown": False,
                          "why": "one walkthrough at a time; the person is already being shown "

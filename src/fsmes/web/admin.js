@@ -69,6 +69,7 @@ function renderUsers(users) {
 
     const cell = el("td");
     const select = el("select");
+    select.dataset.assist = "user-role-select";
     for (const role of roles) {
       const opt = el("option", null, role.name);
       opt.value = role.code;
@@ -130,6 +131,7 @@ function renderRoles() {
     const editRow = el("div", "role-actions");
     const edit = el("button", "ghost small", "Edit");
     edit.type = "button";
+    edit.dataset.assist = "role-edit";
     edit.addEventListener("click", () => startRoleEdit(role));
     editRow.appendChild(edit);
     card.appendChild(editRow);

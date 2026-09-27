@@ -225,6 +225,7 @@ async function openDoc() {
 
   if (doc.status === "draft" && can("documents.approve")) {
     const approve = el("button", null, `Approve revision ${doc.revision}`);
+    approve.dataset.assist = "instruction-approve";
     approve.addEventListener("click", async () => {
       try {
         await api(`/documents/${selected}/approve/${doc.revision}`, { method: "POST" });
@@ -237,6 +238,7 @@ async function openDoc() {
   }
   if (doc.status !== "withdrawn" && can("documents.approve")) {
     const withdraw = el("button", "ghost", "Withdraw");
+    withdraw.dataset.assist = "instruction-withdraw";
     withdraw.addEventListener("click", async () => {
       if (!window.confirm(`Withdraw ${selected}? The floor stops following it.`)) return;
       try {
@@ -250,6 +252,7 @@ async function openDoc() {
   }
   if (doc.status === "approved" && can("documents.write")) {
     const revise = el("button", "ghost", "Open next revision");
+    revise.dataset.assist = "instruction-revise";
     revise.addEventListener("click", async () => {
       try {
         const next = await api(`/documents/${selected}/revise`, { method: "POST", body: {} });

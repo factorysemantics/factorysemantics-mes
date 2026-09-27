@@ -98,13 +98,13 @@
     <section id="produce-panel" class="panel" data-needs-cap="production.book">
       <h2>Produce identified units</h2>
       <form id="produce" class="row" data-assist="trace-produce">
-        <input id="p-material" placeholder="Material code" required>
-        <input id="p-order" placeholder="Order (optional)">
-        <input id="p-equipment" placeholder="Machine (optional)">
-        <input id="p-count" type="number" min="1" value="1">
-        <button id="p-submit">Produce</button>
+        <input id="p-material" placeholder="Material code" required data-assist="trace-produce-material">
+        <input id="p-order" placeholder="Order (optional)" data-assist="trace-produce-order">
+        <input id="p-equipment" placeholder="Machine (optional)" data-assist="trace-produce-machine">
+        <input id="p-count" type="number" min="1" value="1" data-assist="trace-produce-count">
+        <button id="p-submit" data-assist="trace-produce-submit">Produce</button>
       </form>
-      <p id="p-result" class="muted small"></p>
+      <p id="p-result" class="muted small" data-assist="trace-produce-result"></p>
     </section>
   </main>
 

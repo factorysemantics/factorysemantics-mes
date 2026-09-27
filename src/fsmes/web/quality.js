@@ -610,18 +610,23 @@ function drawNcs() {
     }
     const actions = el("div", "nc-actions");
     if (steps.includes("review")) {
-      actions.appendChild(ncButton(nc, "Take under review", () =>
-        api(`/quality/nonconformances/${nc.code}/review`, { method: "POST" })));
+      const review = ncButton(nc, "Take under review", () =>
+        api(`/quality/nonconformances/${nc.code}/review`, { method: "POST" }));
+      review.dataset.assist = "nc-review";
+      actions.appendChild(review);
     }
     if (steps.includes("disposition")) {
       const decide = el("button", "ghost", "Decide…");
       decide.type = "button";
+      decide.dataset.assist = "nc-decide";
       decide.addEventListener("click", () => openDisposition(nc));
       actions.appendChild(decide);
     }
     if (steps.includes("close")) {
-      actions.appendChild(ncButton(nc, "Close", () =>
-        api(`/quality/nonconformances/${nc.code}/close`, { method: "POST" })));
+      const close = ncButton(nc, "Close", () =>
+        api(`/quality/nonconformances/${nc.code}/close`, { method: "POST" }));
+      close.dataset.assist = "nc-close";
+      actions.appendChild(close);
     }
     li.appendChild(actions);
     list.appendChild(li);

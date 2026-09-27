@@ -74,17 +74,17 @@
       <div class="panel">
         <h2>Open work <span id="work-count" class="muted"></span></h2>
         <div class="filter-bar">
-          <select id="work-machine" aria-label="Machine"><option value="">Any machine</option></select>
+          <select id="work-machine" aria-label="Machine" data-assist="maintenance-work-machine"><option value="">Any machine</option></select>
         </div>
         <ul id="work-list" class="queue" data-assist="maintenance-work"></ul>
         <div id="complete-box" class="reason hidden">
           <div class="field">
             <label for="findings">What was found / done?</label>
-            <input id="findings" placeholder="e.g. seals replaced, no scoring on the shaft">
+            <input id="findings" placeholder="e.g. seals replaced, no scoring on the shaft" data-assist="maintenance-complete-findings">
           </div>
           <div class="row">
             <button id="complete-cancel" class="ghost" type="button">Back</button>
-            <button id="complete-confirm" type="button">Complete job</button>
+            <button id="complete-confirm" type="button" data-assist="maintenance-complete-confirm">Complete job</button>
           </div>
         </div>
       </div>
@@ -95,20 +95,20 @@
         <h2>New plan</h2>
         <form id="plan-form" class="stack" data-assist="maintenance-plan-form">
           <div class="row">
-            <input id="plan-code" placeholder="Code (PM-WASH-SEALS)" required>
-            <input id="plan-name" placeholder="Name" required>
-            <select id="plan-machine" aria-label="Machine" required></select>
+            <input id="plan-code" placeholder="Code (PM-WASH-SEALS)" required data-assist="maintenance-plan-code">
+            <input id="plan-name" placeholder="Name" required data-assist="maintenance-plan-name">
+            <select id="plan-machine" aria-label="Machine" required data-assist="maintenance-plan-machine"></select>
           </div>
           <div class="row">
-            <select id="plan-trigger" aria-label="Trigger">
+            <select id="plan-trigger" aria-label="Trigger" data-assist="maintenance-plan-trigger">
               <option value="runtime_hours">every N hours run</option>
               <option value="produced_qty">every N units made</option>
               <option value="calendar_days">every N days</option>
             </select>
-            <input id="plan-interval" type="number" min="0.1" step="0.1" placeholder="N" required>
-            <input id="plan-minutes" type="number" min="1" step="1" placeholder="Expected minutes — this plant's default">
-            <input id="plan-document" placeholder="Instruction code (optional)">
-            <button id="plan-submit">Create plan</button>
+            <input id="plan-interval" type="number" min="0.1" step="0.1" placeholder="N" required data-assist="maintenance-plan-interval">
+            <input id="plan-minutes" type="number" min="1" step="1" placeholder="Expected minutes — this plant's default" data-assist="maintenance-plan-minutes">
+            <input id="plan-document" placeholder="Instruction code (optional)" data-assist="maintenance-plan-document">
+            <button id="plan-submit" data-assist="maintenance-plan-submit">Create plan</button>
           </div>
         </form>
       </div>
@@ -124,7 +124,7 @@
             <option value="calendar_days">calendar days</option>
           </select>
         </div>
-        <div class="table-wrap"><table id="plans-table">
+        <div class="table-wrap"><table id="plans-table" data-assist="maintenance-plans">
           <thead><tr><th>Plan</th><th>Machine</th><th>Trigger</th><th>Progress</th><th class="num">Used</th><th class="num">Interval</th><th>Last done</th><th>Instruction</th></tr></thead>
           <tbody></tbody>
         </table></div>
@@ -144,7 +144,7 @@
             <option value="corrective">corrective</option>
           </select>
         </div>
-        <div class="table-wrap"><table id="history-table">
+        <div class="table-wrap"><table id="history-table" data-assist="maintenance-history">
           <thead><tr><th>Order</th><th>Machine</th><th>Kind</th><th>Summary</th><th>Findings</th><th class="num">Down (min)</th><th>By</th><th>Completed</th></tr></thead>
           <tbody></tbody>
         </table></div>

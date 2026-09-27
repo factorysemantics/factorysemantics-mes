@@ -72,11 +72,13 @@ function drawTriggers() {
     if (FS.can("triggers.approve")) {
       if (t.status === "draft") {
         const b = el("button", "small", "Approve"); b.type = "button";
+        b.dataset.assist = "trigger-approve";
         b.addEventListener("click", async () => { try { await api(`/triggers/${t.code}/approve`, { method: "POST" }); toast(`${t.code} in force`); await loadTriggers(); } catch (err) { toast(err.message, "bad"); } });
         actions.append(b);
       }
       if (t.status !== "withdrawn") {
         const w = el("button", "ghost small", "Withdraw"); w.type = "button";
+        w.dataset.assist = "trigger-withdraw";
         w.addEventListener("click", async () => { try { await api(`/triggers/${t.code}/withdraw`, { method: "POST" }); toast(`${t.code} withdrawn`); await loadTriggers(); } catch (err) { toast(err.message, "bad"); } });
         actions.append(" ", w);
       }

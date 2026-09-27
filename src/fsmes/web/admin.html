@@ -35,8 +35,8 @@
       <p class="muted small">Assigning a role takes effect on that person's very
         next action — capabilities are read live, not baked into their session.</p>
       <div class="filter-bar" data-assist="user-filters">
-        <input id="u-q" type="search" placeholder="Code or name" aria-label="Person code or name">
-        <select id="u-role" aria-label="Role"><option value="">Any role</option></select>
+        <input id="u-q" type="search" placeholder="Code or name" aria-label="Person code or name" data-assist="user-filter-text">
+        <select id="u-role" aria-label="Role" data-assist="user-filter-role"><option value="">Any role</option></select>
       </div>
       <div class="table-wrap">
         <table id="users" data-assist="user-table">
@@ -49,13 +49,13 @@
       <h3 class="mt">Add someone</h3>
       <form id="form-user" class="stack" data-assist="user-form">
         <div class="row">
-          <input name="code" placeholder="Code (e.g. JSMITH)" required>
-          <input name="name" placeholder="Full name" required>
+          <input name="code" placeholder="Code (e.g. JSMITH)" required data-assist="user-new-code">
+          <input name="name" placeholder="Full name" required data-assist="user-new-name">
         </div>
         <div class="row">
-          <input name="password" type="text" placeholder="Initial password" required>
-          <select name="role" id="new-user-role" aria-label="Role"></select>
-          <button>Create</button>
+          <input name="password" type="text" placeholder="Initial password" required data-assist="user-new-password">
+          <select name="role" id="new-user-role" aria-label="Role" data-assist="user-new-role"></select>
+          <button data-assist="user-new-create">Create</button>
         </div>
       </form>
     </section>
@@ -70,16 +70,16 @@
       <h3 class="mt" id="role-form-title">Define a role</h3>
       <form id="form-role" class="stack" data-assist="role-form">
         <div class="row">
-          <input name="code" placeholder="Code (e.g. line_lead)" required>
-          <input name="name" placeholder="Display name" required>
+          <input name="code" placeholder="Code (e.g. line_lead)" required data-assist="role-new-code">
+          <input name="name" placeholder="Display name" required data-assist="role-new-name">
         </div>
-        <input name="description" placeholder="What this role is for">
+        <input name="description" placeholder="What this role is for" data-assist="role-new-description">
         <fieldset class="caps">
           <legend class="muted small">Capabilities</legend>
           <div id="cap-checks" class="cap-grid" data-assist="cap-checks"></div>
         </fieldset>
         <div class="row">
-          <button id="role-save">Create role</button>
+          <button id="role-save" data-assist="role-save">Create role</button>
           <button type="button" id="role-cancel" class="ghost hidden">Cancel</button>
         </div>
       </form>
@@ -94,7 +94,7 @@
         <select id="r-material" aria-label="Material"><option value="">Any material</option></select>
       </div>
       <div class="table-wrap">
-        <table id="routings">
+        <table id="routings" data-assist="routing-list">
           <thead><tr><th>Code</th><th>Name</th><th>Material</th><th>Operations</th></tr></thead>
           <tbody></tbody>
         </table>
@@ -104,14 +104,14 @@
       <h3 class="mt">Define a routing</h3>
       <form id="form-routing" class="stack" data-assist="routing-form">
         <div class="row">
-          <input name="code" placeholder="Code (e.g. RT-BOTTLE-2)" required>
-          <input name="name" placeholder="Name" required>
-          <select name="material" id="routing-material" aria-label="Material"></select>
+          <input name="code" placeholder="Code (e.g. RT-BOTTLE-2)" required data-assist="routing-new-code">
+          <input name="name" placeholder="Name" required data-assist="routing-new-name">
+          <select name="material" id="routing-material" aria-label="Material" data-assist="routing-new-material"></select>
         </div>
         <div id="ops" class="ops" data-assist="routing-ops"></div>
         <div class="row">
-          <button type="button" id="add-op" class="ghost">Add operation</button>
-          <button>Create routing</button>
+          <button type="button" id="add-op" class="ghost" data-assist="routing-add-op">Add operation</button>
+          <button data-assist="routing-create">Create routing</button>
         </div>
       </form>
     </section>

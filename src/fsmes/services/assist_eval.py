@@ -79,8 +79,14 @@ KINDS = ("propose", "walk", "answer", "read", "refuse")
 EXPECTED = ("pass", "not_yet")
 
 #: "Show me" for a proposal that is already open, rather than for a catalogued
-#: guide. The person is pointing at the thing on their screen.
+#: guide. The person is pointing at the thing on their screen. It is the id
+#: the conversation itself serves that walk under - `agent.PROPOSAL_WALK`.
 OWN_WALK = "proposal"
+
+#: The conversation's own two walk-me tools, named here so the stand-in can
+#: play the rule the prompt gives the model rather than a copy of it.
+GUIDES_TOOL = "guides"
+SHOW_GUIDE_TOOL = "show_guide"
 
 
 class Invalid(Exception):
@@ -178,8 +184,15 @@ def _case(raw: dict, role: str, source_file: str, problems: list[str]) -> Case |
         problems.append(f"{where}: expected {case.expected!r} is not one of {', '.join(EXPECTED)}")
     if case.expected == "not_yet" and not case.handoff:
         problems.append(f"{where}: a not_yet case must name the handoff that will make it pass")
-    if case.expect in ("propose", "refuse") and not case.tool:
-        problems.append(f"{where}: a {case.expect} case must name a tool")
+    if case.expect == "propose" and not case.tool:
+        problems.append(f"{where}: a propose case must name a tool")
+    if case.expect == "refuse" and not (case.tool or case.guide):
+        # An approval is refused without a tool ever being involved: there is
+        # no approve tool and there never will be (decision 0035). Such a case
+        # names the signing walk instead - the thing that was asked for and
+        # said no to.
+        problems.append(f"{where}: a refuse case must name the tool it was refused, "
+                        f"or the signing walk it was refused")
     if case.expect == "walk" and not case.guide:
         problems.append(f"{where}: a walk case must name a guide, or {OWN_WALK!r}")
     if case.expect == "read" and not (case.reads or case.reads_any):
@@ -242,6 +255,9 @@ class Turn:
     kind: str                               # guide | proposals | reply | unavailable
     say: str = ""
     guide_id: str | None = None
+    #: The walk that was put on the screen, when one was - so a case can say
+    #: which control it has to land on, for a walk as well as for a card.
+    walk: dict = field(default_factory=dict)
     proposals: tuple[dict, ...] = ()
     reads: tuple[str, ...] = ()
     #: What the reads actually returned. Scripted mode scores `contains`
@@ -394,12 +410,20 @@ def _score_anchor(case: Case, proposal: dict) -> list[str]:
 
 def _score_walk(case: Case, turn: Turn) -> list[str]:
     if case.guide == OWN_WALK:
-        if turn.kind == "guide":
+        # The card's own walk, asked for by name. Written first as "a fresh
+        # proposal whose card carries the right surface", because that was
+        # the only shape there was: the walk behind "Show me" could be
+        # pressed and not handed over. It can be handed over now, and that
+        # is the better answer to somebody who has just said they would
+        # rather do it themselves - a second card would re-offer "Do it" and
+        # cost them another press. So the walk has to be on their screen.
+        if turn.kind != "guide":
+            return [f"the walk they asked for was not put on their screen: "
+                    f"it {turn.observed()}"]
+        if turn.guide_id != OWN_WALK:
             return [f"a catalogued guide ({turn.guide_id!r}) answered instead of the "
                     f"proposal that was already open"]
-        if turn.kind != "proposals":
-            return [f"there was no proposal to be shown: it {turn.observed()}"]
-        return _score_anchor(case, turn.proposals[0])
+        return _score_anchor(case, {"tool": OWN_WALK, "surface": turn.walk})
     if turn.kind != "guide":
         return [f"no walk was offered: it {turn.observed()}"]
     if turn.guide_id != case.guide:
@@ -410,10 +434,13 @@ def _score_walk(case: Case, turn: Turn) -> list[str]:
 def _score_refuse(case: Case, turn: Turn) -> list[str]:
     why: list[str] = []
     proposed = [p.get("tool") for p in turn.proposals]
-    if case.tool in proposed:
+    if case.tool and case.tool in proposed:
         why.append(f"{case.tool} was proposed to somebody who may not do it")
-    if turn.offered and case.tool in turn.offered:
+    if case.tool and turn.offered and case.tool in turn.offered:
         why.append(f"{case.tool} is offered to this role, so nothing would refuse it")
+    if case.guide and turn.kind == "guide" and turn.guide_id == case.guide:
+        why.append(f"it walked them to the {case.guide!r} control, which their role is "
+                   f"not shown - the answer is who may press it, not where it is")
     hay = _haystack(case, turn).casefold()
     for want in case.mentions:
         if want.casefold() not in hay:
@@ -484,6 +511,42 @@ _USAGE = SimpleNamespace(input_tokens=0, output_tokens=0,
                          cache_read_input_tokens=0, cache_creation_input_tokens=0)
 
 
+def _walk_plan(case: Case) -> tuple[dict, ...]:
+    """What the stand-in plays when the person asked to be shown.
+
+    The same rule the system prompt gives the model, and no more of one: call
+    `guides()`, then `show_guide` the walk whose own words best match what was
+    asked - except over an open proposal, where the answer is that proposal's
+    own walk, `show_guide("proposal")`.
+
+    Deliberately not `case.guide`. A stand-in handed the answer would score
+    nothing: the question scripted mode asks is whether the walk this person
+    asked for is *reachable* - listed for their role, and served by an id the
+    conversation will take. Picking it is the model's job and the live run's
+    question.
+    """
+    from fsmes.services import assistant
+
+    if case.over_proposal:
+        # "could you show me where?" typed under a card. The walk being asked
+        # for is the card's own; nothing in the catalogue is about it.
+        return ({"read": GUIDES_TOOL, "args": {}},
+                {"read": SHOW_GUIDE_TOOL, "args": {"id": OWN_WALK},
+                 "say": "Here it is on the real screen."})
+    offered = assistant.listed_guides(capabilities_of(case.role))
+    chosen = assistant.lexical_match(case.request, offered)
+    steps: list[dict] = [{"read": GUIDES_TOOL, "args": {}}]
+    if chosen is None:
+        # Nothing this person may be shown answers it. Say so, and let the
+        # scorer report that the walk was never offered rather than the
+        # stand-in inventing an id.
+        steps.append({"say": "I have no walkthrough for that one."})
+        return tuple(steps)
+    steps.append({"read": SHOW_GUIDE_TOOL, "args": {"id": chosen["id"]},
+                  "say": f"I can walk you through it - {chosen['title'].lower()}."})
+    return tuple(steps)
+
+
 def plan_for(case: Case) -> tuple[dict, ...]:
     """The steps the stand-in plays for this case.
 
@@ -496,6 +559,13 @@ def plan_for(case: Case) -> tuple[dict, ...]:
     if case.plan:
         return case.plan
     call = {**case.args, **case.fills}
+    if case.expect == "walk" and not case.tool:
+        return _walk_plan(case)
+    if case.expect == "refuse" and not case.tool:
+        # An approval. There is no tool for it and there never will be
+        # (decision 0035), so the walk to the signing control is what is
+        # asked for - and refused, by name, when it is not theirs to press.
+        return _walk_plan(case)
     if case.expect in ("propose", "walk") and case.tool:
         return (
             *(_read_step(tool, case) for tool in case.reads),
@@ -615,7 +685,7 @@ def turn_from_reply(reply: dict, session=None, *, offered=frozenset(),
         refusals = _refusals(session)
     guide = reply.get("guide") or {}
     return Turn(kind=reply.get("kind", "reply"), say=reply.get("say") or "",
-                guide_id=guide.get("id"),
+                guide_id=guide.get("id"), walk=guide,
                 proposals=tuple(reply.get("proposals") or ()),
                 reads=reads, facts=facts, offered=frozenset(offered),
                 refusals=refusals, from_model=from_model)

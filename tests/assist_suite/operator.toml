@@ -173,8 +173,6 @@ request = "how do I book production?"
 screen = "/dashboard"
 expect = "walk"
 guide = "book-production"
-expected = "not_yet"
-handoff = "assist-show-me-surfaces"
 note = """A "how do I" is decided by a regex and then by the local model, before
 the agent is asked. With no local model the lexical fallback finds no guide from
 these four words, so nothing is offered. When the walk is a tool the model may
@@ -186,8 +184,6 @@ request = "where do I go to label a stop?"
 screen = "/dashboard"
 expect = "walk"
 guide = "label-a-stop"
-expected = "not_yet"
-handoff = "assist-show-me-surfaces"
 note = "same as operator-asks-how-to-book-production: the deterministic half of the router does not reach this guide"
 
 # ------------------------------------------------------------------- not yours
@@ -237,6 +233,7 @@ screen = "/dashboard/station"
 expect = "propose"
 tool = "start_operation"
 args = { order = "WO-EVAL-1", seq = 10 }
+anchor = "station-queue"
 note = "The operator's most basic act, and until #111 the one write the screens could do that no tool could."
 
 [[case]]
@@ -246,6 +243,7 @@ screen = "/dashboard/station"
 expect = "propose"
 tool = "complete_operation"
 args = { order = "WO-EVAL-1", seq = 10 }
+anchor = "station-queue"
 
 [[case]]
 id = "operator-books-a-lot-in"
@@ -254,3 +252,4 @@ screen = "/dashboard"
 expect = "propose"
 tool = "create_lot"
 args = { code = "LOT-SUGAR-002", material = "RAW-SUGAR", quantity = 400 }
+anchor = "lot-code"

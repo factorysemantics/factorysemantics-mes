@@ -60,7 +60,7 @@
           <div class="row">
             <select id="t-action" aria-label="Action" data-assist="trigger-action"></select>
             <input id="t-params" placeholder='Action params as JSON, e.g. {"severity": "major"}' data-assist="trigger-params">
-            <button id="t-submit">Save draft</button data-assist="trigger-submit">
+            <button id="t-submit" data-assist="trigger-submit">Save draft</button>
           </div>
           <p id="action-help" class="muted small"></p>
         </form>
@@ -80,7 +80,7 @@
           </select>
           <select id="tr-machine" aria-label="Machine"><option value="">Any machine</option></select>
         </div>
-        <div class="table-wrap"><table id="triggers-table">
+        <div class="table-wrap" data-assist="trigger-list"><table id="triggers-table">
           <thead><tr><th>Trigger</th><th>Watches</th><th>Condition</th><th>Then</th><th>Status</th><th class="num">Fired</th><th>Last fired</th><th></th></tr></thead>
           <tbody></tbody>
         </table></div>

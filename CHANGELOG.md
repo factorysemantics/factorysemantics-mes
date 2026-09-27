@@ -40,6 +40,64 @@ goes under Honesty with a migration line, so plant people can find it.
   *"really show that this is putting AI and Agents into this system as first
   class citizens."*
 
+- **Every change the assistant can make for you, it can show you how to make
+  yourself.** "Show me" sat on ten of the thirty-eight write tools the
+  assistant may propose; it is now on all thirty-eight. Press it on any
+  proposal card and the walk opens the real screen, opens the tab the control
+  is behind, types the proposed values into the real boxes and stops with your
+  finger over the real button — for a material, a machine, a specification, a
+  bill of materials, a routing, a sign-in, a role, a maintenance plan, a
+  trigger, a setpoint proposal, a shift, a shutdown day, a serialised unit, a
+  non-conformance decision, and the rest. A test keyed on the tool catalogue
+  fails if a write tool is ever added without one, so it stays true.
+
+  Where a tool takes something the screen has no box for — a serial the plant
+  mints, a shift that applies to one machine, a start time for a plan — the
+  step says so, rather than filling in three fields and quietly dropping the
+  fourth. One walk deliberately fills nothing: putting somebody in a role is a
+  dropdown that saves the instant it changes, so setting it for you would be
+  making the change rather than showing you where it is made.
+
+- **Asked to approve something, the assistant walks you to the signature.**
+  It approves nothing itself and never will (decision 0035) — but *"approve
+  the draft severity"* used to come back as "no tool named approve is
+  available to this person", which is true and useless. There are now five
+  walks, one per approvable kind: a downtime reason, a non-conformance
+  severity, a work instruction, a trigger, a setpoint adjustment. Each ends on
+  the control that actually signs it — the floor screen's review panel for the
+  two vocabularies, their own screens for the other three. Ask for one you are
+  not allowed to sign and it names the capability and what that capability is
+  for, so you know who to ask instead of being told no.
+
+- **The assistant finds a walkthrough from the words people actually type.**
+  Without a local model the fallback matched whole words, so *"how do I book
+  production?"* found nothing — the guide's own line says *booking*. Words now
+  agree on their first four characters, which is the difference between an
+  assistant and a shrug on a plant with no model running.
+
+- **"Could you show me where?" over an open proposal now shows you where.**
+  The walk behind a card's "Show me" is a walkthrough the model can hand over
+  by name, so a question typed under a proposal is answered with that
+  proposal's own walk instead of "there isn't a walkthrough for that". The
+  decline a typed message produces also stopped saying "the person moved on
+  without confirming", which was not what happened.
+
+- **The four newest tools are four of those thirty-eight, and one of them
+  needed a screen before it could be shown at all.** Starting and finishing a
+  step of an order, booking a lot in, revising a work instruction: starting
+  and finishing are on the station's own queue, one row per step, which is
+  where the person who did the work is standing.
+
+- **The floor screen can book a lot in.** A delivery on the dock, or a
+  quantity somebody counted, had no form anywhere: lots only appeared by
+  production booking one or the ERP link sending one, so the assistant could
+  record stock arriving and a person could not. There is now a fourth form
+  beside Book output, Issue material and Quality check — lot code, material,
+  quantity — gated on `production.consume`, the same capability as issuing,
+  because both are the same person's job at the same bench. The lot code is
+  the label on the pallet and is never generated, and an unknown material is
+  refused by name.
+
 - **The assistant can put a walk on your screen because it decided to, not
   because a regex did.** Two new tools when the cloud brain is on: `guides()`
   lists the walkthroughs this person is allowed to follow, and
@@ -270,7 +328,33 @@ goes under Honesty with a migration line, so plant people can find it.
   approval step, and a capability that gates nothing is a role saying something
   untrue about itself.
 
+### Changed
+
+- **The faithfulness suite scores ten more requests, and stopped measuring an
+  order of operations the product no longer has.** Scripted mode ran the guide
+  router before the agent — the very pre-emption #109 removed — so the suite
+  was baking the 2026-09-26 failure into its own measurement. It now opens the
+  conversation the way the endpoint does. Ten cases came off `not_yet`: the
+  five approvals, the two requests to be shown a task, the two refusals to
+  sign somebody else's draft, and Scott's own *"could you show me where?"*.
+  **77 of 77 required cases before, 87 of 87 after; `not_yet` 16 → 6**, and
+  all six that remain belong to another handoff.
+
 ### Fixed
+
+- **A walk's card could be caught showing one step's number over another
+  step's words.** It said `STEP 5 OF 6` while the body was still step 4's —
+  on a slow machine, never on loopback. The card is painted a quarter of a
+  second after the control is scrolled into view, so the ring lands where the
+  control ends up, and that late paint took its words from the step that asked
+  for it and its *number* from wherever the walk had got to by then. Press
+  Next inside that quarter second and the two disagree. A step's number now
+  travels with the step, and a paint a later step has overtaken says nothing.
+
+- **A walkthrough could never have pointed at the trigger form's Save
+  button.** `triggers.html` carried `data-assist="trigger-submit"` on the
+  *closing* `</button>` tag, where the HTML parser throws it away — so the
+  anchor greps as present and has never existed in a rendered page.
 
 - **A regex answered the person three times while the model was never asked.**
   `POST /assist/agent` ran the guide router — `wants_showing()`, a fixed

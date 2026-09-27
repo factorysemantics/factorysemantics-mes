@@ -91,11 +91,13 @@ async function loadQueue() {
     const actions = el("td");
     if (r.status === "proposed" && FS.can("adjustments.approve")) {
       const ok = el("button", "small", "Approve"); ok.type = "button";
+      ok.dataset.assist = "adjustment-approve";
       ok.addEventListener("click", async () => {
         try { await api(`/adjustments/${r.code}/approve`, { method: "POST", body: { note: window.prompt("Note (optional):") || null } }); toast(`${r.code} approved — the agent writes it now`); await loadQueue(); }
         catch (err) { toast(err.message, "bad"); }
       });
       const no = el("button", "ghost small", "Reject"); no.type = "button";
+      no.dataset.assist = "adjustment-reject";
       no.addEventListener("click", async () => {
         try { await api(`/adjustments/${r.code}/reject`, { method: "POST", body: { note: window.prompt("Why?") || null } }); toast(`${r.code} rejected`); await loadQueue(); }
         catch (err) { toast(err.message, "bad"); }

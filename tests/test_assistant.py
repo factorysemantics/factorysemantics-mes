@@ -7,42 +7,23 @@ someone the wrong habit. Nothing compiles these pages, so this is the check
 that keeps the promise true.
 """
 
-import re
-from pathlib import Path
-
 import pytest
 
 from fsmes.services import assistant
 from fsmes.services import capabilities as caps
-
-WEB = Path(__file__).resolve().parents[1] / "src" / "fsmes" / "web"
-
-PAGE_FILES = {
-    "/dashboard": "index.html",
-    "/dashboard/orders": "orders.html",
-    "/dashboard/station": "station.html",
-    "/dashboard/quality": "quality.html",
-    "/dashboard/analysis": "analysis.html",
-    "/dashboard/admin": "admin.html",
-    "/dashboard/instructions": "instructions.html",
-}
-
-
-def anchors_on(page: str) -> set[str]:
-    html = (WEB / PAGE_FILES[page]).read_text(encoding="utf-8")
-    return set(re.findall(r'data-assist="([^"]+)"', html))
-
+from page_anchors import PAGE_FILES, WEB, anchors_on, page_file
 
 # ------------------------------------------------------- guides are honest
 
 @pytest.mark.parametrize("guide", assistant.GUIDES, ids=lambda g: g["id"])
 def test_every_step_points_at_a_control_that_exists(guide):
-    for i, step in enumerate(guide["steps"], 1):
+    evidence = [guide["evidence"]] if guide.get("evidence") else []
+    for i, step in enumerate([*guide["steps"], *evidence], 1):
         assert step["page"] in PAGE_FILES, f"{guide['id']} step {i}: unknown page {step['page']}"
         present = anchors_on(step["page"])
         assert step["anchor"] in present, (
             f"{guide['id']} step {i} points at data-assist={step['anchor']!r} "
-            f"which {PAGE_FILES[step['page']]} does not have"
+            f"which {page_file(step['page'])} does not have"
         )
 
 

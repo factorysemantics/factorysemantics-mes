@@ -10,10 +10,10 @@ regenerates it and fails if this file differs.
 
 There are **68 write routes**; **66** of them a screen calls; **47** write tools send one.
 
-- operator: 16 of 66 screen actions the assistant can propose; 7 with a walk; 15 by written reason.
-- supervisor: 32 of 66 screen actions the assistant can propose; 11 with a walk; 15 by written reason.
-- admin: 51 of 66 screen actions the assistant can propose; 14 with a walk; 15 by written reason.
-- agent: 23 of 66 screen actions the assistant can propose; 10 with a walk; 15 by written reason.
+- operator: 16 of 66 screen actions the assistant can propose; 14 with a walk; 15 by written reason.
+- supervisor: 32 of 66 screen actions the assistant can propose; 25 with a walk; 15 by written reason.
+- admin: 51 of 66 screen actions the assistant can propose; 42 with a walk; 15 by written reason.
+- agent: 23 of 66 screen actions the assistant can propose; 21 with a walk; 15 by written reason.
 
 A *screen action* is a write route some page script calls: the things a
 person can do by pointing at them. The route's own capability gate says
@@ -27,72 +27,72 @@ shown.
 | --- | --- | --- | --- | --- | --- |
 | DELETE | `/admin/roles/{code}` | `admin.js` | no tool — a judgement call, decided against. create_role and update_role exist because defining what a role grants is work an admin can be helped with and is reversible from the screen that did it. Deleting one is not: every account holding it loses every capability at once, and what it granted is not recoverable from the row that is gone. The screen keeps it; the assistant walks an admin to it. | `users.manage` | — |
 | PATCH | `/dashboard/config/{domain}/settings/{key}` | `ai.js`, `config.js` | `write_plant_setting` | per key: the `define` of the ConfigSection the key is listed under | yes |
-| POST | `/adjustments` | `adjustments.js` | `propose_adjustment` | `adjustments.propose` | no |
+| POST | `/adjustments` | `adjustments.js` | `propose_adjustment` | `adjustments.propose` | yes |
 | POST | `/adjustments/{code}/approve` | `adjustments.js` | no tool — the human in the loop before a PLC write - the whole point of the adjustment queue. propose_adjustment proposes; approving is the person the queue exists to ask. | `adjustments.approve` | — |
 | POST | `/adjustments/{code}/reject` | `adjustments.js` | no tool — rejecting is that same judgement, and an agent that could reject could quietly clear the queue it filled. | `adjustments.approve` | — |
-| POST | `/admin/roles` | `admin.js` | `create_role` | `users.manage` | no |
+| POST | `/admin/roles` | `admin.js` | `create_role` | `users.manage` | yes |
 | POST | `/assist/agent` | `assist.js` | no tool — the same: the floor assistant's own conversation endpoint. | none | — |
 | POST | `/assist/agent/confirm` | `assist.js` | no tool — "Do it" - the person's confirmation of a proposal. The loop reads it; a tool that pressed it would be the assistant confirming itself. | none | — |
 | POST | `/assist/agent/decline` | `assist.js` | no tool — the other half of that confirmation, for the same reason. | none | — |
 | POST | `/assist/ask` | `assist.js` | no tool — this is how the assistant is asked. A tool for it would be the assistant calling itself. | none | — |
 | POST | `/auth/login` | `app.js` | no tool — signing in is how a person becomes the person this all acts for. The tools sign in as AGENT themselves, in code, with no model in the loop. | none | — |
 | POST | `/auth/logout` | `app.js`, `common.js` | no tool — ending a person's session is not an action on the plant, and an assistant that could sign somebody out could sign them out mid-shift. | none | — |
-| POST | `/auth/users` | `admin.js` | `create_user` | `users.manage` | no |
+| POST | `/auth/users` | `admin.js` | `create_user` | `users.manage` | yes |
 | POST | `/auth/users/{code}/password` | `admin.js` | no tool — an agent never types a password. Setting somebody's is a person at a keyboard with the account holder in front of them, and a password that passed through a model's context is a password to rotate. | `users.manage` | — |
 | POST | `/coa/pallet/{serial}` | `coa.js` | `issue_pallet_certificate` | `quality.close_nc` | no |
 | POST | `/coa/{order}` | `coa.js` | `issue_certificate` | `quality.close_nc` | no |
 | POST | `/design/chat` | `design.js` | no tool — the design partner, which is how this product is built rather than how a plant is run. Not a floor action. | `audit.read` | — |
-| POST | `/documents` | `assist-record.js`, `instructions.js` | `draft_instruction`, `create_document` | `documents.write` | no |
+| POST | `/documents` | `assist-record.js`, `instructions.js` | `draft_instruction`, `create_document` | `documents.write` | yes |
 | POST | `/documents/{code}/approve/{revision}` | `instructions.js` | no tool — putting a revision in force is the approver's signature, recorded against them by name. Decision 0035: the agent role holds documents.write and never documents.approve, and a confirmed "Do it" runs as AGENT on the person's behalf - so a tool here would sign for them. The assistant drafts (create_document, revise_document) and walks them to Approve. | `documents.approve` | — |
-| POST | `/documents/{code}/revise` | `instructions.js` | `revise_document` | `documents.write` | no |
+| POST | `/documents/{code}/revise` | `instructions.js` | `revise_document` | `documents.write` | yes |
 | POST | `/documents/{code}/withdraw` | `instructions.js` | no tool — taking an instruction out of force is the same signature in reverse, gated on the same documents.approve, and withdrawn procedure is what the floor is working to until somebody notices. A person does it. | `documents.approve` | — |
 | POST | `/equipment/downtime-reasons` | `machine.js`, `reasons.js`, `station.js` | `draft_downtime_reason` | `process.define` | yes |
 | POST | `/equipment/downtime-reasons/{code}/approve/{revision}` | — | no tool — the vocabulary every stop from now on is named with. draft_downtime_reason drafts it; process.approve is a person's, and the walk to the pending-approvals panel is the honest answer. | `process.approve` | — |
 | POST | `/equipment/{code}/state` | `station.js` | `set_machine_state` | `equipment.state` | yes |
 | POST | `/erp/outbox/{message_id}/retry` | `ops.js` | `erp_retry` | `orders.close` | no |
 | POST | `/execution/consume` | `app.js`, `station.js` | `issue_material` | `production.consume` | yes |
-| POST | `/execution/lots` | `app.js`, `station.js` | `create_lot` | `production.consume` | no |
+| POST | `/execution/lots` | `app.js`, `station.js` | `create_lot` | `production.consume` | yes |
 | POST | `/execution/report` | `app.js`, `station.js` | `book_output` | `production.book` | yes |
 | POST | `/maintenance/corrective` | `machine.js`, `maintenance.js` | `raise_corrective_maintenance` | `maintenance.perform` | yes |
-| POST | `/maintenance/orders/{code}/complete` | `machine.js`, `maintenance.js`, `station.js` | `perform_maintenance` | `maintenance.perform` | no |
-| POST | `/maintenance/orders/{code}/start` | `machine.js`, `maintenance.js`, `station.js` | `perform_maintenance` | `maintenance.perform` | no |
-| POST | `/maintenance/plans` | `machine.js`, `maintenance.js` | `create_maintenance_plan` | `maintenance.plan` | no |
-| POST | `/maintenance/raise` | `maintenance.js` | `raise_due_maintenance` | `maintenance.perform` | no |
-| POST | `/masterdata/equipment` | `admin.js`, `app.js`, `masterdata.js` | `create_equipment` | `masterdata.write` | no |
-| POST | `/masterdata/materials` | `admin.js`, `coa.js`, `masterdata.js`, `orders.js` | `create_material` | `masterdata.write` | no |
-| POST | `/masterdata/materials/{code}/bom` | `masterdata.js` | `add_bom_component` | `masterdata.write` | no |
+| POST | `/maintenance/orders/{code}/complete` | `machine.js`, `maintenance.js`, `station.js` | `perform_maintenance` | `maintenance.perform` | yes |
+| POST | `/maintenance/orders/{code}/start` | `machine.js`, `maintenance.js`, `station.js` | `perform_maintenance` | `maintenance.perform` | yes |
+| POST | `/maintenance/plans` | `machine.js`, `maintenance.js` | `create_maintenance_plan` | `maintenance.plan` | yes |
+| POST | `/maintenance/raise` | `maintenance.js` | `raise_due_maintenance` | `maintenance.perform` | yes |
+| POST | `/masterdata/equipment` | `admin.js`, `app.js`, `masterdata.js` | `create_equipment` | `masterdata.write` | yes |
+| POST | `/masterdata/materials` | `admin.js`, `coa.js`, `masterdata.js`, `orders.js` | `create_material` | `masterdata.write` | yes |
+| POST | `/masterdata/materials/{code}/bom` | `masterdata.js` | `add_bom_component` | `masterdata.write` | yes |
 | POST | `/masterdata/personnel` | `masterdata.js` | `add_person` | `users.manage` | no |
-| POST | `/masterdata/routings` | `admin.js` | `create_routing` | `masterdata.write` | no |
+| POST | `/masterdata/routings` | `admin.js` | `create_routing` | `masterdata.write` | yes |
 | POST | `/quality/checks` | `app.js`, `quality.js`, `station.js` | `record_check` | `quality.record` | yes |
 | POST | `/quality/gauges` | `gauges.js` | `register_gauge` | `masterdata.write` | no |
 | POST | `/quality/gauges/{code}/calibrate` | `gauges.js` | `calibrate_gauge` | `quality.close_nc` | no |
-| POST | `/quality/nonconformances/{code}/close` | `quality.js` | `close_nonconformance` | `quality.close_nc` | no |
-| POST | `/quality/nonconformances/{code}/disposition` | `quality.js` | `disposition_nonconformance` | `quality.close_nc` | no |
-| POST | `/quality/nonconformances/{code}/review` | `quality.js` | `review_nonconformance` | `quality.close_nc` | no |
+| POST | `/quality/nonconformances/{code}/close` | `quality.js` | `close_nonconformance` | `quality.close_nc` | yes |
+| POST | `/quality/nonconformances/{code}/disposition` | `quality.js` | `disposition_nonconformance` | `quality.close_nc` | yes |
+| POST | `/quality/nonconformances/{code}/review` | `quality.js` | `review_nonconformance` | `quality.close_nc` | yes |
 | POST | `/quality/severities` | `severities.js` | `draft_nc_severity` | `quality.define` | yes |
 | POST | `/quality/severities/{code}/approve/{revision}` | — | no tool — the same again for the severities a non-conformance is graded at - the second vocabulary, and deliberately the same reason word for word: quality.approve is a person's signature. | `quality.approve` | — |
-| POST | `/quality/specs` | `app.js`, `masterdata.js`, `quality.js`, `spc.js`, `station.js` | `create_spec` | `masterdata.write` | no |
-| POST | `/scheduling/calendar/exceptions` | `schedule.js` | `add_calendar_exception` | `scheduling.plan` | no |
-| POST | `/scheduling/calendar/shifts` | `schedule.js` | `add_shift` | `scheduling.plan` | no |
-| POST | `/scheduling/plan` | `schedule.js` | `plan_all_orders` | `scheduling.plan` | no |
-| POST | `/scheduling/plan/{code}` | `schedule.js` | `plan_order` | `scheduling.plan` | no |
-| POST | `/trace/units` | `trace.js` | `produce_units` | `production.book` | no |
+| POST | `/quality/specs` | `app.js`, `masterdata.js`, `quality.js`, `spc.js`, `station.js` | `create_spec` | `masterdata.write` | yes |
+| POST | `/scheduling/calendar/exceptions` | `schedule.js` | `add_calendar_exception` | `scheduling.plan` | yes |
+| POST | `/scheduling/calendar/shifts` | `schedule.js` | `add_shift` | `scheduling.plan` | yes |
+| POST | `/scheduling/plan` | `schedule.js` | `plan_all_orders` | `scheduling.plan` | yes |
+| POST | `/scheduling/plan/{code}` | `schedule.js` | `plan_order` | `scheduling.plan` | yes |
+| POST | `/trace/units` | `trace.js` | `produce_units` | `production.book` | yes |
 | POST | `/trace/units/batch` | `trace.js` | `produce_batch` | `production.book` | no |
 | POST | `/trace/units/pack` | `trace.js` | `pack_unit` | `production.book` | no |
 | POST | `/trace/units/{serial}/status` | `trace.js` | `set_unit_status` | `quality.close_nc` | no |
-| POST | `/triggers` | `triggers.js` | `draft_trigger` | `triggers.write` | no |
+| POST | `/triggers` | `triggers.js` | `draft_trigger` | `triggers.write` | yes |
 | POST | `/triggers/{code}/approve` | `triggers.js` | no tool — a trigger in force is logic acting on a live plant with nobody in the loop after it. Decision 0035 gives the agent triggers.write and never triggers.approve; draft_trigger drafts, a person signs. | `triggers.approve` | — |
 | POST | `/triggers/{code}/withdraw` | `triggers.js` | no tool — withdrawing a trigger stops a machine being protected by it. Gated on triggers.approve for that reason, and not a tool for the same one. | `triggers.approve` | — |
 | POST | `/workorders` | `app.js`, `orders.js`, `schedule.js` | `create_order` | `orders.create` | yes |
 | POST | `/workorders/{code}/cancel` | `orders.js` | `order_action` | `orders.close` | yes |
 | POST | `/workorders/{code}/close` | `app.js`, `orders.js` | `order_action` | `orders.close` | yes |
 | POST | `/workorders/{code}/hold` | `orders.js` | `order_action` | `orders.close` | yes |
-| POST | `/workorders/{code}/operations/{seq}/complete` | `orders.js`, `station.js` | `complete_operation` | `production.book` | no |
-| POST | `/workorders/{code}/operations/{seq}/start` | `station.js` | `start_operation` | `production.book` | no |
+| POST | `/workorders/{code}/operations/{seq}/complete` | `orders.js`, `station.js` | `complete_operation` | `production.book` | yes |
+| POST | `/workorders/{code}/operations/{seq}/start` | `station.js` | `start_operation` | `production.book` | yes |
 | POST | `/workorders/{code}/release` | `app.js`, `orders.js` | `create_order`, `order_action` | `orders.release` | yes |
 | POST | `/workorders/{code}/resume` | `orders.js` | `order_action` | `orders.close` | yes |
-| PUT | `/admin/roles/{code}` | `admin.js` | `update_role` | `users.manage` | no |
-| PUT | `/admin/users/{code}/role` | `admin.js` | `assign_role` | `users.manage` | no |
+| PUT | `/admin/roles/{code}` | `admin.js` | `update_role` | `users.manage` | yes |
+| PUT | `/admin/users/{code}/role` | `admin.js` | `assign_role` | `users.manage` | yes |
 
 ## Who holds what
 

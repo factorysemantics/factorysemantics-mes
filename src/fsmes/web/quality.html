@@ -77,21 +77,21 @@
         rework, scrap, return) and only then closed. Each step is a supervisor
         action recorded against the person who took it.</p>
       <div class="filter-bar" data-assist="nc-filters">
-        <select id="n-status" aria-label="Status">
+        <select id="n-status" aria-label="Status" data-assist="nc-status">
           <option value="open,under_review,dispositioned">Still open</option>
           <option value="open,under_review">Awaiting a decision</option>
           <option value="dispositioned">Decided, not closed</option>
           <option value="closed">Closed</option>
           <option value="">Any status</option>
         </select>
-        <input id="n-q" type="search" placeholder="Code, order or text" aria-label="Code, order or text">
+        <input id="n-q" type="search" placeholder="Code, order or text" aria-label="Code, order or text" data-assist="nc-search">
       </div>
       <ul id="ncs" class="feed" data-assist="nc-list"></ul>
       <div id="disposition" class="reason hidden" data-assist="nc-disposition">
         <p class="small"><strong id="d-code">—</strong> <span id="d-what" class="muted"></span></p>
         <div class="field">
           <label for="d-choice">What happens to the material?</label>
-          <select id="d-choice">
+          <select id="d-choice" data-assist="nc-disposition-choice">
             <option value="">Choose…</option>
             <option value="use_as_is">Use as is (a concession)</option>
             <option value="rework">Rework</option>
@@ -101,13 +101,13 @@
         </div>
         <div class="field">
           <label for="d-reason">Why</label>
-          <input id="d-reason" placeholder="e.g. customer accepted the deviation in writing">
+          <input id="d-reason" placeholder="e.g. customer accepted the deviation in writing" data-assist="nc-disposition-reason">
         </div>
         <p class="muted small">The reason is required. This is what somebody reads
           when they ask about this batch a year from now.</p>
         <div class="row">
           <button id="d-cancel" class="ghost" type="button">Never mind</button>
-          <button id="d-save" type="button" disabled>Record the decision</button>
+          <button id="d-save" type="button" disabled data-assist="nc-disposition-save">Record the decision</button>
         </div>
       </div>
       <div id="n-pager" class="pager"></div>
