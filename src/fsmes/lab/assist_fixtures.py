@@ -203,9 +203,11 @@ class Kind:
     here: Callable[[str, str], bool]
     #: Put it there, as AGENT on behalf of `actor`. None when a run may not.
     make: Callable[[str, str, str], None] | None = None
-    #: When there is no `make`, the sentence that says why - printed beside
-    #: every case it stops, because "not arranged" with no reason is no better
-    #: than a silent skip.
+    #: Why this may not, or could not, be put there - printed beside every case
+    #: it stops, because "not arranged" with no reason is no better than a
+    #: silent skip. Required where there is no `make`; also worth writing for a
+    #: kind a run tries and a particular plant cannot carry, which is what
+    #: `why_not` prints for it.
     cannot: str = ""
 
 
@@ -394,6 +396,13 @@ def _make_severity(plant: str, code: str, actor: str) -> None:
 #: Why a setpoint change was recommended, and how a second run recognises the
 #: first run's work: the plant numbers a recommendation itself, like the
 #: non-conformance and the corrective order.
+#: Why a plant may not be able to carry one, in the words a result file prints.
+_NO_WRITABLE_SETPOINT = (
+    "a recommended setpoint change names a tag this plant's own manifest declares "
+    "writable with bounds - the first of the three guards between a recommendation "
+    "and a PLC - and nothing here writes a plant's manifest, so a plant that declares "
+    "none has this declared rather than invented for it")
+
 ADJUSTMENT_RATIONALE = ("Brix has been drifting high while this setpoint sat where it is "
                         "(assist eval fixture)")
 
@@ -433,12 +442,8 @@ def _make_adjustment(plant: str, code: str, actor: str) -> None:
         plant, machine=code, writable_only=True)), "rows")
         if row.get("min") is not None and row.get("max") is not None]
     if not writable:
-        raise Unarrangeable(
-            f"{code} declares no writable setpoint with bounds, so nothing may be "
-            f"recommended for it. A recommendation names a tag the plant's own tag "
-            f"manifest marks writable; nothing here writes a plant's manifest, and a "
-            f"recommendation on a tag nobody could write would be one nobody could "
-            f"carry out")
+        raise Unarrangeable(f"{code} declares no writable setpoint with bounds: "
+                            f"{_NO_WRITABLE_SETPOINT}")
     tag = writable[0]
     # Half way between the declared bounds: inside them whatever they are, and
     # not a value chosen here for a process nobody in this run has seen.
@@ -465,7 +470,8 @@ KINDS: dict[str, Kind] = {k.name: k for k in (
     Kind("trigger", _has_trigger, _make_trigger),
     Kind("reason", _has_reason, _make_reason),
     Kind("severity", _has_severity, _make_severity),
-    Kind("adjustment", _has_adjustment, _make_adjustment),
+    Kind("adjustment", _has_adjustment, _make_adjustment,
+         cannot=_NO_WRITABLE_SETPOINT),
 )}
 
 

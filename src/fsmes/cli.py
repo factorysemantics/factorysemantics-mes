@@ -3657,6 +3657,11 @@ def assist_eval_command(
         outcomes = assist_runs.run_scripted(cases)
         model = None
         plant_name = assist_eval.SCRIPTED_PLANT
+        # Why a fixture is not there is the harness's knowledge in either mode,
+        # and a "not arranged" row with no reason beside it is no better than a
+        # silent skip. A scripted run has no other business in `run`.
+        run = {"why_not": {requirement: assist_runs.why_not(requirement)
+                           for outcome in outcomes for requirement in outcome.missing}}
     else:
         outcomes, run, model, plant_name = _live_run(cases, plant, user, password, max_usd,
                                                      accounts=account or [], quiet=quiet,

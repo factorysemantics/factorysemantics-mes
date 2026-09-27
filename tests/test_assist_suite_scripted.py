@@ -896,6 +896,21 @@ def test_a_scripted_run_cannot_be_asked_to_seed_master_data():
     assert "--seed-masterdata is for --live" in result.stdout
 
 
+def test_a_scripted_result_file_says_why_a_fixture_is_not_there_either(tmp_path):
+    """A "not arranged" row with an empty reason beside it is no better than a
+    silent skip, and a scripted run reports one now that a demo plant cannot
+    declare a writable setpoint."""
+    out = tmp_path / "scripted.md"
+    result = CliRunner().invoke(app, ["assist", "eval", "--scripted", "--quiet",
+                                      "--case", "admin-approves-an-adjustment",
+                                      "--out", str(out)])
+    assert result.exit_code == 0, result.output
+    page = out.read_text(encoding="utf-8")
+    assert "## Not arranged" in page
+    assert "adjustment:MIX01" in page
+    assert "writable with bounds" in page, "the row says nothing about why"
+
+
 # -------------------------------- the command's own refusals about accounts
 
 def _cli(monkeypatch, *args):
