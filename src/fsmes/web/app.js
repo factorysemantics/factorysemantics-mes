@@ -792,6 +792,24 @@ $("#form-report").addEventListener("submit", async (event) => {
   await act("/execution/report", "Output booked.", body);
 });
 
+/* A lot arriving, booked in by hand. The quantity is in the material's own
+   unit and the code is the label on the physical thing, so neither is
+   generated here: a lot code somebody invents breaks the link the record
+   exists to keep. An unknown material is refused by the API, by name. */
+$("#form-lot").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const ok = await act("/execution/lots", "Lot booked in.", {
+    code: String(form.get("code")).trim(),
+    material: String(form.get("material")).trim(),
+    quantity: Number(form.get("quantity") || 0),
+  });
+  if (ok) {
+    event.target.reset();
+    await loadLots();
+  }
+});
+
 $("#form-consume").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = new FormData(event.target);

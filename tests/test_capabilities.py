@@ -395,6 +395,10 @@ def test_the_floor_forms_gate_on_what_they_do():
     assert 'data-assist="quality-form" data-needs-cap="quality.record"' in html
     assert 'data-assist="report-form" data-needs-cap="production.book"' in html
     assert 'data-assist="consume-form" data-needs-cap="production.consume"' in html
+    # Booking a lot in is the other half of consumption: stock arriving, on
+    # the same capability as stock being issued, because both are the same
+    # person's job at the same bench.
+    assert 'data-assist="lot-form" data-needs-cap="production.consume"' in html
 
 
 def test_the_agent_role_runs_production_and_never_approves_or_administers():

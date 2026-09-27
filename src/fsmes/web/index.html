@@ -65,6 +65,29 @@
         </div>
         <datalist id="machine-options"></datalist>
       </form>
+      <!-- Stock arriving. Until 2026-09-26 the only way a lot got into this
+           plant was production booking one or the ERP link sending one: a
+           delivery on the dock, or a quantity somebody counted, had no screen
+           at all, while the assistant's `create_lot` could book one in. A
+           person being able to do less than the assistant is the wrong way
+           round, and `test_route_coverage` missed it because its match is
+           textual and this page reads `/execution/lots` on every refresh. -->
+      <form id="form-lot" class="stack" data-assist="lot-form" data-needs-cap="production.consume">
+        <h3>Book a lot in</h3>
+        <div class="row">
+          <input name="code" placeholder="Lot code" aria-label="Lot code"
+                 autocomplete="off" data-assist="lot-code" required
+                 title="The number on the pallet or the certificate - the plant's own label on a physical thing">
+          <input name="material" placeholder="Material" aria-label="Material"
+                 autocomplete="off" data-assist="lot-material" required>
+          <input name="quantity" type="number" step="0.1" min="0" placeholder="Qty"
+                 aria-label="Quantity" data-assist="lot-quantity" required>
+          <button data-assist="lot-submit">Book in</button>
+        </div>
+        <p class="muted small">In the material's own unit. The material has to exist
+          already — a lot of something this plant has never heard of is a typo rather
+          than a delivery.</p>
+      </form>
       <form id="form-consume" class="stack" data-assist="consume-form" data-needs-cap="production.consume">
         <h3>Issue material</h3>
         <div class="row">

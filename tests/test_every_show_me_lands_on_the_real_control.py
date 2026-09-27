@@ -370,6 +370,44 @@ def test_show_me_lands_on_every_control_of_this_walk(tool, admin, plant):
         page.close()
 
 
+# ------------------------- and the newest control on the floor really works
+
+def test_the_floor_screen_books_a_lot_in(admin, plant):
+    """The form `create_lot`'s walk ends on does what the walk says it does.
+
+    It is new here, and it is new because the assistant could book a lot in
+    and no person could: production booked lots, the ERP link sent lots, and a
+    delivery on the dock or a quantity somebody counted had no screen at all.
+    `test_route_coverage` read the page as covering `POST /execution/lots`
+    because its match is textual and the floor page reads that path on every
+    refresh - so the hole was invisible to the ratchet that exists to find it.
+
+    A walk onto a button that does nothing would satisfy every other test in
+    this file, so this one presses it and then asks the plant.
+    """
+    page = admin.new_page()
+    try:
+        page.goto(f"{plant}/dashboard", wait_until="load", timeout=30000)
+        page.fill('[data-assist="lot-code"]', "LOT-DOCK-001")
+        page.fill('[data-assist="lot-material"]', "RAW-SUGAR")
+        page.fill('[data-assist="lot-quantity"]', "240")
+        page.click('[data-assist="lot-submit"]')
+
+        # The lot is issuable from the form beside it, which is the whole
+        # point of booking it in.
+        page.wait_for_function(
+            """() => [...document.querySelectorAll('[data-assist="consume-lot"] option')]
+                     .some((o) => o.value === 'LOT-DOCK-001')""", timeout=20000)
+
+        booked = admin.request.get(f"{plant}/execution/lots?limit=200").json()
+        row = next((lot for lot in booked["items"] if lot["code"] == "LOT-DOCK-001"), None)
+        assert row is not None, f"the plant has no LOT-DOCK-001: {booked['total']} lots"
+        assert row["material"] == "RAW-SUGAR"
+        assert row["quantity"] == 240
+    finally:
+        page.close()
+
+
 # ------------------------------ the counter and the words are one card
 
 def test_a_card_never_shows_one_steps_number_over_another_steps_words(admin, plant):
