@@ -157,6 +157,7 @@ with both names on it.
 |---|---|---|
 | A setting put in force twice | `[process] default_report_hours` → `10.0`, then `8.0` | So "who changed this, and when?" has something to find, **and** so "change the reporting window to 10hrs" is still a change. Two audit rows, one fixture. |
 | A released work order | `WO-EVAL-1` | 1000 of `FG-COLA`. |
+| Its first step, started | step 10 of `WO-EVAL-1` | *Mix*, on `MIX01`. So that "produce 2 units of FG-COLA on MIX01 for WO-EVAL-1" has one right answer: on an order whose first step has not begun, starting it before booking against it is a defensible first move, and the third live run made it. Step 20 is deliberately left waiting — asking to *start* a step only means something where one is. |
 | A non-conformance | `NC-00001` | Opened by the MES itself, from a brix check recorded at 20.0 against a 9.5–11.5 specification. |
 | A corrective maintenance order | `CM-00001` | On `MIX01`, summary *Infeed belt slipping (assist eval fixture)*. |
 | A **draft** work instruction | `WI-EVAL-1` | Unapproved. *Logging a shift handover*. |
@@ -283,7 +284,8 @@ What a person does instead, on a plant they want back:
 - the **recommended setpoint change**, if the plant could carry one — reject it
   on `/dashboard/adjustments`. Nothing was ever written to the machine: a
   recommendation waits for a person, and rejecting one is the person.
-- `WO-EVAL-1` — cancel or close it.
+- `WO-EVAL-1` — cancel or close it. Its step 10 is running; closing the order is
+  the one action, and nothing was booked against the step.
 - `CM-00001` — complete it, or leave it: it is a corrective job on a mixer with
   the words *assist eval fixture* in its summary.
 - `NC-00001` — disposition and close it. It is a real non-conformance about a

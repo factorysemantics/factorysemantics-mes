@@ -22,11 +22,11 @@ run signed in as, through the product's own API. That account is an agent
 deployment and holds an agent deployment's capabilities, so the line falls
 where decision 0035 puts it:
 
-* **Arranged**: a work order, the non-conformance a failed check opens, a
-  corrective maintenance order, one setting taken to ten and put back to eight
-  so the audit trail has a row in it, and five drafts - an instruction, a
-  trigger, a downtime reason, a non-conformance severity and a recommended
-  setpoint change - none of which changes anybody's screen until somebody
+* **Arranged**: a work order and its first step started, the non-conformance a
+  failed check opens, a corrective maintenance order, one setting taken to ten
+  and put back to eight so the audit trail has a row in it, and five drafts - an
+  instruction, a trigger, a downtime reason, a non-conformance severity and a
+  recommended setpoint change - none of which changes anybody's screen until somebody
   signs. Every one of them is about something no drafting case asks for, so
   that a case and the arrangement it runs on never describe the same thing.
 * **Never arranged**: master data. Materials, equipment, routings, lots and
@@ -73,6 +73,18 @@ ORDER = "WO-EVAL-1"
 MATERIAL = "FG-COLA"
 CHARACTERISTIC = "brix"
 MACHINE = "MIX01"
+
+#: The step of that order a run starts, so that booking production against it is
+#: the direct answer to "produce 2 units of FG-COLA on MIX01 for WO-EVAL-1".
+#:
+#: Live on 2026-09-27 the model answered that sentence with
+#: `start_operation(WO-EVAL-1, 10)`, and on a released order whose first step had
+#: not begun that is a defensible first move - so the case had two right answers
+#: and was scored against one of them. A run starts the step instead. The step
+#: after it is deliberately left pending, which is what `operator-starts-a-step`
+#: needs: a request to start a step only means something where a step is waiting.
+STEP_STARTED = 10
+STEP_WAITING = 20
 
 #: The drafts a run puts up for the cases that ask for a signature. Their codes
 #: are ours to choose, so they carry the prefix: nobody should have to guess
@@ -268,6 +280,39 @@ def _has_order(plant: str, code: str) -> bool:
 def _make_order(plant: str, code: str, actor: str) -> None:
     _ok(_tools().create_order(plant, code=code, material=MATERIAL, quantity=1000,
                               release=True, dry_run=False, on_behalf_of=actor))
+
+
+def _has_operation(plant: str, code: str) -> bool:
+    """`operation:WO-EVAL-1/10` - that step of that order, started.
+
+    Started, not finished. What the requirement is about is whether starting the
+    step is still an honest first move, and a step that is running and a step
+    that is done both answer *somebody has started this*; only a pending one
+    leaves the question open.
+
+    An order this plant has not got, or a step that is not on its routing, is
+    unarrangeable rather than absent: the case is reported *not arranged* with
+    the plant's own words, which is the difference between "your routing has no
+    step 10" and "step 10 has not been started".
+    """
+    order, _, seq = code.partition("/")
+    detail = _tools().order_detail(plant, code=order.strip())
+    if not isinstance(detail, dict) or detail.get("error"):
+        raise Unarrangeable(str((detail or {}).get("error")
+                                if isinstance(detail, dict) else detail))
+    steps = (detail.get("order") or {}).get("operations") or []
+    for step in steps:
+        if str(step.get("seq")) == seq.strip():
+            return str(step.get("status") or "").casefold() != "pending"
+    raise Unarrangeable(f"{order} has no step {seq} - its route is "
+                        f"{', '.join(str(s.get('seq')) for s in steps) or 'empty'}")
+
+
+def _make_operation(plant: str, code: str, actor: str) -> None:
+    """Start it, through the same tool the suite asks the model to reach for."""
+    order, _, seq = code.partition("/")
+    _ok(_tools().start_operation(plant, order=order.strip(), seq=int(seq),
+                                 dry_run=False, on_behalf_of=actor))
 
 
 def _has_nonconformance(plant: str, code: str) -> bool:
@@ -508,6 +553,7 @@ KINDS: dict[str, Kind] = {k.name: k for k in (
     Kind("routing", _has_routing, cannot=_MASTER_DATA),
     Kind("spec", _has_spec, cannot=_MASTER_DATA),
     Kind("order", _has_order, _make_order),
+    Kind("operation", _has_operation, _make_operation),
     Kind("nonconformance", _has_nonconformance, _make_nonconformance),
     Kind("maintenance", _has_maintenance, _make_maintenance),
     Kind("setting", _has_setting, _make_setting),
@@ -530,13 +576,14 @@ KINDS: dict[str, Kind] = {k.name: k for k in (
 NONCONFORMANCE = "NC-00001"
 MAINTENANCE = "CM-00001"
 
-#: What a run puts on a plant, in the order it has to go on: the order before
-#: the check that fails against it, the machine's work after it. Everything
-#: here is arrangeable by an agent deployment; everything a case needs that is
-#: *not* here is master data, and is declared rather than made.
+#: What a run puts on a plant, in the order it has to go on: the order before its
+#: own first step and before the check that fails against it, the machine's work
+#: after it. Everything here is arrangeable by an agent deployment; everything a
+#: case needs that is *not* here is master data, and is declared rather than made.
 ARRANGES = (
     f"setting:{SETTING}",
     f"order:{ORDER}",
+    f"operation:{ORDER}/{STEP_STARTED}",
     f"nonconformance:{NONCONFORMANCE}",
     f"maintenance:{MAINTENANCE}",
     f"instruction:{INSTRUCTION}",

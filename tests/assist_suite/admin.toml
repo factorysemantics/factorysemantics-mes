@@ -62,7 +62,14 @@ tool = "write_plant_setting"
 args = { domain = "quality", key = "nc_code_prefix", value = "CR" }
 anchor = "setting-in-focus"
 source = "questions/2026-09-26.md, ~14:57 CDT"
-note = "this one it got right, and then lost three times over"
+note = """This one it got right, and then lost three times over - four, since the
+third live run on 2026-09-27 at 11:1x answered it *"That's not something I can do
+here - NC codes aren't configurable in this system; they're assigned automatically
+with a fixed 'NC' prefix."* with no tool call at all. `nc_code_prefix` is a Quality
+setting this product ships and one `plant_settings(find=...)` finds it. The prompt
+now says to read before denying, and the same unread sentence cost
+`scott-asks-to-be-shown-with-nothing-open` below as well: having decided the
+control was not real, there was nothing left to walk him to."""
 
 [[case]]
 id = "scott-asks-to-be-shown-where"
@@ -110,7 +117,7 @@ screen = "/dashboard/config/quality"
 expect = "read"
 reads_any = ["plant_settings", "spc_chart"]
 contains_any = [
-  ["hold_rules", "hold rules"],
+  ["hold"],
   ["1,2,3,4", "1, 2, 3, 4", "1, 2, 3 and 4", "all four"],
 ]
 never = ["quality procedure", "contact the quality manager"]
@@ -123,10 +130,17 @@ stricter than the truth in two ways.
 `spc_chart` names this plant's hold rules as well - the live model answered
 correctly out of it, and demanding `plant_settings` was scoring the route rather
 than the answer. And the rules are `1,2,3,4` on the Configuration page and "all
-four" in a sentence; both are the same four rules, so both pass. The settings
-key is accepted spelt either way for the same reason. What is still scored is
-that it looked before it answered and did not send anybody to a procedure
-document."""
+four" in a sentence; both are the same four rules, so both pass.
+
+Loosened once more the same day, and this is the second time this case has been
+about the label rather than the fact. The third live run read `spc_chart` twice
+and answered *"rules 1, 2, 3 and 4 are all set to hold (open an NC) when they
+fire"* - the right four rules, the right thing happening to them - and was scored
+a failure because neither `hold_rules` nor the phrase "hold rules" is in it. The
+fact is that the rules hold, and "set to hold" says it; so the group is the word
+itself, which `hold_rules` and "hold rules" both still carry. What is scored is
+that it looked before it answered, named the four rules, said they hold, and did
+not send anybody to a procedure document."""
 
 [[case]]
 id = "scott-changes-which-spc-rules-raise-a-hold"
@@ -450,9 +464,13 @@ request = "I released WO-EVAL-1 - is it on the floor?"
 screen = "/dashboard/orders"
 expect = "read"
 reads_any = ["order_detail", "orders"]
-contains = ["released"]
+contains_any = [["released", "running", "in progress", "started"]]
 lookup = { code = "WO-EVAL-1" }
 requires = ["order:WO-EVAL-1"]
+note = """"Is it on the floor?" is the question, and since 2026-09-27 a run starts
+step 10 of this order, so the plant answers *running* rather than *released*. Both
+mean it is on the floor; the case asked for the one word until the fixture made it
+untrue. What is still scored is that it read the order before answering."""
 
 # ------------------------------------------------------------------- show me
 
