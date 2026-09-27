@@ -129,10 +129,55 @@ def test_the_endpoint_serves_the_same_facts(admin):
         "Floor assistant", "Instruction drafting"}
 
 
+def test_the_cloud_brain_is_not_one_of_the_local_layers_jobs(admin):
+    """It used to be, with its spend as a note inside one of these rows - so
+    `MES_LOCAL_AI=0` emptied this payload and took the plant's bill with it.
+    The cloud brain is a different model behind a different setting, and every
+    consumer reads it from `agent.status()` beside this list."""
+    names = {c["name"] for c in admin.get("/ai").json()["consumers"]}
+    assert not [n for n in names if "agent" in n.lower()], names
+
+    agent_body = admin.get("/assist/agent/status").json()
+    assert set(agent_body) >= {"available", "reason", "model", "spend_usd", "cap_usd",
+                               "last_used"}
+
+
 def test_an_operator_is_not_shown_the_machine_room(client):
     """The panel reads stores and GPU state - audit.read territory, the same
     gate as the rest of the Ops screen."""
     assert client.get("/ai").status_code == 403
+
+
+# ---------------------------------------------------------------- the CLI
+
+def test_the_cli_prints_the_cloud_brain_even_with_no_local_model(monkeypatch, tmp_path):
+    """`fsmes ai-status` had the screen's bug: the cloud brain was printed out
+    of the local layer's rows, so `MES_LOCAL_AI=0` returned before the plant's
+    own bill was ever said."""
+    import json
+    from datetime import UTC, datetime
+
+    from typer.testing import CliRunner
+
+    from fsmes.cli import app
+    from fsmes.services import agent
+
+    bill = tmp_path / "agent-usage.jsonl"
+    bill.write_text(json.dumps({
+        "ts": datetime.now(UTC).isoformat(timespec="seconds"),
+        "model": "claude-sonnet-5", "usd": 3.5}) + "\n", encoding="utf-8")
+    monkeypatch.setattr(agent, "USAGE_FILE", bill)
+    monkeypatch.setenv("MES_AGENT_MONTHLY_USD", "20")
+    monkeypatch.setenv("MES_LOCAL_AI", "0")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    out = CliRunner().invoke(app, ["ai-status"])
+    assert out.exit_code == 0, out.output
+    assert "$3.50 of $20.00 this month" in out.output, out.output
+    # Off says why, in `available()`'s own words.
+    assert "ANTHROPIC_API_KEY" in out.output, out.output
+    # And the local layer says off rather than being the only thing said.
+    assert "MES_LOCAL_AI=0" in out.output, out.output
 
 
 # ------------------------------------------------------------- the store fix

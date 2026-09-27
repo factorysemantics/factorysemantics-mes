@@ -466,6 +466,36 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Fixed
 
+- **The AI tab's Status showed nothing at all on a plant with no local model —
+  including what its assistant costs.** The tab was built from one payload,
+  `GET /ai`, which is the *local* AI layer on the box: Ollama, the GPU, and the
+  jobs the local model has. The cloud brain the assistant actually runs on was
+  a **note inside one of those local rows**, so `MES_LOCAL_AI=0` returned
+  `{"enabled": false}` and took the spend-against-cap with it — the one number
+  a plant administrator most needs from that tab, gone with a setting about a
+  different model. `GET /assist/agent/status` had been serving it properly all
+  along and the page never called it.
+
+  Status now reads both, side by side. The cloud brain's model, whether it is
+  on, its spend this month against this plant's cap and when it was last used
+  are shown whatever `MES_LOCAL_AI` says; the local layer's rows appear when it
+  is on, and when it is off it is **one row saying `off` and why** rather than
+  an empty tab. Neither call failing takes the other with it, and one that does
+  not answer reports *unknown* — not zero, and not a blank that reads as
+  nothing happening. Off says why in `available()`'s own words (*"no
+  ANTHROPIC_API_KEY in this plant's environment"* is something somebody can act
+  on).
+
+  `fsmes ai-status` had the same hole and prints the cloud brain first now,
+  before the local layer's early return. The Ops screen's panel is titled
+  *Local AI* and stays exactly that — the cloud brain is read on the AI tab.
+
+  One rendering bug came out with it: `agent.status()`'s `last_used` carries a
+  `+00:00` offset, and the dashboard's date helper appended a `Z` to every
+  stamp it was given, making `…+00:00Z` — so the cell read **"Invalid Date"**
+  where the date of the assistant's last turn belonged. The helper now
+  recognises a stamp that already says its own offset.
+
 - **The assistant walks an administrator to the signature instead of refusing
   it.** Asked to approve a draft downtime reason by somebody holding
   `process.approve`, it answered *"a signature I can't put my own name to — that

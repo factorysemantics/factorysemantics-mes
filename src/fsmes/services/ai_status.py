@@ -239,17 +239,12 @@ def consumers(stale_after: timedelta | None = None) -> list[dict]:
         "last": None,
         "note": "routes questions and picks guides"
                 if up else "Ollama unreachable - falls back to lexical matching"})
-    # --- the cloud brain behind the same panel --------------------------------
-    from fsmes.services import agent as floor_agent
-    on, why = floor_agent.available()
-    spent = floor_agent.spend_this_month()
-    rows.append({
-        "name": "Floor agent", "trigger": "the Assistant panel, on demand",
-        "output": f"proposes and, once confirmed, performs; usage in {floor_agent.USAGE_FILE}",
-        "state": "ok" if on else "off",
-        "last": _age(floor_agent.last_used()),
-        "note": (f"{floor_agent.MODEL}: ${spent:.2f} of ${floor_agent.monthly_cap_usd():.0f} this month"
-                 if on else why)})
+    # The cloud brain is deliberately *not* in this list. It used to be, and its
+    # spend was a note inside one of these rows - so a plant with
+    # `MES_LOCAL_AI=0` lost the one number a plant administrator most needs
+    # from that screen, to a setting that has nothing to do with it. It is read
+    # from `agent.status()` instead, by every consumer, beside this list rather
+    # than inside it.
     rows.append({
         "name": "Instruction drafting", "trigger": "fsmes draft-instructions, on demand",
         "output": "documents module, marked drafted_by_model, arriving unapproved",

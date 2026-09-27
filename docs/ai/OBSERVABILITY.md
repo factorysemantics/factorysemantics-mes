@@ -12,13 +12,18 @@ when this document and the panel disagree, one of them has a bug.
 | Nightly rollup | 05:30 timer, `Persistent=true` (catches up after boot) | qwen narrates numbers computed from the store | `~/.local/share/fsmes/reports/*.md` → pulled to `Vault/Sims/Reports/` by `fsmes-reports` (laptop) | `systemctl --user list-timers fsmes-rollup.timer` |
 | Design chat | the Design button | qwen answers about the screen being looked at | `~/.local/share/fsmes/design.db` → `/design-triage` → `docs/design/backlog/` | `fsmes design-pending` |
 | Floor assistant (local) | the Assistant button on a plant with no key | routes questions, quotes procedure, picks guides | answers live; stores nothing (falls back to lexical matching when Ollama is down) | ask it something |
-| Floor agent (cloud) | the Assistant button when `agent.available()` is true | a cloud model works the plant's own tools: reads freely, proposes every write, puts a walkthrough on the screen | the plant's own `ai_turns` table (the **AI** screen), plus `~/.local/share/fsmes/agent-turns.jsonl` (one line per turn) and `agent-usage.jsonl` (the bill) | the AI screen, `fsmes ai conversations`, or read the turn log |
+| Floor agent (cloud) — *not a local consumer; read from `agent.status()`* | the Assistant button when `agent.available()` is true | a cloud model works the plant's own tools: reads freely, proposes every write, puts a walkthrough on the screen | the plant's own `ai_turns` table (the **AI** screen), plus `~/.local/share/fsmes/agent-turns.jsonl` (one line per turn) and `agent-usage.jsonl` (the bill) | the AI screen, `fsmes ai conversations`, or read the turn log |
 | Instruction drafting | `fsmes draft-instructions` | qwen drafts work instructions from facts the plant holds | documents module, `drafted_by_model` set, **arriving unapproved** | the Instructions screen |
 | Embeddings | fleet job completion | nomic-embed-text embeds run summaries for semantic search | **`~/.local/share/fleet/fleet.db`** (the fleet platform — NOT the fsmes store) | `fleet ask` from the laptop |
 
 Ollama itself: `127.0.0.1:11434` on `main` (override with `MES_OLLAMA`),
 qwen3:8b ≈ 5.6 GB loaded, idle-unloads after a few minutes. `MES_LOCAL_AI=0`
-declares a machine deliberately AI-free and hides the panel.
+declares a machine with no local model: the Ops screen's Local AI panel is
+hidden, and the AI screen's Status tab says the layer is off and why. It does
+**not** hide the cloud brain, which is a different model behind a different
+setting — the AI tab and `fsmes ai-status` read that from `agent.status()`,
+whatever `MES_LOCAL_AI` says, so a plant that runs no local model still sees
+what its assistant costs against its cap.
 
 ## What the audit found (2026-09-02)
 
