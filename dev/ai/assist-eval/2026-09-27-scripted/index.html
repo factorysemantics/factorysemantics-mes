@@ -3727,6 +3727,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#not-arranged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not arranged
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#marked-not_yet" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3763,7 +3774,7 @@
 
 
 <h1 id="assistant-faithfulness-2026-09-27">Assistant faithfulness — 2026-09-27<a class="headerlink" href="#assistant-faithfulness-2026-09-27" title="Permanent link">&para;</a></h1>
-<p><em>scripted run, 2026-09-27T04:27:51+00:00. 97 of 97 required cases pass; 0 are marked <code>not_yet</code>.</em></p>
+<p><em>scripted run, 2026-09-27T14:57:09+00:00. 98 of 98 required cases pass; 0 are marked <code>not_yet</code>. 1 case was not arranged — this plant has not got what the request names, so it is not scored.</em></p>
 <table>
 <thead>
 <tr>
@@ -3790,7 +3801,7 @@
 </tr>
 <tr>
 <td>Suite commit</td>
-<td>e4406371</td>
+<td>d00e8e68</td>
 </tr>
 </tbody>
 </table>
@@ -3799,47 +3810,57 @@
 <thead>
 <tr>
 <th>Role</th>
+<th>Asked as</th>
 <th style="text-align: right;">Required</th>
 <th style="text-align: right;">Pass</th>
 <th style="text-align: right;">Rate</th>
 <th style="text-align: right;">not_yet</th>
 <th style="text-align: right;">of those, passing</th>
 <th style="text-align: right;">not arranged</th>
+<th style="text-align: right;">no account</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>admin</td>
-<td style="text-align: right;">39</td>
-<td style="text-align: right;">39</td>
+<td>—</td>
+<td style="text-align: right;">40</td>
+<td style="text-align: right;">40</td>
 <td style="text-align: right;">100%</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
 <td style="text-align: right;">0</td>
 </tr>
 <tr>
 <td>agent</td>
+<td>—</td>
 <td style="text-align: right;">13</td>
 <td style="text-align: right;">13</td>
 <td style="text-align: right;">100%</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 </tr>
 <tr>
 <td>operator</td>
+<td>—</td>
 <td style="text-align: right;">26</td>
 <td style="text-align: right;">26</td>
 <td style="text-align: right;">100%</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 </tr>
 <tr>
 <td>supervisor</td>
+<td>—</td>
 <td style="text-align: right;">19</td>
 <td style="text-align: right;">19</td>
 <td style="text-align: right;">100%</td>
+<td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">0</td>
@@ -3848,6 +3869,26 @@
 </table>
 <h2 id="required-cases-that-did-not-pass">Required cases that did not pass<a class="headerlink" href="#required-cases-that-did-not-pass" title="Permanent link">&para;</a></h2>
 <p>None.</p>
+<h2 id="not-arranged">Not arranged<a class="headerlink" href="#not-arranged" title="Permanent link">&para;</a></h2>
+<p>These were not scored. The plant has not got what the request names, so nothing about the model's choice was measured either way.</p>
+<table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Role</th>
+<th>The plant has not got</th>
+<th>Why not</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>admin-approves-an-adjustment</code></td>
+<td>admin</td>
+<td><code>adjustment:MIX01</code></td>
+<td>a recommended setpoint change names a tag this plant's own manifest declares writable with bounds - the first of the three guards between a recommendation and a PLC - and nothing here writes a plant's manifest, so a plant that declares none has this declared rather than invented for it</td>
+</tr>
+</tbody>
+</table>
 <h2 id="marked-not_yet">Marked <code>not_yet</code><a class="headerlink" href="#marked-not_yet" title="Permanent link">&para;</a></h2>
 <p>None.</p>
 <hr />

@@ -3525,10 +3525,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fsmes-assist-eval-live-plant-url-user-code" class="md-nav__link">
+  <a href="#fsmes-assist-eval-live-plant-url-user-code-account-rolecode" class="md-nav__link">
     <span class="md-ellipsis">
       
-        fsmes assist eval --live --plant &lt;url&gt; --user &lt;code&gt;
+        fsmes assist eval --live --plant &lt;url&gt; --user &lt;code&gt; --account &lt;role&gt;=&lt;code&gt;
       
     </span>
   </a>
@@ -3963,10 +3963,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fsmes-assist-eval-live-plant-url-user-code" class="md-nav__link">
+  <a href="#fsmes-assist-eval-live-plant-url-user-code-account-rolecode" class="md-nav__link">
     <span class="md-ellipsis">
       
-        fsmes assist eval --live --plant &lt;url&gt; --user &lt;code&gt;
+        fsmes assist eval --live --plant &lt;url&gt; --user &lt;code&gt; --account &lt;role&gt;=&lt;code&gt;
       
     </span>
   </a>
@@ -4203,11 +4203,34 @@ not pretending to. What it does catch:</p>
 <p>It is deterministic, needs no key and no network, costs nothing, and takes about
 two seconds. <code>tests/test_assist_suite_scripted.py</code> runs it, so the required
 checks carry it on every pull request.</p>
-<h3 id="fsmes-assist-eval-live-plant-url-user-code"><code>fsmes assist eval --live --plant &lt;url&gt; --user &lt;code&gt;</code><a class="headerlink" href="#fsmes-assist-eval-live-plant-url-user-code" title="Permanent link">&para;</a></h3>
+<h3 id="fsmes-assist-eval-live-plant-url-user-code-account-rolecode"><code>fsmes assist eval --live --plant &lt;url&gt; --user &lt;code&gt; --account &lt;role&gt;=&lt;code&gt;</code><a class="headerlink" href="#fsmes-assist-eval-live-plant-url-user-code-account-rolecode" title="Permanent link">&para;</a></h3>
 <p>Asks: <strong>does the model choose right?</strong></p>
 <p>The real model, on a running plant, through <code>POST /assist/agent</code> — the same
 endpoint the assistant panel posts to, so what is scored is what a person gets.
 Every proposal it opens is <strong>declined</strong>, so a scored plant is an unchanged plant.</p>
+<p><strong>One account per role.</strong> <code>--account operator=SCOTT</code> says which account asks the
+operator's cases; repeat it per role. Each one's password comes from
+<code>MES_ASSIST_EVAL_PASSWORD_&lt;ROLE&gt;</code> — <code>MES_ASSIST_EVAL_PASSWORD_OPERATOR</code> — or from
+<code>--password</code> when the code is the same as <code>--user</code>, so nobody has to put one
+password in two variables. A role with <strong>no account</strong> is reported as such: not
+asked, not scored, not paid for, and listed in the result file by name.</p>
+<div class="highlight"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">MES_ASSIST_EVAL_PASSWORD</span><span class="o">=</span>…<span class="w">              </span><span class="c1"># ADMIN's, for --user</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">MES_ASSIST_EVAL_PASSWORD_OPERATOR</span><span class="o">=</span>…<span class="w">     </span><span class="c1"># SCOTT's</span>
+fsmes<span class="w"> </span>assist<span class="w"> </span><span class="nb">eval</span><span class="w"> </span>--live<span class="w"> </span>--plant<span class="w"> </span>http://127.0.0.1:8010<span class="w"> </span>--user<span class="w"> </span>ADMIN<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--account<span class="w"> </span><span class="nv">admin</span><span class="o">=</span>ADMIN<span class="w"> </span>--account<span class="w"> </span><span class="nv">operator</span><span class="o">=</span>SCOTT<span class="w"> </span>--plant-commit<span class="w"> </span><span class="s2">"</span><span class="k">$(</span>git<span class="w"> </span>rev-parse<span class="w"> </span>--short<span class="w"> </span>HEAD<span class="k">)</span><span class="s2">"</span>
+</code></pre></div>
+<p><code>--user</code> is the account the arrangement is written for — its name goes on every
+audited row — and whose budget the run reads. It is not a fallback for a role
+nobody was named for.</p>
+<p>Until 2026-09-27 there was one <code>--user</code> and it answered for everybody. A run of
+the operator suite as the administrator measures the administrator: the
+operator's refusal cases <strong>cannot refuse</strong> when somebody holding every capability
+is typing, so they passed for the wrong reason and the number meant nothing. The
+suite's four roles need four accounts to be scored honestly, and a plant that has
+three of them gets three roles scored and the fourth reported as having nobody.
+Nothing here creates an account: that is <code>create_user</code> on the Administration
+screen, which an administrator does. If a plant is to be scored as a supervisor,
+its pack should carry one.</p>
 <p>It costs money. It stops at <code>--max-usd</code> (default $1.00) and says which cases it
 did not run rather than reporting a short suite as a whole one; the month's cap
 is in <a href="../BUDGET/">BUDGET.md</a> and this is one line on it. It refuses to start
@@ -4252,9 +4275,9 @@ with both names on it.</p>
 </thead>
 <tbody>
 <tr>
-<td>A setting put in force</td>
-<td><code>[process] default_report_hours</code> → <code>10.0</code></td>
-<td>So "who changed this, and when?" has something to find.</td>
+<td>A setting put in force twice</td>
+<td><code>[process] default_report_hours</code> → <code>10.0</code>, then <code>8.0</code></td>
+<td>So "who changed this, and when?" has something to find, <strong>and</strong> so "change the reporting window to 10hrs" is still a change. Two audit rows, one fixture.</td>
 </tr>
 <tr>
 <td>A released work order</td>
@@ -4274,31 +4297,42 @@ with both names on it.</p>
 <tr>
 <td>A <strong>draft</strong> work instruction</td>
 <td><code>WI-EVAL-1</code></td>
-<td>Unapproved.</td>
+<td>Unapproved. <em>Logging a shift handover</em>.</td>
 </tr>
 <tr>
 <td>A <strong>draft</strong> trigger</td>
 <td><code>TR-EVAL-1</code></td>
-<td>Unapproved.</td>
+<td>Unapproved. <code>MIX01</code> pressure above 6.5.</td>
 </tr>
 <tr>
 <td>A <strong>draft</strong> downtime reason</td>
-<td><code>eval_changeover</code></td>
+<td><code>eval_awaiting_parts</code></td>
 <td>Unapproved: nothing labels a stop with it.</td>
 </tr>
 <tr>
 <td>A <strong>draft</strong> non-conformance severity</td>
-<td><code>eval_cosmetic</code></td>
+<td><code>eval_scuff</code></td>
 <td>Unapproved: nothing is graded with it.</td>
+</tr>
+<tr>
+<td>A <strong>recommended</strong> setpoint change</td>
+<td>numbered by the plant</td>
+<td>Unapproved: an engineer decides it and the agent never does. Only where the plant's tag manifest declares a writable setpoint with bounds on <code>MIX01</code> — a demo plant declares none, and then the case that needs one is reported <em>not arranged</em>.</td>
 </tr>
 </tbody>
 </table>
-<p>Four of those eight are <strong>drafts</strong>, and a draft changes nobody's screen until
-somebody signs it. Codes carry <code>EVAL-</code>/<code>eval_</code> wherever the code is ours to
-choose, so what a run left behind can be told from the plant's own work at a
-glance. The plant numbers the non-conformance and the maintenance order itself;
-if it numbers them something else, the cases that name them are reported not
-arranged with the code it did use.</p>
+<p>Five of those are <strong>drafts</strong>, and a draft changes nobody's screen until somebody
+signs it. Codes carry <code>EVAL-</code>/<code>eval_</code> wherever the code is ours to choose, so
+what a run left behind can be told from the plant's own work at a glance. The
+plant numbers the non-conformance, the maintenance order and the recommendation
+itself; if it numbers the first two something else, the cases that name them are
+reported not arranged with the code it did use.</p>
+<p><strong>And each fixture is about something no case asks for.</strong> The prefix keeps the
+codes apart; the words have to be kept apart too. A run that drafted
+<code>eval_cosmetic</code> and then asked the model to "draft a cosmetic severity" was
+answered <em>"there's already a draft 'cosmetic' severity"</em> — correct, and scored as
+a failure on 2026-09-27. Two tests hold that line now, and the same rule is why
+the reporting window ends a run at 8.0 rather than at the 10.0 a case asks for.</p>
 <h3 id="never-arranged-by-the-agent">Never arranged by the agent<a class="headerlink" href="#never-arranged-by-the-agent" title="Permanent link">&para;</a></h3>
 <p><strong>Master data.</strong> Materials, equipment, routings, lots and specifications are the
 plant's own, and an agent deployment does not define them — decision
@@ -4418,16 +4452,19 @@ up after itself would have to reach round the write discipline the suite exists
 to measure, and the tidying would not be in the trail.</p>
 <p>What a person does instead, on a plant they want back:</p>
 <ul>
-<li>the four <strong>drafts</strong> — retire them on their own screens (<code>/dashboard/reasons</code>,
+<li>the <strong>drafts</strong> — retire them on their own screens (<code>/dashboard/reasons</code>,
   <code>/dashboard/severities</code>, <code>/dashboard/instructions</code>, <code>/dashboard/triggers</code>).
   They were never in force, so retiring one changes nothing that was running.</li>
+<li>the <strong>recommended setpoint change</strong>, if the plant could carry one — reject it
+  on <code>/dashboard/adjustments</code>. Nothing was ever written to the machine: a
+  recommendation waits for a person, and rejecting one is the person.</li>
 <li><code>WO-EVAL-1</code> — cancel or close it.</li>
 <li><code>CM-00001</code> — complete it, or leave it: it is a corrective job on a mixer with
   the words <em>assist eval fixture</em> in its summary.</li>
 <li><code>NC-00001</code> — disposition and close it. It is a real non-conformance about a
   real recorded check, and it stays in the record, as every non-conformance does.</li>
-<li><code>default_report_hours</code> — set it back to what it was. <code>setting_changes</code> says
-  what that was.</li>
+<li><code>default_report_hours</code> — a run leaves it at the product's default of 8.0. Set
+  it back to what your plant had; <code>setting_changes</code> says what that was.</li>
 </ul>
 <p>And about the <strong>master data</strong>, honestly: <strong>the API has no way to remove any of
 it.</strong> There is no <code>DELETE</code> and no <code>PATCH</code> on <code>/masterdata/equipment</code>,
@@ -4452,12 +4489,16 @@ writes <code>docs/ai/calibration/&lt;date&gt;/</code>:</p>
 <ul>
 <li>the mode, the model, the plant, the plant's commit and the suite's commit;</li>
 <li>what it cost in dollars and in tokens;</li>
-<li>a pass rate per role;</li>
+<li>a pass rate per role, <strong>and which account answered for each</strong> — a per-role
+  number is about whoever was typing;</li>
 <li>every required case that did not pass, with the expectation, <strong>what it did
   instead</strong>, and a sentence per thing that was wrong;</li>
 <li>every case marked <code>not_yet</code>, and which handoff it is waiting on;</li>
 <li>every case that was <strong>not arranged</strong>, what the plant has not got, and why —
   followed by what the run put on the plant, what was already there, and
+  anything it could not arrange, in the plant's own words;</li>
+<li>every case that was <strong>not asked at all</strong> because this plant has no account
+  holding the role.
   anything it could not arrange, in the plant's own words. That last part comes
   in two halves, because two different accounts wrote them: what the <strong>agent</strong>
   arranged through the assistant's tools, and what <strong>master data</strong> the person
@@ -4510,11 +4551,16 @@ than the thing the person asked for.</p>
    <code>requires</code>. The kinds live in <code>fsmes.lab.assist_fixtures</code>, and a typo in one
    fails the build rather than quietly retiring the case.</p>
 </li>
+<li>Check the case does not describe the arrangement it will run on. A request to
+   draft the word a run drafts, or to set the value a run sets, is a request the
+   model is right to answer <em>that is already there</em> — and five of the six
+   failures in the 2026-09-27 live run were exactly that. Two tests check the
+   codes and the words; the values are yours to keep apart.</li>
 </ol>
 <p>The plant every case is asked about is the demo plant plus what
-<code>fsmes.lab.assist_fixtures.arrange</code> puts on it — the eight rows in <em>What a live
-run puts on the plant</em> above. A scripted run arranges the same plant the same
-way, so the arrangement is exercised on every pull request rather than only when
+<code>fsmes.lab.assist_fixtures.arrange</code> puts on it — the rows in <em>What a live run
+puts on the plant</em> above. A scripted run arranges the same plant the same way,
+so the arrangement is exercised on every pull request rather than only when
 somebody spends money.</p>
 <h2 id="why-this-is-worth-shipping-in-the-open">Why this is worth shipping in the open<a class="headerlink" href="#why-this-is-worth-shipping-in-the-open" title="Permanent link">&para;</a></h2>
 <p>The field publishes capability. A vendor announces how many agents, how many
