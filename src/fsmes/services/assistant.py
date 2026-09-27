@@ -2325,6 +2325,70 @@ SURFACES: dict[str, dict] = {
 }
 
 
+#: Write tools that may be proposed and have no "Show me" walk, and where the
+#: control is on the screen a walk would land on.
+#:
+#: Why there is a list at all. The walk ratchet below keys on `agent.NEEDS`, so
+#: until 2026-09-27 it could not see these nine: they were in no `NEEDS` entry,
+#: which is the bug that day's work fixed - the catalogue offered them to
+#: anybody holding `plant.read`, seven of the nine to an operator who would
+#: then be refused at the route. Naming the capability each one's route demands
+#: makes the catalogue honest, and it lets the ratchet see them for the first
+#: time. What it sees is nine cards with a "Do it" and no "Show me", which is
+#: what those nine have always been. That is a thinner card than the other
+#: thirty-eight get; it is not a refusal and it is not new, so it is written
+#: down here rather than left to block the fix or be hidden by leaving the
+#: tools out of `NEEDS`.
+#:
+#: This is not a licence to ship a tool without a walk. The ratchet checks the
+#: list both ways - a tool here that has grown a surface fails, a proposable
+#: write tool in neither fails - so it can only shrink, and a tenth tool cannot
+#: join it without somebody editing this file. Each sentence names the control,
+#: so it is the start of the walk rather than a note that one is missing, and
+#: the screen it names is checked against `walkthroughs.PAGE_FILES`.
+#:
+#: One of the nine is not a walk anybody should author. `produce_batch` is what
+#: a marker or a palletizer sends - up to five thousand serials in one call -
+#: and no screen posts `/trace/units/batch`. The Produce form on
+#: /dashboard/trace books `produce_units`, which is a different tool with a
+#: walk of its own, so a walk for `produce_batch` would either point at the
+#: wrong control or teach somebody to type five thousand serials by hand.
+WITHOUT_A_WALK: dict[str, str] = {
+    "add_person": (
+        "the Add a person form on the People tab of /dashboard/masterdata. The "
+        "tab has an anchor (masterdata-people-filters); the form itself does "
+        "not yet, so authoring the walk adds one."
+    ),
+    "register_gauge": "the Register a gauge form on /dashboard/gauges (gauge-register).",
+    "calibrate_gauge": "the Record a calibration form on /dashboard/gauges (gauge-calibrate).",
+    "issue_certificate": (
+        "the Issue/reissue button on /dashboard/coa, which appears once an "
+        "order is found (coa-search finds it; the button has no anchor yet)."
+    ),
+    "issue_pallet_certificate": (
+        "the same button on /dashboard/coa - the page reads the serial and "
+        "posts the pallet path itself, so one walk serves both once written."
+    ),
+    "produce_batch": (
+        "no control on any screen, and deliberately: this is what a marker or "
+        "a palletizer sends. See the paragraph above."
+    ),
+    "pack_unit": (
+        "the \"Pack this unit into\" box on /dashboard/trace, which appears "
+        "once a serial is looked up (trace-search looks it up; the box has no "
+        "anchor yet)."
+    ),
+    "set_unit_status": (
+        "the quarantine/release/scrap row on /dashboard/trace (trace-status), "
+        "which the page already gates on quality.close_nc."
+    ),
+    "erp_retry": (
+        "the Retry button on a dead message in the ERP panel of /dashboard/ops "
+        "(ops-erp), which the page already shows only to orders.close."
+    ),
+}
+
+
 class _Blank(dict):
     def __missing__(self, key: str) -> str:
         return ""
