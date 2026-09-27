@@ -2424,21 +2424,24 @@ def visible_guides(capabilities: set[str], db=None) -> list[dict]:
     return out
 
 
-#: What a signing walk says to somebody who may not sign. The capability, and
-#: the product's own plain description of it - so "approve the draft severity"
-#: is answered with who signs it, which is the true answer, rather than with
-#: "no tool named approve is available to you", which is a fact about the
-#: catalogue and no use to anybody standing at a machine.
-#: The one sentence that must survive being read back leads it: a tool result
-#: is summarised to 160 characters in the turn record and in the transcript
-#: the panel shows, and the two facts worth keeping are that the assistant
-#: signs nothing and which capability does.
-SIGNING_NOTE = ("The assistant never approves anything, for anybody. {needs} - "
-                "{about} - is what signs this, and you do not hold it. Somebody "
-                "who does presses the button.")
+#: What a signing walk says to somebody who may not sign, ahead of the sentence
+#: every refusal shares. The capability, the product's own plain description of
+#: it, and the roles that hold it - so "approve the draft severity" is answered
+#: with who signs it, which is the true answer, rather than with "no tool named
+#: approve is available to you", which is a fact about the catalogue and no use
+#: to anybody standing at a machine.
+#:
+#: This lead sentence is the part that is only true of a signature, and it goes
+#: first because it is the one that must survive being read back: a tool result
+#: is summarised to 160 characters in the turn record and in the transcript the
+#: panel shows. The rest is `capabilities.not_yours`, which every refusal now
+#: uses - it said "somebody who does presses the button" until 2026-09-26, and
+#: somebody who does not know who that is cannot go and find them.
+SIGNING_LEAD = "The assistant never approves anything, for anybody. "
 
 
-def signing_guides(capabilities: set[str]) -> list[dict]:
+def signing_guides(capabilities: set[str],
+                   roles: dict[str, list[str]] | None = None) -> list[dict]:
     """The walks to a signing control that this person may *not* follow.
 
     Every other guide is simply hidden from somebody who lacks its capability
@@ -2454,13 +2457,14 @@ def signing_guides(capabilities: set[str]) -> list[dict]:
     for guide in GUIDES:
         if not guide.get("signing") or guide["needs"] in capabilities:
             continue
-        about = capability_names.CAPABILITIES.get(guide["needs"], "").rstrip(".")
         out.append({**guide,
-                    "gated": SIGNING_NOTE.format(needs=guide["needs"], about=about)})
+                    "gated": SIGNING_LEAD + capability_names.not_yours(
+                        guide["needs"], gates="signs this", roles=roles)})
     return out
 
 
-def listed_guides(capabilities: set[str], db=None) -> list[dict]:
+def listed_guides(capabilities: set[str], db=None,
+                  roles: dict[str, list[str]] | None = None) -> list[dict]:
     """Every walk worth naming to this person: the ones they can follow, and
     the signing walks they cannot, each saying who can.
 
@@ -2468,7 +2472,7 @@ def listed_guides(capabilities: set[str], db=None) -> list[dict]:
     a screen is given, and what the facts brain routes over, because neither
     of those can say "not yours, ask them" - they can only put a walk up.
     """
-    return [*visible_guides(capabilities, db), *signing_guides(capabilities)]
+    return [*visible_guides(capabilities, db), *signing_guides(capabilities, roles)]
 
 
 def guide_by_id(guide_id: str, capabilities: set[str], db=None) -> dict | None:

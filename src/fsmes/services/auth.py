@@ -86,6 +86,25 @@ def capabilities_for(session: Session, role_code: str) -> set[str]:
     return set(spec["capabilities"]) if spec else set()
 
 
+def role_bundles(session: Session) -> dict[str, list[str]]:
+    """Every role this plant has, by the name an admin gave it, and what each
+    one grants.
+
+    Read here because a refusal has to be able to say *who* can do the thing
+    that was refused, and after a plant redefines its roles the answer is no
+    longer the one the product shipped. The caller reads it out of a short
+    session and hands it over: the assistant holds no database session of its
+    own by design, and one held across a model call holds SQLite's single
+    write lock across it too.
+
+    Ordered by code so the sentence a person reads is the same sentence twice.
+    """
+    from fsmes.domain import Role
+
+    rows = session.scalars(select(Role).order_by(Role.code)).all()
+    return {(row.name or row.code): row.granted() for row in rows}
+
+
 def current_role(session: Session, claims: dict) -> str | None:
     """The role the signed-in person holds right now.
 
