@@ -12,6 +12,20 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **A live faithfulness run asks each role as an account that holds it.**
+  `fsmes assist eval --live` signed in once and asked every role's questions as
+  that one person, which made three of the four per-role numbers meaningless: an
+  operator's refusal cases cannot refuse while somebody holding every capability
+  is typing, so they passed for the wrong reason. `--account operator=SCOTT`
+  (repeatable) says who asks a role's cases, with each account's password in
+  `MES_ASSIST_EVAL_PASSWORD_<ROLE>` — or in `--password` when the code is the
+  same as `--user`, so no password goes in two variables. A role with no account
+  is reported **no account**: not asked, not scored, not paid for, and named in
+  the result file, which also says which account answered for each role. `--user`
+  stays the account the arrangement is written for and is never a stand-in for a
+  role nobody was named for. Nothing creates an account; a plant to be scored as
+  a supervisor needs one in its pack. `docs/ai/ASSIST-EVAL.md` has the command.
+
 - **A live faithfulness run can put the demo plant's master data on the plant it
   scores — as the person, never as the agent.** `fsmes assist eval --live
   --seed-masterdata` creates `LINE1`, `MIX01`, `PACK01`, `RAW-SUGAR`,
@@ -451,6 +465,30 @@ goes under Honesty with a migration line, so plant people can find it.
   all six that remain belong to another handoff.
 
 ### Fixed
+
+- **The assistant walks an administrator to the signature instead of refusing
+  it.** Asked to approve a draft downtime reason by somebody holding
+  `process.approve`, it answered *"a signature I can't put my own name to — that
+  needs process.approve from a person on the Engineering screen"*. The first half
+  is true and the second is not: the five walks to the five signing controls exist
+  precisely so that request has an answer, and an administrator is shown all five.
+  One sentence in the prompt now says that never approving is not refusing — when
+  a draft's approve walk is theirs to follow, that walk goes on their screen — and
+  the wording that names the capability is for the person who may *not* sign.
+
+- **The faithfulness suite no longer asks for what its own arrangement already
+  did.** Five of the six failures in the 2026-09-27 live run were the suite
+  tripping over its fixtures, each one the model answering correctly: the
+  reporting window was set to 10.0 and then asked to be changed to 10, a
+  `cosmetic` severity was asked for on a plant carrying the run's own
+  `eval_cosmetic`, the Cpk bar was asked for at its own default, nothing arranged
+  the setpoint change an approval case names, and one answer was rejected for
+  writing "the Cpk capable bar" rather than `cpk_capable`. The requests stay word
+  for word; the arrangement moved. A run takes the reporting window to 10.0 and
+  puts it back to the product's 8.0, the drafts it puts up have their own words
+  (`eval_awaiting_parts`, `eval_scuff`) rather than a case's word with a prefix,
+  it recommends a setpoint change where the plant declares a writable one, and
+  two tests fail if any fixture ever reads like the draft a case asks for.
 
 - **Asked for a change, the assistant proposes it — the card is the question.**
   *"I want a non-conformance to have a prefix CR instead of NC. Could you make

@@ -26,6 +26,7 @@ from urllib.parse import parse_qs, urlsplit
 import pytest
 from typer.testing import CliRunner
 
+from fsmes import cli as cli_module
 from fsmes.cli import app
 from fsmes.lab import assist_eval as assist_runs
 from fsmes.lab import assist_fixtures, assist_seed
@@ -133,8 +134,13 @@ def test_every_case_the_current_code_should_pass_does_pass(scored):
 def test_no_case_marked_not_yet_is_passing_already(scored):
     """The ratchet, backwards. A `not_yet` case that passes means a sibling
     handoff landed and nobody took the mark off - so the number the write-up
-    quoted is no longer the number."""
-    passing = [o.case for o in scored if not o.counted and o.passed]
+    quoted is no longer the number.
+
+    A case the plant was not arranged for is out of the required number too, and
+    is not this ratchet's business: scripted mode asks it anyway and it may well
+    pass, which says nothing about a handoff.
+    """
+    passing = [o.case for o in scored if o.arranged and not o.counted and o.passed]
     assert not passing, ("these are marked not_yet and pass now; take the mark off and "
                          "say so: " + ", ".join(f"{c.id} (was waiting on {c.handoff})"
                                                 for c in passing))
@@ -143,7 +149,10 @@ def test_no_case_marked_not_yet_is_passing_already(scored):
 def test_the_run_says_a_pass_rate_for_every_role(scored):
     counts = assist_eval.tally(scored)
     assert set(counts["roles"]) == {"operator", "supervisor", "admin", "agent"}
-    assert counts["required"] + counts["not_yet"] == len(SUITE)
+    # Three buckets and every case in exactly one of them. The third is not
+    # always empty even here: a fixture can need something of the plant's own
+    # that a seeded demo plant has no way to declare.
+    assert counts["required"] + counts["not_yet"] + counts["not_arranged"] == len(SUITE)
     assert counts["total"] == len(SUITE)
 
 
@@ -152,7 +161,7 @@ def test_the_report_names_each_failure_and_what_it_did_instead(scored):
     assert "## Per role" in page and "| operator |" in page
     assert "## Marked `not_yet`" in page
     for outcome in scored:
-        if not outcome.counted:
+        if outcome.arranged and not outcome.counted:
             assert outcome.case.id in page
             assert outcome.case.handoff in page
 
@@ -296,6 +305,11 @@ class _Double(BaseHTTPRequestHandler):
     def log_message(self, *args):    # keep pytest output readable
         pass
 
+    def _who(self) -> str | None:
+        """The account behind this request, out of its own bearer token."""
+        token = (self.headers.get("Authorization") or "").removeprefix("Bearer ").strip()
+        return token.removeprefix("token-") or None
+
     def _send(self, payload: dict, code: int = 200) -> None:
         body = json.dumps(payload).encode()
         self.send_response(code)
@@ -362,11 +376,14 @@ class _Double(BaseHTTPRequestHandler):
             return self._send(dict(body), 201)
         if self.path == "/auth/login":
             self.state["signed_in_as"] = body.get("code")
-            return self._send({"token": "a-token"})
+            # A token per account, so who asked a question is a fact this double
+            # can report rather than one a test has to take on trust.
+            return self._send({"token": f"token-{body.get('code')}"})
         if self.path == "/assist/agent":
             self.state["asks"] += 1
             self.state["spend"] = round(self.state["spend"] + 0.40, 6)
             self.state["asked"].append(body.get("message"))
+            self.state["asked_by"].append((self._who(), body.get("message")))
             return self._send(self.state["replies"].get(
                 body.get("message"), {"kind": "reply", "session": "s1", "say": "I do not know.",
                                       "transcript": []}))
@@ -387,7 +404,7 @@ def _matches(row: dict, query: dict) -> bool:
 
 @pytest.fixture()
 def doubled_plant():
-    _Double.state = {"spend": 0.0, "asks": 0, "asked": [], "declined": [], "replies": {},
+    _Double.state = {"spend": 0.0, "asks": 0, "asked": [], "asked_by": [], "declined": [], "replies": {},
                      "posted": [], "made": [],
                      # An admin, which is who a live run signs in as.
                      "capabilities": {"masterdata.write", "production.consume"},
@@ -414,16 +431,109 @@ def test_a_live_run_scores_a_plant_over_its_own_http_api(doubled_plant):
     }
     plant = assist_runs.Plant(url)
     plant.sign_in("ADMIN", "a-password")
-    outcomes, run = assist_runs.run_live((case,), plant, arranging=False)
+    outcomes, run = assist_runs.run_live((case,), plant, accounts={"admin": plant},
+                                        arranging=False)
     plant.close()
 
     assert state["signed_in_as"] == "ADMIN"
+    assert run["asked_as"] == {"admin": "ADMIN"}
+    assert run["no_account"] == ()
     assert state["asked"] == [case.request]
     assert outcomes[0].passed, outcomes[0].why
     assert outcomes[0].turn.from_model is True
     assert run["model"] == "test-model"
     assert run["usd"] == pytest.approx(0.40)
     assert run["tokens"] == {"input": 100, "output": 10}
+
+
+# ------------------------------------------- one account per role, and no other
+
+def _two_roles(state) -> tuple:
+    """One administrator's case and one operator's, each with a canned reply
+    that would pass, so what these tests measure is who was asked."""
+    admin = BY_ID["scott-wants-the-nonconformance-prefix-to-be-cr"]
+    operator = BY_ID["operator-raises-everything-that-is-due"]
+    state["replies"][admin.request] = {
+        "kind": "proposals", "session": "s1", "say": "I can change it to CR.",
+        "proposals": [{"id": "p1", "tool": "write_plant_setting",
+                       "args": {"domain": "quality", "key": "nc_code_prefix",
+                                "value": "CR"},
+                       "surface": {"steps": [{"anchor": "setting-in-focus"}]}}]}
+    state["replies"][operator.request] = {
+        "kind": "proposals", "session": "s2", "say": "Here is the work that is due.",
+        "proposals": [{"id": "p2", "tool": "raise_due_maintenance", "args": {}}]}
+    return admin, operator
+
+
+def test_each_role_is_asked_as_an_account_that_holds_it(doubled_plant):
+    """Until 2026-09-27 one `--user` answered for every role, so a run of the
+    operator suite as ADMIN reported a number about the administrator. Two
+    accounts, two roles, and the double says which token each question arrived
+    on."""
+    url, state = doubled_plant
+    admin_case, operator_case = _two_roles(state)
+    as_admin, as_operator = assist_runs.Plant(url), assist_runs.Plant(url)
+    as_admin.sign_in("ADMIN", "a-password")
+    as_operator.sign_in("SCOTT", "a-password")
+
+    outcomes, run = assist_runs.run_live(
+        (admin_case, operator_case), as_admin,
+        accounts={"admin": as_admin, "operator": as_operator}, arranging=False)
+    as_admin.close()
+    as_operator.close()
+
+    assert state["asked_by"] == [("ADMIN", admin_case.request),
+                                 ("SCOTT", operator_case.request)]
+    assert run["asked_as"] == {"admin": "ADMIN", "operator": "SCOTT"}
+    assert all(o.passed for o in outcomes), [o.why for o in outcomes]
+
+
+def test_a_role_with_no_account_is_reported_rather_than_asked_as_somebody_else(
+        doubled_plant):
+    """The point of the whole thing: the operator's case is not asked at all, it
+    is not paid for, and it is out of the required number instead of being
+    scored against somebody else's session."""
+    url, state = doubled_plant
+    admin_case, operator_case = _two_roles(state)
+    as_admin = assist_runs.Plant(url)
+    as_admin.sign_in("ADMIN", "a-password")
+
+    outcomes, run = assist_runs.run_live(
+        (admin_case, operator_case), as_admin, accounts={"admin": as_admin},
+        arranging=False)
+    as_admin.close()
+
+    assert state["asked_by"] == [("ADMIN", admin_case.request)]
+    assert run["no_account"] == ("operator",)
+    unasked = [o for o in outcomes if o.no_account]
+    assert [o.case.id for o in unasked] == [operator_case.id]
+    assert not unasked[0].counted and not unasked[0].passed
+    assert "no account holding the operator role" in unasked[0].why[0]
+    counts = assist_eval.tally(outcomes)
+    assert counts["required"] == 1 and counts["passed"] == 1
+    assert counts["no_account"] == 1
+    assert counts["roles"]["operator"]["required"] == 0
+    assert run["usd"] == pytest.approx(0.40), "an unasked case must not be paid for"
+
+
+def test_a_result_file_says_which_account_answered_for_each_role(doubled_plant):
+    """A per-role number is about whoever was typing, so the file says who that
+    was - and names the roles nobody held rather than leaving a gap."""
+    url, state = doubled_plant
+    admin_case, operator_case = _two_roles(state)
+    as_admin = assist_runs.Plant(url)
+    as_admin.sign_in("ADMIN", "a-password")
+    outcomes, run = assist_runs.run_live(
+        (admin_case, operator_case), as_admin, accounts={"admin": as_admin},
+        arranging=False)
+    as_admin.close()
+
+    page = assist_eval.report(outcomes, mode="live", model=run["model"], plant="doubled",
+                              run=run)
+    assert "| admin | ADMIN |" in page
+    assert "| operator | nobody |" in page
+    assert "## Not asked — no account for the role" in page
+    assert operator_case.id in page
 
 
 def test_a_live_run_declines_every_proposal_it_opens(doubled_plant):
@@ -436,7 +546,7 @@ def test_a_live_run_declines_every_proposal_it_opens(doubled_plant):
     }
     plant = assist_runs.Plant(url)
     plant.sign_in("SCOTT", "a-password")
-    assist_runs.run_live((case,), plant, arranging=False)
+    assist_runs.run_live((case,), plant, accounts={"operator": plant}, arranging=False)
     plant.close()
     assert state["declined"] == ["p9"]
 
@@ -448,7 +558,9 @@ def test_a_live_run_stops_at_the_budget_it_was_given_and_says_what_it_did_not_ru
     cases = tuple(c for c in SUITE if not c.requires and not c.over_proposal)[:6]
     plant = assist_runs.Plant(url)
     plant.sign_in("SCOTT", "a-password")
-    outcomes, run = assist_runs.run_live(cases, plant, max_usd=1.00, arranging=False)
+    accounts = {role: plant for role in {c.role for c in cases}}
+    outcomes, run = assist_runs.run_live(cases, plant, accounts=accounts, max_usd=1.00,
+                                        arranging=False)
     plant.close()
     # 40 cents a turn: the third takes it to 1.20, and the fourth never starts.
     assert len(outcomes) == 3
@@ -467,7 +579,8 @@ def test_a_live_run_on_a_plant_with_no_brain_says_so_rather_than_scoring_zero(do
     plant = Off(url)
     plant.sign_in("ADMIN", "a-password")
     with pytest.raises(assist_runs.LiveRefused, match="ANTHROPIC_API_KEY"):
-        assist_runs.run_live(SUITE[:1], plant, arranging=False)
+        assist_runs.run_live(SUITE[:1], plant, accounts={SUITE[0].role: plant},
+                             arranging=False)
     plant.close()
 
 
@@ -480,7 +593,8 @@ def test_a_plant_that_cannot_be_read_reports_cases_not_arranged_rather_than_fail
     case = BY_ID["operator-books-good-and-scrap"]
     plant = assist_runs.Plant(url)
     plant.sign_in("SCOTT", "a-password")
-    outcomes, run = assist_runs.run_live((case,), plant, arranging=False)
+    outcomes, run = assist_runs.run_live((case,), plant, accounts={"operator": plant},
+                                        arranging=False)
     plant.close()
     assert not outcomes[0].arranged
     assert not outcomes[0].counted
@@ -499,7 +613,8 @@ def test_a_live_result_file_says_the_model_the_plant_and_what_it_cost(tmp_path, 
     }
     plant = assist_runs.Plant(url)
     plant.sign_in("ADMIN", "a-password")
-    outcomes, run = assist_runs.run_live((case,), plant, arranging=False)
+    outcomes, run = assist_runs.run_live((case,), plant, accounts={"admin": plant},
+                                        arranging=False)
     plant.close()
     page = assist_eval.report(outcomes, mode="live", model=run["model"], plant="doubled",
                               plant_commit="abc1234", run=run)
@@ -781,6 +896,76 @@ def test_a_scripted_run_cannot_be_asked_to_seed_master_data():
     assert "--seed-masterdata is for --live" in result.stdout
 
 
+def test_a_scripted_result_file_says_why_a_fixture_is_not_there_either(tmp_path):
+    """A "not arranged" row with an empty reason beside it is no better than a
+    silent skip, and a scripted run reports one now that a demo plant cannot
+    declare a writable setpoint."""
+    out = tmp_path / "scripted.md"
+    result = CliRunner().invoke(app, ["assist", "eval", "--scripted", "--quiet",
+                                      "--case", "admin-approves-an-adjustment",
+                                      "--out", str(out)])
+    assert result.exit_code == 0, result.output
+    page = out.read_text(encoding="utf-8")
+    assert "## Not arranged" in page
+    assert "adjustment:MIX01" in page
+    assert "writable with bounds" in page, "the row says nothing about why"
+
+
+# -------------------------------- the command's own refusals about accounts
+
+def _cli(monkeypatch, *args):
+    """`fsmes assist eval` as a person types it, with a key in the environment
+    so the run gets as far as the accounts."""
+    monkeypatch.setenv(assist_runs.KEY, "not called: every run below stops first")
+    for role in ("ADMIN", "OPERATOR", "SUPERVISOR", "AGENT"):
+        monkeypatch.delenv(f"{cli_module.PASSWORD_VAR}_{role}", raising=False)
+    return CliRunner().invoke(app, ["assist", "eval", "--live", "--plant",
+                                    "http://127.0.0.1:1", "--user", "ADMIN",
+                                    "--password", "a-password", *args])
+
+
+def test_a_live_run_with_no_account_named_refuses_rather_than_asking_as_one_person(
+        monkeypatch):
+    """The 2026-09-27 harness signed in once and asked every role's questions as
+    that person. Naming nobody now stops the run instead, before any money."""
+    out = _cli(monkeypatch)
+    assert out.exit_code == 2
+    assert "no role has anybody to ask as" in out.output
+    assert "--account admin=ADMIN" in out.output
+
+
+def test_an_account_the_command_cannot_read_is_said_before_anything_is_asked(
+        monkeypatch):
+    out = _cli(monkeypatch, "--account", "operator=SCOTT")
+    assert out.exit_code == 2
+    assert "No password for SCOTT (operator)" in out.output
+    assert f"{cli_module.PASSWORD_VAR}_OPERATOR" in out.output
+
+
+def test_an_account_written_the_wrong_way_round_is_refused_with_the_shape_it_wants(
+        monkeypatch):
+    out = _cli(monkeypatch, "--account", "SCOTT")
+    assert out.exit_code == 2
+    assert "<role>=<code>" in out.output
+
+
+def test_each_role_reads_its_password_from_its_own_variable(monkeypatch):
+    monkeypatch.setenv(f"{cli_module.PASSWORD_VAR}_OPERATOR", "an-operators-password")
+    assert cli_module._accounts(["operator=SCOTT"], user="ADMIN",
+                                password="an-administrators-password") == \
+        {"operator": ("SCOTT", "an-operators-password")}
+
+
+def test_the_account_that_arranges_the_plant_does_not_need_its_password_twice(
+        monkeypatch):
+    """`--user ADMIN --account admin=ADMIN` is one account, and nobody should
+    have to put one password in two variables."""
+    monkeypatch.delenv(f"{cli_module.PASSWORD_VAR}_ADMIN", raising=False)
+    assert cli_module._accounts(["admin=ADMIN"], user="admin",
+                                password="a-password") == \
+        {"admin": ("ADMIN", "a-password")}
+
+
 # ------------------------------------------------- the fixtures a case needs
 
 def test_every_requires_line_names_a_kind_the_fixtures_know():
@@ -809,6 +994,72 @@ def test_a_case_that_drafts_a_code_and_a_case_that_approves_one_never_name_the_s
     assert not drafts & arranged, f"a run arranges a code a case drafts: {drafts & arranged}"
 
 
+#: The tools a case uses to ask for a draft of the plant's own words.
+DRAFTING = ("draft_downtime_reason", "draft_nc_severity", "draft_instruction",
+            "draft_trigger")
+
+
+def test_no_draft_a_run_puts_up_reads_like_the_draft_a_case_asks_for():
+    """The 2026-09-27 collision, and its three siblings.
+
+    Asked to "draft a cosmetic severity", the live model answered *"there's
+    already a draft 'cosmetic' severity (code eval_cosmetic)"* - which was true,
+    and was the arrangement the same run had just put there. The prefix kept the
+    **codes** apart, which is all the sibling test above needs; a model reads the
+    **words**. `eval_changeover` beside "draft a downtime reason changeover" and
+    "Measuring brix" beside "draft an instruction WI-BRIX called Measuring brix"
+    were the same trap waiting for the roles that had not been run live yet.
+
+    So no code or name a drafting case asks for may appear inside a code or name
+    a run puts up, either way round.
+    """
+    asked: list[tuple[str, str]] = []
+    for case in SUITE:
+        if case.tool not in DRAFTING:
+            continue
+        name = case.fills.get("name") or case.fills.get("title") or ""
+        asked.append((str(case.args.get("code") or ""), str(name)))
+    assert len(asked) >= 5, f"only {len(asked)} drafting case(s) to check against"
+
+    for code, name in assist_fixtures.DRAFTS:
+        ours = f"{code} {name}".casefold()
+        for asked_code, asked_name in asked:
+            for theirs in (asked_code, asked_name):
+                if not theirs:
+                    continue
+                assert theirs.casefold() not in ours, \
+                    f"a run puts up {code} ({name!r}), which reads like {theirs!r}"
+                assert code.casefold() not in theirs.casefold(), \
+                    f"a case asks for {theirs!r}, which reads like {code}"
+
+
+def test_the_trigger_a_run_drafts_watches_something_no_case_asks_about():
+    """A code and a name are not all a model compares. The trigger a run put up
+    watched MIX01's temperature above 85, and the drafting case asks for a trigger
+    on MIX01's temperature above 85 - the same rule, one code apart."""
+    watched = {(str(case.fills.get("tag") or ""), str(case.args.get("threshold") or ""))
+               for case in SUITE if case.tool == "draft_trigger"}
+    assert watched, "no case drafts a trigger any more"
+    ours = (assist_fixtures.TRIGGER_TAG, str(assist_fixtures.TRIGGER_THRESHOLD))
+    assert ours not in watched
+    assert assist_fixtures.TRIGGER_TAG not in {tag for tag, _ in watched}
+
+
+def test_the_setting_a_run_writes_leaves_the_key_changeable():
+    """Both halves of one fixture. The trail has to carry the ten Scott says he
+    set, and the key has to read something else afterwards - otherwise "change
+    the default reporting window to 10hrs" is answered *"already set to 10.0
+    hours, nothing to change"*, which is what happened live on 2026-09-27."""
+    asked_for = {case.args.get("value") for case in SUITE
+                 if case.args.get("key") == "default_report_hours"}
+    assert asked_for, "no case asks for the reporting window any more"
+    for value in asked_for:
+        assert not assist_fixtures.same_value(value, assist_fixtures.SETTING_RESTS_AT), \
+            f"a case asks for {value!r} and the fixture leaves the key reading it"
+    assert assist_fixtures.same_value(assist_fixtures.SETTING_VALUE, "10.0"), \
+        "the case about the audit trail quotes 10.0 in Scott's own words"
+
+
 def test_the_drafts_a_run_puts_up_say_they_are_ours():
     """A person looking at their plant's vocabulary should not have to guess
     which rows a faithfulness run left behind."""
@@ -820,10 +1071,19 @@ def test_the_drafts_a_run_puts_up_say_they_are_ours():
 
 def test_the_scripted_run_arranges_every_fixture_the_suite_asks_for(scored):
     """The whole point, measured: on the plant this suite is written about,
-    nothing is left not arranged. A case that starts coming back not arranged
-    here is a fixture that stopped being made."""
+    everything a run may put there is there. A case that starts coming back not
+    arranged here is a fixture that stopped being made.
+
+    With one exception, and it is a fact about the plant rather than a gap here.
+    A recommended setpoint change needs a tag the plant's own manifest declares
+    writable with bounds - the first of the three guards between a recommendation
+    and a PLC - and a seeded demo plant has no manifest at all. So the one case
+    that needs a recommendation waiting is reported not arranged, with that
+    sentence beside it, rather than asked on a plant where nothing is waiting.
+    """
     unmade = {o.case.id: o.missing for o in scored if not o.arranged}
-    assert not unmade, unmade
+    assert set(unmade) == {"admin-approves-an-adjustment"}, unmade
+    assert unmade["admin-approves-an-adjustment"] == ("adjustment:MIX01",)
 
 
 def test_a_case_whose_fixture_is_missing_is_counted_apart_from_pass_and_fail():
@@ -1094,8 +1354,11 @@ def test_the_routing_nobody_asked_for_is_what_lets_the_agents_order_exist(
 
     assist_runs.seed_live(plant)
     after = assist_runs.arrange_live(url, on_behalf_of="ADMIN")
-    assert not after["refused"], after["refused"]
-    assert set(after["made"]) | set(after["already"]) == set(assist_runs.ARRANGES)
+    # Everything but the setpoint recommendation, which wants a writable tag no
+    # manifest here declares and is refused the same way before and after.
+    assert set(after["refused"]) == {f"adjustment:{assist_fixtures.MACHINE}"}
+    assert set(after["made"]) | set(after["already"]) == \
+        set(assist_runs.ARRANGES) - set(after["refused"])
     plant.close()
 
 
@@ -1123,13 +1386,19 @@ def test_a_live_run_puts_the_suites_fixtures_on_a_real_plant_over_its_own_http_a
     url, calls = plant_on_a_port
     out = assist_runs.arrange_live(url, on_behalf_of="ADMIN")
 
-    assert not out["refused"], out["refused"]
-    assert set(out["made"]) == set(assist_runs.ARRANGES)
+    # Everything but the recommendation, which needs a writable setpoint this
+    # plant's manifest does not declare - reported in the plant's own terms
+    # rather than raised, which is what lets a run say what it could not do.
+    assert set(out["refused"]) == {f"adjustment:{assist_fixtures.MACHINE}"}
+    assert "no writable setpoint" in out["refused"][f"adjustment:{assist_fixtures.MACHINE}"]
+    assert set(out["made"]) == set(assist_runs.ARRANGES) - set(out["refused"])
     assert any(method == "POST" for method, _ in calls), "nothing was written over the wire"
 
     # And the fixtures really are on the plant, asked over the same socket.
     view = assist_runs.live_view(url)
     for requirement in assist_runs.ARRANGES:
+        if requirement in out["refused"]:
+            continue
         assert view.has(requirement), requirement
 
 
@@ -1143,7 +1412,7 @@ def test_arranging_a_plant_that_is_already_arranged_creates_nothing_twice(
 
     url, calls = plant_on_a_port
     first = assist_runs.arrange_live(url)
-    assert first["made"] and not first["refused"]
+    assert first["made"]
 
     before = mcp_server.quality(assist_runs.LIVE_PLANT)["checks"]["checks"]
     work_before = len(mcp_server.maintenance_work(
@@ -1152,8 +1421,8 @@ def test_arranging_a_plant_that_is_already_arranged_creates_nothing_twice(
 
     second = assist_runs.arrange_live(url)
     assert second["made"] == [], f"a second run made {second['made']}"
-    assert set(second["already"]) == set(assist_runs.ARRANGES)
-    assert not second["refused"]
+    assert set(second["already"]) == set(assist_runs.ARRANGES) - set(first["refused"])
+    assert set(second["refused"]) == set(first["refused"])
     assert not [path for method, path in calls if method == "POST"
                 and path != "/auth/login"], "a second run wrote to the plant"
 

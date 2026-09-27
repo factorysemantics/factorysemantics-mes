@@ -285,6 +285,7 @@ class Plant:
         import httpx
 
         self.base_url = base_url.rstrip("/")
+        self.code: str | None = None
         self.http = client if client is not None else httpx.Client(
             base_url=self.base_url, timeout=timeout)
 
@@ -317,6 +318,9 @@ class Plant:
     def sign_in(self, code: str, password: str) -> None:
         out = self._json("POST", "/auth/login", json={"code": code, "password": password})
         self.http.headers["Authorization"] = f"Bearer {out['token']}"
+        # Who is typing. Carried so a result file can say which account answered
+        # for which role rather than leaving a reader to assume.
+        self.code = code
 
     def identity(self) -> dict:
         """What the plant says about itself. It does not report the commit it is
@@ -417,10 +421,18 @@ def live_view(base_url: str) -> Plantview:
 
 
 def run_live(cases: tuple[Case, ...], plant: Plant, *,
+             accounts: dict[str, Plant] | None = None,
              max_usd: float = DEFAULT_MAX_USD,
              on_case=None, arranging: bool = True, seeding: bool = False,
              on_behalf_of: str = "ADMIN") -> tuple[tuple[Outcome, ...], dict]:
     """The suite against the real model, on a running plant.
+
+    **Each role is asked as an account that holds it.** `accounts` maps a role
+    to a `Plant` already signed in as that account, and a role with no account
+    is reported *no account* - not asked, not scored, not paid for, and above all
+    not asked as somebody else. Until 2026-09-27 one `--user` answered for every
+    role, which made the operator's and the agent's numbers meaningless: their
+    refusal cases cannot refuse when the administrator is typing.
 
     The plant is arranged first unless `arranging` is off, and every case the
     plant still has not got what for is reported *not arranged* - not asked, not
@@ -434,7 +446,11 @@ def run_live(cases: tuple[Case, ...], plant: Plant, *,
     come before the arrangement, not after - `WO-EVAL-1` is an order for
     `FG-COLA` routed over `MIX01`, and the non-conformance is opened by a brix
     check against a specification that has to exist to fail against.
+
+    `plant` is the account the arrangement and the seeding are written for and
+    whose budget the run reads; the spend is the plant's own, whoever asked.
     """
+    accounts = {} if accounts is None else {r.lower(): c for r, c in accounts.items()}
     started = plant.brain()
     if not started.get("available"):
         raise LiveRefused(f"this plant's cloud brain is not available: "
@@ -453,6 +469,16 @@ def run_live(cases: tuple[Case, ...], plant: Plant, *,
     not_run: list[Case] = []
     spent = 0.0
     for case in cases:
+        asking = accounts.get(case.role.lower())
+        if asking is None:
+            outcomes.append(score(case, Turn(
+                kind="not_asked", from_model=True,
+                say=f"not asked: this plant has no account holding the {case.role} "
+                    f"role, and this run does not ask one person's questions as "
+                    f"another"), no_account=True))
+            if on_case is not None:
+                on_case(outcomes[-1])
+            continue
         if case.id in unmet:
             short = ", ".join(unmet[case.id])
             outcomes.append(score(case, Turn(kind="not_asked", from_model=True,
@@ -468,15 +494,15 @@ def run_live(cases: tuple[Case, ...], plant: Plant, *,
         session_id: str | None = None
         try:
             if case.over_proposal and case.before_request:
-                first = plant.ask(case.before_request, screen=case.screen)
+                first = asking.ask(case.before_request, screen=case.screen)
                 session_id = first.get("session")
-            reply = plant.ask(case.request, screen=case.screen, session=session_id)
+            reply = asking.ask(case.request, screen=case.screen, session=session_id)
             session_id = reply.get("session") or session_id
             turn = turn_from_reply(reply, from_model=True)
             for proposal in reply.get("proposals") or []:
                 if session_id:
                     with contextlib.suppress(LiveRefused):
-                        plant.decline(session_id, proposal["id"])
+                        asking.decline(session_id, proposal["id"])
         except LiveRefused as exc:
             turn = Turn(kind="unavailable", say=str(exc), from_model=True)
         after = plant.brain()
@@ -488,6 +514,7 @@ def run_live(cases: tuple[Case, ...], plant: Plant, *,
         if on_case is not None:
             on_case(outcome)
     finished = plant.brain()
+    roles = {case.role.lower() for case in cases}
     run = {"model": finished.get("model"), "usd": round(_spent(finished) - spend_at_start, 6),
            "tokens": _token_delta(tokens_at_start, _tokens_of(finished)),
            "not_run": tuple(not_run), "max_usd": max_usd,
@@ -498,5 +525,10 @@ def run_live(cases: tuple[Case, ...], plant: Plant, *,
            # and "seeding was never asked for" are different facts about a
            # plant and the result file has to be able to tell them apart.
            "seeding": seeding, "seeded": seeded,
+           # Who answered for each role, and which roles nobody could. Both go in
+           # the result file: a per-role number is about whoever was typing.
+           "asked_as": {role: client.code for role, client in accounts.items()
+                        if role in roles},
+           "no_account": tuple(sorted(roles - set(accounts))),
            "why_not": {r: why_not(r) for reqs in unmet.values() for r in reqs}}
     return tuple(outcomes), run

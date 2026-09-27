@@ -71,13 +71,41 @@ It is deterministic, needs no key and no network, costs nothing, and takes about
 two seconds. `tests/test_assist_suite_scripted.py` runs it, so the required
 checks carry it on every pull request.
 
-### `fsmes assist eval --live --plant <url> --user <code>`
+### `fsmes assist eval --live --plant <url> --user <code> --account <role>=<code>`
 
 Asks: **does the model choose right?**
 
 The real model, on a running plant, through `POST /assist/agent` — the same
 endpoint the assistant panel posts to, so what is scored is what a person gets.
 Every proposal it opens is **declined**, so a scored plant is an unchanged plant.
+
+**One account per role.** `--account operator=SCOTT` says which account asks the
+operator's cases; repeat it per role. Each one's password comes from
+`MES_ASSIST_EVAL_PASSWORD_<ROLE>` — `MES_ASSIST_EVAL_PASSWORD_OPERATOR` — or from
+`--password` when the code is the same as `--user`, so nobody has to put one
+password in two variables. A role with **no account** is reported as such: not
+asked, not scored, not paid for, and listed in the result file by name.
+
+```bash
+export MES_ASSIST_EVAL_PASSWORD=…              # ADMIN's, for --user
+export MES_ASSIST_EVAL_PASSWORD_OPERATOR=…     # SCOTT's
+fsmes assist eval --live --plant http://127.0.0.1:8010 --user ADMIN \
+  --account admin=ADMIN --account operator=SCOTT --plant-commit "$(git rev-parse --short HEAD)"
+```
+
+`--user` is the account the arrangement is written for — its name goes on every
+audited row — and whose budget the run reads. It is not a fallback for a role
+nobody was named for.
+
+Until 2026-09-27 there was one `--user` and it answered for everybody. A run of
+the operator suite as the administrator measures the administrator: the
+operator's refusal cases **cannot refuse** when somebody holding every capability
+is typing, so they passed for the wrong reason and the number meant nothing. The
+suite's four roles need four accounts to be scored honestly, and a plant that has
+three of them gets three roles scored and the fourth reported as having nobody.
+Nothing here creates an account: that is `create_user` on the Administration
+screen, which an administrator does. If a plant is to be scored as a supervisor,
+its pack should carry one.
 
 It costs money. It stops at `--max-usd` (default $1.00) and says which cases it
 did not run rather than reporting a short suite as a whole one; the month's cap
@@ -127,21 +155,29 @@ with both names on it.
 
 | What | Code | Notes |
 |---|---|---|
-| A setting put in force | `[process] default_report_hours` → `10.0` | So "who changed this, and when?" has something to find. |
+| A setting put in force twice | `[process] default_report_hours` → `10.0`, then `8.0` | So "who changed this, and when?" has something to find, **and** so "change the reporting window to 10hrs" is still a change. Two audit rows, one fixture. |
 | A released work order | `WO-EVAL-1` | 1000 of `FG-COLA`. |
 | A non-conformance | `NC-00001` | Opened by the MES itself, from a brix check recorded at 20.0 against a 9.5–11.5 specification. |
 | A corrective maintenance order | `CM-00001` | On `MIX01`, summary *Infeed belt slipping (assist eval fixture)*. |
-| A **draft** work instruction | `WI-EVAL-1` | Unapproved. |
-| A **draft** trigger | `TR-EVAL-1` | Unapproved. |
-| A **draft** downtime reason | `eval_changeover` | Unapproved: nothing labels a stop with it. |
-| A **draft** non-conformance severity | `eval_cosmetic` | Unapproved: nothing is graded with it. |
+| A **draft** work instruction | `WI-EVAL-1` | Unapproved. *Logging a shift handover*. |
+| A **draft** trigger | `TR-EVAL-1` | Unapproved. `MIX01` pressure above 6.5. |
+| A **draft** downtime reason | `eval_awaiting_parts` | Unapproved: nothing labels a stop with it. |
+| A **draft** non-conformance severity | `eval_scuff` | Unapproved: nothing is graded with it. |
+| A **recommended** setpoint change | numbered by the plant | Unapproved: an engineer decides it and the agent never does. Only where the plant's tag manifest declares a writable setpoint with bounds on `MIX01` — a demo plant declares none, and then the case that needs one is reported *not arranged*. |
 
-Four of those eight are **drafts**, and a draft changes nobody's screen until
-somebody signs it. Codes carry `EVAL-`/`eval_` wherever the code is ours to
-choose, so what a run left behind can be told from the plant's own work at a
-glance. The plant numbers the non-conformance and the maintenance order itself;
-if it numbers them something else, the cases that name them are reported not
-arranged with the code it did use.
+Five of those are **drafts**, and a draft changes nobody's screen until somebody
+signs it. Codes carry `EVAL-`/`eval_` wherever the code is ours to choose, so
+what a run left behind can be told from the plant's own work at a glance. The
+plant numbers the non-conformance, the maintenance order and the recommendation
+itself; if it numbers the first two something else, the cases that name them are
+reported not arranged with the code it did use.
+
+**And each fixture is about something no case asks for.** The prefix keeps the
+codes apart; the words have to be kept apart too. A run that drafted
+`eval_cosmetic` and then asked the model to "draft a cosmetic severity" was
+answered *"there's already a draft 'cosmetic' severity"* — correct, and scored as
+a failure on 2026-09-27. Two tests hold that line now, and the same rule is why
+the reporting window ends a run at 8.0 rather than at the 10.0 a case asks for.
 
 ### Never arranged by the agent
 
@@ -229,16 +265,19 @@ to measure, and the tidying would not be in the trail.
 
 What a person does instead, on a plant they want back:
 
-- the four **drafts** — retire them on their own screens (`/dashboard/reasons`,
+- the **drafts** — retire them on their own screens (`/dashboard/reasons`,
   `/dashboard/severities`, `/dashboard/instructions`, `/dashboard/triggers`).
   They were never in force, so retiring one changes nothing that was running.
+- the **recommended setpoint change**, if the plant could carry one — reject it
+  on `/dashboard/adjustments`. Nothing was ever written to the machine: a
+  recommendation waits for a person, and rejecting one is the person.
 - `WO-EVAL-1` — cancel or close it.
 - `CM-00001` — complete it, or leave it: it is a corrective job on a mixer with
   the words *assist eval fixture* in its summary.
 - `NC-00001` — disposition and close it. It is a real non-conformance about a
   real recorded check, and it stays in the record, as every non-conformance does.
-- `default_report_hours` — set it back to what it was. `setting_changes` says
-  what that was.
+- `default_report_hours` — a run leaves it at the product's default of 8.0. Set
+  it back to what your plant had; `setting_changes` says what that was.
 
 And about the **master data**, honestly: **the API has no way to remove any of
 it.** There is no `DELETE` and no `PATCH` on `/masterdata/equipment`,
@@ -266,12 +305,16 @@ writes `docs/ai/calibration/<date>/`:
 
 - the mode, the model, the plant, the plant's commit and the suite's commit;
 - what it cost in dollars and in tokens;
-- a pass rate per role;
+- a pass rate per role, **and which account answered for each** — a per-role
+  number is about whoever was typing;
 - every required case that did not pass, with the expectation, **what it did
   instead**, and a sentence per thing that was wrong;
 - every case marked `not_yet`, and which handoff it is waiting on;
 - every case that was **not arranged**, what the plant has not got, and why —
   followed by what the run put on the plant, what was already there, and
+  anything it could not arrange, in the plant's own words;
+- every case that was **not asked at all** because this plant has no account
+  holding the role.
   anything it could not arrange, in the plant's own words. That last part comes
   in two halves, because two different accounts wrote them: what the **agent**
   arranged through the assistant's tools, and what **master data** the person
@@ -329,11 +372,16 @@ than the thing the person asked for.
 8. Say what the plant has to have for the sentence to mean anything, in
    `requires`. The kinds live in `fsmes.lab.assist_fixtures`, and a typo in one
    fails the build rather than quietly retiring the case.
+9. Check the case does not describe the arrangement it will run on. A request to
+   draft the word a run drafts, or to set the value a run sets, is a request the
+   model is right to answer *that is already there* — and five of the six
+   failures in the 2026-09-27 live run were exactly that. Two tests check the
+   codes and the words; the values are yours to keep apart.
 
 The plant every case is asked about is the demo plant plus what
-`fsmes.lab.assist_fixtures.arrange` puts on it — the eight rows in *What a live
-run puts on the plant* above. A scripted run arranges the same plant the same
-way, so the arrangement is exercised on every pull request rather than only when
+`fsmes.lab.assist_fixtures.arrange` puts on it — the rows in *What a live run
+puts on the plant* above. A scripted run arranges the same plant the same way,
+so the arrangement is exercised on every pull request rather than only when
 somebody spends money.
 
 ## Why this is worth shipping in the open

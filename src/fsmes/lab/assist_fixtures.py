@@ -23,10 +23,12 @@ deployment and holds an agent deployment's capabilities, so the line falls
 where decision 0035 puts it:
 
 * **Arranged**: a work order, the non-conformance a failed check opens, a
-  corrective maintenance order, one setting written so the audit trail has a
-  row in it, and four drafts - an instruction, a trigger, a downtime reason and
-  a non-conformance severity - none of which changes anybody's screen until
-  somebody signs.
+  corrective maintenance order, one setting taken to ten and put back to eight
+  so the audit trail has a row in it, and five drafts - an instruction, a
+  trigger, a downtime reason, a non-conformance severity and a recommended
+  setpoint change - none of which changes anybody's screen until somebody
+  signs. Every one of them is about something no drafting case asks for, so
+  that a case and the arrangement it runs on never describe the same thing.
 * **Never arranged**: master data. Materials, equipment, routings, lots and
   specifications are the plant's own, and an agent deployment does not define
   them. A plant without `FG-COLA` and `MIX01` gets those cases reported *not
@@ -48,7 +50,22 @@ from typing import Any
 #: answer to find. Engineering's reporting window, because that is the one
 #: Scott changed by hand on 2026-09-26 and then asked the assistant about.
 SETTING = "engineering/default_report_hours"
+
+#: The value the audit trail has to carry: the 10.0 he says he set, because the
+#: case that asks about it quotes that number.
 SETTING_VALUE = "10.0"
+
+#: And what the key is left reading afterwards - the product's own default.
+#:
+#: Both halves, because one run has to serve two of his sentences and they pull
+#: opposite ways. "I just changed it to 10.0 hrs" only means something on a
+#: plant whose trail says somebody did; "I want to change the default reporting
+#: window to 10hrs" only means something on a plant where ten is a change. Live
+#: on 2026-09-27 the arrangement wrote 10.0 and stopped, and the model answered
+#: the second one with *"already set to 10.0 hours - nothing to change"*, which
+#: was right and was scored as a failure. So the fixture is the whole story:
+#: somebody took it to ten, and it is back at eight.
+SETTING_RESTS_AT = "8.0"
 
 #: The order, the machine and the material the suite's sentences name. The
 #: first is ours and says so; the last two are the plant's own.
@@ -59,11 +76,33 @@ MACHINE = "MIX01"
 
 #: The drafts a run puts up for the cases that ask for a signature. Their codes
 #: are ours to choose, so they carry the prefix: nobody should have to guess
-#: whether `eval_changeover` is their plant's vocabulary or ours.
+#: whether `eval_awaiting_parts` is their plant's vocabulary or ours.
+#:
+#: And each one is about something no drafting case asks for. The prefix kept the
+#: *codes* apart, which is what the ratchet needed; it did not keep the *words*
+#: apart, which is what a model reads. Live on 2026-09-27, asked to "draft a
+#: cosmetic severity", the model answered *"there's already a draft 'cosmetic'
+#: severity (code eval_cosmetic)"* - true, and a failure the suite had arranged
+#: for itself. `eval_changeover` beside "draft a downtime reason changeover",
+#: "Measuring brix" beside "draft a work instruction WI-BRIX called Measuring
+#: brix", and a trigger on MIX01's temperature above 85 beside "draft a trigger
+#: TR-HOT: if MIX01 temp goes above 85" were the same trap, three more times.
 INSTRUCTION = "WI-EVAL-1"
+INSTRUCTION_TITLE = "Logging a shift handover (assist eval fixture)"
 TRIGGER = "TR-EVAL-1"
-REASON = "eval_changeover"
-SEVERITY = "eval_cosmetic"
+TRIGGER_NAME = "Feed pump pressure high (assist eval fixture)"
+TRIGGER_TAG = "pressure"
+TRIGGER_THRESHOLD = 6.5
+REASON = "eval_awaiting_parts"
+REASON_NAME = "Awaiting parts (assist eval fixture)"
+SEVERITY = "eval_scuff"
+SEVERITY_NAME = "Scuff (assist eval fixture)"
+
+#: Every draft a run puts up, as code and the words a person would read. The
+#: suite's own test walks this against every drafting case, so a fixture that
+#: starts reading like the draft a case asks for is a red build.
+DRAFTS = ((INSTRUCTION, INSTRUCTION_TITLE), (TRIGGER, TRIGGER_NAME),
+          (REASON, REASON_NAME), (SEVERITY, SEVERITY_NAME))
 
 #: Why a corrective order was raised. Also how a second run recognises the
 #: first run's work, so the plant does not collect one of these per run.
@@ -106,6 +145,19 @@ def _tools():
     from fsmes import mcp_server
 
     return mcp_server
+
+
+def same_value(written: Any, wanted: Any) -> bool:
+    """`"8"`, `"8.0"` and `8.0` are one value.
+
+    The scorer's own comparison, borrowed rather than written again: a setting is
+    text by the time a plant reads one, how it is written is the pack formatter's
+    business, and two functions disagreeing about whether eight is eight is one
+    of the ways a fixture quietly stops being made.
+    """
+    from fsmes.services.assist_eval import same_value as compare
+
+    return compare(wanted, written)
 
 
 def _ok(payload: Any) -> dict:
@@ -151,9 +203,11 @@ class Kind:
     here: Callable[[str, str], bool]
     #: Put it there, as AGENT on behalf of `actor`. None when a run may not.
     make: Callable[[str, str, str], None] | None = None
-    #: When there is no `make`, the sentence that says why - printed beside
-    #: every case it stops, because "not arranged" with no reason is no better
-    #: than a silent skip.
+    #: Why this may not, or could not, be put there - printed beside every case
+    #: it stops, because "not arranged" with no reason is no better than a
+    #: silent skip. Required where there is no `make`; also worth writing for a
+    #: kind a run tries and a particular plant cannot carry, which is what
+    #: `why_not` prints for it.
     cannot: str = ""
 
 
@@ -248,18 +302,43 @@ def _make_maintenance(plant: str, code: str, actor: str) -> None:
         on_behalf_of=actor))
 
 
+def _value_now(plant: str, domain: str, key: str) -> Any:
+    return (_ok(_tools().plant_settings(plant, domain=domain, key=key))
+            .get("setting") or {}).get("value")
+
+
 def _has_setting(plant: str, code: str) -> bool:
-    """`setting:engineering/default_report_hours` - a *change* in the trail, not
-    a value. "Who changed this?" is only a question on a plant where somebody
-    did."""
-    _domain, _, key = code.partition("/")
-    return bool(_rows(_tools().setting_changes(plant, key=key, limit=5), "changes"))
+    """`setting:engineering/default_report_hours` - both halves of the story:
+    the trail says somebody took it to 10.0, and it reads 8.0 now.
+
+    A change in the trail is what makes "who changed this?" a question. The
+    value is what makes "change it to ten" a change - and a plant sitting at ten
+    is a plant where the honest answer is *nothing to change*, which is what the
+    live run was scored down for on 2026-09-27.
+    """
+    domain, _, key = code.partition("/")
+    changes = _rows(_tools().setting_changes(plant, key=key, limit=20), "changes")
+    return (any(same_value(row.get("to"), SETTING_VALUE) for row in changes)
+            and same_value(_value_now(plant, domain, key), SETTING_RESTS_AT))
 
 
 def _make_setting(plant: str, code: str, actor: str) -> None:
+    """Take it to ten, then put it back to eight.
+
+    Two writes, and two audit rows: the first is the fixture the cases about the
+    trail read, the second is what leaves the key changeable. A run that finds
+    the ten already recorded writes it no second time, so pointing this at the
+    same plant twice adds nothing.
+    """
     domain, _, key = code.partition("/")
-    _ok(_tools().write_plant_setting(plant, domain=domain, key=key, value=SETTING_VALUE,
-                                     dry_run=False, on_behalf_of=actor))
+    changes = _rows(_tools().setting_changes(plant, key=key, limit=20), "changes")
+    if not any(same_value(row.get("to"), SETTING_VALUE) for row in changes):
+        _ok(_tools().write_plant_setting(plant, domain=domain, key=key, value=SETTING_VALUE,
+                                        dry_run=False, on_behalf_of=actor))
+    if not same_value(_value_now(plant, domain, key), SETTING_RESTS_AT):
+        _ok(_tools().write_plant_setting(plant, domain=domain, key=key,
+                                        value=SETTING_RESTS_AT, dry_run=False,
+                                        on_behalf_of=actor))
 
 
 def _has_instruction(plant: str, code: str) -> bool:
@@ -269,8 +348,8 @@ def _has_instruction(plant: str, code: str) -> bool:
 
 def _make_instruction(plant: str, code: str, actor: str) -> None:
     _ok(_tools().draft_instruction(
-        plant, code=code, title="Measuring brix",
-        body="Use the refractometer at the sample port.",
+        plant, code=code, title=INSTRUCTION_TITLE,
+        body="Write down what the line is doing and what the next shift should watch.",
         material=MATERIAL, characteristic=CHARACTERISTIC,
         dry_run=False, on_behalf_of=actor))
 
@@ -282,8 +361,8 @@ def _has_trigger(plant: str, code: str) -> bool:
 
 def _make_trigger(plant: str, code: str, actor: str) -> None:
     _ok(_tools().draft_trigger(
-        plant, code=code, name="Mixer running hot", tag="temp", condition="above",
-        threshold=85.0, machine=MACHINE, action="log_event",
+        plant, code=code, name=TRIGGER_NAME, tag=TRIGGER_TAG, condition="above",
+        threshold=TRIGGER_THRESHOLD, machine=MACHINE, action="log_event",
         dry_run=False, on_behalf_of=actor))
 
 
@@ -294,9 +373,10 @@ def _has_reason(plant: str, code: str) -> bool:
 
 def _make_reason(plant: str, code: str, actor: str) -> None:
     _ok(_tools().draft_downtime_reason(
-        plant, code=code, name="Changeover (assist eval fixture)",
-        description="A planned product change. Drafted by a faithfulness run; "
-                    "nothing labels a stop with it until somebody signs it.",
+        plant, code=code, name=REASON_NAME,
+        description="The line is stopped waiting on a spare part. Drafted by a "
+                    "faithfulness run; nothing labels a stop with it until somebody "
+                    "signs it.",
         dry_run=False, on_behalf_of=actor))
 
 
@@ -307,9 +387,72 @@ def _has_severity(plant: str, code: str) -> bool:
 
 def _make_severity(plant: str, code: str, actor: str) -> None:
     _ok(_tools().draft_nc_severity(
-        plant, code=code, name="Cosmetic (assist eval fixture)",
-        description="Visible, not functional. Drafted by a faithfulness run; "
-                    "nothing is graded with it until somebody signs it.",
+        plant, code=code, name=SEVERITY_NAME,
+        description="A light surface mark on the packaging. Drafted by a faithfulness "
+                    "run; nothing is graded with it until somebody signs it.",
+        dry_run=False, on_behalf_of=actor))
+
+
+#: Why a setpoint change was recommended, and how a second run recognises the
+#: first run's work: the plant numbers a recommendation itself, like the
+#: non-conformance and the corrective order.
+#: Why a plant may not be able to carry one, in the words a result file prints.
+_NO_WRITABLE_SETPOINT = (
+    "a recommended setpoint change names a tag this plant's own manifest declares "
+    "writable with bounds - the first of the three guards between a recommendation "
+    "and a PLC - and nothing here writes a plant's manifest, so a plant that declares "
+    "none has this declared rather than invented for it")
+
+ADJUSTMENT_RATIONALE = ("Brix has been drifting high while this setpoint sat where it is "
+                        "(assist eval fixture)")
+
+
+def _open_adjustments(plant: str, machine: str) -> list[dict]:
+    """The recommendations waiting for somebody on this machine. Only `proposed`
+    ones: an approved or written one has had its decision made, and "approve the
+    setpoint change on MIX01" is not a question about one of those."""
+    rows = _rows(_ok(_tools().adjustments(plant, status="proposed", limit=50)),
+                 "adjustments")
+    return [row for row in rows if row.get("equipment") == machine]
+
+
+def _has_adjustment(plant: str, code: str) -> bool:
+    """`adjustment:MIX01` - a setpoint change waiting for a decision on that
+    machine. The code here is the machine, not the recommendation: the plant
+    numbers recommendations itself, and what the case's sentence names is the
+    machine."""
+    return bool(_open_adjustments(plant, code))
+
+
+def _make_adjustment(plant: str, code: str, actor: str) -> None:
+    """Recommend a setpoint change on the machine, so that "approve the setpoint
+    change on MIX01" is a question this plant can be asked.
+
+    A recommendation is the agent's own half of the write-back story and a draft
+    like the other four: an engineer decides it, the agent never does (decision
+    0035). It needs a tag this plant's manifest declares writable, with bounds -
+    three guards stand between a recommendation and a PLC, and the first of them
+    is that manifest. A plant that declares no writable setpoint on this machine
+    is told so, and the cases that name one are reported not arranged rather
+    than scored against a model that correctly said nothing is waiting.
+    """
+    if _open_adjustments(plant, code):
+        return
+    writable = [row for row in _rows(_ok(_tools().browse_tags(
+        plant, machine=code, writable_only=True)), "rows")
+        if row.get("min") is not None and row.get("max") is not None]
+    if not writable:
+        raise Unarrangeable(f"{code} declares no writable setpoint with bounds: "
+                            f"{_NO_WRITABLE_SETPOINT}")
+    tag = writable[0]
+    # Half way between the declared bounds: inside them whatever they are, and
+    # not a value chosen here for a process nobody in this run has seen.
+    value = (float(tag["min"]) + float(tag["max"])) / 2
+    _ok(_tools().propose_adjustment(
+        plant, machine=code, tag=tag["tag"], value=value,
+        rationale=ADJUSTMENT_RATIONALE,
+        evidence={"note": "arranged by fsmes assist eval so that the approval cases "
+                          "have something to approve"},
         dry_run=False, on_behalf_of=actor))
 
 
@@ -327,6 +470,8 @@ KINDS: dict[str, Kind] = {k.name: k for k in (
     Kind("trigger", _has_trigger, _make_trigger),
     Kind("reason", _has_reason, _make_reason),
     Kind("severity", _has_severity, _make_severity),
+    Kind("adjustment", _has_adjustment, _make_adjustment,
+         cannot=_NO_WRITABLE_SETPOINT),
 )}
 
 
@@ -350,6 +495,7 @@ ARRANGES = (
     f"trigger:{TRIGGER}",
     f"reason:{REASON}",
     f"severity:{SEVERITY}",
+    f"adjustment:{MACHINE}",
 )
 
 
