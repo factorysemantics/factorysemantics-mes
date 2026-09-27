@@ -651,6 +651,15 @@ def plan_for(case: Case) -> tuple[dict, ...]:
         # it is about to call. Those are two of the three rules the prompt gives
         # the model, and `tests/test_the_assistant_proposes_rather_than_asking.py`
         # holds every reply this stand-in produces to them.
+        #
+        # And an optional argument is not a question, which is the same rule met
+        # from the other side. `call` is what the sentence named plus what it
+        # implied, and nothing else: an optional argument the person did not give
+        # - `set_machine_state(reason=None)`, live 2026-09-27 11:2x - is absent
+        # from the card and absent from the sentence, rather than asked for in
+        # front of it. `tests/test_the_assistant_reads_before_it_says_no.py`
+        # holds every reply to that one, and holds every `propose` case to
+        # naming what its tool requires, which is what makes the rule fair.
         return (
             *(_read_step(tool, case) for tool in case.reads),
             {"propose": case.tool, "args": call,
@@ -661,6 +670,13 @@ def plan_for(case: Case) -> tuple[dict, ...]:
             {"propose": case.tool, "args": call},
             {"say": "That one is not yours to do here."},
         )
+    # Read before you deny, and before you answer at all: an `answer` or `read`
+    # case reads first and speaks afterwards, and the sentence it speaks reports
+    # what came back rather than what the stand-in believes. That is the third
+    # rule mirrored - live on 2026-09-27 the assistant said `nc_code_prefix`
+    # "isn't configurable" and then that it "isn't a real control", with no tool
+    # call behind either, and both were about a Quality setting this product
+    # ships. The same test file holds every reply this stand-in produces to it.
     reads = case.reads or case.reads_any[:1]
     return (*(_read_step(tool, case) for tool in reads),
             {"say": "Answered from what I read."})
