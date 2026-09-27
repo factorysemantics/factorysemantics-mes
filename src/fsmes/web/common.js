@@ -175,9 +175,14 @@
   };
 
   const inPlantZone = (extra) => (plantZone ? { ...extra, timeZone: plantZone } : extra);
+  /* The API sends two shapes: a naive stamp out of the database, which is UTC
+     and must be told so, and an offset-bearing one out of `datetime.isoformat`
+     (`agent.status()`'s `last_used`). Appending "Z" to the second made
+     "…+00:00Z", and the cell read "Invalid Date" where a date belonged. */
   const asDate = (ts) => {
     const s = String(ts);
-    return new Date(s + (s.endsWith("Z") ? "" : "Z"));
+    const zoned = s.endsWith("Z") || /[+-]\d\d:?\d\d$/.test(s);
+    return new Date(s + (zoned ? "" : "Z"));
   };
 
   FS.fmt = {

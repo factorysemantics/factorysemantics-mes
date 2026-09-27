@@ -2710,13 +2710,24 @@ def design_backlog(
 
 @app.command("ai-status")
 def ai_status_cmd() -> None:
-    """What the local AI layer is doing, and whether anyone would notice it
-    stop. The same facts the Ops screen's Local AI panel shows."""
-    from fsmes.services import ai_status
+    """Which brains are on and what they cost. The same facts the AI screen's
+    Status tab shows."""
+    from fsmes.services import agent, ai_status
+
+    # The cloud brain first, and before the local layer's early return: it is
+    # not part of the local layer, and printing it only when `MES_LOCAL_AI` is
+    # on hid this plant's whole bill behind a setting about a different model.
+    on, why = agent.available()
+    last = agent.last_used()
+    typer.echo(f"cloud brain   {'on' if on else 'OFF'}  {agent.MODEL}  "
+               f"${agent.spend_this_month():.2f} of ${agent.monthly_cap_usd():.2f} this month")
+    typer.echo(f"  {'':<12}last used {last.isoformat(timespec='seconds') if last else 'never'}"
+               + ("" if on else f"; off because {why}"))
 
     out = ai_status.status()
     if not out.get("enabled"):
-        typer.echo("Local AI is disabled on this machine (MES_LOCAL_AI=0).")
+        typer.echo("local AI      OFF on this machine (MES_LOCAL_AI=0) - no local "
+                   "model is asked, and the jobs behind it do not run here.")
         return
 
     o = out["ollama"]

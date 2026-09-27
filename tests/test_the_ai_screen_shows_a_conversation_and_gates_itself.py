@@ -289,13 +289,15 @@ def test_the_settings_tab_says_the_horizon_and_lets_an_admin_move_it(admin, plan
 
 
 def test_the_status_tab_says_which_brains_are_on(admin, plant):
+    """The cloud brain is on this table whatever the local AI setting says -
+    `test_the_ai_tab_says_what_the_assistant_costs_without_local_ai.py` is the
+    file that drives both settings; this one only pins that the tab this
+    module opens draws it at all."""
     page = _open(admin, plant)
     page.locator('.tab[data-tab="status"]').click()
-    page.wait_for_selector("#status-table tbody tr, #status-off:not(.hidden)",
-                           timeout=15000)
-    body = page.locator("#status-table tbody").inner_text()
-    if body.strip():
-        assert "Floor agent" in body
+    page.wait_for_function(
+        "() => document.querySelector('#status-table tbody')"
+        "        .innerText.includes('Floor agent (cloud)')", timeout=15000)
     page.close()
 
 

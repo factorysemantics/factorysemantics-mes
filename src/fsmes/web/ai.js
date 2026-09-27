@@ -244,20 +244,25 @@ function drawProposal(proposal) {
 
 /* ---------- status ---------- */
 
+/* Two brains, two endpoints, and the second must not go missing with the
+   first.
+
+   `/ai` is the *local* layer on this box - Ollama, the GPU, and the jobs the
+   local model has. `/assist/agent/status` is the cloud brain this plant's
+   assistant actually runs on, with its spend against its cap. Until
+   2026-09-27 this tab read only the first, and the cloud brain's spend was a
+   note inside one of the local rows: a plant with `MES_LOCAL_AI=0` got the
+   empty payload and no number at all, losing the one figure a plant
+   administrator most needs from this tab to a setting that has nothing to do
+   with it.
+
+   So both are read, side by side, and neither failing takes the other with
+   it: a call that does not answer reports *unknown*, which is not zero. */
 async function loadStatus() {
-  const out = await api("/ai");
-  const off = $("#status-off");
-  if (!out.enabled) {
-    $("#status-head").textContent = "";
-    $("#status-table tbody").textContent = "";
-    $("#status-budget").textContent = "";
-    off.textContent = "The local AI layer is switched off on this machine "
-      + "(MES_LOCAL_AI=0). The cloud brain, if this plant has a key, answers "
-      + "the assistant panel regardless.";
-    off.classList.remove("hidden");
-    return;
-  }
-  off.classList.add("hidden");
+  const [local, cloud] = await Promise.all([
+    api("/ai").catch((err) => ({ unreadable: err.message || String(err) })),
+    api("/assist/agent/status").catch((err) => ({ unreadable: err.message || String(err) })),
+  ]);
 
   const head = $("#status-head");
   head.textContent = "";
@@ -267,36 +272,122 @@ async function loadStatus() {
     box.appendChild(el("span", "v", value));
     head.appendChild(box);
   };
-  if (out.ollama.reachable) {
-    fact("Model server", "up");
-    fact("Loaded now",
-         out.ollama.loaded.map((m) => m.model).join(", ") || "nothing loaded");
+
+  /* The cloud brain first, and whatever the local layer is doing. */
+  if (cloud.unreadable) {
+    fact("Assistant brain", "unknown");
   } else {
-    fact("Model server", `unreachable at ${out.ollama.url}`);
+    fact("Assistant brain",
+         `${cloud.model || "model not reported"} — ${cloud.available ? "on" : "off"}`);
+    fact("Spend this month", `${money(cloud.spend_usd, 2)} of ${money(cloud.cap_usd)}`);
   }
-  if (out.gpu) {
-    fact("GPU memory", `${out.gpu.vram_used_mb} / ${out.gpu.vram_total_mb} MB`);
-    fact("GPU", `${out.gpu.utilization_pct}% · ${out.gpu.temperature_c}°C`);
+
+  if (local.unreadable) {
+    fact("Local AI", "unknown");
+  } else if (!local.enabled) {
+    fact("Local AI", "off on this machine");
+  } else {
+    if (local.ollama.reachable) {
+      fact("Model server", "up");
+      fact("Loaded now",
+           local.ollama.loaded.map((m) => m.model).join(", ") || "nothing loaded");
+    } else {
+      fact("Model server", `unreachable at ${local.ollama.url}`);
+    }
+    if (local.gpu) {
+      fact("GPU memory", `${local.gpu.vram_used_mb} / ${local.gpu.vram_total_mb} MB`);
+      fact("GPU", `${local.gpu.utilization_pct}% · ${local.gpu.temperature_c}°C`);
+    }
   }
+
+  $("#status-spend").textContent = cloud.unreadable
+    ? `The cloud brain's status could not be read (${cloud.unreadable}), so whether `
+      + "it is on and what it has spent are unknown — which is not the same as nothing."
+    : `Last used ${cloud.last_used ? FS.fmt.stamp(cloud.last_used) : "never on this plant"}. `
+      + "The dollars are an estimate at list prices, the same estimate the "
+      + "conversations carry; the Console is the bill. The cap is this plant's "
+      + "own and does not move with the local AI setting.";
 
   const body = $("#status-table tbody");
   body.textContent = "";
-  for (const row of out.consumers) {
+  for (const row of [cloudRow(cloud), ...localRows(local)]) {
     const tr = el("tr");
     tr.appendChild(el("td", null, row.name));
     tr.appendChild(el("td", "muted", row.trigger));
     tr.appendChild(el("td", null, row.last || "—"));
     tr.appendChild(el("td", "muted small", row.output));
     const state = el("td");
+    /* `off` is a state, not an absence: a brain switched off is reported the
+       way an idle one is, with the reason beside it. */
     const cls = { ok: "confirmed", idle: "declined", stale: "declined",
-                  down: "failed" }[row.state] || "";
+                  off: "declined", down: "failed" }[row.state] || "";
     state.appendChild(el("span", `pill ${cls}`, row.state));
     tr.appendChild(state);
     tr.appendChild(el("td", "muted small", row.note || ""));
     body.appendChild(tr);
   }
-  $("#status-budget").textContent =
-    "GPU budget, in priority order: " + out.budget.join(" → ") + ".";
+
+  $("#status-budget").textContent = local.enabled
+    ? "GPU budget, in priority order: " + local.budget.join(" → ") + "."
+    : "";
+}
+
+/* Money, as a plant writes it. A cap of $10 reads "$10" and a cap of $10.50
+   reads "$10.50" - rounding it to the nearest dollar for tidiness would
+   overstate somebody's budget by fifty cents, and a budget is a number the
+   screen has no business rounding. Spend is always to the cent. */
+function money(value, places) {
+  const n = Number(value || 0).toFixed(places === undefined ? 2 : places);
+  return "$" + (places === undefined ? n.replace(/\.00$/, "") : n);
+}
+
+/* The cloud brain's own row, from its own endpoint. It is here whatever the
+   local AI setting says, because it is not part of the local layer. */
+function cloudRow(cloud) {
+  if (cloud.unreadable) {
+    return { name: "Floor agent (cloud)",
+             trigger: "the Assistant panel, on demand",
+             last: null, output: "proposes, and once confirmed performs",
+             state: "unknown",
+             note: `its status could not be read: ${cloud.unreadable}` };
+  }
+  return {
+    name: "Floor agent (cloud)",
+    trigger: "the Assistant panel, on demand",
+    last: cloud.last_used ? FS.fmt.stamp(cloud.last_used) : null,
+    output: "proposes and, once confirmed, performs; every turn of it is in "
+            + "the conversations beside this tab",
+    state: cloud.available ? "ok" : "off",
+    /* Off says why, in `available()`'s own words - "no ANTHROPIC_API_KEY in
+       this plant's environment" is an answer somebody can act on, and a blank
+       is not. */
+    note: cloud.available
+      ? `${cloud.model} is answering; the spend above is this month's`
+      : cloud.reason,
+  };
+}
+
+/* The local layer's jobs when it is on; one row saying off, and why, when it
+   is not. A row that vanishes is the bug this tab had. */
+function localRows(local) {
+  if (local.unreadable) {
+    return [{ name: "Local AI layer", trigger: "on this machine", last: null,
+              output: "—", state: "unknown",
+              note: `its status could not be read: ${local.unreadable}` }];
+  }
+  if (!local.enabled) {
+    return [{
+      name: "Local AI layer",
+      trigger: "on this machine",
+      last: null,
+      output: "nothing: no local model is asked",
+      state: "off",
+      note: "switched off on this machine (MES_LOCAL_AI=0), so run triage, the "
+            + "nightly rollup, design chat, instruction drafting and the night "
+            + "shift do not run here. The cloud brain above is unaffected.",
+    }];
+  }
+  return local.consumers;
 }
 
 /* ---------- settings ---------- */
