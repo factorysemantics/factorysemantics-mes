@@ -2905,7 +2905,8 @@ def config_audit_cmd(
 
 
 assist_app = typer.Typer(
-    help="The floor assistant: what it can do for a person, measured.")
+    help="The floor assistant: what it can do for a person, measured (coverage), "
+         "and whether it does what people actually ask (eval).")
 app.add_typer(assist_app, name="assist")
 
 
@@ -3511,11 +3512,9 @@ def jev_calibrate(
     typer.echo("  No threshold was chosen. Decision 0031: a judgment is a proposal.")
 
 
-assist_app = typer.Typer(
-    help="The floor assistant: does it do what people actually ask? A written "
-         "suite of requests, scored two ways.",
-)
-app.add_typer(assist_app, name="assist")
+# `assist_app` is defined once, above, beside `coverage`. #110 and #111 each
+# created the group; two `add_typer(name="assist")` calls left only the
+# second one's command reachable, and `fsmes assist coverage` vanished.
 
 
 @assist_app.command("eval")
