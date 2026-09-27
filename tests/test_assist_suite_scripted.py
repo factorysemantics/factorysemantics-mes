@@ -133,8 +133,13 @@ def test_every_case_the_current_code_should_pass_does_pass(scored):
 def test_no_case_marked_not_yet_is_passing_already(scored):
     """The ratchet, backwards. A `not_yet` case that passes means a sibling
     handoff landed and nobody took the mark off - so the number the write-up
-    quoted is no longer the number."""
-    passing = [o.case for o in scored if not o.counted and o.passed]
+    quoted is no longer the number.
+
+    A case the plant was not arranged for is out of the required number too, and
+    is not this ratchet's business: scripted mode asks it anyway and it may well
+    pass, which says nothing about a handoff.
+    """
+    passing = [o.case for o in scored if o.arranged and not o.counted and o.passed]
     assert not passing, ("these are marked not_yet and pass now; take the mark off and "
                          "say so: " + ", ".join(f"{c.id} (was waiting on {c.handoff})"
                                                 for c in passing))
@@ -143,7 +148,10 @@ def test_no_case_marked_not_yet_is_passing_already(scored):
 def test_the_run_says_a_pass_rate_for_every_role(scored):
     counts = assist_eval.tally(scored)
     assert set(counts["roles"]) == {"operator", "supervisor", "admin", "agent"}
-    assert counts["required"] + counts["not_yet"] == len(SUITE)
+    # Three buckets and every case in exactly one of them. The third is not
+    # always empty even here: a fixture can need something of the plant's own
+    # that a seeded demo plant has no way to declare.
+    assert counts["required"] + counts["not_yet"] + counts["not_arranged"] == len(SUITE)
     assert counts["total"] == len(SUITE)
 
 
@@ -152,7 +160,7 @@ def test_the_report_names_each_failure_and_what_it_did_instead(scored):
     assert "## Per role" in page and "| operator |" in page
     assert "## Marked `not_yet`" in page
     for outcome in scored:
-        if not outcome.counted:
+        if outcome.arranged and not outcome.counted:
             assert outcome.case.id in page
             assert outcome.case.handoff in page
 
@@ -809,6 +817,72 @@ def test_a_case_that_drafts_a_code_and_a_case_that_approves_one_never_name_the_s
     assert not drafts & arranged, f"a run arranges a code a case drafts: {drafts & arranged}"
 
 
+#: The tools a case uses to ask for a draft of the plant's own words.
+DRAFTING = ("draft_downtime_reason", "draft_nc_severity", "draft_instruction",
+            "draft_trigger")
+
+
+def test_no_draft_a_run_puts_up_reads_like_the_draft_a_case_asks_for():
+    """The 2026-09-27 collision, and its three siblings.
+
+    Asked to "draft a cosmetic severity", the live model answered *"there's
+    already a draft 'cosmetic' severity (code eval_cosmetic)"* - which was true,
+    and was the arrangement the same run had just put there. The prefix kept the
+    **codes** apart, which is all the sibling test above needs; a model reads the
+    **words**. `eval_changeover` beside "draft a downtime reason changeover" and
+    "Measuring brix" beside "draft an instruction WI-BRIX called Measuring brix"
+    were the same trap waiting for the roles that had not been run live yet.
+
+    So no code or name a drafting case asks for may appear inside a code or name
+    a run puts up, either way round.
+    """
+    asked: list[tuple[str, str]] = []
+    for case in SUITE:
+        if case.tool not in DRAFTING:
+            continue
+        name = case.fills.get("name") or case.fills.get("title") or ""
+        asked.append((str(case.args.get("code") or ""), str(name)))
+    assert len(asked) >= 5, f"only {len(asked)} drafting case(s) to check against"
+
+    for code, name in assist_fixtures.DRAFTS:
+        ours = f"{code} {name}".casefold()
+        for asked_code, asked_name in asked:
+            for theirs in (asked_code, asked_name):
+                if not theirs:
+                    continue
+                assert theirs.casefold() not in ours, \
+                    f"a run puts up {code} ({name!r}), which reads like {theirs!r}"
+                assert code.casefold() not in theirs.casefold(), \
+                    f"a case asks for {theirs!r}, which reads like {code}"
+
+
+def test_the_trigger_a_run_drafts_watches_something_no_case_asks_about():
+    """A code and a name are not all a model compares. The trigger a run put up
+    watched MIX01's temperature above 85, and the drafting case asks for a trigger
+    on MIX01's temperature above 85 - the same rule, one code apart."""
+    watched = {(str(case.fills.get("tag") or ""), str(case.args.get("threshold") or ""))
+               for case in SUITE if case.tool == "draft_trigger"}
+    assert watched, "no case drafts a trigger any more"
+    ours = (assist_fixtures.TRIGGER_TAG, str(assist_fixtures.TRIGGER_THRESHOLD))
+    assert ours not in watched
+    assert assist_fixtures.TRIGGER_TAG not in {tag for tag, _ in watched}
+
+
+def test_the_setting_a_run_writes_leaves_the_key_changeable():
+    """Both halves of one fixture. The trail has to carry the ten Scott says he
+    set, and the key has to read something else afterwards - otherwise "change
+    the default reporting window to 10hrs" is answered *"already set to 10.0
+    hours, nothing to change"*, which is what happened live on 2026-09-27."""
+    asked_for = {case.args.get("value") for case in SUITE
+                 if case.args.get("key") == "default_report_hours"}
+    assert asked_for, "no case asks for the reporting window any more"
+    for value in asked_for:
+        assert not assist_fixtures.same_value(value, assist_fixtures.SETTING_RESTS_AT), \
+            f"a case asks for {value!r} and the fixture leaves the key reading it"
+    assert assist_fixtures.same_value(assist_fixtures.SETTING_VALUE, "10.0"), \
+        "the case about the audit trail quotes 10.0 in Scott's own words"
+
+
 def test_the_drafts_a_run_puts_up_say_they_are_ours():
     """A person looking at their plant's vocabulary should not have to guess
     which rows a faithfulness run left behind."""
@@ -820,10 +894,19 @@ def test_the_drafts_a_run_puts_up_say_they_are_ours():
 
 def test_the_scripted_run_arranges_every_fixture_the_suite_asks_for(scored):
     """The whole point, measured: on the plant this suite is written about,
-    nothing is left not arranged. A case that starts coming back not arranged
-    here is a fixture that stopped being made."""
+    everything a run may put there is there. A case that starts coming back not
+    arranged here is a fixture that stopped being made.
+
+    With one exception, and it is a fact about the plant rather than a gap here.
+    A recommended setpoint change needs a tag the plant's own manifest declares
+    writable with bounds - the first of the three guards between a recommendation
+    and a PLC - and a seeded demo plant has no manifest at all. So the one case
+    that needs a recommendation waiting is reported not arranged, with that
+    sentence beside it, rather than asked on a plant where nothing is waiting.
+    """
     unmade = {o.case.id: o.missing for o in scored if not o.arranged}
-    assert not unmade, unmade
+    assert set(unmade) == {"admin-approves-an-adjustment"}, unmade
+    assert unmade["admin-approves-an-adjustment"] == ("adjustment:MIX01",)
 
 
 def test_a_case_whose_fixture_is_missing_is_counted_apart_from_pass_and_fail():
@@ -1123,13 +1206,19 @@ def test_a_live_run_puts_the_suites_fixtures_on_a_real_plant_over_its_own_http_a
     url, calls = plant_on_a_port
     out = assist_runs.arrange_live(url, on_behalf_of="ADMIN")
 
-    assert not out["refused"], out["refused"]
-    assert set(out["made"]) == set(assist_runs.ARRANGES)
+    # Everything but the recommendation, which needs a writable setpoint this
+    # plant's manifest does not declare - reported in the plant's own terms
+    # rather than raised, which is what lets a run say what it could not do.
+    assert set(out["refused"]) == {f"adjustment:{assist_fixtures.MACHINE}"}
+    assert "no writable setpoint" in out["refused"][f"adjustment:{assist_fixtures.MACHINE}"]
+    assert set(out["made"]) == set(assist_runs.ARRANGES) - set(out["refused"])
     assert any(method == "POST" for method, _ in calls), "nothing was written over the wire"
 
     # And the fixtures really are on the plant, asked over the same socket.
     view = assist_runs.live_view(url)
     for requirement in assist_runs.ARRANGES:
+        if requirement in out["refused"]:
+            continue
         assert view.has(requirement), requirement
 
 
@@ -1143,7 +1232,7 @@ def test_arranging_a_plant_that_is_already_arranged_creates_nothing_twice(
 
     url, calls = plant_on_a_port
     first = assist_runs.arrange_live(url)
-    assert first["made"] and not first["refused"]
+    assert first["made"]
 
     before = mcp_server.quality(assist_runs.LIVE_PLANT)["checks"]["checks"]
     work_before = len(mcp_server.maintenance_work(
@@ -1152,8 +1241,8 @@ def test_arranging_a_plant_that_is_already_arranged_creates_nothing_twice(
 
     second = assist_runs.arrange_live(url)
     assert second["made"] == [], f"a second run made {second['made']}"
-    assert set(second["already"]) == set(assist_runs.ARRANGES)
-    assert not second["refused"]
+    assert set(second["already"]) == set(assist_runs.ARRANGES) - set(first["refused"])
+    assert set(second["refused"]) == set(first["refused"])
     assert not [path for method, path in calls if method == "POST"
                 and path != "/auth/login"], "a second run wrote to the plant"
 
