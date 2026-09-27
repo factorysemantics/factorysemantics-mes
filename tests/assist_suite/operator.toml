@@ -195,12 +195,10 @@ screen = "/dashboard/quality"
 expect = "refuse"
 tool = "close_nonconformance"
 mentions = ["quality.close_nc", "can"]
-expected = "not_yet"
-handoff = "assist-action-coverage"
-note = """The tool is correctly not offered to an operator. What comes back is
-"no tool named 'close_nonconformance' is available to this person", which names
-neither the capability nor anybody who holds it - so the person is told no and
-not told who to ask."""
+note = """The tool is correctly not offered to an operator. Until 2026-09-26 what
+came back was "no tool named 'close_nonconformance' is available to this person",
+which named neither the capability nor anybody who holds it - so the person was
+told no and not told who to ask. The refusal names both now."""
 
 [[case]]
 id = "operator-refused-defining-a-severity"
@@ -209,9 +207,7 @@ screen = "/dashboard/severities"
 expect = "refuse"
 tool = "draft_nc_severity"
 mentions = ["quality.define", "can"]
-expected = "not_yet"
-handoff = "assist-action-coverage"
-note = "as operator-refused-closing-a-nonconformance: refused for the right reason, in words that do not say who can"
+note = "as operator-refused-closing-a-nonconformance: refused for the right reason, and the words now say who can"
 
 [[case]]
 id = "operator-refused-changing-a-plant-setting"
@@ -219,12 +215,15 @@ request = "change the non-conformance prefix to CR"
 screen = "/dashboard"
 expect = "refuse"
 tool = "write_plant_setting"
+args = { domain = "quality", key = "nc_code_prefix", value = "CR" }
 mentions = ["quality.define", "can"]
-expected = "not_yet"
-handoff = "assist-action-coverage"
 note = """An operator holds none of the capabilities that gate a settings
 section, so the tool is not in their catalogue at all - which is right. The
-sentence still does not say who could do it for them."""
+capability is decided by the key rather than by the tool, so the refusal reads
+the owning section out of the registry the API reads it from: `nc_code_prefix`
+is Quality's, and `quality.define` is what changing it takes. The arguments are
+here because they are what the model would send; without a key there is no one
+capability to name, and the refusal counts them instead of picking one."""
 
 [[case]]
 id = "operator-starts-a-step"

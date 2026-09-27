@@ -153,9 +153,7 @@ screen = "/dashboard/admin"
 expect = "refuse"
 tool = "create_user"
 mentions = ["users.manage", "can"]
-expected = "not_yet"
-handoff = "assist-action-coverage"
-note = "correctly not offered; the sentence does not say who could"
+note = "correctly not offered, and the sentence says who could - only Administrator does"
 
 [[case]]
 id = "supervisor-refused-approving-their-own-draft"
