@@ -1058,6 +1058,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../operate/ai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — the AI screen and what it records
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../operate/quality-severities/" class="md-nav__link">
         
   
@@ -3815,8 +3843,8 @@ when this document and the panel disagree, one of them has a bug.</p>
 <td>Floor agent (cloud)</td>
 <td>the Assistant button when <code>agent.available()</code> is true</td>
 <td>a cloud model works the plant's own tools: reads freely, proposes every write, puts a walkthrough on the screen</td>
-<td><code>~/.local/share/fsmes/agent-turns.jsonl</code> (one line per turn) and <code>agent-usage.jsonl</code> (the bill)</td>
-<td><code>fsmes ai-status</code>, or read the turn log</td>
+<td>the plant's own <code>ai_turns</code> table (the <strong>AI</strong> screen), plus <code>~/.local/share/fsmes/agent-turns.jsonl</code> (one line per turn) and <code>agent-usage.jsonl</code> (the bill)</td>
+<td>the AI screen, <code>fsmes ai conversations</code>, or read the turn log</td>
 </tr>
 <tr>
 <td>Instruction drafting</td>
@@ -3862,7 +3890,9 @@ JSON line per turn — per thing the person got back, not per model call:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="nt">"ts"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-09-26T19:55:02+00:00"</span><span class="p">,</span><span class="w"> </span><span class="nt">"plant"</span><span class="p">:</span><span class="w"> </span><span class="s2">"bottling"</span><span class="p">,</span><span class="w"> </span><span class="nt">"session"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ea4a5a9da3c3"</span><span class="p">,</span>
 <span class="w"> </span><span class="nt">"user"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ADMIN"</span><span class="p">,</span><span class="w"> </span><span class="nt">"model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"claude-sonnet-5"</span><span class="p">,</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"proposals"</span><span class="p">,</span>
 <span class="w"> </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"plant_settings"</span><span class="p">,</span><span class="w"> </span><span class="s2">"write_plant_setting"</span><span class="p">],</span>
-<span class="w"> </span><span class="nt">"proposals"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"956d7f527a29"</span><span class="p">,</span><span class="w"> </span><span class="nt">"tool"</span><span class="p">:</span><span class="w"> </span><span class="s2">"write_plant_setting"</span><span class="p">,</span><span class="w"> </span><span class="nt">"outcome"</span><span class="p">:</span><span class="w"> </span><span class="s2">"open"</span><span class="p">}],</span>
+<span class="w"> </span><span class="nt">"proposals"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"956d7f527a29"</span><span class="p">,</span><span class="w"> </span><span class="nt">"tool"</span><span class="p">:</span><span class="w"> </span><span class="s2">"write_plant_setting"</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"domain"</span><span class="p">:</span><span class="w"> </span><span class="s2">"quality"</span><span class="p">,</span><span class="w"> </span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"nc_code_prefix"</span><span class="p">,</span><span class="w"> </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"CR"</span><span class="p">},</span>
+<span class="w">                </span><span class="nt">"outcome"</span><span class="p">:</span><span class="w"> </span><span class="s2">"open"</span><span class="p">}],</span>
 <span class="w"> </span><span class="nt">"input"</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span><span class="w"> </span><span class="nt">"output"</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="nt">"cache_read"</span><span class="p">:</span><span class="w"> </span><span class="mi">1600</span><span class="p">,</span><span class="w"> </span><span class="nt">"cache_write"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"usd"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.00532</span><span class="p">}</span>
 </code></pre></div>
 <p><code>kind</code> is one of <code>reply</code>, <code>proposals</code>, <code>guide</code>, <code>unavailable</code>, <code>error</code>; a
@@ -3870,6 +3900,14 @@ proposal's <code>outcome</code> is <code>open</code>, <code>confirmed</code>, <c
 turn carries <code>error</code> with the exception class. Nothing in the file that is not
 already in the transcript the panel shows the person — no message text, no
 plant rows, no key.</p>
+<p><strong>The same turn is also written into the plant's own database</strong> (2026-09-26),
+as a row in <code>ai_turns</code>, and that is what the <strong>AI</strong> screen reads. The two are
+the same write: this file is the machine's copy and belongs to whoever
+administers the box; the table is the plant's, is behind <code>audit.read</code>, carries
+the words on both sides as well as the tool names, and is pruned to
+<code>[admin] ai_trace_days</code>. See
+<a href="../../operate/ai/">the AI screen</a> for what it holds and what it deliberately
+does not.</p>
 <p><strong>Why it exists.</strong> On 2026-09-26 Scott had a thirty-turn conversation with the
 assistant and nothing on the machine could say how many of those turns reached
 the model. <code>agent-usage.jsonl</code> is the bill and only records calls that

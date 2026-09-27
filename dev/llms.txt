@@ -21,6 +21,7 @@
 - [Operate — Explanation — how much of the window did the MES see](https://docs.factorysemantics.com/dev/operate/coverage/)
 - [Operate — Reference — what the floor assistant can do for you](https://docs.factorysemantics.com/dev/operate/assistant-coverage/)
 - [Operate — How-to — who names the downtime reasons](https://docs.factorysemantics.com/dev/operate/who-names-the-reasons/)
+- [Operate — How-to — the AI screen and what it records](https://docs.factorysemantics.com/dev/operate/ai/)
 - [Operate — How-to — who names the severities](https://docs.factorysemantics.com/dev/operate/quality-severities/)
 - [Operate — Reference — this plant's own quality numbers](https://docs.factorysemantics.com/dev/operate/quality-numbers/)
 - [Operate — Reference — what this plant asks of its ERP link](https://docs.factorysemantics.com/dev/operate/erp-settings/)
