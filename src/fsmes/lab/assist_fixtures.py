@@ -115,8 +115,29 @@ def _ok(payload: Any) -> dict:
     return payload if isinstance(payload, dict) else {}
 
 
+def _rows(payload: Any, key: str) -> list[dict]:
+    """The list a read tool came back with - or the plant's own words about why
+    there is not one. A plant that cannot be read is a reportable fact: it comes
+    out as "not arranged, could not be read", never as "the thing is not there".
+    """
+    if isinstance(payload, dict) and payload.get("error"):
+        raise Unarrangeable(str(payload["error"]))
+    rows = (payload or {}).get(key) or []
+    return [row for row in rows if isinstance(row, dict)]
+
+
 def _found(payload: Any) -> bool:
-    return not (isinstance(payload, dict) and payload.get("error"))
+    """Looked one up by code: there, not there, or the plant would not say.
+
+    A 404 is an answer - this plant has not got it. Anything else (a refusal, a
+    plant that is down) is not, and must not be reported as an absence.
+    """
+    error = payload.get("error") if isinstance(payload, dict) else None
+    if not error:
+        return True
+    if str(error).startswith("404"):
+        return False
+    raise Unarrangeable(str(error))
 
 
 # ------------------------------------------------------------------- the kinds
@@ -142,8 +163,7 @@ _MASTER_DATA = ("master data is the plant's own: an agent deployment does not de
 
 
 def _has_material(plant: str, code: str) -> bool:
-    out = _tools().materials(plant)
-    return any(m.get("code") == code for m in out.get("materials", []))
+    return any(m.get("code") == code for m in _rows(_tools().materials(plant), "materials"))
 
 
 def _walk(nodes: list) -> set[str]:
@@ -155,24 +175,27 @@ def _walk(nodes: list) -> set[str]:
 
 
 def _has_machine(plant: str, code: str) -> bool:
-    return code in _walk(_tools().equipment_tree(plant).get("roots", []))
+    tree = _tools().equipment_tree(plant)
+    if isinstance(tree, dict) and tree.get("error"):
+        raise Unarrangeable(str(tree["error"]))
+    return code in _walk(tree.get("roots") or [])
 
 
 def _has_lot(plant: str, code: str) -> bool:
-    return any(lot.get("code") == code for lot in _tools().lots(plant).get("lots", []))
+    return any(lot.get("code") == code for lot in _rows(_tools().lots(plant), "lots"))
 
 
 def _has_routing(plant: str, code: str) -> bool:
-    return any(r.get("code") == code for r in _tools().routings(plant).get("routings", []))
+    return any(r.get("code") == code
+               for r in _rows(_tools().routings(plant), "routings"))
 
 
 def _has_spec(plant: str, code: str) -> bool:
     """`spec:FG-COLA/brix` - a characteristic on a material, which is how a
     specification is named everywhere else in this product."""
     material, _, characteristic = code.partition("/")
-    specs = (_tools().quality(plant).get("specs") or {}).get("items") or []
     return any(s.get("material") == material and s.get("characteristic") == characteristic
-               for s in specs)
+               for s in _rows(_ok(_tools().quality(plant)).get("specs") or {}, "items"))
 
 
 def _has_order(plant: str, code: str) -> bool:
@@ -203,8 +226,8 @@ def _make_nonconformance(plant: str, code: str, actor: str) -> None:
 
 
 def _maintenance_on(plant: str) -> list[dict]:
-    out = _tools().maintenance_work(plant, machine=MACHINE, open_only=False, limit=50)
-    return list(out.get("work") or [])
+    return _rows(_tools().maintenance_work(plant, machine=MACHINE, open_only=False,
+                                          limit=50), "work")
 
 
 def _has_maintenance(plant: str, code: str) -> bool:
@@ -230,8 +253,7 @@ def _has_setting(plant: str, code: str) -> bool:
     a value. "Who changed this?" is only a question on a plant where somebody
     did."""
     _domain, _, key = code.partition("/")
-    out = _tools().setting_changes(plant, key=key, limit=5)
-    return bool(out.get("changes"))
+    return bool(_rows(_tools().setting_changes(plant, key=key, limit=5), "changes"))
 
 
 def _make_setting(plant: str, code: str, actor: str) -> None:
@@ -242,7 +264,7 @@ def _make_setting(plant: str, code: str, actor: str) -> None:
 
 def _has_instruction(plant: str, code: str) -> bool:
     return any(i.get("code") == code
-               for i in _tools().instructions(plant).get("instructions", []))
+               for i in _rows(_tools().instructions(plant), "instructions"))
 
 
 def _make_instruction(plant: str, code: str, actor: str) -> None:
@@ -254,7 +276,8 @@ def _make_instruction(plant: str, code: str, actor: str) -> None:
 
 
 def _has_trigger(plant: str, code: str) -> bool:
-    return any(t.get("code") == code for t in _tools().triggers(plant).get("triggers", []))
+    return any(t.get("code") == code
+               for t in _rows(_tools().triggers(plant), "triggers"))
 
 
 def _make_trigger(plant: str, code: str, actor: str) -> None:
@@ -266,7 +289,7 @@ def _make_trigger(plant: str, code: str, actor: str) -> None:
 
 def _has_reason(plant: str, code: str) -> bool:
     return any(r.get("code") == code
-               for r in _tools().downtime_reasons(plant).get("reasons", []))
+               for r in _rows(_tools().downtime_reasons(plant), "reasons"))
 
 
 def _make_reason(plant: str, code: str, actor: str) -> None:
@@ -279,7 +302,7 @@ def _make_reason(plant: str, code: str, actor: str) -> None:
 
 def _has_severity(plant: str, code: str) -> bool:
     return any(s.get("code") == code
-               for s in _tools().nc_severities(plant).get("severities", []))
+               for s in _rows(_tools().nc_severities(plant), "severities"))
 
 
 def _make_severity(plant: str, code: str, actor: str) -> None:
@@ -307,10 +330,6 @@ KINDS: dict[str, Kind] = {k.name: k for k in (
 )}
 
 
-#: What a run puts on a plant, in the order it has to go on: the order before
-#: the check that fails against it, the machine's work after it. Everything
-#: here is arrangeable by an agent deployment; everything a case needs that is
-#: *not* here is master data, and is declared rather than made.
 #: The non-conformance and the corrective order are numbered by the plant, not
 #: by this run. These are the codes the demo plant gives them, which is what the
 #: suite's sentences say; a plant that numbers them differently reports those
@@ -318,6 +337,10 @@ KINDS: dict[str, Kind] = {k.name: k for k in (
 NONCONFORMANCE = "NC-00001"
 MAINTENANCE = "CM-00001"
 
+#: What a run puts on a plant, in the order it has to go on: the order before
+#: the check that fails against it, the machine's work after it. Everything
+#: here is arrangeable by an agent deployment; everything a case needs that is
+#: *not* here is master data, and is declared rather than made.
 ARRANGES = (
     f"setting:{SETTING}",
     f"order:{ORDER}",
@@ -353,8 +376,12 @@ def arrange(plant: str, *, on_behalf_of: str = "ADMIN",
     for requirement in ARRANGES:
         kind, code = split(requirement)
         recipe = KINDS[kind].make
-        if view.has(requirement):
-            already.append(requirement)
+        try:
+            if view.has(requirement):
+                already.append(requirement)
+                continue
+        except Unarrangeable as exc:
+            refused[requirement] = f"the plant would not say whether it has this: {exc}"
             continue
         if recipe is None:                            # not reachable today; said anyway
             refused[requirement] = KINDS[kind].cannot
@@ -368,7 +395,13 @@ def arrange(plant: str, *, on_behalf_of: str = "ADMIN",
             refused[requirement] = f"{type(exc).__name__}: {exc}"
             continue
         view.forget(requirement)
-        if view.has(requirement):
+        try:
+            landed = view.has(requirement)
+        except Unarrangeable as exc:
+            refused[requirement] = f"the write went through and the plant would not "\
+                                   f"confirm it: {exc}"
+            continue
+        if landed:
             made.append(requirement)
         else:
             refused[requirement] = (
