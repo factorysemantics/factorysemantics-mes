@@ -4319,6 +4319,11 @@ with both names on it.</p>
 <td>numbered by the plant</td>
 <td>Unapproved: an engineer decides it and the agent never does. Only where the plant's tag manifest declares a writable setpoint with bounds on <code>MIX01</code> — a demo plant declares none, and then the case that needs one is reported <em>not arranged</em>.</td>
 </tr>
+<tr>
+<td>Two identified units</td>
+<td><code>SN-EVAL-1</code>, <code>SN-EVAL-CASE-1</code></td>
+<td>Serials of <code>FG-COLA</code>, for the cases that pack one into another and quarantine a pallet with everything in it.</td>
+</tr>
 </tbody>
 </table>
 <p>Five of those are <strong>drafts</strong>, and a draft changes nobody's screen until somebody
@@ -4340,6 +4345,15 @@ plant's own, and an agent deployment does not define them — decision
 and the AGENT account does not hold <code>masterdata.write</code> to do it with. A plant
 without <code>FG-COLA</code> and <code>MIX01</code> gets those cases reported <em>not arranged</em> rather
 than having a cola line invented on it.</p>
+<p><strong>The gauge register</strong>, for the same reason and with a consequence worth naming.
+A gauge is master data, so a run cannot put one on a plant — which means there is
+no case proposing <code>calibrate_gauge</code>, only an operator being refused it. The demo
+pack seeds no gauges; a plant with a gauge register is what a proposal case for
+that tool is waiting on, not a code change.</p>
+<p><strong>A dead ERP message.</strong> <code>erp_retry</code> puts one back in the queue, and a dead
+message is what an ERP that refused one leaves behind. A run that made one would
+have to break the plant's ERP link on purpose, so <code>erp_retry</code> is in the suite as
+an operator's refusal too.</p>
 <p>That is why the suite belongs against a plant built from the <strong>demo pack</strong>. Point
 it at a bottling plant and most of it comes back not arranged, which is the
 honest answer and not a useful run.</p>

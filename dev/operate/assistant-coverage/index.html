@@ -3849,7 +3849,8 @@ regenerates it and fails if this file differs.</p>
 person can do by pointing at them. The route's own capability gate says
 whether a role may perform it, and a <em>walk</em> is a "Show me" surface in
 <code>services/assistant.py</code> - a tool without one can be proposed but not
-shown.</p>
+shown, and is listed in <code>assistant.WITHOUT_A_WALK</code> with where its
+control is.</p>
 <h2 id="every-write-route">Every write route<a class="headerlink" href="#every-write-route" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -4411,7 +4412,13 @@ shown.</p>
 </table>
 <h2 id="who-holds-what">Who holds what<a class="headerlink" href="#who-holds-what" title="Permanent link">&para;</a></h2>
 <p>Whether each role may perform the route at all, from the route's own
-capability gate. A role that may not perform it is never offered the tool.</p>
+capability gate. A role that may not perform it is never offered the
+tool either: what the assistant offers comes from <code>agent.NEEDS</code>, which
+is a second copy of the same answer, and
+<code>test_every_write_tool_names_the_capability_its_route_demands</code> fails if
+the two ever disagree about any role in this table. Until 2026-09-27
+they disagreed about nine tools, and this column was the half that was
+right.</p>
 <table>
 <thead>
 <tr>

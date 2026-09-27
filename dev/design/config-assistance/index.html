@@ -6345,7 +6345,19 @@ is half a card. <code>assistant.SURFACES</code> is keyed on <code>agent.NEEDS</c
 write tool added without a surface goes red in CI.</p>
 <p>Measured before and after, on the same plant: <strong>10 surfaces of 34 proposable
 write tools</strong>, then 34 of 34 — and <strong>38 of 38</strong> once §15's four tools landed
-and this branch was rebased onto them. Seventy-odd <code>data-assist</code> anchors were
+and this branch was rebased onto them.</p>
+<blockquote>
+<p><strong>2026-09-27.</strong> That figure was 38 of 38 <em>proposable</em> tools, and it turned out
+nine write tools were not proposable only because they named no capability at
+all — so the catalogue offered them to anybody holding <code>plant.read</code> and this
+ratchet could not see them. Naming what each one's route demands makes it 38
+of 47. The nine are recorded in <code>assistant.WITHOUT_A_WALK</code> with the control a
+walk would land on, the test now asserts <code>SURFACES ∪ WITHOUT_A_WALK</code> equals
+the proposable set rather than <code>SURFACES</code> alone, and that list may only
+shrink. One of the nine, <code>produce_batch</code>, has no control on any screen by
+design: it is what a marker or a palletizer sends.</p>
+</blockquote>
+<p>Seventy-odd <code>data-assist</code> anchors were
 added to the forms that had only a form-level one, and one was fixed:
 <code>triggers.html</code> carried <code>data-assist="trigger-submit"</code> on the <em>closing</em> tag,
 where HTML parsing discards it, so no walk could ever have pointed at Save
