@@ -63,6 +63,53 @@ goes under Honesty with a migration line, so plant people can find it.
   the plant is rebuilt or restored from a backup taken first. Seed a plant you are
   willing to rebuild.
 
+- **A design page for the MES as an agentic harness, and a decision to argue
+  with.** Not built: `docs/design/agentic-harness.md` states what exists in the
+  AI layer today, maps the shape of the maintainer's own development crew onto
+  plant-side concepts (and says which parts have no plant analogue and why),
+  and proposes what an agent kind is — an account with a role, a tool set, a
+  cadence, a monthly budget, a declared data class, and one place its work
+  lands. Decision
+  [0038](docs/decisions/0038-an-agent-is-an-account-with-a-role-a-budget-and-a-cadence.md)
+  is *proposed*, not accepted.
+
+  Two functional agents are named. An **analysis agent** holding every read tool
+  and no write tool — and the page records that the plant's own four analyses
+  (`oee_breakdown`, `state_timeline`, `downtime_pareto`, `tag_trend`) have no MCP
+  tool at all today, so no agent can reach them. A **continuous-improvement
+  crew** on a cadence, woken by a no-model check for whether anything it is about
+  has changed, whose entire output is drafts in the five draft-and-sign flows
+  that already exist, landing in the approvals queue that already counts them
+  and states its total.
+
+  **"UI updates 100 % automated" turns out to be fifteen numbers.** The page
+  proposes a five-clause test for what an agent may put in force without a
+  signature — a number a screen runs at, no record's meaning changed, nobody's
+  capability changed, nothing a PLC reads, and undone in one step from the screen
+  that shows it — applies it to ten concrete improvements (four automatic, five
+  signed, one never automatable), and notes that everything it admits is the
+  `[screens]` pack table, all of it behind `users.manage` today.
+
+  It also records four things found while reading the code, each of which is a
+  bug or a stale claim rather than a proposal. **An unattended agent signing in as
+  `AGENT` could already put twenty-four settings in force with nobody in the
+  loop** — twenty-two Configuration sections take effect when saved and are gated
+  on `process.define` or `quality.define`, both of which the `agent` role holds,
+  and they include `[quality] hold_rules`, the two Cpk bars and
+  `[oee] min_observed_seconds`. Nothing exploits it today because the floor
+  assistant never writes unattended; a scheduled agent would, which is why the
+  page's first requirement is that a functional agent gets a role of its own.
+  **Nine of the 47 write tools sit
+  outside the per-person capability filter** (`add_person`, `register_gauge`,
+  `calibrate_gauge`, `issue_certificate`, `issue_pallet_certificate`,
+  `produce_batch`, `pack_unit`, `set_unit_status`, `erp_retry` are in no
+  `agent.NEEDS` entry and no `assistant.SURFACES` entry, so they are offered to
+  anybody holding `plant.read`); **`ai_turns` is a record and not a replayable
+  history**, so "each person's agent remembers" needs a store that does not
+  exist; and **the AI screen's Status tab blanks entirely when `MES_LOCAL_AI=0`**,
+  taking the cloud brain's spend against its cap with it, because that number is
+  a note inside a local-AI payload rather than a row of its own.
+
 - **A live faithfulness run arranges the plant it scores, and says what it
   could not.** `fsmes assist eval --live` used to ask a plant questions about
   things that were not on it. Nine of the nineteen failures in the first live

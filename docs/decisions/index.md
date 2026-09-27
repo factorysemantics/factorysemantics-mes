@@ -45,3 +45,4 @@ Declined ideas stay, so nobody re-proposes them without new facts.
 | [0034](0034-a-count-is-owed-until-it-is-booked.md) | A count the machine made is owed until it is booked, and a reading that fails is retried rather than forgotten | 2026-09-18 |
 | [0035](0035-configuration-is-authored-by-roles-and-selected-by-operators.md) | Accepted — configuration is authored by the role that owns it, and selected by the operator | 2026-09-18, amended by 0036 |
 | [0036](0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md) | The chart draws and records every SPC rule; which of them raise a quality hold is the plant's, and defaults to all four | 2026-09-22 |
+| [0038](0038-an-agent-is-an-account-with-a-role-a-budget-and-a-cadence.md) | *Proposed* — an agent is an account with a role, a tool set, a cadence, a budget and a data class, and what it produces is a proposal | 2026-09-27 |
