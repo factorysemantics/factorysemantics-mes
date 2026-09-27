@@ -330,6 +330,30 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Changed
 
+- **When your role does not let you do something, the assistant says which
+  capability it needs and who holds it.** Asked to close a non-conformance, an
+  operator used to be told *"no tool named 'close_nonconformance' is available
+  to this person"* — a true fact about the tool catalogue, and no use to
+  somebody standing in front of the non-conformance. The answer now names the
+  capability, the product's own plain words for it, and the roles that hold it:
+  *"quality.close_nc is what this needs, and you do not hold it. Supervisor and
+  Administrator can. That capability is: Close non-conformances."* The roles are
+  **your plant's own**, by the names an admin gave them, so a plant that put
+  `quality.close_nc` on a role called Shift Lead is told Shift Lead; where no
+  role at the plant holds it at all, it says so and says that an administrator
+  has to grant it, rather than sending you to somebody who cannot help either.
+
+  It says the same thing in both places it can: at the moment the tool is
+  refused, and up front in the assistant's own briefing, where every action
+  this person cannot take is listed with the capability and who holds it —
+  because the tool catalogue is filtered per role, so without that list there
+  is nothing in view to name. A plant setting is answered with the capability
+  of the section its key is listed under, read from the same registry the API
+  reads it from. The five signing walks already said half of this and now share
+  the sentence, so they name the signer's role too. **The whole faithfulness
+  suite is required for the first time: 97 of 97 required cases pass, and the
+  last 6 `not_yet` marks are off.**
+
 - **The faithfulness suite scores ten more requests, and stopped measuring an
   order of operations the product no longer has.** Scripted mode ran the guide
   router before the agent — the very pre-emption #109 removed — so the suite

@@ -1398,3 +1398,98 @@ a local model, the walkthrough fallback matched whole words, so *"how do I
 book production?"* found nothing — the guide's own line says *booking*. Words
 now agree on their first four characters. On a plant with no model running
 that is the difference between an assistant and a shrug.
+
+## 17. A refusal says which capability, and who holds it — 2026-09-26
+
+### The rule
+
+**When a person's role does not let them do what they asked, the answer names
+the capability, the product's own plain words for it, and the roles that hold
+it.** Never *"no tool named 'close_nonconformance' is available to this
+person"*, which is a true fact about the catalogue and no use whatever to an
+operator standing in front of a non-conformance that needs closing.
+
+One sentence, written once, in `capabilities.not_yours`:
+
+> `quality.close_nc` is what this needs, and you do not hold it. Supervisor and
+> Administrator can. That capability is: Close non-conformances.
+
+The order of the three facts is load-bearing. A tool result is summarised to
+160 characters in the turn record and in the transcript the panel shows, so the
+capability, the fact that it is not held, and who holds it come first; the plain
+description, the part a reader can most afford to lose, comes last. Some
+descriptions are a sentence and a half on their own.
+
+### It says *who*, and who is read from the plant
+
+`capabilities.holders` reads `CAPABILITIES` and `BUILTIN_ROLES` backwards — a
+role is a bundle of capabilities, so who holds one is that bundle read the other
+way. A plant that has redefined or renamed its roles is asked instead:
+`auth.role_bundles` reads them out of the short session the request already has
+open and hands them over, the same way the walkthroughs travel, because the
+assistant holds no database session of its own by design. So a plant whose
+`quality.close_nc` sits on a role called Shift Lead is told Shift Lead.
+
+Three things it will not do. It will not say *"somebody who does presses the
+button"* — the words the signing walks used until today; somebody who does not
+know who that is cannot go and find them. It will not name more roles than a
+sentence read at a machine can carry: three, and then the total, because the
+ones it does not name are still counted out loud (house rule two). And where no
+role at this plant holds the capability at all it says exactly that, and that an
+administrator has to grant it, rather than sending the person to a supervisor
+who cannot help either.
+
+### Two places, because the catalogue is filtered
+
+The tool catalogue is built per capability, so the model is never shown a tool
+the person cannot use. That is right, and it is also what made the refusal
+useless: there was nothing in view to name. So the same lookup answers in two
+places.
+
+- **At call time.** `agent.withheld` turns a tool the person may not use into
+  the sentence, with the capability and the holders as fields beside it. For
+  `write_plant_setting` — the one tool whose capability is an argument rather
+  than a property of the tool (`PER_CALL_NEEDS`) — it reads the owning
+  `ConfigSection` out of the same registry the API reads it from, so
+  `nc_code_prefix` is answered with `quality.define` and a Controls key with
+  `signals.define`, with no second table to keep in step. A call that names no
+  key has no one capability behind it, and then it counts the ones that gate a
+  setting rather than picking one of them. A name that is not a tool at all
+  keeps the sentence it always had: there is nothing else true to say about it.
+- **Before the question arrives.** Every write action this person is *not*
+  offered is listed in the system prompt — one line each, with the capability,
+  its description, and who holds it — because a model only calls a tool it
+  thinks of calling, and the moment it needs this is the moment it has decided
+  there is nothing to call. An operator's list is 25 of the 38 actions and about
+  800 tokens; an administrator's is empty, because nothing is withheld. It costs
+  nothing per turn: the prefix is cached, and it was already per-capability-set,
+  because the catalogue after it is.
+
+A `who_can(action)` tool was the other way to do the second half, and it was not
+taken for that reason — a tool that has to be remembered at exactly the moment
+the model has concluded there is nothing to call is a tool that will be
+forgotten. The prompt gained **one** sentence: name the capability and who holds
+it, from the list below, never that there is no tool.
+
+### The signing walks were already half of this
+
+The five signing walks of §16 refused *with* the capability and its description.
+That is the same sentence, and it is now literally the same sentence: the note a
+signing walk carries is its own lead — *the assistant never approves anything,
+for anybody*, which is the half that is only true of a signature — followed by
+`capabilities.not_yours(…, gates="signs this")`. So there is one of these and
+not two, and the signing walks gained the role names for free.
+
+### What the suite says now
+
+The six cases `assist-action-coverage` left behind were all this one thing.
+They pass and their marks are off: **91 of 91 required cases before, 97 of 97
+after, and the last 6 `not_yet` down to 0.** The whole request suite is required
+for the first time.
+
+One case was rewritten rather than made to pass as written.
+`operator-refused-changing-a-plant-setting` carried no arguments, because it
+never got far enough to need any; the capability behind a setting *is* an
+argument, so the case now sends the domain, key and value a model would send.
+Scoring a refusal against a tool call with no key would have been scoring the
+one shape that has no single capability to name.

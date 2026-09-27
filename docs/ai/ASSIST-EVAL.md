@@ -106,7 +106,7 @@ gets into the file. A result with no build behind it cannot be compared to next
 month's. `--json` writes the same run as data, for a month that wants to diff
 rather than read.
 
-`assist-eval/2026-09-26-scripted.md` is a **scripted** run, kept as the example
+`assist-eval/2026-09-27-scripted.md` is a **scripted** run, kept as the example
 of the shape. It scores no model, and its file name says so — a live run writes
 `<date>.md`.
 
