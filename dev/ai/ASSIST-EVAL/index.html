@@ -3564,10 +3564,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#never-arranged" class="md-nav__link">
+  <a href="#never-arranged-by-the-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Never arranged
+        Never arranged by the agent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-seed-masterdata-the-same-master-data-put-there-by-a-person" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --seed-masterdata: the same master data, put there by a person
       
     </span>
   </a>
@@ -3991,10 +4002,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#never-arranged" class="md-nav__link">
+  <a href="#never-arranged-by-the-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Never arranged
+        Never arranged by the agent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-seed-masterdata-the-same-master-data-put-there-by-a-person" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --seed-masterdata: the same master data, put there by a person
       
     </span>
   </a>
@@ -4194,6 +4216,9 @@ the plant's reason, not a page of zeroes.</p>
 <p>Run it against a <strong>synthetic</strong> plant. The result file quotes what the model did,
 and that includes the arguments it chose; a real plant's codes are a real plant's
 business.</p>
+<p>A plant that was not built from the demo pack has almost none of what the suite's
+sentences name, so most of it comes back <em>not arranged</em>. <code>--seed-masterdata</code> puts
+that master data there as you, once — see below.</p>
 <h2 id="what-a-live-run-puts-on-the-plant-and-what-it-never-will">What a live run puts on the plant, and what it never will<a class="headerlink" href="#what-a-live-run-puts-on-the-plant-and-what-it-never-will" title="Permanent link">&para;</a></h2>
 <p>Almost every sentence in the suite names something: an order, a material, a
 machine, a draft waiting for a signature. Asked "book 600 good on MIX01 against
@@ -4274,7 +4299,7 @@ choose, so what a run left behind can be told from the plant's own work at a
 glance. The plant numbers the non-conformance and the maintenance order itself;
 if it numbers them something else, the cases that name them are reported not
 arranged with the code it did use.</p>
-<h3 id="never-arranged">Never arranged<a class="headerlink" href="#never-arranged" title="Permanent link">&para;</a></h3>
+<h3 id="never-arranged-by-the-agent">Never arranged by the agent<a class="headerlink" href="#never-arranged-by-the-agent" title="Permanent link">&para;</a></h3>
 <p><strong>Master data.</strong> Materials, equipment, routings, lots and specifications are the
 plant's own, and an agent deployment does not define them — decision
 <a href="../../decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators/">0035</a>,
@@ -4284,6 +4309,108 @@ than having a cola line invented on it.</p>
 <p>That is why the suite belongs against a plant built from the <strong>demo pack</strong>. Point
 it at a bottling plant and most of it comes back not arranged, which is the
 honest answer and not a useful run.</p>
+<h3 id="-seed-masterdata-the-same-master-data-put-there-by-a-person"><code>--seed-masterdata</code>: the same master data, put there by a person<a class="headerlink" href="#-seed-masterdata-the-same-master-data-put-there-by-a-person" title="Permanent link">&para;</a></h3>
+<p>A person may define master data, and that is the whole difference. On 2026-09-27
+somebody put this on a plant by hand with ten <code>POST</code>s; <code>--seed-masterdata</code> is
+those ten <code>POST</code>s, made <strong>as the account you signed in with</strong>, over the plant's
+own API — <code>/masterdata/equipment</code>, <code>/masterdata/materials</code>,
+<code>/masterdata/routings</code>, <code>/quality/specs</code>, <code>/execution/lots</code>. Not through the
+assistant's tools, not as AGENT, and nothing in the database that the API did not
+put there.</p>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>assist<span class="w"> </span><span class="nb">eval</span><span class="w"> </span>--live<span class="w"> </span>--plant<span class="w"> </span>http://127.0.0.1:9030<span class="w"> </span>--user<span class="w"> </span>ADMIN<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--seed-masterdata<span class="w"> </span>--plant-commit<span class="w"> </span><span class="s2">"</span><span class="k">$(</span>git<span class="w"> </span>rev-parse<span class="w"> </span>--short<span class="w"> </span>HEAD<span class="k">)</span><span class="s2">"</span>
+</code></pre></div>
+<p><strong>Off unless you ask for it.</strong> It writes master data to a real plant, and the
+run's result file lists every code that arrived, so whoever operates that plant
+can see what turned up and when.</p>
+<table>
+<thead>
+<tr>
+<th>What</th>
+<th>Code</th>
+<th>As the demo pack has it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A work centre</td>
+<td><code>LINE1</code></td>
+<td>Packaging Line 1. <strong>No parent</strong> — see below.</td>
+</tr>
+<tr>
+<td>A work unit</td>
+<td><code>MIX01</code></td>
+<td>Mixer 01, under <code>LINE1</code>, ideal cycle 4.0 s</td>
+</tr>
+<tr>
+<td>A work unit</td>
+<td><code>PACK01</code></td>
+<td>Packer 01, under <code>LINE1</code>, ideal cycle 3.0 s</td>
+</tr>
+<tr>
+<td>A raw material</td>
+<td><code>RAW-SUGAR</code></td>
+<td>Sugar, kg</td>
+</tr>
+<tr>
+<td>A raw material</td>
+<td><code>RAW-FLAVOR</code></td>
+<td>Cola Flavor Concentrate, l</td>
+</tr>
+<tr>
+<td>A finished material</td>
+<td><code>FG-COLA</code></td>
+<td>Cola Syrup 1L, ea</td>
+</tr>
+<tr>
+<td>A routing</td>
+<td><code>RT-COLA</code></td>
+<td>Make Cola Syrup, for <code>FG-COLA</code>: Mix 10 on <code>MIX01</code>, Pack 20 on <code>PACK01</code></td>
+</tr>
+<tr>
+<td>A specification</td>
+<td><code>FG-COLA</code> / <code>brix</code></td>
+<td>9.5–11.5 °Bx</td>
+</tr>
+<tr>
+<td>A lot</td>
+<td><code>LOT-SUGAR-001</code></td>
+<td>500 kg of <code>RAW-SUGAR</code></td>
+</tr>
+<tr>
+<td>A lot</td>
+<td><code>LOT-FLAVOR-001</code></td>
+<td>100 l of <code>RAW-FLAVOR</code></td>
+</tr>
+</tbody>
+</table>
+<p>Those codes and those numbers are <strong>not written down in the seeding</strong>. They are
+read back out of <code>fsmes.seed.seed_demo_plant</code> — the one place the demo plant is
+defined — in a throwaway in-memory database, so what lands on a real plant is
+what the demo pack says and cannot drift from it.</p>
+<p>Three of the ten are not named by any case. <code>RT-COLA</code> is there because a work
+order cannot be created against a material with no routing, so <code>WO-EVAL-1</code> —
+which the AGENT account arranges — needs it first; <code>RAW-FLAVOR</code> and
+<code>LOT-FLAVOR-001</code> are there because the demo pack ships a lot per raw material and
+half a demo reads as a mistake to whoever finds it. Nothing else is seeded, and a
+test fails if that list grows a row with no reason written beside it.</p>
+<p><strong><code>LINE1</code> arrives with no parent.</strong> The demo pack hangs it under an area, under a
+site, under an enterprise; a run has no business inventing four levels of
+somebody else's hierarchy, so it lands as a root work centre with <code>MIX01</code> and
+<code>PACK01</code> beneath it. Move it under your own site if you want it there — by hand,
+because this does not.</p>
+<p><strong>It creates, and never updates.</strong> Every code is looked for first, and one that
+is already there is reported <em>already there</em> and left exactly as the plant has
+it. If your <code>FG-COLA</code> is a different product measured in litres, it stays that;
+correcting somebody's master data to match a test suite is the last thing this
+should do. A second run on a seeded plant writes nothing at all.</p>
+<p><strong>It is refused, in one sentence, when the account may not do it.</strong> The plant
+asks for <code>masterdata.write</code> before it will take nine of these ten, so an account
+without it is told that and nothing is written on the way to finding out. The two
+<strong>lots</strong> are stock rather than a definition, and this product guards those with
+<code>production.consume</code>; an account holding one capability and not the other gets
+the eight definitions and is told which capability the lots wanted. An admin
+holds both.</p>
 <h3 id="removing-it-afterwards">Removing it afterwards<a class="headerlink" href="#removing-it-afterwards" title="Permanent link">&para;</a></h3>
 <p><strong>It does not remove any of it, and there is no <code>--clean</code>.</strong> An MES does not
 delete an audited record; that is most of what an MES is for. A run that tidied
@@ -4302,8 +4429,23 @@ to measure, and the tidying would not be in the trail.</p>
 <li><code>default_report_hours</code> — set it back to what it was. <code>setting_changes</code> says
   what that was.</li>
 </ul>
-<p>Arranging is <strong>idempotent</strong>: a second run on an arranged plant creates nothing
-twice and fails nothing. Point it at the same plant as often as you like.</p>
+<p>And about the <strong>master data</strong>, honestly: <strong>the API has no way to remove any of
+it.</strong> There is no <code>DELETE</code> and no <code>PATCH</code> on <code>/masterdata/equipment</code>,
+<code>/masterdata/materials</code>, <code>/masterdata/routings</code>, <code>/quality/specs</code> or
+<code>/execution/lots</code> — not as an oversight this page is working round, but because
+nothing in this product has needed to unmake a definition yet, and a machine or a
+material with production booked against it is not a row anybody should be able to
+drop. So a plant that has been seeded keeps <code>LINE1</code>, <code>MIX01</code>, <code>PACK01</code>,
+<code>RAW-SUGAR</code>, <code>RAW-FLAVOR</code>, <code>FG-COLA</code>, <code>RT-COLA</code>, the brix specification and the
+two lots until somebody with database access removes them, or until the plant is
+rebuilt or restored from a backup taken before the run (<code>fsmes backup</code> /
+<code>fsmes restore</code>). Nor can the two lots be put beyond use: <code>LotStatus</code> has a
+<code>blocked</code> state and, as of 2026-09-27, nothing in this product sets it. The one
+thing that softens this is that the codes are the demo plant's, so what a person
+finds on their plant is recognisable rather than mysterious. <strong>Seed a plant you
+are willing to rebuild.</strong></p>
+<p>Both halves are <strong>idempotent</strong>: a second run on an arranged, seeded plant creates
+nothing twice and fails nothing. Point it at the same plant as often as you like.</p>
 <h2 id="reading-a-result">Reading a result<a class="headerlink" href="#reading-a-result" title="Permanent link">&para;</a></h2>
 <p>A live run writes <code>docs/ai/assist-eval/&lt;date&gt;.md</code>, the way a calibration run
 writes <code>docs/ai/calibration/&lt;date&gt;/</code>:</p>
@@ -4316,7 +4458,12 @@ writes <code>docs/ai/calibration/&lt;date&gt;/</code>:</p>
 <li>every case marked <code>not_yet</code>, and which handoff it is waiting on;</li>
 <li>every case that was <strong>not arranged</strong>, what the plant has not got, and why —
   followed by what the run put on the plant, what was already there, and
-  anything it could not arrange, in the plant's own words.</li>
+  anything it could not arrange, in the plant's own words. That last part comes
+  in two halves, because two different accounts wrote them: what the <strong>agent</strong>
+  arranged through the assistant's tools, and what <strong>master data</strong> the person
+  seeded. When <code>--seed-masterdata</code> was not given, the file says so — an operator
+  reading a run against their plant should be able to see that its master data
+  was theirs.</li>
 </ul>
 <p>A plant does not report the commit it is running, so <code>--plant-commit</code> is how that
 gets into the file. A result with no build behind it cannot be compared to next
