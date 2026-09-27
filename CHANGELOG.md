@@ -415,6 +415,24 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Fixed
 
+- **Asked for a change, the assistant proposes it — the card is the question.**
+  *"I want a non-conformance to have a prefix CR instead of NC. Could you make
+  that change?"* came back as *"I can change it to 'CR' — want me to go
+  ahead?"*, with nothing on the screen to press; *"…which spc rules raise a
+  hold to 1,2 only"* came back as a paragraph about what the change would mean.
+  The same two requests had produced cards four hours earlier — the model
+  varied, and the prompt let it, because *a proposal is not a change* did not
+  also say *a request for a change is a proposal, not a question*. It says so
+  now. Asked to be shown a change nobody has proposed yet, it proposes first:
+  the card's own "Show me" is the walk being asked for, standing on the very
+  field, and a walkthrough cannot go on the screen in the same turn as a card
+  because the card is what the person is then looking at. And no tool's name
+  reaches the person any more — *"show_guide("proposal") will put the real form
+  on your screen"* is a sentence for a developer, not for somebody at a
+  machine. Three cases of the nineteen the assistant's request suite found on
+  its first live run; the suite now pins all three, over every reply it
+  produces and for every role.
+
 - **A walk's card could be caught showing one step's number over another
   step's words.** It said `STEP 5 OF 6` while the body was still step 4's —
   on a slow machine, never on loopback. The card is painted a quarter of a
