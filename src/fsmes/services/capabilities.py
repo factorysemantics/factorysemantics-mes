@@ -186,3 +186,94 @@ def differs_from_shipped(code: str, capabilities: list[str]) -> bool:
     """
     spec = BUILTIN_ROLES.get(code)
     return spec is not None and set(capabilities) != set(spec["capabilities"])
+
+
+# ----------------------------------------------------- who holds one of them
+
+#: How many role names a refusal says before it counts the rest. Three fits a
+#: sentence read on a phone at a machine; house rule two says the ones it does
+#: not name are still counted out loud.
+NAMED = 3
+
+
+def describe(capability: str) -> str:
+    """The product's own plain words for one capability, without its full stop.
+
+    The description an admin reads while building a role is the description a
+    person refused for want of that capability should read too - one sentence
+    per capability, written once, in `CAPABILITIES`.
+    """
+    return CAPABILITIES.get(capability, "").rstrip(".")
+
+
+def holders(capability: str, roles: dict[str, list[str]] | None = None) -> list[str]:
+    """The names of the roles that hold one capability.
+
+    `roles` is `{name: capabilities}` - this plant's own roles, read by a
+    caller that had a database session open (`auth.role_bundles`). Empty or
+    absent, the answer is the bundles the product ships: right for a plant that
+    has not redefined anything, and the only honest answer available where
+    there is no plant to ask (the scripted eval suite, a CLI). Empty rather
+    than `None` counts as absent on purpose - every plant has roles, so an
+    empty mapping is a caller that did not read them, not a plant with none.
+    """
+    bundles = roles or {spec["name"]: list(spec["capabilities"])
+                        for spec in BUILTIN_ROLES.values()}
+    return [name for name, granted in bundles.items() if capability in granted]
+
+
+def who_holds(capability: str, roles: dict[str, list[str]] | None = None) -> str:
+    """Who can do the thing this capability gates, as a clause in a sentence.
+
+    Never "somebody who does": a person standing at a machine has to know who
+    to call. When more roles hold it than a sentence can carry, the named ones
+    are counted against the total rather than trailed off - unknown is not
+    zero, and neither is "and others".
+    """
+    names = holders(capability, roles)
+    if not names:
+        return ("No role at this plant holds it, so a plant administrator has to "
+                "grant it before anybody can")
+    shown = names[:NAMED]
+    line = f"{_written(shown)} can"
+    if len(names) > len(shown):
+        line += f" - {len(shown)} of the {len(names)} roles that hold it"
+    return line
+
+
+def _written(names: list[str]) -> str:
+    if len(names) == 1:
+        return names[0]
+    return f"{', '.join(names[:-1])} and {names[-1]}"
+
+
+#: What the assistant says about anything a person's role does not let them do.
+#:
+#: One pattern for every refusal, because there was nearly a second one. Before
+#: this, a request outside somebody's role came back as *"no tool named
+#: 'close_nonconformance' is available to this person"* - a true fact about the
+#: catalogue and no use whatever to an operator looking at a non-conformance
+#: that needs closing. The signing walks (#113) already answered their half of
+#: this properly; this is the same sentence, from the same lookup, for the
+#: other half.
+#:
+#: The order of the three facts is load-bearing. A tool result is summarised to
+#: 160 characters in the turn record and in the transcript the panel shows, so
+#: the capability, the fact that it is not held, and who holds it come first;
+#: the plain description, which is the part a reader can most afford to lose,
+#: comes last. Some descriptions are a sentence and a half on their own.
+NOT_YOURS = ("{needs} is what {gates}, and you do not hold it. {who}. "
+             "That capability is: {about}.")
+
+
+def not_yours(capability: str, *, gates: str = "this needs",
+              roles: dict[str, list[str]] | None = None) -> str:
+    """The one refusal sentence, for one capability.
+
+    `gates` is how the capability relates to what was asked - "this needs" for
+    a tool that was not offered, "signs this" for a signature that is somebody
+    else's to give.
+    """
+    return NOT_YOURS.format(needs=capability, gates=gates,
+                            who=who_holds(capability, roles),
+                            about=describe(capability) or "not described in this version")
