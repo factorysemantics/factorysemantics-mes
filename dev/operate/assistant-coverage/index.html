@@ -3840,10 +3840,10 @@ Do not edit it by hand: <code>tests/test_every_write_route_has_a_tool_or_a_reaso
 regenerates it and fails if this file differs.</p>
 <p>There are <strong>68 write routes</strong>; <strong>66</strong> of them a screen calls; <strong>47</strong> write tools send one.</p>
 <ul>
-<li>operator: 16 of 66 screen actions the assistant can propose; 7 with a walk; 15 by written reason.</li>
-<li>supervisor: 32 of 66 screen actions the assistant can propose; 11 with a walk; 15 by written reason.</li>
-<li>admin: 51 of 66 screen actions the assistant can propose; 14 with a walk; 15 by written reason.</li>
-<li>agent: 23 of 66 screen actions the assistant can propose; 10 with a walk; 15 by written reason.</li>
+<li>operator: 16 of 66 screen actions the assistant can propose; 14 with a walk; 15 by written reason.</li>
+<li>supervisor: 32 of 66 screen actions the assistant can propose; 25 with a walk; 15 by written reason.</li>
+<li>admin: 51 of 66 screen actions the assistant can propose; 42 with a walk; 15 by written reason.</li>
+<li>agent: 23 of 66 screen actions the assistant can propose; 21 with a walk; 15 by written reason.</li>
 </ul>
 <p>A <em>screen action</em> is a write route some page script calls: the things a
 person can do by pointing at them. The route's own capability gate says
@@ -3885,7 +3885,7 @@ shown.</p>
 <td><code>adjustments.js</code></td>
 <td><code>propose_adjustment</code></td>
 <td><code>adjustments.propose</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -3909,7 +3909,7 @@ shown.</p>
 <td><code>admin.js</code></td>
 <td><code>create_role</code></td>
 <td><code>users.manage</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -3965,7 +3965,7 @@ shown.</p>
 <td><code>admin.js</code></td>
 <td><code>create_user</code></td>
 <td><code>users.manage</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4005,7 +4005,7 @@ shown.</p>
 <td><code>assist-record.js</code>, <code>instructions.js</code></td>
 <td><code>draft_instruction</code>, <code>create_document</code></td>
 <td><code>documents.write</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4021,7 +4021,7 @@ shown.</p>
 <td><code>instructions.js</code></td>
 <td><code>revise_document</code></td>
 <td><code>documents.write</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4077,7 +4077,7 @@ shown.</p>
 <td><code>app.js</code>, <code>station.js</code></td>
 <td><code>create_lot</code></td>
 <td><code>production.consume</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4101,7 +4101,7 @@ shown.</p>
 <td><code>machine.js</code>, <code>maintenance.js</code>, <code>station.js</code></td>
 <td><code>perform_maintenance</code></td>
 <td><code>maintenance.perform</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4109,7 +4109,7 @@ shown.</p>
 <td><code>machine.js</code>, <code>maintenance.js</code>, <code>station.js</code></td>
 <td><code>perform_maintenance</code></td>
 <td><code>maintenance.perform</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4117,7 +4117,7 @@ shown.</p>
 <td><code>machine.js</code>, <code>maintenance.js</code></td>
 <td><code>create_maintenance_plan</code></td>
 <td><code>maintenance.plan</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4125,7 +4125,7 @@ shown.</p>
 <td><code>maintenance.js</code></td>
 <td><code>raise_due_maintenance</code></td>
 <td><code>maintenance.perform</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4133,7 +4133,7 @@ shown.</p>
 <td><code>admin.js</code>, <code>app.js</code>, <code>masterdata.js</code></td>
 <td><code>create_equipment</code></td>
 <td><code>masterdata.write</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4141,7 +4141,7 @@ shown.</p>
 <td><code>admin.js</code>, <code>coa.js</code>, <code>masterdata.js</code>, <code>orders.js</code></td>
 <td><code>create_material</code></td>
 <td><code>masterdata.write</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4149,7 +4149,7 @@ shown.</p>
 <td><code>masterdata.js</code></td>
 <td><code>add_bom_component</code></td>
 <td><code>masterdata.write</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4165,7 +4165,7 @@ shown.</p>
 <td><code>admin.js</code></td>
 <td><code>create_routing</code></td>
 <td><code>masterdata.write</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4197,7 +4197,7 @@ shown.</p>
 <td><code>quality.js</code></td>
 <td><code>close_nonconformance</code></td>
 <td><code>quality.close_nc</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4205,7 +4205,7 @@ shown.</p>
 <td><code>quality.js</code></td>
 <td><code>disposition_nonconformance</code></td>
 <td><code>quality.close_nc</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4213,7 +4213,7 @@ shown.</p>
 <td><code>quality.js</code></td>
 <td><code>review_nonconformance</code></td>
 <td><code>quality.close_nc</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4237,7 +4237,7 @@ shown.</p>
 <td><code>app.js</code>, <code>masterdata.js</code>, <code>quality.js</code>, <code>spc.js</code>, <code>station.js</code></td>
 <td><code>create_spec</code></td>
 <td><code>masterdata.write</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4245,7 +4245,7 @@ shown.</p>
 <td><code>schedule.js</code></td>
 <td><code>add_calendar_exception</code></td>
 <td><code>scheduling.plan</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4253,7 +4253,7 @@ shown.</p>
 <td><code>schedule.js</code></td>
 <td><code>add_shift</code></td>
 <td><code>scheduling.plan</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4261,7 +4261,7 @@ shown.</p>
 <td><code>schedule.js</code></td>
 <td><code>plan_all_orders</code></td>
 <td><code>scheduling.plan</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4269,7 +4269,7 @@ shown.</p>
 <td><code>schedule.js</code></td>
 <td><code>plan_order</code></td>
 <td><code>scheduling.plan</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4277,7 +4277,7 @@ shown.</p>
 <td><code>trace.js</code></td>
 <td><code>produce_units</code></td>
 <td><code>production.book</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4309,7 +4309,7 @@ shown.</p>
 <td><code>triggers.js</code></td>
 <td><code>draft_trigger</code></td>
 <td><code>triggers.write</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4365,7 +4365,7 @@ shown.</p>
 <td><code>orders.js</code>, <code>station.js</code></td>
 <td><code>complete_operation</code></td>
 <td><code>production.book</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4373,7 +4373,7 @@ shown.</p>
 <td><code>station.js</code></td>
 <td><code>start_operation</code></td>
 <td><code>production.book</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>POST</td>
@@ -4397,7 +4397,7 @@ shown.</p>
 <td><code>admin.js</code></td>
 <td><code>update_role</code></td>
 <td><code>users.manage</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>PUT</td>
@@ -4405,7 +4405,7 @@ shown.</p>
 <td><code>admin.js</code></td>
 <td><code>assign_role</code></td>
 <td><code>users.manage</code></td>
-<td>no</td>
+<td>yes</td>
 </tr>
 </tbody>
 </table>
