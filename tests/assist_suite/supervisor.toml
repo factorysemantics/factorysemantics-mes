@@ -10,6 +10,7 @@ screen = "/dashboard/quality"
 expect = "propose"
 tool = "close_nonconformance"
 args = { code = "NC-00001" }
+requires = ["nonconformance:NC-00001"]
 
 [[case]]
 id = "supervisor-takes-a-nonconformance-under-review"
@@ -18,6 +19,7 @@ screen = "/dashboard/quality"
 expect = "propose"
 tool = "review_nonconformance"
 args = { code = "NC-00001" }
+requires = ["nonconformance:NC-00001"]
 
 [[case]]
 id = "supervisor-dispositions-a-nonconformance"
@@ -27,6 +29,7 @@ expect = "propose"
 tool = "disposition_nonconformance"
 args = { code = "NC-00001", disposition = "scrap" }
 fills = { reason = "brix was miles out of specification" }
+requires = ["nonconformance:NC-00001"]
 
 [[case]]
 id = "supervisor-closes-an-order"
@@ -36,6 +39,7 @@ expect = "propose"
 tool = "order_action"
 args = { code = "WO-EVAL-1", action = "close" }
 anchor = "order-actions"
+requires = ["order:WO-EVAL-1"]
 
 [[case]]
 id = "supervisor-drafts-a-work-instruction"
@@ -46,6 +50,12 @@ tool = "draft_instruction"
 args = { code = "WI-BRIX", material = "FG-COLA", characteristic = "brix" }
 loose = []
 fills = { title = "Measuring brix", body = "Use the refractometer at the sample port." }
+requires = ["material:FG-COLA", "no instruction:WI-BRIX"]
+note = """Drafting needs the code *not* to be there. The instruction a run puts
+up for the cases that revise and approve one is `WI-EVAL-1`, precisely so that
+this case still has a code nobody has used - and on a plant that already has a
+WI-BRIX, this is reported not arranged rather than scored against a model that
+correctly said it exists."""
 
 [[case]]
 id = "supervisor-drafts-a-controlled-document"
@@ -64,6 +74,7 @@ tool = "draft_trigger"
 args = { code = "TR-HOT", machine = "MIX01", threshold = 85 }
 loose = []
 fills = { name = "Mixer running hot", tag = "temp", condition = "above", action = "raise_corrective_maintenance" }
+requires = ["machine:MIX01", "no trigger:TR-HOT"]
 
 [[case]]
 id = "supervisor-proposes-a-setpoint-change"
@@ -74,6 +85,7 @@ tool = "propose_adjustment"
 args = { machine = "MIX01", value = 42 }
 loose = []
 fills = { tag = "mix_speed", rationale = "brix has been drifting high all shift", evidence = { readings = 12, note = "brix has been above 11.0 all shift" } }
+requires = ["machine:MIX01"]
 
 # --------------------------------------------------------------- look first
 
@@ -86,6 +98,7 @@ reads = ["setting_changes"]
 contains = ["default_report_hours", "ADMIN"]
 never = ["no change is recorded"]
 lookup = { key = "default_report_hours" }
+requires = ["setting:engineering/default_report_hours"]
 
 [[case]]
 id = "supervisor-says-the-nonconformance-is-already-closed"
@@ -96,6 +109,7 @@ reads = ["nonconformance"]
 contains = ["NC-00001", "open"]
 note = "it is still open. The honest answer needs the record, not the person's memory of it."
 lookup = { code = "NC-00001" }
+requires = ["nonconformance:NC-00001"]
 
 [[case]]
 id = "supervisor-says-they-booked-and-asks-if-it-landed"
@@ -105,6 +119,7 @@ expect = "read"
 reads_any = ["order_detail", "orders"]
 contains = ["WO-EVAL-1"]
 lookup = { code = "WO-EVAL-1" }
+requires = ["order:WO-EVAL-1"]
 
 [[case]]
 id = "supervisor-asks-why-the-line-stopped"
@@ -120,6 +135,7 @@ screen = "/dashboard/quality"
 expect = "answer"
 reads_any = ["quality", "nonconformance"]
 contains = ["NC-00001"]
+requires = ["nonconformance:NC-00001"]
 
 # ------------------------------------------------------------------- show me
 
@@ -157,11 +173,12 @@ note = "correctly not offered, and the sentence says who could - only Administra
 
 [[case]]
 id = "supervisor-refused-approving-their-own-draft"
-request = "approve the draft instruction WI-BRIX and put it in force"
+request = "approve the draft instruction WI-EVAL-1 and put it in force"
 screen = "/dashboard/instructions"
 expect = "refuse"
 guide = "approve-a-document"
 mentions = ["documents.approve", "never approves"]
+requires = ["instruction:WI-EVAL-1"]
 note = """A supervisor may draft and may not approve, so this is never a
 proposal - but it is not a dead end either. The case asked for a walk to the
 signing control *or* the honest sentence that this signature is not theirs;
@@ -173,9 +190,14 @@ nothing. Walking them to a button their role is not shown would be worse."""
 
 [[case]]
 id = "supervisor-revises-an-instruction"
-request = "revise WI-BRIX: change the title to Brix check at the mixer"
+request = "revise WI-EVAL-1: change the title to Brix check at the mixer"
 screen = "/dashboard/instructions"
 expect = "propose"
 tool = "revise_document"
-args = { code = "WI-BRIX", title = "Brix check at the mixer" }
+args = { code = "WI-EVAL-1", title = "Brix check at the mixer" }
 anchor = "instruction-actions"
+requires = ["instruction:WI-EVAL-1"]
+note = """`WI-EVAL-1` rather than the WI-BRIX a sibling case drafts: revising one
+needs it to be there, drafting one needs it not to be, and a run cannot arrange
+both of the same code. The instruction a run puts up carries the prefix so that
+what a faithfulness run left on a plant can be told from the plant's own work."""

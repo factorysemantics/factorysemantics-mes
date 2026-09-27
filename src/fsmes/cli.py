@@ -3536,6 +3536,11 @@ def assist_eval_command(
         None, "--max-usd",
         help=f"Stop a live run once it has cost this much. Default "
              f"${assist_runs.DEFAULT_MAX_USD:.2f}."),
+    no_arrange: bool = typer.Option(
+        False, "--no-arrange",
+        help="Do not put the suite's fixtures on the live plant. Every case the "
+             "plant has not got what for is then reported 'not arranged' - not "
+             "asked, not scored, not paid for."),
     role: list[str] = typer.Option(
         None, "--role", help="Only these roles. Repeat for several."),
     case: str = typer.Option(None, "--case", help="Only the one case with this id."),
@@ -3571,6 +3576,15 @@ def assist_eval_command(
     in the plant's environment, it costs money, and it stops at `--max-usd`.
     Every proposal it opens is declined, so a scored plant is an unchanged plant.
 
+    A live run **arranges the plant first**: it puts the fixtures the suite's
+    sentences name there, through the tools, as the AGENT account on behalf of
+    the account you signed in as. That writes to the plant and lands in its
+    audit trail - `docs/ai/ASSIST-EVAL.md` lists every row it leaves and what a
+    person does about each. `--no-arrange` leaves the plant alone; cases whose
+    fixtures are not there are reported *not arranged* either way, counted apart
+    from pass and fail, because a model that says "there is no MIX01 here" is
+    right and scoring that as a failure teaches the wrong lesson.
+
     A case the current code cannot pass yet is marked `not_yet` in the suite with
     the handoff that will make it pass. Those are counted separately, and the
     test wrapper fails if one of them starts passing - a ratchet that works both
@@ -3604,14 +3618,15 @@ def assist_eval_command(
         plant_name = assist_eval.SCRIPTED_PLANT
     else:
         outcomes, run, model, plant_name = _live_run(cases, plant, user, password, max_usd,
-                                                     quiet=quiet)
+                                                     quiet=quiet, arranging=not no_arrange)
 
     counts = assist_eval.tally(outcomes)
     if not quiet:
         for outcome in outcomes:
             if outcome.passed:
                 continue
-            mark = "FAIL" if outcome.counted else "not yet"
+            mark = ("not here" if not outcome.arranged
+                    else "FAIL" if outcome.counted else "not yet")
             typer.echo(f"{mark:8} {outcome.case.id}  ({outcome.case.role})")
             for why in outcome.why:
                 typer.echo(f"         {why}")
@@ -3623,6 +3638,14 @@ def assist_eval_command(
                    f"   not_yet {row['not_yet']}")
     typer.echo(f"{'total':12} {counts['passed']:3}/{counts['required']:<3} "
                f"      not_yet {counts['not_yet']}")
+    if counts["not_arranged"]:
+        typer.echo(f"{counts['not_arranged']} case(s) were not arranged: this plant has "
+                   f"not got what the request names, so they were not asked and not "
+                   f"scored. They are listed in the result file.")
+    if run.get("made") or run.get("refused"):
+        typer.echo(f"Arranged: {len(run.get('made') or [])} put there, "
+                   f"{len(run.get('already') or [])} already there, "
+                   f"{len(run.get('refused') or {})} could not be.")
     if counts["not_yet_passing"]:
         typer.echo(f"{counts['not_yet_passing']} case(s) marked not_yet are passing now. "
                    f"Take the mark off them and say so in the handoff.")
@@ -3653,7 +3676,7 @@ def assist_eval_command(
         raise typer.Exit(1)
 
 
-def _live_run(cases, plant, user, password, max_usd, *, quiet: bool):
+def _live_run(cases, plant, user, password, max_usd, *, quiet: bool, arranging: bool):
     """The live half, with the two refusals that have to happen before a call."""
     import os
 
@@ -3680,7 +3703,8 @@ def _live_run(cases, plant, user, password, max_usd, *, quiet: bool):
         outcomes, run = assist_runs.run_live(
             cases, client,
             max_usd=assist_runs.DEFAULT_MAX_USD if max_usd is None else max_usd,
-            on_case=None if quiet else _say_case)
+            on_case=None if quiet else _say_case,
+            arranging=arranging, on_behalf_of=user.upper())
     except assist_runs.LiveRefused as exc:
         typer.echo(f"The live run stopped: {exc}")
         raise typer.Exit(2) from exc
@@ -3690,7 +3714,10 @@ def _live_run(cases, plant, user, password, max_usd, *, quiet: bool):
 
 
 def _say_case(outcome) -> None:
-    typer.echo(f"{'ok  ' if outcome.passed else 'FAIL'} {outcome.case.id}")
+    mark = "ok  " if outcome.passed else ("----" if not outcome.arranged else "FAIL")
+    typer.echo(f"{mark} {outcome.case.id}"
+               + ("" if outcome.arranged
+                  else f"   not arranged: {', '.join(outcome.missing)}"))
 
 
 def run() -> None:

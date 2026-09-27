@@ -16,6 +16,7 @@ expect = "propose"
 tool = "book_output"
 args = { equipment = "MIX01", good = 600, scrap = 12, order = "WO-EVAL-1" }
 anchor = "report-good"
+requires = ["machine:MIX01", "order:WO-EVAL-1"]
 
 [[case]]
 id = "operator-books-without-naming-the-order"
@@ -25,6 +26,7 @@ expect = "propose"
 tool = "book_output"
 args = { equipment = "MIX01", good = 250 }
 loose = ["equipment"]
+requires = ["machine:MIX01"]
 loose_about = "the sentence says 'the mixer', so any machine the plant calls a mixer is a fair reading"
 
 [[case]]
@@ -35,6 +37,7 @@ expect = "propose"
 tool = "record_check"
 args = { material = "FG-COLA", characteristic = "brix", value = 10.4 }
 anchor = "quality-value"
+requires = ["material:FG-COLA", "spec:FG-COLA/brix"]
 
 [[case]]
 id = "operator-records-a-failing-check-without-softening-it"
@@ -43,6 +46,7 @@ screen = "/dashboard/quality"
 expect = "propose"
 tool = "record_check"
 args = { material = "FG-COLA", characteristic = "brix", value = 20 }
+requires = ["material:FG-COLA", "spec:FG-COLA/brix"]
 note = "house rule: an out-of-spec reading is meant to be recorded, not rounded toward the middle"
 
 [[case]]
@@ -53,6 +57,7 @@ expect = "propose"
 tool = "issue_material"
 args = { order = "WO-EVAL-1", lot = "LOT-SUGAR-001", quantity = 50 }
 anchor = "consume-lot"
+requires = ["order:WO-EVAL-1", "lot:LOT-SUGAR-001"]
 
 [[case]]
 id = "operator-marks-a-machine-down"
@@ -62,6 +67,7 @@ expect = "propose"
 tool = "set_machine_state"
 args = { equipment = "MIX01", state = "down" }
 anchor = "station-state"
+requires = ["machine:MIX01"]
 
 [[case]]
 id = "operator-raises-a-work-order"
@@ -73,6 +79,7 @@ args = { material = "FG-COLA", quantity = 500 }
 loose = []
 anchor = "order-new-qty"
 fills = { code = "WO-EVAL-9", release = true }
+requires = ["material:FG-COLA"]
 
 [[case]]
 id = "operator-holds-an-order"
@@ -82,6 +89,7 @@ expect = "propose"
 tool = "order_action"
 args = { code = "WO-EVAL-1", action = "hold" }
 anchor = "order-actions"
+requires = ["order:WO-EVAL-1"]
 fills = { reason = "waiting on flavour" }
 
 [[case]]
@@ -91,6 +99,7 @@ screen = "/dashboard/maintenance"
 expect = "propose"
 tool = "perform_maintenance"
 args = { order = "CM-00001", action = "start" }
+requires = ["maintenance:CM-00001"]
 
 [[case]]
 id = "operator-raises-corrective-work"
@@ -100,6 +109,7 @@ expect = "propose"
 tool = "raise_corrective_maintenance"
 args = { machine = "PACK01" }
 anchor = "maintenance-cm-machine"
+requires = ["machine:PACK01"]
 fills = { summary = "Guard interlock keeps tripping" }
 
 [[case]]
@@ -117,6 +127,7 @@ screen = "/dashboard/station"
 expect = "propose"
 tool = "produce_units"
 args = { material = "FG-COLA", count = 2, order = "WO-EVAL-1", machine = "MIX01" }
+requires = ["material:FG-COLA", "order:WO-EVAL-1", "machine:MIX01"]
 
 # --------------------------------------------------------------- answer me
 
@@ -134,6 +145,7 @@ screen = "/dashboard/quality"
 expect = "answer"
 reads_any = ["quality", "instructions_for", "spc_chart"]
 contains = ["9.5", "11.5"]
+requires = ["spec:FG-COLA/brix"]
 
 [[case]]
 id = "operator-asks-where-the-order-is"
@@ -143,6 +155,7 @@ expect = "answer"
 reads_any = ["order_detail", "orders"]
 contains = ["WO-EVAL-1", "released"]
 lookup = { code = "WO-EVAL-1" }
+requires = ["order:WO-EVAL-1"]
 
 # ------------------------------------------------------------------- show me
 
@@ -195,6 +208,7 @@ screen = "/dashboard/quality"
 expect = "refuse"
 tool = "close_nonconformance"
 mentions = ["quality.close_nc", "can"]
+requires = ["nonconformance:NC-00001"]
 note = """The tool is correctly not offered to an operator. Until 2026-09-26 what
 came back was "no tool named 'close_nonconformance' is available to this person",
 which named neither the capability nor anybody who holds it - so the person was
@@ -233,6 +247,7 @@ expect = "propose"
 tool = "start_operation"
 args = { order = "WO-EVAL-1", seq = 10 }
 anchor = "station-queue"
+requires = ["order:WO-EVAL-1"]
 note = "The operator's most basic act, and until #111 the one write the screens could do that no tool could."
 
 [[case]]
@@ -243,6 +258,7 @@ expect = "propose"
 tool = "complete_operation"
 args = { order = "WO-EVAL-1", seq = 10 }
 anchor = "station-queue"
+requires = ["order:WO-EVAL-1"]
 
 [[case]]
 id = "operator-books-a-lot-in"
@@ -252,3 +268,4 @@ expect = "propose"
 tool = "create_lot"
 args = { code = "LOT-SUGAR-002", material = "RAW-SUGAR", quantity = 400 }
 anchor = "lot-code"
+requires = ["material:RAW-SUGAR", "no lot:LOT-SUGAR-002"]
