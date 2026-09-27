@@ -3840,7 +3840,7 @@ when this document and the panel disagree, one of them has a bug.</p>
 <td>ask it something</td>
 </tr>
 <tr>
-<td>Floor agent (cloud)</td>
+<td>Floor agent (cloud) — <em>not a local consumer; read from <code>agent.status()</code></em></td>
 <td>the Assistant button when <code>agent.available()</code> is true</td>
 <td>a cloud model works the plant's own tools: reads freely, proposes every write, puts a walkthrough on the screen</td>
 <td>the plant's own <code>ai_turns</code> table (the <strong>AI</strong> screen), plus <code>~/.local/share/fsmes/agent-turns.jsonl</code> (one line per turn) and <code>agent-usage.jsonl</code> (the bill)</td>
@@ -3864,7 +3864,12 @@ when this document and the panel disagree, one of them has a bug.</p>
 </table>
 <p>Ollama itself: <code>127.0.0.1:11434</code> on <code>main</code> (override with <code>MES_OLLAMA</code>),
 qwen3:8b ≈ 5.6 GB loaded, idle-unloads after a few minutes. <code>MES_LOCAL_AI=0</code>
-declares a machine deliberately AI-free and hides the panel.</p>
+declares a machine with no local model: the Ops screen's Local AI panel is
+hidden, and the AI screen's Status tab says the layer is off and why. It does
+<strong>not</strong> hide the cloud brain, which is a different model behind a different
+setting — the AI tab and <code>fsmes ai-status</code> read that from <code>agent.status()</code>,
+whatever <code>MES_LOCAL_AI</code> says, so a plant that runs no local model still sees
+what its assistant costs against its cap.</p>
 <h2 id="what-the-audit-found-2026-09-02">What the audit found (2026-09-02)<a class="headerlink" href="#what-the-audit-found-2026-09-02" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Runtime healthy.</strong> qwen loaded and answering (a design-chat question that
