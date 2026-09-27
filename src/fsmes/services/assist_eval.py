@@ -800,9 +800,11 @@ def report(outcomes: tuple[Outcome, ...], *, mode: str, model: str | None = None
     when = when or datetime.now(UTC)
     counts = tally(outcomes)
     run = run or {}
-    unarranged = "" if not counts["not_arranged"] else (
-        f" {counts['not_arranged']} were not arranged — this plant has not got what "
-        f"the request names, so they are not scored.")
+    apart = counts["not_arranged"]
+    unarranged = "" if not apart else (
+        f" {apart} {'case was' if apart == 1 else 'cases were'} not arranged — this "
+        f"plant has not got what the request names, so "
+        f"{'it is' if apart == 1 else 'they are'} not scored.")
     lines = [f"# Assistant faithfulness — {when.date().isoformat()}", "",
              f"*{mode} run, {when.isoformat(timespec='seconds')}. "
              f"{counts['passed']} of {counts['required']} required cases pass; "
