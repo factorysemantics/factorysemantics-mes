@@ -141,7 +141,8 @@ async function loadActivity() {
       opt.value = who;
       select.appendChild(opt);
     }
-    select.value = chosen;
+    select.value = select.dataset.wanted || chosen;
+    delete select.dataset.wanted;
     select.dataset.filled = String(out.actors.length);
   }
 
@@ -282,8 +283,26 @@ $("#action-filter").addEventListener("input", () => {
   window._af = setTimeout(loadActivity, 350);
 });
 
+/* A link into the audit trail arrives with its filter in the address, the way
+   the Configuration page takes `?setting=`. The AI screen's conversations link
+   here to say "this is the write that proposal made"; a link that landed on an
+   unfiltered list would be a promise the screen does not keep. */
+function applyQueryFilters() {
+  const query = new URLSearchParams(window.location.search);
+  const action = query.get("action");
+  if (action) $("#action-filter").value = action;
+  const actor = query.get("actor");
+  if (actor) {
+    // The actor list is filled from the server's own answer, so the value is
+    // set now and again after the first load fills the options.
+    $("#actor-filter").dataset.wanted = actor;
+    $("#actor-filter").value = actor;
+  }
+}
+
 (async function boot() {
   me = await api("/auth/me");
+  applyQueryFilters();
   loadAi();
   setInterval(loadAi, 15000);
   const allowed = (me.capabilities || []).includes("audit.read");

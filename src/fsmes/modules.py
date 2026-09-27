@@ -500,6 +500,18 @@ REGISTRY: tuple[Module, ...] = (
                 define="users.manage",
                 edit_here=True,
                 pack_keys=("[admin] ai_rollup_stale_hours",)),
+            ConfigSection(
+                domain="administration",
+                key="ai_trace_days",
+                label="How long the AI trace is kept",
+                about="Every turn the assistant and the design chat have had "
+                      "on this plant is on the AI screen. Ninety days by "
+                      "default; zero keeps everything. Rows past the horizon "
+                      "are deleted as new ones are written.",
+                href="/dashboard/ai#settings",
+                define="users.manage",
+                edit_here=True,
+                pack_keys=("[admin] ai_trace_days",)),
 
             # IT's three plant-scope rows of the configuration audit. They are
             # listed on the **Administration** page and gated on
@@ -712,6 +724,16 @@ REGISTRY: tuple[Module, ...] = (
         # code. The paths are written out rather than templated so that a
         # crawl, a link check and this registry all see real addresses.
         pages=(Page("/dashboard", "index.html", "The plant at a glance."),
+               # AI is one nav entry with tabs inside it, not a chip per
+               # brain - the same rule as a Configuration workspace (§2a of
+               # docs/design/config-assistance.md). It sits on the kernel's
+               # dashboard module rather than on `assist` because it shows
+               # every brain this plant has, the floor assistant and the
+               # design chat among them, and because a plant that switched
+               # the assistant off still has a trace of what it did before.
+               Page("/dashboard/ai", "ai.html",
+                    "Every conversation this plant's AI has had, what it "
+                    "proposed, what was done, what failed and what it cost."),
                *(Page(f"/dashboard/config/{domain.slug}", "config.html",
                       f"{domain.title}: everything configurable in this workspace, "
                       "in one place, so a new setting needs no new nav entry.")
@@ -722,7 +744,13 @@ REGISTRY: tuple[Module, ...] = (
         # section writes rows into this same table. Here also means always
         # present: a plant that switches Quality off keeps the numbers it had
         # chosen, and they are what it reads again when Quality comes back.
-        tables=("plant_settings",),
+        # `plant_settings` is the Configuration page's own table, keyed by
+        # pack section and key. `ai_turns` is the AI page's, one row per turn
+        # of every conversation any brain on this plant has had. Both are here
+        # rather than on the module whose screen reads them, and for the same
+        # reason: this module is the kernel's, so a plant that switches the
+        # assistant or the design chat off keeps the record of what they did.
+        tables=("plant_settings", "ai_turns"),
         # Three tools for every domain's settings - read, search-and-read-one,
         # write, and the audit trail behind them - for the same reason the
         # table is here: one endpoint writes them all and reads the owning

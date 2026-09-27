@@ -7,6 +7,7 @@ message.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter
@@ -15,9 +16,11 @@ from pydantic import BaseModel
 from fsmes.api import deps
 from fsmes.api.deps import UserDep, require
 from fsmes.config import get_settings
-from fsmes.services import auth, design
+from fsmes.services import ai_trace, auth, design
 
 router = APIRouter()
+
+LOGGER = logging.getLogger(__name__)
 
 WEB_DIR = Path(__file__).resolve().parents[1].parent / "web"
 
@@ -56,6 +59,13 @@ def status(user: UserDep) -> dict:
                  "answers. It is a weaker design partner; set the key to use Claude."
         ),
     }
+
+
+def _trace_days(db) -> float:
+    """This plant's horizon for the AI trace - `[admin] ai_trace_days`."""
+    from fsmes.services import plant_settings
+
+    return float(plant_settings.setting(db, "admin", "ai_trace_days"))
 
 
 def _numbers(db) -> dict:
@@ -173,6 +183,25 @@ def chat(body: ChatIn, user: UserDep) -> dict:
                                        model=numbers["model"])
 
     design.add_turn(conversation, "assistant", text, model=model)
+
+    # The plant's own copy of the same turn. The design store is one SQLite
+    # file per machine and the AI screen reads the plant's database, so a
+    # conversation about this plant's screens is readable beside the floor
+    # assistant's rather than only by whoever has a shell on the box. The
+    # words on both sides and nothing else: no screen dump, no source, no
+    # system prompt - `visible` and `data` are this plant's own rows and have
+    # their own screens and their own gates.
+    try:
+        with deps.short_write() as db:
+            ai_trace.record_quietly(db, {
+                "brain": "design", "session": f"design-{conversation}",
+                "user": user["sub"], "model": model, "kind": "reply",
+                "asked": body.message, "said": text,
+            }, keep_days=_trace_days(db))
+    except Exception as exc:     # a locked database must not eat the answer
+        LOGGER.warning("ai trace: this design turn was not recorded (%s)",
+                       type(exc).__name__, exc_info=exc)
+
     return {
         "conversation": conversation,
         "say": text,

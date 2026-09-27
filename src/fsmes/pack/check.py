@@ -880,6 +880,9 @@ ADMIN_RANGES: dict[str, tuple[float, float | None, str]] = {
     "ai_rollup_stale_hours": (
         0, None, "a rollup is late the instant it is written if the threshold "
                  "is nothing, and the panel would never say anything else"),
+    "ai_trace_days": (
+        0, None, "a negative horizon is not a shorter one; zero is the plant "
+                 "that keeps every turn, and that is the floor"),
 }
 
 SCREEN_RANGES: dict[str, tuple[float, float | None, str]] = {

@@ -1654,6 +1654,116 @@ def restore(
         typer.echo("Then bring the schema to this version: `fsmes init-db`.")
 
 
+# ----------------------------------------------------------------- the AI
+
+ai_app = typer.Typer(
+    help="What this plant's AI has been asked, what it did, and what it cost. "
+         "(`fsmes ai-status` is the other half: which brains are on, and why "
+         "the rest are not.)")
+app.add_typer(ai_app, name="ai")
+
+
+def _ai_since(days: float | None):
+    from datetime import timedelta
+
+    from fsmes.db import utcnow
+
+    return None if days is None or days <= 0 else utcnow() - timedelta(days=float(days))
+
+
+def _ai_outcomes(counts: dict) -> str:
+    if not counts:
+        return "no proposals"
+    return ", ".join(f"{n} {word}" for word, n in sorted(counts.items()))
+
+
+@ai_app.command("conversations")
+def ai_conversations(
+    since: float = typer.Option(None, "--since", help="Only the last N days."),
+    person: str = typer.Option(None, "--person", help="One account's conversations."),
+    limit: int = typer.Option(50, help="How many to print."),
+) -> None:
+    """Every conversation this plant's AI has had, newest first.
+
+    The same rows the AI screen shows, for a plant with no browser at hand -
+    a server over SSH at two in the morning, which is when somebody wants to
+    know what the assistant told the night shift.
+    """
+    from fsmes.db import session_scope
+    from fsmes.services import ai_trace
+
+    with session_scope() as session:
+        page = ai_trace.conversations(session, person=person,
+                                      since=_ai_since(since), limit=limit)
+        spent = ai_trace.spend(session, since=_ai_since(since))
+
+    typer.echo(f"{page['showing']} of {page['total']} conversation(s)"
+               + (f", last {since:g} day(s)" if since else "")
+               + f" — ${spent:.2f} over the rows this plant still keeps.")
+    if not page["conversations"]:
+        typer.echo("Nothing recorded. An assistant nobody has used records nothing, "
+                   "which is not the same as one that is broken — `fsmes ai status` "
+                   "says whether a brain is on.")
+        return
+    typer.echo("")
+    for row in page["conversations"]:
+        typer.echo(f"{row['session']}  {row['brain']:<7} {row['person']:<8} "
+                   f"{row['started']:%Y-%m-%d %H:%M} — {row['last']:%H:%M}  "
+                   f"{row['turns']} turn(s), {row['tool_calls']} tool call(s), "
+                   f"{_ai_outcomes(row['proposals'])}"
+                   + (f", {row['errors']} error(s)" if row["errors"] else "")
+                   + f"  ${row['usd']:.4f}")
+        typer.echo(f"    “{textwrap.shorten(row['opened_with'], 96)}”")
+
+
+@ai_app.command("show")
+def ai_show(
+    conversation: str = typer.Argument(..., help="A conversation id from `fsmes ai conversations`."),
+) -> None:
+    """One conversation, turn by turn, in the order it happened."""
+    from fsmes.db import session_scope
+    from fsmes.services import ai_trace
+
+    with session_scope() as session:
+        page = ai_trace.turns(session, conversation=conversation, limit=ai_trace.MAX_ROWS)
+
+    if not page["turns"]:
+        typer.echo(f"No conversation {conversation!r} in this plant's trace. "
+                   "`fsmes ai conversations` lists the ones it has; a conversation "
+                   "older than `[admin] ai_trace_days` has been pruned.")
+        raise typer.Exit(1)
+
+    first = page["turns"][0]
+    typer.echo(f"{conversation} — {first['brain']} brain, {first['person']}, "
+               f"{first['model'] or 'model not recorded'}")
+    typer.echo(f"{page['showing']} of {page['total']} turn(s).")
+    for turn in page["turns"]:
+        typer.echo("")
+        typer.echo(f"  {turn['ts']:%Y-%m-%d %H:%M:%S}  {turn['kind']}"
+                   + (f"  [{turn['error']}]" if turn["error"] else "")
+                   + (f"  ${turn['usd']:.4f}" if turn["usd"] else ""))
+        if turn["asked"]:
+            for line in textwrap.wrap(turn["asked"], 88) or [""]:
+                typer.echo(f"    > {line}")
+        for call in turn["tools"]:
+            args = " ".join(f"{k}={v}" for k, v in (call.get("args") or {}).items())
+            typer.echo(f"    · {call.get('tool')} {args}".rstrip())
+            typer.echo(f"      {'ok' if call.get('ok') else 'failed'}: {call.get('summary', '')}")
+        for proposal in turn["proposals"]:
+            args = " ".join(f"{k}={v}" for k, v in (proposal.get("args") or {}).items())
+            audited = (f" → {proposal['entity_type']} {proposal['entity_id']}"
+                       if proposal.get("entity_id") else "")
+            typer.echo(f"    ◆ {proposal.get('tool')} {args} — "
+                       f"{proposal.get('outcome')}{audited}".rstrip())
+        if turn["guide"]:
+            typer.echo(f"    ▸ walkthrough {turn['guide']} put on their screen "
+                       f"({turn['guide_steps']} steps; how far they got is not "
+                       "recorded — the walk runs in the browser)")
+        if turn["said"]:
+            for line in textwrap.wrap(turn["said"], 88) or [""]:
+                typer.echo(f"    < {line}")
+
+
 pack_app = typer.Typer(
     help="Plant packs: the one directory that says which plant this is.")
 app.add_typer(pack_app, name="pack")
@@ -2795,7 +2905,8 @@ def config_audit_cmd(
 
 
 assist_app = typer.Typer(
-    help="The floor assistant: what it can do for a person, measured.")
+    help="The floor assistant: what it can do for a person, measured (coverage), "
+         "and whether it does what people actually ask (eval).")
 app.add_typer(assist_app, name="assist")
 
 
@@ -3401,11 +3512,9 @@ def jev_calibrate(
     typer.echo("  No threshold was chosen. Decision 0031: a judgment is a proposal.")
 
 
-assist_app = typer.Typer(
-    help="The floor assistant: does it do what people actually ask? A written "
-         "suite of requests, scored two ways.",
-)
-app.add_typer(assist_app, name="assist")
+# `assist_app` is defined once, above, beside `coverage`. #110 and #111 each
+# created the group; two `add_typer(name="assist")` calls left only the
+# second one's command reachable, and `fsmes assist coverage` vanished.
 
 
 @assist_app.command("eval")

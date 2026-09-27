@@ -9,6 +9,7 @@ anything itself, so it cannot reach past the person's own permissions.
 from __future__ import annotations
 
 import contextlib
+import logging
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -17,11 +18,14 @@ from sqlalchemy import select
 from fsmes.api import deps
 from fsmes.api.deps import DbDep, UserDep
 from fsmes.config import get_settings
+from fsmes.db import utcnow
 from fsmes.domain import NonConformance, Person, WorkOrder
-from fsmes.services import agent, assistant, auth, documents
+from fsmes.services import agent, ai_trace, assistant, auth, documents
 from fsmes.services import analysis as analysis_service
 
 router = APIRouter()
+
+LOGGER = logging.getLogger(__name__)
 
 
 class AskIn(BaseModel):
@@ -196,6 +200,67 @@ def _context_chars(db) -> int:
     return int(plant_settings.setting(db, "admin", "assistant_context_chars"))
 
 
+def _trace_days(db) -> float:
+    """This plant's horizon for the AI trace - `[admin] ai_trace_days`."""
+    from fsmes.services import plant_settings
+
+    return float(plant_settings.setting(db, "admin", "ai_trace_days"))
+
+
+def _record(sess, *, since=None) -> None:
+    """Write the turn that just finished into this plant's own trace.
+
+    After the model, never before it: this opens the plant's write lock for
+    the length of one INSERT. A turn that cannot be recorded is a line in the
+    plant's log and nothing the person waiting for their answer ever sees -
+    the assistant's job is to answer, and the record is this screen's.
+
+    `since` is the instant a confirmed write began, and it is how a proposal
+    in the trace finds the audit row it produced: the agent writes as AGENT on
+    behalf of the person, so every audit row written for that person by the
+    agent since that instant belongs to this turn. That is the link decision
+    0035 needs on the page - the trace says what was proposed, the audit trail
+    says what changed, and the two name the same entity.
+    """
+    row = getattr(sess, "last_turn", None)
+    if not row:
+        return
+    try:
+        with deps.short_write() as db:
+            if since is not None:
+                _attach_audit_rows(db, row, sess.user, since)
+            ai_trace.record_quietly(db, row, keep_days=_trace_days(db))
+    except Exception as exc:     # a locked database must not eat the answer
+        LOGGER.warning("ai trace: this turn was not recorded (%s) session=%s",
+                       type(exc).__name__, sess.id, exc_info=exc)
+
+
+def _attach_audit_rows(db, row: dict, person: str, since) -> None:
+    """Put the audit row a confirmed proposal produced beside the proposal."""
+    from fsmes.domain import AuditLog
+
+    confirmed = [p for p in row.get("proposals") or [] if p.get("outcome") == "confirmed"]
+    if not confirmed:
+        return
+    written = db.scalars(
+        select(AuditLog).where(AuditLog.on_behalf_of == person, AuditLog.ts >= since)
+        .order_by(AuditLog.id.asc())).all()
+    if not written:
+        return
+    # One proposal is one write, in the order they were confirmed. More audit
+    # rows than proposals is normal - one write can touch two entities - so the
+    # first row of each is the one named and the count says there were more.
+    for index, proposal in enumerate(confirmed):
+        if index >= len(written):
+            break
+        entry = written[index]
+        proposal["entity_type"] = entry.entity_type
+        proposal["entity_id"] = entry.entity_id
+        proposal["action"] = entry.action
+    if len(written) > len(confirmed):
+        confirmed[-1]["audit_rows"] = len(written)
+
+
 def _who(db, user: dict) -> tuple[str, set[str], str]:
     role = auth.current_role(db, user) or user["role"]
     person = db.scalar(select(Person).where(Person.code == user["sub"]))
@@ -296,6 +361,7 @@ def agent_message(body: AgentIn, user: UserDep) -> dict:
     sess = (agent.get_session(body.session, user["sub"])
             or agent.open_session(user["sub"], plant, capabilities, guides=guides, **budget))
     out = agent.message(sess, body.message, name=name, role=role)
+    _record(sess)
     if out.get("kind") == "guide" and out.get("guide"):
         # `show_guide` handed back the walk itself. The reply the panel reads
         # is the same shape the guide router makes, so a walk starts the same
@@ -312,7 +378,10 @@ def agent_confirm(body: ResolveIn, user: UserDep) -> dict:
     sess = agent.get_session(body.session, user["sub"])
     if sess is None:
         raise HTTPException(404, "that conversation has expired - ask again")
-    return agent.confirm(sess, body.proposal)
+    began = utcnow()
+    out = agent.confirm(sess, body.proposal)
+    _record(sess, since=began)
+    return out
 
 
 @router.post("/agent/decline")
@@ -320,7 +389,9 @@ def agent_decline(body: ResolveIn, user: UserDep) -> dict:
     sess = agent.get_session(body.session, user["sub"])
     if sess is None:
         raise HTTPException(404, "that conversation has expired - ask again")
-    return agent.decline(sess, body.proposal, body.reason)
+    out = agent.decline(sess, body.proposal, body.reason)
+    _record(sess)
+    return out
 
 
 @router.get("/guides")

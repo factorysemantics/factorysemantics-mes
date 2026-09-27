@@ -12,6 +12,34 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **AI is a workspace in the navigation bar, beside Setup, and it shows every
+  conversation this plant's AI has had.** Three tabs behind `audit.read`:
+  **Conversations** — one row per conversation with who, when, how many turns,
+  what was proposed and what became of each, how many turns failed and what it
+  cost, and under it the turns themselves in order (the person's words, the
+  assistant's, every tool call with the one sentence the panel showed, every
+  proposal with its outcome, the walkthrough that went on their screen, the
+  class of any error); **Status** — which brains are on, which are off and
+  why, the GPU, and the cloud brain's spend against its cap; **Settings** —
+  how long the trace is kept, and links to the Setup rows that gate the
+  assistant. A confirmed proposal names the audit row it wrote, so the trace
+  and the audit trail can be read side by side.
+
+  The record is the plant's own: an `ai_turns` table in the plant's database,
+  written by the assistant as it answers and by the design chat, pruned to
+  `[admin] ai_trace_days` (90 by default; 0 keeps everything) as new rows are
+  written. It holds what the person was shown and one sentence per tool call —
+  never the system prompt, never the key, never a tool's raw payload. Without
+  a browser: `fsmes ai conversations`, `fsmes ai show <session>`,
+  `fsmes ai status`. `docs/operate/ai.md` says what is recorded, who may read
+  it, how long it is kept and how to read a failure out of it.
+
+  It exists because twice in one week the only record of an assistant failure
+  was a screenshot somebody pasted into a chat window, and the error that
+  broke a session for good was written down nowhere at all. Scott, 2026-09-26:
+  *"really show that this is putting AI and Agents into this system as first
+  class citizens."*
+
 - **The assistant can put a walk on your screen because it decided to, not
   because a regex did.** Two new tools when the cloud brain is on: `guides()`
   lists the walkthroughs this person is allowed to follow, and

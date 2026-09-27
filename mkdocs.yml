@@ -103,6 +103,7 @@ nav:
       - Explanation — how much of the window did the MES see: operate/coverage.md
       - Reference — what the floor assistant can do for you: operate/assistant-coverage.md
       - How-to — who names the downtime reasons: operate/who-names-the-reasons.md
+      - How-to — the AI screen and what it records: operate/ai.md
       - How-to — who names the severities: operate/quality-severities.md
       - Reference — this plant's own quality numbers: operate/quality-numbers.md
       - Reference — what this plant asks of its ERP link: operate/erp-settings.md

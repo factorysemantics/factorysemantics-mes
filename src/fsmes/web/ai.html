@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI — FactorySemantics MES</title>
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/station.css">
+<link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/ops.css">
+<link rel="stylesheet" href="/static/ai.css">
+<link rel="stylesheet" href="/static/assist.css">
+<script>
+  /* Before first paint: a daylight user must never see a flash of the
+     dark control-room palette. */
+  try {
+    document.documentElement.setAttribute(
+      "data-theme", localStorage.getItem("fsmes-theme") || "control-room");
+  } catch (e) { /* private window: the default stands */ }
+</script>
+<link rel="stylesheet" href="/static/design.css">
+</head>
+<body>
+<div id="app">
+  <header data-nav="ai"></header>
+
+  <div id="denied" class="panel denied hidden">
+    <h2>Not your screen</h2>
+    <p class="muted">The AI trace needs the <code>audit.read</code> capability —
+      the same one the audit trail is behind, because this is the record of what
+      was done in this plant and by whom. You are signed in as
+      <strong id="denied-who"></strong>.</p>
+  </div>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <div id="ai-tabs" class="tabs hidden" role="tablist" data-assist="ai-tabs">
+    <button class="tab" role="tab" data-tab="conversations">Conversations</button>
+    <button class="tab" role="tab" data-tab="status">Status</button>
+    <button class="tab" role="tab" data-tab="settings">Settings</button>
+  </div>
+
+  <main id="ai-main" class="object-main hidden">
+    <section class="tab-panel" data-panel="conversations">
+      <div class="panel">
+        <h2>Conversations <span id="conv-count" class="muted count">—</span></h2>
+        <p class="muted small">
+          Every turn of every conversation this plant's AI has had: what was asked,
+          which tools it called, what it proposed, what was done and what failed.
+          The plant keeps its own copy, in its own database, so a conversation
+          somebody had on a phone last night is readable here this morning and a
+          bug is a trace rather than a screenshot.
+        </p>
+        <div class="filter-bar" data-assist="ai-filter">
+          <input id="conv-q" type="search" aria-label="Person, words or tool"
+                 placeholder="Person, words or tool">
+          <select id="conv-since" aria-label="How far back">
+            <option value="">everything kept</option>
+            <option value="1">last day</option>
+            <option value="7" selected>last 7 days</option>
+            <option value="30">last 30 days</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table id="conv-table" data-assist="ai-conversations">
+            <thead><tr>
+              <th>Started</th><th>Who</th><th>Brain</th><th>Opened with</th>
+              <th>Turns</th><th>Proposals</th><th>Errors</th><th>Cost</th><th></th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p id="conv-empty" class="muted small hidden"></p>
+        <p id="conv-note" class="muted small"></p>
+      </div>
+
+      <div id="conv-detail" class="panel hidden">
+        <h2>One conversation <span id="detail-who" class="muted"></span></h2>
+        <p id="detail-facts" class="muted small"></p>
+        <div id="turns" class="turns" data-assist="ai-turns"></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="status">
+      <div class="panel">
+        <h2>Brains <span class="muted">— what is on, and why the rest is not</span></h2>
+        <div id="status-head" class="facts"></div>
+        <div class="table-wrap">
+          <table id="status-table" data-assist="ai-status">
+            <thead><tr>
+              <th>Job</th><th>Runs when</th><th>Last activity</th>
+              <th>Output goes to</th><th>State</th><th>Note</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p id="status-budget" class="muted small"></p>
+        <p id="status-off" class="muted small hidden"></p>
+      </div>
+
+      <div class="panel">
+        <h2>What this screen promises</h2>
+        <p class="muted small">
+          The trace records what the panel showed the person and one sentence per
+          tool call. It never holds the system prompt, never the key, and never a
+          tool's raw payload — a record of the plant's own rows read through this
+          screen would be a way around the capabilities those rows are behind.
+        </p>
+        <p class="muted small">
+          A plant in shadow mode writes these rows like any other: the trace changes
+          nothing in the plant and carries nothing off the box. What shadow mode
+          withholds is the cloud brain itself, so a shadow plant's rows are the
+          local model's.
+        </p>
+        <p class="muted small">
+          How far a person got through a walkthrough is <strong>not</strong> recorded.
+          The walk runs in their browser and the plant is not told, and an unknown is
+          written as an unknown rather than guessed at.
+        </p>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="settings">
+      <div class="panel">
+        <h2>How long the trace is kept</h2>
+        <p class="muted small">
+          Turns older than this are deleted as new ones are written, so what this
+          screen shows is what the plant has. Zero keeps everything.
+        </p>
+        <div class="row" data-needs-cap="users.manage">
+          <label for="trace-days">Days kept</label>
+          <input id="trace-days" type="number" min="0" step="1"
+                 data-assist="ai-trace-days">
+          <button id="trace-save" data-assist="ai-trace-save">Save</button>
+        </div>
+        <p id="trace-now" class="muted small"></p>
+        <p id="trace-readonly" class="muted small hidden">
+          Changing it needs <code>users.manage</code>, which you do not hold.
+        </p>
+      </div>
+
+      <div class="panel">
+        <h2>The numbers that gate the assistant</h2>
+        <p class="muted small">
+          These are Setup's, not this screen's: one Configuration entry per
+          workspace, and a row per thing. Each opens where it is set.
+        </p>
+        <ul id="agent-settings" class="setting-links"></ul>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/common.js"></script>
+<script src="/static/ai.js"></script>
+<script src="/static/assist.js"></script>
+<script src="/static/themes.js"></script>
+<script src="/static/design.js"></script>
+</body>
+</html>

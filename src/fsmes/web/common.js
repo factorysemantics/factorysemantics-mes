@@ -75,6 +75,19 @@
       { href: "/dashboard/admin", label: "Admin", cap: "users.manage" },
       { href: "/dashboard/config/administration", label: "Configuration", cap: null },
     ] },
+    /* AI is its own workspace beside Setup, not a chip per brain: one entry
+       with Conversations, Status and Settings inside it, the same shape §2a
+       of docs/design/config-assistance.md gives a Configuration workspace.
+       Scott, 2026-09-26, asked for it in those words - "really show that this
+       is putting AI and Agents into this system as first class citizens" -
+       after an assistant failure whose only record was a screenshot.
+
+       Behind `audit.read`, like Ops, because the trace is the record of what
+       was done in this plant and by whom. Somebody who may not read the audit
+       trail does not see the chip at all rather than seeing one that refuses. */
+    { group: "AI", items: [
+      { href: "/dashboard/ai", label: "AI", cap: "audit.read" },
+    ] },
   ];
 
   /* Object pages have no nav entry of their own; they are reached by links
