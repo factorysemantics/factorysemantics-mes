@@ -80,20 +80,43 @@ TURN_FILE = Path(os.environ.get(
 HIDDEN = {"list_plants"}
 
 # What a person must be allowed to do for a write tool to be proposed on
-# their behalf. A write tool missing here is still gated by plant.read and by
-# the AGENT role at the API; a capability named here must exist in
-# capabilities.CAPABILITIES (a test checks).
+# their behalf, read from the `require(...)` of the route the tool sends to.
+#
+# Every write tool is here or in `PER_CALL_NEEDS`, and
+# `test_every_write_tool_names_the_capability_its_route_demands` fails on one
+# that is not. That was not true until 2026-09-27: nine write tools were in
+# neither, and a tool in neither is offered to anybody holding `plant.read`.
+# Nothing was written - the route refused the call when it arrived - but the
+# model was shown a tool it would be refused on, and the person got a refusal
+# for a thing their assistant had just offered them.
+#
+# A capability named here must exist in capabilities.CAPABILITIES (a test
+# checks) and must be one the tool's own routes demand (the ratchet checks).
 NEEDS: dict[str, str] = {
     "record_check": "quality.record",
     "close_nonconformance": "quality.close_nc",
     "review_nonconformance": "quality.close_nc",
     "disposition_nonconformance": "quality.close_nc",
+    # A supervisor's dispositions, each gated on the same capability closing a
+    # non-conformance is: recording what a gauge did when it was checked,
+    # putting a certificate in force, and quarantining, releasing or scrapping
+    # an identified unit.
+    "calibrate_gauge": "quality.close_nc",
+    "issue_certificate": "quality.close_nc",
+    "issue_pallet_certificate": "quality.close_nc",
+    "set_unit_status": "quality.close_nc",
     "produce_units": "production.book",
     "book_output": "production.book",
     # Starting and completing a step of an order: the operator's most basic
     # act, and gated by the route on the same capability booking output is.
     "start_operation": "production.book",
     "complete_operation": "production.book",
+    # Identified units: what a marker or a palletizer sends, and what an
+    # operator does by hand at the packing station. The same capability
+    # booking output is gated on, because it is the same act counted a
+    # serial at a time.
+    "produce_batch": "production.book",
+    "pack_unit": "production.book",
     "issue_material": "production.consume",
     "create_lot": "production.consume",
     "set_machine_state": "equipment.state",
@@ -105,9 +128,14 @@ NEEDS: dict[str, str] = {
     "create_maintenance_plan": "maintenance.plan",
     "create_material": "masterdata.write",
     "create_equipment": "masterdata.write",
+    "register_gauge": "masterdata.write",
     "create_routing": "masterdata.write",
     "create_spec": "masterdata.write",
     "add_bom_component": "masterdata.write",
+    # A person on the personnel register without a sign-in. The register is
+    # who the plant may name as having done something, so it is gated where
+    # accounts are.
+    "add_person": "users.manage",
     "create_user": "users.manage",
     "create_role": "users.manage",
     "update_role": "users.manage",
@@ -119,6 +147,9 @@ NEEDS: dict[str, str] = {
     "draft_downtime_reason": "process.define",
     "draft_nc_severity": "quality.define",
     "propose_adjustment": "adjustments.propose",
+    # Putting a dead ERP message back in the queue. Gated where closing an
+    # order is: the message is usually the confirmation of one.
+    "erp_retry": "orders.close",
     "plan_order": "scheduling.plan",
     "plan_all_orders": "scheduling.plan",
     "add_shift": "scheduling.plan",

@@ -1254,7 +1254,19 @@ write tool added without a surface goes red in CI.
 
 Measured before and after, on the same plant: **10 surfaces of 34 proposable
 write tools**, then 34 of 34 — and **38 of 38** once §15's four tools landed
-and this branch was rebased onto them. Seventy-odd `data-assist` anchors were
+and this branch was rebased onto them.
+
+> **2026-09-27.** That figure was 38 of 38 *proposable* tools, and it turned out
+> nine write tools were not proposable only because they named no capability at
+> all — so the catalogue offered them to anybody holding `plant.read` and this
+> ratchet could not see them. Naming what each one's route demands makes it 38
+> of 47. The nine are recorded in `assistant.WITHOUT_A_WALK` with the control a
+> walk would land on, the test now asserts `SURFACES ∪ WITHOUT_A_WALK` equals
+> the proposable set rather than `SURFACES` alone, and that list may only
+> shrink. One of the nine, `produce_batch`, has no control on any screen by
+> design: it is what a marker or a palletizer sends.
+
+Seventy-odd `data-assist` anchors were
 added to the forms that had only a form-level one, and one was fixed:
 `triggers.html` carried `data-assist="trigger-submit"` on the *closing* tag,
 where HTML parsing discards it, so no walk could ever have pointed at Save

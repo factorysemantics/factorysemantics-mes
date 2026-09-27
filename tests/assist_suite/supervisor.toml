@@ -201,3 +201,50 @@ note = """`WI-EVAL-1` rather than the WI-BRIX a sibling case drafts: revising on
 needs it to be there, drafting one needs it not to be, and a run cannot arrange
 both of the same code. The instruction a run puts up carries the prefix so that
 what a faithfulness run left on a plant can be told from the plant's own work."""
+
+# ------------------------------------ the dispositions that were offered to anybody
+#
+# Four of the seven write tools the catalogue offered to an operator until
+# 2026-09-27, all of them gated at the route on quality.close_nc, plus the ERP
+# retry gated on orders.close. An operator asking for any of these got a card
+# with "Do it" on it and then a refusal from the route. They are a supervisor's,
+# and these are the cases that say so.
+
+[[case]]
+id = "supervisor-issues-a-certificate-of-analysis"
+request = "issue the certificate of analysis for WO-EVAL-1"
+screen = "/dashboard/coa"
+expect = "propose"
+tool = "issue_certificate"
+args = { order = "WO-EVAL-1" }
+requires = ["order:WO-EVAL-1"]
+note = """The fixture order is released, not finished, and the plant may well
+refuse to certify it. That is the plant's answer to give: what is scored here is
+that the assistant proposes the issue rather than telling a supervisor there is
+no tool for it, which is what it did before this tool named its capability."""
+
+[[case]]
+id = "supervisor-issues-a-pallets-certificate"
+request = "issue the certificate for pallet SN-EVAL-CASE-1"
+screen = "/dashboard/coa"
+expect = "propose"
+tool = "issue_pallet_certificate"
+args = { pallet = "SN-EVAL-CASE-1" }
+requires = ["unit:SN-EVAL-CASE-1"]
+note = """A separate tool from the one above, and a separate route: `/coa/{order}`
+and `/coa/pallet/{serial}` are two paths of different lengths, and a reader that
+treated one as covering the other is the bug
+`test_a_tool_never_counts_as_covering_a_longer_path` was written for."""
+
+[[case]]
+id = "supervisor-quarantines-a-pallet-and-what-is-inside-it"
+request = "quarantine SN-EVAL-CASE-1 and everything in it, the brix on that run was out"
+screen = "/dashboard/trace"
+expect = "propose"
+tool = "set_unit_status"
+args = { serial = "SN-EVAL-CASE-1", status = "quarantined", cascade = true }
+fills = { note = "brix on that run was out of specification" }
+requires = ["unit:SN-EVAL-CASE-1"]
+note = """Cascade is the whole point: holding a pallet without holding its cases
+holds nothing. The tool defaults it to true and the sentence says it out loud, so
+it is scored."""

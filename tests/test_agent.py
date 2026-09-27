@@ -1183,7 +1183,7 @@ def test_every_surface_names_pages_that_exist_and_an_example():
         assert surface["example"], tool
 
 
-def test_every_write_tool_the_agent_may_propose_has_a_walk_onto_the_real_form():
+def test_every_write_tool_the_agent_may_propose_has_a_walk_or_a_written_line():
     """The ratchet. A person who is offered "Do it" is offered "Show me" too -
     for every write tool, not the ten that happened to be written first.
 
@@ -1193,12 +1193,44 @@ def test_every_write_tool_the_agent_may_propose_has_a_walk_onto_the_real_form():
     *"it would even be possible for the Assistant to take me to that page with
     those actions performed, correct?"* - yes, and this is what keeps it true
     of all of them.
+
+    `WITHOUT_A_WALK` is the one relief valve, and it exists because of what
+    happened on 2026-09-27: nine write tools were in no `NEEDS` entry at all,
+    so this ratchet could not see them, and the catalogue offered them to
+    anybody holding `plant.read`. Naming their capability is the fix, and it
+    showed this test nine cards that have always had a "Do it" and no "Show
+    me". Recording them is honest; leaving the tools out of `NEEDS` to keep
+    this test green would not be.
     """
     proposable = set(agent.NEEDS) | set(agent.PER_CALL_NEEDS)
-    assert set(assistant.SURFACES) == proposable, (
-        f"no surface for: {sorted(proposable - set(assistant.SURFACES))}; "
-        f"surface for something that is not a proposable write tool: "
-        f"{sorted(set(assistant.SURFACES) - proposable)}")
+    written = set(assistant.WITHOUT_A_WALK)
+    both = sorted(written & set(assistant.SURFACES))
+    assert not both, (
+        "these tools have a surface and a line saying they have none; delete "
+        f"the line: {both}")
+    assert set(assistant.SURFACES) | written == proposable, (
+        f"no surface and no written line for: "
+        f"{sorted(proposable - set(assistant.SURFACES) - written)}; "
+        f"surface or line for something that is not a proposable write tool: "
+        f"{sorted((set(assistant.SURFACES) | written) - proposable)}")
+
+
+def test_a_tool_with_no_walk_says_where_the_control_is_on_a_screen_that_exists():
+    """The written line is the start of the walk, not a note that one is
+    missing. Every screen a line names has to be a screen this product serves,
+    so a line cannot outlive the page it points at.
+    """
+    import re
+
+    from fsmes.services import walkthroughs
+
+    for tool, line in assistant.WITHOUT_A_WALK.items():
+        assert len(line) > 40, f"{tool}: that is not a sentence"
+        named = re.findall(r"/dashboard[\w/-]*", line)
+        unknown = [p for p in named if p not in walkthroughs.PAGE_FILES]
+        assert not unknown, f"{tool} names screens this product does not serve: {unknown}"
+        assert named or "no control on any screen" in line, (
+            f"{tool}: say which screen the control is on, or that there is none")
 
 
 @pytest.mark.parametrize("tool", sorted(assistant.SURFACES))
