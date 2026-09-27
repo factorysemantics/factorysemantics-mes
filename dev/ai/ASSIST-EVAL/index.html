@@ -4285,6 +4285,11 @@ with both names on it.</p>
 <td>1000 of <code>FG-COLA</code>.</td>
 </tr>
 <tr>
+<td>Its first step, started</td>
+<td>step 10 of <code>WO-EVAL-1</code></td>
+<td><em>Mix</em>, on <code>MIX01</code>. So that "produce 2 units of FG-COLA on MIX01 for WO-EVAL-1" has one right answer: on an order whose first step has not begun, starting it before booking against it is a defensible first move, and the third live run made it. Step 20 is deliberately left waiting — asking to <em>start</em> a step only means something where one is.</td>
+</tr>
+<tr>
 <td>A non-conformance</td>
 <td><code>NC-00001</code></td>
 <td>Opened by the MES itself, from a brix check recorded at 20.0 against a 9.5–11.5 specification.</td>
@@ -4472,7 +4477,8 @@ to measure, and the tidying would not be in the trail.</p>
 <li>the <strong>recommended setpoint change</strong>, if the plant could carry one — reject it
   on <code>/dashboard/adjustments</code>. Nothing was ever written to the machine: a
   recommendation waits for a person, and rejecting one is the person.</li>
-<li><code>WO-EVAL-1</code> — cancel or close it.</li>
+<li><code>WO-EVAL-1</code> — cancel or close it. Its step 10 is running; closing the order is
+  the one action, and nothing was booked against the step.</li>
 <li><code>CM-00001</code> — complete it, or leave it: it is a corrective job on a mixer with
   the words <em>assist eval fixture</em> in its summary.</li>
 <li><code>NC-00001</code> — disposition and close it. It is a real non-conformance about a
