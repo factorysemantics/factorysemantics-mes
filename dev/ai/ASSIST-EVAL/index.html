@@ -4258,8 +4258,11 @@ downtime reason <code>changeover</code>" is not a question you can put to a plan
 vocabulary already holds one.</p>
 <p>Anything the plant still has not got makes that case <strong>not arranged</strong> — it is
 not asked, not paid for and not scored, and it is listed in the result file with
-the reason. It is counted in its own column, apart from pass and fail, so the
-required number cannot quietly drift.</p>
+the reason <strong>and with what would make it arrangeable</strong>. Both halves, because
+from the reason alone a reader cannot tell a plant that is short of one line in a
+file from a suite asking for something no plant could give it, and those are
+different problems with different owners. It is counted in its own column, apart
+from pass and fail, so the required number cannot quietly drift.</p>
 <h3 id="arranged">Arranged<a class="headerlink" href="#arranged" title="Permanent link">&para;</a></h3>
 <p>Written by the <strong>AGENT</strong> account, naming the person the run signed in as, through
 the product's own API — the same write path the suite is about, so a fixture that
@@ -4322,7 +4325,7 @@ with both names on it.</p>
 <tr>
 <td>A <strong>recommended</strong> setpoint change</td>
 <td>numbered by the plant</td>
-<td>Unapproved: an engineer decides it and the agent never does. Only where the plant's tag manifest declares a writable setpoint with bounds on <code>MIX01</code> — a demo plant declares none, and then the case that needs one is reported <em>not arranged</em>.</td>
+<td>Unapproved: an engineer decides it and the agent never does. Only where the plant's tag manifest declares a writable setpoint with bounds on <code>MIX01</code> — a demo plant declares none, and then the case that needs one is reported <em>not arranged</em>, saying what would fix it: one tag under <code>tables.&lt;the machine's object&gt;.tags</code> in the plant's <code>tags.json</code> reading <code>{"kind": "sp", "writable": true, "min": &lt;low&gt;, "max": &lt;high&gt;}</code>. A line <code>fsmes.sim.generate</code> made carries them already.</td>
 </tr>
 <tr>
 <td>Two identified units</td>
@@ -4514,7 +4517,8 @@ writes <code>docs/ai/calibration/&lt;date&gt;/</code>:</p>
 <li>every required case that did not pass, with the expectation, <strong>what it did
   instead</strong>, and a sentence per thing that was wrong;</li>
 <li>every case marked <code>not_yet</code>, and which handoff it is waiting on;</li>
-<li>every case that was <strong>not arranged</strong>, what the plant has not got, and why —
+<li>every case that was <strong>not arranged</strong>, what the plant has not got, why, and
+  what would make it arrangeable —
   followed by what the run put on the plant, what was already there, and
   anything it could not arrange, in the plant's own words;</li>
 <li>every case that was <strong>not asked at all</strong> because this plant has no account
