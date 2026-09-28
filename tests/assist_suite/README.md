@@ -47,3 +47,16 @@ model answered "there's already a draft 'cosmetic' severity" — right, and scor
 as a failure. Two tests hold the line now: no drafting case and no arranged draft
 may share a code, and none may read like the other. The same goes for a value —
 a run leaves the reporting window at 8.0 precisely because a case asks for 10.
+
+## A person reads the label, not the key
+
+A `read` case never makes a setting's storage key the only wording that passes.
+`default_report_hours` is what the database calls the reporting window; *the
+default reporting window* is what the person who asked about it reads on every
+screen they have, and an answer in their words is the better answer. So the key
+goes in a `contains_any` group beside the label's spellings rather than in
+`contains` on its own — the key stays *a* rendering, because it is what a machine
+consumer says and what the scripted facts carry.
+`test_no_read_case_makes_a_setting_key_the_only_way_to_say_what_it_read` holds
+the line, keyed on the product's own `ConfigSection` keys, and the one admin miss
+of the 2026-09-27 live run is the whole reason it exists.

@@ -27,6 +27,7 @@ import pytest
 from typer.testing import CliRunner
 
 from fsmes import cli as cli_module
+from fsmes import modules
 from fsmes.cli import app
 from fsmes.lab import assist_eval as assist_runs
 from fsmes.lab import assist_fixtures, assist_seed
@@ -96,6 +97,58 @@ def test_the_suite_asks_about_every_approval_a_person_signs():
 def test_the_suite_has_refusals_and_turns_that_must_look_before_they_answer():
     assert sum(1 for c in SUITE if c.expect == "refuse") >= 3
     assert sum(1 for c in SUITE if c.expect == "read") >= 5
+
+
+#: Every name the database gives a setting, and the pack keys behind each one:
+#: `default_report_hours` off a `ConfigSection`, `cpk_capable` off its pack keys.
+#: Read off the product rather than written out here, so a setting added tomorrow
+#: is covered by the rule below without anybody remembering to add it.
+SETTING_KEYS = frozenset(
+    {section.key for mod in modules.REGISTRY for section in mod.config_sections}
+    | {pack.rsplit("] ", 1)[-1].strip()
+       for mod in modules.REGISTRY for section in mod.config_sections
+       for pack in section.pack_keys})
+
+
+def test_the_keys_a_setting_is_stored_under_are_read_off_the_product_and_its_labels_are_not():
+    """The rule below is only worth anything if it knows a key from a label."""
+    assert {"default_report_hours", "gauge_ratio", "cpk_capable"} <= SETTING_KEYS
+    for label in ("The default reporting window", "reporting window",
+                  "When a gauge can judge a tolerance", "Cpk bar"):
+        assert label not in SETTING_KEYS, label
+
+
+def test_no_read_case_makes_a_setting_key_the_only_way_to_say_what_it_read():
+    """A person at a machine reads the label, not the key.
+
+    Live on `09c8ce2c`, 2026-09-27, the one admin miss in forty was this rule
+    missing. Asked *"I just changed it to 10.0 hrs. Could you change it back to
+    8 hrs?"*, the model read `setting_changes` and `plant_settings` and answered
+    *"the default reporting window is already back at 8.0 hours - the audit
+    trail shows it was changed from 10.0 to 8.0 at 16:14 today"* - right, read
+    from the trail, and in the words off his own screen. The case demanded the
+    literal `default_report_hours` and scored it a failure.
+
+    So no `read` case may make a setting's storage key the only wording that
+    passes: a key in `contains` is required outright, and a `contains_any` group
+    of nothing but keys is the same demand with more words. The key stays *a*
+    rendering in every group - it is what a machine consumer and the scripted
+    facts both say - alongside the label a person would type.
+    """
+    demanded = []
+    for case in SUITE:
+        if case.expect != "read":
+            continue
+        for want in case.contains:
+            if want in SETTING_KEYS:
+                demanded.append(f"{case.file}: {case.id}: contains demands the key "
+                                f"{want!r} - move it into a contains_any group beside "
+                                f"the label a person reads")
+        for group in case.contains_any:
+            if all(want in SETTING_KEYS for want in group):
+                demanded.append(f"{case.file}: {case.id}: every rendering in "
+                                f"{list(group)} is a storage key - add the label")
+    assert not demanded, "\n".join(demanded)
 
 
 @pytest.mark.parametrize("quoted", [
