@@ -904,14 +904,20 @@ def report(outcomes: tuple[Outcome, ...], *, mode: str, model: str | None = None
         # Why a fixture could not be arranged is the harness's knowledge, not
         # this module's: it comes in on the run, so the scorer stays a scorer.
         reasons = run.get("why_not") or {}
+        fixes = run.get("what_would") or {}
         lines += ["## Not arranged", "",
                   "These were not scored. The plant has not got what the request names, "
-                  "so nothing about the model's choice was measured either way.", "",
-                  "| Case | Role | The plant has not got | Why not |", "|---|---|---|---|"]
+                  "so nothing about the model's choice was measured either way. The last "
+                  "column is what would make each one arrangeable - so that a reader can "
+                  "tell a plant that is short of a line from a suite asking for something "
+                  "no plant could give it.", "",
+                  "| Case | Role | The plant has not got | Why not | What would make it "
+                  "arrangeable |", "|---|---|---|---|---|"]
         for outcome in unmade:
             for requirement in outcome.missing:
                 lines.append(f"| `{outcome.case.id}` | {outcome.case.role} | "
-                             f"`{requirement}` | {reasons.get(requirement, '')} |")
+                             f"`{requirement}` | {reasons.get(requirement, '')} "
+                             f"| {fixes.get(requirement, '')} |")
         lines.append("")
 
     unasked_cases = [o for o in outcomes if o.no_account]

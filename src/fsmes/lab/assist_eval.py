@@ -25,6 +25,7 @@ from fsmes.lab.assist_fixtures import (
     Plantview,
     Unarrangeable,
     arrange,
+    how_to_arrange,
     missing,
     why_not,
 )
@@ -53,8 +54,9 @@ KEY = "ANTHROPIC_API_KEY"
 # module is the two ways of reaching a plant to do it - in-process for a
 # scripted run, over its own HTTP API for a live one.
 __all__ = ["ARRANGES", "DEFAULT_MAX_USD", "KEY", "SEEDS", "LiveRefused", "Plant",
-           "Plantview", "Unarrangeable", "arrange", "arrange_live", "missing",
-           "run_live", "run_scripted", "scripted_plant", "seed_live", "why_not"]
+           "Plantview", "Unarrangeable", "arrange", "arrange_live", "how_to_arrange",
+           "missing", "run_live", "run_scripted", "scripted_plant", "seed_live",
+           "why_not"]
 
 
 # ---------------------------------------------------------- a plant to run on
@@ -530,5 +532,10 @@ def run_live(cases: tuple[Case, ...], plant: Plant, *,
            "asked_as": {role: client.code for role, client in accounts.items()
                         if role in roles},
            "no_account": tuple(sorted(roles - set(accounts))),
-           "why_not": {r: why_not(r) for reqs in unmet.values() for r in reqs}}
+           "why_not": {r: why_not(r) for reqs in unmet.values() for r in reqs},
+           # And what would fix each one. Said beside the reason, because a
+           # reader who is only told why cannot tell a plant short of a line
+           # from a suite asking for the impossible.
+           "what_would": {r: how_to_arrange(r)
+                          for reqs in unmet.values() for r in reqs}}
     return tuple(outcomes), run

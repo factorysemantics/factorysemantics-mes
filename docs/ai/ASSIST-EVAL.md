@@ -143,8 +143,11 @@ vocabulary already holds one.
 
 Anything the plant still has not got makes that case **not arranged** — it is
 not asked, not paid for and not scored, and it is listed in the result file with
-the reason. It is counted in its own column, apart from pass and fail, so the
-required number cannot quietly drift.
+the reason **and with what would make it arrangeable**. Both halves, because
+from the reason alone a reader cannot tell a plant that is short of one line in a
+file from a suite asking for something no plant could give it, and those are
+different problems with different owners. It is counted in its own column, apart
+from pass and fail, so the required number cannot quietly drift.
 
 ### Arranged
 
@@ -164,7 +167,7 @@ with both names on it.
 | A **draft** trigger | `TR-EVAL-1` | Unapproved. `MIX01` pressure above 6.5. |
 | A **draft** downtime reason | `eval_awaiting_parts` | Unapproved: nothing labels a stop with it. |
 | A **draft** non-conformance severity | `eval_scuff` | Unapproved: nothing is graded with it. |
-| A **recommended** setpoint change | numbered by the plant | Unapproved: an engineer decides it and the agent never does. Only where the plant's tag manifest declares a writable setpoint with bounds on `MIX01` — a demo plant declares none, and then the case that needs one is reported *not arranged*. |
+| A **recommended** setpoint change | numbered by the plant | Unapproved: an engineer decides it and the agent never does. Only where the plant's tag manifest declares a writable setpoint with bounds on `MIX01` — a demo plant declares none, and then the case that needs one is reported *not arranged*, saying what would fix it: one tag under `tables.<the machine's object>.tags` in the plant's `tags.json` reading `{"kind": "sp", "writable": true, "min": <low>, "max": <high>}`. A line `fsmes.sim.generate` made carries them already. |
 | Two identified units | `SN-EVAL-1`, `SN-EVAL-CASE-1` | Serials of `FG-COLA`, for the cases that pack one into another and quarantine a pallet with everything in it. |
 
 Five of those are **drafts**, and a draft changes nobody's screen until somebody
@@ -324,7 +327,8 @@ writes `docs/ai/calibration/<date>/`:
 - every required case that did not pass, with the expectation, **what it did
   instead**, and a sentence per thing that was wrong;
 - every case marked `not_yet`, and which handoff it is waiting on;
-- every case that was **not arranged**, what the plant has not got, and why —
+- every case that was **not arranged**, what the plant has not got, why, and
+  what would make it arrangeable —
   followed by what the run put on the plant, what was already there, and
   anything it could not arrange, in the plant's own words;
 - every case that was **not asked at all** because this plant has no account

@@ -582,7 +582,10 @@ the honest answer to this sentence on that plant, and was scored as a failure. A
 run now recommends one where it can. It can only do that where the plant's tag
 manifest declares a writable setpoint with bounds on this machine; a seeded demo
 plant declares none, so this case is reported *not arranged* there rather than
-asked. The walk itself is still checked - it is listed to the administrator, and
+asked. Since 2026-09-28 the result file also says what would make it arrangeable -
+one tag line in that manifest - so a reader of the row knows it is the plant that
+is short of a declaration and not the suite that is asking the impossible. The
+walk itself is still checked - it is listed to the administrator, and
 `test_an_administrator_is_shown_every_signing_walk_as_theirs_to_follow` fails if
 that stops being true."""
 

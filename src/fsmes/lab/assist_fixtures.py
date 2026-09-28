@@ -230,11 +230,20 @@ class Kind:
     #: kind a run tries and a particular plant cannot carry, which is what
     #: `why_not` prints for it.
     cannot: str = ""
+    #: What would make a plant able to carry it, in the words a result file
+    #: prints. The other half of the same fact: a reader who is told only that a
+    #: case was not arranged cannot tell a plant that is missing a line from a
+    #: suite that is asking for something impossible. `how_to_arrange` prints it.
+    fix: str = ""
 
 
 _MASTER_DATA = ("master data is the plant's own: an agent deployment does not define "
                 "materials, equipment, routings, lots or specifications (decision 0035), "
                 "so a run declares this rather than inventing it")
+
+_SEED_IT = ("put the code on the plant yourself, or run with `--seed-masterdata`, which "
+            "puts the demo plant's master data there over the plant's own API as the "
+            "account you signed in as - never as the agent")
 
 
 def _has_material(plant: str, code: str) -> bool:
@@ -447,16 +456,28 @@ def _make_severity(plant: str, code: str, actor: str) -> None:
         dry_run=False, on_behalf_of=actor))
 
 
-#: Why a setpoint change was recommended, and how a second run recognises the
-#: first run's work: the plant numbers a recommendation itself, like the
-#: non-conformance and the corrective order.
-#: Why a plant may not be able to carry one, in the words a result file prints.
+#: Why a plant may not be able to carry a recommended setpoint change, in the
+#: words a result file prints.
 _NO_WRITABLE_SETPOINT = (
     "a recommended setpoint change names a tag this plant's own manifest declares "
     "writable with bounds - the first of the three guards between a recommendation "
     "and a PLC - and nothing here writes a plant's manifest, so a plant that declares "
     "none has this declared rather than invented for it")
 
+#: And what a person would do about it. The first guard between a recommendation
+#: and a PLC is a declaration, so the thing that is missing is a line in a file -
+#: which is the fact a reader of a result file needs, because it says the plant is
+#: short of a declaration rather than the suite short of sense.
+_DECLARE_A_SETPOINT = (
+    "one writable setpoint on this machine in the plant's tag manifest - a tag in "
+    "`tags.json` beside its replay data, under `tables.<the machine's object>.tags`, "
+    'reading `{"kind": "sp", "writable": true, "min": <low>, "max": <high>}`. A line '
+    "`fsmes.sim.generate` made carries them already. Nothing else is needed: a run "
+    "recommends the change itself once there is a tag to recommend it on")
+
+#: Why a setpoint change was recommended, and how a second run recognises the
+#: first run's work: the plant numbers a recommendation itself, like the
+#: non-conformance and the corrective order.
 ADJUSTMENT_RATIONALE = ("Brix has been drifting high while this setpoint sat where it is "
                         "(assist eval fixture)")
 
@@ -547,11 +568,11 @@ def _make_unit(plant: str, code: str, actor: str) -> None:
 
 
 KINDS: dict[str, Kind] = {k.name: k for k in (
-    Kind("material", _has_material, cannot=_MASTER_DATA),
-    Kind("machine", _has_machine, cannot=_MASTER_DATA),
-    Kind("lot", _has_lot, cannot=_MASTER_DATA),
-    Kind("routing", _has_routing, cannot=_MASTER_DATA),
-    Kind("spec", _has_spec, cannot=_MASTER_DATA),
+    Kind("material", _has_material, cannot=_MASTER_DATA, fix=_SEED_IT),
+    Kind("machine", _has_machine, cannot=_MASTER_DATA, fix=_SEED_IT),
+    Kind("lot", _has_lot, cannot=_MASTER_DATA, fix=_SEED_IT),
+    Kind("routing", _has_routing, cannot=_MASTER_DATA, fix=_SEED_IT),
+    Kind("spec", _has_spec, cannot=_MASTER_DATA, fix=_SEED_IT),
     Kind("order", _has_order, _make_order),
     Kind("operation", _has_operation, _make_operation),
     Kind("nonconformance", _has_nonconformance, _make_nonconformance),
@@ -562,9 +583,12 @@ KINDS: dict[str, Kind] = {k.name: k for k in (
     Kind("reason", _has_reason, _make_reason),
     Kind("severity", _has_severity, _make_severity),
     Kind("adjustment", _has_adjustment, _make_adjustment,
-         cannot=_NO_WRITABLE_SETPOINT),
-    Kind("person", _has_person, cannot=_PERSON),
-    Kind("gauge", _has_gauge, cannot=_GAUGE),
+         cannot=_NO_WRITABLE_SETPOINT, fix=_DECLARE_A_SETPOINT),
+    Kind("person", _has_person, cannot=_PERSON,
+         fix="ask this case on a plant that has not got this person"),
+    Kind("gauge", _has_gauge, cannot=_GAUGE,
+         fix="ask this case on a plant that has not got this gauge, or put the gauge "
+             "on this one as a person who holds masterdata.write"),
     Kind("unit", _has_unit, _make_unit),
 )}
 
@@ -690,6 +714,30 @@ def why_not(requirement: str) -> str:
     if listed is None:
         return f"no fixture of kind {kind!r} is known"
     return listed.cannot or "a run arranges this, and on this plant it could not be made"
+
+
+def how_to_arrange(requirement: str) -> str:
+    """What would make this plant able to carry it - the other half of `why_not`.
+
+    On 2026-09-27 a live run reported `admin-approves-an-adjustment` not arranged
+    on a plant whose tag manifest declares no writable setpoint, and said only
+    why. A reader of that file cannot tell from "why" alone whether the plant is
+    short of one line or the suite is asking for something no plant could do, and
+    that is the difference between a fact about a plant and a bug in a suite.
+    """
+    bare = requirement[3:].strip() if requirement.startswith("no ") else requirement
+    kind, code = split(bare)
+    if requirement.startswith("no "):
+        return (f"ask this case on a plant that has not got `{code}` - nothing here "
+                f"removes a plant's own records, and an MES does not delete an "
+                f"audited one")
+    listed = KINDS.get(kind)
+    if listed is None:
+        return "nothing, until a fixture of this kind exists"
+    if listed.fix:
+        return listed.fix
+    return ("a run arranges this itself, so the reason beside it is what this plant "
+            "said when it tried")
 
 
 def unknown_kinds(cases) -> list[str]:

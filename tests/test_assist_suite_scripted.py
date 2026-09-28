@@ -681,6 +681,51 @@ def test_a_plant_that_cannot_be_read_reports_cases_not_arranged_rather_than_fail
     assert run["usd"] == 0.0, "an unaskable case must not be paid for"
 
 
+def test_a_not_arranged_case_says_what_would_make_it_arrangeable_and_not_only_why_not():
+    """Both halves of the same fact.
+
+    Live on `09c8ce2c`, 2026-09-27, `admin-approves-an-adjustment` came back not
+    arranged on a plant whose tag manifest declares no writable setpoint, and the
+    result file said only why. From "why" alone a reader cannot tell a plant that
+    is short of one line in a file from a suite asking for something no plant
+    could give it - and those are different problems with different owners.
+    """
+    case = BY_ID["admin-approves-an-adjustment"]
+    assert "adjustment:MIX01" in case.requires
+
+    outcome = assist_eval.score(
+        case, assist_eval.Turn(kind="not_asked",
+                               say="this plant has not got what the request names"),
+        missing=("adjustment:MIX01",))
+    assert not outcome.arranged and not outcome.counted
+    page = assist_eval.report((outcome,), mode="live", model="a-model", plant="somewhere",
+                              run={"why_not": {"adjustment:MIX01":
+                                               assist_fixtures.why_not("adjustment:MIX01")},
+                                   "what_would": {"adjustment:MIX01":
+                                                  assist_fixtures.how_to_arrange(
+                                                      "adjustment:MIX01")}})
+    assert "What would make it arrangeable" in page
+    # The manifest line itself, so a reader knows where to put it and what to put.
+    assert "tags.json" in page and '"writable": true' in page
+    assert "tables.<the machine\'s object>.tags" in page
+
+
+def test_every_requirement_a_case_names_has_a_reason_and_a_remedy_a_person_can_read():
+    """Keyed on the suite rather than on a list here: a `requires` line added
+    tomorrow carries both sentences or this goes red. The remedy for something a
+    case needs the plant *not* to have is not "remove it" - an MES does not delete
+    an audited record, and neither does this."""
+    for case in SUITE:
+        for requirement in case.requires:
+            because = assist_fixtures.why_not(requirement)
+            remedy = assist_fixtures.how_to_arrange(requirement)
+            assert because and remedy, requirement
+            assert "no fixture" not in because, requirement
+            assert "until a fixture of this kind exists" not in remedy, requirement
+            if requirement.startswith("no "):
+                assert "has not got" in remedy, requirement
+
+
 def test_a_live_result_file_says_the_model_the_plant_and_what_it_cost(tmp_path, doubled_plant):
     url, state = doubled_plant
     case = BY_ID["scott-asks-which-spc-rules-are-on-hold"]
