@@ -95,7 +95,8 @@ request = "who changed the default reporting window, and when?"
 screen = "/dashboard/config/engineering"
 expect = "read"
 reads = ["setting_changes"]
-contains = ["default_report_hours", "ADMIN"]
+contains = ["ADMIN"]
+contains_any = [["default_report_hours", "default reporting window", "reporting window"]]
 never = ["no change is recorded"]
 lookup = { key = "default_report_hours" }
 requires = ["setting:engineering/default_report_hours"]

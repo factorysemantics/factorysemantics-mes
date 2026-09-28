@@ -27,6 +27,7 @@ import pytest
 from typer.testing import CliRunner
 
 from fsmes import cli as cli_module
+from fsmes import modules
 from fsmes.cli import app
 from fsmes.lab import assist_eval as assist_runs
 from fsmes.lab import assist_fixtures, assist_seed
@@ -93,9 +94,87 @@ def test_the_suite_asks_about_every_approval_a_person_signs():
                          "approve-an-adjustment"}
 
 
+def test_the_one_request_only_produce_batch_can_answer_names_a_stack_no_other_tool_takes():
+    """A case that fails a judgement is measuring the suite, not the model.
+
+    Live on `09c8ce2c`, 2026-09-27, asked to bring two printed serials in, the
+    model proposed `produce_units(serial=SN-0001)` and
+    `produce_units(serial=SN-0002)` where the case wanted one `produce_batch`.
+    Both book the same two units - `produce_units` takes a serial a person names
+    as well as minting one - so for two units there were two right answers and
+    the case picked one of them.
+
+    The sentence names a pallet now: what a palletizer actually sends is the
+    stack with the stack's own serial, and `produce_units` has no `container`
+    argument to put it in. This test is what keeps that true - a `container` on
+    `produce_units` tomorrow would quietly turn this case back into a coin toss.
+    """
+    case = BY_ID["operator-brings-a-printed-batch-of-serials-in"]
+    assert case.tool == "produce_batch" and case.args.get("container")
+    served = {tool.name: set(tool.input_schema.get("properties") or {})
+              for tool in agent.registry_tools()}
+    assert set(case.args) <= served["produce_batch"], sorted(case.args)
+    takes_a_stack = sorted(name for name, args in served.items()
+                           if "container" in args and name != "produce_batch")
+    assert not takes_a_stack, (f"{takes_a_stack} now take a container too, so this "
+                              f"request has more than one right answer again")
+
+
 def test_the_suite_has_refusals_and_turns_that_must_look_before_they_answer():
     assert sum(1 for c in SUITE if c.expect == "refuse") >= 3
     assert sum(1 for c in SUITE if c.expect == "read") >= 5
+
+
+#: Every name the database gives a setting, and the pack keys behind each one:
+#: `default_report_hours` off a `ConfigSection`, `cpk_capable` off its pack keys.
+#: Read off the product rather than written out here, so a setting added tomorrow
+#: is covered by the rule below without anybody remembering to add it.
+SETTING_KEYS = frozenset(
+    {section.key for mod in modules.REGISTRY for section in mod.config_sections}
+    | {pack.rsplit("] ", 1)[-1].strip()
+       for mod in modules.REGISTRY for section in mod.config_sections
+       for pack in section.pack_keys})
+
+
+def test_the_keys_a_setting_is_stored_under_are_read_off_the_product_and_its_labels_are_not():
+    """The rule below is only worth anything if it knows a key from a label."""
+    assert {"default_report_hours", "gauge_ratio", "cpk_capable"} <= SETTING_KEYS
+    for label in ("The default reporting window", "reporting window",
+                  "When a gauge can judge a tolerance", "Cpk bar"):
+        assert label not in SETTING_KEYS, label
+
+
+def test_no_read_case_makes_a_setting_key_the_only_way_to_say_what_it_read():
+    """A person at a machine reads the label, not the key.
+
+    Live on `09c8ce2c`, 2026-09-27, the one admin miss in forty was this rule
+    missing. Asked *"I just changed it to 10.0 hrs. Could you change it back to
+    8 hrs?"*, the model read `setting_changes` and `plant_settings` and answered
+    *"the default reporting window is already back at 8.0 hours - the audit
+    trail shows it was changed from 10.0 to 8.0 at 16:14 today"* - right, read
+    from the trail, and in the words off his own screen. The case demanded the
+    literal `default_report_hours` and scored it a failure.
+
+    So no `read` case may make a setting's storage key the only wording that
+    passes: a key in `contains` is required outright, and a `contains_any` group
+    of nothing but keys is the same demand with more words. The key stays *a*
+    rendering in every group - it is what a machine consumer and the scripted
+    facts both say - alongside the label a person would type.
+    """
+    demanded = []
+    for case in SUITE:
+        if case.expect != "read":
+            continue
+        for want in case.contains:
+            if want in SETTING_KEYS:
+                demanded.append(f"{case.file}: {case.id}: contains demands the key "
+                                f"{want!r} - move it into a contains_any group beside "
+                                f"the label a person reads")
+        for group in case.contains_any:
+            if all(want in SETTING_KEYS for want in group):
+                demanded.append(f"{case.file}: {case.id}: every rendering in "
+                                f"{list(group)} is a storage key - add the label")
+    assert not demanded, "\n".join(demanded)
 
 
 @pytest.mark.parametrize("quoted", [
@@ -600,6 +679,51 @@ def test_a_plant_that_cannot_be_read_reports_cases_not_arranged_rather_than_fail
     assert not outcomes[0].counted
     assert any("could not be read" in m for m in outcomes[0].missing)
     assert run["usd"] == 0.0, "an unaskable case must not be paid for"
+
+
+def test_a_not_arranged_case_says_what_would_make_it_arrangeable_and_not_only_why_not():
+    """Both halves of the same fact.
+
+    Live on `09c8ce2c`, 2026-09-27, `admin-approves-an-adjustment` came back not
+    arranged on a plant whose tag manifest declares no writable setpoint, and the
+    result file said only why. From "why" alone a reader cannot tell a plant that
+    is short of one line in a file from a suite asking for something no plant
+    could give it - and those are different problems with different owners.
+    """
+    case = BY_ID["admin-approves-an-adjustment"]
+    assert "adjustment:MIX01" in case.requires
+
+    outcome = assist_eval.score(
+        case, assist_eval.Turn(kind="not_asked",
+                               say="this plant has not got what the request names"),
+        missing=("adjustment:MIX01",))
+    assert not outcome.arranged and not outcome.counted
+    page = assist_eval.report((outcome,), mode="live", model="a-model", plant="somewhere",
+                              run={"why_not": {"adjustment:MIX01":
+                                               assist_fixtures.why_not("adjustment:MIX01")},
+                                   "what_would": {"adjustment:MIX01":
+                                                  assist_fixtures.how_to_arrange(
+                                                      "adjustment:MIX01")}})
+    assert "What would make it arrangeable" in page
+    # The manifest line itself, so a reader knows where to put it and what to put.
+    assert "tags.json" in page and '"writable": true' in page
+    assert "tables.<the machine\'s object>.tags" in page
+
+
+def test_every_requirement_a_case_names_has_a_reason_and_a_remedy_a_person_can_read():
+    """Keyed on the suite rather than on a list here: a `requires` line added
+    tomorrow carries both sentences or this goes red. The remedy for something a
+    case needs the plant *not* to have is not "remove it" - an MES does not delete
+    an audited record, and neither does this."""
+    for case in SUITE:
+        for requirement in case.requires:
+            because = assist_fixtures.why_not(requirement)
+            remedy = assist_fixtures.how_to_arrange(requirement)
+            assert because and remedy, requirement
+            assert "no fixture" not in because, requirement
+            assert "until a fixture of this kind exists" not in remedy, requirement
+            if requirement.startswith("no "):
+                assert "has not got" in remedy, requirement
 
 
 def test_a_live_result_file_says_the_model_the_plant_and_what_it_cost(tmp_path, doubled_plant):

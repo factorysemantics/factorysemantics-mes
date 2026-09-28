@@ -27,12 +27,21 @@ request = "I just changed it to 10.0 hrs. Could you change it back to 8 hrs?"
 screen = "/dashboard"
 expect = "read"
 reads = ["setting_changes"]
-contains = ["default_report_hours", "10.0"]
+contains = ["10.0"]
+contains_any = [["default_report_hours", "default reporting window", "reporting window"]]
 never = ["I don't see any change recorded", "no change recorded"]
 requires = ["setting:engineering/default_report_hours"]
 source = "questions/2026-09-26.md, ~05:13 CDT, bottling, ADMIN"
 note = """Answered "I don't see any change recorded" without making a single tool
-call. He had changed it. The read has to happen before the sentence does."""
+call. He had changed it. The read has to happen before the sentence does.
+
+The key was a `contains` literal until 2026-09-28, and live on `09c8ce2c` that
+cost the case: the model read both records and said *"the default reporting
+window is already back at 8.0 hours - the audit trail shows it was changed from
+10.0 to 8.0 at 16:14 today"*, which is the right answer, read from the trail, in
+the words off the screen. The label is now a rendering of its own. The value
+stays a `contains` literal: the trail records `10.0`, and a reply that cannot
+say which number was there has not read it."""
 lookup = { key = "default_report_hours" }
 
 # ------------------------------- Scott, 2026-09-25 evening (default_job_minutes)
@@ -161,12 +170,17 @@ request = "configurate this When a gauge can judge a tolerance to fail"
 screen = "/dashboard/config/quality"
 expect = "read"
 reads = ["plant_settings"]
-contains = ["gauge_ratio"]
+contains_any = [["gauge_ratio", "resolution ratio", "rule of ten", "10:1"]]
 never = ["does not have a specific configuration", "consult the approved work instruction"]
 source = "questions/2026-09-26.md, ~15:03 CDT"
 note = """He pasted the label off the screen. "When a gauge can judge a
 tolerance" is the section's own label and `plant_settings` searches labels, so
-this is one read away. He was told the system has no such configuration."""
+this is one read away. He was told the system has no such configuration.
+
+The group deliberately does *not* accept the label back: he pasted it, so
+echoing it proves nothing was read. What it accepts is the key or the setting in
+the product's own words - the resolution ratio, the rule of ten, 10:1 - each of
+which only a reply that looked can say."""
 lookup = { domain = "quality", find = "gauge" }
 
 [[case]]
@@ -455,8 +469,11 @@ request = "has anybody changed a setting on this plant today?"
 screen = "/dashboard/config/engineering"
 expect = "read"
 reads = ["setting_changes"]
-contains = ["default_report_hours"]
+contains_any = [["default_report_hours", "default reporting window", "reporting window"]]
 requires = ["setting:engineering/default_report_hours"]
+note = """The label rather than the key since 2026-09-28: a person asking who
+touched a setting is owed the setting's name, and "the default reporting window"
+is its name on every screen they have. The read is what is still scored."""
 
 [[case]]
 id = "admin-says-they-released-the-order"
@@ -565,7 +582,10 @@ the honest answer to this sentence on that plant, and was scored as a failure. A
 run now recommends one where it can. It can only do that where the plant's tag
 manifest declares a writable setpoint with bounds on this machine; a seeded demo
 plant declares none, so this case is reported *not arranged* there rather than
-asked. The walk itself is still checked - it is listed to the administrator, and
+asked. Since 2026-09-28 the result file also says what would make it arrangeable -
+one tag line in that manifest - so a reader of the row knows it is the plant that
+is short of a declaration and not the suite that is asking the impossible. The
+walk itself is still checked - it is listed to the administrator, and
 `test_an_administrator_is_shown_every_signing_walk_as_theirs_to_follow` fails if
 that stops being true."""
 

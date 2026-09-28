@@ -410,6 +410,47 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Changed
 
+- **The request suite scores what a reply means, not the words the database
+  stores it under.** The dated live run of 2026-09-27 found four places where the
+  suite, not the model, was the thing being measured, and all four are in the
+  suite rather than in the product:
+
+  - A `read` case no longer makes a setting's storage key the only wording that
+    passes. The one admin miss in forty was this: asked *"I just changed it to
+    10.0 hrs. Could you change it back to 8 hrs?"*, the assistant read both
+    records and answered *"the default reporting window is already back at 8.0
+    hours — the audit trail shows it was changed from 10.0 to 8.0 at 16:14
+    today"* — right, read from the trail, in the words off the screen — and the
+    case wanted the literal `default_report_hours`. The key is now one rendering
+    in a `contains_any` group beside the label a person reads, in all six cases
+    that demanded one, and a test keyed on the product's own settings registry
+    fails on the next one anybody writes.
+  - The one request only `produce_batch` can answer names a pallet. It named two
+    loose serials, and the model answered with two `produce_units` calls that
+    book exactly the same two units — a judgement, not a wrong act. What a
+    palletizer actually sends is the stack with the stack's own serial, and
+    `produce_units` has no `container` argument, so there is one right answer
+    again; a test goes red if another tool grows one.
+  - Asked to requeue a dead ERP message on a plant whose outbox holds nothing
+    dead, *"there is nothing to retry"* is a pass — and only when the reply also
+    names who could if there were. The refusal case asks for `orders.close` and a
+    role that holds it, read off `capabilities.py`; the literal `can` it replaced
+    was never that test, being inside both "cancel" (this capability's own
+    description) and "cannot".
+  - The same live reply put a tool's name in front of an operator — *"requeuing a
+    dead ERP message is done via `erp_retry`"* — which the scripted stand-in
+    cannot do and so never scored. `tests/live_replies.py` keeps a live reply
+    verbatim, and the rule from #116 is scored against that reply from here on.
+
+- **A case a plant could not arrange says what would make it arrangeable, not
+  only why not.** `admin-approves-an-adjustment` came back *not arranged* on a
+  plant whose tag manifest declares no writable setpoint, and the result file said
+  only why. From the reason alone a reader cannot tell a plant that is short of
+  one line in a file from a suite asking for something no plant could give it, and
+  those are different problems with different owners. Every *Not arranged* row now
+  carries both halves — for this one, the tag to put under
+  `tables.<the machine's object>.tags` in the plant's `tags.json`.
+
 - **The assistant reads before it says a thing does not exist or cannot be
   changed.** Asked on 2026-09-27 to give a non-conformance the prefix `CR`, it
   made no tool call and answered *"That's not something I can do here — NC codes

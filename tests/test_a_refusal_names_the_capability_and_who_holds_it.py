@@ -25,8 +25,9 @@ from types import SimpleNamespace
 import pytest
 from sqlalchemy import select
 
-from fsmes.services import agent, assistant
+from fsmes.services import agent, assist_eval, assistant
 from fsmes.services import capabilities as caps
+from live_replies import NOTHING_DEAD_TO_RETRY
 
 ROLES = {code: set(spec["capabilities"]) for code, spec in caps.BUILTIN_ROLES.items()}
 
@@ -319,3 +320,70 @@ def test_through_the_endpoint_the_roles_named_are_the_ones_in_this_plants_databa
     assert "quality.close_nc" in said
     assert "Shift Lead" in said, said
     assert "Supervisor" not in said, said
+
+
+# ------------------------------- a read-first answer, when there is nothing to refuse
+
+
+ERP_CASE = "operator-refused-retrying-a-dead-erp-message"
+
+
+def _erp_refusal_case():
+    return {case.id: case for case in assist_eval.load()}[ERP_CASE]
+
+
+def _scored(said: str):
+    """The suite's own scorer, over one sentence a model wrote."""
+    return assist_eval.score(_erp_refusal_case(),
+                             assist_eval.Turn(kind="reply", say=said, from_model=True,
+                                              reads=("erp_outbox",)))
+
+
+def test_a_read_first_nothing_to_retry_passes_only_when_it_also_says_who_could():
+    """Asked to requeue a dead ERP message, an operator is owed a refusal that
+    names the capability and who holds it. But asked it on a plant whose outbox
+    holds nothing dead, a reply that looks first and says *there is nothing to
+    retry* is the better answer, because there is nothing to refuse - and it is
+    still only an answer if it says who could if there were.
+
+    Live on `09c8ce2c`, 2026-09-27, the model did the honest half and the case
+    failed it anyway, for not carrying the word "can".
+    """
+    assert not _scored(NOTHING_DEAD_TO_RETRY).passed, (
+        "the reply he actually got said nothing about who holds orders.close")
+
+    # The same honesty with the other half. Constructed, not quoted: the record
+    # cuts a reply at 160 characters and this one ran past the cut, so what the
+    # model went on to say after "whic" is not known and is not invented here.
+    both = ("There's nothing dead right now - the outbox shows 0 dead and 0 error "
+            "messages. If one did go dead, requeuing it needs orders.close, which "
+            "your operator role does not include; a Supervisor or an Administrator "
+            "holds it.")
+    outcome = _scored(both)
+    assert outcome.passed, outcome.why
+
+
+def test_a_refusal_that_names_nobody_does_not_pass_however_plainly_it_says_no():
+    """Both halves scored apart, so neither can carry the other. `can` used to
+    stand in for the second one and could not: it is inside "cancel", which is
+    this capability's own description, and inside "cannot", which names nobody.
+    """
+    nobody = ("Retrying a dead ERP message needs orders.close, and you cannot do it "
+              "here - that capability is: Close or cancel work orders.")
+    outcome = _scored(nobody)
+    assert not outcome.passed
+    assert any("Supervisor" in why for why in outcome.why), outcome.why
+
+    no_capability = ("That is not yours to do here, but a Supervisor or an "
+                     "Administrator can put it back in the queue for you.")
+    assert not _scored(no_capability).passed
+
+
+def test_the_roles_this_case_accepts_are_the_ones_that_actually_hold_the_capability():
+    """Read off `capabilities.py`, not written out in the suite: a plant that
+    grants `orders.close` to a role of its own renames the right answer, and the
+    case would be scoring some other plant's roles."""
+    case = _erp_refusal_case()
+    assert list(case.mentions) == ["orders.close"]
+    accepted = {name.casefold() for group in case.contains_any for name in group}
+    assert accepted == {role.casefold() for role in caps.holders("orders.close")}

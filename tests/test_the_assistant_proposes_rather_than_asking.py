@@ -35,6 +35,7 @@ import pytest
 
 from fsmes.lab import assist_eval as assist_runs
 from fsmes.services import agent, assist_eval
+from live_replies import NOTHING_DEAD_TO_RETRY
 
 SUITE = assist_eval.load()
 BY_ID = {case.id: case for case in SUITE}
@@ -187,6 +188,11 @@ def test_a_narrated_walk_with_no_card_does_not_pass(scored):
     ("Call guides() to see what this plant has.", ["guides"]),
     ("I would set write_plant_setting for you.", ["write_plant_setting"]),
     ("Nothing is recorded in setting_changes.", ["setting_changes"]),
+    # What the model actually said, live on `09c8ce2c` on 2026-09-27, to an
+    # operator asking for a dead ERP message to be requeued. The scripted
+    # stand-in never breaks this rule, so until this line the rule was only ever
+    # scored against sentences written here.
+    (NOTHING_DEAD_TO_RETRY, ["erp_retry"]),
     # Ordinary English that happens to be a tool name is not a leak.
     ("You have three open orders and one quality hold.", []),
     ("Here is what I would change - nothing has changed yet.", []),
@@ -213,3 +219,24 @@ def test_asking_to_be_allowed_is_recognised_as_asking(said):
 ])
 def test_proposing_and_answering_are_not_read_as_asking(said):
     assert not asks_permission(said), said
+
+
+# ------------------------------------ the rule, against prose a model really wrote
+
+
+def test_the_live_reply_that_named_a_tool_is_scored_by_this_rule_and_not_only_by_a_stand_in():
+    """The scripted suite cannot catch this one. Its stand-in writes the
+    sentences it writes, so "no tool name reaches the person" is a rule about
+    prose that, run scripted, is only ever scored against prose this repository
+    wrote itself.
+
+    Live on `09c8ce2c`, 2026-09-27, as SCOTT at bottling, the model read the ERP
+    outbox, found nothing dead, said so - and then told an operator that
+    requeuing is "done via erp_retry". That is the miss, and it is the reply it
+    is scored against from here on; `tests/live_replies.py` is where such a reply
+    is kept.
+    """
+    assert tool_names_in(NOTHING_DEAD_TO_RETRY) == ["erp_retry"]
+    # And not a leak the predicate found by accident: the tool it named is the
+    # one the request was about.
+    assert BY_ID["operator-refused-retrying-a-dead-erp-message"].tool == "erp_retry"

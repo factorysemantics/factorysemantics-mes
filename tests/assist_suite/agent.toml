@@ -84,7 +84,8 @@ request = "what is this plant's reporting window set to?"
 screen = "/dashboard/config/engineering"
 expect = "read"
 reads = ["plant_settings"]
-contains = ["default_report_hours", "8.0"]
+contains = ["8.0"]
+contains_any = [["default_report_hours", "default reporting window", "reporting window"]]
 lookup = { domain = "engineering", find = "reporting window" }
 requires = ["setting:engineering/default_report_hours"]
 note = """8.0 rather than the 10.0 this said until 2026-09-27: the fixture takes
@@ -100,7 +101,7 @@ request = "somebody says the reporting window moved. did it?"
 screen = "/dashboard/config/engineering"
 expect = "read"
 reads = ["setting_changes"]
-contains = ["default_report_hours"]
+contains_any = [["default_report_hours", "default reporting window", "reporting window"]]
 never = ["no change is recorded"]
 lookup = { key = "default_report_hours" }
 requires = ["setting:engineering/default_report_hours"]
