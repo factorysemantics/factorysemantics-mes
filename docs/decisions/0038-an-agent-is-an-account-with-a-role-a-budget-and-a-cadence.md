@@ -1,7 +1,7 @@
 # 0038 — An agent in this plant is an account with a role, a budget, a cadence and a data class, and what it produces is a proposal
 
-- **Status:** proposed
-- **Date:** 2026-09-27
+- **Status:** accepted
+- **Date:** 2026-09-27; **accepted with amendments 2026-09-28**
 - **Deciders:** maintainer
 
 ## Context
@@ -52,6 +52,31 @@ revert and a generated walk to the signature. Two of the five approvable kinds
 are wired into `services/review.py`'s `KINDS`; the code names the other three as
 *"an entry in that registry, not a new mechanism here"*.
 
+**Accepted on 2026-09-28, with two amendments**, both of them the maintainer's
+answers to the design page's own questions. His words are quoted in full in
+[the design page](../design/agentic-harness.md#decided-2026-09-28); in summary:
+
+- **Amendment A — the harness changes the product's code.** *"I was thinking a
+  person should literally be able to change the code to improve the UI. Move
+  cards, change graphs, etc. This should be as maliable as possible."* The
+  fifteen `[screens]` numbers this record called "one narrow exception" are a
+  floor, not the thing. The exception below is rewritten as **three tiers**, and
+  the middle one is an agent that edits the product's UI code and lands the
+  change as a pull request a person merges.
+- **Amendment B — the harness is the engine of all product improvement.**
+  *"This should become the bottle neck for driving all other improvements on that
+  list. For example, if I wanted to integrate with SAP or fix any ERPNext
+  connection, then it should be this harness that allows be to fix or build it."*
+  So the roles the maintainer runs on his own machine are what runs inside the
+  product, against the product's own repository — with a person's merge as the
+  signature, and with the checkout, the CI and the compiler anywhere but the
+  plant.
+
+Two facts recorded below have been fixed since this record was written, both on
+2026-09-27: the nine ungated write tools (**PR #119**) and the AI tab's Status
+blanking without a local model (**PR #122**). They are kept in *Consequences*
+because they are why the first field of the row is the account.
+
 Decision [0035](0035-configuration-is-authored-by-roles-and-selected-by-operators.md)
 already settled who authors and who signs. Decision
 [0031](0031-a-judgment-is-a-proposal.md) already settled that a model's answer is
@@ -89,15 +114,51 @@ discovered through `/dashboard/pending-approvals` counted and with its total, an
 signed by a person holding the `*.approve` half. **No agent holds an `*.approve`
 capability, and no new approval mechanism is created.**
 
-**One narrow exception, off by default, and it is fifteen numbers.** An agent
-may put a change in force without a signature only when all five of these hold:
-it changes a number a screen runs at; it changes no record's meaning; it changes
-nobody's capability; nothing a PLC reads changes, directly or through a cadence a
-write depends on; and it is undone in one step, from the screen that shows it, by
-the path that made it. Today that set is exactly the `[screens]` pack table. It
-is gated by a capability of its own that an administrator grants deliberately,
-per plant, and every such change writes an audit row with the agent as actor and
-a trace row beside it.
+**Three tiers, and only the first two can ever stop needing a person** (amended
+2026-09-28).
+
+*Tier (a) — the numbers a screen runs at.* An agent may put one in force without
+a signature only when all five of these hold: it changes a number a screen runs
+at; it changes no record's meaning; it changes nobody's capability; nothing a PLC
+reads changes, directly or through a cadence a write depends on; and it is undone
+in one step, from the screen that shows it, by the path that made it. Today that
+set is the fifteen `[screens]` keys plus `[process] gantt_screenful`. It is gated
+by a capability of its own that an administrator grants deliberately, per plant,
+it runs **warn-only for a release first**, and every such change writes an audit
+row with the agent as actor and a trace row beside it.
+
+*Tier (b) — the product's own UI code.* An agent may **propose** a change to the
+operator UI's own files as a branch and a pull request, proved by the
+repository's existing gates — `test`, `postgres`, `browser`, `lab`, `lockfile`,
+`wheel-demo` and the DCO sign-off — and carrying a test that fails before the
+change and passes after it. **The merge is the signature**, held by a person on a
+repository the plant does not control, which keeps 0035's rule exactly. Nothing
+is applied to a running plant: a code change reaches a plant when the plant
+upgrades, and there is no other path. After the warn-only release, this tier may
+automate only within a **declared file set** — the per-screen `web/*.html|js|css`
+files, and explicitly not `common.js`, `assist.js`, `assist-record.js`, `kit.js`,
+`styles.css`, `themes.css`, `themes.js`, `web/vendor/` or `web/line/` — and not
+for any diff that removes a `data-assist` anchor, moves a computation into the
+browser, or fetches anything from outside the box. One question is open and named
+rather than assumed: `fsmes ui-check --accept` makes the current look the
+accepted look, so either a person re-accepts the baselines as part of the merge
+or tier (b) never automates.
+
+*Tier (c) — everything else.* The kernel, the API, the domain services, the
+capability model, migrations, packs, connectors, and any doc that states a rule.
+An agent may propose any of it — that is what amendment B is for, and it is how
+an SAP or ERPNext fix would arrive. **None of it ever applies itself.** There is
+no release after which tier (c) automates and no setting that turns it on. A
+person's capability, a password and the deletion of a record are not automatable
+at any tier, and the product already has no tool for them.
+
+**The line between the tiers is this plant's configuration, and it is signed.**
+It lives in the `[ai]` domain with the budgets and cadences, the agent may read
+it and propose changes to it through the settings tools that already exist, and
+the section that holds it is gated on an `*.approve` rather than taking effect
+when saved — because a section that took effect when saved would let an agent
+widen its own boundary and then use the widened one. `screens.define` is granted
+and revoked through the same tools, on the same signature.
 
 **Cadence, budget and class are the plant's, and stated.** Each kind's interval
 and monthly budget are plant settings; a scheduled kind runs behind a
@@ -136,12 +197,38 @@ card a person presses. A functional agent has nobody in front of it, so it must
 have a role of its own rather than `AGENT`'s, and the plant must declare which
 keys an unattended agent may write rather than inferring it from a capability.
 
-**Nine of the 47 write tools are outside the per-person capability filter.** `add_person`, `register_gauge`, `calibrate_gauge`,
-`issue_certificate`, `issue_pallet_certificate`, `produce_batch`, `pack_unit`,
-`set_unit_status` and `erp_retry` appear in no `agent.NEEDS` entry and no
-`assistant.SURFACES` entry, so they are offered to anybody holding `plant.read`
-and only the API's gate against the `AGENT` account refuses them. More agent
-kinds multiply that hole.
+**Nine of the 47 write tools were outside the per-person capability filter —
+closed by PR #119 on 2026-09-27.** `add_person`, `register_gauge`,
+`calibrate_gauge`, `issue_certificate`, `issue_pallet_certificate`,
+`produce_batch`, `pack_unit`, `set_unit_status` and `erp_retry` appeared in no
+`agent.NEEDS` entry and no `assistant.SURFACES` entry, so they were offered to
+anybody holding `plant.read` and only the API's gate against the `AGENT` account
+refused them. Measured against `main` at `ad5219d3`: `NEEDS ∪ PER_CALL_NEEDS` is
+now 47 of the 47 writes rather than 38, and the catalogue offered on `plant.read`
+alone is 51 read tools rather than 60 with nine writes among them. It is recorded
+here because more agent kinds would have multiplied it, and because it is the
+second reason the first field of the row is the account.
+
+### The build plan this decision commits to (2026-09-28)
+
+Four milestones, in the order the maintainer's answers imply, each sized as
+handoffs. They are consequences of this record, not a schedule, and none has been
+opened.
+
+| Milestone | What it is | What it proves |
+|---|---|---|
+| **M1 — the analysis agent, with graphing** | the four analyses as read tools returning the screens' own envelope; a kind with its own account and role and no write tool, asserted by a test; a chart contract of six rules — a chart draws what the API measured, every figure carries its coverage, unknown is drawn as unknown, axes are honest, every chart states its total, and the palette and all four themes; hand-drawn SVG through `kit.js`, no build step, nothing fetched from outside the box; off in shadow mode and saying so | an account and role of its own, a tool set defined by what it may not call, a per-conversation budget, and a place on the AI tab |
+| **M2 — the `[ai]` domain and the person's own agent** | a fifth Configuration domain in the AI nav group holding budgets, cadences and the automation line; a `my agent` view behind `plant.read` that says out loud that a supervisor can read what you type; a durable transcript plus a short remembered-facts list the person can read and delete, with its total; per-agent budget shares | a budget that is the plant's rather than the box's, and the tab as a person's own place |
+| **M3 — the improvement crew, warn-only** | the three unwired `review.KINDS` entries; a cadence in the API lifespan behind a no-model delta that advances its own watermark; proposals into the flows that exist and nothing that applies itself, for a release; `screens.define`, off by default, granted through the settings tools on a signature | all six fields against a real plant, including the three hardest: a cadence in a long-lived process, a plant-scoped budget, and a roster honest about a pass that did not happen |
+| **M4 — the harness as the engine** | the checkout, the branch per proposal and the pull-request body that carries the finding; tier (b) UI changes as draft pull requests with a `browser` test that fails first; the crew's roles as kinds inside the product; and, after the warn-only release, the declared file set and the `ui-check` baseline question answered | amendment B — or disproves it |
+
+**And the three numbers that would show amendment B wrong**, which do not exist
+today and will after M3's warn-only release: how many of the harness's proposals
+a person signed against how many were declined and ignored; how many evenings a
+merged proposal cost end to end against what the same change would have cost by
+hand; and whether anybody other than the maintainer ever merged one. If the first
+is small, the second is not better than one-for-one and the third is zero, the
+project's own strategy pages were right to rank this fifth of five.
 
 Revisit when: a kind has run on a cadence against a real plant for a month and
 the number of its proposals that were signed, declined and ignored is written
@@ -155,7 +242,9 @@ Rule 2 — unknown is a valid answer — is why a scheduled pass that did not ru
 `unknown` and never a quiet *clean*, and why a roster row says `stale` rather
 than `ok`. Rule 3 — agent-native, and an agent acts for a person — is the whole
 of the second and third rules: the drafting half is what an agent may hold, the
-approving half is what it may never hold, and the one exception is bounded by a
-five-clause test and off until an administrator says otherwise. Rule 4 — config,
+approving half is what it may never hold, and the exceptions are bounded — tier
+(a) by a five-clause test and off until an administrator says otherwise, tier (b)
+by a declared file set, a test that fails first and a person's merge, and tier
+(c) not at all. Rule 4 — config,
 not code, at plant boundaries — is why a kind's cadence, budget and role are the
 plant's configuration and not constants in the wheel.

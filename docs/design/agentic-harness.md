@@ -5,11 +5,101 @@ built. Scott asked, that morning, how the AI tab becomes "the dashboard of an
 MES agentic harness" — every person with their own agent, functional agents for
 deep work, a continuous-improvement team on a cadence, and "this whole crew
 setup, basically running in Bottling. Not exactly." This page answers that with
-the code cited, proposes a boundary for what an agent may put in force without
-a signature, and ends with ten questions. **It decides nothing and builds
-nothing.** The decision it turns on is
+the code cited and proposes a boundary for what an agent may put in force
+without a signature.*
+
+***Revised 2026-09-28** against `main` at `ad5219d3`, to what Scott decided that
+morning. His ten answers are quoted in full in [Decided](#decided-2026-09-28),
+which also says, section by section, which recommendation was accepted, which was
+accepted with a rider, and which was replaced. Two answers changed the shape of
+the design: the harness changes the product's own **code**, UI first, and the
+harness is the **engine of all product improvement** rather than one more
+feature. §9 is now a four-milestone build plan sized as handoffs.
+**Still nothing is built from this page.** The decision it turns on is
 [0038](../decisions/0038-an-agent-is-an-account-with-a-role-a-budget-and-a-cadence.md),
-which is proposed and not accepted.*
+accepted 2026-09-28 with those amendments.*
+
+---
+
+## Decided (2026-09-28)
+
+Scott answered all ten questions of §10 on 2026-09-28 at about 06:20. **Eight
+answers accept this page's recommendation. Two change its shape**, and this
+revision is what they change. His words are below in full, unedited, because a
+paraphrase of a decision is not the decision.
+
+> **1. Is the line right?** Seems right to me but it should be configurable with the same agentic access to change.
+>
+> **2. "UI updates 100% automated" turned out to mean 15 specific numbers (the [screens] settings) — is that what you meant, or something bigger?** I was thinking a person should literally be able to change the code to improve the UI. Move cards, change graphs, etc. This should be as maliable as possible.
+>
+> **3. Want a new permission, screens.define, off by default, so a plant turns this on deliberately rather than getting it automatically?** Configurable with MCP tool.
+>
+> **4. Start with the CI crew that only proposes fixes (never applies them itself), plus the analysis agent's read-only tools? Or build the analysis agent alone first?** Analysis first with very good graphing capabilities.
+>
+> **5. Should it run warn-only for a release first — the crew proposes, nothing auto-applies, until you've seen a month of what it would have done?** Yes.
+>
+> **6. Should there be a new "AI" section in Configuration for agent budgets/schedules, rather than burying them in Setup?** Yes.
+>
+> **7. Per-person memory: start with none — the agent just stops forgetting mid-conversation, but doesn't remember facts about you — until there's a real design for memory you can read and delete?** I'd envision a fully customizable agent with full memory and potentially even a skill set later. I could envision each person eventually getting their own fully embodied agent that works on their behalf. But simple is best for now and I'd defer to a simpler proof of concept, with just retaining memory for now.
+>
+> **8. Right now nobody can read their own past AI conversations, and it's not private from supervisors either. Add a "my agent" view, and say that out loud in the UI?** Yes.
+>
+> **9. If the analysis agent runs in shadow/offline mode: turn it off and say so, or let it answer worse with a local model? (recommends: off)** Off.
+>
+> **10. The honest case against doing any of this is in §9 — this ranks 5th of 5 on your own priority list, nobody outside this machine asked for it. Is it worth an evening a week for a month, against the first-real-machine work you've called the real bottleneck?** I feel this should be a tool for driving product improvement and thus should accelerate solutions for all other areas. That's the goal for this harness. To make this product self evolve on its own. In that regard, this should become the bottle neck for driving all other improvements on that list. For example, if I wanted to integrate with SAP or fix any ERPNext connection, then it should be this harness that allows be to fix or build it.
+
+### What each section now says
+
+| § | The recommendation it made | Ruling |
+|---|---|---|
+| 2 — the map: crew → plant | the crew's five ideas, ported; the steward's safety model replaced by the approvals queue | **replaced by answer 10.** The map is not an analogy. The crew's roles run *inside the product, against the product's own repository*, and §2a below says what runs where |
+| 3 — one agent per person | a durable transcript; the trace unchanged; **no memory at first** | **accepted, except memory, replaced by answer 7**: a simple proof of concept that retains memory. §3 defines what that is and what it is not |
+| 3, 8 — a "my agent" view behind `plant.read`, and the panel saying out loud that a supervisor can read what you type | | **accepted** (answer 8) |
+| 4 — functional agents as six fields | an agent kind is an account, a tool set, a cadence, a budget, a data class and one place its work lands | **accepted**, and answer 10 adds a seventh thing a code-editing kind needs: a checkout. §2a |
+| 5 — the signature boundary | five clauses; the automatable set is fifteen screen numbers | **replaced by answer 2.** Fifteen numbers is a floor, not the thing. §5 is now three tiers, and the middle one is the harness changing the product's own code. The five clauses survive as tier (a)'s test |
+| 5 — the automation line itself | a judgement written into the product | **accepted with the rider** (answer 1): the line is a Configuration setting the agent may read and propose changes to through the settings tools, gated on `*.approve` |
+| 5 — `screens.define`, off `agent` by default | a new capability an administrator grants deliberately | **accepted with the rider** (answer 3): granted and revoked through the same settings tools, not only by hand |
+| 5 — warn-only for a release first | the crew proposes; automation is switched on by a plant that has read a month of proposals | **accepted** (answer 5), and it now applies to tier (b) as well as tier (a) |
+| 6 — bare minimum by default | a default screen answers a question somebody has while standing up | **accepted**, not asked about, unchanged |
+| 7 — budgets, cadences, and a fifth `ai` Configuration domain inside the AI nav group | | **accepted** (answer 6) |
+| 8 — the AI tab as the dashboard | what the AI did, what it costs, what it is waiting on; at most one number per agent | **accepted**, and it is where M1's charts render |
+| 9 — start with the CI crew (option A), taking the analysis agent's read tools along | | **replaced by answer 4**: the analysis agent first, *"with very good graphing capabilities"*. §9 is now a four-milestone build plan in the order the answers imply |
+| 9 — the analysis agent in shadow mode | off, and saying so | **accepted** (answer 9) |
+| 9 — the case for building none of it yet | this ranks fifth of five on the project's own strategy pages | **kept, and answered** by answer 10 in §9. The case is not withdrawn; it is overruled with a reason, and the reason is testable |
+
+### The two amendments, stated once
+
+**Amendment A (answer 2) — the harness changes the product's code.** *"I was
+thinking a person should literally be able to change the code to improve the UI.
+Move cards, change graphs, etc. This should be as maliable as possible."* The
+automated tier this page drew — fifteen `[screens]` numbers a plant runs at — is
+a floor. The thing is an agent that **edits `web/*.html`, `web/*.js` and
+`web/*.css`, runs the test tiers the repository already has (the `browser` tier
+included), and lands the change through the same review the maintainer's own crew
+uses: a branch, a pull request, CI, and a person's merge.** Decision
+[0035](../decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators.md)'s
+rule that the agent never approves is kept exactly, and the mechanism that keeps
+it is that **the merge is the signature**. §5 is rewritten around that.
+
+**Amendment B (answer 10) — the harness is the engine, not a feature.** *"This
+should become the bottle neck for driving all other improvements on that list.
+For example, if I wanted to integrate with SAP or fix any ERPNext connection,
+then it should be this harness that allows be to fix or build it."* So §2's
+crew → plant table stops being an analogy: the roles the maintainer runs on his
+own machine — a steward that keeps a board, executors that take a handoff to a
+pull request, a triage that wakes on a delta, an evolver that changes the
+machinery — are what runs **inside the product, against the product's own
+repository**, budgeted and scheduled by the plant, with a person's merge as the
+signature. §2a says what runs where and what it honestly cannot do.
+
+**One thing this page still refuses to say.** Nothing here claims the harness
+will make the product self-evolve. That is the stated goal, in Scott's words, and
+§5 says tier by tier what would have to be true for a change to land without a
+person: a test that fails on the bug, a `browser` tier that runs it, a diff
+confined to a declared file set, a warn-only release whose proposals a person
+reviewed, and an automation line the plant wrote down. Until those hold, every
+code change is a pull request a person merges, and the page says so in every
+section that touches code.
 
 ---
 
@@ -172,6 +262,100 @@ right.** It is also the thing the market is asking for: ABI Research's
 transparency, and human oversight, rather than promising fully autonomous
 execution on the factory floor"*.
 
+### 2a. Amended by answer 10: the map is not an analogy
+
+Scott, 2026-09-28: *"This should become the bottle neck for driving all other
+improvements on that list. For example, if I wanted to integrate with SAP or fix
+any ERPNext connection, then it should be this harness that allows be to fix or
+build it."*
+
+So the table above is not a set of metaphors. **The roles are what runs inside
+the product, against the product's own repository.** A steward that keeps a
+board of what is being worked on; executors that take one piece of work from open
+to a pull request and stop; a triage woken by a delta rather than a clock; an
+evolver that changes the machinery and never the product in the same pass. The
+plant schedules them and pays for them; a person merges.
+
+That is a bigger claim than anything else on this page, so it is worth being
+exact about what it requires, because three of the four requirements do not exist
+and one of them cannot exist in some plants.
+
+#### What runs where
+
+**The plant box has the wheel, not the repository.** A plant runs `fsmes` from an
+installed wheel (PyPI, or the container image) with its own database beside it
+([0021](../decisions/0021-one-database-per-plant.md)). There is no git checkout
+on it, no compiler, no test runner and no network path to GitHub, and none of
+those is an oversight: [0005](../decisions/0005-plain-html-no-build-step.md) is
+*"plain HTML, CSS and JS, no build step"* precisely so a plant PC needs no
+toolchain for years.
+
+So a harness that edits code needs three things the plant does not have, and they
+have to be somewhere:
+
+| What it needs | Where it can honestly be | What it is today |
+|---|---|---|
+| **A checkout of the product's source** | not the plant. A machine the maintainer controls — his own box, a runner, or a container the project publishes — holding a clone and a branch per proposal | the maintainer's own crew already is this, exactly: worktrees under `~/.herdr/worktrees/`, a branch per handoff |
+| **A CI that can fail the change** | GitHub Actions, already: `test`, `postgres`, `browser`, `lab`, `lockfile`, `wheel-demo`, plus the DCO sign-off check | exists and is required on pull requests |
+| **A way for the result to reach a running plant** | **a release.** A merged change reaches a plant when the plant upgrades its wheel or its image and runs its migrations — which ship in the wheel since #25 | exists, and is the only path |
+
+**The consequence, stated plainly: a code change made by the harness does not
+reach a plant until the plant upgrades.** There is no hot patch, no code pushed
+down a wire into a running plant, and this page does not propose one. A plant
+that pulled executable code from the internet at run time would be a plant that
+fails its own change management, and the field's most disciplined comparable
+project refuses even to run resident on an OT network for the same reason (§9).
+The loop is: the plant's records produce the finding → a checkout somewhere else
+produces the change → CI judges it → a person merges it → the release carries it
+back. **The plant is where the evidence and the goal come from; it is not where
+the compiler runs.**
+
+#### What a plant with no internet can do
+
+An air-gapped or shadow-mode plant cannot participate in the code half at all,
+and it should be told so rather than shown a dead button. What it can still do is
+everything the harness does with configuration and evidence:
+
+- **Produce the finding.** The crawl over its own refusals — unlabelled seconds,
+  withheld stations, orphan counts, drafts nobody signed — runs on the local
+  model or on no model at all, and its output is a proposal in the plant's own
+  queue.
+- **Export the finding, not the data.** A proposal is a sentence, an evidence
+  payload and a diff. `fsmes shadow`'s register already names, per class, what
+  may leave the box ([0032](../decisions/0032-a-hosted-judgment-and-the-shadow.md));
+  a finding written for a maintainer is `catalogue` or `configuration` class, and
+  a plant that will not export even that is a plant that contributes nothing
+  upstream and keeps working.
+- **Receive the fix as a release**, like every other plant.
+
+What it cannot do is run the cloud brain, and the register already refuses that
+with its own sentence: *"it carries this plant's numbers off the box, and a plant
+lending us its data to watch did not agree to that."*
+
+#### What the maintainer's own crew keeps doing
+
+**Governance of the public repository stays a person's, and stays outside the
+product.** Merging, releasing, tagging, answering an issue, writing on the
+website, posting anywhere — the crew's standing orders already reserve every one
+of those for Scott, and nothing in this design moves them into a plant. A plant's
+harness may open a pull request; it may not merge one, may not tag a release, and
+has no account on GitHub of its own that a maintainer did not deliberately give
+it.
+
+That division is also the answer to *"I don't want my crew session there"* from
+2026-09-27: **the crew's shape ports; the crew's session does not.** About 80 of
+`bin/crew-up`'s 200 lines are repair of an interactive CLI run as a daemon, and
+in a server process that whole category disappears.
+
+#### What answer 10 does to the priority list
+
+It reverses it, and that is the whole of the argument in §9. Every other item on
+the project's roadmap costs an evening per improvement. If SAP and ERPNext work
+is to go *through* the harness, then the harness is not competing with the
+first-real-machine work for evenings — it is the thing that is supposed to make
+each of those evenings produce more than one change. **That is a claim that can
+be wrong, and §9 says what would show it wrong.**
+
 ---
 
 ## 3. One agent per person
@@ -217,14 +401,38 @@ are different screens wanting different gates.
    days — a transcript is a convenience and the trace is the record.
 2. **The trace.** Exists. Unchanged. Behind `audit.read`, because it is the
    record of what was done in this plant and by whom.
-3. **Memory, which is not history.** Recommendation: **nothing, at first, and
-   deliberately.** A remembered fact is a plant number cached outside the table
-   that owns it, which is the thing `ai_turns` already refuses to do ("a screen
-   gated on `audit.read` that carried raw tool results would be a way around the
-   capabilities those rows are behind"). When memory arrives it must be a short
-   list of sentences the **person can read and delete on their own screen**, and
-   it must never hold a number — the agent re-reads numbers, every turn, because
-   the system prompt already tells it to.
+3. **Memory, which is not history.** This page recommended **nothing at first**.
+   **Answer 7 replaced that**: *"I'd envision a fully customizable agent with
+   full memory and potentially even a skill set later … But simple is best for
+   now and I'd defer to a simpler proof of concept, with just retaining memory
+   for now."*
+
+   So memory is in, at proof-of-concept size, and the size has to be written
+   down or it will grow. **"Retaining memory", for M2, is exactly two things:**
+
+   - **the durable transcript** of piece 1 above — the agent picks up where the
+     person left off, across a restart and across a week, because the
+     `tool_use`/`tool_result` blocks were kept; and
+   - **a short remembered-facts list**, plain sentences, **which the person can
+     read and delete on the `my agent` view**, with a stated maximum number of
+     entries and its total shown beside it like every other list.
+
+   **And nothing else.** Not a skill set, not a profile the agent infers, not a
+   vector store, not a memory shared between people, and **never a plant
+   number** — a remembered number is a plant fact cached outside the table that
+   owns it, which is the thing `ai_turns` already refuses to do (*"a screen gated
+   on `audit.read` that carried raw tool results would be a way around the
+   capabilities those rows are behind"*). The agent re-reads numbers every turn
+   because the system prompt already tells it to, and a remembered "OEE on MIX01
+   is 62 %" would be wrong by the next shift and convincing anyway.
+
+   Two consequences that must be built with it rather than after it. A
+   remembered fact is **written only when the person's own turn put it there**,
+   so the list is readable as things I told it about me rather than things it
+   decided about me. And a remembered fact is **not private from a supervisor**,
+   like everything else in the trace, so the same sentence that says so on the
+   panel says so on the memory list. The fully embodied agent with a skill set
+   is a later design, and this page does not pretend to be it.
 
 ### What is private, and what the plant may see
 
@@ -249,14 +457,13 @@ plant setting**; it is **per box, not per plant** (that file holds every plant
 on the machine); and it is **one pool**, so a person's conversation and a
 nightly crawl spend the same money with no way to say which may have it.
 
-### What it must never do — the current design, kept, with two holes named
+### What it must never do — the current design, kept, with one hole named
 
 An agent acts within the capabilities of the person it acts for. That is
 enforced in `catalogue()` and `withheld()`: the model is never shown a tool the
 person may not use, and the list of what they may not do is in the cached system
-prompt as *"38 of the 38 actions the assistant can take for somebody"*, each
-with the capability and who holds it. Keep all of it. Two things are not true
-yet and a harness will make both worse:
+prompt, each entry with the capability and who holds it. Keep all of it. One
+thing is not true yet and a harness will make it worse:
 
 - **`on_behalf_of` is attribution, not authorisation.** The API authorises
   against the `AGENT` account's own role — 14 capabilities, no `*.approve` —
@@ -264,18 +471,22 @@ yet and a harness will make both worse:
   side of the API. That is deliberate and it works, but it means **every new
   agent kind either gets its own account and role or silently inherits AGENT's
   fourteen.** §4 makes that a requirement.
-- **Nine write tools are outside the per-person gate.** `add_person`,
-  `register_gauge`, `calibrate_gauge`, `issue_certificate`,
-  `issue_pallet_certificate`, `produce_batch`, `pack_unit`, `set_unit_status`
-  and `erp_retry` appear in no `NEEDS` entry and no `SURFACES` entry, so
-  `catalogue()` offers all nine to anybody holding `plant.read` and only the
-  API's own gate — against the `AGENT` account, not the person — refuses them.
-  That is nine of the 47 write tools, and it makes one generated page inaccurate:
-  `assistant-coverage.md` reads each row's capability from the *route*, so it
-  prints `n` for an operator against `issue_certificate` while the catalogue
-  would offer it to one. (Its Walk column says `no` for exactly these nine,
-  which is the visible symptom.) **It should be closed before any of this is
-  built** — a proposals queue filled by an agent is a bad place to discover it.
+
+**The second hole this page found has been closed since it was written, and the
+numbers in it have moved with the fix.** Nine write tools — `add_person`,
+`register_gauge`, `calibrate_gauge`, `issue_certificate`,
+`issue_pallet_certificate`, `produce_batch`, `pack_unit`, `set_unit_status` and
+`erp_retry` — were in no `NEEDS` entry and no `SURFACES` entry, so `catalogue()`
+offered all nine to anybody holding `plant.read`, and only the API's own gate
+against the `AGENT` account refused them. **PR #119 closed it on 2026-09-27.**
+Measured against `main` at `ad5219d3`, which this revision is written against:
+`NEEDS ∪ PER_CALL_NEEDS` is now **47 of the 47 write tools** rather than 38, and
+the catalogue offered on `plant.read` alone is **51** — every read tool that
+takes a `plant` argument, and no write tool at all — rather than 60.
+`assistant-coverage.md` is accurate for those nine rows again. It is named here
+rather than deleted because it is the reason §4's first field is the account:
+the hole existed for months and nothing exploited it only because the floor
+assistant never writes unattended.
 
 ### The tab is where a person manages their own agent
 
@@ -312,6 +523,13 @@ crew's scar tissue left out.
 would think to add: an agent that has not said what leaves the box cannot be
 switched on in a plant that cares, and 0032 already made every *question* say
 it.
+
+**Amendment A adds a seventh field, and only for the kinds that have it: a
+checkout.** A kind that edits the product's own code needs a clone of the
+repository, a branch per proposal, and a CI that can fail it — and §2a says why
+none of those is on the plant box and what that means for a plant with no
+internet. The six fields above are unchanged for every kind that does not edit
+code, which is all of them until M4.
 
 ### (a) The analysis agent
 
@@ -412,8 +630,18 @@ is unknown in the morning, never a quiet 'clean'."*
 
 ## 5. What needs a signature, and what does not
 
-Scott: *"Maybe even making things like UI updates 100 % automated whereas other
-improvements need ADMIN user approval."*
+Scott, 2026-09-27: *"Maybe even making things like UI updates 100 % automated
+whereas other improvements need ADMIN user approval."*
+
+Scott, 2026-09-28, answer 2, which replaced this section's shape: *"I was
+thinking a person should literally be able to change the code to improve the UI.
+Move cards, change graphs, etc. This should be as maliable as possible."*
+
+**So there are three tiers, not one line.** The fifteen numbers this page found
+are the floor — tier (a). The thing Scott means is tier (b), the harness changing
+the product's own code. Tier (c) is everything else, and it never automates.
+Each tier below has its **test** — what has to pass before the change counts as
+safe — and its **signature** — who or what stands behind it.
 
 ### Where the line is today
 
@@ -429,6 +657,10 @@ carries `define="users.manage"` (`modules.py:331-434`). The `agent` role
 deliberately does not hold `users.manage`, so **an agent cannot write one of
 them today, and `write_plant_setting` is refused with the capability named.**
 
+And there is no code tier at all. **No agent in this product has ever written a
+line of the product**, there is no checkout on a plant box (§2a), and the only
+thing that changes a plant's code is an upgrade.
+
 There is also a precedent for the opposite answer, and it is worth reading
 before proposing anything: `signals.define` went to `admin` and **explicitly not
 to `agent`**, with the reason in the source —
@@ -437,12 +669,15 @@ to `agent`**, with the reason in the source —
 > hard the OPC agent retries a booking is not drafting — there is nobody in the
 > loop after it."*
 
-**That sentence is the real boundary.** Not "is it the UI"; *is there anybody in
-the loop after it*.
+**That sentence is the real boundary, and it survives amendment A intact.** Not
+"is it the UI"; *is there anybody in the loop after it*. What answer 2 changes is
+the answer for code, not the question: for a code change there **is** somebody in
+the loop after it, and it is whoever merges the pull request.
 
 ### An automated tier already exists, by accident, and it is twenty-four keys
 
-This is the most important thing on the page and it was found while writing it.
+This is the most important thing this page found in the code, and nothing in the
+amendments touches it.
 
 A live Configuration section is written through
 `PATCH /dashboard/config/{domain}/settings/{key}`, and *"the gate is the
@@ -466,7 +701,7 @@ a number with no pending state has nothing to sign.
 - `[quality] nc_code_prefix`, `[quality] serial_digits` — what records are
   *named*;
 - `[process] default_report_hours`, `report_windows`, `gantt_screenful` — the
-  presentation numbers, and the only three of the twenty-four that the test
+  presentation numbers, and the only three of the twenty-four that tier (a)
   below would admit.
 
 Today nothing exploits this, for one reason: **the floor assistant never writes
@@ -480,15 +715,18 @@ agent is not a new capability — it is that **a functional agent must not run a
 the `AGENT` account.** It needs a role of its own with a bundle chosen for its
 job, which is exactly what §4's first field says and why that field is first.
 
-The second consequence is that the honest version of Scott's line is a
-*narrowing*, not a widening: the plant declares a small list of keys an
-unattended agent may put in force, and every other live setting stays a proposal
-even though the account could technically write it.
+The second consequence is that the honest version of tier (a) is a *narrowing*,
+not a widening: the plant declares a small list of keys an unattended agent may
+put in force, and every other live setting stays a proposal even though the
+account could technically write it.
 
-### The test, in 0035's terms
+### Tier (a) — the numbers a screen runs at
 
-Recommendation, as five clauses. An agent may put a change in force by itself
-only when **all five** are true:
+*The change.* A value in the `[screens]` table, plus `[process] gantt_screenful`
+(see below): how often a screen re-reads the plant, how many cards a page shows,
+how long a confirmation lingers, how many times a walk retries an anchor.
+
+*The test.* Five clauses, **all five** of which must hold:
 
 1. it changes **a number a screen runs at**, not a number the plant is judged
    by. The test is what the number *does*, not which pack table it sits in —
@@ -503,79 +741,201 @@ only when **all five** are true:
 5. it is **undone from the screen that shows it, in one step, by the same path
    that made it**.
 
-Anything failing one of the five needs a person: the domain's `*.approve` where
-one exists, and otherwise the capability that section already names — which for a
-setting with no pending state is usually `users.manage`. Anything about
-a person's capability, a password, or the deletion of a record is **never
-automatable at all**, and the product already says so: the assistant has no tool
-for `DELETE /admin/roles/{code}`, for any `/auth/*` password route, or for any
-`*.approve` route, each with a written reason.
+*The signature.* **Warn-only for the first release** (answer 5): the crew
+proposes the number like anything else, nothing applies itself, and a person
+reads a month of what it would have done. After that release, and only in a plant
+whose administrator has granted `screens.define`, the change applies itself and
+writes its own audit row.
 
-In 0035's vocabulary: **the automatable set is tier three's presentation edge —
-a number whose only consequence is what a person sees on the next page load.**
-It is not a new tier. It is the smallest part of the existing one.
+*Why this tier is small and stays small.* In 0035's vocabulary it is tier three's
+presentation edge — a number whose only consequence is what a person sees on the
+next page load. It is not a new tier; it is the smallest part of the existing
+one. Anything failing one of the five clauses is tier (c).
 
-### The mechanism, if Scott accepts the line
+### Tier (b) — the product's own UI code
 
-- **A role of its own for every functional agent**, so no scheduled agent
-  inherits `AGENT`'s `process.define` and `quality.define` and the twenty-four
-  keys behind them. This one is not optional and does not depend on the rest.
-- **One new capability, `screens.define`**, gating the six `[screens]` sections
-  instead of `users.manage`, described as *"Set the numbers this plant's screens
-  run at: refresh rates, page sizes, how long a confirmation stays"*. No
-  `screens.approve` beside it — there is nothing to sign, and 0035's rule three
-  plus `signals.approve`'s own absence say a capability that gates nothing is a
-  role saying something untrue about itself. `[process] gantt_screenful` moves
-  under it, or is named as an exception on the screen; either way the set is
-  written down in one place.
-- **It is not on `agent` by default.** An administrator grants it, deliberately,
-  per plant — exactly the sentence the `agent` role's own description already
-  uses. A plant that never grants it never has an automated change, and the
-  harness still works.
-- **A warn-only first pass.** The CI crew proposes screen numbers like anything
-  else for the first release; the plant turns automation on when it has read a
-  month of proposals it would have accepted. This is the crew's own discipline
-  (a change states the effect expected in the next report) and it is the
-  mitigation the scout named for exactly this class of idea: *a wrong refusal is
-  worse than a missing guard*, so warn before you act.
-- **Through the API, never through a pack.** 0035 records that `fsmes pack apply`
-  writes no audit row. An automated change that left no audit row would be the
-  one change in this product nobody can find, so the path is the same `PATCH`
-  a person's Save uses.
+This is what answer 2 asked for, and it is the new thing on this page.
 
-### The boundary applied to ten things the CI crew might actually find
+*The change.* A diff to the operator UI's own files — moving a card, changing a
+chart, adding a column, fixing a layout that is wrong on a phone — **proposed by
+the harness as a branch and a pull request, and merged by a person.** Not applied
+to a running plant; see §2a. It reaches plants in the next release, like every
+other change.
+
+*The test.* The repository's existing gates, unchanged and unweakened, all of
+them required on the pull request: `test`, `postgres`, `browser`, `lab`,
+`lockfile`, `wheel-demo`, and the DCO sign-off check. **The `browser` tier is the
+one that matters here** — it exists because until 2026-09-25 the Chromium tests
+were `slow`-marked and nothing ran them, and a `test_ui_nav` assertion had been
+red on `main` for a day of green checks. A UI change with no browser test is a UI
+change nobody checked.
+
+Beyond the gates, **three things a code proposal must carry or it is not
+reviewable**, taken from the crew's own handoff shape: the finding it came from,
+with the record that produced it; a test that fails before the change and passes
+after it, named as prose; and one sentence saying what it did not do and why.
+
+*The signature.* **A person's merge, for a release — and that is not a temporary
+measure, it is the mechanism.** Decision 0035 says the agent never approves.
+Here the approval is the merge button on a pull request, held by a person with
+commit rights on a repository the plant does not control. That is a stronger
+signature than any `*.approve` capability in the product, because it is outside
+the plant the agent is running in.
+
+*What could later automate, and what could not.* After the warn-only release
+(answer 5), the candidate for automation is narrow and it has to be written down
+before it is granted, because "touch only `web/`" sounds obvious and is not.
+
+**Included** — the per-screen files, where a diff confined to one screen's own
+`web/<screen>.html`, `web/<screen>.js` and `web/<screen>.css` changes what that
+one screen looks like and nothing else. There are 27 such HTML files, 32 JS and
+16 CSS.
+
+**Excluded, by name, even though they are under `web/`:**
+
+| File | Why it is not presentation |
+|---|---|
+| `common.js` (778 lines) | the nav and the one `api()`. It exists because *"the nav was pasted into eight HTML files - which is how one page grew a duplicate link and seven lost their current-page marker"*. A change here changes every screen at once, and `test_ui_nav.py` checks the nav against the module registry |
+| `assist.js` (952) and `assist-record.js` (552) | the walk engine and the recorder. Walks are how approvals are signed — *"approvals are walks to the signature"* (#113) — and the 2026-09-25 anchor race was a bug in this file that made the product look permission-broken on Scott's phone. Not layout |
+| `kit.js` (255) | the one set of coverage charts, so that *"the Floor tile and the machine page can never state coverage differently"*. A change here changes how a coverage figure reads on four pages at once. That is honesty rendering, and honesty rendering is tier (c) |
+| `styles.css` (586), `themes.css`, `themes.js` | the palette and the four themes — `STYLE.md` rules 2 and 3. All four themes are first-class, and a change to the palette is a change to every screen in four looks |
+| `web/vendor/` | three.js, vendored with its licences and SHA-256s under the standing terms *"these files are read, never built"* |
+| `web/line/`, `line3d.html` | the 3D line view, which is the one place the no-build-step rule is met by a vendored ES module rather than by hand-drawn SVG |
+
+**And three exclusions that are about the diff rather than the file**, because a
+change inside an included file can still be any of them:
+
+- **Removing or renaming a `data-assist` anchor.** Guides point at anchors, and
+  `tests/page_anchors.py` with `test_assistant.py` and `test_agent.py` fail when
+  a guide step names an anchor its page does not have. The test catches it; the
+  point is that it is not a presentation change, it is a change to how somebody
+  is walked to a signature.
+- **Moving a computation into the browser.** A screen draws what the API
+  measured ([0031](../decisions/0031-a-judgment-is-a-proposal.md),
+  [0033](../decisions/0033-availability-is-a-share-of-what-was-watched.md), and
+  `kit.js`'s own *"nothing here computes a number"*). A diff that starts
+  calculating a figure in JavaScript has changed what a number means, whatever
+  directory it is in.
+- **Fetching anything from outside the box** — a script tag, a font, a CDN.
+  `STYLE.md` rule 9 and [0005](../decisions/0005-plain-html-no-build-step.md).
+
+**One honest hole in automating this tier, and it has no answer yet.**
+`fsmes ui-check` crawls every screen in every theme and judges it against
+accepted baselines in `tests/ui/baselines/` — and `ui-check --accept` *makes the
+current look the accepted look*. **An agent that may run `--accept` can erase the
+only check that would have said the look changed.** So either the baselines are
+re-accepted by a person as part of the merge, or tier (b) never automates at all.
+This page recommends the first and names the second as the fallback; it does not
+pretend the problem is solved.
+
+### Tier (c) — everything else, always a person's merge
+
+Everything not in (a) or (b): the kernel, the API, the domain services, the
+capability model, migrations, the packs, the connectors, the docs that state a
+rule. A harness may propose any of it — that is the whole of answer 10, and it is
+how SAP or an ERPNext fix would arrive — and **none of it ever applies itself.**
+There is no release after which tier (c) automates, and no setting that turns it
+on.
+
+Three things are not automatable at any tier, and the product already refuses
+them: a person's capability, a password, and the deletion of a record. The
+assistant has no tool for `DELETE /admin/roles/{code}`, for any `/auth/*`
+password route, or for any `*.approve` route, each with a written reason.
+
+### The line itself is a setting, not a constant (answer 1, and answer 3)
+
+Scott, answer 1: *"Seems right to me but it should be configurable with the same
+agentic access to change."* Answer 3, on `screens.define`: *"Configurable with
+MCP tool."*
+
+So the boundary above is not a constant in the wheel. **It is this plant's
+configuration**, in the `[ai]` domain of §7, and it says: which tier (a) keys
+this plant will let an agent write; whether tier (b) is warn-only or automated;
+and which file set tier (b) counts as presentation. Three consequences follow
+from putting it there, and all three are already the product's own rules:
+
+- **The agent can read it and propose changes to it** through the settings tools
+  that already exist (`read_plant_setting`, `write_plant_setting`,
+  `propose_plant_setting`, §11 of [configuration assistance](config-assistance.md)),
+  which is exactly what Scott asked for. It reads it the way it reads any other
+  setting, and it proposes a change to it the way it proposes any other change.
+- **It is gated on `*.approve`, not on a `define`.** This is the one setting in
+  the product that must not be a `approve=None` section, because a section that
+  takes effect when saved would let an agent widen its own boundary and then use
+  the widened one. **The section that holds the automation line is signed, by a
+  person, every time it moves** — and the pending-approval row says which clause
+  moved and in whose favour.
+- **`screens.define` is granted and revoked through the same tools**, on the same
+  gate: an agent may propose that a plant grant it, with its evidence; an
+  administrator signs. It is off by default and a plant that never grants it
+  never has an automated change, and the harness still works — the proposals
+  simply wait.
+
+### The mechanism, per tier
+
+**Common to all three.** A role of its own for every functional agent, so no
+scheduled agent inherits `AGENT`'s `process.define` and `quality.define` and the
+twenty-four keys behind them. This one is not optional and does not depend on the
+rest.
+
+**Tier (a).** One new capability, `screens.define`, gating the six `[screens]`
+sections instead of `users.manage`, described as *"Set the numbers this plant's
+screens run at: refresh rates, page sizes, how long a confirmation stays"*. No
+`screens.approve` beside it — there is nothing to sign, and 0035's rule three
+plus `signals.approve`'s own absence say a capability that gates nothing is a
+role saying something untrue about itself. `[process] gantt_screenful` moves
+under it, or is named as an exception on the screen; either way the set is
+written down in one place, in the `[ai]` domain, where it is readable.
+Through the API, never through a pack: 0035 records that `fsmes pack apply`
+writes no audit row, and an automated change that left no audit row would be the
+one change in this product nobody can find, so the path is the same `PATCH` a
+person's Save uses.
+
+**Tier (b).** A checkout, a branch per proposal, a pull request, CI, a merge —
+§2a says where each of those lives and why none of them is on the plant. Three
+things it needs that the maintainer's own crew already has working and the
+product does not: a worktree per piece of work, a handoff shape that carries the
+finding and the evidence into the pull request body, and a sign-off on every
+commit. The DCO check already enforces the third.
+
+**Tier (c).** Nothing new. It is a proposal like any other, and the merge is the
+signature.
+
+### The boundary applied to ten things the harness might actually find
 
 | # | What it found | What it would do | Verdict |
 |---|---|---|---|
-| 1 | The floor page shows 24 machine cards; this plant has 9 and half the page is empty | `[screens] floor_machine_page` 24 → 12 | **automatic** — presentation, reversible, nothing judged |
-| 2 | Walks time out on this plant: 20 attempts at 150 ms is 3 s and the config page renders in 4 | `[screens] assistant_fill_attempts` 20 → 40 | **automatic** — this is the 2026-09-25 bug as a setting |
-| 3 | Operators miss confirmations; the toast is gone before they look up | `[screens] toast_ms` 3500 → 6000 | **automatic** — an accessibility answer a plant gives for its own people |
-| 4 | The state timeline shows 12 machines of 60 and people never scroll | `[process] gantt_screenful` 12 → 20 | **automatic** — presentation, and the total is already stated |
-| 5 | Forty per cent of stops are four spellings of one changeover | draft a downtime reason `changeover` | **`process.approve`** — it names what every stop from now on is called |
-| 6 | Half the stations report on under 30 % coverage and nobody notices | `[oee] coverage_floor` 0 → 0.8 | **not automatable, and not signable either** — it has no Configuration section, so it changes only when the pack is applied and the plant restarts. And `fsmes pack apply` writes no audit row (0035's own honest gap), so an agent could not leave a record of having done it. The proposal here is a sentence to a person, not a write |
-| 7 | Brix has gone over specification eleven times without an NC being raised | draft a trigger: brix > 11.5 sustained 60 s → open NC | **`triggers.approve`** — logic against a live plant, and the record says so |
-| 8 | Scrap tracks MIX01's speed setpoint across 40 hours | propose an adjustment 1.33 → 1.25, with the evidence | **`adjustments.approve`** — the human in the loop before a PLC write |
-| 9 | The disk is small and the trace is ninety days | `[admin] ai_trace_days` 90 → 30 | **`users.manage`** — it deletes an audited record. Retention is not presentation |
-| 10 | Operators cannot read their own AI conversations | grant `operator` the capability for it | **never automatable** — a person's capability is nobody's but an administrator's |
+| 1 | The floor page shows 24 machine cards; this plant has 9 and half the page is empty | `[screens] floor_machine_page` 24 → 12 | **tier (a)** — presentation, reversible, nothing judged |
+| 2 | Walks time out on this plant: 20 attempts at 150 ms is 3 s and the config page renders in 4 | `[screens] assistant_fill_attempts` 20 → 40 | **tier (a)** — this is the 2026-09-25 bug as a setting |
+| 3 | Operators miss confirmations; the toast is gone before they look up | `[screens] toast_ms` 3500 → 6000 | **tier (a)** — an accessibility answer a plant gives for its own people |
+| 4 | The state timeline shows 12 machines of 60 and people never scroll | `[process] gantt_screenful` 12 → 20 | **tier (a)**, and the clause-1 exception — read the note below |
+| 5 | On a phone the order card's three buttons wrap and the middle one falls under the fold | a diff to `orders.html` and `orders.css`, with a `browser` test that fails at 390 px before it | **tier (b)** — a pull request, CI, a person's merge. This is answer 2's "move cards" exactly |
+| 6 | The OEE waterfall's bars are unreadable in the high-contrast theme | a diff to `analysis.css` — and **not** to `styles.css`, which would be tier (c) | **tier (b)**, if it stays out of the palette; **tier (c)** the moment it touches a theme variable |
+| 7 | Forty per cent of stops are four spellings of one changeover | draft a downtime reason `changeover` | **`process.approve`** — it names what every stop from now on is called. Tier (c) |
+| 8 | Brix has gone over specification eleven times without an NC being raised | draft a trigger: brix > 11.5 sustained 60 s → open NC | **`triggers.approve`** — logic against a live plant, and the record says so |
+| 9 | Scrap tracks MIX01's speed setpoint across 40 hours | propose an adjustment 1.33 → 1.25, with the evidence | **`adjustments.approve`** — the human in the loop before a PLC write |
+| 10 | The ERPNext connector drops a confirmation when the Job Card is closed between read and write | a diff to the connector, a test that reproduces it, a pull request | **tier (c)** — and it is answer 10's own example. The harness may find it, write it and prove it; a person merges it |
 
-**Four automatic; three signed by the domain's approver; one by an administrator
-with no approval step behind it; two an agent cannot do at all.** That ratio is
-the answer to whether Scott's "100 % automated" is a large category. **It is
-not** — it is about fifteen numbers. Which is the honest version of his sentence
-rather than a diminished one: those fifteen are exactly the ones that made the
-product feel broken on his phone on 2026-09-25, and nothing about the plant's own
-records changes when any of them moves.
+Two more that show the edges, both real and both from this repository's history:
+half the stations reporting on under 30 % coverage would want `[oee]
+coverage_floor`, which **has no Configuration section at all** — it changes only
+when the pack is applied and the plant restarts, and `fsmes pack apply` writes no
+audit row, so an agent could not leave a record of having done it; the proposal
+there is a sentence to a person. And "operators cannot read their own AI
+conversations" wants a capability grant, which is **never automatable** at any
+tier.
 
-**Number 4 is the one to read twice**, because it is the clause-1 exception and it
-is a real finding. `gantt_screenful` is a number a screen runs at — how many
-machines the state timeline draws before it stops and says so — and it lives in
-the `[process]` pack table rather than `[screens]`, because that is where the
-analysis service's numbers live (`config-assistance.md` §13). So the boundary
-cannot be "the `[screens]` table" and has to be the five clauses; a plant's
-answer is a list of keys the product declares automatable, and
+**Number 4 is the one to read twice**, because it is tier (a)'s clause-1
+exception and it is a real finding. `gantt_screenful` is a number a screen runs
+at — how many machines the state timeline draws before it stops and says so — and
+it lives in the `[process]` pack table rather than `[screens]`, because that is
+where the analysis service's numbers live (`config-assistance.md` §13). So the
+boundary cannot be "the `[screens]` table" and has to be the five clauses; a
+plant's answer is a list of keys the product declares automatable, and
 `[process] gantt_screenful` is on it while every other `[process]` key is not.
-Which is one more argument for granting `screens.define` deliberately: the set it
-gates is a judgement somebody made once, and it should be readable on a screen.
+Which is one more argument for the line being a setting a person signs: the set
+it gates is a judgement somebody made once, and it should be readable on a
+screen.
 
 ### Every automated change is still a record
 
@@ -596,6 +956,13 @@ gates is a judgement somebody made once, and it should be readable on a screen.
 - **Counted.** The AI tab says how many changes this agent made without a
   signature this month, beside its spend. A number nobody can see is a number
   nobody governs.
+
+**And for tier (b), a code change's record is the pull request** — the branch,
+the diff, the CI run, the sign-off and the merge commit, all of them outside the
+plant and all of them permanent. That is a better record than anything the plant
+could keep about its own code, and it is the reason the code half lives where it
+does. What the **plant** keeps is the other end: the finding that produced the
+change, and — once the release carries it back — the version it arrived in.
 
 ---
 
@@ -836,10 +1203,12 @@ Three tabs behind `audit.read`, added 2026-09-26 (#112):
   **machine-shaped rather than plant-shaped**: its rows come from
   `services/ai_status.py`, which reads files under `~/.local/share/fsmes/` — the
   results store, the rollup notes, the design database, the usage file — because
-  one GPU serves every plant on the box. Two consequences: the cloud brain's
-  spend is a *note inside a local-AI payload*, and if `MES_LOCAL_AI=0` the whole
-  tab blanks, cloud budget included. `agent.status()` returns spend, cap and
-  tokens at `GET /assist/agent/status` and **the tab never calls it.**
+  one GPU serves every plant on the box. This page found that the cloud brain's
+  spend was a note inside a local-AI payload, so the whole tab blanked when
+  `MES_LOCAL_AI=0`, cloud budget included; **PR #122 closed that on 2026-09-27**
+  and the tab now calls `GET /assist/agent/status` for spend, cap and tokens
+  whatever the local layer is doing. What remains true is the shape: the rows
+  are still the box's rather than the plant's, and §7 is where that is fixed.
 - **Settings** — exactly one editable number, `ai_trace_days`, plus links to
   three Setup sections.
 
@@ -921,83 +1290,241 @@ has become the thing he is describing — and the precedent is on the record: 00
 refused a single fleet OEE because *"an executive asks for it"* is not a reason
 when the number would be a lie.
 
+**And the distinction M1 has to hold, because it puts charts on this tab.** An
+exploration the analysis agent drew *for the person who asked, beside their
+conversation, gone when they are done* is not a dashboard panel; it is an answer.
+The rule is the one already in the registry — *"its own page because these are
+questions you sit down with, not things you watch"* — so an exploration lives
+where the question was asked, and **a chart becomes part of the tab only by
+somebody deciding it should be**, at which point it joins the system like any
+other screen (§6). If a chart is on this tab for everybody and nobody asked it a
+question, it has crossed the line.
+
 ---
 
-## 9. Where to start
+## 9. The build plan
 
-Three candidates, scored on what a decision-maker gets on day one, how much of
-the harness each proves, how far it is from a real plant, and what it costs.
+This section asked which of three candidates to start with and recommended the
+continuous-improvement crew. **Answer 4 replaced that**: *"Analysis first with
+very good graphing capabilities."* Answer 5 set the release discipline —
+*warn-only first*. Answer 7 put a simple memory in. Answer 2 put code changes in.
+Answer 10 said what the whole thing is for.
 
-**"How much of the harness" means these seven**, from §4 and §8: an account and
-role of its own, a tool set, a cadence, a budget, a declared data class, a place
-its work lands, and a tab that shows all six.
+So this is now four milestones in the order those answers imply, each sized as
+handoffs an executor can take one at a time. **Nothing here is built, and this
+plan is not a schedule.** Each milestone states what it proves, and — more
+usefully — what it still does not.
 
-### A — The CI crew as a nightly job that only proposes
+Two prerequisites from this page's own findings are already done and are not
+milestones: the nine ungated write tools were closed by **#119**, and the AI
+tab's Status blanking without a local model was closed by **#122**, both on
+2026-09-27. The prerequisite that remains is inside M1: **a functional agent gets
+an account and a role of its own rather than `AGENT`'s**, because `AGENT` holds
+`process.define` and `quality.define` and the twenty-four settings behind them
+(§5).
 
-*What ships.* A delta check over the plant's own refusals; when it is non-empty,
-one bounded model pass under a monthly budget; the output is drafts in the flows
-that already exist, landing in the approvals queue; one roster row on the AI tab
-saying when it last ran, what it found and what it spent. No automated changes at
-all in the first release.
+### M1 — the analysis agent, with graphing (answer 4)
 
-| | |
+*What it is.* An agent, on demand from the AI tab, that holds every read tool and
+no write tool, can reach the plant's own four analyses, and draws what it finds.
+It writes nothing anywhere, so the worst case is a wrong picture rather than a
+wrong plant.
+
+*Its read tools.* The four analyses the product computes and no agent can reach
+(`oee_breakdown`, `state_timeline`, `downtime_pareto`, `tag_trend`), plus what is
+already reachable: the trace (`ai_turns`), the audit trail, the coverage ledger,
+and the eval results. The four must return **the payload the screens get** —
+`coverage`, `coverage_note`, the full ledger, `unknown_seconds`, `labelled_by`,
+every `total` — so the agent inherits the honesty rather than being told about
+it.
+
+*The chart contract.* This is the *"very good graphing"* half of the answer, and
+it is where the milestone can go wrong, because a rendered chart is the most
+convincing wrong thing this product can draw (house rule 6). Six rules, all of
+them existing rules applied to a picture:
+
+1. **A chart draws what the API measured.** It computes nothing —
+   `kit.js`'s own line, and [0031](../decisions/0031-a-judgment-is-a-proposal.md)
+   and [0033](../decisions/0033-availability-is-a-share-of-what-was-watched.md)
+   behind it.
+2. **Every figure carries its coverage**, because the envelope it came from
+   does. A station whose figures are withheld is drawn as withheld, with its
+   ledger, never omitted and never averaged away.
+3. **Unknown is drawn as unknown** — a rendering of its own, not a gap, not a
+   zero, not a smooth line through it (`STYLE.md` rule 8,
+   [0030](../decisions/0030-a-lost-connection-is-unknown-time.md)).
+4. **Honest axes.** A y-axis that does not start at zero says so on itself; a
+   truncated window says what it truncated; a rate has its denominator in the
+   label. A chart whose shape depends on a choice states the choice.
+5. **Every chart states its total** — *"showing 60 of 340"* — including the
+   things the agent chose not to draw (`STYLE.md` rule 4).
+6. **The palette, and all four themes.** `STYLE.md` rules 2 and 3: colour comes
+   from the palette and nowhere else, and control-room, daylight, high-contrast
+   and night-shift are all first-class. A chart that is only legible in one
+   theme is not finished.
+
+*And the charting library, which is the decision inside this milestone.*
+[0005](../decisions/0005-plain-html-no-build-step.md) is "no build step", and
+`STYLE.md` rule 9 is *"plain HTML/JS/CSS, hand-drawn SVG for charts, no bundler,
+no framework, no font or script fetched from outside the box."* So "no build
+step" means, concretely: **no npm, no bundler, nothing fetched at run time, and
+any library at all must be vendored** — committed under `web/vendor/` with its
+npm version, licence, SHA-256 and the date it was downloaded, under the standing
+terms *"these files are read, never built"*, which is exactly what three.js
+already has there. **Recommendation: hand-drawn SVG through `kit.js`, extended
+rather than duplicated**, because `kit.js` exists precisely so that *"the Floor
+tile and the machine page can never state coverage differently"* and a second
+chart engine would make that drift permanent. A vendored library is the fallback
+if a chart the agent needs genuinely cannot be hand-drawn — the three.js
+precedent was accepted because WebGL cannot be — and it is a decision record when
+it happens, not a quiet addition.
+
+*Where it renders.* The AI tab (§8), beside the conversation, for the person who
+asked. Never promoted to a default screen without a person's decision (§6), and
+when one is, it joins the system: same header and nav, the palette, four themes,
+a `data-assist` anchor, and `ui-check` crawling it from the day it exists.
+
+*In shadow mode: off, and saying so* (answer 9).
+
+| Handoff | One line |
 |---|---|
-| **Day one value** | An approver opens the plant in the morning and something useful is waiting, with the evidence for it. That is the whole product thesis in one screen |
-| **Proves** | all seven, and the three hardest ones — a cadence inside a long-lived process, a budget that is a plant setting, and a roster honest about a pass that did not happen. Its tool set is narrow by consequence rather than by design, which is the only one it exercises weakly |
-| **Distance from the field** | small. It reads what the plant already wrote and writes only drafts, and a draft changes nobody's screen until somebody signs |
-| **Cost** | the largest of the three: a cadence in the lifespan, a delta, a roster, a budget setting, and the three unwired `review.KINDS` entries |
-| **Risk** | proposals nobody signs. Mitigated by the delta (no findings, no pass) and by the queue already stating how long each item has waited |
+| `analysis-mcp-tools` | The four analyses as read tools, returning the screens' own envelope with coverage, the ledger and every total |
+| `analysis-agent-kind` | The kind: its own account and role, no write tool, asserted by a test that its catalogue contains nothing carrying `dry_run`; off in shadow mode and saying which brain and why |
+| `analysis-chart-kit` | `kit.js` extended to the chart shapes an exploration needs, against the six rules above, in four themes, with no build step and nothing fetched from outside the box |
+| `analysis-in-the-ai-tab` | Where an exploration renders, what it costs, and what it does when the ledger withheld the answer |
 
-### B — The analysis agent, on demand from the AI tab
+*What M1 proves.* An account and role of its own, a tool set defined by what it
+may **not** call, a per-conversation budget, and a place on the tab. *What it
+does not.* Anything about a schedule, a monthly budget, a proposal, a signature,
+or a line of the product's own code.
 
-*What ships.* Four read tools over the existing analysis service, a kind with no
-write tool and a test that asserts it, and a place in the tab for it to render
-an exploration.
+### M2 — the `[ai]` domain, the person's own agent, and memory (answers 6, 7, 8)
 
-| | |
+*What it is.* The plumbing every later milestone needs, plus the two things
+Scott asked for by name: a *my agent* view, and an agent that stops forgetting.
+
+*The `[ai]` Configuration domain* (answer 6): a fifth `ConfigDomain` whose
+Configuration entry sits in the **AI nav group**, not Setup — §7 says why, and
+§2a of [configuration assistance](config-assistance.md) is the rule it follows.
+It holds each kind's budget and cadence, the plant's AI budget as a plant setting
+rather than an environment variable, and — from §5 — **the automation line
+itself, in a section gated on `*.approve` rather than one that takes effect when
+saved.**
+
+*The `my agent` view* (answer 8): behind `plant.read`, not `audit.read`, showing
+my conversations, what my agent spent, what it proposed for me and what became of
+each. And the panel **says out loud, where a person types, that nothing they type
+is private** — it is in `ai_turns` and every holder of `audit.read` can read it.
+That sentence is the deliverable, not a footnote to it.
+
+*Retained memory* (answer 7), at the size §3 fixes: the durable transcript, plus
+a short remembered-facts list the person can read and delete on that view, with
+its maximum and its total stated. No skill set, no inferred profile, no shared
+memory, and never a plant number.
+
+*Per-person budgets*: shares of the plant's budget, checked against the total
+when they are saved the way `cpk_marginal` is already checked against
+`cpk_capable`. Spend per agent needs no new column — `usd` is on every `ai_turns`
+row — only the agent's name on the row.
+
+| Handoff | One line |
 |---|---|
-| **Day one value** | High for one person at a time, and it is the thing Scott asked for by name. It also closes a real gap: the plant's own analytics are unreachable by any agent today |
-| **Proves** | four: the account and role, the tool set (strongly — a kind defined by what it may *not* call), the per-conversation budget, and a place on the tab. Nothing about a schedule, a monthly budget, proposals or signatures |
-| **Distance from the field** | smallest of the three. It writes nothing anywhere |
-| **Cost** | smallest. Four tools over a service that exists, and the payload already carries coverage and provenance |
-| **Risk** | it is a better chat window rather than a harness. Nothing about it makes the next piece easier |
+| `ai-config-domain` | The fifth Configuration domain, its entry in the AI nav group, the plant's AI budget as a setting, and the automation line in a section a person signs |
+| `my-agent-view` | The person's own view behind `plant.read`, and the panel saying out loud that a supervisor can read what you type |
+| `durable-transcript` | A transcript that replays: the `tool_use`/`tool_result` blocks `ai_turns` deliberately does not keep, its own horizon, the person's to read |
+| `remembered-facts` | The short list, written only from the person's own turns, readable and deletable on the `my agent` view, with its maximum and its total |
+| `per-agent-budgets` | Each kind's monthly share, checked against the plant's total when saved; the agent's name on the trace row |
 
-### C — Per-person persistent agents
+*What M2 proves.* A budget that is the plant's, a cadence field with somewhere to
+live, and the tab as a person's own place rather than an auditor's. *What it does
+not.* Anything on a schedule, and anything that proposes.
 
-*What ships.* A durable transcript, a person's own view of it behind
-`plant.read`, and a per-person share of the plant's budget.
+### M3 — the improvement crew, warn-only (answer 5)
 
-| | |
+*What it is.* A scheduled, budgeted crawl over the records the plant already
+keeps, whose entire output is **proposals**, in the flows that already exist.
+**Nothing applies itself in this milestone — that is what warn-only means**, and
+it runs that way for a release so Scott can read a month of what it would have
+done before any of it is switched on.
+
+*Its trigger.* A no-model delta first: has anything the crawl is about changed —
+new unlabelled seconds, a new withheld station, a new open non-conformance, a
+draft that has crossed a waiting threshold? If nothing changed, **no model runs**,
+and the pass is recorded as a pass that found nothing. The agent advances its own
+watermark, so a wake that did nothing is visible rather than silent. This is the
+crew's best idea and its cheapest: 131 script passes a week, 22 with news, a
+handful of model wakes, against the 48 model passes a day it replaced.
+
+*Its cadence.* The one precedent in the product is the hourly tag-retention sweep
+in `api/app.py`'s lifespan, whose own comment states the pattern: *"Retention
+runs in the API process because it is the one long-lived process every deployment
+has."*
+
+*Where its work lands.* The five draft-and-sign pairs and the approvals queue,
+never a third mechanism. Two of the five kinds are wired into `review.KINDS`
+today; wiring the other three — trigger, instruction, adjustment — is a
+prerequisite and is worth doing whether or not any of this is built, because
+*"a lifecycle whose last step is that somebody remembers to look"* is the failure
+0035 was aimed at.
+
+*A pass that did not happen is unknown, never clean.* `ai_status`'s rule already:
+*"a night the loop did not run is unknown in the morning, never a quiet
+'clean'."*
+
+| Handoff | One line |
 |---|---|
-| **Day one value** | Real but quiet: the assistant stops forgetting. It does not produce a decision that would not have happened |
-| **Proves** | two: a budget per agent, and the tab as a person's own place rather than an auditor's |
-| **Distance from the field** | small, and it has a prerequisite that is a genuine bug: the nine ungated write tools in §3 |
-| **Cost** | middling: a new table, a new view, a new gate, and a decision about memory that this page deliberately does not make |
-| **Risk** | it is the piece most likely to grow a memory feature nobody scoped |
+| `review-kinds-unwired` | The three unwired `review.KINDS` entries — trigger, instruction, adjustment — so a drafted one reaches an approver |
+| `crew-cadence-and-delta` | The cadence in the API lifespan, the no-model delta in front of it, the watermark the pass advances itself, and a pass that found nothing recorded as one |
+| `crew-proposals-warn-only` | The crawl's findings as drafts in the flows that exist; nothing applies itself; the roster row on the AI tab, honest about a pass that did not run |
+| `screens-define-capability` | `screens.define`, off `agent` by default, granted and revoked through the settings tools on a signature (answers 1 and 3) |
 
-### Recommendation
+*What M3 proves.* All six fields of §4's row, against a real plant, with the
+three hardest — a cadence inside a long-lived process, a budget that is a plant
+setting, and a roster honest about a pass that did not happen. *What it does
+not.* Touch a line of the product's code.
 
-**Start with A, and do B's four read tools as part of it.**
+### M4 — the harness as the engine (answer 10, and answer 2)
 
-The reason is not that A is the most impressive; it is that **A is the only one of
-the three that produces a decision that would not otherwise have happened**, which
-is the test §1 set. It also proves the parts that are hard to retrofit — a cadence
-in a long-lived process, a budget that is a plant setting, a roster that is honest
-about a pass that did not happen — while writing nothing but drafts, so the worst
-case is a queue somebody ignores rather than a plant somebody has to repair.
-B's four read tools come along because the CI crew needs them to read the
-analyses it is crawling, and once they exist the analysis agent is a kind with a
-different tool subset rather than a project.
+*What it is.* The milestone Scott's tenth answer describes: the crew's roles
+running inside the product, against the product's own repository, so that *"if I
+wanted to integrate with SAP or fix any ERPNext connection, then it should be
+this harness that allows be to fix or build it."*
 
-C waits. Two prerequisites do not, whichever of these is built: **give a
-functional agent a role of its own rather than `AGENT`'s** (§5 — otherwise a
-scheduled agent starts life able to move twenty-four settings including the Cpk
-bars), and **close the nine ungated write tools** (§3).
+*What it needs, and §2a is the honest version.* A checkout somewhere that is not
+the plant; the CI the repository already has; and a release as the only path back
+to a running plant. **No code is pushed into a running plant, ever**, and an
+air-gapped plant participates by exporting a finding and receiving a release.
 
-### And the case for building none of it yet
+*What it produces.* Tier (b) of §5 first, because it is the narrowest and it is
+the one Scott asked for: a UI change as a **branch, a pull request, a test that
+fails before it, and a person's merge**. Then, on the same machinery, tier (c) —
+a connector fix, an ERPNext bug, an SAP adapter — which is the same shape and
+never automates.
 
-This page would be dishonest without it, because the project's own strategy says
-so in three places.
+*And the automation question for tier (b), which this milestone must answer
+rather than assume.* After the warn-only release: the declared file set (§5 names
+the inclusions, the six named exclusions and the three diff-shaped ones), and the
+`ui-check` baseline problem — `ui-check --accept` makes the current look the
+accepted look, so an agent that may run it can erase the check that would have
+caught it. **Either a person re-accepts the baselines as part of the merge, or
+tier (b) never automates.** Both are acceptable outcomes; pretending the question
+does not exist is not.
+
+| Handoff | One line |
+|---|---|
+| `harness-checkout-and-ci` | Where the checkout lives, a branch per proposal, and a pull-request body that carries the finding, its evidence and what it did not do |
+| `ui-code-proposals` | Tier (b): the harness opens a draft pull request against `web/`, with a `browser` test that fails before the change and passes after it |
+| `harness-roles-in-product` | The crew's roles as agent kinds inside the product — a board, a handoff, an executor that stops at a pull request, a triage on a delta |
+| `tier-b-automation-line` | After the warn-only release: the declared file set as a setting, and the `ui-check` baseline question answered one way or the other |
+
+*What M4 proves.* Answer 10, or disproves it — see the next section. *What it
+does not.* Make the product self-evolve. §5 says what would have to be true, tier
+by tier, for a change to land without a person, and tier (c) never does.
+
+### The case for building none of it yet — kept, and answered
+
+This page made the case against itself, because the project's own strategy says
+so in three places, and the case is not withdrawn by being answered.
 
 - *Growth engine* (2026-09-05) ranks the agent story **lever five of six** by
   leverage per evening and names the bottleneck elsewhere: *"the single most
@@ -1021,10 +1548,46 @@ field's most disciplined comparable project **refuses to be resident at all**:
 *"there is deliberately no run-forever mode: a resident process on an OT network
 needs change management, a laptop running for a week does not."*
 
-The counter-argument is one sentence and Scott should weigh it against the three
-above: **the harness is the only lever on this list that makes the product better
-without an evening per improvement**, and the evening budget is the constraint
-every other page names.
+**Scott's answer, 2026-09-28, in his own words:**
+
+> *"I feel this should be a tool for driving product improvement and thus should
+> accelerate solutions for all other areas. That's the goal for this harness. To
+> make this product self evolve on its own. In that regard, this should become
+> the bottle neck for driving all other improvements on that list. For example,
+> if I wanted to integrate with SAP or fix any ERPNext connection, then it should
+> be this harness that allows be to fix or build it."*
+
+Read against the three strategy pages, that is not a disagreement about the
+ranking. It is a claim that the ranking is **the wrong shape**: the harness is
+not the fifth item competing with the other four for evenings, it is the thing
+that is supposed to change the price of the other four. The scarce resource is
+still evenings, and the answer to a scarce resource is not to spend it on the
+fifth item — it is to spend it on the thing that makes each evening produce more
+than one change.
+
+**Two of the three objections survive that answer intact, and are not answered
+here.** Nobody outside this machine has asked for it, and the field's most
+disciplined comparable project refuses to run resident on an OT network — which
+§2a takes seriously by putting the checkout, the CI and the compiler anywhere but
+the plant. The third objection, the ranking, is overruled with a reason.
+
+**And the reason is testable, so this page says what would show it wrong.** After
+M3's warn-only release and M4's first tier (b) proposals, three numbers exist
+that do not exist today:
+
+1. **How many of the harness's proposals a person signed**, against how many were
+   declined and how many were ignored. 0038 already says to revisit on exactly
+   this number and not before.
+2. **How many evenings a merged harness proposal cost**, end to end, against what
+   the same change would have cost by hand. If a proposal costs an evening to
+   review, the harness has moved the work rather than reduced it.
+3. **Whether a second person could sign.** The bus factor objection is answered
+   only if somebody other than the maintainer ever merges one.
+
+If, after a month, the first number is small, the second is not better than
+one-for-one, and the third is zero, then the ranking was right and this is lever
+five of six. **That is the honest test, it is a month away, and it is the reason
+M3 is warn-only and M4 is last.**
 
 ### Where this is, and is not, ground nobody holds
 
@@ -1059,66 +1622,59 @@ Honest, with the caveats the research itself carries.
 
 ---
 
-## 10. Questions for Scott
+## 10. The ten questions, and what each answer changed
 
-Each answerable in a sentence. Numbers 1, 2 and 4 are the ones the decision
-turns on.
+These were the questions this page ended with on 2026-09-27. Scott answered all
+ten on 2026-09-28 at about 06:20; his words are quoted in full in
+[Decided](#decided-2026-09-28) and are not paraphrased here. This table is the
+index: the question, the answer in a word, and where the page changed.
 
-1. **Is the line right?** An agent may put a change in force by itself only when
-   it changes a number a screen runs at, changes no record's meaning, changes
-   nobody's capability, touches nothing a PLC reads, and is undone in one step
-   from the screen that shows it. Everything else needs the domain's `*.approve`.
-   Yes, or move a clause.
+| # | The question | Answer | Where it landed |
+|---|---|---|---|
+| 1 | Is the five-clause line right? | **yes, with a rider** — make it configurable, with agentic access to change it | §5, *The line itself is a setting*: the line lives in the `[ai]` domain, in a section gated on `*.approve`, and the agent reads and proposes changes to it through the settings tools |
+| 2 | "UI updates 100 % automated" turned out to be fifteen numbers — is that what you meant? | **no — something bigger**: a person should be able to change the *code* | §5 rewritten as three tiers; tier (b) is the harness editing `web/`, proving it with the `browser` tier, and landing it as a pull request a person merges. Amendment A |
+| 3 | A new capability `screens.define`, off by default? | **yes**, and configurable with an MCP tool | §5, *The mechanism, per tier*, and the `screens-define-capability` handoff in M3: granted and revoked through the same settings tools, on a signature |
+| 4 | The CI crew first, or the analysis agent alone? | **analysis first, with very good graphing** | §9 is now M1–M4, and M1 is the analysis agent with the six-rule chart contract and the no-build-step question answered |
+| 5 | Warn-only for a release first? | **yes** | §5, tier (a) and tier (b) both; M3 is the warn-only milestone and M4's automation waits on its release |
+| 6 | A fifth `ai` Configuration domain rather than Setup? | **yes** | §7 unchanged, and it is the `ai-config-domain` handoff in M2 |
+| 7 | Per-person memory: none at first? | **no — retain memory, in a simple proof of concept** | §3, piece 3, rewritten: the durable transcript plus a short remembered-facts list the person can read and delete, with its total. No skill set, no inferred profile, never a plant number |
+| 8 | A "my agent" view, and say out loud that it is not private? | **yes** | §3 and §8, and the `my-agent-view` handoff in M2 |
+| 9 | The analysis agent in shadow mode: off, or worse answers? | **off** | §7's shadow table, unchanged, and M1 builds it that way |
+| 10 | Is this worth an evening a week, against the first-real-machine work? | **it is the engine, not the fifth item** | §2a — the crew's roles inside the product, what runs where, and what an air-gapped plant can do; §9's case-against, kept and answered, with three numbers that would show the answer wrong. Amendment B |
 
-2. **"UI updates 100 % automated" turns out to be fifteen numbers** — the
-   `[screens]` table, all of it behind `users.manage` today. Is that what you
-   meant, or did you mean something larger that I have not found?
+**What is still open, and is Scott's to say when it arrives.** Three things this
+revision names as decisions rather than deciding:
 
-3. **Do you want a new capability `screens.define`, off `agent` by default**, so
-   a plant grants automation deliberately rather than getting it on upgrade?
-
-4. **Start with the CI crew that only proposes** (option A), taking the analysis
-   agent's four read tools along with it? Or the analysis agent alone first
-   (option B)?
-
-5. **Warn-only first?** The CI crew proposes screen numbers like everything else
-   for one release, and automation is switched on by a plant that has read a
-   month of proposals it would have accepted.
-
-6. **A fifth Configuration domain, `ai`, with its entry inside the AI nav group**
-   — rather than the agents' budgets and cadences living on Setup, away from the
-   tab that shows what they did?
-
-7. **Per-person memory: nothing at first?** A durable transcript so the agent
-   stops forgetting, but no remembered facts, until there is a design for a
-   memory a person can read and delete.
-
-8. **The trace is not private and a person cannot read their own conversations.**
-   Both are consequences of one gate. Should the tab gain a "my agent" view
-   behind `plant.read`, and should the panel say out loud that a supervisor can
-   read what you type?
-
-9. **The analysis agent in shadow mode: off and saying so, or a local-model
-   version that answers worse?** I recommend off, because a quietly degraded
-   answer is the failure 0032 was written about.
-
-10. **The case against is in §9 and it is real** — your own strategy pages rank
-    this fifth of five, nobody outside this machine has asked for it, and the
-    field's most disciplined project refuses to run resident on an OT network at
-    all. Is the harness worth an evening a week for a month, against the
-    first-real-machine work your growth page calls the bottleneck?
+1. **Whether tier (b) ever automates at all**, which turns on the `ui-check`
+   baseline question in §5 — an agent that may run `ui-check --accept` can erase
+   the check that would have caught its own change. M4 answers it; either answer
+   is honest.
+2. **Whether a chart the analysis agent needs justifies a vendored library.**
+   M1 recommends hand-drawn SVG through `kit.js`; a vendored library would be a
+   decision record, not a quiet addition.
+3. **Whether the four Setup sections that already hold the assistant's numbers
+   move into the `[ai]` domain or stay and are linked** (§7). One sentence.
 
 ---
 
 ## What this page does not do
 
-- It does not build anything, and nothing in it is a commitment.
+- **It does not build anything.** The design is accepted; §9's four milestones
+  are a plan, not a schedule, and no handoff named in it has been opened.
+- **It does not claim the harness will make the product self-evolve.** That is
+  the stated goal, in Scott's words. What the page says is what would have to be
+  true, tier by tier, for a change to land without a person — and that tier (c),
+  which is most of the product, never does.
+- **It does not put a compiler on a plant.** §2a says where the checkout, the CI
+  and the release live, and that a code change reaches a plant only when the
+  plant upgrades.
 - It does not reopen the questions in
   [kernel and modules](https://github.com/factorysemantics/factorysemantics-mes/pull/107)
   — whether an agent kind is a module is that page's question, and the six-field
   row in §4 is deliberately written so that either answer works.
-- It does not decide what memory is. §3 recommends none, which is a decision to
-  defer, not a design.
+- **It does not design the fully embodied agent** Scott described in answer 7.
+  §3 defines memory at proof-of-concept size and says so; a skill set is a later
+  design.
 - It does not choose the plant's numbers. Every budget, cadence and floor in it
   is a setting with a default, and the default is the one that costs nothing
   surprising.

@@ -63,52 +63,85 @@ goes under Honesty with a migration line, so plant people can find it.
   the plant is rebuilt or restored from a backup taken first. Seed a plant you are
   willing to rebuild.
 
-- **A design page for the MES as an agentic harness, and a decision to argue
-  with.** Not built: `docs/design/agentic-harness.md` states what exists in the
-  AI layer today, maps the shape of the maintainer's own development crew onto
-  plant-side concepts (and says which parts have no plant analogue and why),
-  and proposes what an agent kind is — an account with a role, a tool set, a
-  cadence, a monthly budget, a declared data class, and one place its work
-  lands. Decision
+- **A design page for the MES as an agentic harness, and an accepted decision
+  behind it.** Not built: `docs/design/agentic-harness.md` states what exists in
+  the AI layer today, maps the shape of the maintainer's own development crew
+  onto plant-side concepts (and says which parts have no plant analogue and why),
+  and says what an agent kind is — an account with a role, a tool set, a cadence,
+  a monthly budget, a declared data class, and one place its work lands. Decision
   [0038](docs/decisions/0038-an-agent-is-an-account-with-a-role-a-budget-and-a-cadence.md)
-  is *proposed*, not accepted.
+  is **accepted (2026-09-28) with two amendments**, both of them the maintainer's
+  own answers, quoted in full in the page's *Decided* section.
 
-  Two functional agents are named. An **analysis agent** holding every read tool
-  and no write tool — and the page records that the plant's own four analyses
-  (`oee_breakdown`, `state_timeline`, `downtime_pareto`, `tag_trend`) have no MCP
-  tool at all today, so no agent can reach them. A **continuous-improvement
-  crew** on a cadence, woken by a no-model check for whether anything it is about
-  has changed, whose entire output is drafts in the five draft-and-sign flows
-  that already exist, landing in the approvals queue that already counts them
-  and states its total.
+  **Amendment A — the harness changes the product's code.** *"I was thinking a
+  person should literally be able to change the code to improve the UI. Move
+  cards, change graphs, etc."* So the automated tier this page first drew —
+  fifteen `[screens]` numbers a plant's screens run at — is a floor, and the
+  signature boundary is now **three tiers, each with its test and its
+  signature**. Tier (a) is those numbers, behind a five-clause test, warn-only
+  for a release before anything applies itself. **Tier (b) is the product's own
+  UI code**: the harness proposes a diff to `web/` as a branch and a pull
+  request, proves it with the repository's existing gates (`test`, `postgres`,
+  `browser`, `lab`, `lockfile`, `wheel-demo` and the DCO sign-off) and a test
+  that fails before the change, and **a person's merge is the signature** —
+  which is how decision 0035's rule that an agent never approves is kept. If
+  that tier ever automates it is only inside a declared file set, and the page
+  names the exclusions rather than implying them: `common.js`, `assist.js`,
+  `assist-record.js`, `kit.js`, `styles.css`, `themes.css`, `themes.js`,
+  `web/vendor/` and `web/line/`, plus any diff that removes a `data-assist`
+  anchor, moves a computation into the browser, or fetches anything from outside
+  the box. One question is named and not answered: `fsmes ui-check --accept`
+  makes the current look the accepted look, so an agent that may run it can erase
+  the check that would have caught its own change. **Tier (c) is everything else
+  and never automates at all.**
 
-  **"UI updates 100 % automated" turns out to be fifteen numbers.** The page
-  proposes a five-clause test for what an agent may put in force without a
-  signature — a number a screen runs at, no record's meaning changed, nobody's
-  capability changed, nothing a PLC reads, and undone in one step from the screen
-  that shows it — applies it to ten concrete improvements (four automatic, five
-  signed, one never automatable), and notes that everything it admits is the
-  `[screens]` pack table, all of it behind `users.manage` today.
+  **Amendment B — the harness is the engine of all product improvement.** *"This
+  should become the bottle neck for driving all other improvements on that list.
+  For example, if I wanted to integrate with SAP or fix any ERPNext connection,
+  then it should be this harness that allows be to fix or build it."* So the
+  crew → plant map stops being an analogy, and the page says what runs where,
+  honestly: **the plant box has the wheel, not the repository.** There is no
+  checkout, no compiler and no test runner on a plant, deliberately (decision
+  0005 is "no build step"), so a code-editing harness needs a checkout somewhere
+  else, the CI the project already has, and **a release as the only path back to
+  a running plant**. No code is pushed into a running plant. A plant with no
+  internet can still produce the finding and receive the fix as a release, and
+  the maintainer's own crew keeps the public repository's governance.
 
-  It also records four things found while reading the code, each of which is a
-  bug or a stale claim rather than a proposal. **An unattended agent signing in as
-  `AGENT` could already put twenty-four settings in force with nobody in the
-  loop** — twenty-two Configuration sections take effect when saved and are gated
-  on `process.define` or `quality.define`, both of which the `agent` role holds,
-  and they include `[quality] hold_rules`, the two Cpk bars and
+  **A four-milestone build plan**, in the order the answers imply, each milestone
+  sized as handoffs: **M1** the analysis agent with graphing (the four analyses
+  as read tools returning the screens' own envelope; a chart contract of six
+  rules — a chart draws what the API measured, every figure carries its coverage,
+  unknown is drawn as unknown, honest axes, every chart states its total, the
+  palette and all four themes; hand-drawn SVG through `kit.js`, no build step);
+  **M2** the `[ai]` Configuration domain, the `my agent` view, a durable
+  transcript and a short remembered-facts list the person can read and delete,
+  per-agent budgets; **M3** the improvement crew, warn-only, on a no-model delta;
+  **M4** the harness as the engine — the checkout and CI story, UI code
+  proposals, and the crew's roles inside the product.
+
+  The page keeps its own case against being built at all — the project's strategy
+  pages rank this fifth of five and nobody outside this machine has asked for it
+  — and answers it in the maintainer's words rather than withdrawing it. **Two of
+  the three objections survive intact**, and the answer is written so it can be
+  shown wrong: after the warn-only release, three numbers say whether it was —
+  how many proposals a person signed, what a merged proposal cost against doing
+  it by hand, and whether anybody but the maintainer ever merged one.
+
+  It also records what it found while reading the code. **An unattended agent
+  signing in as `AGENT` could put twenty-four settings in force with nobody in
+  the loop** — twenty-two Configuration sections take effect when saved and are
+  gated on `process.define` or `quality.define`, both of which the `agent` role
+  holds, and they include `[quality] hold_rules`, the two Cpk bars and
   `[oee] min_observed_seconds`. Nothing exploits it today because the floor
   assistant never writes unattended; a scheduled agent would, which is why the
-  page's first requirement is that a functional agent gets a role of its own.
-  **Nine of the 47 write tools sit
-  outside the per-person capability filter** (`add_person`, `register_gauge`,
-  `calibrate_gauge`, `issue_certificate`, `issue_pallet_certificate`,
-  `produce_batch`, `pack_unit`, `set_unit_status`, `erp_retry` are in no
-  `agent.NEEDS` entry and no `assistant.SURFACES` entry, so they are offered to
-  anybody holding `plant.read`); **`ai_turns` is a record and not a replayable
-  history**, so "each person's agent remembers" needs a store that does not
-  exist; and **the AI screen's Status tab blanks entirely when `MES_LOCAL_AI=0`**,
-  taking the cloud brain's spend against its cap with it, because that number is
-  a note inside a local-AI payload rather than a row of its own.
+  first field of an agent kind is its own account. **`ai_turns` is a record and
+  not a replayable history**, so "each person's agent remembers" needs a store
+  that does not exist. Two further findings have been fixed since the page was
+  written and the page says so with the numbers moved: the nine ungated write
+  tools (#119, so `NEEDS ∪ PER_CALL_NEEDS` is now 47 of the 47 writes and the
+  catalogue on `plant.read` alone is 51 read tools) and the AI tab's Status
+  blanking without a local model (#122).
 
 - **A live faithfulness run arranges the plant it scores, and says what it
   could not.** `fsmes assist eval --live` used to ask a plant questions about
