@@ -94,6 +94,32 @@ def test_the_suite_asks_about_every_approval_a_person_signs():
                          "approve-an-adjustment"}
 
 
+def test_the_one_request_only_produce_batch_can_answer_names_a_stack_no_other_tool_takes():
+    """A case that fails a judgement is measuring the suite, not the model.
+
+    Live on `09c8ce2c`, 2026-09-27, asked to bring two printed serials in, the
+    model proposed `produce_units(serial=SN-0001)` and
+    `produce_units(serial=SN-0002)` where the case wanted one `produce_batch`.
+    Both book the same two units - `produce_units` takes a serial a person names
+    as well as minting one - so for two units there were two right answers and
+    the case picked one of them.
+
+    The sentence names a pallet now: what a palletizer actually sends is the
+    stack with the stack's own serial, and `produce_units` has no `container`
+    argument to put it in. This test is what keeps that true - a `container` on
+    `produce_units` tomorrow would quietly turn this case back into a coin toss.
+    """
+    case = BY_ID["operator-brings-a-printed-batch-of-serials-in"]
+    assert case.tool == "produce_batch" and case.args.get("container")
+    served = {tool.name: set(tool.input_schema.get("properties") or {})
+              for tool in agent.registry_tools()}
+    assert set(case.args) <= served["produce_batch"], sorted(case.args)
+    takes_a_stack = sorted(name for name, args in served.items()
+                           if "container" in args and name != "produce_batch")
+    assert not takes_a_stack, (f"{takes_a_stack} now take a container too, so this "
+                              f"request has more than one right answer again")
+
+
 def test_the_suite_has_refusals_and_turns_that_must_look_before_they_answer():
     assert sum(1 for c in SUITE if c.expect == "refuse") >= 3
     assert sum(1 for c in SUITE if c.expect == "read") >= 5
