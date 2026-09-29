@@ -312,6 +312,26 @@
 
   let serial = 0;
 
+  /* A footer sentence longer than the chart is wide. Looking at the graph on
+     2026-09-29 found its unknown note running off the right-hand edge — the
+     sentence that names the holes is the longest one this kit writes, and a
+     coverage sentence a reader cannot finish is the one failure mode the
+     footer exists to prevent. Wrapped onto `<tspan>`s of one `<text>`, so the
+     element still holds the whole sentence and `textContent` still equals
+     `data-total`. */
+  function wrapNote(text, width) {
+    const per = Math.max(Math.floor((width - 10) / 5.6), 24);
+    if (text.length <= per) return [text];
+    const lines = [];
+    let line = "";
+    for (const word of String(text).split(" ")) {
+      if (line && line.length + 1 + word.length > per) { lines.push(line); line = word; }
+      else line = line ? `${line} ${word}` : word;
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
   /* The envelope's own number, as a string, unrounded — what a test reads. */
   const raw = (v) => (v === null || v === undefined ? "" : String(v));
   /* What the reader has narrowed the picture to, as a shape sees it. A shape
@@ -513,13 +533,15 @@
       for (const note of plan.notes || []) push("chart-withheld", note);
 
       const lineH = 14;
+      const wrapped = notes.map((n) => ({ ...n, lines: wrapNote(n.text, width) }));
+      const footLines = wrapped.reduce((n, w) => n + w.lines.length, 0);
       const legend = options.legend === false ? [] : (plan.legend || []);
       const slider = options.slider === false ? null : (plan.slider || null);
       const legendRows = legend.length ? layOutLegend(legend, width) : [];
       const chromeTop = plan.height + (legendRows.length || slider ? 6 : 0);
       const chromeH = legendRows.length * 16 + (slider ? 26 : 0);
       const footTop = chromeTop + chromeH;
-      const height = footTop + (notes.length ? 8 + notes.length * lineH : 0);
+      const height = footTop + (notes.length ? 8 + footLines * lineH : 0);
 
       node.replaceChildren();
       node.setAttribute("height", height);
@@ -560,10 +582,17 @@
          and a slider, "a text whose class starts with chart-" no longer means
          "a sentence this chart is making about itself", and the <desc> is
          assembled from these and only these. */
-      notes.forEach((note, index) => {
-        add(node, "text", { x: 4, y: footTop + 8 + index * lineH + 10,
-                            class: note.cls, "data-footer": "true" }, note.text);
-      });
+      let row = 0;
+      for (const note of wrapped) {
+        const text = add(node, "text", { x: 4, y: footTop + 8 + row * lineH + 10,
+                                         class: note.cls, "data-footer": "true" });
+        /* The leading space on a continuation line is deliberate: it keeps
+           `textContent` equal to the sentence this note was assembled from,
+           which is what the total and the <desc> are checked against. */
+        note.lines.forEach((line, i) => add(text, "tspan",
+          i ? { x: 4, dy: lineH } : { x: 4 }, i ? ` ${line}` : line));
+        row += note.lines.length;
+      }
       /* Last, so it paints over everything, and empty until a pointer is on a
          mark. Stripped from an export: a tooltip is where the reader's mouse
          happens to be, which is not a fact about the plant. */
@@ -605,7 +634,10 @@
 
     function showHover(mark, at) {
       if (!hoverLayer) return;
-      const { value, lines } = describe(mark);
+      const { value, lines: said } = describe(mark);
+      /* Narrower than the footer: a tooltip as wide as the chart covers the
+         chart it is describing. */
+      const lines = said.flatMap((line) => wrapNote(line, 330));
       hoverLayer.replaceChildren();
       hoverLayer.setAttribute("data-hover-value", value === null ? "" : value);
       hoverLayer.setAttribute("data-hover-lines", String(lines.length));
@@ -1551,6 +1583,13 @@
              same one every run. */
           let d = Math.hypot(ex, ey);
           if (d < 0.01) { ex = ((i % 7) - 3) / 10 || 0.1; ey = ((j % 5) - 2) / 10 || 0.1; d = Math.hypot(ex, ey); }
+          /* Repulsion has a reach. Without one, two components that cannot
+             pull on each other push each other to opposite ends of the frame
+             and the fit pass then flattens both — which is what looking at
+             this on 2026-09-29 showed: four nodes in a row along the top edge
+             with their names on top of each other. Beyond about two node
+             spacings, nodes no longer shove. */
+          if (d > k * 2.4) continue;
           const push = (k * k) / d;
           a.dx += (ex / d) * push; a.dy += (ey / d) * push;
           b.dx -= (ex / d) * push; b.dy -= (ey / d) * push;
@@ -1567,8 +1606,8 @@
       for (const p of points) {
         /* A whiff of gravity, or a component with no edges drifts off the
            picture and the reader never learns it was there. */
-        p.dx += (cx - p.x) * 0.012;
-        p.dy += (cy - p.y) * 0.012;
+        p.dx += (cx - p.x) * 0.03;
+        p.dy += (cy - p.y) * 0.03;
         const d = Math.max(Math.hypot(p.dx, p.dy), 1e-6);
         p.x += (p.dx / d) * Math.min(d, temp);
         p.y += (p.dy / d) * Math.min(d, temp);
@@ -1576,6 +1615,25 @@
         p.y = Math.max(box.y, Math.min(box.y + box.height, p.y));
       }
       temp -= cool;
+    }
+    /* And then FIT it. Looking at the graph on 2026-09-29 found two
+       disconnected components flung to opposite corners and clamped there,
+       with their labels off both edges of the picture — which is what a
+       repulsion term does to a graph whose components cannot pull on each
+       other. Scaling the finished layout into the box is deterministic, keeps
+       every relative position the forces settled on, and cannot put a node
+       somewhere a reader cannot see it. */
+    const xs = points.map((p) => p.x), ys = points.map((p) => p.y);
+    const lo = { x: Math.min(...xs), y: Math.min(...ys) };
+    const hi = { x: Math.max(...xs), y: Math.max(...ys) };
+    const scale = Math.min(
+      (hi.x - lo.x) > 1 ? box.width / (hi.x - lo.x) : 1,
+      (hi.y - lo.y) > 1 ? box.height / (hi.y - lo.y) : 1);
+    const mid = { x: (lo.x + hi.x) / 2, y: (lo.y + hi.y) / 2 };
+    const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    for (const p of points) {
+      p.x = centre.x + (p.x - mid.x) * scale;
+      p.y = centre.y + (p.y - mid.y) * scale;
     }
     return at;
   }
@@ -1626,10 +1684,14 @@
     const edgesTotal = has(carriedTotals.edges) ? carriedTotals.edges : carriedEdges.length;
     const notDrawn = Math.max(edgesTotal - edges.length, 0);
 
-    const left = 8, right = 8, top = 10;
     const height = options.height || 320;
-    const box = { x: left + 2, y: top + 2, width: width - left - right - 4,
-                  height: height - top - 34 };
+    /* The margins are for the NAMES, not the nodes: a label is centred over
+       its node and is far wider than it, so a layout that filled the frame
+       edge to edge would put half of "what is my next order" outside the
+       picture. Looking at it on 2026-09-29 did exactly that. */
+    const side = 58, top = 22, foot = 40;
+    const box = { x: side, y: top, width: Math.max(width - side * 2, 80),
+                  height: Math.max(height - top - foot, 60) };
     const at = forceLayout(nodes, edges, box, options);
 
     const weights = nodes.map((n) => (isNum(n.weight) ? n.weight : 0));
@@ -1676,8 +1738,15 @@
       /* Rule 4: every choice the shape depends on, and every measure the
          ENVELOPE computed — never one this chart worked out. */
       axes: [
-        has(measures.threshold) || has(threshold)
-          ? `edges lighter than ${has(threshold) ? threshold : measures.threshold} are not drawn`
+        /* Two thresholds, and they are two different facts: the one the API
+           applied before it handed the graph over, and the one the reader has
+           moved to since. A single sentence would hide whichever was not
+           being shown. */
+        has(measures.threshold)
+          ? `the API drew no edge lighter than ${measures.threshold}`
+          : null,
+        has(threshold) && threshold !== measures.threshold
+          ? `and the reader has raised that to ${threshold}`
           : null,
         has(measures.components)
           ? `${things(measures.components, "connected component")} in the graph as measured`
@@ -1900,6 +1969,20 @@
       }
       to[i].setAttribute("style", css);
     }
+    /* The ground the chart is drawn on, carried with it. Looking at an
+       exported file on 2026-09-29 with no stylesheet behind it found the page
+       showing straight through — so a daylight chart pasted onto a dark slide
+       took the slide's colour and its footer went with it. The PNG already
+       filled its canvas; now the SVG says the same thing, and the two cannot
+       come to disagree. */
+    const ground = document.createElementNS(NS, "rect");
+    ground.setAttribute("x", 0);
+    ground.setAttribute("y", 0);
+    ground.setAttribute("width", node.getAttribute("width") || 0);
+    ground.setAttribute("height", node.getAttribute("height") || 0);
+    ground.setAttribute("fill", panelColour());
+    ground.setAttribute("data-chrome", "ground");
+    clone.insertBefore(ground, clone.firstChild);
     clone.setAttribute("xmlns", NS);
     clone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
     return clone;
@@ -1908,7 +1991,7 @@
   /* The colour behind the picture. A chart is drawn on a panel, and an SVG
      with nothing behind it is a transparent PNG that reads as white wherever
      it is pasted — including onto a dark slide, where the footer disappears. */
-  function ground() {
+  function panelColour() {
     const value = getComputedStyle(document.documentElement)
       .getPropertyValue("--panel").trim();
     return value || "#ffffff";
@@ -1934,7 +2017,7 @@
           canvas.width = Math.round(width * scale);
           canvas.height = Math.round(height * scale);
           const ctx = canvas.getContext("2d");
-          ctx.fillStyle = ground();
+          ctx.fillStyle = panelColour();
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
           canvas.toBlob((blob) => (blob
