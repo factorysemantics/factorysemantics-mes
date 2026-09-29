@@ -179,11 +179,11 @@ def test_the_agent_tool_list_is_shorter_for_this_plant():
         return json.loads(done.stdout.strip().splitlines()[-1])
 
     everything = ask({"MES_MODULES": "all"})
-    assert len(everything) == 11, everything
+    assert len(everything) == 12, everything
 
     values = fmt.settings(fmt.read(PACK))
     this_plant = ask({"MES_MODULES": values["MES_MODULES"]})
-    assert len(this_plant) == 9, this_plant
+    assert len(this_plant) == 10, this_plant
     assert set(everything) - set(this_plant) == {"serialization", "coa"}
 
 

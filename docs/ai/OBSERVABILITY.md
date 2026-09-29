@@ -12,9 +12,21 @@ when this document and the panel disagree, one of them has a bug.
 | Nightly rollup | 05:30 timer, `Persistent=true` (catches up after boot) | qwen narrates numbers computed from the store | `~/.local/share/fsmes/reports/*.md` → pulled to `Vault/Sims/Reports/` by `fsmes-reports` (laptop) | `systemctl --user list-timers fsmes-rollup.timer` |
 | Design chat | the Design button | qwen answers about the screen being looked at | `~/.local/share/fsmes/design.db` → `/design-triage` → `docs/design/backlog/` | `fsmes design-pending` |
 | Floor assistant (local) | the Assistant button on a plant with no key | routes questions, quotes procedure, picks guides | answers live; stores nothing (falls back to lexical matching when Ollama is down) | ask it something |
-| Floor agent (cloud) — *not a local consumer; read from `agent.status()`* | the Assistant button when `agent.available()` is true | a cloud model works the plant's own tools: reads freely, proposes every write, puts a walkthrough on the screen | the plant's own `ai_turns` table (the **AI** screen), plus `~/.local/share/fsmes/agent-turns.jsonl` (one line per turn) and `agent-usage.jsonl` (the bill) | the AI screen, `fsmes ai conversations`, or read the turn log |
+| Floor agent (cloud) — *not a local consumer; read from `agent.status()`* | the Assistant button when `agent.available()` is true | a cloud model works the plant's own tools: reads freely — the four shift analyses included, each answering with the screen's own envelope, coverage ledger and all where the route serves one — proposes every write, puts a walkthrough on the screen | the plant's own `ai_turns` table (the **AI** screen), plus `~/.local/share/fsmes/agent-turns.jsonl` (one line per turn) and `agent-usage.jsonl` (the bill) | the AI screen, `fsmes ai conversations`, or read the turn log |
 | Instruction drafting | `fsmes draft-instructions` | qwen drafts work instructions from facts the plant holds | documents module, `drafted_by_model` set, **arriving unapproved** | the Instructions screen |
 | Embeddings | fleet job completion | nomic-embed-text embeds run summaries for semantic search | **`~/.local/share/fleet/fleet.db`** (the fleet platform — NOT the fsmes store) | `fleet ask` from the laptop |
+
+The cloud agent's reads of the plant leave no record of their own, and are not
+meant to: what a read returned is in the turn's transcript, and the turn is in
+`ai_turns` and in the turn log below with the tool names it used. So "did the
+assistant read the plant's own OEE or work one out for itself" is answered by
+`tools` on the turn — `oee_breakdown`, `state_timeline`, `downtime_pareto` and
+`tag_trend` are the four that reach the plant's own analyses, and an answer about
+a KPI with none of them in the turn is an answer to look at twice. Of the four,
+**`oee_breakdown` is the one that carries the coverage ledger**;
+`downtime_pareto` carries only how blind its window was (`unknown_seconds`,
+`unknown_share`), and `state_timeline` and `tag_trend` carry no coverage figure,
+because their routes serve none.
 
 Ollama itself: `127.0.0.1:11434` on `main` (override with `MES_OLLAMA`),
 qwen3:8b ≈ 5.6 GB loaded, idle-unloads after a few minutes. `MES_LOCAL_AI=0`

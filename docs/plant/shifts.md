@@ -109,8 +109,12 @@ with their keys, which one is running, the total, and the clock the boundaries
 are drawn on. The **Analysis** screen's *Shift* selector is driven by it, and
 keeps its choice in the address bar so a screen can be handed to somebody else.
 
-The MCP tools `downtime` and `tag_trend` take the same `shift` argument, and
-`shifts` lists them.
+The MCP tools take the same `shift` argument — `oee_breakdown`,
+`state_timeline`, `downtime_pareto` and `tag_trend`, the four analyses an agent
+reads — and `shifts` lists the keys they take. Leaving both `shift` and `hours`
+out is this plant's own `default_report_hours`, and every answer states the
+`requested_hours` it was given, so nothing downstream reads a window as a fact
+about a shift.
 
 ### A shift still running
 
