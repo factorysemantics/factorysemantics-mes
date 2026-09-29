@@ -950,6 +950,56 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Fixed
 
+- **A trace graph said each machine had been watched for the whole window, on a
+  plant the coverage ledger had barely seen.** The first picture this product
+  ever drew for a person carried the number decision 0033 exists to prevent. A
+  168-hour `trace_graph` came back with `watched_seconds: 604800` on both
+  machines' `stopped_with` edges and `unknown_seconds: 0`, while
+  `oee_breakdown` over the same request clamped its window to 10.36 h and
+  reported **coverage 0.0617 — 37,303 observed seconds of 604,800**. The agent
+  read the graph and told the reader the plant was *"fully watched … no blind
+  time."*
+
+  The cause: the graph took the window's own length less the recorded
+  disconnections. A plant with no disconnection row therefore looked completely
+  watched — but a hole in the state history that nothing recorded a
+  disconnection for is time nobody watched either, which is the whole reason the
+  coverage ledger exists and is the fix `oee_breakdown` already had. Every
+  seconds-weighted edge now carries that machine's **`observed_seconds` out of
+  the ledger**, and the graph's `unknown_seconds` is the ledger's unobserved
+  time rather than zero by default. A test pins the edge against
+  `oee_breakdown`'s own figure for the same window, so the two cannot drift
+  apart again.
+
+  The graph also says which window those seconds came from. A new `watched`
+  block carries `hours`, `requested_hours` and `clamped` the way the OEE
+  envelope does, with the machine-seconds watched, the machine-seconds nobody
+  watched, and the coverage between them. The graph's own window is **not**
+  clamped to the ledger — a question is recorded whether or not a machine was
+  being watched, and shortening the picture would silently drop turns — so the
+  two halves cover different lengths of time and the block says so.
+
+- **An exploration described the shape it had read instead of drawing it.**
+  Asked *"what is the biggest problem for our operators?"* on a real plant, the
+  analysis agent read the rollup, the graph and the pareto, answered honestly —
+  and drew nothing. Asked the same question with the word *"draw"* in it, it
+  drew both. A reader handed the sentence and not the picture has to take the
+  shape on trust, so the prompt now says in one line that a graph or a pareto it
+  has read is **drawn, not described**, in the same turn it read one and without
+  being asked. The request suite scores it: a case may name the reads whose
+  answers have to be drawn, and the §1 case does, with no *"draw"* anywhere in
+  the sentence a person types.
+
+- **`draw` refused a guessed id where a tool name would do.** The same live run
+  spent two rounds on ids it had invented (`downtime_pareto_1`, `trace_graph_1`)
+  before it used the real `toolu_…` ones — the ids are in the conversation, but a
+  model that has not looked at them has no way to be sure, and the person waits
+  through every round trip. `draw(from=…)` now takes **a tool's name** as well as
+  a `tool_use` id, meaning that tool's most recent answer in this conversation.
+  Nothing is guessed: `downtime_pareto_1` is neither, and is still refused — with
+  a sentence that now names both ways of saying it, so the next call is right.
+  A spec carrying numbers of its own is refused exactly as before.
+
 - **The AI tab's Status showed nothing at all on a plant with no local model —
   including what its assistant costs.** The tab was built from one payload,
   `GET /ai`, which is the *local* AI layer on the box: Ollama, the GPU, and the

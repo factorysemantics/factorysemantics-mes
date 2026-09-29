@@ -511,6 +511,116 @@ def test_a_graph_of_records_claims_no_coverage_and_an_edge_in_seconds_says_what_
             assert edge["watched_seconds"] is None
 
 
+def test_an_edges_watched_seconds_is_the_ledgers_and_not_the_length_of_the_window(
+        wired, a_trace_worth_reading, a_floor_with_stops_and_repairs):
+    """The bug the first drawn picture carried, pinned from both ends.
+
+    On 2026-09-29, on the bottling plant, a 168 h request came back with
+    `watched_seconds: 604800` on both machines' `stopped_with` edges and
+    `unknown_seconds: 0`, while `oee_breakdown` over the same request clamped to
+    10.36 h and reported coverage 0.0617 - 37,303 s observed of 604,800. The
+    graph was taking the window's own length less the recorded disconnections,
+    and this plant had recorded none, so it claimed the whole window; the agent
+    read that and told the reader the plant was fully watched with no blind time.
+
+    So the figure is the coverage ledger's `observed_seconds` - the same
+    arithmetic `oee_breakdown` reports for the same window - and the test is
+    against `oee_breakdown` rather than against a number written down here,
+    because a number written down here is a second arithmetic.
+
+    The tolerance is a second: the two envelopes each call `utcnow()`, so the
+    windows they build end a few milliseconds apart, and a machine whose state
+    interval is still open is clipped to each of those ends in turn.
+    """
+    graph = _graph(wired)
+    oee = mcp_server.oee_breakdown("testplant", hours=4)
+    assert "error" not in oee, oee
+    watched_by_machine = {station["code"]: station["observed_seconds"]
+                          for station in oee["stations"]}
+
+    timed = [e for e in graph["edges"] if e["kind"] in ("stopped_with", "labelled_by")]
+    assert timed, "this plant recorded no stop, so there is nothing to pin"
+    checked = 0
+    for edge in timed:
+        code = edge["from"].partition(":")[2] if edge["from"].startswith("machine:") else None
+        if code is None or code not in watched_by_machine:
+            continue
+        assert edge["watched_seconds"] == pytest.approx(watched_by_machine[code], abs=1.0), (
+            f"{code}: the graph says {edge['watched_seconds']} s watched and the "
+            f"ledger says {watched_by_machine[code]} s")
+        checked += 1
+    assert checked, "no machine appears in both envelopes, so nothing was pinned"
+
+
+def test_a_window_the_ledger_only_partly_covers_never_reports_full_watching(
+        wired, a_trace_worth_reading, a_floor_with_stops_and_repairs):
+    """The failure in one sentence: a graph over four hours of a plant this MES
+    has been watching for forty minutes may not say it watched four hours.
+
+    The `watched` block is where it says so - `requested_hours` and `clamped` the
+    way the OEE envelope does - and the seconds on the edges are the ledger's.
+    The graph's own window is *not* clamped, because a question is recorded
+    whether a machine was being watched or not; what is said is that the two
+    halves of the picture cover different lengths of time.
+    """
+    graph = _graph(wired)
+    watched = graph["watched"]
+    window = watched["window_seconds"]
+
+    assert watched["requested_hours"] == 4
+    assert watched["watched_seconds"] < window, (
+        "the graph claims every machine-second of the window was watched")
+    assert watched["watched_seconds"] + watched["unknown_seconds"] == pytest.approx(
+        window, abs=1.0), "the ledger's seconds do not add up to the window"
+    assert 0 < watched["coverage"] < 1
+    assert graph["unknown_seconds"] > 0, "unknown time came back as zero"
+    # And the clamp is stated rather than applied: the graph still runs over the
+    # whole four hours, which is where the questions are.
+    assert watched["clamped"] is True
+    assert watched["hours"] < watched["requested_hours"]
+    assert "asked for" in watched["note"]
+    assert graph["window"]["hours"] == 4, (
+        "the graph's own window was shortened to the machines' half, which would "
+        "drop the questions asked before this MES saw a machine")
+
+
+def test_the_watched_block_says_which_of_three_things_it_has_to_say():
+    """Three states and three sentences, because they are three different facts.
+
+    A plant with no machines defined has nothing weighted in seconds at all; a
+    plant whose machines this MES has never watched has a window that is unknown
+    time and not idle time; and a window the ledger starts inside says how much
+    of it the seconds cover. *Watched none of it* and *nothing to watch* are not
+    the same answer, and a graph that gave the first for the second would be
+    inventing a blindness.
+
+    Asserted on the sentence rather than through a route because it is the
+    sentence that is under test, and this repository's test session always has
+    the demo plant's machines on it.
+    """
+    end = utcnow()
+    start = end - timedelta(hours=4)
+
+    nothing_defined = trace_analysis._watched_window(start, end, {
+        "watching_from": None, "watched_seconds": 0, "unknown_seconds": 0,
+        "watched_share": None, "machines_total": 0})
+    assert "no machines defined" in nothing_defined["note"]
+    assert nothing_defined["coverage"] is None, "nothing to watch is not zero coverage"
+
+    never_watched = trace_analysis._watched_window(start, end, {
+        "watching_from": None, "watched_seconds": 0.0, "unknown_seconds": 28800.0,
+        "watched_share": 0.0, "machines_total": 2})
+    assert "never watched any of the 2 machines" in never_watched["note"]
+    assert "not idle time" in never_watched["note"]
+
+    partly = trace_analysis._watched_window(start, end, {
+        "watching_from": end - timedelta(hours=1), "watched_seconds": 3600.0,
+        "unknown_seconds": 25200.0, "watched_share": 0.125, "machines_total": 2})
+    assert partly["clamped"] is True
+    assert "1 h of the 4 h asked for" in partly["note"]
+    assert partly["coverage"] == 0.125
+
+
 def test_the_graph_says_how_many_nodes_and_edges_it_is_showing_of_how_many(
         wired, a_trace_worth_reading, a_floor_with_stops_and_repairs):
     """Every list states its total, and a filtered graph restates it rather than
@@ -535,9 +645,14 @@ def test_this_plants_whole_graph_now_fits_one_answer(
     is the reason an exploration can read a graph and then follow the thread -
     three nodes is not a thread.
 
-    Measured on 2026-09-29 for `analysis-in-the-ai-tab`. If this starts failing
-    because the plant grew, the number to move is not the assertion: it is
-    `RESULT_LIMIT`, deliberately, with a new measurement beside it.
+    Measured on 2026-09-29 for `analysis-in-the-ai-tab`, and measured again the
+    same day for `explore-draws-and-watched`, which gave the frame its `watched`
+    block: **6,794 characters of the 7,200 one list may take**, 3,354 of them
+    frame. Four hundred characters of headroom on a two-machine plant, which is
+    thin - a plant one node bigger pages, and paging is what is supposed to
+    happen. If this starts failing because the plant grew, the number to move is
+    not the assertion: it is `RESULT_LIMIT`, deliberately, with a new
+    measurement beside it.
     """
     served = _graph(wired)
     whole = mcp_server.trace_graph("testplant", hours=4)

@@ -390,7 +390,13 @@ than the thing the person asked for.
 8. Say what the plant has to have for the sentence to mean anything, in
    `requires`. The kinds live in `fsmes.lab.assist_fixtures`, and a typo in one
    fails the build rather than quietly retiring the case.
-9. Check the case does not describe the arrangement it will run on. A request to
+9. If the answer is a *shape* — a graph, a pareto — say which reads have to be
+   **drawn** and not only read, in `draws`. The analysis agent only: it is the one
+   kind offered `draw`. Every name in `draws` must also be in `reads`, because a
+   picture is drawn from a read. Keep the word *"draw"* out of the request itself:
+   a reader who has to ask for the chart is a reader who was handed a shape in
+   prose, which is exactly what the first live exploration did on 2026-09-29.
+10. Check the case does not describe the arrangement it will run on. A request to
    draft the word a run drafts, or to set the value a run sets, is a request the
    model is right to answer *that is already there* — and five of the six
    failures in the 2026-09-27 live run were exactly that. Two tests check the

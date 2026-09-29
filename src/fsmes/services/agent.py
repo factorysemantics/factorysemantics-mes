@@ -507,8 +507,9 @@ class Kind:
 #:
 #: It takes no numbers and it cannot be given any. The model names a tool call
 #: it already made - `from` is the id of its own `tool_use` block, which is
-#: beside every result it has been handed - and the loop looks that id up in
-#: what the plant actually returned. The envelope goes to the browser; the
+#: beside every result it has been handed, or the plain name of the tool, which
+#: means its most recent answer in this conversation - and the loop looks that up
+#: in what the plant actually returned. The envelope goes to the browser; the
 #: browser draws it with `FS.kit.chart`, which writes the total, the coverage
 #: and the footer before any shape draws anything. So every figure in the
 #: picture is a figure the plant computed, and rule 1 of the chart contract is
@@ -532,7 +533,8 @@ def chart_tools() -> list[dict]:
         {"name": DRAW_TOOL, "write": False,
          "description":
              "Draw one chart beside your answer, from a result you have already read. "
-             "`from` is the id of your own tool_use block for that call - the plant's "
+             "`from` is the id of your own tool_use block for that call, or just the "
+             "tool's name, which draws that tool's most recent answer - the plant's "
              "own payload is what gets drawn, with its total and its coverage on it. "
              "You pass no numbers: this tool has nowhere to put them, deliberately.",
          "input_schema": {
@@ -540,7 +542,8 @@ def chart_tools() -> list[dict]:
              "additionalProperties": False,
              "properties": {
                  "from": {"type": "string",
-                          "description": "the tool_use id of the call whose answer to draw"},
+                          "description": "the tool_use id of the call whose answer to draw, "
+                                         "or the tool's name for its most recent answer"},
                  "shape": {"type": "string", "enum": list(CHART_SHAPES),
                            "description": "which shape fits what that answer is"},
                  "title": {"type": "string",
@@ -564,17 +567,21 @@ def chart_tools() -> list[dict]:
 #: path by which the two could come to disagree.
 ANALYSIS_CHARTS = (
     f"You can draw what you read. `{DRAW_TOOL}` puts one chart beside your answer: give it the "
-    f"`from` id of the tool call whose answer you want drawn - the id of your own tool_use block, "
-    f"which is beside every result you have been handed - the `shape` "
+    f"`from` of the tool call whose answer you want drawn - the id of your own tool_use block, "
+    f"which is beside every result you have been handed, or simply that tool's name, which takes "
+    f"its most recent answer - the `shape` "
     f"({', '.join(CHART_SHAPES)}), and a plain `title` saying what the picture is of. "
     "The plant's own payload is what gets drawn: you never pass numbers, you never pass a series, "
     "and a chart that carried figures of yours would be a second arithmetic reachable only "
     "through you. The picture states its own total and its own coverage, drawn from that same "
     "payload, so say the figures in words as well and let the two agree. "
-    "Draw when a shape is the answer - a network of what connects to what, a series over time, "
-    "a pareto, a spread - and not to decorate a sentence; a reader asked you a question, not for "
-    "a dashboard. A trace graph is `graph`, a downtime pareto is `bars`, a tag or MTTR series is "
-    "`line`, a state history is `states`.")
+    "A graph or a pareto you have read is drawn, not described: call it in the same turn you read "
+    "one, without being asked, because a reader handed the sentence and not the picture has to "
+    "take the shape on trust. "
+    "Otherwise draw when a shape is the answer - a series over time, a spread - and not to "
+    "decorate a sentence; a reader asked you a question, not for a dashboard. A trace graph is "
+    "`graph`, a downtime pareto is `bars`, a tag or MTTR series is `line`, a state history is "
+    "`states`.")
 
 ANALYSIS_SYSTEM = """You are the analysis agent inside FactorySemantics MES, a manufacturing \
 execution system, exploring plant "{plant}" for the person who asked.
@@ -1789,6 +1796,10 @@ def _draw(sess: Session, args: dict) -> tuple[dict, dict | None]:
     its own numbers has something that is not the plant's in it. Either way the
     picture would be stating a figure this MES never measured, in the most
     convincing medium the product has.
+
+    `from` is resolved by `_read_named`: an exact `tool_use` id, or a tool name
+    meaning that tool's most recent answer here. Neither is a guess, and a
+    refusal now says both ways of naming a read.
     """
     extra = sorted(k for k in args if k not in DRAW_KEYS)
     if extra:
@@ -1799,15 +1810,18 @@ def _draw(sess: Session, args: dict) -> tuple[dict, dict | None]:
     shape = str(args.get("shape") or "").strip()
     if shape not in CHART_SHAPES:
         return ({"error": f"no chart shape {shape!r}: {', '.join(CHART_SHAPES)}"}, None)
-    from_id = str(args.get("from") or "").strip()
-    held = sess.payloads.get(from_id)
+    named = str(args.get("from") or "").strip()
+    from_id, held = _read_named(sess, named)
     if held is None:
         read = [f"{row['tool']} ({tid})" for tid, row in sess.payloads.items()]
+        tools = sorted({row["tool"] for row in sess.payloads.values()})
         return ({"error":
-                 f"nothing in this conversation was read under the id {from_id!r}, so there is "
-                 f"nothing to draw: a chart is a tool result, and this tool has no numbers of "
-                 f"its own. "
-                 + (f"You have read: {', '.join(read)}." if read
+                 f"nothing in this conversation was read under the id or the tool name "
+                 f"{named!r}, so there is nothing to draw: a chart is a tool result, and this "
+                 f"tool has no numbers of its own. `from` takes the tool_use id of a call you "
+                 f"made, or just the tool's name, which draws that tool's most recent answer. "
+                 + (f"You have read: {', '.join(read)}. So {tools[0]!r} would draw the last "
+                    f"{tools[0]}." if read
                     else "Read something first, then draw it.")}, None)
     tool, envelope = held["tool"], held["envelope"]
     spec = {"id": f"c{len(sess.turn_charts) + 1}", "from": from_id, "tool": tool,
@@ -1817,7 +1831,38 @@ def _draw(sess: Session, args: dict) -> tuple[dict, dict | None]:
     told = {"drawn": f"{shape} of {tool} is beside your answer",
             "states": "the picture carries its own total and coverage from that payload; "
                       "say the figures in words too"}
+    if named != from_id:
+        # The model said a tool name; say which call that turned out to be, so the
+        # next `draw` in the same turn can name the id if it means an earlier one.
+        told["from"] = f"the most recent {tool} in this conversation ({from_id})"
     return (told, spec)
+
+
+def _read_named(sess: Session, named: str) -> tuple[str, dict | None]:
+    """Which read `from` means, and what it returned.
+
+    Two ways to say it, and one of them costs the model nothing to get right.
+    A `tool_use` id is exact and is what the loop always took. A bare **tool
+    name** is the other, and it means "the most recent answer that tool gave in
+    this conversation" - added 2026-09-29, because the first live exploration
+    that drew anything spent two rounds guessing ids (`downtime_pareto_1`,
+    `trace_graph_1`) before it used the real ones: the ids are in the
+    conversation, but a model that has not looked at them has no way to be sure,
+    and a round trip to find out is a round trip the person waits through.
+
+    Nothing is guessed. `downtime_pareto_1` is neither an id nor a tool name and
+    is still refused, with the sentence that now names the tool-name form - the
+    refusal teaches the shorter way to say it rather than only saying no.
+    """
+    held = sess.payloads.get(named)
+    if held is not None:
+        return named, held
+    # Most recent last: `sess.payloads` is insertion-ordered and older entries
+    # fall off the front, so the last match is the latest answer.
+    for tool_use_id, row in reversed(list(sess.payloads.items())):
+        if row["tool"] == named:
+            return tool_use_id, row
+    return named, None
 
 
 def _walks_on_offer(sess: Session) -> list[dict]:
