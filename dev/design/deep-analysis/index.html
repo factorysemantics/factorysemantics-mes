@@ -5859,7 +5859,15 @@ because a filtered graph that kept the old total is a list that reads complete.<
 <li><strong>Empty node kinds are drawn empty</strong> (§1, step 5) rather than omitted, so the
   reader sees which questions this plant cannot answer at all.</li>
 <li><strong>An edge labelled with seconds carries how much of the window was watched, or
-  it carries nothing</strong> (the harness §6 rule 4).</li>
+  it carries nothing</strong> (the harness §6 rule 4). <em>Watched</em> means the coverage
+  ledger's <code>observed_seconds</code> for that machine over that window — the same figure
+  <code>oee_breakdown</code> reports — and never the window's own length. The first graph
+  this product drew for a person got that wrong (2026-09-29: 604,800 s claimed
+  where the ledger said 37,303), so the envelope carries a <code>watched</code> block with
+  <code>requested_hours</code> and <code>clamped</code> beside the seconds. The graph's own window is
+  not clamped to the ledger: a question is recorded whether or not a machine was
+  being watched, so the two halves of the picture cover different lengths of time
+  and the block says which.</li>
 </ul>
 <hr />
 <h2 id="8-what-it-costs">8. What it costs<a class="headerlink" href="#8-what-it-costs" title="Permanent link">&para;</a></h2>
@@ -6036,6 +6044,20 @@ served <strong>3 nodes of 15 and 1 edge of 14</strong> of its trace graph at 6,0
 rows of 40 to 26 of 40. What §1 still cannot say is what it said it could not:
 the screen a question came from, the workcenter a person works at, and anything
 linking a question to a stop — D8, D9 and <em>nothing</em>, in that order.</p>
+<p><strong>Two live explorations on bottling the same afternoon settled the two things
+only a real model could settle, and found a third.</strong> Asked §1's question, the
+agent read <code>trace_rollup</code> → <code>trace_graph</code> → <code>downtime_pareto</code> in that order and
+answered honestly — and drew <strong>nothing</strong>; asked with <em>"draw"</em> in the sentence it
+drew both, after two rounds spent guessing <code>tool_use</code> ids. So: <strong>a graph or a
+pareto the agent has read is drawn, not described</strong>, which is now a line in the
+prompt and a <code>draws</code> expectation on the §1 case; and <strong><code>draw</code> takes a tool name
+as well as an id</strong>, meaning that tool's most recent answer, so a guess costs no
+round trip while an invented id (<code>downtime_pareto_1</code>) is still refused. The third
+was an honesty bug in D3's envelope: <code>trace_graph</code> claimed 604,800 watched
+seconds — the whole requested window — where the ledger said 37,303, and the
+agent repeated it. §7's rule now says <em>watched</em> means the coverage ledger's
+<code>observed_seconds</code>, and the envelope carries a <code>watched</code> block stating the window
+those seconds came from.</p>
 <p><strong>The fastest route to Scott seeing his own example answered is D3 → D4 → D5</strong>,
 and D1 can run alongside since it is a migration that touches nothing else.
 D1 first makes the <em>answer better</em> (a workcenter in it, a shift on a turn); D5
