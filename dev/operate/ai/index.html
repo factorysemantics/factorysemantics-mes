@@ -1140,10 +1140,49 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-three-tabs" class="md-nav__link">
+  <a href="#the-five-tabs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The three tabs
+        The five tabs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#explore-asking-a-question-nobody-wrote-down" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Explore — asking a question nobody wrote down
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Explore — asking a question nobody wrote down">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-trace-keeps-of-a-chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the trace keeps of a chart
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#my-agent-your-own-record" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        My agent — your own record
       
     </span>
   </a>
@@ -3996,10 +4035,49 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-three-tabs" class="md-nav__link">
+  <a href="#the-five-tabs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The three tabs
+        The five tabs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#explore-asking-a-question-nobody-wrote-down" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Explore — asking a question nobody wrote down
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Explore — asking a question nobody wrote down">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-the-trace-keeps-of-a-chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the trace keeps of a chart
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#my-agent-your-own-record" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        My agent — your own record
       
     </span>
   </a>
@@ -4131,28 +4209,111 @@ reconstructed from a cost log, the audit trail and a reading of the source. A
 plant that can be asked to change things has to be able to say what it was
 asked and what it did.</p>
 <h2 id="who-may-read-it">Who may read it<a class="headerlink" href="#who-may-read-it" title="Permanent link">&para;</a></h2>
-<p><code>audit.read</code> — supervisor and above, and the <code>agent</code> role. The same gate the
-audit trail is behind, and for the same reason: this is the record of what was
-done in this plant and by whom. Somebody without it does not see the <strong>AI</strong>
-chip at all, rather than seeing one that refuses.</p>
+<p><code>audit.read</code> — supervisor and above, and the <code>agent</code> role — for the trace, the
+brains and Explore. The same gate the audit trail is behind, and for the same
+reason: this is the record of what was done in this plant and by whom.</p>
+<p><strong>One tab is everybody's.</strong> <em>My agent</em> is behind <code>plant.read</code>, and it is the
+reason the <strong>AI</strong> chip is now in the nav for every signed-in role rather than
+only for the people who may read the trace: a person seeing their own record is
+<a href="../../decisions/0039-an-analysis-is-recorded-code-that-can-only-read/">decision 0039</a>
+clause 4, and a clause reachable only by typing the address would have promised
+nothing. Somebody without <code>audit.read</code> opens the screen on that tab, and the
+tabs that are not theirs are not on the page at all — the chip leads somewhere
+rather than refusing.</p>
 <p>Changing how long the trace is kept needs <code>users.manage</code>, like every other
 number on Setup › Configuration.</p>
-<h2 id="the-three-tabs">The three tabs<a class="headerlink" href="#the-three-tabs" title="Permanent link">&para;</a></h2>
+<h2 id="the-five-tabs">The five tabs<a class="headerlink" href="#the-five-tabs" title="Permanent link">&para;</a></h2>
+<p>The screen opens on <strong>Conversations</strong>, which is what it opened on before there
+were five: the tab is the record of what this plant's AI did, and moving
+somebody's landing tab under them is a change nobody asked for.</p>
 <p><strong>Conversations.</strong> One row per conversation — who, when, how many turns, what
 was proposed and what became of each proposal, how many turns failed, and what
 it cost. Open one and you get the turns in the order they happened: what the
 person typed, what the assistant said back, every tool it called with the one
 sentence the panel showed, every proposal with its outcome, and the
 walkthrough it put on the screen.</p>
+<p><strong>Explore.</strong> Ask the analysis agent a question nobody wrote down, and read the
+answer with the plant's own charts beside it. See
+<a href="#explore-asking-a-question-nobody-wrote-down">Explore</a> below.</p>
 <p><strong>Status.</strong> Which brains are on and why the rest are off — the model server,
 the GPU, the cloud brain's spend against its cap, and every assigned job the
 local model has, with when each last did anything. The same rows the Ops
 screen's Local AI panel shows; this tab is where they belong beside the
 conversations they produce.</p>
+<p><strong>My agent.</strong> Your own record, and only yours. See
+<a href="#my-agent-your-own-record">My agent</a> below. It is the one tab on this screen
+that is <strong>not</strong> behind <code>audit.read</code>.</p>
 <p><strong>Settings.</strong> How long the trace is kept, and links to the Setup rows that
 gate the assistant itself: what one conversation may spend, how much of the
 plant it is told, and when a daily AI artifact is called late. Those are
 Setup's rows and this page links to them rather than copying them.</p>
+<h2 id="explore-asking-a-question-nobody-wrote-down">Explore — asking a question nobody wrote down<a class="headerlink" href="#explore-asking-a-question-nobody-wrote-down" title="Permanent link">&para;</a></h2>
+<p><strong>Who may.</strong> <code>audit.read</code>, like the rest of this screen except <em>My agent</em>: an
+exploration reads what other people typed, so the gate on the trace is the gate
+on an analysis of it.</p>
+<p>Type a question and the analysis agent answers. Where the shape is the answer it
+draws a chart beside its words — the network of who is asking what, a pareto, a
+series over time — and then follows the thread wherever the plant's own records
+take it. A question about the people here starts at the trace: which questions
+are being asked and by how many of whom, then what those questions connect to
+<strong>and what they connect to nothing at all</strong>, and only then the floor's records.
+The absence is usually the finding.</p>
+<p><strong>Every chart is the plant's arithmetic, drawn.</strong> The agent does not compute a
+series and hand it over: it names a read it already made, and the server attaches
+that read's own payload, which the browser draws with the same chart kit every
+screen in this product draws with. A chart spec carrying numbers of its own, or
+naming no read at all, is refused with a sentence rather than drawn. So the
+figure in the words and the figure in the picture are the same figure, and there
+is no path by which they could disagree.</p>
+<p><strong>It is interactive two ways.</strong> You ask the next question in words. Or you click
+a node on a graph — which does not run a query behind the agent's back: it puts
+a question to the agent, which reads, and answers, and draws again. Every re-draw
+re-states its totals, because a filtered picture that kept the old total is a
+list that reads complete.</p>
+<p><strong>Take one away.</strong> Each exploration chart has an SVG and a PNG button. What you
+get is the picture you are looking at, with the coverage sentence still on it:
+a chart is presentation-ready when its footer survives being pasted into a slide.</p>
+<p><strong>What it costs.</strong> Every reply says what that answer cost, what this exploration
+has spent against what one exploration may spend (<code>$0.25</code> by default), and where
+the month stands. At the cap the agent stops and says what the month has left,
+which is the budget that does not reset. Estimates at list prices; the Console
+is the bill.</p>
+<p><strong>When the agent is off</strong> — a plant with no key, a spent month, shadow mode —
+Explore is still there and says which and why. A state with a reason is not a
+missing screen. In shadow mode the cloud brain is refused outright, because this
+analysis carries the words people typed and a plant lending us its data to watch
+did not agree to that.</p>
+<p><strong>An exploration is not a dashboard.</strong> It lives as long as the conversation and
+goes with the trace at <code>ai_trace_days</code>. Nothing on this tab is drawn that nobody
+asked for, and nothing here is published to anybody: a chart becomes part of a
+screen only when somebody decides it should be.</p>
+<h3 id="what-the-trace-keeps-of-a-chart">What the trace keeps of a chart<a class="headerlink" href="#what-the-trace-keeps-of-a-chart" title="Permanent link">&para;</a></h3>
+<p>The <code>draw</code> call is a tool call like any other, and it lands in the turn's <code>tools</code>
+with a one-line summary: <strong>the shape, the tool it was drawn from, the total, the
+coverage word and the title.</strong> Never the envelope. The same sentence this page
+already makes about tool results holds for pictures — the trace records what the
+person was shown, not a second copy of the plant's rows outside the tables that
+own them.</p>
+<h2 id="my-agent-your-own-record">My agent — your own record<a class="headerlink" href="#my-agent-your-own-record" title="Permanent link">&para;</a></h2>
+<p><strong>Who may.</strong> <code>plant.read</code>, which every role holds. An operator who may not read
+the trace still sees this tab, and it is the only one they see; a supervisor sees
+it beside the rest, and it is still theirs and not the plant's. The account is
+the signed-in one and there is no way to ask this screen — or the route behind
+it — about anybody else.</p>
+<p>Three things, each the same read the analysis agent makes, narrowed to you:</p>
+<ul>
+<li><strong>Your conversations</strong> with this plant's AI, in the window it keeps.</li>
+<li><strong>Every time an analysis named you</strong> — the <code>analysis.person_named</code> rows, with
+  when and by whom. An answer that named everybody named you too, and that is
+  shown as such rather than left to be inferred from an absence.</li>
+<li><strong>Your questions, grouped</strong> the way the rollup groups them: what you asked more
+  than once, what you asked once, and how many of your turns carried no words at
+  all.</li>
+</ul>
+<p>This is <a href="../../decisions/0039-an-analysis-is-recorded-code-that-can-only-read/">decision 0039</a>
+clause 4, and it is the test to apply to any analysis this product ever adds:
+<strong>if the plant would not show it to the person it is about, it should not be
+run.</strong></p>
 <h2 id="what-is-recorded">What is recorded<a class="headerlink" href="#what-is-recorded" title="Permanent link">&para;</a></h2>
 <p>Per turn:</p>
 <table>
@@ -4315,9 +4476,10 @@ two acts should not share one gate.</p>
 search the trail for their own code and find every analysis that named them.
 <code>GET /audit?entity_type=personnel</code> is that search.</p>
 <p><strong>An analysis a plant will not show the person it is about should not be run.</strong>
-That is the test to apply to anything added here later. An operator seeing
-everything the analysis could say about them, on their own account, is the piece
-still to build.</p>
+That is the test to apply to anything added here later, and it is built: the
+<a href="#my-agent-your-own-record">My agent</a> tab is an operator seeing everything the
+analysis could say about them, on their own account, behind a capability every
+role holds.</p>
 <p>One thing to know before any of this: <strong>on any plant running this today, a
 supervisor can already read every operator's questions verbatim</strong> for as long as
 the trace is kept — <code>audit.read</code> gates <code>/ai</code>, and the payload carries <code>person</code>
@@ -4407,6 +4569,10 @@ what the assistant told the night shift.</p>
 <td>the status rows — the brains, the GPU, the assigned jobs</td>
 </tr>
 <tr>
+<td><code>GET /ai/me</code></td>
+<td>the signed-in person's own record: their conversations, their turns, the rollup filtered to them, and every analysis that named them. Behind <code>plant.read</code>, and it takes no person — the account is the one signed in</td>
+</tr>
+<tr>
 <td><code>GET /analysis/trace/rollup</code></td>
 <td>the questions this plant asked, grouped by role, workcenter or shift — with the unattributed count and the totals</td>
 </tr>
@@ -4420,7 +4586,7 @@ what the assistant told the night shift.</p>
 </tr>
 </tbody>
 </table>
-<p>The first four and the two <code>/analysis/trace/</code> reads are behind <code>audit.read</code> — an analysis of the trace must not be a way around the gate on the trace; the MTTR is behind <code>plant.read</code> like every other read of the floor. Every list states its total.</p>
+<p><code>GET /ai/me</code> is behind <code>plant.read</code> for the reason above; the other four and the two <code>/analysis/trace/</code> reads are behind <code>audit.read</code> — an analysis of the trace must not be a way around the gate on the trace; the MTTR is behind <code>plant.read</code> like every other read of the floor. Every list states its total.</p>
 <p><code>GET /assist/agent/status</code> is the other one worth knowing: it answers for
 one agent (<code>?kind=analysis</code>) and carries a <code>kinds</code> object beside it saying
 the same of every kind this plant has — its account, its role, whether it
