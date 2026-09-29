@@ -87,6 +87,12 @@ _OPERATOR = (
     "orders.create", "orders.release", "quality.record", "equipment.state",
     "maintenance.perform",
 )
+#: The analysis agent's bundle: see the plant, and see the record of what was
+#: done to it. Nothing that writes. Deliberately not `_VIEWER` plus one thing -
+#: it is written out, because a capability added to the viewer's bundle in a
+#: later release must not silently reach a role whose whole claim is that it
+#: holds two.
+_ANALYST = ("plant.read", "audit.read")
 _SUPERVISOR = (*_OPERATOR, "orders.close", "quality.close_nc", "audit.read",
                "documents.write", "triggers.write", "adjustments.propose")
 _ADMIN = (*_SUPERVISOR, "masterdata.write", "users.manage",
@@ -139,6 +145,29 @@ BUILTIN_ROLES: dict[str, dict] = {
         ),
         "capabilities": [*_OPERATOR, "audit.read", "documents.write", "triggers.write",
                          "adjustments.propose", "process.define", "quality.define"],
+    },
+    # The analysis agent's role, and the narrowest bundle in the product: it
+    # reads the plant and reads the record of what was done to it, and holds
+    # nothing that writes anything anywhere. The kind that runs under it is
+    # offered a catalogue built by *exclusion* - every read tool, no write tool
+    # (`agent.KINDS`) - and this role is the second gate behind that one: even
+    # a catalogue with a bug in it cannot write, because the account it calls
+    # the plant's own API with may not.
+    #
+    # `audit.read` is here and not on `viewer` because the whole point of the
+    # kind is to explain what happened, and what happened includes what the
+    # plant's own AI and people did - the trace and the audit trail. It reads
+    # the record; it adds nothing to it.
+    "analyst": {
+        "name": "Analyst",
+        "description": (
+            "Read the plant and the record of what was done to it, and change "
+            "nothing. What the analysis agent holds: every read there is, no "
+            "write anywhere - it cannot book, cannot draft, cannot propose and "
+            "cannot approve. An admin who grants it more has made it something "
+            "other than an analyst."
+        ),
+        "capabilities": list(_ANALYST),
     },
     "quality_inspector": {
         "name": "Quality Inspector",

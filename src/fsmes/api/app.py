@@ -43,7 +43,7 @@ def _warn_about_well_known_passwords() -> None:
     import os
 
     from fsmes.config import get_settings
-    from fsmes.plant import LAB_ONLY_AGENT_PASSWORD
+    from fsmes.plant import LAB_ONLY_AGENT_PASSWORD, LAB_ONLY_ANALYST_PASSWORD
 
     settings = get_settings()
     kept = []
@@ -53,6 +53,8 @@ def _warn_about_well_known_passwords() -> None:
         kept.append("MES_OPERATOR_PASSWORD (operator)")
     if os.environ.get("FSMES_AGENT_PASSWORD", LAB_ONLY_AGENT_PASSWORD) == LAB_ONLY_AGENT_PASSWORD:
         kept.append("FSMES_AGENT_PASSWORD (lab default)")
+    if os.environ.get("FSMES_ANALYST_PASSWORD", LAB_ONLY_ANALYST_PASSWORD) == LAB_ONLY_ANALYST_PASSWORD:
+        kept.append("FSMES_ANALYST_PASSWORD (lab default)")
     if not settings.secret_key:
         kept.append("MES_SECRET_KEY (empty: tokens do not survive a restart)")
     if kept:

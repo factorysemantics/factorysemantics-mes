@@ -1377,8 +1377,7 @@ def plant_on_a_port():
             server.shutdown()
             server.server_close()
             mcp_server._local.pop(assist_runs.LIVE_PLANT, None)
-            client = mcp_server._clients.pop(assist_runs.LIVE_PLANT, None)
-            if client is not None:
+            for client in mcp_server.drop_clients(assist_runs.LIVE_PLANT):
                 client.close()
 
 
@@ -1407,8 +1406,7 @@ def bare_plant_on_a_port():
             server.shutdown()
             server.server_close()
             mcp_server._local.pop(assist_runs.LIVE_PLANT, None)
-            client = mcp_server._clients.pop(assist_runs.LIVE_PLANT, None)
-            if client is not None:
+            for client in mcp_server.drop_clients(assist_runs.LIVE_PLANT):
                 client.close()
 
 

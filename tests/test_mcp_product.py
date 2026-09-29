@@ -47,8 +47,13 @@ def wired(make_client, session, monkeypatch):
     auth.create_user(session, code=mcp_server.AGENT_USER, name="Plant Agent",
                      password=mcp_server.AGENT_PASSWORD, role="agent")
     session.flush()
-    client = make_client()
-    monkeypatch.setattr(mcp_server, "_clients", {"testplant": client})
+    # One client per account the tools sign in as, each with its own cookies:
+    # a shared one would answer as whichever of them signed in last. The one
+    # handed back is AGENT's, so a test that reads a route itself reads it as
+    # the account whose tool calls it is checking.
+    clients = mcp_server.wire_clients("testplant", make_client)
+    monkeypatch.setattr(mcp_server, "_clients", clients)
+    client = clients[mcp_server.client_key("testplant", mcp_server.AGENT_USER)]
     monkeypatch.setattr(mcp_server, "_registry",
                         lambda: {"testplant": {"api_port": 0, "label": "Test"}})
     return client

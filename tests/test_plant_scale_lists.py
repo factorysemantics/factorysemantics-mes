@@ -276,7 +276,10 @@ def test_the_instruction_catalogue_answers_a_search(admin):
 def test_the_agent_tools_say_how_much_of_a_paged_list_they_show(admin, monkeypatch):
     from fsmes import mcp_server
 
-    monkeypatch.setattr(mcp_server, "_clients", {"testplant": admin})
+    # Nothing here acts as any account but AGENT, so one client behind all of
+    # them is honest: the analyst's reads are not what this file is about.
+    monkeypatch.setattr(mcp_server, "_clients",
+                        mcp_server.wire_clients("testplant", lambda: admin))
     monkeypatch.setattr(mcp_server, "_registry", lambda: {"testplant": {"api_port": 0, "label": "test"}})
     for tool, key in ((mcp_server.maintenance_work, "work"), (mcp_server.adjustments, "adjustments"),
                       (mcp_server.certificates, "certificates"), (mcp_server.trigger_firings, "firings")):

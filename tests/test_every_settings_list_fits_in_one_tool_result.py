@@ -58,7 +58,8 @@ def tools(make_client, session, monkeypatch):
     auth.create_user(session, code=mcp_server.AGENT_USER, name="Plant Agent",
                      password=mcp_server.AGENT_PASSWORD, role="agent")
     session.flush()
-    monkeypatch.setattr(mcp_server, "_clients", {"testplant": make_client()})
+    monkeypatch.setattr(mcp_server, "_clients",
+                        mcp_server.wire_clients("testplant", make_client))
     monkeypatch.setattr(mcp_server, "_registry",
                         lambda: {"testplant": {"api_port": 0, "label": "Test"}})
 

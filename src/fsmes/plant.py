@@ -65,6 +65,13 @@ REGISTRY_ENV = "FSMES_PLANT_REGISTRY"
 # overrides it; a plant that keeps it is told so at start-up (see api/app.py).
 LAB_ONLY_AGENT_PASSWORD = "agent-lab-only"
 
+# The analysis agent's own sign-in, the same way and for the same reason.
+# FSMES_ANALYST_PASSWORD overrides it; a plant that keeps it is told so at
+# start-up beside the agent's. A second account rather than a second role on
+# the first, because the two kinds are allowed different things and an audit
+# row has to say which of them read the plant.
+LAB_ONLY_ANALYST_PASSWORD = "analyst-lab-only"
+
 LAB_USERS = [
     ("SCOTT", "Scott K", "operator", "operator"),
     # The simulated shop floor signs in as itself. Invented checks and issues
@@ -82,6 +89,14 @@ LAB_USERS = [
     # the agent do to my plant" is one audit query. The capability-role work
     # will narrow this to exactly what an agent deployment grants.
     ("AGENT", "Plant Agent", os.environ.get("FSMES_AGENT_PASSWORD", LAB_ONLY_AGENT_PASSWORD), "agent"),
+    # The analysis agent's sign-in. The `analyst` role: `plant.read` and
+    # `audit.read`, and nothing that writes - so the reads its conversations
+    # make are attributable to it and gated on its own role rather than on
+    # AGENT's, which may book production. Every read it makes is audited under
+    # this name, so "what did the analyst look at" is one audit query, the way
+    # "what did the agent do to my plant" already is.
+    ("ANALYST", "Plant Analyst",
+     os.environ.get("FSMES_ANALYST_PASSWORD", LAB_ONLY_ANALYST_PASSWORD), "analyst"),
 ]
 
 
