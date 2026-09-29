@@ -142,6 +142,7 @@ nav:
       - Design — configuration assistance: design/config-assistance.md
       - Design — the configuration audit: design/config-audit-2026-09-21.md
       - Design — the agentic harness: design/agentic-harness.md
+      - Design — deep analysis in the AI tab: design/deep-analysis.md
       - Decisions:
           - decisions/index.md
           - decisions/0001-apache-2-with-dco.md
@@ -181,6 +182,7 @@ nav:
           - decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators.md
           - decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md
           - decisions/0038-an-agent-is-an-account-with-a-role-a-budget-and-a-cadence.md
+          - decisions/0039-an-analysis-is-recorded-code-that-can-only-read.md
           - Template: decisions/TEMPLATE.md
   - Agents:
       - agents/index.md
