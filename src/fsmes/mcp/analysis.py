@@ -25,11 +25,15 @@ this file exists to keep it:
   line and on every station, the `coverage_note` that withholds a figure, and
   the whole `ledger` behind it, beside `observed_seconds` and `unknown_seconds`.
   This is the one whose numbers are rates, and rates are what coverage governs.
-* **`downtime_pareto` carries how blind the window was, not a coverage ratio.**
-  `unknown_seconds` and `unknown_share` - machine-seconds nobody watched over
-  machine-seconds in the window - and no ledger. So "how much of this pareto's
-  window was watched" is answerable; "what share of it did each machine
-  contribute" is not, from this payload.
+* **`downtime_pareto` carries the line's coverage, not the ledger behind it.**
+  `unknown_seconds`, `watched_seconds` and `coverage` - the ledger's own
+  machine-seconds over the window that was asked for, the same arithmetic
+  `oee_breakdown` reports - with `unknown_share` beside them. No per-machine
+  ledger. So "how much of this pareto's window was watched" is answerable;
+  "what share of it did each machine contribute" is not, from this payload.
+  Until 2026-09-29 those seconds were the sum of the *recorded disconnections*,
+  which is zero on a plant that has never recorded one, and a pareto over a
+  window the ledger started inside said nobody was unwatched for any of it.
 * **`state_timeline` and `tag_trend` carry no coverage figure at all.** A Gantt
   and a trend are what the MES *recorded*, drawn on a window clamped to when it
   started watching (`window.clamped`, and for a trend the tag's own first
@@ -355,15 +359,18 @@ def register(mcp, call) -> dict:
         second in `total_seconds`. `vocabulary_total` is how many reasons are on
         the list right now.
 
-        `unknown_seconds` is how much of this window nobody was watching. It is
-        deliberately *not* a bucket - a disconnection is not downtime and must
-        never be sorted beside a reason - and `unknown_share` prices it in
+        `unknown_seconds` is how much of this window nobody was watching, out
+        of the coverage ledger - **not** the sum of the recorded disconnections,
+        which is zero on a plant that has never recorded one. It is deliberately
+        *not* a bucket - a disconnection is not downtime and must never be
+        sorted beside a reason - and `unknown_share` prices it in
         machine-seconds, so one machine of a hundred going quiet reads as 1%
-        rather than as a blind window. Those two are the whole of what this
-        payload says about coverage: there is **no `coverage` ratio and no
-        ledger** here, so how blind the window was is answerable and what each
-        machine's watched share was is not. `oee_breakdown` over the same window
-        carries both.
+        rather than as a blind window. `watched_seconds` and `coverage` are the
+        other side of the same account, and are the same figures
+        `oee_breakdown` reports over the same window. What this payload does
+        **not** carry is the per-machine `ledger`: how blind the window was is
+        answerable here, what each machine's watched share was is not. Ask
+        `oee_breakdown` for that.
 
         `hours` left out is this plant's own default reporting window, stated
         back as `window.requested_hours`; `shift` overrides it. A pareto too
