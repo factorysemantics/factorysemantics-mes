@@ -38,6 +38,7 @@ from sqlalchemy.orm import Session
 
 from fsmes.db import utcnow
 from fsmes.domain import AiTurn
+from fsmes.services import calendar as calendar_service
 
 LOGGER = logging.getLogger(__name__)
 
@@ -59,12 +60,40 @@ NEVER_STORED = ("You are the assistant inside FactorySemantics MES",
                 "ANTHROPIC_API_KEY")
 
 
+#: How long a stored screen path may be. Longer than any route this product
+#: has; a path past it is cut rather than refused, because a turn is worth
+#: recording whatever the browser was on.
+SCREEN_CHARS = 80
+
+
+def screen_path(value: str | None) -> str | None:
+    """The route a question was asked from, with the query string removed.
+
+    `?setting=nc_code_prefix` names the thing the person was looking at, and
+    this column exists to say *where* they were. A column that quietly grew a
+    second meaning would be read for the first one - so the fragment and the
+    query are cut here, once, rather than by each caller.
+
+    Anything that is not a path is dropped to None. The browser posts
+    `window.location.pathname` and always has; a caller sending something
+    else is recorded as *not known* rather than as a screen nobody has.
+    """
+    text = (value or "").strip()
+    if not text:
+        return None
+    text = text.split("#", 1)[0].split("?", 1)[0].strip()
+    if not text.startswith("/"):
+        return None
+    return text[:SCREEN_CHARS]
+
+
 def record(session: Session, row: dict, *, keep_days: float | None = None) -> AiTurn:
     """Write one turn, and prune anything past the horizon.
 
     `row` is the shape `agent` builds for its own log line, so the file on
     disk and the row in the plant say the same thing about the same turn by
-    construction rather than by agreement.
+    construction rather than by agreement - plus `screen`, which the browser
+    posts and only the API route sees.
     """
     turn = AiTurn(
         ts=_ts(row.get("ts")),
@@ -72,6 +101,7 @@ def record(session: Session, row: dict, *, keep_days: float | None = None) -> Ai
         brain=str(row.get("brain") or "floor")[:20],
         person=str(row.get("user") or row.get("person") or "")[:40],
         model=str(row.get("model") or "")[:60],
+        screen=screen_path(row.get("screen")),
         kind=str(row.get("kind") or "reply")[:20],
         asked=str(row.get("asked") or ""),
         said=str(row.get("said") or ""),
@@ -86,6 +116,11 @@ def record(session: Session, row: dict, *, keep_days: float | None = None) -> Ai
         cache_write_tokens=int(row.get("cache_write") or 0),
         usd=float(row.get("usd") or 0.0),
     )
+    # The shift the turn was taken in, from the plant calendar as it stands
+    # (decision 0028). Site-wide patterns: a conversation happens on a screen
+    # and not at a machine, so there is no equipment to narrow it by. Null
+    # when no pattern covers the instant, which is *not attributed*.
+    calendar_service.stamp(turn, calendar_service.shift_for(session, turn.ts))
     session.add(turn)
     session.flush()
     if keep_days is not None:
@@ -146,6 +181,9 @@ def _public(turn: AiTurn) -> dict:
         "brain": turn.brain,
         "person": turn.person,
         "model": turn.model,
+        "screen": turn.screen,
+        "shift_code": turn.shift_code,
+        "shift_day": turn.shift_day,
         "kind": turn.kind,
         "asked": turn.asked,
         "said": turn.said,
@@ -190,8 +228,16 @@ def turns(session: Session, *, conversation: str | None = None,
 
 def conversations(session: Session, *, person: str | None = None,
                   since: datetime | None = None, limit: int = 50) -> dict:
-    """One row per conversation: who, when, how many turns, what came of the
-    proposals, how many turns failed, and what it cost.
+    """One row per conversation: who, when, from which screen, in which
+    shift, how many turns, what came of the proposals, how many turns
+    failed, and what it cost.
+
+    `screen` is the screen it was *opened* from and `screens` is how many
+    distinct screens its turns carry, because a conversation that followed
+    somebody from Production to Quality is not a conversation about
+    Production. `turns_without_a_screen` counts the turns that name none -
+    every row written before the column existed, and the design chat, whose
+    panel names a screen in words rather than as a path.
 
     Built from the turns rather than from a second table, so a conversation
     cannot exist that has no turns in it and a count cannot drift from the
@@ -239,11 +285,26 @@ def _summarise(session_id: str, rows: list[AiTurn]) -> dict:
             outcome = str(proposal.get("outcome") or "open")
             outcomes[outcome] = outcomes.get(outcome, 0) + 1
     opened = next((t for t in rows if t.asked), rows[0])
+    # Where it was opened, and how many other screens it moved through. A
+    # conversation follows a person around the product, so one screen on a
+    # row that had three would read as a fact about the whole of it; the
+    # count says how much the one screen leaves out, and the turns
+    # themselves carry the rest.
+    screens = [t.screen for t in rows if t.screen]
+    distinct = len(dict.fromkeys(screens))
     return {
         "session": session_id,
         "brain": rows[0].brain,
         "person": rows[0].person,
         "model": next((t.model for t in rows if t.model), ""),
+        # Null is *not recorded* - a conversation from before the column
+        # existed, or one the caller opened without naming a screen.
+        "screen": screens[0] if screens else None,
+        "screens": distinct,
+        "turns_without_a_screen": sum(1 for t in rows if not t.screen),
+        # The shift it opened in, stamped when the first turn was written.
+        "shift_code": rows[0].shift_code,
+        "shift_day": rows[0].shift_day,
         "started": rows[0].ts,
         "last": rows[-1].ts,
         "turns": len(rows),

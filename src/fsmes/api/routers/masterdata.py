@@ -197,6 +197,18 @@ class PersonIn(BaseModel):
     code: str
     name: str
     role: str = "operator"
+    #: The work center or station this person normally works at, by code.
+    #: Null is *the plant has not said*, and every rollup that groups by it
+    #: counts the people it could not place rather than folding them in.
+    #: It grants nothing and restricts nothing.
+    home_equipment: str | None = None
+
+
+class HomeEquipmentIn(BaseModel):
+    #: A work center or station code, or null to say the plant no longer
+    #: knows. Clearing it is an edit somebody makes on purpose, so it is a
+    #: value this body may carry rather than an omission.
+    equipment: str | None = None
 
 
 @router.get("/personnel")
@@ -213,10 +225,29 @@ def list_personnel(
     if q:
         like = f"%{q}%"
         query = query.where(Person.code.ilike(like) | Person.name.ilike(like))
-    return [PersonIn(code=p.code, name=p.name, role=p.role) for p in db.scalars(query)]
+    return [_person_out(p) for p in db.scalars(query)]
+
+
+def _person_out(p: Person) -> PersonIn:
+    return PersonIn(code=p.code, name=p.name, role=p.role,
+                    home_equipment=p.home_equipment.code if p.home_equipment else None)
 
 
 @router.post("/personnel", status_code=201, dependencies=[require("users.manage")])
 def create_person(body: PersonIn, db: DbDep, actor: ActorDep) -> PersonIn:
-    p = masterdata.create_person(db, code=body.code, name=body.name, role=body.role, actor=actor)
-    return PersonIn(code=p.code, name=p.name, role=p.role)
+    p = masterdata.create_person(db, code=body.code, name=body.name, role=body.role,
+                                 home_equipment=body.home_equipment, actor=actor)
+    return _person_out(p)
+
+
+@router.put("/personnel/{code}/home-equipment", dependencies=[require("users.manage")])
+def set_home_equipment(code: str, body: HomeEquipmentIn, db: DbDep, actor: ActorDep) -> PersonIn:
+    """Say where somebody normally works, or clear it.
+
+    The one link between a person and the equipment tree. It is not a role
+    and no capability reads it: it says where to group somebody's questions
+    and their shift, and null says the plant has not told us - which every
+    rollup counts out loud instead of guessing.
+    """
+    return _person_out(masterdata.set_home_equipment(
+        db, code=code, equipment=body.equipment, actor=actor))

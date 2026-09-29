@@ -218,3 +218,5 @@ class Person(Base):
     # and null means the plant has not said - which every rollup that uses it
     # counts out loud rather than folding into a group.
     home_equipment_id: Mapped[int | None] = mapped_column(ForeignKey("equipment.id"))
+
+    home_equipment: Mapped[Equipment | None] = relationship()
