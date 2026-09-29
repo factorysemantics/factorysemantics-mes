@@ -89,11 +89,12 @@ def test_the_registry_says_how_many_modules_there_are_and_how_many_can_be_switch
     # the machine router ends with `/{code}` and would swallow it, `quality`
     # for the same structural reason before it has such a route.
     assert mounts == 25, f"{mounts} routers in the registry; the app mounted 24 before it existed"
-    # Thirteen tool files across eleven modules that ship one: `equipment` and
+    # Fourteen tool files across twelve modules that ship one: `equipment` and
     # `quality` each have a second for their vocabulary, mirroring the second
-    # router and the screen that drafts it, and `dashboard` has the one that
-    # reads and writes any domain's live settings.
-    assert tools == 13, f"{tools} tool files in the registry; the MCP server registered 13"
+    # router and the screen that drafts it, `dashboard` has the one that reads
+    # and writes any domain's live settings, and `analysis` has the four
+    # analyses that were HTTP-only until the agent needed to read them.
+    assert tools == 14, f"{tools} tool files in the registry; the MCP server registered 14"
 
 
 # ----------------------------------------------------------------- routes
@@ -160,11 +161,11 @@ def test_a_module_that_is_off_registers_no_agent_tools():
 
     everything = ask("all")
     assert "quality" in everything["modules"]
-    assert len(everything["modules"]) == 11
+    assert len(everything["modules"]) == 12
 
     without = ask(WITHOUT_QUALITY)
     assert "quality" not in without["modules"]
-    assert len(without["modules"]) == 10, without["modules"]
+    assert len(without["modules"]) == 11, without["modules"]
     # Every other module's tools are still registered: one module left, not ten.
     assert set(everything["modules"]) - set(without["modules"]) == {"quality"}
 

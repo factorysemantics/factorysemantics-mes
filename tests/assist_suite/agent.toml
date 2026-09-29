@@ -111,7 +111,7 @@ id = "agent-answers-what-is-down"
 request = "is anything down on line 1?"
 screen = "/dashboard"
 expect = "answer"
-reads_any = ["machines", "line_wip", "equipment_tree", "downtime"]
+reads_any = ["machines", "line_wip", "equipment_tree", "downtime_pareto"]
 
 [[case]]
 id = "agent-refused-administering-accounts"
