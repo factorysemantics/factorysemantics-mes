@@ -17,6 +17,7 @@ is the day it should stay green.
 from types import SimpleNamespace
 
 import pytest
+from sqlalchemy import select
 
 from fsmes import mcp_server
 from fsmes import plant as plants
@@ -108,6 +109,28 @@ def test_the_analysis_catalogue_holds_no_tool_that_could_change_the_plant():
         assert tool["name"] not in agent.PER_CALL_NEEDS, tool["name"]
 
 
+def test_nothing_in_the_catalogue_sends_a_write_to_any_route_of_this_product():
+    """The second, independent definition of a write, and the reason the claim is
+    checkable rather than asserted.
+
+    `assist_coverage.tool_writes()` does not look at a schema at all: it parses
+    the tool modules and reads which helper each tool's body calls and with what
+    verb, so it would catch a tool that changed the plant while somehow carrying
+    no `dry_run`. The two derivations agree on all 47 names today; what this
+    pins is that neither of them ever meets the analysis catalogue.
+    """
+    from fsmes import assist_coverage
+
+    by_source = {write.tool for write in assist_coverage.tool_writes()}
+    assert by_source, "the source scan found no writes at all, so it proves nothing"
+    offered = {t["name"] for t in agent.catalogue(ANALYST, for_kind=agent.ANALYSIS)}
+    assert not by_source & offered
+    # And the two ways of naming a write agree, which is what makes either of
+    # them worth trusting.
+    by_schema = {t.name for t in agent.registry_tools() if "dry_run" in props(t)}
+    assert by_source == by_schema
+
+
 def test_the_analysis_catalogue_is_every_read_tool_and_says_how_many_of_how_many():
     """"Full MCP" means every read tool, so a read must not be missing either -
     a catalogue narrowed by hand would be the thing this kind exists not to be.
@@ -183,6 +206,27 @@ def test_the_analysts_password_comes_from_its_own_key_and_the_lab_default_is_fla
     with open(source, encoding="utf-8") as fh:
         said = fh.read()
     assert "FSMES_ANALYST_PASSWORD (lab default)" in said
+
+
+def test_an_account_can_hold_a_role_this_release_added_on_a_plant_built_before_it(
+        session):
+    """`fsmes plant <name> migrate` creates any lab account a plant has not got,
+    by shelling out to `fsmes add-user` - and that is the one path that never
+    goes through the app's start-up, where the roles the product ships are topped
+    up. On a plant whose database predates this release, creating ANALYST would
+    have been refused for want of a role row it was about to be given, and
+    `ensure_lab_users` only reports the ones that worked: the account would have
+    appeared on the *second* migrate and nowhere in between.
+    """
+    from fsmes.domain import Role
+    from fsmes.services import auth
+
+    session.execute(Role.__table__.delete().where(Role.code == "analyst"))
+    session.flush()
+    person = auth.create_user(session, code="ANALYST", name="Plant Analyst",
+                              password="a-long-enough-password", role="analyst")
+    assert person.role == "analyst"
+    assert session.scalar(select(Role).where(Role.code == "analyst")) is not None
 
 
 # ------------------------------------------------ what its reads reach as
