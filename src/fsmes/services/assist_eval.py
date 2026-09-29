@@ -87,6 +87,15 @@ OWN_WALK = "proposal"
 #: play the rule the prompt gives the model rather than a copy of it.
 GUIDES_TOOL = "guides"
 SHOW_GUIDE_TOOL = "show_guide"
+#: And the exploration's own chart tool - `agent.DRAW_TOOL`. Written out here for
+#: the same reason as the two above; a test pins the three against the loop's own
+#: names, so a rename cannot leave this file quietly scoring nothing.
+DRAW_TOOL = "draw"
+
+#: The conversation's own tools. None of them reads the plant, so none of them is
+#: one of a turn's `reads`: the walk goes on the person's screen and the chart is
+#: scored as a chart.
+_OURS = frozenset({GUIDES_TOOL, SHOW_GUIDE_TOOL, DRAW_TOOL})
 
 
 class Invalid(Exception):
@@ -141,6 +150,12 @@ class Case:
     or_walk: tuple[str, ...] = ()
     #: Tools that must be read in this turn, before the answer.
     reads: tuple[str, ...] = ()
+    #: Reads whose answer has to be *drawn* as well as read - the exploration's
+    #: own `draw` tool, named by the tool whose payload the picture carries. Not
+    #: a synonym for `reads`: a graph the agent read and described in prose is a
+    #: shape the reader has to take on trust, and on 2026-09-29 the first live
+    #: exploration did exactly that until it was asked for a picture outright.
+    draws: tuple[str, ...] = ()
     #: ... or any one of these, when several reads would be honest answers.
     reads_any: tuple[str, ...] = ()
     #: Loose on prose: substrings, matched case-insensitively.
@@ -178,8 +193,8 @@ class Case:
         return bool(self.before_request or self.before)
 
 
-_LISTS = ("loose", "not_guide", "or_walk", "reads", "reads_any", "contains", "never",
-          "mentions", "requires")
+_LISTS = ("loose", "not_guide", "or_walk", "reads", "reads_any", "draws", "contains",
+          "never", "mentions", "requires")
 #: Lists of lists: each group is a set of renderings, one of which must appear.
 _GROUPS = ("contains_any",)
 _FIELDS = {f for f in Case.__dataclass_fields__} | {"before", "plan"}
@@ -242,8 +257,25 @@ def _case(raw: dict, role: str, source_file: str, problems: list[str],
             problems.append(f"{where}: requires {requirement!r} is not \"kind:code\" "
                             f"(or \"no kind:code\")")
     for step in (*case.plan, *case.before):
-        if not (step.get("read") or step.get("propose") or step.get("say")):
-            problems.append(f"{where}: a step must read, propose or say something: {step}")
+        if not (step.get("read") or step.get("propose") or step.get("draw")
+                or step.get("say")):
+            problems.append(f"{where}: a step must read, propose, draw or say "
+                            f"something: {step}")
+        if step.get("draw") and step["draw"] not in (*case.reads, *case.reads_any):
+            problems.append(f"{where}: a step draws {step['draw']!r}, which this "
+                            f"case never reads")
+    for tool in case.draws:
+        # A picture is drawn from a read, so a case that demands one has to
+        # demand the read behind it - otherwise the requirement is a chart of
+        # nothing, which is the refusal `draw` already gives.
+        if tool not in (*case.reads, *case.reads_any):
+            problems.append(f"{where}: draws {tool!r}, which this case never reads")
+    if case.draws and case.kind != "analysis":
+        # Only one kind holds the tool at all: the floor assistant answers beside
+        # somebody standing at a machine, where a picture is a dashboard nobody
+        # asked for (`docs/design/deep-analysis.md` §2).
+        problems.append(f"{where}: only an analysis case can require a drawing - "
+                        f"the {case.kind} assistant is not offered {DRAW_TOOL!r}")
     return case
 
 
@@ -312,6 +344,10 @@ class Turn:
     #: against this, because the prose is the stand-in's and scoring it would
     #: be scoring the suite against itself.
     facts: str = ""
+    #: The charts drawn beside the answer, as the loop's own specs - so a case
+    #: can ask for a picture and not only for a sentence. The tool a chart was
+    #: drawn from is `spec["tool"]`.
+    charts: tuple[dict, ...] = ()
     #: Tool names this role was offered at all.
     offered: frozenset[str] = frozenset()
     #: Words the loop handed back when a tool could not be used.
@@ -554,7 +590,21 @@ def _score_reads(case: Case, turn: Turn) -> list[str]:
     if case.reads_any and not set(case.reads_any) & set(turn.reads):
         why.append(f"it read none of {', '.join(case.reads_any)} - and said nothing about "
                    f"having no tool for it")
+    why += _score_draws(case, turn)
     return why
+
+
+def _score_draws(case: Case, turn: Turn) -> list[str]:
+    """Did it draw what it read, without being asked to.
+
+    The picture is half of the answer, so a case may require one by naming the
+    tool whose payload it has to carry. The request itself never says "draw": a
+    reader who has to ask for the chart is a reader who was handed a shape in
+    prose, which is what the first live exploration did on 2026-09-29.
+    """
+    drawn = {str(chart.get("tool")) for chart in turn.charts}
+    return [f"it read {tool} and described it instead of drawing it"
+            for tool in case.draws if tool not in drawn]
 
 
 # ----------------------------------------------------- the scripted stand-in
@@ -724,6 +774,19 @@ def _blocks(step: dict, index: int) -> tuple[list[Any], str]:
     out: list[Any] = []
     if step.get("say"):
         out.append(SimpleNamespace(type="text", text=str(step["say"])))
+    if step.get("draw"):
+        # `draw = "trace_graph"` and `shape = "graph"`: the picture, named by the
+        # tool whose answer it carries. The stand-in says it the way a plan can
+        # say it at all - by tool name - because the `tool_use` ids in a scripted
+        # conversation are this function's own and a plan cannot know them. That
+        # is the same form a live model gets to use since 2026-09-29, so the two
+        # modes exercise one code path.
+        args = {"from": str(step["draw"]), "shape": str(step.get("shape") or "graph")}
+        if step.get("title"):
+            args["title"] = str(step["title"])
+        out.append(SimpleNamespace(type="tool_use", id=f"s{index}", name=DRAW_TOOL,
+                                   input=args))
+        return out, "tool_use"
     tool = step.get("read") or step.get("propose")
     if tool:
         out.append(SimpleNamespace(type="tool_use", id=f"s{index}", name=tool,
@@ -773,9 +836,14 @@ def _facts_and_reads(session, writes=frozenset()) -> tuple[tuple[str, ...], str]
     A write tool whose preview came back an error leaves a transcript line with
     no `write` marker on it, so the catalogue's own answer to "is this a write"
     is what decides, not the shape of the line.
+
+    The conversation's own tools are not reads of the plant. `draw` is scored as
+    a chart (`Turn.charts`) and never counted here: a case that named its reads
+    exactly would otherwise start failing the day the agent drew one of them.
     """
     reads = tuple(entry["tool"] for entry in session.transcript
-                  if not entry.get("write") and entry["tool"] not in writes)
+                  if not entry.get("write") and entry["tool"] not in writes
+                  and entry["tool"] not in _OURS)
     facts: list[str] = []
     for message in session.history:
         content = message.get("content")
@@ -793,7 +861,8 @@ def turn_from_reply(reply: dict, session=None, *, offered=frozenset(),
                     writes=frozenset(), from_model: bool = False) -> Turn:
     """One reply from the agent - scripted or live - in the scorer's shape."""
     reads: tuple[str, ...] = tuple(e["tool"] for e in reply.get("transcript") or []
-                                   if not e.get("write") and e["tool"] not in writes)
+                                   if not e.get("write") and e["tool"] not in writes
+                                   and e["tool"] not in _OURS)
     facts = ""
     refusals = tuple(str(e.get("summary")) for e in reply.get("transcript") or []
                      if e.get("ok") is False)
@@ -804,7 +873,8 @@ def turn_from_reply(reply: dict, session=None, *, offered=frozenset(),
     return Turn(kind=reply.get("kind", "reply"), say=reply.get("say") or "",
                 guide_id=guide.get("id"), walk=guide,
                 proposals=tuple(reply.get("proposals") or ()),
-                reads=reads, facts=facts, offered=frozenset(offered),
+                reads=reads, facts=facts, charts=tuple(reply.get("charts") or ()),
+                offered=frozenset(offered),
                 refusals=refusals, from_model=from_model)
 
 

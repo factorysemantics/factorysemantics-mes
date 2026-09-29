@@ -11,7 +11,10 @@ The rule, and it is one rule seen from three sides:
    There is no field on that tool for numbers, and a spec that carries some is
    refused by name rather than ignored.
 2. A spec naming no tool result is refused with a plain sentence that says what
-   *was* read, because a refusal with no next step is half an answer.
+   *was* read, because a refusal with no next step is half an answer. `from`
+   takes a `tool_use` id **or a tool name** - that tool's most recent answer -
+   and a guessed id like `downtime_pareto_1` is neither, so it is still refused,
+   with a sentence that now teaches the shorter way to say it.
 3. What reaches the trace is a summary - shape, tool, total, coverage word - and
    never the envelope. `ai_turns` records what the person was shown; a second
    copy of the plant's rows in it would be a way round the capabilities those
@@ -170,6 +173,82 @@ def test_a_chart_spec_pointing_at_no_tool_result_is_refused_and_says_what_was_re
     assert "trace_graph" in refusal["summary"], "the refusal does not say what was read"
 
 
+def test_a_chart_can_name_the_tool_instead_of_the_id_and_gets_its_latest_answer(
+        exploring):
+    """The fallback that costs a guess nothing. On 2026-09-29 the first live
+    exploration that drew anything spent two rounds on invented ids before it
+    used the real ones - the ids were in the conversation, but a model that has
+    not looked has no way to be sure, and the person waits through the round
+    trip. A tool name means that tool's most recent answer here."""
+    script, served = exploring
+    script += [_wants("tu_1", "trace_graph", hours=24),
+               _wants("tu_2", agent.DRAW_TOOL, **{"from": "trace_graph",
+                                                  "shape": "graph"}),
+               _said("Drawn from the graph I read.")]
+    sess = _open()
+    out = agent.message(sess, "what is the biggest problem for our operators?")
+
+    assert len(out["charts"]) == 1
+    chart = out["charts"][0]
+    # Resolved to the call, not left as the word: the spec says which tool_use
+    # its numbers came out of, because that is what makes them checkable.
+    assert chart["from"] == "tu_1"
+    assert chart["tool"] == "trace_graph"
+    assert chart["envelope"] == served["trace_graph"]
+
+
+def test_a_tool_name_takes_the_most_recent_answer_that_tool_gave(exploring):
+    """"Most recent" is the rule, and it is the useful one: an exploration that
+    narrowed a graph and then drew it means the narrower picture, not the first
+    one it read."""
+    script, served = exploring
+    narrower = {**A_GRAPH, "nodes_total": 3, "nodes": A_GRAPH["nodes"][:1]}
+    script += [_wants("tu_1", "trace_graph", hours=168),
+               _wants("tu_2", "trace_graph", hours=24),
+               _wants("tu_3", agent.DRAW_TOOL, **{"from": "trace_graph",
+                                                  "shape": "graph"}),
+               _said("Drawn.")]
+    sess = _open()
+
+    def serve_two(name, args, *, plant, on_behalf_of=None, dry_run=None, client_ref=None):
+        if name == "trace_graph":
+            return narrower if args.get("hours") == 24 else A_GRAPH
+        return served.get(name, {"plant": plant, "total": 1, "showing": 1})
+
+    import pytest as _pytest
+    with _pytest.MonkeyPatch.context() as env:
+        env.setattr(agent, "execute", serve_two)
+        out = agent.message(sess, "narrow it and draw it")
+
+    assert out["charts"][0]["from"] == "tu_2"
+    assert out["charts"][0]["total"] == 3
+
+
+def test_a_guessed_id_is_still_refused_and_the_refusal_names_the_shorter_way(
+        exploring):
+    """The two shapes the live run guessed - `downtime_pareto_1`, `trace_graph_1`
+    - are neither an id nor a tool name, and nothing here matches them to one:
+    drawing a payload because a string looked a bit like its tool would be
+    picking the numbers for the model. So the refusal stands, and it now says
+    both ways of naming a read, so the next call is right."""
+    script, _served = exploring
+    for guess in ("downtime_pareto_1", "trace_graph_1"):
+        script[:] = [_wants("tu_1", "downtime_pareto", hours=8),
+                     _wants("tu_2", agent.DRAW_TOOL, **{"from": guess, "shape": "bars"}),
+                     _said("I could not draw that.")]
+        sess = _open()
+        out = agent.message(sess, "draw the pareto")
+
+        assert "charts" not in out, f"{guess} drew something"
+        refusal = next(row for row in out["transcript"] if row["tool"] == agent.DRAW_TOOL)
+        assert refusal["ok"] is False
+        assert guess in refusal["summary"]
+        assert "or the tool name" in refusal["summary"]
+        assert "the tool's name" in refusal["summary"], (
+            "the refusal does not teach the form that would have worked")
+        assert "downtime_pareto" in refusal["summary"]
+
+
 def test_a_read_that_failed_is_not_something_a_chart_can_be_drawn_from(exploring):
     """A chart of a refusal is not a chart. The payload of a failed read is a
     sentence about why there was no answer, and drawing it would put a title
@@ -313,6 +392,19 @@ def test_the_prompt_tells_the_model_how_to_ask_for_a_chart_and_that_it_passes_no
         assert shape in prompt
 
 
+def test_the_prompt_says_a_graph_it_read_is_drawn_and_not_described():
+    """One sentence, added 2026-09-29. The first live exploration read the
+    rollup, the graph and the pareto, answered honestly, and drew nothing; the
+    same question with "draw" in it drew both. So the default is in the prompt
+    now - and the other half of the same sentence says the tool name is a way to
+    name a read, so the model that has not memorised its own ids still gets one
+    call right."""
+    prompt = agent.system_for(agent.ANALYSIS)
+    assert "drawn, not described" in prompt
+    assert "without being asked" in prompt
+    assert "that tool's name" in prompt
+
+
 def test_the_floor_assistants_prompt_says_nothing_about_charts():
     """One kind draws and the other does not, and the prompts say the same
     thing the catalogue does."""
@@ -340,6 +432,83 @@ def test_the_scripted_run_of_the_chain_case_reads_the_trace_before_the_floor():
         turn = runs.run_scripted_case(case, plant.plant)
     assert list(turn.reads) == order, turn.reads
     assert assist_eval.score(case, turn).passed, assist_eval.score(case, turn).why
+
+
+def test_the_scripted_chain_draws_the_graph_and_the_pareto_with_no_draw_in_the_question(
+):
+    """The prompt's new default, scored rather than described. The request the
+    case carries never says "draw" - and the run has to come back with a picture
+    of the graph and a picture of the pareto anyway, each carrying the payload of
+    the read it names."""
+    from fsmes.lab import assist_eval as runs
+    from fsmes.services import assist_eval
+
+    case = next(c for c in assist_eval.load()
+                if c.id == "analyst-follows-the-question-from-the-trace-into-the-floor")
+    assert "draw" not in case.request.lower(), (
+        "the case now asks for the picture, which is the thing under test")
+    assert case.draws == ("trace_graph", "downtime_pareto")
+
+    with runs.scripted_plant() as plant:
+        turn = runs.run_scripted_case(case, plant.plant)
+    assert {chart["tool"] for chart in turn.charts} == {"trace_graph", "downtime_pareto"}
+    # And the shapes are the ones the design page names for them.
+    by_tool = {chart["tool"]: chart for chart in turn.charts}
+    assert by_tool["trace_graph"]["shape"] == "graph"
+    assert by_tool["downtime_pareto"]["shape"] == "bars"
+    # The picture carries the plant's own payload, not the stand-in's idea of one.
+    assert by_tool["trace_graph"]["envelope"]["coverage"] == "absent"
+    assert assist_eval.score(case, turn).passed, assist_eval.score(case, turn).why
+
+
+def test_the_suite_calls_the_conversations_own_tools_what_the_loop_calls_them():
+    """The suite writes out the three tools the conversation owns rather than
+    importing them, so the scorer can be read on its own. This is what keeps the
+    copies honest: rename one in the loop and the copy stops matching here rather
+    than quietly scoring nothing."""
+    from fsmes.services import assist_eval
+
+    assert assist_eval.DRAW_TOOL == agent.DRAW_TOOL
+    assert (assist_eval.GUIDES_TOOL, assist_eval.SHOW_GUIDE_TOOL) == agent.GUIDE_TOOLS
+    # And none of them is a read of the plant: a `draw` counted among a turn's
+    # reads would break every case that names its reads exactly.
+    assert assist_eval._OURS == {agent.DRAW_TOOL, *agent.GUIDE_TOOLS}
+
+
+def test_a_case_that_asks_for_a_drawing_it_never_read_is_refused_by_the_suite():
+    """The suite's own validation. A picture is drawn from a read, so `draws`
+    naming a tool the case never reads is a requirement for a chart of nothing -
+    which is the refusal `draw` gives at runtime, caught at load instead."""
+    from fsmes.services import assist_eval
+
+    problems: list[str] = []
+    assist_eval._case({"id": "made-up", "request": "graph it", "expect": "read",
+                       "reads": ["trace_rollup"], "draws": ["trace_graph"]},
+                      "analyst", "analyst.toml", problems, kind="analysis")
+    assert any("never reads" in problem for problem in problems), problems
+
+    floor: list[str] = []
+    assist_eval._case({"id": "made-up", "request": "graph it", "expect": "read",
+                       "reads": ["trace_graph"], "draws": ["trace_graph"]},
+                      "operator", "operator.toml", floor, kind="floor")
+    assert any("only an analysis case" in problem for problem in floor), floor
+
+
+def test_an_exploration_that_described_a_graph_instead_of_drawing_it_fails_the_case():
+    """The scorer's own half. A turn with the three reads and no chart is the
+    turn the live run gave on 2026-09-29, and it has to fail - otherwise the
+    sentence in the prompt is a sentence nobody checks."""
+    from fsmes.services import assist_eval
+
+    case = next(c for c in assist_eval.load()
+                if c.id == "analyst-follows-the-question-from-the-trace-into-the-floor")
+    described = assist_eval.Turn(
+        kind="reply", say="The biggest cluster is labelling a stop.",
+        reads=("trace_rollup", "trace_graph", "downtime_pareto"),
+        facts="unattributed turns; unlabelled_share 0.36")
+    outcome = assist_eval.score(case, described)
+    assert not outcome.passed
+    assert any("described it instead of drawing it" in why for why in outcome.why), outcome.why
 
 
 def test_the_question_that_needed_a_shift_stamp_is_no_longer_waiting_on_a_handoff():

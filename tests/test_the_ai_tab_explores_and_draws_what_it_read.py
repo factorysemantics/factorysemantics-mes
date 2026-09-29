@@ -160,7 +160,10 @@ FIRST_TURN = [
                                            "title": "Who asks what, and what it touches"}),
           stop="tool_use"),
     _turn(_use("tu_3", "downtime_pareto", hours=24), stop="tool_use"),
-    _turn(_use("tu_4", agent.DRAW_TOOL, **{"from": "tu_3", "shape": "bars",
+    # Named by tool rather than by id, which is the form added on 2026-09-29 after
+    # a live model spent two rounds guessing ids. Both forms are played here, so
+    # the page is drawn from each of them once.
+    _turn(_use("tu_4", agent.DRAW_TOOL, **{"from": "downtime_pareto", "shape": "bars",
                                            "title": "Downtime by reason, worst first"}),
           stop="tool_use"),
     _turn(_text(THE_ANSWER)),
@@ -366,6 +369,39 @@ def test_an_exploration_draws_the_graph_then_follows_the_thread_onto_the_floor(
         assert "no screen on a question" in said
         assert "placed at one" in said
         assert "inventing the link" in said
+    finally:
+        page.close()
+
+
+def test_the_picture_comes_without_the_person_asking_for_one(supervisor, plant):
+    """The question Scott typed, and nothing in it says "draw".
+
+    On 2026-09-29 the live run on bottling read the chain, answered well, and
+    drew nothing; the same question with the word "draw" in it drew both
+    pictures. The prompt says the default now (`agent.ANALYSIS_CHARTS`), the
+    suite scores it (`analyst-follows-the-question-from-the-trace-into-the-floor`
+    carries `draws`), and this is the assertion that the graph reaches the
+    screen: `svg.fs-chart[data-kind="graph"]`, in the log, for a question that
+    only asked what the problem is.
+    """
+    plant.script[:] = list(FIRST_TURN)
+    page = _explore(supervisor, plant)
+    try:
+        question = "what is the biggest problem for our operators?"
+        assert "draw" not in question
+        _ask(page, question)
+        # Wait on the state being asserted - the graph is on the page - and not
+        # on the box that will hold it.
+        page.wait_for_function(
+            "() => document.querySelectorAll("
+            "'#explore-log svg.fs-chart[data-kind=\"graph\"]').length >= 1",
+            timeout=25000)
+        graph = page.locator('#explore-log svg.fs-chart[data-kind="graph"]').first
+        assert graph.get_attribute("data-coverage") == "absent"
+        # And the pareto beside it, drawn from a `draw` that named the tool
+        # rather than the id - the form a guessing model gets right first time.
+        _wait_for_charts(page, 2)
+        assert _chart(page, 1).get_attribute("data-kind") == "bars"
     finally:
         page.close()
 

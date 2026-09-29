@@ -198,6 +198,7 @@ request = "our operators seem to be struggling - start from what they are asking
 screen = "/dashboard/ai"
 expect = "read"
 reads = ["trace_rollup", "trace_graph", "downtime_pareto"]
+draws = ["trace_graph", "downtime_pareto"]
 contains_any = [["unattributed", "no person", "could not attribute"],
                 ["unlabelled", "unlabelled_share"]]
 never = ["caused the downtime", "because they asked", "as a result of the question"]
@@ -211,15 +212,29 @@ question about people starts at the trace and ends on the floor, and a run that
 went straight to the pareto would answer a question about machines. The order is
 pinned by the plan below and asserted in
 `tests/test_an_exploration_draws_what_the_plant_measured.py`; `never` holds the
-causal claim, which is the one wrong answer this shape invites."""
+causal claim, which is the one wrong answer this shape invites.
+
+`draws` is the half added on 2026-09-29, after the first two live explorations on
+a real plant: asked this question, the model read the chain and answered well and
+drew **nothing**; asked the same question with the word "draw" in it, it drew
+both. A graph and a pareto it has read are drawn, not described - the request
+above still never says "draw", and the picture has to come anyway."""
 [[case.plan]]
 read = "trace_rollup"
 [[case.plan]]
 read = "trace_graph"
 [[case.plan]]
+draw = "trace_graph"
+shape = "graph"
+title = "Who asks what, and what it touches"
+[[case.plan]]
 read = "downtime_pareto"
 [[case.plan]]
-say = "Answered from what I read, in that order: what they asked, what it connects to, and what the floor recorded."
+draw = "downtime_pareto"
+shape = "bars"
+title = "Downtime by reason, worst first"
+[[case.plan]]
+say = "Answered from what I read, in that order: what they asked, what it connects to, and what the floor recorded - with the graph and the pareto drawn beside it."
 
 [[case]]
 id = "analyst-will-not-rank-the-operators-by-name"
