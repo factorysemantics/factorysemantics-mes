@@ -472,7 +472,7 @@ def test_the_suite_calls_the_conversations_own_tools_what_the_loop_calls_them():
     assert (assist_eval.GUIDES_TOOL, assist_eval.SHOW_GUIDE_TOOL) == agent.GUIDE_TOOLS
     # And none of them is a read of the plant: a `draw` counted among a turn's
     # reads would break every case that names its reads exactly.
-    assert assist_eval._OURS == {agent.DRAW_TOOL, *agent.GUIDE_TOOLS}
+    assert {agent.DRAW_TOOL, *agent.GUIDE_TOOLS} == assist_eval._OURS
 
 
 def test_a_case_that_asks_for_a_drawing_it_never_read_is_refused_by_the_suite():
