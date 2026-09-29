@@ -864,6 +864,7 @@ GRAPH_FACTS = """() => {
         legend: [...node.querySelectorAll('[data-legend]')]
             .map((e) => e.getAttribute('data-legend')),
         markup: node.outerHTML,
+        plot: node.querySelector('g.chart-plot').innerHTML,
     };
 }"""
 
@@ -977,8 +978,10 @@ def test_the_graph_prints_the_measures_it_was_given_and_refuses_a_centrality(pag
     # rather than leaving a silence a plant manager will read a link into.
     assert "it touches no downtime reason" in printed
     assert "centrality" in printed and "refused" in printed
-    assert "centrality" not in got["markup"].replace(
-        GRAPH["measures"]["refused"], ""), "a centrality reached the markup"
+    # And it is only ever a sentence in the footer: nothing on a mark claims a
+    # centrality, so there is no number on the picture that could be read as
+    # one.
+    assert "centrality" not in got["plot"], "a centrality reached a mark"
 
 
 def test_the_layout_is_the_same_picture_every_time_it_is_drawn(page):
