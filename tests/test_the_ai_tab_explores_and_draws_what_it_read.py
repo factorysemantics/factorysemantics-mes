@@ -11,6 +11,8 @@ half that only exists in a browser:
   **tool result's own figures**, not something this page worked out (rule 1);
 - the holes are drawn - `unattributed` carries its degree, the empty node kinds
   are on the picture rather than left out;
+- the picture comes for a question with no "draw" in it, which is the half of
+  §1 the first live run got wrong;
 - the reply says what it cost;
 - a node expands into a **question put to the agent**, which reads and re-draws,
   and the re-drawn picture re-states its total;

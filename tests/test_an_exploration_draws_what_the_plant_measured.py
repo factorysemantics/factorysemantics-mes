@@ -26,7 +26,8 @@ every reply carries, and the cap that stops an exploration and says what the
 month has left.
 
 The browser half - that the drawn `data-*` are the payload's own figures, that
-the holes are drawn, that a node expands into a question - is in
+the holes are drawn, that a node expands into a question, and that the picture
+reaches the screen for a question with no "draw" in it - is in
 `tests/test_the_ai_tab_explores_and_draws_what_it_read.py`, which needs a
 browser to say anything.
 """
