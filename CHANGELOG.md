@@ -12,6 +12,59 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **Explore on the AI tab: an exploration that draws what it read.** A person
+  holding `audit.read` opens **Explore** on `/dashboard/ai`, types a question,
+  and the analysis agent answers beside its own charts — the trace graph of who
+  is asking what, and then whatever the thread leads to on the floor. It is the
+  design page's §1 worked example, made real: *"what is the biggest problem for
+  our operators?"* answered with the totals, the coverage and the named
+  silences.
+
+  **The agent never computes a series.** It names a tool call it already made —
+  the id of its own `tool_use` block — and the server attaches the envelope out
+  of what the plant actually returned; the browser draws that with
+  `FS.kit.chart`, which writes the total and the coverage before any shape draws
+  anything. The `draw` tool has three string fields and nowhere to put a number,
+  and a spec that finds a way, or that names no tool result, is **refused with a
+  plain sentence** rather than drawn. So a chart here cannot state a figure this
+  MES did not measure, and there is no code path by which it could.
+
+  **Interactive means two things.** The person asks the next question in words
+  and the agent re-draws; and clicking a node on the graph becomes a *question
+  put to the agent* — never this page reaching around it into an endpoint — and
+  the re-drawn picture re-states its own total. Every exploration chart carries
+  the SVG and PNG export from `FS.kit.export`, footer and all.
+
+  **Every reply says what it cost**: that answer, this exploration against what
+  one exploration may spend, and the month. At the cap the agent stops and says
+  what the month has left. With the analysis brain off — a plant with no key, a
+  spent budget, shadow mode — Explore is still there and says which and why: a
+  state with a reason is not a missing screen.
+
+  What the trace keeps of a picture is a **summary** — shape, tool, total,
+  coverage word, title — as the `draw` call's own line among the turn's tool
+  calls. Never the envelope: a second copy of the plant's rows in `ai_turns`
+  would be a way around the capabilities those rows are behind.
+
+- **`My agent`: everything the analysis could say about you, shown to you.**
+  A tab on `/dashboard/ai` behind `plant.read` — which every role holds — and
+  scoped to the signed-in account by the route itself, with no way to ask it
+  about anybody else. Your own conversations, the questions you asked grouped
+  the way the analysis groups them, and **every time an analysis named you**:
+  the `analysis.person_named` audit rows, with when and by whom. That is
+  decision 0039 clause 4, reciprocity, and the test it sets for any analysis
+  this product ever runs — *if the plant would not show it to the person it is
+  about, it should not be run.* An operator who may not read the trace sees this
+  tab and no other; a supervisor sees it beside the rest, and it is still theirs
+  and not the plant's.
+
+- **The audit trail says which shift a row fell in.** `shift_code` and
+  `shift_day`, which D1 stamped and nothing read. It is what makes *"compare OEE
+  and scrap during somebody's shift"* a question this plant can answer honestly:
+  the shift that person's rows fell in, beside what that shift made. Two facts
+  side by side and never a third — a booking carries no actor at all, so
+  "this person's OEE" is an attribution nothing in this product records.
+
 - **A fifth chart shape — the network graph — and charts a reader can touch.**
   `FS.kit.chart("graph", envelope)` draws the network of the deep-analysis
   design page §7: nodes by kind, edges by kind with their weight, and the
@@ -716,6 +769,18 @@ goes under Honesty with a migration line, so plant people can find it.
   untrue about itself.
 
 ### Changed
+
+- **`[admin] agent_result_limit` is 12,000 characters, up from 6,000.** Raised
+  on two measurements rather than a feeling. The trace graph's *frame* alone —
+  the window, the declared-and-empty node kinds with their sentences, the
+  refused measures — took most of a 6,000-character answer: a two-machine test
+  plant came back **3 nodes of 15 and 1 edge of 14**, and at 12,000 it is 15 of
+  15 and 14 of 14. Administration's settings list went from **12 rows of 40** to
+  **26 of 40**. An exploration that reads a graph and then follows the thread
+  cannot do either on three nodes. **The honest paging is unchanged**: every list
+  still states its total and names the call that reaches the rest, and this
+  raises the budget rather than removing the honesty. A plant that wants the old
+  number sets the key.
 
 - **The shift analysis screen's downtime pareto and state timeline are drawn by
   the chart kit.** The pareto now prints what its payload always knew and the

@@ -873,6 +873,19 @@ stated as a guess.
 | **D10** | `analysis-sandbox` — **only if Scott picks B**, and only after D5 showed how deep A reaches | depth the catalogue cannot reach, re-runnable and recorded | D5 | 4+ |
 | **D11** | `analysis-eval-case` — §1's question as a scored case in `tests/assist_suite/analyst.toml` | *"does the analysis agent answer the question Scott asked"* becomes a number CI keeps | D5 | 1 |
 
+**D5 is done** (2026-09-29). Explore on `/dashboard/ai` answers §1
+with the plant's own charts beside the words; the agent asks for a picture by
+**naming a tool call it already made** and has nowhere to put a number of its
+own, so every figure drawn is one the plant computed; expanding a node is a
+question put to the agent rather than a query behind it; every reply says what
+it cost; and *My agent* is 0039 clause 4 behind `plant.read`. `RESULT_LIMIT`
+went to 12,000 on two measurements — this repository's two-machine test plant
+served **3 nodes of 15 and 1 edge of 14** of its trace graph at 6,000 and
+**15 of 15, 14 of 14** at 12,000; Administration's settings list went from 12
+rows of 40 to 26 of 40. What §1 still cannot say is what it said it could not:
+the screen a question came from, the workcenter a person works at, and anything
+linking a question to a stop — D8, D9 and *nothing*, in that order.
+
 **The fastest route to Scott seeing his own example answered is D3 → D4 → D5**,
 and D1 can run alongside since it is a migration that touches nothing else.
 D1 first makes the *answer better* (a workcenter in it, a shift on a turn); D5

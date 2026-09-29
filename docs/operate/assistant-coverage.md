@@ -32,7 +32,7 @@ control is.
 | POST | `/adjustments/{code}/approve` | `adjustments.js` | no tool — the human in the loop before a PLC write - the whole point of the adjustment queue. propose_adjustment proposes; approving is the person the queue exists to ask. | `adjustments.approve` | — |
 | POST | `/adjustments/{code}/reject` | `adjustments.js` | no tool — rejecting is that same judgement, and an agent that could reject could quietly clear the queue it filled. | `adjustments.approve` | — |
 | POST | `/admin/roles` | `admin.js` | `create_role` | `users.manage` | yes |
-| POST | `/assist/agent` | `assist.js` | no tool — the same: the floor assistant's own conversation endpoint. | none | — |
+| POST | `/assist/agent` | `ai.js`, `assist.js` | no tool — the same: the conversation endpoint both agents answer on - the panel's floor assistant, and the AI tab's exploration. | none | — |
 | POST | `/assist/agent/confirm` | `assist.js` | no tool — "Do it" - the person's confirmation of a proposal. The loop reads it; a tool that pressed it would be the assistant confirming itself. | none | — |
 | POST | `/assist/agent/decline` | `assist.js` | no tool — the other half of that confirmation, for the same reason. | none | — |
 | POST | `/assist/ask` | `assist.js` | no tool — this is how the assistant is asked. A tool for it would be the assistant calling itself. | none | — |
