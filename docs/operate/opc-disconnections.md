@@ -54,7 +54,10 @@ machine was disconnected inside it. Every OEE answer carries
 `unknown_seconds` and `unknown_share` beside the figure, so 92 % availability
 over forty observed minutes of an eight-hour window cannot be read as though
 it covered the shift. The downtime pareto states the unknown share of its
-window for the same reason the unlabelled bucket exists.
+window for the same reason the unlabelled bucket exists — and since 2026-09-29
+out of the coverage ledger rather than out of the disconnection rows, so a
+pareto over a window this MES has no history for says so instead of reporting
+nothing unwatched.
 
 **A disconnection is never a downtime reason.** It is not a bucket in the
 pareto, it does not book, it does not label a stop, and it never reaches an

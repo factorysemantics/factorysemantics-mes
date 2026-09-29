@@ -66,8 +66,15 @@ WINDOW = {
 }
 
 #: A downtime pareto as `/analysis/downtime` returns one, with an unlabelled
-#: bucket, a cumulative share, and fifteen minutes nobody was watching that is
-#: deliberately NOT one of the reasons.
+#: bucket, a cumulative share, and the coverage ledger's account of the window
+#: beside them - deliberately NOT one of the reasons.
+#:
+#: The window is one the ledger starts well inside: eight hours were asked for
+#: and this MES had been watching eleven machines for 2.1 of them, so 83,160 of
+#: 316,800 machine-seconds were watched and the rest were not. That is the case
+#: the pareto used to get wrong - it reported the recorded disconnections, of
+#: which this plant has none, so the chart drew "0 % of this window nobody was
+#: watching" under a window it had seen a quarter of.
 PARETO = {
     "line": {"code": "LINE1", "name": "Line 1"},
     "window": WINDOW,
@@ -83,7 +90,8 @@ PARETO = {
     "unlabelled_share": 0.3571,
     "from_the_list_seconds": 9720.0, "from_the_list_share": 0.6429,
     "typed_seconds": 0.0, "typed_share": 0.0, "vocabulary_total": 7,
-    "unknown_seconds": 900.0, "unknown_share": 0.0198,
+    "unknown_seconds": 233640.0, "unknown_share": 0.7375,
+    "watched_seconds": 83160.0, "coverage": 0.2625,
     "machines_total": 11,
 }
 
@@ -535,15 +543,40 @@ def test_a_chart_carries_the_coverage_of_the_envelope_it_was_given(page):
     third is the one a reader would otherwise mistake for the first."""
     assert drawn(page, "line")["coverage"] == "0.83"
     assert drawn(page, "line")["coverageKind"] == "known"
-    # /analysis/downtime states its blindness in seconds and a share, because a
-    # disconnection is not downtime and must never be sorted beside a reason.
+    # /analysis/downtime carries the coverage ledger's own ratio, so it is
+    # drawn as a figure like any other and not as a fallback.
     pareto = drawn(page, "pareto")
-    assert pareto["coverageKind"] == "unknown_share"
-    assert any("nobody was watching" in f["text"] for f in pareto["footer"]), \
-        "the pareto drew the 15 minutes nobody was watching nowhere"
+    assert pareto["coverageKind"] == "known"
+    assert pareto["coverage"] == "0.2625"
     # /analysis/timeline carries no coverage figure today. The chart says
     # "absent" rather than inventing one or implying full coverage.
     assert drawn(page, "states")["coverage"] == "absent"
+
+
+def test_a_pareto_over_a_barely_watched_window_never_says_nobody_was_unwatched(page):
+    """The failure this test exists for, in the words a reader saw.
+
+    On 2026-09-29 the second chart in the first picture this product drew for
+    anybody carried the sentence *"0 % of this window nobody was watching"*
+    under a 168-hour window the coverage ledger had seen 6 % of. The payload
+    was not lying about what it held - it held the sum of the *recorded
+    disconnections*, and that plant had never recorded one - but nobody reads a
+    footer as a statement about disconnection rows.
+
+    So: a fixed envelope whose window the ledger starts well inside, and the
+    footer sentence asserted whole. The share is the envelope's own `coverage`,
+    printed the way every other chart in the kit prints one, and the words
+    "nobody was watching" never appear over a window nobody watched three
+    quarters of.
+    """
+    pareto = drawn(page, "pareto")
+    printed = [f["text"] for f in pareto["footer"]]
+    assert "Watched 26% of the window" in printed, printed
+    assert not any("nobody was watching" in text for text in printed), printed
+    # Rule 2's three facts stay told apart: this is a figure, not an absence
+    # and not a field the payload left off.
+    assert pareto["coverageKind"] == "known"
+    assert pareto["coverage"] == "0.2625"
 
 
 def test_a_row_below_the_coverage_floor_is_drawn_withheld_and_not_as_a_smaller_bar(page):

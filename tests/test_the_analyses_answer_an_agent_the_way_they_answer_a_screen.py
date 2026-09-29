@@ -187,8 +187,11 @@ COVERAGE = {
                       "each": {"coverage", "coverage_floor", "coverage_note",
                                "ledger", "unknown_seconds", "unknown_share",
                                "observed_seconds"}},
-    # How blind the window was, and no ratio, no ledger.
-    "downtime_pareto": {"top": {"unknown_seconds", "unknown_share"}, "each": set()},
+    # How blind the window was, as the ledger's own seconds and the ratio over
+    # them - the line's, with no per-machine ledger behind it.
+    "downtime_pareto": {"top": {"coverage", "unknown_seconds", "unknown_share",
+                                "watched_seconds"},
+                        "each": set()},
     # What the MES recorded, and nothing about what share of the window it was
     # watching while recording it.
     "state_timeline": {"top": set(), "each": set()},
@@ -200,7 +203,8 @@ LISTS = {"oee_breakdown": "stations", "downtime_pareto": "reasons",
 
 #: Every field any of the four uses to say how much of its window was watched.
 COVERAGE_FIELDS = {"coverage", "coverage_floor", "coverage_note", "ledger",
-                   "unknown_seconds", "unknown_share", "observed_seconds"}
+                   "unknown_seconds", "unknown_share", "observed_seconds",
+                   "watched_seconds"}
 
 
 @pytest.mark.parametrize("tool", sorted(COVERAGE), ids=sorted(COVERAGE))

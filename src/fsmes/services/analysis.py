@@ -596,6 +596,16 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float | No
     codes and a thousand typed sentences look like a plant with six reasons.
     With `unlabelled_seconds` the three account for every second in
     `total_seconds`.
+
+    **How blind the window was comes from the coverage ledger.** `unknown_seconds`
+    is the ledger's unobserved machine-seconds over the window that was asked
+    for, `watched_seconds` its observed ones, and `coverage` the ratio - the
+    same three figures `oee_breakdown` reports over the same window. They are
+    deliberately not the sum of the recorded disconnections, which is what they
+    were until 2026-09-29: that number is zero on any plant that has never
+    recorded one, so a 168 h pareto on a plant the MES had been watching for
+    fifty minutes said nobody was unwatched for any of it. A disconnection is
+    still never a bucket - it is not downtime and nobody named it.
     """
     # None is *this plant's own reporting window*, resolved here rather than
     # in the signature so a caller gets what the plant is running on now.
@@ -669,8 +679,26 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float | No
     # but stated on the same object, for the same reason the unlabelled bucket
     # exists: a pareto that does not say how blind its window was reads as
     # complete.
-    unknown = sum(connection_service.unknown_seconds(db, ids, start, end).values())
-    window_seconds = (end - start).total_seconds()
+    #
+    # Out of the coverage ledger, and never out of the recorded disconnections.
+    # Until 2026-09-29 this was `sum(connection.unknown_seconds(...))`, which is
+    # zero on any plant that has never recorded a disconnection - so a 168 h
+    # pareto on a plant the ledger had watched for 5,400 s of it reported 0 s
+    # unwatched and the chart kit drew "0 % of this window nobody was watching"
+    # under it. A hole in the state history that nothing recorded a
+    # disconnection for is time nobody watched either (decision 0033); this is
+    # the same arithmetic `oee_breakdown` reports over the same window, and #136
+    # made the trace graph read it the same way.
+    #
+    # Against the window that was *asked for*, not the clamped one above: the
+    # `window` block says what was drawn, and coverage only means anything
+    # against what somebody asked to see. `oee_breakdown` splits the two the
+    # same way and for the same reason - see `_asked_window`.
+    asked_start, asked_end = _asked_window(hours, the_shift)
+    ledgers = coverage.totals_many(db, ids, asked_start, asked_end)
+    unknown = sum(account.not_observed_seconds for account in ledgers.values())
+    watched = sum(account.observed_seconds for account in ledgers.values())
+    window_seconds = (asked_end - asked_start).total_seconds()
 
     return {
         "line": {"code": centre.code, "name": centre.name},
@@ -690,11 +718,18 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float | No
         # has ever had, which is what `vocabulary` above counts.
         "vocabulary_total": len(reasons.catalog(db)),
         "unknown_seconds": round(unknown, 1),
-        # Machine-seconds unwatched over machine-seconds in the window, so a
-        # plant of a hundred machines with one disconnected reads as 1% rather
-        # than as the whole window being blind.
+        # Machine-seconds unwatched over machine-seconds in the window that was
+        # asked for, so a plant of a hundred machines with one blind reads as
+        # 1% rather than as the whole window being dark.
         "unknown_share": (round(unknown / (window_seconds * len(ids)), 4)
                           if window_seconds > 0 and ids else None),
+        # And the other side of the same account, so a reader does not have to
+        # subtract: machine-seconds anybody actually watched, and that over the
+        # machine-seconds there were to watch. `coverage` is the key the chart
+        # kit reads to put "Watched 0.4% of the window" under a pareto instead
+        # of falling through to `unknown_share`.
+        "watched_seconds": round(watched, 1),
+        "coverage": _round(_line_coverage(ledgers.values())),
         "machines_total": len(units),
     }
 

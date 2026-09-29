@@ -286,6 +286,50 @@ def test_unlabelled_downtime_is_named_not_hidden(session, line):
     assert result["unlabelled_share"] > 0.8
 
 
+def test_the_paretos_unwatched_seconds_are_the_ledgers_and_not_the_disconnections(
+        session, line):
+    """The same arithmetic `oee_breakdown` reports, pinned against its own
+    answer rather than against a number typed in here.
+
+    Two figures could not be allowed to drift apart: a pareto and an OEE
+    breakdown over one window are read side by side on one screen, and on
+    2026-09-29 they disagreed completely. The pareto took the sum of the
+    *recorded disconnections* - zero on a plant that has never recorded one -
+    while the ledger over the same window said 6 % of it was watched. So the
+    assertion is `oee_breakdown`'s own `not_observed_seconds`, `observed_seconds`
+    and `coverage`, with a second's tolerance for the two clock reads.
+    """
+    _state(session, "MIX01", EquipmentStateName.RUNNING, minutes_ago=50, minutes=30)
+    _state(session, "MIX01", EquipmentStateName.DOWN, minutes_ago=20, minutes=15,
+           reason="infeed jam")
+
+    pareto = analysis.downtime_pareto(session, line_code=line, hours=8)
+    oee = analysis.oee_breakdown(session, line_code=line, hours=8)
+    assert pareto["unknown_seconds"] == pytest.approx(oee["not_observed_seconds"], abs=1)
+    assert pareto["watched_seconds"] == pytest.approx(oee["observed_seconds"], abs=1)
+    assert pareto["coverage"] == pytest.approx(oee["coverage"], abs=0.001)
+    # And the ledger's two halves account for the machine-seconds there were,
+    # so `unknown_share` and `coverage` are the same fact said twice.
+    assert pareto["unknown_share"] + pareto["coverage"] == pytest.approx(1.0, abs=0.001)
+
+
+def test_a_window_the_ledger_starts_inside_never_reports_nobody_unwatched(session, line):
+    """The live failure, in one assertion. This plant has no disconnection row
+    at all, and eight hours were asked for of a line the MES has been watching
+    for fifty minutes - so the honest answer is that most of the window was
+    unwatched, and the old arithmetic answered nought."""
+    _state(session, "MIX01", EquipmentStateName.RUNNING, minutes_ago=50, minutes=45)
+
+    pareto = analysis.downtime_pareto(session, line_code=line, hours=8)
+    assert pareto["window"]["clamped"], "the window was not one the ledger starts inside"
+    assert pareto["unknown_seconds"] > 0, (
+        "a pareto over a window nobody watched most of reported none of it unwatched")
+    # Eight hours of two machines is 57,600 machine-seconds; fifty minutes of
+    # one of them is what anybody watched.
+    assert pareto["unknown_share"] > 0.9
+    assert pareto["coverage"] is not None and pareto["coverage"] < 0.1
+
+
 def test_no_downtime_is_reported_as_no_downtime(session, line):
     _state(session, "MIX01", EquipmentStateName.RUNNING, minutes_ago=30, minutes=30)
     result = analysis.downtime_pareto(session, line_code=line, hours=8)

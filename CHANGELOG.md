@@ -999,6 +999,37 @@ goes under Honesty with a migration line, so plant people can find it.
   Nothing is guessed: `downtime_pareto_1` is neither, and is still refused — with
   a sentence that now names both ways of saying it, so the next call is right.
   A spec carrying numbers of its own is refused exactly as before.
+- **The downtime pareto said "0 % of this window nobody was watching" over a
+  window the plant had seen 6 % of.** Its `unknown_seconds` was the sum of the
+  **recorded disconnections**, which is nought on any plant that has never
+  recorded one — so on a plant whose coverage ledger started ten hours into a
+  168-hour window, a pareto reported that nothing went unwatched, and the chart
+  kit printed that under the bars. Measured here on a seeded plant on
+  2026-09-29: `downtime_pareto(hours=168)` answered `unknown_seconds: 0`,
+  `unknown_share: 0.0`, while `oee_breakdown` over the same window answered
+  `not_observed_seconds: 1,204,200` and `coverage: 0.0045`. The second chart in
+  the first picture this product drew for anybody carried the wrong sentence.
+
+  The pareto's unwatched seconds now come from the **coverage ledger**, over the
+  window that was asked for — the same `coverage.totals_many` arithmetic
+  `oee_breakdown` reports and PR #136 gave the trace graph. The envelope keeps
+  every key it had and gains `watched_seconds` and `coverage`, so the chart kit
+  prints *"Watched 0.4 % of the window"* the way it does for every other figure
+  instead of falling through to a share of the disconnections. A test pins the
+  pareto's three figures against `oee_breakdown`'s own answer for the same
+  window rather than against a number typed into a test, so the two arithmetics
+  a screen shows side by side cannot drift apart again. Decision 0033, and the
+  chart contract's rule 2, applied to the pareto.
+
+  A disconnection is still never a bucket: it is not downtime and nobody named
+  it. The other three analyses were read for the same fault and do not carry it
+  — `state_timeline` and `tag_trend` and `production_trend` state no unwatched
+  figure at all, which is what their docstrings and the MCP tools say. What
+  `state_timeline` *does* still do is draw only the holes a disconnection was
+  recorded for; a hole nothing recorded is white space on the Gantt. That is
+  the same understatement in a different shape and it needs the ledger's
+  intervals rather than a one-line change, so it is named here and not fixed.
+
 
 - **The AI tab's Status showed nothing at all on a plant with no local model —
   including what its assistant costs.** The tab was built from one payload,
