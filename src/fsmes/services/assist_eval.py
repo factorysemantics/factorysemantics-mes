@@ -101,12 +101,14 @@ class Case:
 
     id: str
     role: str
+    request: str
+    expect: str
     #: Which agent this request is put to - `floor` (the assistant in the panel)
     #: or `analysis`. Declared once per file beside the role, because a file is
-    #: one person asking one agent; a case does not override it.
+    #: one person asking one agent; a case does not override it. It keeps a
+    #: default so that the four files written before there were two agents say
+    #: nothing new.
     kind: str = "floor"
-    request: str = ""
-    expect: str = "answer"
     screen: str = "/dashboard"
     #: propose / refuse: the tool that does it.
     tool: str | None = None

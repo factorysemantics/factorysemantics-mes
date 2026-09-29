@@ -81,8 +81,9 @@ ANALYST_USER = "ANALYST"
 ANALYST_PASSWORD = os.environ.get("FSMES_ANALYST_PASSWORD", plants.LAB_ONLY_ANALYST_PASSWORD)
 
 #: Which accounts this server can sign in as, and the environment key each
-#: password comes from. A caller names an account; nothing outside this module
-#: handles a password.
+#: password was read from - at import, the way the agent's always has been, so a
+#: plant that changes one restarts. A caller names an account and never a
+#: password; nothing outside this module handles one.
 ACCOUNTS: dict[str, str] = {
     AGENT_USER: "FSMES_AGENT_PASSWORD",
     ANALYST_USER: "FSMES_ANALYST_PASSWORD",
