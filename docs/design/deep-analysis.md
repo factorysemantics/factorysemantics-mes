@@ -929,6 +929,30 @@ Each answerable in a sentence.
 
 ---
 
+## Decided — 2026-09-29
+
+The maintainer, on reading §11 (his words: *"I agree with all recommendations
+and want to build up to D5 as fast as possible. I agree with monitoring
+position."*):
+
+1. **The monitoring position stands as written** — counts before names;
+   `people.analyse` held by no shipped role; every per-person answer audited
+   and visible to the person; reciprocity on the operator's own view. 0039 is
+   accepted.
+2. **A, then B** — the catalogue extended by the three tools; the sandbox only
+   if bottling shows the catalogue too shallow, as a decision of its own.
+3. **Extend `kit.js`** — interactivity on the four shapes and a `graph` shape;
+   no plotly; no matplotlib.
+4. **The gallery is per plant and per person**, publishing gated on a
+   capability.
+5. **Per-request timing on by default.**
+6. **Page visits and dwell time are left out of the first release** and
+   decided on their own.
+7. **Export is SVG and PNG** from the browser, the chart carrying its footer.
+8. **Build to D5 as fast as possible**: D3 and D4 in parallel, D1 alongside as
+   capacity allows, D5 rewritten against this page once D3 and D4 are in.
+
+
 ## What this page does not do
 
 It builds nothing. It changes no schema, no tool, no chart and no agent. It does

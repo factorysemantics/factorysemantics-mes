@@ -1,6 +1,6 @@
 # 0039 — A deep analysis is a recorded computation that can only read, and it counts people before it names one
 
-- **Status:** proposed
+- **Status:** accepted (2026-09-29, on the design page's §11 — "I agree with all recommendations … I agree with monitoring position")
 - **Date:** 2026-09-29
 - **Deciders:** @kalwei
 

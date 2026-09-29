@@ -59,7 +59,7 @@ goes under Honesty with a migration line, so plant people can find it.
   it eleven things, three of them changes it must refuse: `fsmes assist eval
   --scripted` is 122 of 122, every role at 100%.
 - **A design page for analysis that reasons as deeply as the question, and
-  decision 0039 *proposed*.** `docs/design/deep-analysis.md` works one
+  decision 0039 *accepted* 2026-09-29.** `docs/design/deep-analysis.md` works one
   management question — *"what is the biggest problem for our operators?"* —
   end to end over the records this plant actually keeps, and says at every step
   what it can and cannot support. Its findings: the question is answerable to
