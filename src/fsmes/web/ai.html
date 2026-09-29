@@ -39,8 +39,13 @@
   <p id="banner" class="banner hidden"></p>
 
   <div id="ai-tabs" class="tabs hidden" role="tablist" data-assist="ai-tabs">
-    <button class="tab" role="tab" data-tab="explore">Explore</button>
+    <!-- Conversations stays first, and so stays the tab this screen opens on
+         with no fragment in the address. Explore is the new thing and the
+         reason most people will come here from now on, but the screen's
+         identity is the record of what this plant's AI did (#112), and moving
+         somebody's landing tab under them is a change nobody asked for. -->
     <button class="tab" role="tab" data-tab="conversations">Conversations</button>
+    <button class="tab" role="tab" data-tab="explore">Explore</button>
     <button class="tab" role="tab" data-tab="status">Status</button>
     <button class="tab" role="tab" data-tab="mine">My agent</button>
     <button class="tab" role="tab" data-tab="settings">Settings</button>

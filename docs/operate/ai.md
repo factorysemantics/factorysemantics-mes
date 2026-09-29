@@ -32,9 +32,9 @@ number on Setup › Configuration.
 
 ## The five tabs
 
-**Explore.** Ask the analysis agent a question nobody wrote down, and read the
-answer with the plant's own charts beside it. See
-[Explore](#explore-asking-a-question-nobody-wrote-down) below.
+The screen opens on **Conversations**, which is what it opened on before there
+were five: the tab is the record of what this plant's AI did, and moving
+somebody's landing tab under them is a change nobody asked for.
 
 **Conversations.** One row per conversation — who, when, how many turns, what
 was proposed and what became of each proposal, how many turns failed, and what
@@ -42,6 +42,10 @@ it cost. Open one and you get the turns in the order they happened: what the
 person typed, what the assistant said back, every tool it called with the one
 sentence the panel showed, every proposal with its outcome, and the
 walkthrough it put on the screen.
+
+**Explore.** Ask the analysis agent a question nobody wrote down, and read the
+answer with the plant's own charts beside it. See
+[Explore](#explore-asking-a-question-nobody-wrote-down) below.
 
 **Status.** Which brains are on and why the rest are off — the model server,
 the GPU, the cloud brain's spend against its cap, and every assigned job the

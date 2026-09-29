@@ -827,8 +827,8 @@ async function loadMine() {
 /* ---------- tabs ---------- */
 
 const LOADERS = {
-  explore: loadExplore,
   conversations: loadConversations,
+  explore: loadExplore,
   status: loadStatus,
   mine: loadMine,
   settings: loadSettings,
@@ -853,7 +853,7 @@ function onTab(name) {
    clause behind a capability no operator holds would have promised nothing. */
 function myTabs() {
   return FS.can("audit.read")
-    ? ["explore", "conversations", "status", "mine", "settings"]
+    ? ["conversations", "explore", "status", "mine", "settings"]
     : (FS.can("plant.read") ? ["mine"] : []);
 }
 

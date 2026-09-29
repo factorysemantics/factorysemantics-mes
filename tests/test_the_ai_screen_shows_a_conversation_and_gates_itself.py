@@ -318,17 +318,35 @@ def test_the_status_tab_says_which_brains_are_on(admin, plant):
     page.close()
 
 
-def test_an_operator_is_told_it_is_not_their_screen_and_sees_no_chip(operator, plant):
-    """The gate. Not a blank page and not a refusal from an endpoint after the
-    fact: the chip is not in their nav at all, and the screen says which
-    capability it needs and who they are signed in as."""
+def test_an_operator_is_told_which_part_of_this_screen_is_not_theirs(operator, plant):
+    """The gate, as it stands since D5 (`analysis-in-the-ai-tab`, 2026-09-29).
+
+    Until then an operator saw no **AI** chip and no screen at all, and the
+    reason was right: the trace is what other people typed. Then decision 0039
+    clause 4 arrived - *an operator sees everything the analysis could say about
+    them* - and a reciprocity clause reachable only by typing the address would
+    have promised nothing. So the chip is in their nav, the screen opens on the
+    one tab that is theirs, and the panel says in plain words which capability
+    the rest of it needs and who they are signed in as.
+
+    What has not changed is the part that matters: the tabs that read other
+    people's conversations are **removed from the page**, not disabled. A tab
+    that is there and answers 403 is a screen telling somebody to try.
+    """
     page = _open(operator, plant)
     page.wait_for_selector("#denied:not(.hidden)", timeout=15000)
-    assert page.locator("#ai-main").is_hidden()
     assert "audit.read" in page.locator("#denied").inner_text()
     assert "SCOTT" in page.locator("#denied-who").inner_text()
 
+    page.wait_for_selector('.tab[data-tab="mine"]', state="visible", timeout=15000)
+    tabs = page.locator("#ai-tabs .tab").evaluate_all(
+        "tabs => tabs.map(t => t.dataset.tab)")
+    assert tabs == ["mine"], f"an operator was offered {tabs}"
+    for theirs_not in ("conversations", "explore", "status", "settings"):
+        assert page.locator(f'[data-panel="{theirs_not}"]').count() == 0, theirs_not
+
     page.wait_for_selector("header[data-nav] nav.nav a", timeout=15000)
-    chips = page.locator("header[data-nav] nav.nav a").all_inner_texts()
-    assert "AI" not in [c.strip() for c in chips], chips
+    chips = [c.strip() for c in
+             page.locator("header[data-nav] nav.nav a").all_inner_texts()]
+    assert "AI" in chips, chips
     page.close()
