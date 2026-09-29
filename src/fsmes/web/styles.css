@@ -584,3 +584,59 @@ nav.nav { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
    Every mention of a machine or a line is a way to its page. */
 a.obj { color: var(--accent); text-decoration: none; font-family: var(--mono); }
 a.obj:hover { text-decoration: underline; }
+
+/* ---------- charts ----------
+   The chart contract of docs/design/STYLE.md, in one stylesheet.
+
+   These classes belong to `kit.js`, which every screen shares, so they live
+   here rather than in one screen's sheet: the same six rules have to look the
+   same wherever a chart is drawn, and all four themes have to follow without
+   the page knowing a chart exists (rule 6). Before this, `.grid-line` and
+   `.axis` lived in analysis.css and `.limit-line` in machine.css, so a kit
+   chart drawn on any third screen came out unstyled. Every colour here
+   resolves to a palette variable and nothing else (STYLE.md rule 2). */
+
+.fs-chart { display: block; max-width: 100%; overflow: visible; }
+
+/* Axes and grid. Deliberately quiet: the marks carry the reading. */
+.axis { fill: var(--muted); font-size: 10px; }
+.grid-line { stroke: var(--line); stroke-width: 1; }
+.row-label { fill: var(--text); font-size: 11px; font-family: var(--mono); }
+.bar-label { fill: var(--text); font-size: 11px; }
+.limit-line { stroke: var(--idle); stroke-width: 1; stroke-dasharray: 4 3; }
+
+/* A trend: the band is the spread, the line is the mean drawn over it. */
+.trend-band { fill: var(--accent); opacity: 0.18; }
+.trend-line { fill: none; stroke: var(--accent); stroke-width: 1.6; }
+/* The pareto's cumulative share - where to stop reading. */
+.cum-line { fill: none; stroke: var(--idle); stroke-width: 1.4; stroke-dasharray: 3 3; }
+.series-good { fill: var(--running); }
+.series-scrap { fill: var(--down); }
+.series-count { fill: var(--accent); }
+
+/* UNKNOWN IS A RENDERING OF ITS OWN (rule 3, decision 0030). Not a gap, not a
+   zero, not a smooth line through it: hatched, in the neutral grey the rest
+   of the product already uses for "we have no record of this", so it can
+   never be read as a measurement. The hatch is an SVG pattern kit.js writes
+   per chart; these two classes paint it. */
+.chart-unknown-ground { fill: var(--panel-2); }
+.chart-unknown-hatch { stroke: var(--unknown); stroke-width: 2; }
+/* The line a series breaks into on either side of an unknown stretch, and the
+   dashed stub that says the two ends are not joined. */
+.chart-break { stroke: var(--unknown); stroke-width: 1; stroke-dasharray: 2 3; }
+
+/* What every chart says about itself, under the plot. Four lines at most, and
+   each is a fact the picture cannot carry on its own: the total (rule 5), an
+   axis choice that changes the shape (rule 4), the unknown it holds (rule 3)
+   and how much of the window anybody watched (rule 2). The same sentences go
+   into the <desc> a screen reader is given, so the two cannot disagree. */
+.chart-total { fill: var(--text); font-size: 11px; font-weight: 600; }
+.chart-axis-note,
+.chart-unknown-note,
+.chart-coverage,
+.chart-ledger { fill: var(--muted); font-size: 10px; }
+/* Withheld is not "worse". A station under this plant's coverage floor is
+   drawn at full width in the unknown hatch with its ledger printed beside it,
+   never as a shorter bar - a shorter bar reads as a measurement of a machine
+   rather than of how little of it we saw (decision 0033). */
+.chart-withheld { fill: var(--muted); font-size: 10px; font-style: italic; }
