@@ -12,6 +12,47 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **A fifth chart shape — the network graph — and charts a reader can touch.**
+  `FS.kit.chart("graph", envelope)` draws the network of the deep-analysis
+  design page §7: nodes by kind, edges by kind with their weight, and the
+  holes as things with a number on them. The layout is ninety hand-written
+  lines of force maths, deterministic from the first frame. **Nothing new is
+  vendored and there is still no build step** — the reason the graph is a
+  *shape* rather than a charting library is that the six rules of the chart
+  contract are structural in `kit.js`: the frame writes `data-total`,
+  `data-coverage`, the `<title>`, the `<desc>` and the footer for every shape
+  before the shape draws anything, so a new shape inherits all of it and a new
+  engine would inherit none.
+
+  Four rules the graph keeps on top of the six. **Every edge is a recorded
+  fact** — the kit draws the edges the envelope carries and never one between
+  two nodes that ended up near each other. **The `unattributed` and
+  `unlabelled` nodes carry their degree** rather than a weight, because what a
+  hole is, is what it touches. **A node kind this plant records nothing of is
+  drawn empty** with its zero and its name, never omitted — a graph that quietly
+  left `screen` out would read as a complete picture of a plant where the
+  questions came from nowhere. And **coverage is `absent`**, because a graph of
+  records is not a rate over a watched window; there is no centrality, because
+  a centrality over an edge set that is whatever happens to be recorded is the
+  most convincing wrong number this product could show.
+
+  **And what the reader narrows a chart to now re-states its total.** Hovering
+  a mark says that mark's own number with the coverage sentence under it; the
+  legend switches a kind out of the picture; the graph's threshold moves; the
+  time axis brushes on the line, the timeline and the histogram. Every one of
+  those rewrites `data-total` **and** the footer, on all five shapes, because a
+  filtered chart that kept the old total is a list that reads complete. The
+  shift analysis screen's downtime pareto and state timeline get this for free.
+
+- **`FS.kit.export(chart, "svg" | "png")` takes a chart off the page with its
+  footer on.** The SVG is the chart node's own markup with the theme's resolved
+  colours inlined and the panel colour behind it; the PNG is that SVG through a
+  canvas in the browser. No server round trip and no second renderer — a second
+  renderer is the one that drifts, because nobody checks an export in four
+  themes. The rule it is built to keep: **a chart is presentation-ready when its
+  footer survives being pasted into a slide**, so the total and the coverage
+  sentence go into the file and a test says they are still there.
+
 - **Three reads that answer a management question from the records: `trace_rollup`,
   `trace_graph` and `maintenance_mttr`.** *"What is the biggest problem for our
   operators?"* is now answerable out of the plant's own AI trace, its stops and
