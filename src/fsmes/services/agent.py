@@ -256,6 +256,62 @@ def _withheld_setting(tool: str, capabilities: set[str], args: dict,
             "capability": None, "held_by": []}
 
 
+def no_write_note(kind: Kind) -> str:
+    """What a kind that holds no write tool is told about its own catalogue.
+
+    The floor assistant's note below is a list of the actions *this person* may
+    not take and who may. For a kind with no write tools at all that list would
+    be every write in the product, and it would be the wrong sentence anyway:
+    nothing is being withheld from an analyst for want of a capability - the
+    kind is a reader, and the change belongs to the assistant in the panel.
+
+    Every number in it is counted from the registry, and they add up to the
+    whole of it, because a sentence that says "you hold 53 tools" and leaves
+    the reader to wonder about the rest is the kind of arithmetic this product
+    does not leave lying around (house rule 2).
+    """
+    def props(tool):
+        return (tool.input_schema or {}).get("properties") or {}
+
+    every = [t for t in registry_tools() if t.name not in HIDDEN]
+    writes = [t.name for t in every if "dry_run" in props(t)]
+    plantless = [t.name for t in every if "plant" not in props(t)]
+    mine = [t.name for t in every if t.name not in writes and t.name not in plantless]
+    return (f"\n\nYou hold {len(mine)} of this plant's {len(every)} tools, and every one of them "
+            f"is a read. The {len(writes)} that change anything are not in your catalogue and "
+            f"cannot be put there; what is left ({', '.join(sorted(plantless))}) takes no plant "
+            f"argument and is not about a plant at all. So asked to change something, say that "
+            f"you only read, and that the assistant in the panel can propose it to whoever signs "
+            f"it - never that a tool is missing, never that it is broken, and never that you will "
+            f"do it later.")
+
+
+def not_this_kinds(tool: str, kind: Kind) -> dict | None:
+    """Why a tool this kind reached for is not in its catalogue, when the reason
+    is the kind rather than the person.
+
+    `withheld` answers the other question - *"this person does not hold the
+    capability, and here is who does"* - and for a kind with no write tools at
+    all that answer would be true and misleading in the same sentence: it would
+    read as though a supervisor could ask the analyst to do it. The reason is
+    the agent, not the person asking, so the sentence says the agent.
+    """
+    if kind.writes:
+        return None
+    if tool in NEEDS or tool in PER_CALL_NEEDS:
+        # The order of the clauses is load-bearing: a tool result is summarised
+        # to 160 characters in the transcript the panel shows and in the turn
+        # record, so what a reader can least afford to lose comes first - the
+        # agent holds none of these, and who can.
+        return {"error": (f"{tool} changes the plant, and {kind.title} holds no tool that "
+                          f"does - the assistant in the panel can propose it to whoever "
+                          f"signs it, and that is the answer. Say that you only read; never "
+                          f"that there is no way to do it, and never that the person's own "
+                          f"role is what stopped it, because it is not."),
+                "reads_only": True, "agent": kind.name}
+    return None
+
+
 def withheld_note(capabilities: set[str],
                   roles: dict[str, list[str]] | None = None) -> str:
     """Every write action this person is not offered, one line each, with the
@@ -360,6 +416,165 @@ Speak plainly, in at most four sentences, to someone standing at a machine. Stat
 you found. If you cannot do what was asked, say what you can do instead."""
 
 
+# --------------------------------------------------------------- the kinds
+
+#: The two agent kinds this product has. A kind is not a mode of one agent: it
+#: is an account, a role, a tool set, a prompt and a budget, and decision 0038
+#: says that is the whole of what an agent is. `floor` is the assistant in the
+#: panel, which proposes changes for the person signed in; `analysis` explores
+#: and explains and holds nothing that writes.
+#:
+#: They are rows here rather than branches everywhere because every place that
+#: used to mean "the agent" now has to say *which* - the catalogue, the prompt,
+#: the availability sentence, the budget, the account its reads sign in as, and
+#: the `brain` on the trace row - and a branch per place is how one of them
+#: quietly keeps the other's answer.
+FLOOR = "floor"
+ANALYSIS = "analysis"
+
+
+@dataclass(frozen=True)
+class Kind:
+    """One agent kind, and what it is allowed to be."""
+
+    #: What it is called: in the trace's `brain` column, and in the panel.
+    name: str
+    title: str
+    #: The plant account its tool calls sign in as, and the built-in role that
+    #: account holds. Both exist on every plant `fsmes plant init` built
+    #: (`plant.LAB_USERS`); a plant that predates one is told to run init again
+    #: rather than quietly falling back to the other kind's account, because
+    #: not falling back is the whole point of there being two.
+    account: str
+    role: str
+    #: The middle word of its own environment keys - `MES_{env}_BRAIN` and
+    #: `MES_{env}_CONVERSATION_USD`. In M2 these become `[ai]` settings with
+    #: the same words in the same order (`analysis_brain`,
+    #: `analysis_conversation_usd`), so that is a move and not a redesign.
+    env: str
+    #: Whether a tool that changes the plant may be in its catalogue at all.
+    #: `False` is enforced by building the catalogue out of what a tool is
+    #: *not*, and asserted by a test that reads the tool registry rather than
+    #: the catalogue - see `catalogue`.
+    writes: bool
+    #: Whether it is offered the two walk-me tools. The analysis kind is not: a
+    #: walk is how somebody is led onto a form to make a change, and a kind
+    #: that may not propose a change has no business leading anybody to one
+    #: either. Its answer to "show me how" is the assistant in the panel.
+    walks: bool
+    #: Its system prompt, with `{plant}` still in it.
+    system: str
+    #: What one conversation with it may spend, in dollars, before it stops and
+    #: says so. Zero is uncapped, which is what the floor assistant has always
+    #: been - a floor conversation is bounded by `[admin] agent_max_rounds` and
+    #: by somebody standing at a machine waiting for it. The month's cap
+    #: (`MES_AGENT_MONTHLY_USD`) is shared whatever this says: every kind's
+    #: spend counts against `spend_this_month()`, because it is one bill.
+    conversation_usd: float
+
+    @property
+    def brain_env(self) -> str:
+        return f"MES_{self.env}_BRAIN"
+
+    @property
+    def cap_env(self) -> str:
+        return f"MES_{self.env}_CONVERSATION_USD"
+
+
+#: What an exploration draws, and what a chart has to say about its own
+#: coverage. Two sentences, and they are `analysis-in-the-ai-tab`'s to write:
+#: the shapes themselves landed in `kit.js` with #128, and where an exploration
+#: renders is that handoff's question. Until then the honest instruction is the
+#: one below - words and numbers, no picture - and this constant is the place to
+#: replace, so nobody has to read the prompt looking for where the charts go.
+ANALYSIS_CHARTS = (
+    "Describe the shape you found in words and quote every number you mention: where an "
+    "exploration is drawn, and what a chart must say about its own coverage, is not built "
+    "yet, so a picture is not yours to promise.")
+
+ANALYSIS_SYSTEM = """You are the analysis agent inside FactorySemantics MES, a manufacturing \
+execution system, exploring plant "{plant}" for the person who asked.
+
+You explore and you explain. Reads are free and they are meant to be deep: follow the question \
+wherever this plant's own records take it - the four shift analyses, the state history, the tag \
+history, the quality record, the audit trail - and answer in the plant's own words, with its own \
+codes, never invented ones.
+
+You draw what was measured. Every figure you give is one the plant computed and handed you; never \
+work an OEE, an availability, a rate or a share out of the parts yourself, because the plant's \
+arithmetic is the one its screens and its people already agree on, and a second one reachable \
+only through you is how two true-looking numbers come to disagree.
+
+Every figure carries its coverage. A payload that says what share of the window was actually \
+watched is a payload whose numbers mean nothing without it, so give the share beside the figure, \
+every time. Where the ledger withheld a figure, say it was withheld and give the reason the \
+ledger gave - never fill the hole, never average it away, and never answer the question the \
+ledger refused.
+
+Unknown is an answer; zero is not. Time nobody was watching is unknown time and not idle time; a \
+stop nobody labelled is unlabelled and not "other". Say which, in those words, and say how much.
+
+A list is only what it says it is. If a result carries "total", "showing", "more" or "truncated", \
+say so and call again - narrower, or with the offset it names - rather than reporting what you \
+were shown as all there is.
+
+Read before you deny. Never say this plant has no such machine, no such stop and no such record \
+until you have looked for it in this turn.
+
+You change nothing and you recommend nothing. You hold no tool that changes this plant: you \
+cannot book, cannot draft, cannot propose, cannot approve and cannot put anything on anybody's \
+screen to sign. Asked to change something, say plainly that you only read, and that the \
+assistant in the panel on any screen can propose that change to whoever signs it - then answer \
+the measuring half of the question if there is one. Never say what somebody ought to change, \
+either: a recommendation is a proposal, and a proposal is another agent's tool and another \
+person's signature.
+
+{charts}
+
+Speak plainly, to somebody who has sat down with a question. State the numbers you found and the \
+share of the window behind them. If the plant cannot answer what was asked, say what it can \
+answer instead."""
+
+
+KINDS: dict[str, Kind] = {
+    FLOOR: Kind(
+        name=FLOOR, title="the floor assistant", account="AGENT", role="agent",
+        env="AGENT", writes=True, walks=True, system=SYSTEM,
+        conversation_usd=0.0),
+    ANALYSIS: Kind(
+        name=ANALYSIS, title="the analysis agent", account="ANALYST", role="analyst",
+        env="ANALYSIS", writes=False, walks=False,
+        system=ANALYSIS_SYSTEM.replace("{charts}", ANALYSIS_CHARTS),
+        # A fortieth of the month's $10. One exploration that runs away is a
+        # quarter, not the month - and this is a speed bump rather than a wall
+        # on purpose: the wall is the month's cap, which no new conversation
+        # gets around. `docs/ai/BUDGET.md` says both numbers.
+        conversation_usd=0.25),
+}
+
+
+def kind_named(name: str | None) -> Kind:
+    """One kind, by name. `None` and "" are the floor assistant, because that
+    is what every caller that predates kinds meant.
+
+    An unknown name is refused rather than defaulted: a panel asking for a kind
+    this release does not have should be told so, not handed the agent that can
+    change the plant.
+    """
+    if not name:
+        return KINDS[FLOOR]
+    try:
+        return KINDS[str(name)]
+    except KeyError:
+        raise KeyError(f"no agent kind {name!r} in this product: "
+                       f"{', '.join(sorted(KINDS))}") from None
+
+
+def system_for(kind: str | Kind = FLOOR) -> str:
+    """One kind's system prompt, with `{plant}` still in it."""
+    return (kind if isinstance(kind, Kind) else kind_named(kind)).system
+
+
 # ------------------------------------------------------- the walk-me tools
 
 #: Two read-only tools that are not the plant's: they are this conversation's
@@ -414,9 +629,16 @@ def guide_tools() -> list[dict]:
 
 # ------------------------------------------------------------ availability
 
-def brain() -> str:
-    """claude | off. (qwen joins in a later phase.)"""
-    return os.environ.get("MES_AGENT_BRAIN", "auto").strip().lower()
+def brain(for_kind: str | Kind = FLOOR) -> str:
+    """claude | off, for one kind. (qwen joins in a later phase.)
+
+    Each kind has its own switch - `MES_AGENT_BRAIN` for the floor assistant,
+    `MES_ANALYSIS_BRAIN` for the analysis agent - so a plant can run the one it
+    wants without turning the other off. Neither is read at import: a test that
+    sets it and a plant that restarts with it changed behave the same way.
+    """
+    kind = for_kind if isinstance(for_kind, Kind) else kind_named(for_kind)
+    return os.environ.get(kind.brain_env, "auto").strip().lower()
 
 
 def monthly_cap_usd() -> float:
@@ -434,24 +656,52 @@ def sdk_installed() -> bool:
     return True
 
 
-def available() -> tuple[bool, str]:
-    """Can the cloud brain be used right now, and if not, why."""
+def conversation_cap_usd(for_kind: str | Kind = FLOOR) -> float:
+    """What one conversation with this kind may spend. Zero is uncapped.
+
+    An environment key for now, named so that M2's `[ai]` domain can hold the
+    same words as a plant setting (`docs/ai/BUDGET.md` says so out loud). A
+    number this plant cannot read is the kind's own default rather than a
+    crash: a typo in a budget must not take the agent off the plant.
+    """
+    kind = for_kind if isinstance(for_kind, Kind) else kind_named(for_kind)
+    try:
+        return max(0.0, float(os.environ.get(kind.cap_env, kind.conversation_usd)))
+    except ValueError:
+        return kind.conversation_usd
+
+
+def available(for_kind: str | Kind = FLOOR) -> tuple[bool, str]:
+    """Can this kind be used right now, and if not, why - naming the kind.
+
+    Shadow mode, a spent month and a missing key are the plant's and stop both
+    kinds; the switch and the per-conversation budget are the kind's own. The
+    sentence says which brain it is about either way, because a panel that can
+    talk to two of them has to be able to say which one is off (answer 9).
+    """
     from fsmes import shadow
 
+    kind = for_kind if isinstance(for_kind, Kind) else kind_named(for_kind)
     if shadow.enabled():
         # It changes nothing in the plant, but it carries the plant's own
         # numbers off the box, and a plant lending us its data to watch did
-        # not agree to that. The local model on this machine still answers.
-        return False, ("shadow mode: this plant's data does not leave the box, so the cloud "
-                       f"brain is not used. Unset {shadow.SETTING} and restart to allow it.")
-    if brain() == "off":
-        return False, "the cloud brain is switched off (MES_AGENT_BRAIN=off)"
+        # not agree to that. The local model on this machine still answers -
+        # for the floor assistant. There is no local analysis agent, and
+        # answering worse was the option Scott turned down (answer 9), so on a
+        # shadow plant the analysis agent is simply off and says so.
+        return False, (f"shadow mode: this plant's data does not leave the box, so "
+                       f"{kind.title} is not used. Unset {shadow.SETTING} and restart to "
+                       f"allow it.")
+    if brain(kind) == "off":
+        return False, f"{kind.title} is switched off ({kind.brain_env}=off)"
     if not os.environ.get("ANTHROPIC_API_KEY"):
         return False, "no ANTHROPIC_API_KEY in this plant's environment"
     if not sdk_installed():
         return False, "the anthropic package is not installed (pip install 'fsmes[agent]')"
     spent = spend_this_month()
     if spent >= monthly_cap_usd():
+        # One bill for the box, whichever kind spent it. A month's cap that a
+        # second kind could get around would not be a cap.
         return False, f"this month's budget is spent (${spent:.2f} of ${monthly_cap_usd():.2f})"
     return True, "ok"
 
@@ -571,10 +821,22 @@ def registry_tools() -> list[Any]:
         return list(_tools_cache)
 
 
-def catalogue(capabilities: set[str]) -> list[dict]:
+def catalogue(capabilities: set[str], *, for_kind: str | Kind = FLOOR) -> list[dict]:
     """The tools this person may have used on their behalf, as Anthropic tool
     definitions. `plant` is injected by the caller; the agent's identity and
-    idempotency arguments are the loop's business, never the model's."""
+    idempotency arguments are the loop's business, never the model's.
+
+    **A kind that may not write gets its catalogue by exclusion.** Not by a list
+    of the tools it may have - a list is a thing somebody adds to - but by
+    dropping every tool that carries `dry_run`, which is what makes a tool a
+    write in this product, and every tool named in `NEEDS` or `PER_CALL_NEEDS`,
+    which is the independent list of what each write is gated on. A new write
+    tool is therefore outside the analysis catalogue on the day it is written,
+    by construction, and
+    `test_the_analysis_catalogue_holds_no_tool_that_could_change_the_plant`
+    asserts it against the registry rather than against this function.
+    """
+    kind = for_kind if isinstance(for_kind, Kind) else kind_named(for_kind)
     if "plant.read" not in capabilities:
         return []
     out = []
@@ -586,6 +848,9 @@ def catalogue(capabilities: set[str]) -> list[dict]:
         if "plant" not in props:
             continue
         write = "dry_run" in props
+        if not kind.writes and (write or "on_behalf_of" in props
+                                or tool.name in NEEDS or tool.name in PER_CALL_NEEDS):
+            continue
         need = NEEDS.get(tool.name)
         if need and need not in capabilities:
             continue
@@ -620,7 +885,13 @@ def _result_payload(result: Any) -> Any:
 
 def execute(name: str, args: dict, *, plant: str, on_behalf_of: str | None = None,
             dry_run: bool | None = None, client_ref: str | None = None) -> Any:
-    """Run one tool against this plant. Writes pass dry_run explicitly."""
+    """Run one tool against this plant. Writes pass dry_run explicitly.
+
+    Which plant account the call signs in as is the conversation's, not this
+    function's: `_drive` holds the kind's account open around every round
+    (`mcp_server.acting_as`), so a tool called here reaches the plant as the
+    agent that called it.
+    """
     from fsmes import mcp_server
     call = dict(args)
     call["plant"] = plant
@@ -664,6 +935,12 @@ class Session:
     plant: str
     capabilities: set[str]
     tools: list[dict]
+    #: Which agent this conversation is with. A conversation belongs to one
+    #: kind for its whole life: the catalogue, the prompt and the budget were
+    #: all read from it when it opened, and a message that arrives asking for
+    #: the other kind opens a new conversation rather than changing this one's
+    #: mind halfway through.
+    kind: str = FLOOR
     history: list[Any] = field(default_factory=list)
     pending: dict[str, Proposal] = field(default_factory=dict)
     results: dict[str, dict] = field(default_factory=dict)   # tool_use_id -> tool_result block
@@ -729,6 +1006,16 @@ class Session:
     ttl: int = SESSION_TTL
     result_limit: int = RESULT_LIMIT
 
+    #: What this conversation may spend, and what it has spent - the kind's own
+    #: `MES_{env}_CONVERSATION_USD`, read once when it opened, for the reason
+    #: the three above are read once. Zero is uncapped.
+    cap_usd: float = 0.0
+    spent_usd: float = 0.0
+
+    @property
+    def the_kind(self) -> Kind:
+        return kind_named(self.kind)
+
     @property
     def tool_by_name(self) -> dict[str, dict]:
         return {t["name"]: t for t in self.tools}
@@ -752,6 +1039,7 @@ def _sweep() -> None:
 
 
 def open_session(user: str, plant: str, capabilities: set[str], *,
+                 kind: str | Kind = FLOOR,
                  max_rounds: int = MAX_ROUNDS, ttl: int = SESSION_TTL,
                  result_limit: int = RESULT_LIMIT,
                  guides: list[dict] | None = None,
@@ -764,31 +1052,47 @@ def open_session(user: str, plant: str, capabilities: set[str], *,
     call. The caller has a short read open already and hands them over. The
     walkthroughs come the same way and for the same reason.
     """
-    walks = list(guides or [])
-    tools = catalogue(capabilities)
+    the_kind = kind if isinstance(kind, Kind) else kind_named(kind)
+    walks = list(guides or []) if the_kind.walks else []
+    tools = catalogue(capabilities, for_kind=the_kind)
     if walks and tools:
         # Offered beside the plant's own tools, and only to somebody the
         # catalogue would speak to at all: without `plant.read` there is no
         # conversation to show anything in.
         tools += guide_tools()
+    note = (withheld_note(set(capabilities), roles) if the_kind.writes
+            else no_write_note(the_kind))
     sess = Session(id=uuid.uuid4().hex[:12], user=user, plant=plant,
                    capabilities=set(capabilities), tools=tools,
+                   kind=the_kind.name,
                    max_rounds=int(max_rounds), ttl=int(ttl),
                    result_limit=int(result_limit), guides=walks,
                    roles=dict(roles or {}),
-                   withheld=withheld_note(set(capabilities), roles))
+                   cap_usd=conversation_cap_usd(the_kind),
+                   withheld=note)
     with _sessions_lock:
         _sweep()
         _sessions[sess.id] = sess
     return sess
 
 
-def get_session(session_id: str | None, user: str) -> Session | None:
+def get_session(session_id: str | None, user: str,
+                kind: str | Kind | None = None) -> Session | None:
+    """This person's open conversation, if it is still open.
+
+    `kind` is how a caller says which agent it means: a conversation opened with
+    one kind is not handed to the other, because the tools, the prompt and the
+    budget in it are that kind's. The caller then opens a new one, which is the
+    honest thing - two agents, two conversations.
+    """
     if not session_id:
         return None
     with _sessions_lock:
         sess = _sessions.get(session_id)
     if sess is None or sess.user != user:
+        return None
+    if kind is not None and sess.kind != kind_named(
+            kind.name if isinstance(kind, Kind) else kind).name:
         return None
     sess.touched = time.monotonic()
     return sess
@@ -822,7 +1126,7 @@ def _call_model(sess: Session) -> Any:
         model=MODEL,
         max_tokens=4096,
         system=[{"type": "text",
-                  "text": SYSTEM.format(plant=sess.plant) + sess.withheld,
+                  "text": system_for(sess.kind).format(plant=sess.plant) + sess.withheld,
                   "cache_control": {"type": "ephemeral"}}],
         tools=_anthropic_tools(sess),
         messages=sess.history,
@@ -965,7 +1269,7 @@ def _record_turn(sess: Session, kind: str, say: str, extra: dict) -> None:
     # showed, for the caller to write into this plant's own trace. The system
     # prompt is not in it and cannot be: nothing here reads `SYSTEM`.
     sess.last_turn = {
-        **row, "brain": "floor",
+        **row, "brain": sess.kind,
         "asked": sess.turn_asked, "said": say,
         "tools": [dict(entry) for entry in sess.transcript[sess.turn_from:]],
         "guide_steps": (len(extra["guide"].get("steps") or [])
@@ -1118,8 +1422,28 @@ def _call_once_more_if_it_was_the_line(sess: Session) -> Any:
         return _call_model(sess)
 
 
+def _spent_its_own_budget(sess: Session) -> str:
+    """Why this conversation has to stop, or "" while it may carry on.
+
+    A per-conversation cap is a speed bump and not a wall, deliberately: the
+    next conversation starts at zero, and the wall is the month's cap, which no
+    new conversation gets around. What it stops is one exploration that keeps
+    calling - which is the failure mode a kind with every read tool and no
+    person watching each round has and the floor assistant does not.
+    """
+    if sess.cap_usd <= 0 or sess.spent_usd < sess.cap_usd:
+        return ""
+    return (f"this conversation has spent ${sess.spent_usd:.2f} of the ${sess.cap_usd:.2f} "
+            f"one conversation with {sess.the_kind.title} may spend "
+            f"({sess.the_kind.cap_env}). Ask again in a new conversation - the month's "
+            f"budget is the one that does not reset (${spend_this_month():.2f} of "
+            f"${monthly_cap_usd():.2f} so far)")
+
+
 def _drive(sess: Session) -> dict:
-    ok, why = available()
+    from fsmes import mcp_server
+
+    ok, why = available(sess.kind)
     if not ok:
         # `reason` is what the panel reads: "off" is a plant without a key, a
         # spent budget or shadow mode, and only that turns the panel's brain
@@ -1127,105 +1451,123 @@ def _drive(sess: Session) -> dict:
         return _reply(sess, "unavailable", f"The cloud brain is not available: {why}.",
                       reason="off", why=why)
     _repair_history(sess)
-    for _ in range(sess.max_rounds):
-        try:
-            response = _call_once_more_if_it_was_the_line(sess)
-        except Exception as exc:  # reported to the person, never a 500
-            sess.turn_error = type(exc).__name__
-            LOGGER.warning(
-                "agent: the model did not answer (%s: %s) session=%s user=%s history=%s",
-                type(exc).__name__, str(exc)[:400], sess.id, sess.user, history_shape(sess))
-            # The session stays callable: the history ends on the person's own
-            # words or on a set of tool results, both of which the API takes.
-            return _reply(
-                sess, "error",
-                "The assistant hit an error on that one. Say it again and I will try afresh.",
-                reason="error", error=type(exc).__name__)
-        sess.history.append({"role": "assistant", "content": response.content})
-        usage = _usage_of(response)
-        for key, value in usage.items():
-            sess.turn_usage[key] = sess.turn_usage.get(key, 0) + value
-        log_usage(sess.plant, sess.user, MODEL, usage)
+    # Every round of this conversation reaches the plant as the kind's own
+    # account: the floor assistant as AGENT, which is what every write in
+    # this product is already audited under, and the analysis agent as
+    # ANALYST, whose role holds `plant.read` and `audit.read` and nothing
+    # that writes. The catalogue is the first gate on what it may call and
+    # this is the second, and the second one does not depend on this file
+    # being right.
+    with mcp_server.acting_as(sess.the_kind.account):
+        for _ in range(sess.max_rounds):
+            spent = _spent_its_own_budget(sess)
+            if spent:
+                # Not "off": the plant's brain is fine and the next conversation
+                # will reach it. The panel only hands over to the local model on
+                # `reason: "off"`, so this says its own word.
+                return _reply(sess, "unavailable", f"I have to stop there: {spent}.",
+                              reason="spent", why=spent)
+            try:
+                response = _call_once_more_if_it_was_the_line(sess)
+            except Exception as exc:  # reported to the person, never a 500
+                sess.turn_error = type(exc).__name__
+                LOGGER.warning(
+                    "agent: the model did not answer (%s: %s) session=%s user=%s history=%s",
+                    type(exc).__name__, str(exc)[:400], sess.id, sess.user, history_shape(sess))
+                # The session stays callable: the history ends on the person's own
+                # words or on a set of tool results, both of which the API takes.
+                return _reply(
+                    sess, "error",
+                    "The assistant hit an error on that one. Say it again and I will try afresh.",
+                    reason="error", error=type(exc).__name__)
+            sess.history.append({"role": "assistant", "content": response.content})
+            usage = _usage_of(response)
+            for key, value in usage.items():
+                sess.turn_usage[key] = sess.turn_usage.get(key, 0) + value
+            sess.spent_usd = round(sess.spent_usd + _cost(MODEL, usage), 6)
+            log_usage(sess.plant, sess.user, MODEL, usage)
 
-        say = "".join(getattr(b, "text", "") for b in response.content if getattr(b, "type", "") == "text")
-        tool_uses = [b for b in response.content if getattr(b, "type", "") == "tool_use"]
-        if getattr(response, "stop_reason", None) == "refusal":
-            return _reply(sess, "reply", say or "I cannot help with that one.")
-        if not tool_uses:
-            return _reply(sess, "reply", say.strip() or "(no reply)")
+            say = "".join(getattr(b, "text", "") for b in response.content if getattr(b, "type", "") == "text")
+            tool_uses = [b for b in response.content if getattr(b, "type", "") == "tool_use"]
+            if getattr(response, "stop_reason", None) == "refusal":
+                return _reply(sess, "reply", say or "I cannot help with that one.")
+            if not tool_uses:
+                return _reply(sess, "reply", say.strip() or "(no reply)")
 
-        proposals: list[Proposal] = []
-        shown: dict | None = None
-        shown_by: str | None = None
-        sess.awaiting = [b.id for b in tool_uses]
-        for block in tool_uses:
-            args = dict(block.input or {})
-            spec = sess.tool_by_name.get(block.name)
-            sess.turn_tools.append(block.name)
-            if block.name in GUIDE_TOOLS and spec is not None:
-                before = shown
-                shown, payload = _walk_me(sess, block.name, args, already=shown)
-                if shown is not before:
-                    shown_by = block.id
-                sess.results[block.id] = _tool_result(block.id, payload, sess.result_limit)
-                sess.transcript.append({"tool": block.name, "args": args,
-                                        "ok": "error" not in payload,
-                                        "summary": _summary(payload)})
-            elif spec is None:
-                # Not offered because they may not use it, or not a tool at all.
-                # The first is the common one and has a true answer; the second
-                # keeps the sentence it always had.
-                payload = withheld(block.name, sess.capabilities, args, sess.roles) or {
-                    "error": f"no tool named {block.name!r} is available to this person"}
-                sess.results[block.id] = _tool_result(block.id, payload, sess.result_limit)
-                sess.transcript.append({"tool": block.name, "args": args, "ok": False, "summary": payload["error"]})
-            elif spec["write"]:
-                preview = execute(block.name, args, plant=sess.plant, on_behalf_of=sess.user, dry_run=True)
-                if isinstance(preview, dict) and "error" in preview:
-                    sess.results[block.id] = _tool_result(block.id, preview, sess.result_limit)
-                    sess.transcript.append({"tool": block.name, "args": args, "ok": False,
-                                            "summary": _summary(preview)})
-                    continue
-                from fsmes.services import assistant
-                prop = Proposal(id=uuid.uuid4().hex[:12], tool_use_id=block.id, tool=block.name, args=args,
-                                preview=preview,
-                                # The person's own capabilities, so the walk's
-                                # words can say which side of the gate they are
-                                # on rather than only that there is a gate.
-                                surface=assistant.surface_for(block.name, args,
-                                                              sess.capabilities))
-                proposals.append(prop)
-                if prop.surface is not None:
-                    # Kept past the card's life: "show me where?" comes after.
-                    sess.last_surface = prop.surface
-                sess.pending[prop.id] = prop
-                sess.turn_proposals.append({"id": prop.id, "tool": prop.tool,
-                                            "args": dict(prop.args), "outcome": "open"})
-            else:
-                payload = execute(block.name, args, plant=sess.plant)
-                sess.results[block.id] = _tool_result(block.id, payload, sess.result_limit)
-                sess.transcript.append({"tool": block.name, "args": args,
-                                        "ok": not (isinstance(payload, dict) and "error" in payload),
-                                        "summary": _summary(payload)})
-        if proposals:
-            if shown is not None and shown_by is not None:
-                # A proposal card and a walkthrough in one round: the card is
-                # what the person is looking at, so the walk did not happen and
-                # the model is told so rather than left believing it did.
-                sess.results[shown_by] = _tool_result(
-                    shown_by, {"shown": False,
-                               "why": "a proposal is waiting on the person; offer the walk "
-                                      "again once they have decided"}, sess.result_limit)
-                shown = None
-            return _reply(sess, "proposals", say.strip(), proposals=[p.public() for p in proposals])
-        if shown is not None:
-            # The walk goes on the person's screen now; the model's own
-            # sentence goes above it. The results of this round are committed
-            # first, so the next thing they say starts from a whole history.
+            proposals: list[Proposal] = []
+            shown: dict | None = None
+            shown_by: str | None = None
+            sess.awaiting = [b.id for b in tool_uses]
+            for block in tool_uses:
+                args = dict(block.input or {})
+                spec = sess.tool_by_name.get(block.name)
+                sess.turn_tools.append(block.name)
+                if block.name in GUIDE_TOOLS and spec is not None:
+                    before = shown
+                    shown, payload = _walk_me(sess, block.name, args, already=shown)
+                    if shown is not before:
+                        shown_by = block.id
+                    sess.results[block.id] = _tool_result(block.id, payload, sess.result_limit)
+                    sess.transcript.append({"tool": block.name, "args": args,
+                                            "ok": "error" not in payload,
+                                            "summary": _summary(payload)})
+                elif spec is None:
+                    # Not offered because they may not use it, or not a tool at all.
+                    # The first is the common one and has a true answer; the second
+                    # keeps the sentence it always had.
+                    payload = (not_this_kinds(block.name, sess.the_kind)
+                               or withheld(block.name, sess.capabilities, args, sess.roles)
+                               or {"error": f"no tool named {block.name!r} is available "
+                                            f"to this person"})
+                    sess.results[block.id] = _tool_result(block.id, payload, sess.result_limit)
+                    sess.transcript.append({"tool": block.name, "args": args, "ok": False, "summary": payload["error"]})
+                elif spec["write"]:
+                    preview = execute(block.name, args, plant=sess.plant, on_behalf_of=sess.user, dry_run=True)
+                    if isinstance(preview, dict) and "error" in preview:
+                        sess.results[block.id] = _tool_result(block.id, preview, sess.result_limit)
+                        sess.transcript.append({"tool": block.name, "args": args, "ok": False,
+                                                "summary": _summary(preview)})
+                        continue
+                    from fsmes.services import assistant
+                    prop = Proposal(id=uuid.uuid4().hex[:12], tool_use_id=block.id, tool=block.name, args=args,
+                                    preview=preview,
+                                    # The person's own capabilities, so the walk's
+                                    # words can say which side of the gate they are
+                                    # on rather than only that there is a gate.
+                                    surface=assistant.surface_for(block.name, args,
+                                                                  sess.capabilities))
+                    proposals.append(prop)
+                    if prop.surface is not None:
+                        # Kept past the card's life: "show me where?" comes after.
+                        sess.last_surface = prop.surface
+                    sess.pending[prop.id] = prop
+                    sess.turn_proposals.append({"id": prop.id, "tool": prop.tool,
+                                                "args": dict(prop.args), "outcome": "open"})
+                else:
+                    payload = execute(block.name, args, plant=sess.plant)
+                    sess.results[block.id] = _tool_result(block.id, payload, sess.result_limit)
+                    sess.transcript.append({"tool": block.name, "args": args,
+                                            "ok": not (isinstance(payload, dict) and "error" in payload),
+                                            "summary": _summary(payload)})
+            if proposals:
+                if shown is not None and shown_by is not None:
+                    # A proposal card and a walkthrough in one round: the card is
+                    # what the person is looking at, so the walk did not happen and
+                    # the model is told so rather than left believing it did.
+                    sess.results[shown_by] = _tool_result(
+                        shown_by, {"shown": False,
+                                   "why": "a proposal is waiting on the person; offer the walk "
+                                          "again once they have decided"}, sess.result_limit)
+                    shown = None
+                return _reply(sess, "proposals", say.strip(), proposals=[p.public() for p in proposals])
+            if shown is not None:
+                # The walk goes on the person's screen now; the model's own
+                # sentence goes above it. The results of this round are committed
+                # first, so the next thing they say starts from a whole history.
+                _commit_results(sess)
+                return _reply(sess, "guide", say.strip(), guide=shown)
             _commit_results(sess)
-            return _reply(sess, "guide", say.strip(), guide=shown)
-        _commit_results(sess)
-    return _reply(sess, "reply", "I stopped after too many steps without finishing. Try a smaller ask.")
+        return _reply(sess, "reply", "I stopped after too many steps without finishing. Try a smaller ask.")
 
 
 def _walks_on_offer(sess: Session) -> list[dict]:
@@ -1344,11 +1686,30 @@ def _continue(sess: Session) -> dict:
     return _drive(sess)
 
 
-def status() -> dict:
-    ok, why = available()
-    return {"available": ok, "reason": why, "model": MODEL, "brain": brain(),
+def status(for_kind: str | Kind = FLOOR) -> dict:
+    """What one kind costs and whether it is on - and the same for every kind.
+
+    The top-level fields are the floor assistant's and keep the names the panel
+    and the AI tab have always read; `kinds` is the same answer per kind, so a
+    screen that can talk to two agents can say which is on and why the other is
+    not without asking twice.
+    """
+    kind = for_kind if isinstance(for_kind, Kind) else kind_named(for_kind)
+    ok, why = available(kind)
+    return {"available": ok, "reason": why, "model": MODEL, "brain": brain(kind),
+            "kind": kind.name,
             "spend_usd": spend_this_month(), "cap_usd": monthly_cap_usd(),
+            "conversation_cap_usd": conversation_cap_usd(kind),
             # Tokens beside the dollars, because the dollars are this file's
             # price list and the tokens are the bill's own unit.
             "tokens_this_month": tokens_this_month(),
-            "last_used": last_used().isoformat(timespec="seconds") if last_used() else None}
+            "last_used": last_used().isoformat(timespec="seconds") if last_used() else None,
+            "kinds": {name: _kind_status(spec) for name, spec in KINDS.items()},
+            "total_kinds": len(KINDS)}
+
+
+def _kind_status(kind: Kind) -> dict:
+    ok, why = available(kind)
+    return {"kind": kind.name, "title": kind.title, "available": ok, "reason": why,
+            "account": kind.account, "role": kind.role, "writes": kind.writes,
+            "brain": brain(kind), "conversation_cap_usd": conversation_cap_usd(kind)}

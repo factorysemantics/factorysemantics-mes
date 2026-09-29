@@ -22,6 +22,7 @@ the product, where a person's screen gets it too.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import threading
 from contextvars import ContextVar
@@ -71,6 +72,61 @@ ROOT = plants.find_root(Path(os.environ["FSMES_ROOT"]) if os.environ.get("FSMES_
 AGENT_USER = "AGENT"
 AGENT_PASSWORD = os.environ.get("FSMES_AGENT_PASSWORD", plants.LAB_ONLY_AGENT_PASSWORD)
 
+# The analysis agent's own sign-in, created the same way in the `analyst` role:
+# `plant.read` and `audit.read`, and nothing at all that writes. Its
+# conversations hold every read tool and no write tool
+# (`services.agent.KINDS`), and this account is the second gate behind that
+# one - the plant refuses a write to it whatever a catalogue offers.
+ANALYST_USER = "ANALYST"
+ANALYST_PASSWORD = os.environ.get("FSMES_ANALYST_PASSWORD", plants.LAB_ONLY_ANALYST_PASSWORD)
+
+#: Which accounts this server can sign in as, and the environment key each
+#: password was read from - at import, the way the agent's always has been, so a
+#: plant that changes one restarts. A caller names an account and never a
+#: password; nothing outside this module handles one.
+ACCOUNTS: dict[str, str] = {
+    AGENT_USER: "FSMES_AGENT_PASSWORD",
+    ANALYST_USER: "FSMES_ANALYST_PASSWORD",
+}
+
+# Which account the current tool call signs in as. AGENT unless a caller says
+# otherwise, because AGENT is what every write in this product has always been
+# audited under and a default that changed would rewrite the meaning of the
+# audit trail.
+_actor: ContextVar[str] = ContextVar("actor", default=AGENT_USER)
+
+
+def _password(code: str) -> str:
+    if code == ANALYST_USER:
+        return ANALYST_PASSWORD
+    return AGENT_PASSWORD
+
+
+@contextlib.contextmanager
+def acting_as(code: str | None):
+    """Sign in as this account for the calls made inside.
+
+    `None` and AGENT are the same thing and cost nothing. An account this
+    server does not know is refused here rather than at the login, so a typo in
+    a kind is a readable error and never a quiet fall back to AGENT - falling
+    back is exactly what having two accounts exists to prevent.
+
+    Each account keeps its own HTTP client, and so its own session cookie. One
+    shared client would carry whichever account signed in last, and `_call`
+    retries a 401 by signing in - so an ANALYST call on an AGENT-cookied client
+    would have gone through *as AGENT*, which is the one outcome this must
+    never have.
+    """
+    code = code or AGENT_USER
+    if code not in ACCOUNTS:
+        raise KeyError(f"no account {code!r} for the tools to sign in as: "
+                       f"{', '.join(sorted(ACCOUNTS))}")
+    token = _actor.set(code)
+    try:
+        yield code
+    finally:
+        _actor.reset(token)
+
 # Who the current tool call acts for, and its idempotency key. Set by every
 # write tool from its own arguments; read by _call when it sends the request.
 _identity: ContextVar[tuple[str | None, str | None]] = ContextVar("identity", default=(None, None))
@@ -99,7 +155,9 @@ SHADOW_NOTE = (
 def serve_locally(plant: str, base_url: str) -> None:
     with _lock:
         _local[plant] = base_url
-        _clients.pop(plant, None)
+    # Every account's client for this plant, not only the one that happens to be
+    # signed in here: they all point at the address it had before.
+    drop_clients(plant)
 
 
 def _registry() -> dict[str, dict]:
@@ -108,30 +166,72 @@ def _registry() -> dict[str, dict]:
     return fleet.load(ROOT)
 
 
+def client_key(plant: str, account: str | None = None) -> str:
+    """Where one plant-and-account's client is kept.
+
+    Public because a caller that serves a plant in its own process has to put
+    its own clients there - the eval runner and the test suite both do - and
+    they must not have to know how the key is spelt.
+    """
+    return f"{plant}\x00{account or _actor.get()}"
+
+
+def wire_clients(plant: str, make) -> dict[str, httpx.Client]:
+    """A client per account, for a caller serving this plant in its own process.
+
+    `make` is called once per account and must hand back a client with a cookie
+    jar of its own: two accounts sharing one would mean the plant answering as
+    whichever of them signed in last, which is the whole thing `acting_as` is
+    for. The result goes straight into `_clients`.
+    """
+    return {client_key(plant, code): make() for code in ACCOUNTS}
+
+
+def drop_clients(plant: str) -> list[httpx.Client]:
+    """Forget every account's client for one plant, and hand them back.
+
+    Returned rather than closed here, because the caller that made them is the
+    one that knows whether they are closeable - a `TestClient` standing in for a
+    plant is not this module's to shut down.
+    """
+    with _lock:
+        keys = [k for k in _clients if k.split("\x00")[0] == plant]
+        return [_clients.pop(k) for k in keys]
+
+
 def _client(plant: str) -> httpx.Client:
+    """This plant's client for the account the call is being made as.
+
+    One client per plant *and account*: a client holds the session cookie, and
+    two accounts sharing one would mean the plant answering as whichever of
+    them signed in last. See `acting_as`.
+    """
+    key = client_key(plant)
     if plant in _local:
         with _lock:
-            client = _clients.get(plant)
+            client = _clients.get(key)
             if client is None:
-                client = _clients[plant] = httpx.Client(base_url=_local[plant], timeout=20.0)
+                client = _clients[key] = httpx.Client(base_url=_local[plant], timeout=20.0)
             return client
     registry = _registry()
     if plant not in registry:
         raise KeyError(f"Unknown plant {plant!r}. Known: {', '.join(registry)}.")
     with _lock:
-        client = _clients.get(plant)
+        client = _clients.get(key)
         if client is None:
             cfg = registry[plant]
             host = cfg.get("api_host", "127.0.0.1")
             client = httpx.Client(base_url=f"http://{host}:{cfg['api_port']}",
                                   timeout=20.0)
-            _clients[plant] = client
+            _clients[key] = client
         return client
 
 
 def _call(plant: str, method: str, path: str, body: dict | None = None) -> Any:
-    """One API call, signing in (or back in) as AGENT when needed."""
+    """One API call, signing in (or back in) when needed as whichever account
+    `acting_as` named - AGENT unless somebody said otherwise."""
     client = _client(plant)
+    actor = _actor.get()
     on_behalf_of, client_ref = _identity.get()
     headers = {}
     if on_behalf_of:
@@ -142,11 +242,13 @@ def _call(plant: str, method: str, path: str, body: dict | None = None) -> Any:
         r = client.request(method, path, json=body, headers=headers)
         if r.status_code == 401 and attempt == 1:
             login = client.post("/auth/login",
-                                json={"code": AGENT_USER, "password": AGENT_PASSWORD})
+                                json={"code": actor, "password": _password(actor)})
             if login.status_code != 200:
                 raise RuntimeError(
-                    f"{plant}: the AGENT account cannot sign in "
-                    f"({login.status_code}). Run `fsmes plant {plant} init` to create it.")
+                    f"{plant}: the {actor} account cannot sign in "
+                    f"({login.status_code}). Run `fsmes plant {plant} init` to create it "
+                    f"- it creates every account the tools use, and will not touch the "
+                    f"ones already there.")
             continue
         break
     if r.status_code >= 400:
@@ -171,7 +273,7 @@ def _write(plant: str, path: str, body: dict, dry_run: bool, would: str, *,
     result = _call(plant, method, path, body)
     if isinstance(result, dict) and "error" in result:
         return result
-    out = {"done": would, "plant": plant, "response": result, "audited_as": AGENT_USER}
+    out = {"done": would, "plant": plant, "response": result, "audited_as": _actor.get()}
     on_behalf_of, client_ref = _identity.get()
     if on_behalf_of:
         out["on_behalf_of"] = on_behalf_of

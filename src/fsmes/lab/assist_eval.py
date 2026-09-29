@@ -116,6 +116,12 @@ def scripted_plant(*, seeded: bool = True):
     auth.ensure_builtin_roles(session)
     auth.create_user(session, code=mcp_server.AGENT_USER, name="Plant Agent",
                      password=mcp_server.AGENT_PASSWORD, role="agent")
+    # The analysis agent's own account, with the password the tools sign in
+    # with, because its conversations reach this plant as ANALYST and not as
+    # AGENT. A suite that let it fall back to AGENT would be scoring a kind
+    # that holds every write tool.
+    auth.create_user(session, code=mcp_server.ANALYST_USER, name="Plant Analyst",
+                     password=mcp_server.ANALYST_PASSWORD, role="analyst")
     # One account per role the suite asks as, so `on_behalf_of` names somebody
     # this plant has actually heard of. A dry run does not check the identity it
     # is given, and a suite that leaned on that would be proving less than it
@@ -123,7 +129,7 @@ def scripted_plant(*, seeded: bool = True):
     from fsmes.domain import Person
 
     have = {person.code for person in session.scalars(select(Person))}
-    for role in ("operator", "supervisor", "admin", "agent"):
+    for role in ("operator", "supervisor", "admin", "agent", "analyst"):
         if role.upper() not in have:
             auth.create_user(session, code=role.upper(), name=f"Suite {role}",
                              password="a-long-enough-password", role=role)
@@ -145,14 +151,22 @@ def scripted_plant(*, seeded: bool = True):
     deps.short_read = _same_session_read
     idempotency.session_scope = keys_scope
     idempotency.read_only_session = keys_scope
-    client = TestClient(app)
+    # One client per account the tools can sign in as, each with its own cookie
+    # jar. Only the first enters the app's lifespan - it runs once per app, and
+    # a `TestClient` answers requests either way.
+    clients = {code: TestClient(app) for code in mcp_server.ACCOUNTS}
+    client = clients[mcp_server.AGENT_USER]
     client.__enter__()
-    mcp_server._clients = {SCRIPTED_PLANT: client}
+    mcp_server._clients = {mcp_server.client_key(SCRIPTED_PLANT, code): each
+                           for code, each in clients.items()}
     mcp_server._registry = lambda: {SCRIPTED_PLANT: {"api_port": 0, "label": "Assist eval"}}
     try:
         yield SimpleNamespace(plant=SCRIPTED_PLANT, session=session, client=client)
     finally:
         client.__exit__(None, None, None)
+        for code, each in clients.items():
+            if code != mcp_server.AGENT_USER:
+                each.close()
         (deps.short_read, idempotency.session_scope, idempotency.read_only_session,
          mcp_server._clients, mcp_server._registry) = saved
         session.close()
@@ -202,13 +216,13 @@ def run_scripted_case(case: Case, plant: str) -> Turn:
 
     capabilities = capabilities_of(case.role)
     guides = assistant.listed_guides(capabilities)
-    tools = agent.catalogue(capabilities)
+    tools = agent.catalogue(capabilities, for_kind=case.kind)
     offered = frozenset(t["name"] for t in tools)
     writes = frozenset(t["name"] for t in tools if t["write"])
 
     with _a_brain_that_is_on():
         session = agent.open_session(case.role.upper(), plant, capabilities,
-                                     guides=guides)
+                                     kind=case.kind, guides=guides)
         if case.over_proposal:
             agent._call_model = scripted_model(tuple(case.before))
             agent.message(session, case.before_request or "(the turn before)",

@@ -28,6 +28,9 @@
 (function () {
   const KEY = "fsmes-guide";
   const SESSION_KEY = "fsmes-agent-session";
+  const KIND_KEY = "fsmes-agent-kind";    // which agent this panel is talking to
+  const FLOOR = "floor";                  // the assistant that can propose a change
+  const ANALYSIS = "analysis";            // every read tool, no write tool
   const LOG_KEY = "fsmes-assist-log";     // what the panel showed, so a page change does not lose it
   const OPEN_KEY = "fsmes-assist-open";   // whether the panel was open when the page changed
   const $ = (s, root = document) => root.querySelector(s);
@@ -52,6 +55,11 @@
   let ring = null;
   let coach = null;
   let busy = false;
+  /* Which agent the panel is talking to. One at a time, and switching starts a
+     fresh conversation: the tools, the prompt and the budget belong to the kind
+     the conversation was opened with, and the server opens a new one rather than
+     handing this one over (`agent.get_session`). */
+  let kind = FLOOR;
   const headButtons = [];  // added by other scripts (the recorder) before the panel exists
   let entries = [];       // the conversation as rendered, kept in sessionStorage
   let replaying = false;  // re-rendering saved entries: do not record them again
@@ -101,6 +109,12 @@
       b.addEventListener("click", hb.handler);
       head.appendChild(b);
     }
+    if (analysisOffered()) {
+      const swap = el("button", null, "Ask the analyst");
+      swap.id = "assist-kind";
+      swap.addEventListener("click", switchKind);
+      head.appendChild(swap);
+    }
     const fresh = el("button", null, "New chat");
     fresh.title = "Forget this conversation and start another";
     fresh.addEventListener("click", newChat);
@@ -145,9 +159,37 @@
     return line;
   }
 
+  /* What the server says about the agent this panel is talking to: whether it
+     is on, and the sentence saying why not. `kinds` arrives from
+     /assist/agent/status; a release without it is the floor assistant alone. */
+  function chosen() {
+    const row = (agent.kinds || {})[kind];
+    if (row) return row;
+    return { kind: FLOOR, title: "the assistant", available: !!agent.available,
+             reason: agent.reason || "", writes: true };
+  }
+
+  function analysisOffered() {
+    return !!(agent.kinds || {})[ANALYSIS];
+  }
+
   function renderBrain() {
     const b = $("#assist-brain");
     if (!b) return;
+    const who = chosen();
+    if (kind !== FLOOR) {
+      /* The analysis agent has no local stand-in and never gets one (answer 9
+         of the harness design): on a shadow plant, or with no key, it is off and
+         the chip says so rather than implying another model answered. */
+      b.textContent = who.available ? `${agent.model} · analysis` : "analysis off";
+      b.title = who.available
+        ? `The analysis agent reads and explains; it can change nothing. `
+          + `$${(who.conversation_cap_usd || 0).toFixed(2)} for one conversation, `
+          + `$${(agent.spend_usd || 0).toFixed(2)} of $${agent.cap_usd} this month.`
+        : who.reason || "The analysis agent is off.";
+      b.className = who.available ? "assist-brain on" : "assist-brain";
+      return;
+    }
     if (agent.available) {
       b.textContent = `${agent.model}`;
       b.title = `Cloud brain on. $${(agent.spend_usd || 0).toFixed(2)} of $${agent.cap_usd} this month.`;
@@ -159,12 +201,42 @@
     }
   }
 
+  /* The switch between the two agents. Minimal on purpose: the AI tab is where
+     an exploration is meant to live, and that is its own piece of work. Here it
+     is one button, and pressing it starts a new conversation with the other
+     agent and says which one is now listening. */
+  function renderKindButton() {
+    const b = $("#assist-kind");
+    if (!b) return;
+    b.textContent = kind === FLOOR ? "Ask the analyst" : "Back to the assistant";
+    b.title = kind === FLOOR
+      ? "A second agent that holds every read tool and no write tool: it explores "
+        + "and explains, and can change nothing. Starts a new conversation."
+      : "Back to the assistant that can propose changes for you. Starts a new "
+        + "conversation.";
+  }
+
+  function switchKind() {
+    kind = kind === FLOOR ? ANALYSIS : FLOOR;
+    try { sessionStorage.setItem(KIND_KEY, kind); } catch (e) { /* private mode */ }
+    renderKindButton();
+    newChat();
+    renderBrain();
+  }
+
   let suggestions = null;   // fetched once per page, for this screen
 
   async function renderSuggestions() {
     const box = $("#assist-suggest");
     if (!box) return;
     box.textContent = "";
+    if (kind !== FLOOR) {
+      /* The chips are things to say to the assistant about this screen, and most
+         of them are changes to make. None of them is a question for an agent
+         that cannot make one, so this agent is offered none until the AI tab
+         says what an exploration starts from. */
+      return;
+    }
     if (!agent.available) {
       // Only tasks this person is actually allowed to do - the server already
       // filtered them by capability.
@@ -231,6 +303,19 @@
   async function askQuestion(question) {
     say(question, "you");
     clearSuggestions();
+    if (kind !== FLOOR) {
+      /* No local fallback for this one, deliberately. There is no local analysis
+         agent, and answering worse was the option that was turned down: off is
+         off, and it says which agent and why. */
+      const who = chosen();
+      if (!who.available) {
+        say(`${who.title} is not available: ${who.reason}. The assistant can still `
+            + `answer and walk you through things - press "Back to the assistant".`, "bot");
+        return;
+      }
+      await agentSend(question);
+      return;
+    }
     if (agent.available) { await agentSend(question); return; }
     noteTheLocalBrain();
     const pending = say("thinking…", "thinking");
@@ -264,7 +349,7 @@
     try {
       const out = await api("/assist/agent", {
         method: "POST",
-        body: { message, session: sessionId(), screen: window.location.pathname },
+        body: { message, session: sessionId(), screen: window.location.pathname, kind },
       });
       pending.remove();
       render(out);
@@ -312,8 +397,10 @@
     }
     if (out.kind === "unavailable") {
       /* Only the reasons `available()` names - no key, budget spent, shadow
-         mode - hand the panel to the local model. */
-      if (out.reason === "off") {
+         mode - hand the panel to the local model, and only ever for the floor
+         assistant: the analysis agent has no local stand-in, and one of them
+         being off says nothing about the other. */
+      if (out.reason === "off" && kind === FLOOR) {
         agent.available = false;
         renderBrain();
       }
@@ -447,6 +534,16 @@
   }
 
   function hello() {
+    if (kind !== FLOOR) {
+      const who = chosen();
+      const what = who.available
+        ? "You are talking to the analysis agent. It reads this plant deeply and explains what "
+          + "it found, with the share of the window every figure was measured over - and it can "
+          + "change nothing at all. Ask for a change and it will tell you who can make it."
+        : `The analysis agent is off: ${who.reason}`;
+      say(`${what}`, "bot");
+      return;
+    }
     const what = agent.available
       ? "Ask me about this plant, tell me what to do and I will propose it for you to confirm, "
         + "or ask how to do something and I will walk you through it on screen."
@@ -463,6 +560,7 @@
     if (!$("#assist-log").childElementCount && entries.length) replayEntries();
     if (!$("#assist-log").childElementCount) hello();
     renderBrain();
+    renderKindButton();
     if (entries.length <= 1) renderSuggestions(); else clearSuggestions();
     $("#assist-input").focus();
   }
@@ -874,6 +972,13 @@
     } catch (err) {
       agent = { available: false };
     }
+    /* Which agent this browser was last talking to. A kind this release does
+       not have falls back to the floor assistant rather than posting a name the
+       server would refuse. */
+    try {
+      const last = sessionStorage.getItem(KIND_KEY);
+      if (last && (agent.kinds || {})[last]) kind = last;
+    } catch (e) { /* private mode */ }
 
     const launch = el("button", "assist-launch", "Assistant");
     launch.setAttribute("aria-label", "Open the plant assistant");

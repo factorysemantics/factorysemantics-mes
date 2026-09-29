@@ -12,6 +12,53 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **A second agent: the analysis agent, which holds every read tool and no
+  write tool.** An agent kind is now an account, a role, a tool set, a prompt
+  and a budget (decision 0038), and there are two of them: the `floor`
+  assistant that proposes changes for the person signed in, and `analysis`,
+  which explores and explains and can change nothing at all. Every place that
+  used to mean "the agent" now says which — the catalogue, the prompt, the
+  availability sentence, the per-conversation budget, the account its tool
+  calls sign in as, and the `brain` on its row in the AI trace.
+
+  **"No write tool" is checked, not asserted.** The analysis catalogue is built
+  by exclusion: every tool carrying `dry_run` — which is what makes a tool a
+  write in this product — and every tool named in the list of what each write
+  is gated on is dropped, so a write tool written tomorrow is outside it on the
+  day it is written rather than when somebody remembers. A test asserts it
+  against the tool registry rather than against the catalogue: 53 of the 101
+  tools, every one a read.
+
+  **Two gates, not one.** The second is the account. The tools reach a plant
+  over its own HTTP API, and an analysis conversation signs in as `ANALYST`,
+  whose built-in `analyst` role holds `plant.read` and `audit.read` and nothing
+  that writes — so the plant refuses a write to it even if a catalogue ever
+  offered one. Each account keeps its own HTTP client, because a shared one
+  carries whichever of them signed in last.
+
+  It is not offered the two walkthrough tools either: a walk ends on a form
+  with a button somebody presses, and an agent that may not propose a change
+  has no business leading anybody there. Asked for a change, it says that it
+  only reads and that the assistant in the panel can propose it to whoever
+  signs it — never that the person's own role is the obstacle, because it is
+  not.
+
+  **What one conversation may spend** is `MES_ANALYSIS_CONVERSATION_USD`,
+  $0.25 by default against the month's shared $10; the floor assistant stays
+  uncapped per conversation, as it has always been. A conversation that reaches
+  its cap says so and says what the month has left. **In shadow mode it is off
+  and says which agent and why** — there is no local analysis agent, and
+  answering worse was the option that was turned down.
+
+  `POST /assist/agent` takes a `kind`; `GET /assist/agent/status` answers for
+  one kind and carries every kind beside it. The Assistant panel has one
+  button, *Ask the analyst*, which starts a fresh conversation with the other
+  agent — a conversation belongs to one agent for its whole life. Where an
+  exploration is drawn is the next handoff's; until then it answers in words
+  and numbers and promises no picture. `tests/assist_suite/analyst.toml` asks
+  it eleven things, three of them changes it must refuse: `fsmes assist eval
+  --scripted` is 122 of 122, every role at 100%.
+
 - **Charts that say what they do not know.** `kit.js` — the one set of chart
   shapes every screen draws through — grows `FS.kit.chart(kind, envelope,
   options)` and four shapes an analysis needs: a line series, bars (a pareto

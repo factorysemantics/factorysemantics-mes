@@ -205,6 +205,19 @@ def create_user(
         role = str(plant_settings.setting(session, "admin", "default_new_account_role"))
     known = {r.code for r in session.scalars(select(RoleModel))} or set(ROLES)
     if role not in known:
+        from fsmes.services import capabilities as caps
+
+        if role in caps.BUILTIN_ROLES:
+            # A role the product ships is not unknown just because this database
+            # predates it. The shipped roles are topped up when the app starts
+            # (`api/app.py`'s lifespan), and `fsmes add-user` is the one path
+            # that never goes through it - which is how `fsmes plant <name>
+            # migrate` reached a plant, tried to create the account for a role
+            # added in this release, and was refused for want of a row it was
+            # about to be given.
+            ensure_builtin_roles(session)
+            known = {r.code for r in session.scalars(select(RoleModel))}
+    if role not in known:
         raise Invalid(f"unknown role {role!r} (expected one of {', '.join(sorted(known))})")
     code = code.upper()
     if session.scalar(select(Person).where(Person.code == code)):

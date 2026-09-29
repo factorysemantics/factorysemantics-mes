@@ -103,6 +103,12 @@ class Case:
     role: str
     request: str
     expect: str
+    #: Which agent this request is put to - `floor` (the assistant in the panel)
+    #: or `analysis`. Declared once per file beside the role, because a file is
+    #: one person asking one agent; a case does not override it. It keeps a
+    #: default so that the four files written before there were two agents say
+    #: nothing new.
+    kind: str = "floor"
     screen: str = "/dashboard"
     #: propose / refuse: the tool that does it.
     tool: str | None = None
@@ -179,12 +185,13 @@ _GROUPS = ("contains_any",)
 _FIELDS = {f for f in Case.__dataclass_fields__} | {"before", "plan"}
 
 
-def _case(raw: dict, role: str, source_file: str, problems: list[str]) -> Case | None:
+def _case(raw: dict, role: str, source_file: str, problems: list[str],
+          kind: str = "floor") -> Case | None:
     where = f"{source_file}: case {raw.get('id', '(no id)')!r}"
     unknown = sorted(set(raw) - _FIELDS)
     if unknown:
         problems.append(f"{where}: fields the suite does not know: {', '.join(unknown)}")
-    kwargs: dict[str, Any] = {"role": role, "file": source_file}
+    kwargs: dict[str, Any] = {"role": role, "kind": kind, "file": source_file}
     for key, value in raw.items():
         if key not in _FIELDS:
             continue
@@ -262,8 +269,18 @@ def load(directory: Path | None = None) -> tuple[Case, ...]:
         if not role:
             problems.append(f"{path.name}: no role = \"...\" line")
             continue
+        # Which agent this file's requests are put to. Absent is the floor
+        # assistant, because that is what every file written before there were
+        # two of them was asking.
+        kind = str(raw.get("kind") or "floor")
+        from fsmes.services import agent as _agent
+
+        if kind not in _agent.KINDS:
+            problems.append(f"{path.name}: kind {kind!r} is not an agent this product "
+                            f"has: {', '.join(sorted(_agent.KINDS))}")
+            continue
         for entry in raw.get("case", []):
-            case = _case(entry, role, path.name, problems)
+            case = _case(entry, role, path.name, problems, kind)
             if case is not None:
                 cases.append(case)
     seen: dict[str, str] = {}

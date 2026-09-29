@@ -51,7 +51,11 @@ MAX_ROWS = 500
 #: words and the environment variable the key lives in: a test asserts a
 #: recorded turn contains neither, because the one way this table becomes a
 #: liability is by quietly starting to carry the prompt.
+#: One opening per agent kind, because a second kind arrived with a second
+#: prompt and a tuple naming only the first would have stopped being the check
+#: it claims to be.
 NEVER_STORED = ("You are the assistant inside FactorySemantics MES",
+                "You are the analysis agent inside FactorySemantics MES",
                 "ANTHROPIC_API_KEY")
 
 

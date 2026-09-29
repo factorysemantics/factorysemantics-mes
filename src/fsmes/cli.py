@@ -2723,6 +2723,24 @@ def ai_status_cmd() -> None:
                f"${agent.spend_this_month():.2f} of ${agent.monthly_cap_usd():.2f} this month")
     typer.echo(f"  {'':<12}last used {last.isoformat(timespec='seconds') if last else 'never'}"
                + ("" if on else f"; off because {why}"))
+    # One line per agent kind, because there is more than one of them now and
+    # "the cloud brain" above is the key, the model and the month's bill they
+    # share. A kind can be off on its own - shadow mode turns the analysis agent
+    # off and leaves the floor assistant on the local model - and a plant reading
+    # this over SSH has no other way to find that out.
+    typer.echo(f"  agents      {len(agent.KINDS)} kinds")
+    for spec in agent.KINDS.values():
+        kind_on, kind_why = agent.available(spec)
+        cap = (f"${agent.conversation_cap_usd(spec):.2f} a conversation"
+               if agent.conversation_cap_usd(spec) > 0 else "uncapped per conversation")
+        typer.echo(f"    {spec.name:<10}{'on ' if kind_on else 'OFF'}  "
+                   f"{spec.account}/{spec.role}  "
+                   f"{'reads and proposes' if spec.writes else 'reads only'}  {cap}")
+        if not kind_on and kind_why != why:
+            # Only when it is this kind's own reason. Repeating the plant's -
+            # no key, month spent - once per kind would bury the one line that
+            # is actually about this agent.
+            typer.echo(f"      {'':<8}off because {kind_why}")
 
     out = ai_status.status()
     if not out.get("enabled"):

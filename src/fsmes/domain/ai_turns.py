@@ -40,12 +40,17 @@ from sqlalchemy.orm import Mapped, mapped_column
 from fsmes.db import Base, utcnow
 
 #: The brains that write here. `floor` is the assistant panel's agent - the
-#: cloud model with the plant's own tools; `design` is the Design button, which
-#: talks about the product rather than about the plant. One table rather than
-#: two because the question a person brings to this screen is "what has the AI
-#: in this plant been doing", and that question does not know which button was
-#: pressed.
-BRAINS = ("floor", "design")
+#: cloud model with the plant's own tools; `analysis` is the analysis agent,
+#: which holds every read tool and no write tool and explains rather than
+#: proposes; `design` is the Design button, which talks about the product rather
+#: than about the plant. One table rather than three because the question a
+#: person brings to this screen is "what has the AI in this plant been doing",
+#: and that question does not know which button was pressed.
+#:
+#: The name is the agent kind's own (`services.agent.KINDS`), so the tab can
+#: list one kind's conversations apart from another's without a second table and
+#: without a mapping that could disagree with the agent that wrote the row.
+BRAINS = ("floor", "analysis", "design")
 
 
 class AiTurn(Base):

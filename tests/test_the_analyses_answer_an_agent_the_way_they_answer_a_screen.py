@@ -47,8 +47,12 @@ def wired(make_client, session, monkeypatch):
     auth.create_user(session, code=mcp_server.AGENT_USER, name="Plant Agent",
                      password=mcp_server.AGENT_PASSWORD, role="agent")
     session.flush()
-    client = make_client()
-    monkeypatch.setattr(mcp_server, "_clients", {"testplant": client})
+    # A client per account the tools can sign in as, each with its own cookies.
+    # The one handed back is AGENT's - the account these tool calls are made as,
+    # so the route this file reads beside them is read as the same person.
+    clients = mcp_server.wire_clients("testplant", make_client)
+    monkeypatch.setattr(mcp_server, "_clients", clients)
+    client = clients[mcp_server.client_key("testplant", mcp_server.AGENT_USER)]
     monkeypatch.setattr(mcp_server, "_registry",
                         lambda: {"testplant": {"api_port": 0, "label": "Test"}})
     return client
