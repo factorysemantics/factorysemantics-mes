@@ -483,15 +483,18 @@ def register(mcp, call) -> dict:
         Every answer that does name a person writes an audit row the person can
         find (`analysis.person_named`).
 
-        `by="workcenter"` comes back with an empty breakdown and every turn
-        unattributed, and says why: a person has no workcenter in this product at
-        all. `screen=` matches nothing and says why: no question records the
-        screen it was asked from, though the browser sends it. Both name the
-        milestone that closes them rather than leaving a reader to wonder.
+        `by="workcenter"` groups people by the work centre above the equipment
+        the plant put them at (`personnel.home_equipment_id`), and says how many
+        of its people carry one: it is null until somebody sets it, and nobody
+        is placed by where they have worked. `screen=` filters on the route a
+        question was asked from, and says how many turns in the window record
+        none - the column is not backfilled, so a plant that upgraded has turns
+        that cannot match any filter.
 
         `unattributed_turns` is what the grouping could not attribute - a turn
         with no person, a person this plant no longer has, an instant no shift
-        covers. Never folded into a group and never dropped.
+        covers, a person nobody has placed. Never folded into a group and never
+        dropped.
 
         `hours` left out is this plant's own default reporting window. Any window
         is clamped to `[admin] ai_trace_days`, and `window.clamped_to_retention`

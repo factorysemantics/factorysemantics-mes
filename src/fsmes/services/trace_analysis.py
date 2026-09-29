@@ -330,9 +330,10 @@ def trace_rollup(db: Session, hours: float | None = None, shift: str | None = No
     if person:
         turns = [t for t in turns if t.person == person]
     without_a_screen = sum(1 for t in turns if not t.screen)
+    filtered_on: str | None = None
     if screen is not None:
-        wanted = ai_trace.screen_path(screen) or screen
-        turns = [t for t in turns if t.screen == wanted]
+        filtered_on = ai_trace.screen_path(screen) or screen
+        turns = [t for t in turns if t.screen == filtered_on]
         if without_a_screen:
             notes.append(
                 f"{without_a_screen} turn(s) in this window record no screen and "
@@ -442,12 +443,15 @@ def trace_rollup(db: Session, hours: float | None = None, shift: str | None = No
         # never dropped: three turns with no person is a hole with a number on
         # it, not three turns fewer.
         "unattributed_turns": unattributed,
-        # Of every turn in the window, how many record no screen. Stated
-        # whether or not a screen filter was asked for, because "four
-        # questions came from Quality" means one thing when every turn has a
-        # screen on it and another when half of them predate the column.
+        # Of the turns this window holds - after `person=`, before `screen=`
+        # - how many record no screen at all. Stated whether or not a screen
+        # filter was asked for, because "four questions came from Quality"
+        # means one thing when every turn carries a screen and another when
+        # half of them predate the column.
         "turns_without_a_screen": without_a_screen,
-        "screen": screen,
+        # The path actually filtered on, not the string asked for: a caller
+        # who sent a query string gets back what was matched.
+        "screen": filtered_on,
         "repeated_groups": repeated,
         "new_groups": len(out_groups) - repeated,
         "repeated_share": round(repeated / len(out_groups), 4) if out_groups else None,

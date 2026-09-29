@@ -297,11 +297,13 @@ function wireFilters() {
   bind("person-q", "pQ", drawPeople); bind("person-filter-role", "pRole", drawPeople);
 }
 
-async function setHome(code, equipment) {
+/* `at` rather than `equipment`, which is this module's own list of the
+   plant's tree and would be shadowed here by a single code. */
+async function setHome(code, at) {
   await api(`/masterdata/personnel/${encodeURIComponent(code)}/home-equipment`,
-            { method: "PUT", body: { equipment: equipment || null } });
-  toast(equipment ? `${code} works at ${equipment}.`
-                  : `Where ${code} works is no longer recorded.`);
+            { method: "PUT", body: { equipment: at || null } });
+  toast(at ? `${code} works at ${at}.`
+           : `Where ${code} works is no longer recorded.`);
   await loadPeople();
 }
 

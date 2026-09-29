@@ -177,7 +177,9 @@ def trace_rollup(
     shift: str | None = _SHIFT,
     by: str = Query("role", description="role, workcenter or shift. Never person."),
     screen: str | None = Query(None, description="Only questions asked from this "
-                                                 "screen. No turn records one yet."),
+                                                 "screen, as a route path. Turns "
+                                                 "that record none are counted, "
+                                                 "not matched."),
     person: str | None = Query(None, description="One account's turns. Needs "
                                                  "`people.analyse`."),
     name_people: bool = Query(False, description="Break every group down by account "
