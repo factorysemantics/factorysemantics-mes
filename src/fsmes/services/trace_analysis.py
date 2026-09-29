@@ -698,7 +698,13 @@ def _watched_window(start: datetime, end: datetime, facts: dict) -> dict:
         "unknown_seconds": facts["unknown_seconds"],
         "coverage": facts["watched_share"],
     }
-    if from_ is None:
+    if not machines:
+        # A plant before anybody defined its master data. No edge here is
+        # weighted in seconds at all, so there is nothing to have watched - which
+        # is a different sentence from "watched none of it".
+        out["note"] = ("this plant has no machines defined, so no edge in this graph "
+                       "is weighted in seconds and none carries a watched figure.")
+    elif from_ is None:
         out["note"] = (f"this MES has never watched any of the {machines} machines here: "
                        f"the whole window is unknown time, not idle time.")
     elif out["clamped"]:

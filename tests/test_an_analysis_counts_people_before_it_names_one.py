@@ -584,6 +584,43 @@ def test_a_window_the_ledger_only_partly_covers_never_reports_full_watching(
         "drop the questions asked before this MES saw a machine")
 
 
+def test_the_watched_block_says_which_of_three_things_it_has_to_say():
+    """Three states and three sentences, because they are three different facts.
+
+    A plant with no machines defined has nothing weighted in seconds at all; a
+    plant whose machines this MES has never watched has a window that is unknown
+    time and not idle time; and a window the ledger starts inside says how much
+    of it the seconds cover. *Watched none of it* and *nothing to watch* are not
+    the same answer, and a graph that gave the first for the second would be
+    inventing a blindness.
+
+    Asserted on the sentence rather than through a route because it is the
+    sentence that is under test, and this repository's test session always has
+    the demo plant's machines on it.
+    """
+    end = utcnow()
+    start = end - timedelta(hours=4)
+
+    nothing_defined = trace_analysis._watched_window(start, end, {
+        "watching_from": None, "watched_seconds": 0, "unknown_seconds": 0,
+        "watched_share": None, "machines_total": 0})
+    assert "no machines defined" in nothing_defined["note"]
+    assert nothing_defined["coverage"] is None, "nothing to watch is not zero coverage"
+
+    never_watched = trace_analysis._watched_window(start, end, {
+        "watching_from": None, "watched_seconds": 0.0, "unknown_seconds": 28800.0,
+        "watched_share": 0.0, "machines_total": 2})
+    assert "never watched any of the 2 machines" in never_watched["note"]
+    assert "not idle time" in never_watched["note"]
+
+    partly = trace_analysis._watched_window(start, end, {
+        "watching_from": end - timedelta(hours=1), "watched_seconds": 3600.0,
+        "unknown_seconds": 25200.0, "watched_share": 0.125, "machines_total": 2})
+    assert partly["clamped"] is True
+    assert "1 h of the 4 h asked for" in partly["note"]
+    assert partly["coverage"] == 0.125
+
+
 def test_the_graph_says_how_many_nodes_and_edges_it_is_showing_of_how_many(
         wired, a_trace_worth_reading, a_floor_with_stops_and_repairs):
     """Every list states its total, and a filtered graph restates it rather than
