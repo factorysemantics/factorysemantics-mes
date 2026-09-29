@@ -548,6 +548,24 @@ _GAUGE = ("the gauge register is master data, and the AGENT account does not hol
           "GA-BRIX01\" is a question you can put to a plant that has not got one")
 
 
+_HOME = ("where a person works is `users.manage`, like the register they are on: "
+         "an agent deployment does not decide that somebody works on LINE1 "
+         "(decision 0035). A run declares this rather than setting it, and a plant "
+         "that has not placed anybody answers the work-centre questions with an "
+         "unattributed count, which is the truth about that plant")
+
+
+def _has_home(plant: str, code: str) -> bool:
+    """`home:SCOTT` - has this plant said where this person works?
+
+    Names the person, not the equipment: which line they are on is the
+    plant's own answer, and a case that demanded a particular one would be
+    asking a plant to be laid out the way the demo plant is.
+    """
+    return any(p.get("code") == code and p.get("home_equipment")
+               for p in _rows(_tools().people(plant, q=code), "people"))
+
+
 def _has_gauge(plant: str, code: str) -> bool:
     return any(g.get("code") == code for g in _rows(_tools().gauges(plant), "gauges"))
 
@@ -586,6 +604,9 @@ KINDS: dict[str, Kind] = {k.name: k for k in (
          cannot=_NO_WRITABLE_SETPOINT, fix=_DECLARE_A_SETPOINT),
     Kind("person", _has_person, cannot=_PERSON,
          fix="ask this case on a plant that has not got this person"),
+    Kind("home", _has_home, cannot=_HOME,
+         fix="put this person at a work centre or a station on the People tab of "
+             "Master data, as somebody who holds users.manage"),
     Kind("gauge", _has_gauge, cannot=_GAUGE,
          fix="ask this case on a plant that has not got this gauge, or put the gauge "
              "on this one as a person who holds masterdata.write"),

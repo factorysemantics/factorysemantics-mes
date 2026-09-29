@@ -251,26 +251,38 @@ def test_every_turn_the_grouping_could_not_attribute_is_counted_out_loud(
     assert attributed + answer["unattributed_turns"] == answer["turns_total"]
 
 
-def test_a_workcenter_rollup_is_empty_and_says_which_column_would_fill_it(
+def test_a_workcenter_rollup_counts_the_people_this_plant_has_not_placed(
         wired, a_trace_worth_reading):
-    """Nobody has a workcenter in this product, so every breakdown is empty and
-    every turn is unattributed - said outright, with the column and the milestone
-    named, rather than returned as a plant where nobody asked anything."""
+    """`personnel.home_equipment_id` exists (D1) and nobody on this plant has
+    one, so every breakdown is empty and every turn is unattributed - said
+    outright, with the column named and how many people carry it, rather than
+    returned as a plant where nobody asked anything.
+
+    Nobody is placed by where they have worked, either. The station one
+    browser last chose is a fact about that browser, and using it here would
+    put a person on a line on the strength of a click."""
     answer = mcp_server.trace_rollup("testplant", hours=4, by="workcenter")
     assert answer["groups"], "the questions are still there; it is the breakdown that is empty"
     for group in answer["groups"]:
         assert group["by"] == {}
         assert group["unattributed"] == group["turns"]
-    assert "home_equipment_id" in answer["note"] and "D1" in answer["note"]
+    assert "home_equipment_id" in answer["note"]
+    assert "unattributed" in answer["note"]
 
 
-def test_filtering_by_screen_matches_nothing_and_says_why(wired, a_trace_worth_reading):
-    """`ai_turns` has no screen column, so a screen filter cannot match. Returning
-    everything would be reporting an unfiltered answer as a filtered one - which
-    is the failure mode, not the missing column."""
+def test_filtering_by_screen_says_how_many_turns_could_not_have_matched(
+        wired, a_trace_worth_reading):
+    """`ai_turns.screen` exists (D1) and nothing backfills it, so on a plant
+    whose turns predate the column a screen filter matches none of them - and
+    the answer says how many it could not have matched rather than reading as
+    a plant where nobody asked from that screen.
+
+    The failure mode this guards is the other one: returning everything and
+    calling it filtered."""
     answer = mcp_server.trace_rollup("testplant", hours=4, screen="/dashboard/machines")
     assert answer["groups"] == [] and answer["turns_total"] == 0
-    assert "D1" in answer["note"]
+    assert answer["turns_without_a_screen"] == 7
+    assert "not backfilled" in answer["note"]
 
 
 def test_the_grouping_says_the_rule_it_grouped_by(wired, a_trace_worth_reading):
@@ -382,14 +394,21 @@ def _graph(client, **params) -> dict:
 
 def test_the_graph_draws_only_edges_a_record_stands_behind(
         wired, a_trace_worth_reading, a_floor_with_stops_and_repairs):
-    """Every edge kind that is drawn has a table behind it, and the two that have
-    no source at all are declared empty with the sentence saying so."""
+    """Every edge kind that is drawn has a table behind it, and the one that
+    has no source at all is declared empty with the sentence saying so.
+
+    `asked_from` has a source since D1 and is drawn here even though no turn
+    on this plant records a screen: it lands on the `unattributed` node, which
+    is what makes "seven questions came from nowhere we know of" a thing on
+    the picture rather than seven edges that were never drawn."""
     graph = _graph(wired)
     kinds = {edge["kind"] for edge in graph["edges"]}
     assert {"asked", "followed_by", "stopped_with", "labelled_by", "repaired_by"} <= kinds
-    assert graph["edge_kinds"]["asked_from"] == 0
+    assert graph["edge_kinds"]["asked_from"] > 0
+    assert all(edge["to"] == "unattributed:screen"
+               for edge in graph["edges"] if edge["kind"] == "asked_from")
+    assert "asked_from" not in graph["empty_edge_kinds"]
     assert graph["edge_kinds"]["visited"] == 0
-    assert "D1" in graph["empty_edge_kinds"]["asked_from"]
     assert "D9" in graph["empty_edge_kinds"]["visited"]
 
 
@@ -422,12 +441,18 @@ def test_the_holes_are_nodes_with_a_degree_on_them(
 def test_the_empty_node_kinds_are_drawn_empty_rather_than_left_out(
         wired, a_trace_worth_reading, a_floor_with_stops_and_repairs):
     """A graph that omitted `screen` and `workcenter` would read as a complete
-    picture of a plant where those questions came from nowhere."""
+    picture of a plant where those questions came from nowhere.
+
+    Both columns exist since D1 and neither is filled on this plant, which is
+    the ordinary state of a plant that upgraded - so each is declared empty
+    with the sentence that tells *nothing happened* from *nothing is
+    recorded*."""
     graph = _graph(wired)
     assert set(graph["node_kinds"]) == set(trace_analysis.NODE_KINDS)
     assert graph["node_kinds"]["screen"] == 0
     assert graph["node_kinds"]["workcenter"] == 0
-    assert "D1" in graph["empty_node_kinds"]["workcenter"]
+    assert "not backfilled" in graph["empty_node_kinds"]["screen"]
+    assert "home_equipment_id" in graph["empty_node_kinds"]["workcenter"]
 
 
 def test_labelled_by_names_a_system_and_never_a_person(

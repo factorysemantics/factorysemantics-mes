@@ -25,3 +25,28 @@ def test_the_migrations_are_found_inside_the_package_not_the_working_directory()
     assert location.parent.name == "fsmes"
     assert (location / "env.py").is_file()
     assert list((location / "versions").glob("*.py")), "no migration scripts alongside the package"
+
+
+def test_the_newest_revision_goes_down_again_and_back_up(tmp_path, monkeypatch):
+    """A downgrade is the step a plant reaches for at the worst moment.
+
+    Run on a scratch SQLite file rather than on the suite's own database,
+    because the suite builds its schema from the model and emptying it
+    between tests is not the same thing as walking the chain. CI's
+    `postgres` job runs the same three commands against PostgreSQL 16,
+    where a batch rewrite behaves differently and an unnamed constraint
+    cannot be dropped at all.
+    """
+    from alembic import command
+
+    monkeypatch.setenv("MES_DATABASE_URL", f"sqlite:///{tmp_path / 'chain.db'}")
+    config = alembic_config()
+
+    command.upgrade(config, "head")
+    command.downgrade(config, "-1")
+    command.upgrade(config, "head")
+
+    import sqlite3
+    with sqlite3.connect(tmp_path / "chain.db") as conn:
+        at = conn.execute("SELECT version_num FROM alembic_version").fetchone()[0]
+    assert at == head_revision()
