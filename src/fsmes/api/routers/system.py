@@ -1,3 +1,4 @@
+import logging
 """System endpoints: health, shadow mode, metrics, audit trail queries."""
 
 from fastapi import APIRouter
@@ -12,6 +13,8 @@ from fsmes.api.deps import DbDep, ReadDbDep, UserDep, require
 from fsmes.domain import AuditLog, ErpMessage, MessageStatus, OrderStatus, TagValue, WorkOrder
 from fsmes.services import connection as connection_service
 from fsmes.services import line_clock
+
+log = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -362,7 +365,12 @@ def ai_about_me(user: UserDep, db: ReadDbDep, since_days: float | None = None) -
     except ValueError as exc:
         # A plant whose calendar cannot place the window is a fact about the
         # plant, not a reason to show somebody a blank page about themselves.
-        out["rollup_unreadable"] = str(exc)
+        # The exception's own words stay in the plant's log: what it says can
+        # carry a stack frame or a path, and this page is read by every
+        # account holding plant.read (CodeQL, PR #135).
+        log.warning("my-agent rollup unreadable for %s", me, exc_info=exc)
+        out["rollup_unreadable"] = ("the plant's calendar could not place the "
+                                    "window; the plant's log has the detail")
     return out
 
 
