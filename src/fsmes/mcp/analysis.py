@@ -1,4 +1,4 @@
-"""The four analyses as read tools: the payload a screen gets, unchanged.
+"""The plant's analyses as read tools: the payload a screen gets, unchanged.
 
 `oee_breakdown`, `state_timeline`, `downtime_pareto` and `tag_trend` are the
 questions an ERP cannot answer, and until now they were HTTP-only - so an agent
@@ -88,6 +88,32 @@ silent cut:
   the bucket count it was given and the one that was asked for.
 
 Nothing here resamples, reorders or rounds anything the plant did not.
+
+## Three more, for a question the four could not answer
+
+`trace_rollup`, `trace_graph` and `maintenance_mttr` joined them on 2026-09-29,
+under decision
+[0039](../../../docs/decisions/0039-an-analysis-is-recorded-code-that-can-only-read.md)
+and the worked example of
+[the design page](../../../docs/design/deep-analysis.md) §1 - *"what is the
+biggest problem for our operators?"*. They are the same shape as the four: the
+plant computes, the route serves, the tool hands over what came back. No new
+engine, no new dependency, and no arithmetic here that the plant did not do.
+
+Two things about them are rules rather than features, and both are in the
+plant's own code rather than in a prompt:
+
+* **Counts before names.** A rollup over people comes back grouped by role, by
+  workcenter or by shift, never by account, unless the caller asks for names and
+  the plant has granted `people.analyse` - a capability **no shipped role
+  holds**. Every answer that does name a person writes an audit row that person
+  can find. 0039 clauses 2, 3 and 4.
+* **No centrality.** Betweenness, PageRank and eigenvector centrality are
+  refused by name, with the reason, in the graph's own `measures.refused`. An
+  edge set that is *whatever this plant happens to have recorded* does not
+  support a score that reads as importance, and that number would be the most
+  convincing wrong thing in the product - the graph's version of the recomputed
+  rate 0031 and 0033 exist to prevent.
 """
 
 from __future__ import annotations
@@ -429,6 +455,216 @@ def register(mcp, call) -> dict:
                 "points_showing": len(narrowed.get("points") or []),
                 "more": _TREND_MORE.format(asked=buckets, used=fewer)}
 
+    # ------------------------------------------------ the trace, as a rollup
+
+    @mcp.tool()
+    def trace_rollup(plant: str, hours: float | None = None, shift: str | None = None,
+                     by: str = "role", screen: str | None = None,
+                     person: str | None = None, name_people: bool = False,
+                     offset: int = 0) -> dict:
+        """What the people at this plant asked its assistant, grouped by
+        question - the payload the route serves, unchanged.
+
+        The question behind it is "are they asking the same thing or different
+        things", and the answer is the group list: each group's turns, its
+        distinct sessions, the `by` breakdown, when it was first and last seen,
+        and whether the same question was asked in the window of the same length
+        before this one. Beside them, `groups_of_one` - the once-only questions,
+        which are the interesting half - and `wordless_turns`, because pressing a
+        button is a turn nobody typed.
+
+        **Grouped by role, by workcenter or by shift; never by person.** That is
+        decision 0039 clause 2 and it is the default in the plant's own code, not
+        a rule written into a prompt: with neither `person=` nor
+        `name_people=True`, no key in any breakdown is an account code. Those two
+        arguments need the `people.analyse` capability, which **no shipped role
+        holds** - so on a plant that has not granted it, asking for names comes
+        back refused with the capability named, and the refusal is the answer.
+        Every answer that does name a person writes an audit row the person can
+        find (`analysis.person_named`).
+
+        `by="workcenter"` comes back with an empty breakdown and every turn
+        unattributed, and says why: a person has no workcenter in this product at
+        all. `screen=` matches nothing and says why: no question records the
+        screen it was asked from, though the browser sends it. Both name the
+        milestone that closes them rather than leaving a reader to wonder.
+
+        `unattributed_turns` is what the grouping could not attribute - a turn
+        with no person, a person this plant no longer has, an instant no shift
+        covers. Never folded into a group and never dropped.
+
+        `hours` left out is this plant's own default reporting window. Any window
+        is clamped to `[admin] ai_trace_days`, and `window.clamped_to_retention`
+        with its sentence says when it was: rows past the horizon are pruned, and
+        a quietly shortened window is how "no questions in March" comes to mean
+        "March was deleted".
+
+        `coverage` is `absent`: these are counts of records, not a share of a
+        window anybody watched.
+
+        Reading is free - `audit.read` is the gate, the same one `/ai` uses on
+        the same rows, and no capability beyond it unless you ask for names.
+        """
+        payload = call(plant, "GET", "/analysis/trace/rollup"
+                       + _query(hours=hours, shift=shift, by=by, screen=screen,
+                                person=person,
+                                name_people=("true" if name_people else None)))
+        return _paged(plant, payload, listname="groups", noun="question groups",
+                      offset=offset,
+                      advice="showing {showing} of {total} {noun}, most asked first; "
+                             "call again with offset={next_offset} for the smaller "
+                             "ones, or narrow the window with hours= or shift=")
+
+    # ------------------------------------------------- the trace, as a graph
+
+    @mcp.tool()
+    def trace_graph(plant: str, hours: float | None = None, shift: str | None = None,
+                    threshold: float = 1, kinds: str | None = None) -> dict:
+        """This plant's questions and its stops as one graph of recorded facts -
+        the payload the route serves, unchanged.
+
+        `nodes` are roles, question groups, machines, downtime reasons, who named
+        them, maintenance orders and shifts, each with a `weight` and a `degree`;
+        `edges` are `asked`, `followed_by`, `stopped_with`, `labelled_by`,
+        `repaired_by` and `fell_in`, each weighted by the thing it counts.
+
+        **The holes are nodes.** `unattributed` is turns with no person on them
+        and `unlabelled` is stops nobody named, both carrying their degree, so
+        the hole is a thing on the picture with a number on it rather than a tidy
+        graph that happens to be three turns short.
+
+        **Empty kinds are declared, not omitted.** `screen` and `workcenter` are
+        empty on every plant today, and `asked_from` and `visited` are empty edge
+        kinds, each with the sentence saying what is missing and which milestone
+        adds it. A graph that left them out would read as a complete picture of a
+        plant where those questions came from nowhere.
+
+        **There is no edge between a question and a stop, and there will not
+        be.** Nothing in this product links the two; a question at 09:12 and a
+        stop at 09:14 is a coincidence until somebody records that they are the
+        same event. What the answer supports is the adjacency - the machines
+        these questions name are also the machines with the most unlabelled
+        downtime - and that is two facts side by side, never a third.
+
+        `measures` is size, what the biggest component touches and **what it does
+        not** (the absence is the finding), what changed against the previous
+        window of the same length or the sentence that the previous window is
+        outside retention, and degree and weight. **Betweenness, PageRank and
+        eigenvector centrality are refused**, by name, each with why: on a graph
+        whose edge set is whatever this plant happens to have recorded, a
+        centrality score is a number with no meaning and the most convincing
+        wrong thing this product could hand anybody.
+
+        `threshold` hides edges lighter than it and is stated back beside the
+        component count, because a shape that depends on a choice states the
+        choice. `kinds` is a comma-separated list of node kinds to keep.
+
+        `coverage` is `absent`. An edge weighted in seconds carries
+        `watched_seconds` - how much of that machine's window anybody was
+        watching - or it carries `null`; a count of seconds presented as though
+        the machine had been watched throughout is what decision 0033 exists to
+        prevent.
+
+        A graph too big for one answer is asked of the plant again for the
+        heaviest nodes that fit, so `nodes_showing` is true of the list beside
+        it, and `more` says what was left out.
+
+        Reading is free - `audit.read` is the gate, as it is on `/ai`.
+        """
+        path = "/analysis/trace/graph"
+        query = dict(hours=hours, shift=shift, threshold=threshold, kinds=kinds)
+        payload = call(plant, "GET", path + _query(**query))
+        if isinstance(payload, dict) and "error" in payload:
+            return payload
+        out = {"plant": plant, **payload}
+        nodes = list(payload.get("nodes") or [])
+        if len(nodes) < 2 or _length(out) <= _budget():
+            return out
+
+        # How many whole nodes fit, measured on the answer rather than guessed,
+        # and then asked of the plant - so its own `nodes_showing` and
+        # `edges_showing` describe the lists they are beside, and the components
+        # it counted are the components of the graph it drew.
+        empty = {k: v for k, v in out.items() if k not in ("nodes", "edges")}
+        room = _budget() - _length({**empty, "nodes": [], "edges": []})
+        if room <= 0:
+            # The frame alone - the window, the empty kinds and their reasons,
+            # the refused measures - fills the answer, so asking the plant for
+            # fewer nodes would not make this fit and would draw a graph nobody
+            # asked for. Hand the whole thing over and let the loop's own cut
+            # apply, which drops whole items and says how many: blunt, and
+            # honest, which is the order this module puts them in.
+            return out
+        fits = 0
+        taken: list = []
+        for node in nodes:
+            taken.append(node)
+            if fits and len(json.dumps(taken, default=str)) > room // 2:
+                break
+            fits += 1
+        narrowed = call(plant, "GET", path + _query(**query, limit=max(1, fits)))
+        if isinstance(narrowed, dict) and "error" in narrowed:
+            return narrowed
+        return {"plant": plant, **narrowed,
+                "more": f"{narrowed.get('nodes_showing')} of "
+                        f"{narrowed.get('nodes_total')} nodes drawn, heaviest first, "
+                        f"and {narrowed.get('edges_showing')} of "
+                        f"{narrowed.get('edges_total')} edges - a whole plant's graph "
+                        f"does not fit one answer. Raise threshold= to hide the "
+                        f"lightest edges, name the kinds you want with kinds=, or "
+                        f"narrow the window with hours= or shift=."}
+
+    # ---------------------------------------------------- repair time in time
+
+    @mcp.tool()
+    def maintenance_mttr(plant: str, hours: float | None = None,
+                         equipment: str | None = None, kind: str | None = None,
+                         bucket: str = "day", offset: int = 0) -> dict:
+        """Repair time over time, with the count of repairs nobody timed beside
+        it - the payload the route serves, unchanged.
+
+        Per bucket: `n`, `mean`, `min`, `max` and **`untimed`**. That last one is
+        the point. `maintenance_orders` carries `raised_at`, `started_at`,
+        `completed_at`, `performed_by` and `downtime_minutes`, and every one but
+        `raised_at` is nullable - so an MTTR over 6 of 19 orders is a different
+        fact from an MTTR over 19, and `untimed_total` beside `mttr_minutes` is
+        what keeps them different. Never quote the mean without it.
+
+        **Two sources, and they are not the same claim.** `started_at` to
+        `completed_at` is how long somebody worked on it; `downtime_minutes` is
+        how long the machine was down for it, which a plant records when nobody
+        stamped the work. Each order says which it came from in `minutes_from`,
+        and each bucket counts both, because averaging the two without saying so
+        would be one number standing for two measurements.
+
+        Where a preventive plan exists, its `expected_minutes` is reported beside
+        the actual as `planned_mean` and `actual_mean_where_planned`, with
+        `planned_n` saying over how many - never folded into the mean, because a
+        plan is not a measurement.
+
+        `equipment` is a comma-separated list of machine codes, `kind` is
+        `preventive` or `corrective`, and `bucket` is `hour`, `day` or `week`.
+        `hours` left out is this plant's own default reporting window.
+
+        `coverage` is `absent`: durations between two recorded instants are not a
+        share of a watched window.
+
+        Reading is free - `plant.read` is the whole gate.
+        """
+        payload = call(plant, "GET", "/analysis/maintenance/mttr"
+                       + _query(hours=hours, equipment=equipment, kind=kind,
+                                bucket=bucket))
+        out = _paged(plant, payload, listname="orders", noun="maintenance orders",
+                     offset=offset,
+                     advice="showing {showing} of {total} {noun}; every bucket beside "
+                            "them counts the whole window, timed and untimed. Call "
+                            "again with offset={next_offset} for the rest, or narrow "
+                            "with equipment= or hours=")
+        if isinstance(out, dict) and "orders_showing" in out:
+            out["orders_total"] = len(payload.get("orders") or [])
+        return out
+
     return {f.__name__: f for f in (oee_breakdown, state_timeline,
-                                    downtime_pareto, tag_trend)}
+                                    downtime_pareto, tag_trend,
+                                    trace_rollup, trace_graph, maintenance_mttr)}
 
