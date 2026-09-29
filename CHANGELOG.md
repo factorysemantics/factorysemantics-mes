@@ -58,6 +58,29 @@ goes under Honesty with a migration line, so plant people can find it.
   and numbers and promises no picture. `tests/assist_suite/analyst.toml` asks
   it eleven things, three of them changes it must refuse: `fsmes assist eval
   --scripted` is 122 of 122, every role at 100%.
+- **A design page for analysis that reasons as deeply as the question, and
+  decision 0039 *accepted* 2026-09-29.** `docs/design/deep-analysis.md` works one
+  management question — *"what is the biggest problem for our operators?"* —
+  end to end over the records this plant actually keeps, and says at every step
+  what it can and cannot support. Its findings: the question is answerable to
+  about half its depth today, and what stops the rest is the records rather
+  than the engine — the screen a question was asked from reaches the API and is
+  dropped, a person has no workcenter and no shift, a booking has no actor,
+  nothing times a request, and nothing records a page visit at all. It argues
+  the engine fork (a catalogue the agent composes, against agent-written code in
+  a sandbox), the renderer fork with measured bytes (`kit.js` at 52,536 against
+  plotly 3.1.1 at 4,830,889, which has no network layout in it either), the
+  network model over the trace and the plant, the standard-chart gallery and how
+  a saved view is stored, what one answer costs, and eleven milestones replacing
+  `analysis-in-the-ai-tab`.
+
+  [0039](docs/decisions/0039-an-analysis-is-recorded-code-that-can-only-read.md)
+  carries the two things that need a record: a deep analysis is a computation the
+  plant records and which can only read — never a rate the plant computes — and
+  it counts people by role, workcenter or shift before it names one, with naming
+  behind a capability no shipped role holds and every named-person answer writing
+  an audit row the person can see. Nothing is built; the page and the record are
+  the maintainer's to accept or send back.
 
 - **Charts that say what they do not know.** `kit.js` — the one set of chart
   shapes every screen draws through — grows `FS.kit.chart(kind, envelope,
