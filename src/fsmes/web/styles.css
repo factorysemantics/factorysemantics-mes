@@ -611,6 +611,9 @@ a.obj:hover { text-decoration: underline; }
 /* The pareto's cumulative share - where to stop reading. */
 .cum-line { fill: none; stroke: var(--idle); stroke-width: 1.4; stroke-dasharray: 3 3; }
 .series-good { fill: var(--running); }
+/* A plain bar. Named here rather than filled from the JS, so that "nothing in
+   kit.js names a colour" stays literally true (rule 6). */
+.bar-mark { fill: var(--down); }
 .series-scrap { fill: var(--down); }
 .series-count { fill: var(--accent); }
 

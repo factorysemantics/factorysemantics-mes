@@ -84,38 +84,25 @@
   }
 
   /* ---------- a state timeline: one row per machine ----------
-     data = /analysis/timeline: { window: {start, end}, machines: [{code, intervals: [{state, reason, start, end, seconds}]}] } */
+     data = /analysis/timeline: { window: {start, end}, machines: [{code,
+     intervals: [{state, reason, start, end, seconds}]}] }
+
+     Four screens draw this - analysis, the machine page, the line view and the
+     schedule board - so it is one implementation, and since 2026-09-28 that
+     implementation is the `states` shape of the chart contract below. It used
+     to be a second copy of the same layout, which meant a disconnected
+     interval was a solid grey block here and hatched nowhere: the same drift
+     between two screens this file exists to prevent, one level down. */
   function timeline(host, data, options = {}) {
     host.replaceChildren();
-    const machines = data.machines.filter((m) => m.intervals.length);
-    if (!machines.length) return empty(host, options.emptyText || "No equipment states recorded in this window yet.");
-
-    const left = 78, right = 12, rowH = options.rowHeight || 26, gap = 6, top = 6;
-    const width = Math.max(host.clientWidth || 900, 620);
-    const plot = width - left - right;
-    const height = top + machines.length * (rowH + gap) + 22;
-    const start = utc(data.window.start).getTime();
-    const end = utc(data.window.end).getTime();
-    const span = Math.max(end - start, 1);
-
-    const chart = svg(width, height);
-    timeTicks(chart, start, end, plot, top + machines.length * (rowH + gap), left);
-    machines.forEach((machine, index) => {
-      const y = top + index * (rowH + gap);
-      add(chart, "text", { x: left - 8, y: y + rowH / 2 + 4, class: "row-label", "text-anchor": "end" }, machine.code);
-      for (const interval of machine.intervals) {
-        const x0 = left + ((utc(interval.start).getTime() - start) / span) * plot;
-        const x1 = left + ((utc(interval.end).getTime() - start) / span) * plot;
-        const rect = add(chart, "rect", {
-          x: x0, y, width: Math.max(x1 - x0, 1), height: rowH, rx: 2,
-          fill: `var(--${interval.state}, var(--unknown))`,
-          opacity: interval.state === "running" ? 0.85 : 0.95,
-        });
-        add(rect, "title", {}, `${machine.code} ${interval.state}${interval.reason ? ` (${interval.reason})` : ""}
-${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`);
-      }
-    });
-    host.appendChild(chart);
+    const machines = (data.machines || []).filter((m) => (m.intervals || []).length);
+    /* A window in which nothing was recorded says so in words. The shape below
+       would draw an empty grid with an honest total over it, which is right for
+       an exploration and wrong for a screen whose panel is otherwise blank. */
+    if (!machines.length) {
+      return empty(host, options.emptyText || "No equipment states recorded in this window yet.");
+    }
+    return draw(host, "states", data, { rowHeight: 26, rows: machines, ...options });
   }
 
   /* ---------- a trend: mean line over a min/max band ----------
@@ -385,6 +372,15 @@ ${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`);
      is drawn withheld here too. */
   const isWithheld = (row) => Boolean(row && row.coverage_note && row.coverage_floor);
 
+  /* What a withheld row says under the chart: why its figures are withheld,
+     and its own ledger — where the unwatched seconds went. Rule 2 asks for the
+     ledger, not just the word "withheld": "nobody watched it" is not a
+     finding anybody can act on, and "never connected for 2h 03m" is. */
+  function withheldNotes(row, label) {
+    return [`${label}: ${row.coverage_note}`]
+      .concat(ledgerNotes(row.ledger).map((note) => `${label}: ${note}`));
+  }
+
   /* The ledger as a sentence: where the unwatched time went. Drawn wherever
      the envelope carries one, and it states its own total like every other
      list in this product. */
@@ -592,7 +588,7 @@ ${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`);
         ? `${things(gaps.length, "stretch", "stretches")} hatched: the line is broken there `
           + `because there was no reading, not because the value was zero`
         : null,
-      notes: withheld.map((s) => `${s.label}: ${s.coverage_note}`),
+      notes: withheld.flatMap((s) => withheldNotes(s, s.label)),
       paint(g, ctx) {
         for (let i = 0; i <= 3; i++) {
           const value = scale.lo + ((scale.hi - scale.lo) * i) / 3;
@@ -693,9 +689,15 @@ ${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`);
     /* The longest bar is the scale. Laying out is allowed; the number beside
        each bar is still the envelope's own. */
     const biggest = Math.max(...rows.map((r) => (isNum(r[valueKey]) ? r[valueKey] : 0)), 0) || 1;
-    const unlabelled = rows.filter((r) => String(r[labelKey]).toLowerCase() === "unlabelled");
+    /* Unlabelled is not a reason (house rule 3), a row with no figure is not a
+       zero, and a withheld row is not a small one: all three are drawn in the
+       hatch, and this is the one predicate that decides it — so the note under
+       the chart and the marks on it can never disagree about how many. */
+    const isUnlabelled = (r) => String(r[labelKey]).toLowerCase() === "unlabelled";
+    const isUnknownRow = (r) => !isNum(r[valueKey]) || isWithheld(r) || isUnlabelled(r);
+    const unlabelled = rows.filter(isUnlabelled);
     const withheld = rows.filter(isWithheld);
-    const unknownRows = rows.filter((r) => !isNum(r[valueKey]) || isWithheld(r));
+    const unknownRows = rows.filter(isUnknownRow);
 
     const totalText = has(envelope.total_seconds) ? `${duration(envelope.total_seconds)} in total`
       : has(envelope.total) ? `${count(envelope.total)} in total` : null;
@@ -727,7 +729,7 @@ ${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`);
           + (unlabelled.length ? "unlabelled stops are reported as unlabelled, not filed under a reason"
                                : "no figure was measured for them")
         : null,
-      notes: withheld.map((r) => `${r[labelKey]}: ${r.coverage_note}`),
+      notes: withheld.flatMap((r) => withheldNotes(r, String(r[labelKey]))),
       paint(g, ctx) {
         rows.forEach((row, index) => {
           const y = top + index * (barH + gap);
@@ -735,8 +737,7 @@ ${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`);
           add(g, "text", { x: left - 8, y: y + barH / 2 + 4, class: "row-label", "text-anchor": "end" },
               name.length > 15 ? name.slice(0, 14) + "…" : name);
           const value = row[valueKey];
-          const unknown = !isNum(value) || isWithheld(row)
-                          || name.toLowerCase() === "unlabelled";
+          const unknown = isUnknownRow(row);
           /* A row with no figure, and a row this plant's floor withholds, are
              drawn at FULL width in the hatch. A shorter bar would read as a
              smaller number, and what actually happened is that nobody saw it
@@ -747,7 +748,7 @@ ${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`);
           const rect = add(g, "rect", {
             x: left, y, width: w, height: barH, rx: 3,
             class: unknown ? "chart-unknown" : "bar-mark",
-            fill: unknown ? ctx.hatch : "var(--down)",
+            ...(unknown ? { fill: ctx.hatch } : {}),
             opacity: unknown ? 1 : 0.85,
             "data-value": raw(value),
             "data-label": name,
@@ -808,8 +809,13 @@ ${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`);
     const intervals = rows.flatMap((r) => r.intervals || []);
     const blind = intervals.filter((i) => UNKNOWN.has(i.state));
     const withheld = rows.filter(isWithheld);
-    const shown = has(envelope.machines_shown) ? envelope.machines_shown : rows.length;
-    const of = has(envelope.machines_total) ? envelope.machines_total : rows.length;
+    /* Three numbers, because they are three different facts: the rows on the
+       picture, the rows the payload carried (a machine that reported nothing
+       in this window is one of those, and a caller may leave it off), and the
+       machines the line has. A Gantt of six machines on a line of eleven is
+       not a picture of the line, and nothing in the picture says so. */
+    const carried = (envelope.machines || envelope.rows || rows).length;
+    const of = has(envelope.machines_total) ? envelope.machines_total : carried;
 
     return {
       height,
@@ -817,15 +823,20 @@ ${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`);
       /* Rule 5, and the reason the payload carries `machines_total` at all: a
          Gantt of six machines on a line of eleven is not a picture of the
          line, and a reader cannot tell from the picture. */
-      total: `${count(shown)} of ${things(of, "machine")} drawn`
-             + ` · ${things(intervals.length, "interval")}`
-             + (withheld.length ? ` · ${count(withheld.length)} withheld below the coverage floor` : ""),
+      total: [`${count(rows.length)} of ${things(of, "machine")} drawn`,
+              carried > rows.length
+                ? `${count(carried - rows.length)} reported nothing in this window`
+                : null,
+              things(intervals.length, "interval"),
+              withheld.length
+                ? `${count(withheld.length)} withheld below the coverage floor` : null,
+             ].filter(Boolean).join(" · "),
       axes: [],
       unknown: blind.length
         ? `${things(blind.length, "stretch", "stretches")} hatched: the MES had lost sight of `
           + `the machine, which is not the same as the machine standing still`
         : null,
-      notes: withheld.map((r) => `${r.code || r.label}: ${r.coverage_note}`),
+      notes: withheld.flatMap((r) => withheldNotes(r, r.code || r.label || "")),
       paint(g, ctx) {
         timeTicks(g, start, end, plot, top + rows.length * (rowH + gap), left);
         rows.forEach((row, index) => {

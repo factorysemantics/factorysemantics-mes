@@ -2,7 +2,10 @@
 
    Five views over one line and one window. Everything is drawn as inline SVG
    from the API's own numbers — no chart library, matching the rest of this UI,
-   which has to keep running on a plant PC for years without a toolchain.
+   which has to keep running on a plant PC for years without a toolchain. The
+   timeline, the trend and the pareto come from `kit.js`, which is the one set
+   of chart shapes and the one place the chart contract is kept; what is still
+   drawn here is drawn here because no other screen wants it yet.
 
    The one rule inherited from the MES itself: never draw a number that was not
    measured. A null component renders as a hatched "unknown" band, not as zero,
@@ -10,7 +13,6 @@
    yet look identical on a bar chart and mean opposite things. */
 
 const $ = (s) => document.querySelector(s);
-const NS = "http://www.w3.org/2000/svg";
 
 let state = { line: null, hours: 8, shift: null, machine: null };
 
@@ -161,45 +163,26 @@ function renderTimeline(data) {
   FS.kit.timeline($("#timeline"), data);
 }
 
-/* ---------- downtime pareto ---------- */
+/* ---------- downtime pareto ----------
+
+   Drawn by the kit, not by this file. It used to be forty lines of SVG here,
+   which is how the same picture came to say less than the payload behind it
+   knew: the bars were drawn but the total was not, the unlabelled bucket was
+   a dimmer red rather than a rendering of its own, and the 15 minutes nobody
+   was watching were in the envelope and nowhere on the screen. The kit draws
+   it against the six rules, so all of that is on the chart now — and the
+   analysis screen and the AI tab cannot come to draw the same pareto
+   differently, which is the whole reason kit.js exists. */
 function renderPareto(data) {
   const host = $("#pareto");
-  host.replaceChildren();
   if (!data.reasons.length) {
-    return empty(host, "No downtime in this window — nothing to explain.");
+    host.replaceChildren();
+    // Not "nothing to explain" alone: a window with no downtime in it is still
+    // a window over some number of machines, and the total says which.
+    return empty(host,
+      `No downtime in this window — nothing to explain, across ${data.machines_total} machine(s).`);
   }
-
-  const left = 96, right = 34, top = 8, barH = 24, gap = 8;
-  const width = Math.max(host.clientWidth || 420, 360);
-  const plot = width - left - right;
-  const height = top + data.reasons.length * (barH + gap) + 24;
-  const max = data.reasons[0].seconds || 1;
-
-  const chart = svg(width, height);
-  data.reasons.forEach((reason, index) => {
-    const y = top + index * (barH + gap);
-    add(chart, "text", { x: left - 8, y: y + barH / 2 + 4, class: "row-label", "text-anchor": "end" },
-        reason.reason.length > 14 ? reason.reason.slice(0, 13) + "…" : reason.reason);
-    const w = Math.max((reason.seconds / max) * plot, 2);
-    const rect = add(chart, "rect", {
-      x: left, y, width: w, height: barH, rx: 3,
-      fill: reason.reason === "unlabelled" ? "var(--unknown)" : "var(--down)",
-      opacity: reason.reason === "unlabelled" ? 0.55 : 0.85,
-    });
-    add(rect, "title", {}, `${reason.reason}: ${duration(reason.seconds)} over ${reason.events} stop(s)
-${Object.entries(reason.machines).map(([m, s]) => `${m} ${duration(s)}`).join(", ")}`);
-    add(chart, "text", { x: left + w + 6, y: y + barH / 2 + 4, class: "bar-label" }, duration(reason.seconds));
-  });
-
-  // Cumulative share — the line that tells you where to stop reading.
-  if (data.reasons.length > 1) {
-    const points = data.reasons.map((r, i) => {
-      const x = left + (r.cumulative ?? 0) * plot;
-      return `${x},${top + i * (barH + gap) + barH / 2}`;
-    });
-    add(chart, "polyline", { points: points.join(" "), class: "cum-line" });
-  }
-  host.appendChild(chart);
+  FS.kit.draw(host, "pareto", data, { labelWidth: 96, noun: "reason" });
 }
 
 /* ---------- production over time ---------- */
