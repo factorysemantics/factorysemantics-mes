@@ -57,7 +57,49 @@ Per turn:
 
 The floor assistant writes a row for every turn, including a confirm, a
 decline, an error, and a turn where the cloud brain was unavailable. The
-design chat writes one per exchange, under the `design` brain.
+design chat writes one per exchange, under the `design` brain. The analysis
+agent writes its own, under the `analysis` brain — which is how the
+Conversations tab lists one agent's conversations apart from the other's.
+
+## The two agents
+
+There are two agent kinds, and the `brain` on every row says which one was
+talking.
+
+| | **floor** | **analysis** |
+|---|---|---|
+| What it is for | somebody at a machine who wants something done | somebody who has sat down with a question |
+| Account and role | `AGENT`, role `agent` | `ANALYST`, role `analyst` — `plant.read` and `audit.read`, nothing that writes |
+| Tools | every read, plus the writes the person's own role allows | **every read tool and no write tool**, and it is built that way rather than listed: any tool carrying `dry_run` is dropped, so a write tool added tomorrow is outside it on the day it is written |
+| Can it change the plant | it proposes; a person presses "Do it" | no. There is nothing in its catalogue that changes anything, and its account would be refused if there were |
+| Walkthroughs | yes — "Show me" walks you onto the real form | no. A walk ends on a button somebody presses, and this agent does not lead anybody to a change |
+| What one conversation may spend | uncapped (see [BUDGET.md](../ai/BUDGET.md)) | $0.25 by default |
+| In shadow mode | falls back to the local model | **off, and says so** |
+
+Asked for a change, an analysis conversation says that it only reads and
+that the assistant in the panel can propose it to whoever signs it. It does
+not say the person's role is the obstacle, because it is not.
+
+**Where to find it.** The Assistant panel on any screen has one button —
+*Ask the analyst* — which starts a fresh conversation with the other agent.
+A conversation belongs to one agent for its whole life: its tools, its
+prompt and its budget were read from that agent when it opened, so switching
+starts a new one rather than handing the old one over.
+
+**The two accounts must both exist.** `fsmes plant <name> init` creates them
+and leaves any account already there exactly as it is; a plant built before
+this release gets `ANALYST` on its next `fsmes plant <name> migrate`. Until
+it has one, an analysis conversation's first read comes back saying that the
+`ANALYST` account cannot sign in and naming the command that creates it —
+deliberately, rather than quietly falling back to `AGENT`, which holds
+enough to book production.
+
+> **What the person's own role does *not* narrow.** An agent's reads reach
+> the plant as the agent's account, not as the person asking, so what a
+> conversation can look up is bounded by the agent's role rather than by the
+> reader's. That is true of both kinds and is not new — the floor
+> assistant's `agent` role has held `audit.read` since it existed — but it
+> is worth knowing before granting either account more.
 
 ## What is not recorded, and why
 
@@ -135,3 +177,10 @@ what the assistant told the night shift.
 | `GET /ai` | the status rows — the brains, the GPU, the assigned jobs |
 
 All four are behind `audit.read`. Every list states its total.
+
+`GET /assist/agent/status` is the other one worth knowing: it answers for
+one agent (`?kind=analysis`) and carries a `kinds` object beside it saying
+the same of every kind this plant has — its account, its role, whether it
+can write at all, what one conversation may spend, and why it is off if it
+is. It is behind being signed in, not behind `audit.read`: it says nothing
+about what anybody asked.
