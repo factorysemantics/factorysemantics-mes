@@ -286,6 +286,27 @@ def no_write_note(kind: Kind) -> str:
             f"do it later.")
 
 
+def not_this_kinds(tool: str, kind: Kind) -> dict | None:
+    """Why a tool this kind reached for is not in its catalogue, when the reason
+    is the kind rather than the person.
+
+    `withheld` answers the other question - *"this person does not hold the
+    capability, and here is who does"* - and for a kind with no write tools at
+    all that answer would be true and misleading in the same sentence: it would
+    read as though a supervisor could ask the analyst to do it. The reason is
+    the agent, not the person asking, so the sentence says the agent.
+    """
+    if kind.writes:
+        return None
+    if tool in NEEDS or tool in PER_CALL_NEEDS:
+        return {"error": (f"{tool} changes the plant, and {kind.title} holds no tool that "
+                          f"does - not for anybody, whatever their role. Say that you only "
+                          f"read, and that the assistant in the panel can propose this to "
+                          f"whoever signs it. Never that there is no way to do it."),
+                "reads_only": True, "agent": kind.name}
+    return None
+
+
 def withheld_note(capabilities: set[str],
                   roles: dict[str, list[str]] | None = None) -> str:
     """Every write action this person is not offered, one line each, with the
@@ -1489,8 +1510,10 @@ def _drive(sess: Session) -> dict:
                     # Not offered because they may not use it, or not a tool at all.
                     # The first is the common one and has a true answer; the second
                     # keeps the sentence it always had.
-                    payload = withheld(block.name, sess.capabilities, args, sess.roles) or {
-                        "error": f"no tool named {block.name!r} is available to this person"}
+                    payload = (not_this_kinds(block.name, sess.the_kind)
+                               or withheld(block.name, sess.capabilities, args, sess.roles)
+                               or {"error": f"no tool named {block.name!r} is available "
+                                            f"to this person"})
                     sess.results[block.id] = _tool_result(block.id, payload, sess.result_limit)
                     sess.transcript.append({"tool": block.name, "args": args, "ok": False, "summary": payload["error"]})
                 elif spec["write"]:

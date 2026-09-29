@@ -145,6 +145,11 @@ class AgentIn(BaseModel):
     message: str
     session: str | None = None
     screen: str | None = None
+    #: Which agent to say it to - `floor` (the assistant that proposes changes)
+    #: or `analysis` (every read tool, no write tool). Absent means the floor
+    #: assistant, because that is what every caller written before there were
+    #: two of them meant.
+    kind: str = agent.FLOOR
 
 
 class ResolveIn(BaseModel):
@@ -168,6 +173,19 @@ def _ensure_local() -> str:
         agent.serve_locally(plant, f"http://{host}:{settings.api_port}")
         _local_ready = True
     return plant
+
+
+def _kind_or_400(name: str | None) -> agent.Kind:
+    """The agent kind a request named, or a refusal that lists the ones there are.
+
+    Never a default for a name this release does not have: a panel asking for a
+    kind that is not here should be told, not handed the agent that can change
+    the plant.
+    """
+    try:
+        return agent.kind_named(name)
+    except KeyError as exc:
+        raise HTTPException(400, str(exc)) from None
 
 
 def _agent_budget(db) -> dict:
@@ -319,9 +337,16 @@ def agent_suggestions(user: UserDep, db: DbDep, screen: str | None = None) -> di
 
 
 @router.get("/agent/status")
-def agent_status(user: UserDep) -> dict:
-    """Is the cloud brain on, and what has it cost this month."""
-    return agent.status()
+def agent_status(user: UserDep, kind: str | None = None) -> dict:
+    """Is the cloud brain on, and what has it cost this month.
+
+    The top-level fields are the named kind's - the floor assistant unless a
+    caller says otherwise, which is what the panel and the AI tab have always
+    read. `kinds` says the same of every kind this plant has, with its account,
+    its role, whether it can write at all, and why it is off if it is, so a
+    screen offering two agents can say which is which without asking twice.
+    """
+    return agent.status(_kind_or_400(kind))
 
 
 @router.post("/agent")
@@ -341,7 +366,12 @@ def agent_message(body: AgentIn, user: UserDep) -> dict:
     Like `/assist/ask`, it holds no request session: the agent's rounds are
     model calls, and the agent reaches the plant through this plant's own API
     rather than through a session borrowed from this request.
+
+    `kind` says which agent. A conversation belongs to one of them for its whole
+    life, so a message that names the other opens a new one rather than handing
+    this one's tools and budget over (`agent.get_session`).
     """
+    kind = _kind_or_400(body.kind)
     with deps.short_read() as db:
         role, capabilities, name = _who(db, user)
         guides = assistant.visible_guides(capabilities, db)
@@ -361,8 +391,14 @@ def agent_message(body: AgentIn, user: UserDep) -> dict:
         budget = _agent_budget(db)
         timeout = _model_timeout(db, "assistant_timeout_seconds")
         model = _local_model(db)
-    agent_on, _why = agent.available()
-    if not agent_on:
+    agent_on, _why = agent.available(kind)
+    if not agent_on and kind.walks:
+        # The local model's walkthroughs are the floor assistant's fallback and
+        # nobody else's: a walk leads somebody onto a form to make a change, and
+        # a kind that may not propose a change has no business leading them
+        # there either. An analysis conversation on a plant with the brain off
+        # says so instead - and still writes its turn into the trace, which is
+        # what `agent.message` does with an unavailable reply.
         guide = assistant.route(body.message, capabilities, guides=guides,
                                 timeout=timeout, model=model)
         if guide:
@@ -371,9 +407,9 @@ def agent_message(body: AgentIn, user: UserDep) -> dict:
                 "guide": _guide_out(guide), "say": _walk_line(guide),
             }
     plant = _ensure_local()
-    sess = (agent.get_session(body.session, user["sub"])
-            or agent.open_session(user["sub"], plant, capabilities, guides=offerable,
-                                  roles=roles, **budget))
+    sess = (agent.get_session(body.session, user["sub"], kind)
+            or agent.open_session(user["sub"], plant, capabilities, kind=kind,
+                                  guides=offerable, roles=roles, **budget))
     out = agent.message(sess, body.message, name=name, role=role)
     _record(sess)
     if out.get("kind") == "guide" and out.get("guide"):
