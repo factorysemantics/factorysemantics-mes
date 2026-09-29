@@ -4168,6 +4168,14 @@ Setup's rows and this page links to them rather than copying them.</p>
 <td>The person's words and the assistant's, exactly as the panel showed them</td>
 </tr>
 <tr>
+<td><code>screen</code></td>
+<td>The route the browser was on when the question was asked — <code>/dashboard/quality</code>, never the query string. Null where none was recorded</td>
+</tr>
+<tr>
+<td><code>shift_code</code> / <code>shift_day</code></td>
+<td>Which shift the turn fell in, worked out when the row was written from this plant's calendar as it stood. Null where no pattern covered the instant</td>
+</tr>
+<tr>
 <td><code>tools</code></td>
 <td>Each tool call: its name, the arguments the panel displayed, whether it worked, and the one-line summary</td>
 </tr>
@@ -4194,6 +4202,26 @@ decline, an error, and a turn where the cloud brain was unavailable. The
 design chat writes one per exchange, under the <code>design</code> brain. The analysis
 agent writes its own, under the <code>analysis</code> brain — which is how the
 Conversations tab lists one agent's conversations apart from the other's.</p>
+<p><strong>About <code>screen</code>, and the three ways it is null.</strong> It is the path the panel
+posts — <code>window.location.pathname</code> — with the query string and the fragment
+cut off before it is stored: <code>?setting=nc_code_prefix</code> names the <em>thing</em>
+somebody was looking at, and a column meant to say <em>where</em> they were would be
+read for the first if it carried the second. It is null on a turn recorded
+before this column existed, because nothing is backfilled; on a confirm or a
+decline, because the panel posts no screen with those and guessing the screen
+of the message before would record a place the plant was never told about; and
+on a design-chat turn, whose panel names a screen in words rather than as a
+path. The Conversations tab shows the screen a conversation was opened from
+and how many others its turns crossed, and the rollups count the turns that
+name none rather than leaving them out of a total.</p>
+<p><strong>About the shift stamp.</strong> Written once, when the row is written, the same way
+every booking and every state change has carried one since
+<a href="../../decisions/0028-which-shift-a-minute-belongs-to/">decision 0028</a> — so a
+question asked in January keeps January's shift when the roster is rewritten
+in March. Null means <em>not attributed</em>: a plant with no shift patterns gets it
+on everything, and that is the truth rather than a shift nobody named. Audit
+rows carry the same pair, for the same reason, so a change and the production
+it explains can be read in the unit a plant is run in.</p>
 <h2 id="the-two-agents">The two agents<a class="headerlink" href="#the-two-agents" title="Permanent link">&para;</a></h2>
 <p>There are two agent kinds, and the <code>brain</code> on every row says which one was
 talking.</p>
