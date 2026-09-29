@@ -564,9 +564,14 @@ def register(mcp, call) -> dict:
 
         `coverage` is `absent`. An edge weighted in seconds carries
         `watched_seconds` - how much of that machine's window anybody was
-        watching - or it carries `null`; a count of seconds presented as though
-        the machine had been watched throughout is what decision 0033 exists to
-        prevent.
+        watching, out of the coverage ledger, which is the same
+        `observed_seconds` `oee_breakdown` reports for that window - or it
+        carries `null`; a count of seconds presented as though the machine had
+        been watched throughout is what decision 0033 exists to prevent. The
+        `watched` block says which window those seconds came from, with
+        `requested_hours` and `clamped`: the machines' half of this graph reaches
+        back only to when this MES started watching them, while the questions'
+        half covers the whole window.
 
         A graph too big for one answer is asked of the plant again for the
         heaviest nodes that fit, so `nodes_showing` is true of the list beside

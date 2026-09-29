@@ -22,9 +22,14 @@ recorded instants, and seconds the plant already measured. So every envelope
 carries `coverage: "absent"` - the third value `kit.js` has for exactly this
 case - rather than a percentage of a window nobody watched. Where an edge is
 labelled in seconds it carries how much of that machine's window was watched
-beside it, or it carries `null`; a number of seconds presented as though the
-machine had been watched the whole time is the failure decision 0033 exists to
-prevent, one graph edge at a time.
+beside it, **out of the coverage ledger** - the same `observed_seconds`
+`oee_breakdown` reports - or it carries `null`; a number of seconds presented as
+though the machine had been watched the whole time is the failure decision 0033
+exists to prevent, one graph edge at a time. On 2026-09-29 it was that failure:
+the graph took the window's own length less the recorded disconnections, so a
+168 h request came back "604,800 s watched, 0 s unknown" on a plant the ledger
+had seen for 37,303 s of it, and the agent told the reader the plant was fully
+watched with no blind time.
 
 **Every list states its total.** House rule: `groups_total`, `nodes_total`,
 `edges_total`, `orders_total`, and the unattributed and untimed counts that say
@@ -67,9 +72,9 @@ from fsmes.domain import (
     MaintenanceOrder,
     Person,
 )
-from fsmes.services import ai_trace, masterdata, plant_settings
+from fsmes.services import ai_trace, coverage, masterdata, plant_settings
 from fsmes.services import calendar as calendar_service
-from fsmes.services import connection as connection_service
+from fsmes.services import equipment as equipment_service
 
 #: How a question's text is reduced before turns are grouped by it. Stated in
 #: every envelope as `normalisation`, because grouping text is a judgment and a
@@ -577,9 +582,26 @@ def _graph_facts(db: Session, start: datetime, end: datetime) -> dict:
     machines = _machines(db)
     by_id = {m.id: m for m in machines}
     ids = list(by_id)
-    unknown = connection_service.unknown_seconds(db, ids, start, end)
     window_seconds = max(0.0, (end - start).total_seconds())
-    watched = {mid: round(max(0.0, window_seconds - unknown.get(mid, 0.0)), 1) for mid in ids}
+    # How much of this window anybody actually watched each machine, out of the
+    # coverage ledger - the same `observed_seconds` `oee_breakdown` reports over
+    # the same window, and never the window's own length. Until 2026-09-29 this
+    # was `window_seconds` less the recorded disconnections, which on a plant
+    # with no disconnection row at all made every edge claim the whole window:
+    # a 168 h request came back "604,800 s watched, 0 s unknown" while the
+    # ledger said 37,303 s, and the agent repeated it as "fully watched, no
+    # blind time". A hole in the state history that nothing recorded a
+    # disconnection for is time nobody watched either.
+    ledgers = coverage.totals_many(db, ids, start, end)
+    watched = {mid: round(ledgers[mid].observed_seconds, 1) for mid in ids}
+    unknown = {mid: ledgers[mid].not_observed_seconds for mid in ids}
+    # When this MES started watching the first of these machines, inside this
+    # window. The graph's window is not clamped to it - the trace half of the
+    # picture is about questions, which are recorded whether a machine was
+    # watched or not - so it is *said* instead, the way the OEE envelope says
+    # `clamped` and `requested_hours`.
+    seen = equipment_service.first_seen(db, ids)
+    watching_from = max(start, min(seen.values())) if seen else None
 
     states = db.scalars(
         select(EquipmentState).where(
@@ -630,10 +652,60 @@ def _graph_facts(db: Session, start: datetime, end: datetime) -> dict:
         edge(machine, job, "repaired_by", minutes or 0.0, None)
 
     return {"nodes": nodes, "edges": edges, "watched": watched,
+            "watching_from": watching_from,
+            "watched_seconds": round(sum(watched.values()), 1),
             "unknown_seconds": round(sum(unknown.values()), 1),
+            # Machine-seconds nobody watched over machine-seconds there were to
+            # watch, so a plant of ten machines with one blind reads as 10 %
+            # rather than as the whole window being dark.
             "unknown_share": (round(sum(unknown.values()) / (window_seconds * len(ids)), 4)
                               if window_seconds > 0 and ids else None),
+            "watched_share": (round(sum(watched.values()) / (window_seconds * len(ids)), 4)
+                              if window_seconds > 0 and ids else None),
             "machines_total": len(machines)}
+
+
+def _watched_window(start: datetime, end: datetime, facts: dict) -> dict:
+    """What the machines' half of this graph was watched over, and how much of it
+    anybody actually saw.
+
+    Two windows, said apart. The graph runs over `[start, end)` because a
+    question is recorded whether or not a machine was being watched, so clamping
+    the picture to the ledger would drop turns. But the seconds on an edge are
+    only meaningful against what was watched - so this block states the shorter
+    window out loud, `requested_hours` and `clamped` the way the OEE envelope
+    does, and the ledger's own observed seconds beside it.
+
+    `coverage` here is machine-seconds watched over machine-seconds there were
+    to watch. It is not the graph's coverage - the graph has none and says so -
+    it is the coverage of the one figure on it measured in seconds. Kept short
+    on purpose: this frame shares an answer with the picture, and prose here is
+    nodes the reader does not get.
+    """
+    asked = max(0.0, (end - start).total_seconds() / 3600)
+    from_ = facts["watching_from"]
+    realised = max(0.0, (end - from_).total_seconds() / 3600) if from_ is not None else 0.0
+    machines, window = facts["machines_total"], max(0.0, (end - start).total_seconds())
+    out = {
+        "hours": round(realised, 4),
+        "requested_hours": round(asked, 4),
+        "start": from_,
+        "end": end,
+        "clamped": round(realised, 4) < asked - 0.001,
+        "machines_total": machines,
+        "window_seconds": round(window * machines, 1),
+        "watched_seconds": facts["watched_seconds"],
+        "unknown_seconds": facts["unknown_seconds"],
+        "coverage": facts["watched_share"],
+    }
+    if from_ is None:
+        out["note"] = (f"this MES has never watched any of the {machines} machines here: "
+                       f"the whole window is unknown time, not idle time.")
+    elif out["clamped"]:
+        out["note"] = (f"the seconds cover {round(realised, 2):g} h of the "
+                       f"{round(asked, 2):g} h asked for - where this MES started "
+                       f"watching - while the questions cover the whole window.")
+    return out
 
 
 def _components(nodes: dict, edges: list[dict]) -> list[set[str]]:
@@ -706,6 +778,13 @@ def trace_graph(db: Session, hours: float | None = None, shift: str | None = Non
     of components, because a shape that depends on a choice states the choice.
     `kinds` keeps only those node kinds (and the edges between them); every kind
     is still declared, so a filtered graph says what it is not showing.
+
+    **The seconds are watched seconds.** A `stopped_with` or `labelled_by` edge
+    carries that machine's `watched_seconds` out of the coverage ledger, and the
+    `watched` block says what window those came from - with `requested_hours` and
+    `clamped`, as the OEE envelope does, because the machines' half of this
+    picture reaches back only to when this MES started watching them while the
+    questions' half covers the whole window.
     """
     start, end, window = _trace_window(db, hours, shift)
     facts = _graph_facts(db, start, end)
@@ -797,13 +876,15 @@ def trace_graph(db: Session, hours: float | None = None, shift: str | None = Non
             "previous_window_note": previous_note,
             "refused": REFUSED_MEASURES,
         },
+        "watched": _watched_window(start, end, facts),
         "unknown_seconds": facts["unknown_seconds"],
         "unknown_share": facts["unknown_share"],
         "machines_total": facts["machines_total"],
         "coverage": "absent",
         "coverage_note": (
             "a graph of records is not a rate over a watched window. An edge "
-            "weighted in seconds carries that machine's watched seconds, or null."
+            "weighted in seconds carries that machine's watched seconds out of "
+            "the coverage ledger - see `watched` - or it carries null."
         ),
     }
 
