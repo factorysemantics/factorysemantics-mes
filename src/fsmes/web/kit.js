@@ -7,12 +7,21 @@
    draws what the API measured, and draws "unknown" when it did not.
 
    The second half of this file is the CHART CONTRACT - `FS.kit.chart(kind,
-   envelope, options)`, the four shapes an analysis exploration needs, drawn
+   envelope, options)`, the five shapes an analysis exploration needs, drawn
    against the six rules of docs/design/agentic-harness.md SS9 M1 and the
    chart contract in docs/design/STYLE.md. It is here, and extended rather
    than duplicated, for the same reason the rest of this file is: `kit.js`
    exists so that two screens can never state coverage differently, and a
-   second chart engine would make that drift permanent. */
+   second chart engine would make that drift permanent.
+
+   That is also why the network graph of docs/design/deep-analysis.md SS7 is a
+   fifth SHAPE rather than a vendored chart engine. The six rules are
+   structural here: `frame()` writes data-total, data-coverage, the <title>
+   and the <desc> and the footer for EVERY shape before the shape draws
+   anything, so a new shape cannot forget them. A 4.8 MB engine would have
+   inherited none of it, and would not have drawn the graph either - it has no
+   force layout. The layout is 90 hand-written lines below, and nothing new is
+   vendored. */
 
 (function () {
   "use strict";
@@ -251,7 +260,8 @@
          FS.kit.chart(kind, envelope, options) -> <svg>
          FS.kit.draw(host, kind, envelope, options) -> <svg>
 
-     `kind` is "line", "bars" (alias "pareto"), "states" or "histogram".
+     `kind` is "line", "bars" (alias "pareto"), "states", "histogram" or
+     "graph".
      `envelope` is the API's own payload — the same object a screen was given,
      with its coverage, its ledger and its totals still on it. `options` names
      which of the payload's fields to plot, and nothing else.
@@ -290,12 +300,29 @@
 
      Each chart also carries a `<title>` and a `<desc>` assembled from the
      same sentences as the visible footer, so what a screen reader is told and
-     what a sighted reader sees cannot drift apart. */
+     what a sighted reader sees cannot drift apart.
+
+     AND THE READER CAN TOUCH IT (2026-09-29). Hovering a mark says what that
+     mark's own `data-value` is and how much of the window anybody watched;
+     the legend switches a kind out of the picture; the threshold moves; the
+     time axis brushes. **Every one of those re-states the total**, in
+     `data-total` and in the footer, because a filtered chart that kept the
+     old total is a list that reads complete. That is the seventh thing the
+     frame does for every shape, so a new shape cannot forget it either. */
 
   let serial = 0;
 
   /* The envelope's own number, as a string, unrounded — what a test reads. */
   const raw = (v) => (v === null || v === undefined ? "" : String(v));
+  /* What the reader has narrowed the picture to, as a shape sees it. A shape
+     that is handed no view draws the whole envelope, which is what every
+     caller from before the charts became interactive gets. */
+  const viewOf = (options) => (options && options.view) || {};
+  const hiddenIn = (options) => viewOf(options).hidden || new Set();
+  /* A clock label from milliseconds, in the plant's own zone — the same
+     `FS.fmt.clock` the rest of the kit uses, fed an instant rather than a row's
+     timestamp string. */
+  const clockAt = (ms) => FS.fmt.clock(new Date(ms).toISOString());
   const has = (v) => v !== null && v !== undefined;
   const isNum = (v) => typeof v === "number" && Number.isFinite(v);
   const count = (v) => (has(v) ? Math.round(v).toLocaleString() : "—");
@@ -430,58 +457,383 @@
   }
 
   /* ---------- the frame every shape is drawn in ----------
-     The plot, then the footer: the total, any axis choice, the unknown the
-     chart is carrying, the coverage, and the ledger when there is one. Those
-     five sentences are assembled once and used twice — painted under the plot
-     and concatenated into the `<desc>` — so the screen and the screen reader
-     cannot come to disagree. */
+     The plot, then whatever the reader can touch, then the footer: the total,
+     any axis choice, the filters the reader applied, the unknown the chart is
+     carrying, the coverage, and the ledger when there is one. Those sentences
+     are assembled once and used twice — painted under the plot and
+     concatenated into the `<desc>` — so the screen and the screen reader
+     cannot come to disagree.
+
+     Since 2026-09-29 the frame also owns the interaction, for the same reason
+     it owns the six rules: a shape describes what it can be narrowed to and
+     the frame does the narrowing, so a new shape cannot invent a filter that
+     forgets to re-state the total. Every one of them redraws through here.
+
+     The controls are drawn INSIDE the `<svg>` rather than as HTML beside it.
+     Three reasons: `FS.kit.chart()` still returns one node, so nothing that
+     already draws a chart has to change; `ui-check` still watches one
+     `svg.fs-chart`; and the export of §3 is that node's own `outerHTML`, so
+     what lands in a slide carries the legend and the threshold the reader
+     chose along with the footer that states them. They are keyboard-reachable
+     and announce themselves (STYLE.md rule 6's intent — there is no
+     `<button>` inside an SVG). */
   function frame(kind, envelope, options, shape) {
     const width = Math.max(options.width || 0, 360);
-    const plan = shape(envelope, options, width);
-    const cover = coverageOf(envelope);
-    const notes = [];
-    const push = (cls, text) => { if (text) notes.push({ cls, text }); };
-    push("chart-total", plan.total);
-    push("chart-axis-note", windowNote(envelope.window));
-    for (const note of plan.axes || []) push("chart-axis-note", note);
-    push("chart-unknown-note", plan.unknown);
-    push("chart-coverage", cover.text);
-    for (const note of ledgerNotes(envelope.ledger)) push("chart-ledger", note);
-    for (const note of plan.notes || []) push("chart-withheld", note);
-
-    const lineH = 14;
-    const height = plan.height + (notes.length ? 8 + notes.length * lineH : 0);
     const id = `fs-chart-${++serial}`;
-    const node = svg(width, height);
+    const node = svg(width, 10);
     node.setAttribute("class", "fs-chart");
     node.setAttribute("data-kind", kind);
     node.setAttribute("role", "img");
     node.setAttribute("aria-labelledby", `${id}-title ${id}-desc`);
-    /* Rule 5 and rule 2 as machine-readable facts, so a test — or the AI tab,
-       which has to say what it drew — reads them off the chart itself rather
-       than off the payload it hopes the chart used. */
-    node.setAttribute("data-total", plan.total || "");
-    node.setAttribute("data-coverage", cover.attr);
-    node.setAttribute("data-coverage-kind", cover.kind);
-    if (plan.unknown) node.setAttribute("data-carries-unknown", "true");
 
-    const title = plan.title || `${kind} chart`;
-    add(node, "title", { id: `${id}-title` }, title);
-    /* The same sentences as the footer, as prose: a screen reader is given
-       the total, the axis choices, the unknown and the coverage in the order
-       a sighted reader meets them. */
-    add(node, "desc", { id: `${id}-desc` },
-        [title].concat(notes.map((n) => n.text))
-          .map((line) => (/[.!?—]$/.test(line) ? line : `${line}.`)).join(" "));
+    /* What the READER has narrowed the picture to. Not data: three choices,
+       each of which changes what is drawn and therefore what the total says. */
+    const view = {
+      hidden: new Set(options.hidden || []),
+      threshold: has(options.threshold) ? options.threshold : null,
+      brush: options.brush || null,
+    };
+    let hoverLayer = null;
 
-    const marks = add(node, "g", { class: "chart-plot" });
-    plan.paint(marks, { hatch: hatch(node, `${id}-unknown`), width, id });
+    function render() {
+      const plan = shape(envelope, { ...options, view }, width);
+      const cover = coverageOf(envelope);
+      const notes = [];
+      const push = (cls, text) => { if (text) notes.push({ cls, text }); };
+      push("chart-total", plan.total);
+      push("chart-axis-note", windowNote(envelope.window));
+      for (const note of plan.axes || []) push("chart-axis-note", note);
+      /* The reader's own choices, in the footer with everything else, because
+         a filtered chart whose footer did not say so is a picture claiming to
+         be the whole of something. */
+      for (const note of plan.filters || []) push("chart-filter-note", note);
+      push("chart-unknown-note", plan.unknown);
+      push("chart-coverage", cover.text);
+      for (const note of ledgerNotes(envelope.ledger)) push("chart-ledger", note);
+      for (const note of plan.notes || []) push("chart-withheld", note);
 
-    notes.forEach((note, index) => {
-      add(node, "text", { x: 4, y: plan.height + 8 + index * lineH + 10, class: note.cls },
-          note.text);
+      const lineH = 14;
+      const legend = options.legend === false ? [] : (plan.legend || []);
+      const slider = options.slider === false ? null : (plan.slider || null);
+      const legendRows = legend.length ? layOutLegend(legend, width) : [];
+      const chromeTop = plan.height + (legendRows.length || slider ? 6 : 0);
+      const chromeH = legendRows.length * 16 + (slider ? 26 : 0);
+      const footTop = chromeTop + chromeH;
+      const height = footTop + (notes.length ? 8 + notes.length * lineH : 0);
+
+      node.replaceChildren();
+      node.setAttribute("height", height);
+      node.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      /* Rule 5 and rule 2 as machine-readable facts, so a test — or the AI tab,
+         which has to say what it drew — reads them off the chart itself rather
+         than off the payload it hopes the chart used. Rewritten on every
+         redraw: hiding a kind or moving a threshold changes the total, and the
+         attribute is the total. */
+      node.setAttribute("data-total", plan.total || "");
+      node.setAttribute("data-coverage", cover.attr);
+      node.setAttribute("data-coverage-kind", cover.kind);
+      if (plan.unknown) node.setAttribute("data-carries-unknown", "true");
+      else node.removeAttribute("data-carries-unknown");
+      if (view.hidden.size || has(view.threshold) || view.brush) {
+        node.setAttribute("data-filtered", "true");
+      } else {
+        node.removeAttribute("data-filtered");
+      }
+
+      const title = plan.title || `${kind} chart`;
+      add(node, "title", { id: `${id}-title` }, title);
+      /* The same sentences as the footer, as prose: a screen reader is given
+         the total, the axis choices, the unknown and the coverage in the order
+         a sighted reader meets them. */
+      add(node, "desc", { id: `${id}-desc` },
+          [title].concat(notes.map((n) => n.text))
+            .map((line) => (/[.!?—]$/.test(line) ? line : `${line}.`)).join(" "));
+
+      const marks = add(node, "g", { class: "chart-plot" });
+      plan.paint(marks, { hatch: hatch(node, `${id}-unknown`), width, id });
+
+      if (legendRows.length) drawLegend(node, legendRows, chromeTop, view, render);
+      if (slider) drawSlider(node, slider, chromeTop + legendRows.length * 16, view, render);
+      if (plan.brushable) drawBrush(node, plan.brushable, view, render);
+
+      notes.forEach((note, index) => {
+        add(node, "text", { x: 4, y: footTop + 8 + index * lineH + 10, class: note.cls },
+            note.text);
+      });
+      /* Last, so it paints over everything, and empty until a pointer is on a
+         mark. Stripped from an export: a tooltip is where the reader's mouse
+         happens to be, which is not a fact about the plant. */
+      hoverLayer = add(node, "g", { class: "chart-hover", "data-chrome": "hover" });
+    }
+
+    /* ---- hover: the mark's own number, and what it is short of knowing ----
+       Rule 1 in the hand: what appears is the `data-value` the mark already
+       carries, never a recomputed one, with the chart's coverage sentence
+       under it so a number and how much of the window it covers are read
+       together. */
+    function describe(mark) {
+      const value = mark.getAttribute("data-value");
+      const label = mark.getAttribute("data-label") || mark.getAttribute("data-series")
+                 || mark.getAttribute("data-node") || mark.getAttribute("data-edge-kind")
+                 || mark.getAttribute("data-state") || "";
+      const lines = [];
+      lines.push(label ? `${label}: ${value === "" ? "unknown" : value}`
+                       : (value === "" ? "unknown" : value));
+      if (mark.getAttribute("data-state")) lines.push(mark.getAttribute("data-state"));
+      if (mark.getAttribute("data-degree")) {
+        lines.push(`degree ${mark.getAttribute("data-degree")}`);
+      }
+      if (mark.getAttribute("data-unknown") === "true") {
+        lines.push(mark.getAttribute("data-withheld") === "true"
+          ? "withheld — below this plant's coverage floor"
+          : "unknown — nobody measured this");
+      }
+      const cover = coverageOf(envelope);
+      if (cover.text) lines.push(cover.text);
+      return { value, lines };
+    }
+
+    function showHover(mark, at) {
+      if (!hoverLayer) return;
+      const { value, lines } = describe(mark);
+      hoverLayer.replaceChildren();
+      hoverLayer.setAttribute("data-hover-value", value === null ? "" : value);
+      hoverLayer.setAttribute("data-hover-lines", String(lines.length));
+      const texts = lines.map((text, i) => add(hoverLayer, "text", {
+        x: 0, y: 12 + i * 12, class: i ? "chart-hover-note" : "chart-hover-value",
+      }, text));
+      const box = hoverLayer.getBBox();
+      const pad = 5;
+      const w = box.width + pad * 2;
+      const h = box.height + pad * 2;
+      const x = Math.max(2, Math.min(width - w - 2, at.x + 10));
+      const y = Math.max(2, at.y - h - 8);
+      const ground = document.createElementNS(NS, "rect");
+      for (const [k, v] of Object.entries({ x: 0, y: 0, width: w, height: h, rx: 3,
+                                            class: "chart-hover-box" })) {
+        ground.setAttribute(k, v);
+      }
+      hoverLayer.insertBefore(ground, hoverLayer.firstChild);
+      texts.forEach((t, i) => { t.setAttribute("x", pad); t.setAttribute("y", pad + 11 + i * 12); });
+      hoverLayer.setAttribute("transform", `translate(${x} ${y})`);
+    }
+
+    function clearHover() {
+      if (!hoverLayer) return;
+      hoverLayer.replaceChildren();
+      hoverLayer.removeAttribute("data-hover-value");
+      hoverLayer.removeAttribute("data-hover-lines");
+    }
+
+    /* Delegated on the frame and attached once, because the plot is replaced
+       on every redraw and a handler per mark would be re-attached with it. */
+    node.addEventListener("pointermove", (event) => {
+      const mark = event.target.closest ? event.target.closest("[data-value]") : null;
+      if (!mark || !node.contains(mark)) { clearHover(); return; }
+      showHover(mark, atPointer(node, event));
     });
+    node.addEventListener("pointerleave", clearHover);
+    /* A keyboard reaches the same sentence: a focused mark describes itself
+       where it sits. */
+    node.addEventListener("focusin", (event) => {
+      const mark = event.target.closest ? event.target.closest("[data-value]") : null;
+      if (!mark) return;
+      const box = mark.getBBox ? mark.getBBox() : null;
+      if (box) showHover(mark, { x: box.x + box.width, y: box.y });
+    });
+
+    render();
+    /* What a page (D5) drives the chart with, and what a test reads back. */
+    node.fsChart = {
+      view,
+      redraw: render,
+      /* Set the whole view at once — one redraw, one new total. */
+      apply(next) {
+        if (next && "hidden" in next) view.hidden = new Set(next.hidden || []);
+        if (next && "threshold" in next) view.threshold = next.threshold;
+        if (next && "brush" in next) view.brush = next.brush;
+        render();
+        return node;
+      },
+    };
     return node;
+  }
+
+  /* Where the pointer is, in the chart's own units. `max-width: 100%` means a
+     chart on a narrow screen is drawn at one scale and laid out at another. */
+  function atPointer(node, event) {
+    const box = node.getBoundingClientRect();
+    const w = Number(node.getAttribute("width")) || box.width || 1;
+    const h = Number(node.getAttribute("height")) || box.height || 1;
+    return {
+      x: (event.clientX - box.left) * (box.width ? w / box.width : 1),
+      y: (event.clientY - box.top) * (box.height ? h / box.height : 1),
+    };
+  }
+
+  /* ---------- the legend, which is a set of switches ----------
+     Laid out in rows across the width the chart has; an entry is a swatch, a
+     name and the entry's own figure. Clicking one takes that kind out of the
+     picture AND out of the total, which is the whole point. */
+  function layOutLegend(entries, width) {
+    const rows = [];
+    let row = [];
+    let x = 4;
+    for (const entry of entries) {
+      const text = entry.note ? `${entry.label} (${entry.note})` : entry.label;
+      const w = 16 + text.length * 5.6 + 12;
+      if (row.length && x + w > width - 4) { rows.push(row); row = []; x = 4; }
+      row.push({ ...entry, text, x, w });
+      x += w;
+    }
+    if (row.length) rows.push(row);
+    return rows;
+  }
+
+  function drawLegend(node, rows, top, view, redraw) {
+    const g = add(node, "g", { class: "chart-legend", "data-chrome": "legend",
+                               role: "group", "aria-label": "what is drawn" });
+    rows.forEach((row, index) => {
+      const y = top + index * 16;
+      for (const entry of row) {
+        const off = view.hidden.has(entry.key);
+        const item = add(g, "g", {
+          class: `chart-legend-item${off ? " off" : ""}`,
+          "data-legend": entry.key, tabindex: "0", role: "switch",
+          "aria-checked": off ? "false" : "true",
+          "aria-label": `${entry.text}${off ? ", hidden" : ", drawn"}`,
+        });
+        add(item, "rect", { x: entry.x, y: y + 3, width: 9, height: 9, rx: 2,
+                            class: `chart-legend-swatch ${entry.cls || "bar-mark"}` });
+        add(item, "text", { x: entry.x + 14, y: y + 11, class: "chart-legend-text" },
+            entry.text);
+        const toggle = () => {
+          if (view.hidden.has(entry.key)) view.hidden.delete(entry.key);
+          else view.hidden.add(entry.key);
+          redraw();
+        };
+        item.addEventListener("click", toggle);
+        item.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggle(); }
+        });
+      }
+    });
+  }
+
+  /* ---------- the threshold, which is a choice the picture depends on ------
+     Drawn rather than an <input range>, so it exports with the chart and so
+     the number it is set to sits beside it in the same words the footer uses
+     (rule 4). Arrow keys move it; so does a drag. */
+  function drawSlider(node, slider, top, view, redraw) {
+    const left = 4 + slider.label.length * 5.6 + 8;
+    const right = Number(node.getAttribute("width")) - 60;
+    const span = Math.max(right - left, 40);
+    const [lo, hi] = slider.domain;
+    const at = has(view.threshold) ? view.threshold : lo;
+    const x = left + ((at - lo) / Math.max(hi - lo, 1e-9)) * span;
+    const y = top + 13;
+    const g = add(node, "g", { class: "chart-slider", "data-chrome": "slider" });
+    add(g, "text", { x: 4, y: y + 4, class: "chart-legend-text" }, slider.label);
+    add(g, "line", { x1: left, y1: y, x2: left + span, y2: y, class: "chart-slider-track" });
+    add(g, "line", { x1: left, y1: y, x2: x, y2: y, class: "chart-slider-done" });
+    add(g, "text", { x: left + span + 6, y: y + 4, class: "chart-legend-text" },
+        slider.say ? slider.say(at) : String(at));
+    const handle = add(g, "circle", {
+      cx: x, cy: y, r: 6, class: "chart-slider-handle",
+      tabindex: "0", role: "slider", "data-threshold": raw(at),
+      "aria-valuemin": lo, "aria-valuemax": hi, "aria-valuenow": at,
+      "aria-label": slider.label,
+    });
+    const step = slider.step || Math.max((hi - lo) / 20, 1);
+    const set = (value) => {
+      view.threshold = Math.max(lo, Math.min(hi, Math.round(value / step) * step));
+      redraw();
+    };
+    const fromX = (px) => lo + ((px - left) / span) * (hi - lo);
+    handle.addEventListener("keydown", (event) => {
+      const by = { ArrowLeft: -step, ArrowDown: -step, ArrowRight: step, ArrowUp: step }[event.key];
+      if (by === undefined) return;
+      event.preventDefault();
+      set((has(view.threshold) ? view.threshold : lo) + by);
+    });
+    const track = add(g, "rect", {
+      x: left, y: y - 8, width: span, height: 16,
+      class: "chart-grab", "data-chrome": "slider-track",
+    });
+    const drag = (event) => set(fromX(atPointer(node, event).x));
+    for (const target of [track, handle]) {
+      target.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        drag(event);
+        const move = (e) => drag(e);
+        const up = () => {
+          node.removeEventListener("pointermove", move);
+          node.removeEventListener("pointerup", up);
+        };
+        node.addEventListener("pointermove", move);
+        node.addEventListener("pointerup", up);
+      });
+    }
+  }
+
+  /* ---------- the brush: narrowing the axis, and saying so ----------
+     Drag across the plot to keep that stretch; click once to give it back.
+     The shape does the narrowing — the frame only turns two pixel positions
+     into two numbers in the shape's own domain. */
+  function drawBrush(node, brushable, view, redraw) {
+    const { x, width: w, y, height: h, domain } = brushable;
+    const g = add(node, "g", { class: "chart-brush", "data-chrome": "brush" });
+    const toDomain = (px) => domain[0]
+      + ((Math.max(x, Math.min(x + w, px)) - x) / Math.max(w, 1)) * (domain[1] - domain[0]);
+    const toPixel = (v) => x + ((v - domain[0]) / Math.max(domain[1] - domain[0], 1e-9)) * w;
+    if (view.brush) {
+      /* The kept stretch, marked so a test can read the reader's own choice
+         back off the picture. */
+      add(g, "rect", {
+        x: toPixel(view.brush[0]), y, height: h,
+        width: Math.max(toPixel(view.brush[1]) - toPixel(view.brush[0]), 1),
+        class: "chart-brush-span", "data-brush-from": raw(view.brush[0]),
+        "data-brush-to": raw(view.brush[1]),
+      });
+    }
+    const surface = add(g, "rect", {
+      x, y, width: w, height: h, class: "chart-grab",
+      "data-brush-surface": "true",
+      tabindex: "0", role: "button",
+      "aria-label": view.brush
+        ? "the axis is brushed — press Escape to show the whole window"
+        : "drag across the plot to narrow the axis",
+    });
+    let from = null;
+    let span = null;
+    surface.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      from = atPointer(node, event).x;
+      span = add(g, "rect", { x: from, y, width: 1, height: h, class: "chart-brush-span" });
+      const move = (e) => {
+        const now = atPointer(node, e).x;
+        span.setAttribute("x", Math.min(from, now));
+        span.setAttribute("width", Math.max(Math.abs(now - from), 1));
+      };
+      const up = (e) => {
+        node.removeEventListener("pointermove", move);
+        node.removeEventListener("pointerup", up);
+        const now = atPointer(node, e).x;
+        /* A drag narrows; a click gives the whole window back. Four pixels is
+           the difference between the two, and it is a click otherwise. */
+        if (Math.abs(now - from) < 4) view.brush = null;
+        else view.brush = [toDomain(Math.min(from, now)), toDomain(Math.max(from, now))];
+        redraw();
+      };
+      node.addEventListener("pointermove", move);
+      node.addEventListener("pointerup", up);
+    });
+    surface.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || !view.brush) return;
+      event.preventDefault();
+      view.brush = null;
+      redraw();
+    });
   }
 
   /* ---------- a line series, with the unknown drawn as unknown ----------
@@ -497,15 +849,15 @@
      exists rather than a polyline: joining two readings across an hour nobody
      watched draws a measurement of that hour, and there wasn't one. */
   function lineShape(envelope, options, width) {
-    const series = envelope.series
+    const carried = envelope.series
       || [{ label: options.label || envelope.tag || envelope.equipment || "series",
             points: envelope.points || [],
             coverage_note: envelope.coverage_note, coverage_floor: envelope.coverage_floor }];
     const valueKey = options.value
-      || keyOf((series[0].points || [])[0], ["value", "mean", "count"])
+      || keyOf((carried[0].points || [])[0], ["value", "mean", "count"])
       /* Nothing to inspect and nothing to draw: an empty series still has to
          state its total, so it gets a name for a field that is not there. */
-      || ((series[0].points || []).length ? null : "value");
+      || ((carried[0].points || []).length ? null : "value");
     if (!valueKey) {
       throw new TypeError(
         "kit.chart('line'): options.value must name the field to plot — a chart "
@@ -518,9 +870,25 @@
     const plot = width - left - right;
     const plotH = height - top - bottom;
     const timed = Boolean(envelope.window && envelope.window.start);
-    const start = timed ? utc(envelope.window.start).getTime() : 0;
-    const end = timed ? utc(envelope.window.end).getTime() : 1;
+    const whole = {
+      start: timed ? utc(envelope.window.start).getTime() : 0,
+      end: timed ? utc(envelope.window.end).getTime() : 1,
+    };
+    /* The reader brushed a stretch of the clock. The axis narrows to it and
+       the readings outside it leave the picture — and the total says how many
+       did, because a chart zoomed in that kept the old total reads as the
+       whole window. */
+    const brush = timed ? viewOf(options).brush : null;
+    const start = brush ? Math.max(whole.start, brush[0]) : whole.start;
+    const end = brush ? Math.min(whole.end, brush[1]) : whole.end;
     const span = Math.max(end - start, 1);
+    const inside = (p) => !brush || (utc(p.t).getTime() >= start && utc(p.t).getTime() <= end);
+    const series = brush
+      ? carried.map((s) => ({ ...s, points: (s.points || []).filter(inside) }))
+      : carried;
+    const outside = brush
+      ? carried.reduce((n, s) => n + (s.points || []).filter((p) => !inside(p)).length, 0)
+      : 0;
 
     const all = [];
     for (const s of series) {
@@ -555,12 +923,14 @@
       });
       if (run) gaps.push({ from: run.from, to: left + plot, cause: "no reading" });
     }
+    /* A declared unwatched stretch may run off either edge of a brushed axis,
+       so it is clipped to the plot rather than drawn outside it. */
+    const onAxis = (x) => Math.max(left, Math.min(left + plot, x));
     for (const gap of envelope.unknown || []) {
-      gaps.push({
-        from: timed ? left + ((utc(gap.start).getTime() - start) / span) * plot : left,
-        to: timed ? left + ((utc(gap.end).getTime() - start) / span) * plot : left + plot,
-        cause: gap.cause || gap.reason || "nobody was watching",
-      });
+      const from = timed ? onAxis(left + ((utc(gap.start).getTime() - start) / span) * plot) : left;
+      const to = timed ? onAxis(left + ((utc(gap.end).getTime() - start) / span) * plot) : left + plot;
+      if (to <= left || from >= left + plot || to === from) continue;
+      gaps.push({ from, to, cause: gap.cause || gap.reason || "nobody was watching" });
     }
     const withheld = series.filter(isWithheld);
     const drawn = series.length - withheld.length;
@@ -580,10 +950,21 @@
          carried, and how many were withheld rather than drawn. */
       total: [`${things(readings, "reading")} drawn`,
               blind ? `${count(blind)} with no reading` : null,
+              outside ? `${count(outside)} outside the brushed range` : null,
               `${things(drawn, "series")} of ${count(series.length)}`,
               withheld.length ? `${count(withheld.length)} withheld below the coverage floor` : null,
              ].filter(Boolean).join(" · "),
       axes: [scale.note, label.text ? `y: ${label.text}` : null].filter(Boolean),
+      /* Rule 4: the axis the reader is looking at is a choice they made, so
+         the chart says which stretch of the clock it is showing. */
+      filters: brush
+        ? [`brushed to ${clockAt(start)}–${clockAt(end)} of `
+           + `${clockAt(whole.start)}–${clockAt(whole.end)}`]
+        : [],
+      brushable: timed
+        ? { x: left, width: plot, y: top, height: plotH,
+            domain: [whole.start, whole.end], say: clockAt }
+        : null,
       unknown: gaps.length
         ? `${things(gaps.length, "stretch", "stretches")} hatched: the line is broken there `
           + `because there was no reading, not because the value was zero`
@@ -687,9 +1068,15 @@
      them under one is how a plant convinces itself it has data it hasn't got
      (house rule 3). */
   function barsShape(envelope, options, width) {
-    const rows = options.rows || envelope.rows || envelope.reasons || envelope.stations || [];
-    const labelKey = options.labelKey || keyOf(rows[0], ["label", "reason", "code", "name"]) || "label";
-    const valueKey = options.valueKey || keyOf(rows[0], ["value", "seconds", "count"]) || "value";
+    const carried = options.rows || envelope.rows || envelope.reasons || envelope.stations || [];
+    const labelKey = options.labelKey || keyOf(carried[0], ["label", "reason", "code", "name"]) || "label";
+    const valueKey = options.valueKey || keyOf(carried[0], ["value", "seconds", "count"]) || "value";
+    /* A row the reader switched off in the legend. It leaves the picture and
+       it leaves the total with it — a filtered chart that kept the old total
+       is a list that reads complete (rule 5, STYLE.md rule 4). */
+    const hidden = hiddenIn(options);
+    const rows = carried.filter((r) => !hidden.has(`row:${String(r[labelKey])}`));
+    const off = carried.length - rows.length;
     const asDuration = options.format
       ? options.format === "duration"
       : valueKey === "seconds" || valueKey.endsWith("_seconds");
@@ -715,13 +1102,14 @@
       : has(envelope.total) ? `${count(envelope.total)} in total` : null;
     const noun = options.noun || (envelope.reasons ? "reason" : "row");
     const of = has(options.rowsTotal) ? options.rowsTotal
-      : has(envelope.rows_total) ? envelope.rows_total : rows.length;
+      : has(envelope.rows_total) ? envelope.rows_total : carried.length;
 
     return {
       height,
       title: options.title || (envelope.reasons ? "Downtime by reason, worst first" : "bars"),
       total: [totalText,
               `showing ${count(rows.length)} of ${things(of, noun)}`,
+              off ? `${count(off)} switched off in the legend` : null,
               unlabelled.length && has(envelope.unlabelled_share)
                 ? `${FS.fmt.pct(envelope.unlabelled_share)} of it unlabelled`
                 : null,
@@ -742,6 +1130,16 @@
                                : "no figure was measured for them")
         : null,
       notes: withheld.flatMap((r) => withheldNotes(r, String(r[labelKey]))),
+      /* One toggle per row, because on this shape the rows ARE the kinds. */
+      legend: carried.map((r) => ({
+        key: `row:${String(r[labelKey])}`,
+        label: String(r[labelKey]),
+        note: isNum(r[valueKey]) ? say(r[valueKey]) : "unknown",
+        cls: isUnknownRow(r) ? "chart-unknown-swatch" : "bar-mark",
+      })),
+      filters: off
+        ? [`${things(off, "row")} switched off — every figure above is of what is drawn`]
+        : [],
       paint(g, ctx) {
         rows.forEach((row, index) => {
           const y = top + index * (barH + gap);
@@ -814,11 +1212,23 @@
     const left = 82, right = 14, rowH = options.rowHeight || 24, gap = 6, top = 8;
     const plot = width - left - right;
     const height = Math.max(top + rows.length * (rowH + gap) + 22, top + rowH + 22);
-    const start = utc(envelope.window.start).getTime();
-    const end = utc(envelope.window.end).getTime();
+    const whole = { start: utc(envelope.window.start).getTime(),
+                    end: utc(envelope.window.end).getTime() };
+    const brush = viewOf(options).brush;
+    const start = brush ? Math.max(whole.start, brush[0]) : whole.start;
+    const end = brush ? Math.min(whole.end, brush[1]) : whole.end;
     const span = Math.max(end - start, 1);
     const UNKNOWN = new Set(["disconnected", "unknown"]);
-    const intervals = rows.flatMap((r) => r.intervals || []);
+    /* An interval that only overlaps the brushed stretch is DRAWN clipped and
+       still carries its own full duration in `data-value`: the seconds are the
+       envelope's number and the picture is the reader's choice, and rule 1
+       says the two must not be confused. The footer says so. */
+    const overlaps = (i) => utc(i.end).getTime() > start && utc(i.start).getTime() < end;
+    const shown = (r) => (brush ? (r.intervals || []).filter(overlaps) : (r.intervals || []));
+    const allIntervals = rows.flatMap((r) => r.intervals || []);
+    const intervals = rows.flatMap(shown);
+    const clipped = intervals.filter(
+      (i) => utc(i.start).getTime() < start || utc(i.end).getTime() > end).length;
     const blind = intervals.filter((i) => UNKNOWN.has(i.state));
     const withheld = rows.filter(isWithheld);
     /* Three numbers, because they are three different facts: the rows on the
@@ -839,11 +1249,23 @@
               carried > rows.length
                 ? `${count(carried - rows.length)} reported nothing in this window`
                 : null,
-              things(intervals.length, "interval"),
+              brush
+                ? `${count(intervals.length)} of ${things(allIntervals.length, "interval")} `
+                  + `in the brushed range`
+                : things(intervals.length, "interval"),
               withheld.length
                 ? `${count(withheld.length)} withheld below the coverage floor` : null,
              ].filter(Boolean).join(" · "),
       axes: [],
+      filters: brush
+        ? [`brushed to ${clockAt(start)}–${clockAt(end)} of `
+           + `${clockAt(whole.start)}–${clockAt(whole.end)}`].concat(
+            clipped ? [`${things(clipped, "interval")} run past the brushed edge — `
+                       + `each is drawn short and still carries its whole duration`] : [])
+        : [],
+      brushable: { x: left, width: plot, y: top,
+                   height: rows.length * (rowH + gap),
+                   domain: [whole.start, whole.end], say: clockAt },
       unknown: blind.length
         ? `${things(blind.length, "stretch", "stretches")} hatched: the MES had lost sight of `
           + `the machine, which is not the same as the machine standing still`
@@ -864,9 +1286,11 @@
             add(rect, "title", {}, row.coverage_note);
             return;
           }
-          for (const interval of row.intervals || []) {
-            const x0 = left + ((utc(interval.start).getTime() - start) / span) * plot;
-            const x1 = left + ((utc(interval.end).getTime() - start) / span) * plot;
+          for (const interval of shown(row)) {
+            const on = (t) => Math.max(left, Math.min(left + plot,
+              left + ((utc(t).getTime() - start) / span) * plot));
+            const x0 = on(interval.start);
+            const x1 = on(interval.end);
             const unknown = UNKNOWN.has(interval.state);
             const rect = add(g, "rect", {
               x: x0, y, width: Math.max(x1 - x0, 1), height: rowH, rx: 2,
@@ -897,13 +1321,20 @@
      and rule 4's "a chart whose shape depends on a choice states the
      choice"). The bins come from the API, and the width is printed. */
   function histogramShape(envelope, options, width) {
-    const bins = options.bins || envelope.bins;
-    if (!Array.isArray(bins)) {
+    const carried = options.bins || envelope.bins;
+    if (!Array.isArray(carried)) {
       throw new TypeError(
         "kit.chart('histogram'): needs envelope.bins — [{from, to, count}]. This kit "
         + "does not bin a series: the bin width decides the shape, so it is the "
         + "API's choice to make and to state, not the chart's");
     }
+    /* The reader brushed a stretch of the value axis. Whole bins only: half a
+       bin is a count nobody measured, and slicing one would be the kit binning
+       a series, which is exactly what it refuses to do. */
+    const brush = viewOf(options).brush;
+    const bins = brush
+      ? carried.filter((b) => b.from >= brush[0] - 1e-9 && b.to <= brush[1] + 1e-9)
+      : carried;
     const left = 46, right = 14, top = 14, bottom = 28;
     const height = options.height || 200;
     const plot = width - left - right;
@@ -914,6 +1345,8 @@
     const scale = yScale(bins.map((b) => b.count), { zero: true, min: 0 });
     const lowEdge = bins.length ? bins[0].from : 0;
     const highEdge = bins.length ? bins[bins.length - 1].to : 1;
+    const wholeLow = carried.length ? carried[0].from : 0;
+    const wholeHigh = carried.length ? carried[carried.length - 1].to : 1;
     const xSpan = Math.max(highEdge - lowEdge, 1e-9);
     const blind = bins.filter((b) => !isNum(b.count));
     const outside = envelope.outside || {};
@@ -929,7 +1362,8 @@
                     ? `${count(envelope.n)} of ${things(envelope.n_total, "reading")}`
                     : things(envelope.n, "reading"))
                 : things(bins.length, "bin"),
-              `${things(bins.length, "bin")} drawn`,
+              brush ? `${count(bins.length)} of ${things(carried.length, "bin")} drawn`
+                    : `${things(bins.length, "bin")} drawn`,
               has(outside.below) || has(outside.above)
                 ? `${count((outside.below || 0) + (outside.above || 0))} outside the axis `
                   + `(${count(outside.below || 0)} below, ${count(outside.above || 0)} above)`
@@ -944,6 +1378,13 @@
           + `not a count of zero`
         : null,
       notes: [],
+      filters: brush
+        ? [`brushed to ${lowEdge}${unit}–${highEdge}${unit} of `
+           + `${wholeLow}${unit}–${wholeHigh}${unit}; whole bins only`]
+        : [],
+      brushable: { x: left, width: plot, y: top, height: plotH,
+                   domain: [wholeLow, wholeHigh],
+                   say: (v) => `${Number(v).toFixed(2)}${unit}` },
       paint(g, ctx) {
         for (let i = 0; i <= 2; i++) {
           const value = scale.lo + ((scale.hi - scale.lo) * i) / 2;
@@ -992,7 +1433,489 @@
     };
   }
 
-  const SHAPES = { line: lineShape, bars: barsShape, states: statesShape, histogram: histogramShape };
+  /* ---------- the network: nodes by kind, edges by kind with weight --------
+
+     Fed the §7 envelope of `docs/design/deep-analysis.md`:
+
+       { nodes: [{id, kind, label, weight, degree}],
+         edges: [{from, to, kind, weight, unit, watched_seconds}],
+         node_kinds: [{kind, nodes, note, unknown}],   // declared, empties too
+         measures: {threshold, components, biggest, refused},
+         showing: {nodes, edges}, total: {nodes, edges} }
+
+     Four things about this shape are the design and not the drawing:
+
+     **Every edge is a recorded fact.** The kit draws the edges the envelope
+     carries and never an edge between two nodes that happen to be near each
+     other. An edge nobody observed is not an edge, and a picture is where that
+     rule is hardest to keep and easiest to break.
+
+     **The holes are things with numbers on them.** `unattributed` and
+     `unlabelled` are nodes, hatched, carrying their DEGREE rather than a
+     weight — what a hole is, is what it touches — so a reader sees the three
+     turns with no person rather than a tidy graph that is three turns short.
+
+     **Empty node kinds are drawn empty.** A graph that silently omitted
+     `screen` because no record names one would read as a complete picture of a
+     plant where questions came from nowhere. They are drawn in their own row,
+     outlined, carrying the zero the envelope stated.
+
+     **Coverage is `absent`, always.** A graph of records is not a rate over a
+     watched window, and one claiming a coverage percentage would be claiming
+     something nobody measured (§7). `coverageOf` already says "absent" for a
+     payload with no coverage field; the envelope must not invent one.
+
+     Nothing is computed here. The threshold, the component count and the
+     biggest cluster are the envelope's own numbers, printed. Centrality is not
+     drawn because it is not offered: a centrality score over an edge set that
+     is *whatever happens to be recorded* is the most convincing wrong number
+     this product could show. */
+
+  const cssName = (s) => String(s).replace(/[^A-Za-z0-9_-]/g, "");
+  const GRAPH_HOLES = new Set(["unattributed", "unlabelled"]);
+  const isHole = (n) => n.unknown === true || GRAPH_HOLES.has(String(n.kind));
+
+  /* A Fruchterman–Reingold layout, hand-written, because the node count is
+     bounded by "showing 60 of 340" anyway and 17 KB of vendored force maths
+     would have to earn itself against that.
+
+     DETERMINISTIC from the first frame: the starting positions are a
+     golden-angle spiral seeded by the node's index, never `Math.random`, and
+     the iteration count is fixed. A layout that moved between two runs would
+     make a screenshot baseline, an export and a browser test three different
+     pictures of the same graph, and the first one to disagree would be blamed
+     on the plant. */
+  function forceLayout(nodes, edges, box, options = {}) {
+    const n = nodes.length;
+    const at = new Map();
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    const radius = Math.max(Math.min(box.width, box.height) / 2 - 8, 1);
+    nodes.forEach((node, i) => {
+      const r = radius * Math.sqrt((i + 0.5) / Math.max(n, 1));
+      at.set(node.id, {
+        x: box.x + box.width / 2 + r * Math.cos(i * golden),
+        y: box.y + box.height / 2 + r * Math.sin(i * golden),
+        dx: 0, dy: 0,
+      });
+    });
+    if (n < 2) return at;
+    const k = Math.sqrt((box.width * box.height) / n) * 0.62;
+    /* Fewer passes on a big graph: the picture is bounded, the patience of a
+       plant PC is not. */
+    const steps = options.steps || (n > 140 ? 90 : 220);
+    const links = edges
+      .map((e) => ({ a: at.get(e.from), b: at.get(e.to) }))
+      .filter((l) => l.a && l.b && l.a !== l.b);
+    let temp = Math.min(box.width, box.height) / 6;
+    const cool = temp / (steps + 1);
+    const points = [...at.values()];
+    for (let step = 0; step < steps; step++) {
+      for (const p of points) { p.dx = 0; p.dy = 0; }
+      for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+          const a = points[i], b = points[j];
+          let ex = a.x - b.x, ey = a.y - b.y;
+          /* Two nodes exactly on top of each other have no direction to push
+             apart in, so they are given one — from their index, so it is the
+             same one every run. */
+          let d = Math.hypot(ex, ey);
+          if (d < 0.01) { ex = ((i % 7) - 3) / 10 || 0.1; ey = ((j % 5) - 2) / 10 || 0.1; d = Math.hypot(ex, ey); }
+          const push = (k * k) / d;
+          a.dx += (ex / d) * push; a.dy += (ey / d) * push;
+          b.dx -= (ex / d) * push; b.dy -= (ey / d) * push;
+        }
+      }
+      for (const link of links) {
+        const ex = link.a.x - link.b.x, ey = link.a.y - link.b.y;
+        const d = Math.max(Math.hypot(ex, ey), 0.01);
+        const pull = (d * d) / k;
+        link.a.dx -= (ex / d) * pull; link.a.dy -= (ey / d) * pull;
+        link.b.dx += (ex / d) * pull; link.b.dy += (ey / d) * pull;
+      }
+      const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+      for (const p of points) {
+        /* A whiff of gravity, or a component with no edges drifts off the
+           picture and the reader never learns it was there. */
+        p.dx += (cx - p.x) * 0.012;
+        p.dy += (cy - p.y) * 0.012;
+        const d = Math.max(Math.hypot(p.dx, p.dy), 1e-6);
+        p.x += (p.dx / d) * Math.min(d, temp);
+        p.y += (p.dy / d) * Math.min(d, temp);
+        p.x = Math.max(box.x, Math.min(box.x + box.width, p.x));
+        p.y = Math.max(box.y, Math.min(box.y + box.height, p.y));
+      }
+      temp -= cool;
+    }
+    return at;
+  }
+
+  function graphShape(envelope, options, width) {
+    const carriedNodes = options.nodes || envelope.nodes || [];
+    const carriedEdges = options.edges || envelope.edges || [];
+    if (!Array.isArray(carriedNodes) || !Array.isArray(carriedEdges)) {
+      throw new TypeError(
+        "kit.chart('graph'): needs envelope.nodes and envelope.edges — this shape "
+        + "draws the edges somebody recorded and has no way to infer one");
+    }
+    const view = viewOf(options);
+    const hidden = hiddenIn(options);
+    const threshold = has(view.threshold) ? view.threshold : null;
+
+    /* The kinds this model declares, INCLUDING the ones this plant has no node
+       of. The envelope says which; a caller that names none gets the kinds its
+       own nodes have, and no empties, because the kit cannot know what a plant
+       failed to record. */
+    const declared = envelope.node_kinds || envelope.kinds
+      || [...new Set(carriedNodes.map((n) => String(n.kind)))].map((kind) => ({ kind }));
+    const nodeKinds = declared.map((k) => ({
+      kind: String(k.kind),
+      nodes: has(k.nodes) ? k.nodes
+        : carriedNodes.filter((n) => String(n.kind) === String(k.kind)).length,
+      note: k.note || null,
+      unknown: k.unknown === true,
+    }));
+    const empties = nodeKinds.filter((k) => k.nodes === 0);
+    const edgeKinds = [...new Set(carriedEdges.map((e) => String(e.kind)))];
+
+    /* What the reader switched off, and what the threshold took out. Both are
+       the reader's, both change the total, and the footer says both. */
+    const keptEdges = carriedEdges.filter((e) =>
+      !hidden.has(`edge:${String(e.kind)}`)
+      && !(has(threshold) && isNum(e.weight) && e.weight < threshold));
+    const keptNodeKind = (n) => !hidden.has(`node:${String(n.kind)}`);
+    /* An edge whose end left the picture is not drawn — an edge to nowhere is
+       a line the reader would read as reaching something. */
+    const drawnNodes = carriedNodes.filter(keptNodeKind);
+    const ids = new Set(drawnNodes.map((n) => n.id));
+    const edges = keptEdges.filter((e) => ids.has(e.from) && ids.has(e.to));
+    const nodes = drawnNodes;
+
+    const carriedTotals = envelope.total || {};
+    const nodesTotal = has(carriedTotals.nodes) ? carriedTotals.nodes : carriedNodes.length;
+    const edgesTotal = has(carriedTotals.edges) ? carriedTotals.edges : carriedEdges.length;
+    const notDrawn = Math.max(edgesTotal - edges.length, 0);
+
+    const left = 8, right = 8, top = 10;
+    const height = options.height || 320;
+    const box = { x: left + 2, y: top + 2, width: width - left - right - 4,
+                  height: height - top - 34 };
+    const at = forceLayout(nodes, edges, box, options);
+
+    const weights = nodes.map((n) => (isNum(n.weight) ? n.weight : 0));
+    const heaviest = Math.max(...weights, 0) || 1;
+    const rOf = (n) => 4 + 9 * Math.sqrt(Math.max(isNum(n.weight) ? n.weight : 0, 0) / heaviest);
+    const edgeWeights = carriedEdges.map((e) => (isNum(e.weight) ? e.weight : 0));
+    const widest = Math.max(...edgeWeights, 0) || 1;
+    const strokeOf = (e) => 0.8 + 2.6 * Math.sqrt(Math.max(isNum(e.weight) ? e.weight : 0, 0) / widest);
+
+    /* Which nodes get a name beside them. Every label on sixty nodes is a grey
+       smear; a choice about what the reader can read is a choice the chart
+       states (rule 4). The holes and the empties are always named — they are
+       the finding. */
+    const labelCount = has(options.labels) ? options.labels : 14;
+    const named = new Set(
+      nodes.slice()
+        .sort((a, b) => (isNum(b.weight) ? b.weight : 0) - (isNum(a.weight) ? a.weight : 0))
+        .slice(0, labelCount).map((n) => n.id));
+    for (const n of nodes) if (isHole(n)) named.add(n.id);
+
+    const holes = nodes.filter(isHole);
+    /* The harness's §6 rule 4, on an edge: seconds without how much of the
+       window anybody watched are seconds nobody can check, so the number is
+       not printed and the edge says why. */
+    const unwatched = edges.filter(
+      (e) => e.unit === "seconds" && !has(e.watched_seconds));
+    const measures = envelope.measures || {};
+
+    const byKind = (kind) => carriedNodes.filter((n) => String(n.kind) === kind).length;
+
+    return {
+      height,
+      title: options.title || "The network of what this plant recorded",
+      /* Rule 5, in §7's own words: "showing 60 of 340 nodes; 12 edges not
+         drawn". Recomputed on every redraw, so hiding a kind or moving the
+         threshold cannot leave yesterday's number on the picture. */
+      total: [`showing ${count(nodes.length)} of ${things(nodesTotal, "node")}`,
+              `${count(edges.length)} of ${things(edgesTotal, "edge")} drawn`,
+              notDrawn ? `${count(notDrawn)} edges not drawn` : null,
+              empties.length
+                ? `${things(empties.length, "node kind")} declared and empty here`
+                : null,
+             ].filter(Boolean).join(" · "),
+      /* Rule 4: every choice the shape depends on, and every measure the
+         ENVELOPE computed — never one this chart worked out. */
+      axes: [
+        has(measures.threshold) || has(threshold)
+          ? `edges lighter than ${has(threshold) ? threshold : measures.threshold} are not drawn`
+          : null,
+        has(measures.components)
+          ? `${things(measures.components, "connected component")} in the graph as measured`
+          : null,
+        measures.biggest && has(measures.biggest.weight)
+          ? `the biggest cluster holds ${count(measures.biggest.weight)} of `
+            + `${count(measures.biggest.of_weight)} ${measures.biggest.unit || "turns"}`
+            + (measures.biggest.touches
+               ? `, touching ${measures.biggest.touches.join(", ")}` : "")
+          : null,
+        measures.biggest && (measures.biggest.absent || []).length
+          ? `it touches no ${measures.biggest.absent.join(", no ")} — the absence is `
+            + `the finding, not a silence`
+          : null,
+        nodes.length > labelCount
+          ? `the ${count(labelCount)} heaviest nodes are named, and every hole is`
+          : null,
+        `node size is a share of the heaviest, ${count(heaviest)}; `
+          + `edge width a share of the widest, ${count(widest)}`,
+        measures.refused || null,
+      ].filter(Boolean),
+      unknown: [
+        holes.length
+          ? `${things(holes.length, "node")} hatched — `
+            + `${holes.map((h) => h.label || h.id).join(", ")} carry their degree and not `
+            + `a weight, because what a hole is, is what it touches`
+          : null,
+        empties.length
+          ? `${things(empties.length, "kind")} drawn empty: `
+            + `${empties.map((k) => k.kind).join(", ")} — declared by the model and `
+            + `recorded by nothing on this plant`
+          : null,
+        unwatched.length
+          ? `${things(unwatched.length, "edge")} measured in seconds with no record of `
+            + `how much of the window was watched, so the seconds are not printed`
+          : null,
+      ].filter(Boolean).join("; ") || null,
+      notes: [],
+      filters: [
+        hidden.size
+          ? `${things(hidden.size, "kind")} switched off — every figure above is of `
+            + `what is drawn`
+          : null,
+        has(threshold)
+          ? `threshold ${threshold}: ${count(carriedEdges.length - keptEdges.length)} `
+            + `edges below it are not drawn`
+          : null,
+      ].filter(Boolean),
+      legend: edgeKinds.map((kind) => ({
+        key: `edge:${kind}`, label: kind.replace(/_/g, " "),
+        note: things(carriedEdges.filter((e) => String(e.kind) === kind).length, "edge"),
+        cls: `edge-swatch edge-${cssName(kind)}`,
+      })).concat(nodeKinds.map((k) => ({
+        key: `node:${k.kind}`, label: k.kind.replace(/_/g, " "),
+        note: things(byKind(k.kind), "node"),
+        cls: k.nodes === 0 ? "graph-node-empty"
+          : GRAPH_HOLES.has(k.kind) ? "chart-unknown-swatch"
+          : `graph-node-kind node-${cssName(k.kind)}`,
+      }))),
+      slider: widest > 1
+        ? { label: "edges at least", domain: [0, widest],
+            step: Math.max(Math.round(widest / 20), 1), say: (v) => count(v) }
+        : null,
+      paint(g, ctx) {
+        /* Edges first, so a node sits on top of what reaches it. */
+        for (const edge of edges) {
+          const a = at.get(edge.from), b = at.get(edge.to);
+          if (!a || !b) continue;
+          const kind = String(edge.kind);
+          const seconds = edge.unit === "seconds";
+          const blind = seconds && !has(edge.watched_seconds);
+          const line = add(g, "line", {
+            x1: a.x, y1: a.y, x2: b.x, y2: b.y,
+            class: `graph-edge edge-${cssName(kind)}${blind ? " graph-edge-unknown" : ""}`,
+            "stroke-width": strokeOf(edge),
+            /* Rule 1: the weight the envelope carried, on the edge that drew it. */
+            "data-value": raw(edge.weight),
+            "data-edge-kind": kind,
+            "data-from": raw(edge.from), "data-to": raw(edge.to),
+            ...(blind ? { "data-unknown": "true" } : {}),
+            ...(has(edge.watched_seconds) ? { "data-watched": raw(edge.watched_seconds) } : {}),
+          });
+          add(line, "title", {},
+              `${edge.from} → ${edge.to} (${kind.replace(/_/g, " ")})\n`
+              + (blind
+                 ? `${duration(edge.weight)}, but how much of the window was watched is `
+                   + `not recorded — so this number cannot be checked`
+                 : seconds
+                   ? `${duration(edge.weight)} of ${duration(edge.watched_seconds)} watched`
+                   : `${raw(edge.weight)}`));
+        }
+        for (const node of nodes) {
+          const p = at.get(node.id);
+          if (!p) continue;
+          const hole = isHole(node);
+          const kind = String(node.kind);
+          const mark = add(g, "circle", {
+            cx: p.x, cy: p.y, r: rOf(node),
+            class: `graph-node ${hole ? "chart-unknown"
+                                      : `graph-node-kind node-${cssName(kind)}`}`,
+            ...(hole ? { fill: ctx.hatch, "data-unknown": "true" } : {}),
+            /* A hole carries its DEGREE (§7): what a hole is, is what it
+               touches. Everything else carries the weight it was measured at. */
+            "data-value": raw(hole ? node.degree : node.weight),
+            "data-degree": raw(node.degree),
+            "data-node": raw(node.id), "data-node-kind": kind,
+            "data-label": node.label || node.id,
+            tabindex: "0", role: "button",
+            "aria-label": `${node.label || node.id}, ${kind.replace(/_/g, " ")}`,
+          });
+          add(mark, "title", {},
+              `${node.label || node.id} (${kind.replace(/_/g, " ")})\n`
+              + (hole
+                 ? `a hole: ${things(node.degree, "edge")} reach it, and nothing names `
+                   + `what is behind them`
+                 : `${raw(node.weight)}${node.unit ? ` ${node.unit}` : ""}`
+                   + `, ${things(node.degree, "edge")}`));
+          /* The page (D5) decides what "into its records" means; the kit says
+             which node was asked for and draws nothing new itself. */
+          mark.addEventListener("click", (event) => {
+            event.stopPropagation();
+            mark.dispatchEvent(new CustomEvent("fs-chart-expand", {
+              bubbles: true,
+              detail: { id: node.id, kind, label: node.label || node.id,
+                        value: hole ? node.degree : node.weight, degree: node.degree },
+            }));
+          });
+          if (named.has(node.id)) {
+            const text = String(node.label || node.id);
+            add(g, "text", {
+              x: p.x, y: p.y - rOf(node) - 4, class: "graph-label", "text-anchor": "middle",
+            }, text.length > 22 ? `${text.slice(0, 21)}…` : text);
+          }
+        }
+        /* And the kinds this plant recorded nothing of, drawn rather than
+           omitted — the row is the point of the row. */
+        if (empties.length) {
+          const y = box.y + box.height + 16;
+          add(g, "text", { x: 4, y: y + 4, class: "axis" }, "declared, and empty here:");
+          let x = 140;
+          for (const kind of empties) {
+            const mark = add(g, "circle", {
+              cx: x, cy: y, r: 5, class: "graph-node graph-node-empty",
+              "data-value": raw(kind.nodes), "data-empty": "true",
+              "data-node-kind": kind.kind, "data-label": kind.kind,
+              ...(kind.unknown ? { "data-unknown": "true" } : {}),
+            });
+            add(mark, "title", {},
+                `${kind.kind}: no node — ${kind.note || "nothing on this plant records one"}`);
+            const text = kind.kind.replace(/_/g, " ");
+            add(g, "text", { x: x + 9, y: y + 4, class: "graph-label" }, text);
+            x += 18 + text.length * 5.6 + 12;
+          }
+        }
+      },
+    };
+  }
+
+  const SHAPES = { line: lineShape, bars: barsShape, states: statesShape,
+                   histogram: histogramShape, graph: graphShape };
+
+  /* ================================================================
+     EXPORT — the same picture, off the page
+
+         FS.kit.export(svgNode, "svg" | "png") -> Promise<Blob>
+
+     §3 of docs/design/deep-analysis.md: the `fs-chart` node already carries
+     everything an export needs — its own `<title>` and `<desc>`, the footer
+     lines, `data-total`, `data-coverage`. So an export is that node's own
+     markup with the palette's RESOLVED colours written onto it, and nothing
+     else: no second renderer, no server round trip, and no chance of an export
+     that draws a different picture from the screen.
+
+     The rule this is built to keep, and the one worth checking in review: **a
+     chart is presentation-ready when its footer survives being pasted into a
+     slide.** An export whose coverage sentence was stripped is not an export
+     this product makes — so the footer, the total and the coverage go into the
+     file, and a test asserts they are still there.
+
+     Inlining the colours is not "naming a colour" (rule 6). Nothing here
+     chooses one: it reads back what the theme the reader is in already
+     resolved, which is the only way the file looks in a slide the way it
+     looked on the screen. */
+
+  const EXPORT_STYLE = [
+    "fill", "fill-opacity", "stroke", "stroke-width", "stroke-dasharray",
+    "stroke-linecap", "stroke-linejoin", "stroke-opacity", "opacity",
+    "font-family", "font-size", "font-weight", "font-style", "text-anchor",
+    "dominant-baseline", "letter-spacing", "display",
+  ];
+
+  function exportable(node) {
+    if (!node || node.tagName !== "svg" || !node.classList.contains("fs-chart")) {
+      throw new TypeError(
+        "kit.export: give it a chart — the <svg class=\"fs-chart\"> that "
+        + "FS.kit.chart() returned, because the footer and the coverage this "
+        + "export has to carry are on that node");
+    }
+    const clone = node.cloneNode(true);
+    /* A tooltip is where somebody's mouse happened to be. Everything else the
+       reader can see goes into the file, the legend and the threshold
+       included: those are the choices the footer is stating. */
+    for (const transient of clone.querySelectorAll('[data-chrome="hover"]')) {
+      transient.remove();
+    }
+    for (const el of clone.querySelectorAll("[tabindex]")) el.removeAttribute("tabindex");
+    const from = [node, ...node.querySelectorAll("*")];
+    const to = [clone, ...clone.querySelectorAll("*")];
+    /* The hover layer left the clone, so walk the SOURCE for its styles and
+       skip what is no longer there — matched by position, which is document
+       order in both and the reason the removal happens first is that it
+       would otherwise shift the pairing. */
+    const live = from.filter((el) => !el.closest('[data-chrome="hover"]'));
+    for (let i = 0; i < to.length && i < live.length; i++) {
+      const computed = getComputedStyle(live[i]);
+      let css = "";
+      for (const prop of EXPORT_STYLE) {
+        const value = computed.getPropertyValue(prop);
+        if (value) css += `${prop}:${value};`;
+      }
+      to[i].setAttribute("style", css);
+    }
+    clone.setAttribute("xmlns", NS);
+    clone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
+    return clone;
+  }
+
+  /* The colour behind the picture. A chart is drawn on a panel, and an SVG
+     with nothing behind it is a transparent PNG that reads as white wherever
+     it is pasted — including onto a dark slide, where the footer disappears. */
+  function ground() {
+    const value = getComputedStyle(document.documentElement)
+      .getPropertyValue("--panel").trim();
+    return value || "#ffffff";
+  }
+
+  function exportChart(node, format = "svg") {
+    const clone = exportable(node);
+    const markup = `<?xml version="1.0" encoding="UTF-8"?>\n${clone.outerHTML}`;
+    if (format === "svg") {
+      return Promise.resolve(new Blob([markup], { type: "image/svg+xml;charset=utf-8" }));
+    }
+    if (format !== "png") {
+      throw new TypeError(`kit.export: no such format: ${format} (svg, png)`);
+    }
+    const width = Number(node.getAttribute("width")) || 800;
+    const height = Number(node.getAttribute("height")) || 400;
+    const scale = 2;      // a slide is projected, and 1x is a soft chart
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(width * scale);
+          canvas.height = Math.round(height * scale);
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = ground();
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((blob) => (blob
+            ? resolve(blob)
+            : reject(new Error("the browser produced no PNG from this chart"))), "image/png");
+        } catch (err) { reject(err); }
+      };
+      image.onerror = () => reject(
+        new Error("the browser could not read the chart back as an image"));
+      image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
+    });
+  }
 
   /* The one entry point. `pareto` is `bars` with the cumulative line on. */
   function chart(kind, envelope, options = {}) {
@@ -1024,6 +1947,7 @@
 
   FS.kit = { utc, duration, age, svg, add, empty, timeTicks, timeline, trend, oeeBars,
              coverageRow, ledgerSummary,
-             /* The chart contract: one entry point, four shapes, six rules. */
-             chart, draw };
+             /* The chart contract: one entry point, five shapes, six rules —
+                and one way to take a chart off the page with its footer on. */
+             chart, draw, export: exportChart };
 })();
