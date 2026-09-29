@@ -412,6 +412,19 @@ def trace_rollup(db: Session, hours: float | None = None, shift: str | None = No
         "previous_window_note": previous_note,
         "named_people": bool(name_people or person),
         "person": person,
+        # The rule, in the payload rather than in a prompt - so an agent reading
+        # this answer inherits it the way it inherits a coverage figure, and a
+        # reader who wanted a ranking learns what would have to be granted for
+        # one rather than being told "no".
+        "naming_note": (
+            f"grouped by {by} and never by account: naming a person needs the "
+            f"'people.analyse' capability (decision 0039), which no shipped role "
+            f"holds, and every answer that names one writes an audit row that "
+            f"person can find."
+            if not (name_people or person) else
+            "this answer names people, so it wrote an audit row "
+            "('analysis.person_named') the person named can find."
+        ),
         "coverage": "absent",
         "coverage_note": (
             "these are counts of records, not a share of a window anybody "

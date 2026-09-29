@@ -12,6 +12,43 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **Three reads that answer a management question from the records: `trace_rollup`,
+  `trace_graph` and `maintenance_mttr`.** *"What is the biggest problem for our
+  operators?"* is now answerable out of the plant's own AI trace, its stops and
+  its repairs, with no new engine and no new dependency. The arithmetic is the
+  plant's, in `services/trace_analysis.py`; the routes are `/analysis/trace/rollup`,
+  `/analysis/trace/graph` and `/analysis/maintenance/mttr`, so a screen and an
+  agent read the same envelope; the tools hand over what came back, unchanged.
+
+  **Counts before names (decision 0039).** A rollup over people comes back grouped
+  by role, by workcenter or by shift and **never by account** — the default is in
+  the plant's code, not in a prompt. Naming a person needs a new capability,
+  `people.analyse`, which **no shipped role holds**: not the administrator, and
+  not the analyst whose job this analysis is. A plant grants it deliberately, and
+  every answer that names somebody writes `analysis.person_named` to the audit
+  trail against `personnel`/their code, so the person can find out. What the
+  grouping could not attribute is counted out loud rather than dropped.
+
+  **The graph draws only what a record stands behind, and says what it cannot
+  draw.** `screen` and `workcenter` are node kinds that are empty on every plant
+  today and are declared empty with the reason; `asked_from` and `visited` are
+  edge kinds with no source at all and say so. **Nothing draws an edge from a
+  question to a stop** — nothing in this product links the two, and putting them
+  side by side because the times are close would be inventing the link. The holes
+  are nodes with a degree on them: turns with no person, stops nobody named.
+
+  **Betweenness, PageRank and eigenvector centrality are refused**, by name, with
+  the reason in the payload. On a graph whose edge set is whatever a plant happens
+  to have recorded, a centrality score is the most convincing wrong number this
+  product could offer — the graph's version of the recomputed rate decisions 0031
+  and 0033 exist to prevent. Degree and weight are what it reports.
+
+  **Every MTTR prints how many repairs it could not time.** Each timed order says
+  which record timed it — `started_at`→`completed_at`, or `downtime_minutes` — and
+  a preventive plan's `expected_minutes` is reported beside the actual, never
+  inside it. A window that reached past `[admin] ai_trace_days` says so instead of
+  quietly shortening.
+
 - **A second agent: the analysis agent, which holds every read tool and no
   write tool.** An agent kind is now an account, a role, a tool set, a prompt
   and a budget (decision 0038), and there are two of them: the `floor`
