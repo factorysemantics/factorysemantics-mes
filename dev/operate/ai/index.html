@@ -1162,6 +1162,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-two-agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The two agents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-is-not-recorded-and-why" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3940,6 +3951,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-two-agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The two agents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-is-not-recorded-and-why" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4091,7 +4113,81 @@ Setup's rows and this page links to them rather than copying them.</p>
 </table>
 <p>The floor assistant writes a row for every turn, including a confirm, a
 decline, an error, and a turn where the cloud brain was unavailable. The
-design chat writes one per exchange, under the <code>design</code> brain.</p>
+design chat writes one per exchange, under the <code>design</code> brain. The analysis
+agent writes its own, under the <code>analysis</code> brain — which is how the
+Conversations tab lists one agent's conversations apart from the other's.</p>
+<h2 id="the-two-agents">The two agents<a class="headerlink" href="#the-two-agents" title="Permanent link">&para;</a></h2>
+<p>There are two agent kinds, and the <code>brain</code> on every row says which one was
+talking.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><strong>floor</strong></th>
+<th><strong>analysis</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What it is for</td>
+<td>somebody at a machine who wants something done</td>
+<td>somebody who has sat down with a question</td>
+</tr>
+<tr>
+<td>Account and role</td>
+<td><code>AGENT</code>, role <code>agent</code></td>
+<td><code>ANALYST</code>, role <code>analyst</code> — <code>plant.read</code> and <code>audit.read</code>, nothing that writes</td>
+</tr>
+<tr>
+<td>Tools</td>
+<td>every read, plus the writes the person's own role allows</td>
+<td><strong>every read tool and no write tool</strong>, and it is built that way rather than listed: any tool carrying <code>dry_run</code> is dropped, so a write tool added tomorrow is outside it on the day it is written</td>
+</tr>
+<tr>
+<td>Can it change the plant</td>
+<td>it proposes; a person presses "Do it"</td>
+<td>no. There is nothing in its catalogue that changes anything, and its account would be refused if there were</td>
+</tr>
+<tr>
+<td>Walkthroughs</td>
+<td>yes — "Show me" walks you onto the real form</td>
+<td>no. A walk ends on a button somebody presses, and this agent does not lead anybody to a change</td>
+</tr>
+<tr>
+<td>What one conversation may spend</td>
+<td>uncapped (see <a href="../../ai/BUDGET/">BUDGET.md</a>)</td>
+<td>$0.25 by default</td>
+</tr>
+<tr>
+<td>In shadow mode</td>
+<td>falls back to the local model</td>
+<td><strong>off, and says so</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Asked for a change, an analysis conversation says that it only reads and
+that the assistant in the panel can propose it to whoever signs it. It does
+not say the person's role is the obstacle, because it is not.</p>
+<p><strong>Where to find it.</strong> The Assistant panel on any screen has one button —
+<em>Ask the analyst</em> — which starts a fresh conversation with the other agent.
+A conversation belongs to one agent for its whole life: its tools, its
+prompt and its budget were read from that agent when it opened, so switching
+starts a new one rather than handing the old one over.</p>
+<p><strong>The two accounts must both exist.</strong> <code>fsmes plant &lt;name&gt; init</code> creates them
+and leaves any account already there exactly as it is; a plant built before
+this release gets <code>ANALYST</code> on its next <code>fsmes plant &lt;name&gt; migrate</code>. Until
+it has one, an analysis conversation's first read comes back saying that the
+<code>ANALYST</code> account cannot sign in and naming the command that creates it —
+deliberately, rather than quietly falling back to <code>AGENT</code>, which holds
+enough to book production.</p>
+<blockquote>
+<p><strong>What the person's own role does <em>not</em> narrow.</strong> An agent's reads reach
+the plant as the agent's account, not as the person asking, so what a
+conversation can look up is bounded by the agent's role rather than by the
+reader's. That is true of both kinds and is not new — the floor
+assistant's <code>agent</code> role has held <code>audit.read</code> since it existed — but it
+is worth knowing before granting either account more.</p>
+</blockquote>
 <h2 id="what-is-not-recorded-and-why">What is not recorded, and why<a class="headerlink" href="#what-is-not-recorded-and-why" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>The system prompt.</strong> Never. A test asserts a recorded turn does not
@@ -4177,6 +4273,12 @@ what the assistant told the night shift.</p>
 </tbody>
 </table>
 <p>All four are behind <code>audit.read</code>. Every list states its total.</p>
+<p><code>GET /assist/agent/status</code> is the other one worth knowing: it answers for
+one agent (<code>?kind=analysis</code>) and carries a <code>kinds</code> object beside it saying
+the same of every kind this plant has — its account, its role, whether it
+can write at all, what one conversation may spend, and why it is off if it
+is. It is behind being signed in, not behind <code>audit.read</code>: it says nothing
+about what anybody asked.</p>
 
 
 

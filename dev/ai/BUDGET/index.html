@@ -3809,6 +3809,60 @@ at list prices, and past <code>MES_AGENT_MONTHLY_USD</code> (default 10) the pan
 the budget is spent and the local assistant carries on. A 10-turn floor task
 with the tool catalogue cached costs roughly 1–3 cents. The Local AI panel
 shows the running total beside the GPU rows.</p>
+<h2 id="two-agents-one-bill">Two agents, one bill<a class="headerlink" href="#two-agents-one-bill" title="Permanent link">&para;</a></h2>
+<p>There are two agent kinds now — the floor assistant, which proposes changes,
+and the <strong>analysis agent</strong>, which holds every read tool and no write tool.</p>
+<p><strong>The month's cap is shared.</strong> Both kinds' turns go into the same usage file
+and are summed together, so <code>MES_AGENT_MONTHLY_USD</code> is the whole box's
+budget whichever agent spent it. A second kind that could get around the
+month's cap would not be a cap.</p>
+<p><strong>A conversation has a cap of its own</strong>, and that is the new number:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Default</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MES_AGENT_CONVERSATION_USD</code></td>
+<td><code>0</code> (uncapped)</td>
+<td>What one floor conversation may spend. Uncapped is what it has always been: a floor conversation is bounded by <code>[admin] agent_max_rounds</code> and by somebody standing at a machine waiting for it</td>
+</tr>
+<tr>
+<td><code>MES_ANALYSIS_CONVERSATION_USD</code></td>
+<td><code>0.25</code></td>
+<td>What one analysis conversation may spend — a fortieth of the month</td>
+</tr>
+<tr>
+<td><code>MES_AGENT_BRAIN</code></td>
+<td><code>auto</code></td>
+<td><code>off</code> switches the floor assistant off</td>
+</tr>
+<tr>
+<td><code>MES_ANALYSIS_BRAIN</code></td>
+<td><code>auto</code></td>
+<td><code>off</code> switches the analysis agent off, on its own</td>
+</tr>
+</tbody>
+</table>
+<p>Why the analysis agent gets one and the floor assistant does not: it holds
+every read tool, it is asked to explore, and nobody is watching each round
+of it. The cap is a <strong>speed bump, not a wall</strong> — the next conversation
+starts at zero, and the wall is the month's cap, which no new conversation
+gets around. When a conversation reaches it, it says so, says what the
+month has left, and stops; it does not hand over to the local model,
+because there is no local analysis agent.</p>
+<p><strong>These four are environment keys today and become <code>[ai]</code> settings in M2</strong>
+(<code>docs/design/agentic-harness.md</code> §9), with the same words in the same
+order: <code>analysis_brain</code>, <code>analysis_conversation_usd</code>. The rename is a move,
+not a redesign, which is why they are named this way now.</p>
+<p><strong>In shadow mode the analysis agent is off</strong> and says so (answer 9 of the
+harness design). The floor assistant falls back to the local model on a
+shadow plant; the analysis agent has no local stand-in, and answering worse
+was the option that was turned down.</p>
 <p>Embeddings (nomic-embed-text) are effectively free beside qwen and are not
 budgeted. The Local AI panel on <code>/dashboard/ops</code> displays this order so
 "is the GPU doing what I decided it should" is answerable at a glance;
