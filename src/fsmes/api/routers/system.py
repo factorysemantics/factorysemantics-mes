@@ -1,5 +1,6 @@
-import logging
 """System endpoints: health, shadow mode, metrics, audit trail queries."""
+
+import logging
 
 from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse
