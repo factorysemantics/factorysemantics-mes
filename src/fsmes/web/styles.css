@@ -683,6 +683,14 @@ a.obj:hover { text-decoration: underline; }
 .node-downtime_reason { fill: var(--down); }
 .node-maintenance_order { fill: var(--idle); }
 .node-shift { fill: var(--muted); }
+/* Nine node kinds and eight hues a palette can spare — `--unknown` is reserved
+   for the holes, and a kind painted in it would read as one. So the ninth is
+   told apart by a RING rather than by a colour, which survives all four
+   themes. `labelling_source` gets it because it is the one kind that is not a
+   thing on the floor: it names the system that named a stop. Without this it
+   fell through to the base fill and came out grey, which said "nobody knows"
+   about a fact somebody recorded. */
+.node-labelling_source { fill: var(--muted); stroke: var(--text); stroke-width: 2; }
 /* A kind the model declares and this plant recorded nothing of. Drawn, never
    omitted: a graph that dropped it would read as a complete picture of a
    plant where those questions came from nowhere. */

@@ -851,7 +851,8 @@ GRAPH_FACTS = """() => {
             .map((t) => ({cls: t.getAttribute('class'), text: t.textContent})),
         nodes: [...node.querySelectorAll('[data-node]')].map((e) => ({
             ...attrs(e, ['data-node', 'data-node-kind', 'data-label', 'data-value',
-                         'data-degree', 'data-unknown', 'fill']),
+                         'data-degree', 'data-weight', 'data-unknown', 'fill']),
+            title: e.querySelector('title') ? e.querySelector('title').textContent : '',
             cx: Number(e.getAttribute('cx')), cy: Number(e.getAttribute('cy')),
             cls: e.getAttribute('class'),
         })),
@@ -925,7 +926,7 @@ def test_the_unattributed_node_carries_its_degree_because_a_hole_is_what_it_touc
         assert (hole["fill"] or "").startswith("url(#"), (
             f"a hole is painted {hole['fill']} rather than hatched")
     printed = " ".join(f["text"] for f in got["footer"])
-    assert "carry their degree and not a weight" in printed
+    assert "each carries its degree and not a weight" in printed
 
 
 def test_the_graph_never_claims_a_coverage_nobody_measured(page):
@@ -1281,3 +1282,258 @@ def test_export_refuses_anything_that_is_not_a_chart(page):
     assert len(refused) == 2, f"export accepted something it should not have: {refused}"
     assert "give it a chart" in refused[0]
     assert "no such format" in refused[1]
+
+
+# ---------------------- and the graph the PLANT builds, not a fixture of one
+
+def test_the_graph_shape_draws_the_envelope_the_plant_itself_returns(page):
+    """The drift-prevention half for the fifth shape, and the reason this one is
+    worth having on top of the fixed envelopes above: `/analysis/trace/graph`
+    (`services/trace_analysis.py`) spells the same graph a different way from
+    the design page — the node kinds as a count by name, the totals as four
+    flat numbers, the biggest cluster as four flat fields, and `coverage` as the
+    WORD "absent" rather than as a missing field. A shape that only ever saw
+    the page's spelling would draw an empty picture against the product's own
+    route and nobody would find out until a screen was built on it (D5).
+
+    This is a live plant, so the numbers are not asserted; that the route's
+    envelope goes through the kit and comes out obeying the contract is."""
+    got = page.evaluate(
+        """async () => {
+            const reply = await fetch('/analysis/trace/graph?hours=8&threshold=0',
+                                      {credentials: 'same-origin'});
+            if (!reply.ok) return {status: reply.status};
+            const envelope = await reply.json();
+            const host = document.getElementById('fs-chart-probe');
+            const node = FS.kit.draw(host, 'graph', envelope, {width: 760, height: 300});
+            return {
+                status: 200,
+                total: node.getAttribute('data-total'),
+                coverage: node.getAttribute('data-coverage'),
+                coverageKind: node.getAttribute('data-coverage-kind'),
+                desc: node.querySelector('desc').textContent,
+                footer: [...node.querySelectorAll('text[data-footer]')]
+                    .map((t) => t.textContent),
+                kinds: [...node.querySelectorAll('[data-node-kind]')]
+                    .map((e) => e.getAttribute('data-node-kind')),
+                empties: [...node.querySelectorAll('[data-empty="true"]')]
+                    .map((e) => e.getAttribute('data-node-kind')),
+                declared: Object.keys(envelope.node_kinds || {}),
+                values: [...node.querySelectorAll('[data-value]')]
+                    .map((e) => e.getAttribute('data-value')),
+            };
+        }""")
+    assert got["status"] == 200, f"/analysis/trace/graph answered {got['status']}"
+    # Rule 5: the total is there and it names what was left out.
+    assert got["total"] and "nodes" in got["total"], got["total"]
+    assert "edges" in got["total"], got["total"]
+    # Rule 2, and the specific way this envelope says it: the WORD "absent".
+    # Before this, `coverageOf` read that word as a figure and the chart said
+    # "Watched —% of the window", which is the exact confusion the three values
+    # of `data-coverage` exist to prevent.
+    assert got["coverage"] == "absent", got["coverage"]
+    assert got["coverageKind"] == "absent"
+    assert "Watched" not in got["desc"], got["desc"]
+    # Every kind on the picture is one the route declared — the shape invents
+    # no kind of its own, and draws every kind the route says is empty.
+    assert got["declared"], "the route declared no node kinds"
+    for kind in got["kinds"]:
+        assert kind in got["declared"], f"{kind} is not a kind the route declared"
+    empty_now = [k for k in got["declared"] if k not in set(got["kinds"]) - set(got["empties"])]
+    assert set(got["empties"]) <= set(got["declared"])
+    assert empty_now, "this plant records every kind, so nothing pins the empty row"
+    assert got["values"], "the chart drew nothing at all"
+    # And the refusal is on the picture, in the route's own words.
+    printed = " ".join(got["footer"])
+    assert "refused" in printed, printed
+
+
+#: The SAME graph in the plant's own spelling — `/analysis/trace/graph`, which
+#: states the node kinds as a count by name, the reasons for the empty ones
+#: separately, the totals as four flat numbers, the biggest cluster as four flat
+#: fields, and `coverage` as the WORD "absent". Fixed, so the two spellings are
+#: pinned whatever a live plant happens to hold.
+#:
+#: It carries what PR #133 adds to that route: `asked_from` edges now that a
+#: turn records its screen, and MORE THAN ONE `unattributed` node — turns with
+#: no person, turns that record no screen, and people who sit outside any work
+#: centre are three different holes, each with its own degree.
+PLANT_GRAPH = {
+    "window": dict(WINDOW, clamped=False, hours=8.0, requested_hours=8),
+    "threshold": 1,
+    "nodes": [
+        {"id": "role:operator", "kind": "role", "label": "operator",
+         "weight": 6.0, "degree": 2},
+        {"id": "question_group:label a stop", "kind": "question_group",
+         "label": "label a stop", "weight": 41.0, "degree": 3},
+        {"id": "screen:/dashboard/ops", "kind": "screen", "label": "/dashboard/ops",
+         "weight": 28.0, "degree": 1},
+        {"id": "machine:FILL01", "kind": "machine", "label": "FILL01",
+         "weight": 2420.0, "degree": 2},
+        {"id": "downtime_reason:MECH", "kind": "downtime_reason", "label": "MECH",
+         "weight": 2140.0, "degree": 2},
+        {"id": "labelling_source:here", "kind": "labelling_source", "label": "here",
+         "weight": 2140.0, "degree": 1},
+        # Three holes, not one. Each is a different thing nobody recorded.
+        {"id": "unattributed:turns", "kind": "unattributed",
+         "label": "turns with no person on them", "weight": 3.0, "degree": 1},
+        {"id": "unattributed:screen", "kind": "unattributed",
+         "label": "turns that record no screen", "weight": 13.0, "degree": 1},
+        {"id": "unattributed:workcenter", "kind": "unattributed",
+         "label": "people outside any work centre", "weight": 4.0, "degree": 0},
+    ],
+    "edges": [
+        {"from": "role:operator", "to": "question_group:label a stop",
+         "kind": "asked", "weight": 41.0, "watched_seconds": None},
+        {"from": "unattributed:turns", "to": "question_group:label a stop",
+         "kind": "asked", "weight": 3.0, "watched_seconds": None},
+        {"from": "question_group:label a stop", "to": "screen:/dashboard/ops",
+         "kind": "asked_from", "weight": 28.0, "watched_seconds": None},
+        {"from": "question_group:label a stop", "to": "unattributed:screen",
+         "kind": "asked_from", "weight": 13.0, "watched_seconds": None},
+        # Seconds, and the machine's own watched window with them.
+        {"from": "machine:FILL01", "to": "downtime_reason:MECH",
+         "kind": "stopped_with", "weight": 2140.0, "watched_seconds": 28800.0},
+        {"from": "downtime_reason:MECH", "to": "labelling_source:here",
+         "kind": "labelled_by", "weight": 2140.0, "watched_seconds": 28800.0},
+    ],
+    "node_kinds": {"role": 1, "workcenter": 0, "question_group": 1, "screen": 1,
+                   "machine": 1, "downtime_reason": 1, "labelling_source": 1,
+                   "maintenance_order": 0, "shift": 0, "unattributed": 3,
+                   "unlabelled": 0},
+    "edge_kinds": {"asked": 2, "followed_by": 0, "asked_from": 2, "visited": 0,
+                   "stopped_with": 1, "labelled_by": 1, "repaired_by": 0,
+                   "fell_in": 0},
+    "empty_node_kinds": {
+        "workcenter": "no person here has a work centre; the ones that could not be "
+                      "placed are on the unattributed node with their count.",
+        "maintenance_order": "nothing in this window is one of these.",
+        "shift": "nothing in this window is one of these.",
+        "unlabelled": "nothing in this window is one of these.",
+    },
+    "empty_edge_kinds": {
+        "visited": "nothing here records a page visit or a dwell time - no table, "
+                   "no beacon, no log this product keeps.",
+    },
+    "nodes_showing": 9, "nodes_total": 9,
+    "edges_showing": 6, "edges_total": 6,
+    "measures": {
+        "components": 2,
+        "threshold": 1,
+        "biggest_component_nodes": 5,
+        "biggest_component_weight": 85.0,
+        "biggest_component_touches": ["question_group", "role", "screen", "unattributed"],
+        "biggest_component_does_not_touch": ["downtime_reason", "machine"],
+        "absence_note": "what the biggest cluster does not touch is a finding, not a "
+                        "gap in the drawing - and nothing here links a question to a "
+                        "stop at all.",
+        "refused": {
+            "betweenness": "refused: a shortest path here runs over whatever this "
+                           "plant happens to have recorded.",
+            "pagerank": "refused: these edges are the records that exist, not a "
+                        "sample.",
+        },
+    },
+    "unknown_seconds": 900.0,
+    "unknown_share": 0.031,
+    "machines_total": 11,
+    "coverage": "absent",
+    "coverage_note": "a graph of records is not a rate over a watched window. An "
+                     "edge weighted in seconds carries that machine's watched "
+                     "seconds, or null.",
+}
+
+
+def plant_graph(page, theme="control-room"):
+    page.evaluate(DRAW, ["graph", PLANT_GRAPH, {"height": 300, "width": 760}, theme])
+    return page.evaluate(GRAPH_FACTS)
+
+
+def test_the_plants_own_spelling_of_the_graph_draws_the_same_contract(page):
+    """`/analysis/trace/graph` writes the same graph a different way from the
+    design page: kinds as a count by name, totals as four flat numbers, the
+    biggest cluster as four flat fields, `coverage` as the word "absent". The
+    kit reads either, because its job is to draw what the API measured and not
+    to make the API spell it a particular way."""
+    got = plant_graph(page)
+    assert got["coverage"] == "absent" and got["coverageKind"] == "absent"
+    assert "showing 9 of 9 nodes" in got["total"], got["total"]
+    assert "6 of 6 edges drawn" in got["total"], got["total"]
+    assert len(got["edges"]) == len(PLANT_GRAPH["edges"])
+    printed = " ".join(f["text"] for f in got["footer"])
+    assert "2 connected components" in printed, printed
+    # The flat biggest-cluster fields, in a sentence, with the absence in it.
+    assert "the biggest cluster is 5 nodes" in printed, printed
+    assert "it touches no downtime_reason" in printed, printed
+    # Both refusals, each in the route's own words.
+    assert "betweenness refused" in printed and "pagerank refused" in printed
+
+
+def test_every_hole_the_plant_records_is_its_own_node_with_its_own_degree(page):
+    """PR #133's shape, and §7's rule under it. Turns with no person, turns that
+    record no screen, and people who sit outside any work centre are three
+    different things nobody recorded — so they are three nodes with three
+    degrees, not one lump called "unknown". The one with no edge at all is the
+    hardest and the most useful: a hole of degree 0 is still drawn."""
+    got = plant_graph(page)
+    holes = {n["data-node"]: n for n in got["nodes"]
+             if n["data-node-kind"] == "unattributed"}
+    assert set(holes) == {"unattributed:turns", "unattributed:screen",
+                          "unattributed:workcenter"}
+    assert holes["unattributed:turns"]["data-value"] == "1"
+    assert holes["unattributed:screen"]["data-value"] == "1"
+    # Four people outside any work centre, and nothing joins them to anything.
+    # `data-value` is the degree because §7 says a hole is what it touches — and
+    # this one touches nothing, so the four would be lost if the mark carried
+    # only that. It carries both, and says both.
+    alone = holes["unattributed:workcenter"]
+    assert alone["data-value"] == "0" and alone["data-degree"] == "0"
+    assert alone["data-weight"] == "4", "the four people fell off the picture"
+    assert "4 of them" in alone["title"] and "0 edges reach it" in alone["title"], (
+        alone["title"])
+    for hole in holes.values():
+        assert hole["data-unknown"] == "true"
+        assert (hole["fill"] or "").startswith("url(#")
+
+
+def test_an_empty_kind_with_a_reason_is_a_zero_and_not_an_unknown(page):
+    """The distinction PR #133 makes it possible to get wrong. Since that change
+    the route gives EVERY empty kind a sentence, and most of them say "nothing
+    in this window is one of these" — which is a measured zero. "Nobody could
+    have recorded this" is a different fact, and a shape that read "has a
+    sentence" as "is unknown" would hatch four kinds this plant simply had none
+    of, which is house rule 2 backwards."""
+    got = plant_graph(page)
+    empty = {k["data-node-kind"]: k for k in got["empties"]}
+    assert set(empty) == {"workcenter", "maintenance_order", "shift", "unlabelled"}
+    for kind in empty.values():
+        assert kind["data-value"] == "0"
+        assert kind["data-unknown"] is None, (
+            f"{kind['data-node-kind']} is drawn as unknown; it is a measured zero")
+
+
+def test_an_asked_from_edge_is_drawn_now_that_a_turn_records_its_screen(page):
+    """The edge kind that had no source at all until PR #133 gave `ai_turns` its
+    `screen` column. Both ends are drawn: the screens a question was asked from,
+    and the turns that record no screen — because the second is the measure of
+    how much the first is worth."""
+    got = plant_graph(page)
+    asked_from = [e for e in got["edges"] if e["data-edge-kind"] == "asked_from"]
+    assert len(asked_from) == 2, got["edges"]
+    assert {e["data-to"] for e in asked_from} == {"screen:/dashboard/ops",
+                                                  "unattributed:screen"}
+    assert {e["data-value"] for e in asked_from} == {"28", "13"}
+
+
+def test_an_edge_in_seconds_carries_the_machines_watched_window(page):
+    """The harness's §6 rule 4, the way round that is a reassurance. The plant's
+    envelope names no unit; what says these two are seconds is that they carry a
+    watched window, which is a thing nobody would put beside a count of
+    questions. The chart says so under the picture."""
+    got = plant_graph(page)
+    timed = [e for e in got["edges"] if e["data-watched"]]
+    assert len(timed) == 2, got["edges"]
+    assert all(e["data-watched"] == "28800" for e in timed)
+    assert all(e["data-unknown"] is None for e in timed)
+    printed = " ".join(f["text"] for f in got["footer"])
+    assert "carry the machine's own watched window" in printed, printed

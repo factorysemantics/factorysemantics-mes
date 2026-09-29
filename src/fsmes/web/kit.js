@@ -386,6 +386,16 @@
      payload has no coverage field" are three different facts a reader is
      entitled to tell apart. `data-coverage` says which. */
   function coverageOf(envelope) {
+    /* A payload may say "absent" in so many words rather than by leaving the
+       field off — the plant's own trace-graph read does, because a graph of
+       records is not a rate over a watched window and the route says so out
+       loud. Without
+       this the next line would read the word as a figure and print
+       "Watched —% of the window", which is the exact confusion `data-coverage`
+       exists to prevent. */
+    if (envelope.coverage === "absent") {
+      return { attr: "absent", kind: "absent", text: envelope.coverage_note || null };
+    }
     if (!("coverage" in envelope)) {
       /* Some payloads state their blindness in seconds rather than as a
          share — the downtime pareto does, because a disconnection is not
@@ -1653,9 +1663,31 @@
     /* The kinds this model declares, INCLUDING the ones this plant has no node
        of. The envelope says which; a caller that names none gets the kinds its
        own nodes have, and no empties, because the kit cannot know what a plant
-       failed to record. */
-    const declared = envelope.node_kinds || envelope.kinds
-      || [...new Set(carriedNodes.map((n) => String(n.kind)))].map((kind) => ({ kind }));
+       failed to record.
+
+       Two spellings, read as one. `services/trace_analysis.py` — the plant's
+       own trace-graph read — states the kinds as a count by name and the
+       reasons for the empty ones separately; the design page writes them as a
+       list of objects. The kit reads either, because its job is to draw
+       what the API measured, not to make the API spell it a particular way. */
+    const listed = Array.isArray(envelope.node_kinds) ? envelope.node_kinds
+      : Array.isArray(envelope.kinds) ? envelope.kinds : null;
+    const counted = !listed && envelope.node_kinds && typeof envelope.node_kinds === "object"
+      ? envelope.node_kinds : null;
+    const whyEmpty = envelope.empty_node_kinds || {};
+    const declared = listed
+      || (counted
+        ? Object.keys(counted).map((kind) => ({
+            kind, nodes: counted[kind], note: whyEmpty[kind] || null,
+            /* NOT inferred from the note. The route gives every empty kind a
+               sentence, and most of them say "nothing in this window is one of
+               these" — a measured zero. "Nobody could have recorded this" is a
+               different fact, and this spelling of the envelope has no field
+               that claims it, so the kit does not claim it either: the kind is
+               drawn empty and its own sentence says why. */
+            unknown: false,
+          }))
+        : [...new Set(carriedNodes.map((n) => String(n.kind)))].map((kind) => ({ kind })));
     const nodeKinds = declared.map((k) => ({
       kind: String(k.kind),
       nodes: has(k.nodes) ? k.nodes
@@ -1680,8 +1712,10 @@
     const nodes = drawnNodes;
 
     const carriedTotals = envelope.total || {};
-    const nodesTotal = has(carriedTotals.nodes) ? carriedTotals.nodes : carriedNodes.length;
-    const edgesTotal = has(carriedTotals.edges) ? carriedTotals.edges : carriedEdges.length;
+    const nodesTotal = has(carriedTotals.nodes) ? carriedTotals.nodes
+      : has(envelope.nodes_total) ? envelope.nodes_total : carriedNodes.length;
+    const edgesTotal = has(carriedTotals.edges) ? carriedTotals.edges
+      : has(envelope.edges_total) ? envelope.edges_total : carriedEdges.length;
     const notDrawn = Math.max(edgesTotal - edges.length, 0);
 
     const height = options.height || 320;
@@ -1718,7 +1752,23 @@
        not printed and the edge says why. */
     const unwatched = edges.filter(
       (e) => e.unit === "seconds" && !has(e.watched_seconds));
+    const timedEdges = edges.filter((e) => has(e.watched_seconds));
     const measures = envelope.measures || {};
+    /* The same two spellings again, for the one measure that is a sentence. */
+    const biggest = measures.biggest
+      || (has(measures.biggest_component_weight)
+        ? { nodes: measures.biggest_component_nodes,
+            weight: measures.biggest_component_weight,
+            touches: measures.biggest_component_touches,
+            absent: measures.biggest_component_does_not_touch }
+        : null);
+    /* And the refusal, which the design page calls the fourth measure. Printed
+       in the envelope's own words, every one of them: a refusal a reader has
+       to go and look up is a refusal that reads as an omission. */
+    const refused = typeof measures.refused === "string" ? [measures.refused]
+      : (measures.refused && typeof measures.refused === "object"
+        ? Object.keys(measures.refused).map((m) => `${m} ${measures.refused[m]}`)
+        : []);
 
     const byKind = (kind) => carriedNodes.filter((n) => String(n.kind) === kind).length;
 
@@ -1751,28 +1801,40 @@
         has(measures.components)
           ? `${things(measures.components, "connected component")} in the graph as measured`
           : null,
-        measures.biggest && has(measures.biggest.weight)
-          ? `the biggest cluster holds ${count(measures.biggest.weight)} of `
-            + `${count(measures.biggest.of_weight)} ${measures.biggest.unit || "turns"}`
-            + (measures.biggest.touches
-               ? `, touching ${measures.biggest.touches.join(", ")}` : "")
+        biggest && has(biggest.weight)
+          ? (has(biggest.of_weight)
+              ? `the biggest cluster holds ${count(biggest.weight)} of `
+                + `${count(biggest.of_weight)} ${biggest.unit || "turns"}`
+              : `the biggest cluster is ${things(biggest.nodes, "node")} `
+                + `weighing ${count(biggest.weight)}`)
+            + ((biggest.touches || []).length
+               ? `, touching ${biggest.touches.join(", ")}` : "")
           : null,
-        measures.biggest && (measures.biggest.absent || []).length
-          ? `it touches no ${measures.biggest.absent.join(", no ")} — the absence is `
+        biggest && (biggest.absent || []).length
+          ? `it touches no ${biggest.absent.join(", no ")} — the absence is `
             + `the finding, not a silence`
           : null,
+        measures.absence_note || null,
         nodes.length > labelCount
           ? `the ${count(labelCount)} heaviest nodes are named, and every hole is`
           : null,
+        /* The harness's §6 rule 4, said the way round that is a reassurance
+           rather than a warning: these edges carry their denominator with
+           them. The sentence under `unknown` is the other way round, for the
+           ones that do not. */
+        timedEdges.length
+          ? `${things(timedEdges.length, "edge")} weighted in seconds carry the `
+            + `machine's own watched window`
+          : null,
         `node size is a share of the heaviest, ${count(heaviest)}; `
           + `edge width a share of the widest, ${count(widest)}`,
-        measures.refused || null,
+        ...refused,
       ].filter(Boolean),
       unknown: [
         holes.length
           ? `${things(holes.length, "node")} hatched — `
-            + `${holes.map((h) => h.label || h.id).join(", ")} carry their degree and not `
-            + `a weight, because what a hole is, is what it touches`
+            + `${holes.map((h) => h.label || h.id).join(", ")}: each carries its degree `
+            + `and not a weight, because what a hole is, is what it touches`
           : null,
         empties.length
           ? `${things(empties.length, "kind")} drawn empty: `
@@ -1816,8 +1878,12 @@
           const a = at.get(edge.from), b = at.get(edge.to);
           if (!a || !b) continue;
           const kind = String(edge.kind);
-          const seconds = edge.unit === "seconds";
-          const blind = seconds && !has(edge.watched_seconds);
+          /* `watched_seconds` is only ever set on an edge weighted in seconds —
+             a watched window beside a count of questions would mean nothing —
+             so its presence says which this is, and `unit` says so explicitly
+             when a caller has it to give. */
+          const seconds = edge.unit === "seconds" || has(edge.watched_seconds);
+          const blind = edge.unit === "seconds" && !has(edge.watched_seconds);
           const line = add(g, "line", {
             x1: a.x, y1: a.y, x2: b.x, y2: b.y,
             class: `graph-edge edge-${cssName(kind)}${blind ? " graph-edge-unknown" : ""}`,
@@ -1851,7 +1917,13 @@
             /* A hole carries its DEGREE (§7): what a hole is, is what it
                touches. Everything else carries the weight it was measured at. */
             "data-value": raw(hole ? node.degree : node.weight),
+            /* Both numbers, always. `data-value` is the one the picture is
+               drawn from, and for a hole §7 says that is the degree — but a
+               hole of degree 0 would then be a node carrying nothing at all,
+               and "four people outside any work centre" is exactly the finding
+               it exists to show. Neither number is ever dropped. */
             "data-degree": raw(node.degree),
+            "data-weight": raw(node.weight),
             "data-node": raw(node.id), "data-node-kind": kind,
             "data-label": node.label || node.id,
             tabindex: "0", role: "button",
@@ -1860,8 +1932,9 @@
           add(mark, "title", {},
               `${node.label || node.id} (${kind.replace(/_/g, " ")})\n`
               + (hole
-                 ? `a hole: ${things(node.degree, "edge")} reach it, and nothing names `
-                   + `what is behind them`
+                 ? `a hole: ${raw(node.weight)} of them, and `
+                   + `${things(node.degree, "edge")} reach it — nothing names what is `
+                   + `behind them`
                  : `${raw(node.weight)}${node.unit ? ` ${node.unit}` : ""}`
                    + `, ${things(node.degree, "edge")}`));
           /* The page (D5) decides what "into its records" means; the kit says
@@ -1884,10 +1957,16 @@
         /* And the kinds this plant recorded nothing of, drawn rather than
            omitted — the row is the point of the row. */
         if (empties.length) {
-          const y = box.y + box.height + 16;
+          /* Wrapped, because the model declares eleven kinds and a chart can be
+             360 wide — a row that ran off the edge would hide exactly the kinds
+             this row exists to show. */
+          let y = box.y + box.height + 16;
           add(g, "text", { x: 4, y: y + 4, class: "axis" }, "declared, and empty here:");
           let x = 140;
           for (const kind of empties) {
+            const text = kind.kind.replace(/_/g, " ");
+            const w = 18 + text.length * 5.6 + 12;
+            if (x + w > ctx.width - 4 && x > 140) { x = 140; y += 14; }
             const mark = add(g, "circle", {
               cx: x, cy: y, r: 5, class: "graph-node graph-node-empty",
               "data-value": raw(kind.nodes), "data-empty": "true",
@@ -1896,9 +1975,8 @@
             });
             add(mark, "title", {},
                 `${kind.kind}: no node — ${kind.note || "nothing on this plant records one"}`);
-            const text = kind.kind.replace(/_/g, " ");
             add(g, "text", { x: x + 9, y: y + 4, class: "graph-label" }, text);
-            x += 18 + text.length * 5.6 + 12;
+            x += w;
           }
         }
       },
