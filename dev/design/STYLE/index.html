@@ -4029,10 +4029,59 @@ where the crawler cannot.</p>
     same <code>.kpi</code> strip when there are KPIs, themed via the palette from day
     one — and they are crawled automatically (ui-check reads the routes from
     <code>app.py</code>), so a new screen is watched the day it exists.</li>
-<li><strong>Every chart obeys the chart contract below</strong>, and is drawn by
+<li>
+<p><strong>Every chart obeys the chart contract below</strong>, and is drawn by
     <code>kit.js</code> — <code>FS.kit.chart(kind, envelope, options)</code>. A second chart
     engine on a second screen is how two screens come to state coverage
-    differently, which is the thing <code>kit.js</code> exists to make impossible.</li>
+    differently, which is the thing <code>kit.js</code> exists to make impossible.
+    The kinds are <code>line</code>, <code>bars</code> (alias <code>pareto</code>), <code>states</code>, <code>histogram</code>
+    and <code>graph</code>.</p>
+<p><strong>The <code>graph</code> shape</strong>, the network of the deep-analysis design page
+(<code>docs/design/deep-analysis.md</code> §7, which lands with its own change),
+keeps four rules of its own on top of the six:</p>
+<ul>
+<li><strong>Every edge is a recorded fact.</strong> The shape draws the edges the
+  envelope carries and never one between two nodes that ended up near
+  each other. A picture is where "an edge nobody observed is not an
+  edge" is hardest to keep and easiest to break.</li>
+<li><strong>The holes are things with numbers on them.</strong> <code>unattributed</code> and
+  <code>unlabelled</code> are nodes, hatched, carrying their <strong>degree</strong> rather
+  than a weight — what a hole is, is what it touches — so the reader
+  sees the three turns with no person rather than a tidy graph that is
+  three turns short.</li>
+<li><strong>Empty node kinds are drawn empty.</strong> A kind the model declares and
+  this plant records nothing of is on the picture with its zero and
+  its name. A graph that quietly omitted <code>screen</code> would read as a
+  complete picture of a plant where the questions came from nowhere.</li>
+<li><strong>Coverage is <code>absent</code>, always, and there is no centrality.</strong> A graph
+  of records is not a rate over a watched window. And betweenness,
+  PageRank and eigenvector centrality over an edge set that is
+  <em>whatever happens to be recorded</em> would be the most convincing wrong
+  number this product could show, so the shape does not offer one.</li>
+</ul>
+<p>Node kinds and edge kinds map to palette variables in <code>styles.css</code> and
+nowhere in <code>kit.js</code> (rule 2). Under the night-shift palette three node
+kinds are close in hue, because that palette is deliberately low-blue;
+the legend and the node names carry the distinction there.</p>
+</li>
+<li>
+<p><strong>What the reader narrowed a chart to re-states its total.</strong> Hovering a
+    mark says that mark's own <code>data-value</code> with the coverage sentence under
+    it; the legend switches a kind out; the threshold moves; the time axis
+    brushes. Every one of those rewrites <code>data-total</code> <strong>and</strong> the footer,
+    because a filtered chart that kept the old total is a list that reads
+    complete (rule 4). The frame does this for every shape, so a new shape
+    cannot forget it. The controls are drawn inside the <code>&lt;svg&gt;</code> — there is
+    no <code>&lt;button&gt;</code> in SVG, so they carry <code>role</code>, <code>tabindex</code> and an
+    <code>aria-label</code>, and they answer a keyboard.</p>
+</li>
+<li>
+<p><strong>A chart is presentation-ready when its footer survives the paste.</strong>
+    <code>FS.kit.export(chart, "svg" | "png")</code> is the chart node's own markup
+    with the theme's resolved colours inlined and the panel colour behind
+    it. An export whose coverage sentence was stripped is not an export
+    this product makes.</p>
+</li>
 </ol>
 <h2 id="the-chart-contract">The chart contract<a class="headerlink" href="#the-chart-contract" title="Permanent link">&para;</a></h2>
 <p>A rendered chart is the most convincing wrong thing this product can draw
@@ -4075,9 +4124,17 @@ sighted reader sees cannot drift apart.</p>
 extended in <code>kit.js</code> rather than duplicated. A charting library would have to
 be vendored under <code>web/vendor/</code> with its version, licence and SHA-256, and is a
 decision record when it happens — the three.js precedent was accepted because
-WebGL cannot be hand-drawn. None of the four shapes needed one.</p>
+WebGL cannot be hand-drawn. <strong>None of the five shapes needed one, the network
+graph included</strong>: its layout is ninety hand-written lines, and the reason it is
+a shape rather than a vendored engine is that the six rules are <em>structural</em>
+here — <code>frame()</code> writes <code>data-total</code>, <code>data-coverage</code>, the <code>&lt;title&gt;</code>, the
+<code>&lt;desc&gt;</code> and the footer for every shape before the shape draws anything, so a
+new shape inherits all of it and a new engine would inherit none
+(<code>docs/design/deep-analysis.md</code> §6, where that is measured against vendoring
+plotly).</p>
 <p>Pinned by <code>tests/test_a_chart_draws_only_what_the_api_measured.py</code>: every shape,
-every rule, in all four themes, from fixed envelopes.</p>
+every rule, every interaction and the export, in all four themes, from fixed
+envelopes.</p>
 <h2 id="what-ui-check-watches">What ui-check watches<a class="headerlink" href="#what-ui-check-watches" title="Permanent link">&para;</a></h2>
 <p>Components: <code>header</code>, <code>.kpi</code>, <code>.panel</code>, <code>table</code>, <code>.pill</code>, <code>button</code>,
 <code>.filters</code>, <code>svg.fs-chart</code> — first instance per page, plus a count. The chart
