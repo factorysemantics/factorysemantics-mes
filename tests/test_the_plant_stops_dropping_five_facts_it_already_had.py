@@ -355,9 +355,14 @@ def test_a_screen_filter_now_matches_the_turns_recorded_against_that_screen(sess
     """It used to match nothing, because there was no column; returning
     everything would have been reporting an unfiltered answer as a filtered
     one. Now it filters, and still says how many turns record no screen."""
-    _turn(session, asked="why is this held", screen="/dashboard/production")
-    _turn(session, asked="how do I book scrap", screen="/dashboard/quality")
-    _turn(session, asked="what is this alarm")
+    # A minute ago, not now: the window's `end` is taken when the rollup
+    # runs, and on a clock as coarse as Windows' a turn stamped in the same
+    # tick lands exactly on `end` and is outside `ts < end`. CI found it
+    # (2026-09-29, windows-latest 3.12 only).
+    earlier = utcnow() - timedelta(minutes=1)
+    _turn(session, asked="why is this held", screen="/dashboard/production", ts=earlier)
+    _turn(session, asked="how do I book scrap", screen="/dashboard/quality", ts=earlier)
+    _turn(session, asked="what is this alarm", ts=earlier)
 
     answer = trace_analysis.trace_rollup(session, hours=24, screen="/dashboard/production")
 
@@ -371,8 +376,9 @@ def test_a_rollup_by_workcenter_counts_the_people_nobody_placed(session):
     and no number for everybody else reads as the whole plant."""
     masterdata.set_home_equipment(session, code="SCOTT", equipment="PACK01", actor="ADMIN")
     session.flush()
-    _turn(session, asked="why is this held", user="SCOTT")
-    _turn(session, asked="why is this held", user="ADMIN")
+    earlier = utcnow() - timedelta(minutes=1)   # see the test above
+    _turn(session, asked="why is this held", user="SCOTT", ts=earlier)
+    _turn(session, asked="why is this held", user="ADMIN", ts=earlier)
 
     answer = trace_analysis.trace_rollup(session, hours=24, by="workcenter")
 
