@@ -457,33 +457,450 @@ async function saveTraceDays() {
   await loadSettings();
 }
 
+
+/* ---------- Explore: the exploration, beside the conversation ----------
+
+   Scott, 2026-09-29: "this doesn't go nearly deep enough … it should be in AI
+   … access all data including the AI traces … graphs a network node analysis …
+   then the agent, after graphing and analyzing those connections, should be
+   able to graph and analyze any data internally relevant to that thread."
+
+   `docs/design/deep-analysis.md` §2 is why it is here and not on the analysis
+   page, and the sentence it turns on: *what makes a chart a dashboard is not
+   where it is drawn, it is whether anybody asked it a question.* Everything in
+   this panel was asked for by the person reading it, in words, in this
+   conversation, and it lives as long as the conversation does. Nothing is drawn
+   on this tab that nobody asked for - which is why the tab still opens on this
+   panel empty, with an input and no picture.
+
+   Two rules hold the whole thing up and both are the server's, not this file's:
+
+   1. **The agent never computes a series.** It names a tool call it made, by
+      the id of its own `tool_use` block, and the server attaches the envelope
+      out of what the plant actually returned. This file draws that envelope
+      with `FS.kit.chart`, which writes the total and the coverage before any
+      shape draws anything. So a chart here cannot carry a figure the plant did
+      not compute; there is no code path by which it could.
+   2. **Expanding a node is a question, not a query.** Clicking a node on the
+      graph does not reach around the agent into an endpoint: it puts a sentence
+      to the agent, which reads, and answers, and re-draws - and the kit
+      re-states the totals on every re-draw, because a filtered picture that
+      kept the old total is a list that reads complete. */
+
+const EXPLORE_KIND = "analysis";
+let exploreSession = null;
+let exploreBusy = false;
+let exploreBrain = null;
+
+/* Which of a payload's fields a shape plots. This is the one thing kit's
+   `options` is for - naming the field, because a chart that picked one would be
+   choosing what the reader is looking at - and it is deliberately the only
+   mapping in this file. No number is touched: where a series has to be built,
+   it is built out of the payload's own rows, unaltered, so every `data-value`
+   on the picture is still a figure that came off the plant. */
+const PLOTS = {
+  trace_rollup: {
+    bars: (e) => ({ rows: e.groups || [], labelKey: "key", valueKey: "turns",
+                    noun: "question group", rowsTotal: e.groups_total,
+                    title: "Questions asked, most asked first" }),
+  },
+  maintenance_mttr: {
+    line: (e) => ({ series: [{ label: "mean repair minutes", points: e.buckets || [] }],
+                    value: "mean", title: "Repair time over time" }),
+  },
+  downtime_pareto: {
+    bars: () => ({ title: "Downtime by reason, worst first" }),
+  },
+  production_trend: {
+    line: (e) => ({ series: [{ label: "good", points: e.points || [] }],
+                    value: "good", title: "Good over the window" }),
+  },
+};
+
+/* The envelope a shape is handed, and the options beside it. The envelope is
+   the plant's own payload; where a shape needs a series the payload keeps under
+   another name, the rows themselves are carried across rather than copied into
+   new numbers. */
+function plotFor(chart) {
+  const build = (PLOTS[chart.tool] || {})[chart.shape];
+  const options = build ? build(chart.envelope) : {};
+  const envelope = options.series
+    ? { ...chart.envelope, series: options.series }
+    : chart.envelope;
+  const { series, ...rest } = options;
+  return { envelope, options: { title: chart.title || rest.title, ...rest } };
+}
+
+function exploreLog() {
+  return $("#explore-log");
+}
+
+function exploreSay(text, cls) {
+  const line = el("div", `explore-msg ${cls}`, text);
+  exploreLog().appendChild(line);
+  line.scrollIntoView({ block: "nearest" });
+  return line;
+}
+
+/* What the reply cost, in the words the rest of this screen uses: an estimate
+   at list prices, with the Console as the bill. Three numbers because they
+   answer three different questions - what that answer cost, what this
+   exploration has spent of what one may spend, and where the month stands. */
+function exploreCost(cost) {
+  if (!cost) return;
+  const conversation = cost.conversation_cap_usd
+    ? `$${cost.conversation_usd.toFixed(4)} of $${cost.conversation_cap_usd.toFixed(2)} `
+      + "this exploration may spend"
+    : `$${cost.conversation_usd.toFixed(4)} this exploration`;
+  $("#explore-cost").textContent =
+    `That answer cost about $${cost.turn_usd.toFixed(4)}. ${conversation}; `
+    + `$${cost.month_usd.toFixed(2)} of $${cost.month_cap_usd.toFixed(2)} this month. `
+    + "Estimates at list prices — the Console is the bill.";
+}
+
+/* One chart, as the person sees it: the kit's own SVG, and a way to take it
+   away with its footer on. A payload the shape cannot draw says so in the
+   kit's own words rather than drawing something else. */
+function drawChart(chart) {
+  const box = el("figure", "explore-chart");
+  box.dataset.tool = chart.tool;
+  box.dataset.shape = chart.shape;
+  const head = el("figcaption");
+  head.appendChild(el("span", "chart-title", chart.title || chart.tool));
+  head.appendChild(el("span", "muted small",
+    ` — drawn from ${chart.tool}, which this plant computed`));
+  box.appendChild(head);
+  const host = el("div", "chart-host");
+  box.appendChild(host);
+  exploreLog().appendChild(box);
+
+  let node = null;
+  try {
+    const plot = plotFor(chart);
+    node = FS.kit.draw(host, chart.shape, plot.envelope, plot.options);
+  } catch (err) {
+    /* The kit refuses a payload it cannot draw honestly, by name. That refusal
+       is the answer here: the sentence beside it already carried the numbers,
+       and a second-choice shape would be this file deciding what the reader is
+       looking at. */
+    host.appendChild(el("p", "empty",
+      `This answer could not be drawn as a ${chart.shape}: ${err.message}`));
+    return box;
+  }
+
+  const tools = el("div", "chart-tools");
+  for (const format of ["svg", "png"]) {
+    const button = el("button", "ghost small", format.toUpperCase());
+    button.dataset.export = format;
+    button.setAttribute("aria-label",
+      `Export “${chart.title || chart.tool}” as ${format.toUpperCase()}`);
+    button.addEventListener("click", () => exportChart(node, chart, format));
+    tools.appendChild(button);
+  }
+  box.appendChild(tools);
+
+  /* Rule 2 of this panel: a node is a question. The kit says which node was
+     asked for and draws nothing new itself; the tab puts the sentence to the
+     agent, and the agent reads. Nothing here reaches around it into an
+     endpoint - an answer this screen assembled would be an answer with no
+     trace row and no coverage behind it. */
+  node.addEventListener("fs-chart-expand", (event) => {
+    const it = event.detail || {};
+    const kind = String(it.kind || "node").replace(/_/g, " ");
+    ask(`Expand the ${kind} “${it.label || it.id}” (${it.id}) into the records `
+        + "behind it, and re-state the totals.").catch(fail);
+  });
+  return box;
+}
+
+/* The chart off the page, with its footer on it. `FS.kit.export` is the one
+   implementation (deep-analysis §3): the same node the reader is looking at,
+   its colours resolved, its coverage sentence still in the file. */
+async function exportChart(node, chart, format) {
+  try {
+    const blob = await FS.kit.export(node, format);
+    const name = `${(chart.title || chart.tool).toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "chart"}.${format}`;
+    const url = URL.createObjectURL(blob);
+    const link = el("a");
+    link.href = url;
+    link.download = name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    FS.toast(`Saved ${name}, footer and all.`);
+  } catch (err) {
+    fail(err);
+  }
+}
+
+function drawExploreTrace(rows) {
+  if (!rows || !rows.length) return;
+  const details = el("details", "explore-trace");
+  const names = [...new Set(rows.map((r) => r.tool))];
+  details.appendChild(el("summary", null,
+    `${rows.length} tool call${rows.length === 1 ? "" : "s"}: ${names.join(", ")}`));
+  for (const row of rows) {
+    const line = el("div", `trace-row ${row.ok ? "ok" : "bad"}`);
+    const args = Object.entries(row.args || {}).map(([k, v]) => `${k}=${v}`).join(" ");
+    line.appendChild(el("code", null, `${row.tool} ${args}`.trim()));
+    line.appendChild(el("span", null, row.summary || ""));
+    details.appendChild(line);
+  }
+  exploreLog().appendChild(details);
+}
+
+function renderExplore(out) {
+  exploreSession = out.session || exploreSession;
+  drawExploreTrace(out.transcript);
+  for (const chart of out.charts || []) drawChart(chart);
+  if (out.say) exploreSay(out.say, "bot");
+  exploreCost(out.cost);
+  if (out.kind === "unavailable") {
+    /* Off, or out of budget. Both are states with a reason, and the reason is
+       what a person can act on; neither is an error and neither is a blank. */
+    $("#explore-state").textContent = out.why
+      ? `The analysis agent is not answering: ${out.why}.`
+      : "The analysis agent is not answering.";
+  }
+  exploreLog().lastElementChild?.scrollIntoView({ block: "nearest" });
+}
+
+async function ask(question) {
+  if (exploreBusy || !question) return;
+  clearBanner();
+  exploreSay(question, "me");
+  const pending = exploreSay("working…", "thinking");
+  exploreBusy = true;
+  $("#explore-send").disabled = true;
+  try {
+    const out = await api("/assist/agent", {
+      method: "POST",
+      body: { message: question, session: exploreSession,
+              screen: window.location.pathname, kind: EXPLORE_KIND },
+    });
+    pending.remove();
+    renderExplore(out);
+  } catch (err) {
+    pending.remove();
+    exploreSay("I could not reach the analysis agent just then. Nothing was "
+               + "changed — it only reads.", "bot");
+    fail(err);
+  } finally {
+    exploreBusy = false;
+    $("#explore-send").disabled = false;
+  }
+}
+
+/* Whether the agent is on, and why it is not. Shadow mode is the one that has
+   to be said in full: a shadow plant's numbers do not leave the box, so the
+   cloud brain is refused there, and an exploration that quietly answered from
+   somewhere else would be the whole point of shadow mode undone. */
+async function loadExplore() {
+  const status = await api(`/assist/agent/status?kind=${EXPLORE_KIND}`)
+    .catch((err) => ({ unreadable: err.message || String(err) }));
+  exploreBrain = status;
+  const line = $("#explore-state");
+  if (status.unreadable) {
+    line.textContent = `Whether the analysis agent is on could not be read (${status.unreadable}), `
+      + "which is not the same as it being off.";
+  } else if (status.available) {
+    const kind = (status.kinds || {})[EXPLORE_KIND] || {};
+    line.textContent = `${status.model} is answering, as the ${kind.account} account, `
+      + `whose ${kind.role} role holds every read in this plant and nothing that writes.`;
+  } else {
+    line.textContent = `The analysis agent is off: ${status.reason} `
+      + "Explore is here either way — this is a state with a reason, not a missing screen.";
+  }
+  $("#explore-input").disabled = false;
+  $("#explore-send").disabled = false;
+}
+
+function newExploration() {
+  exploreSession = null;
+  exploreLog().textContent = "";
+  $("#explore-cost").textContent = "";
+  FS.toast("Fresh exploration. The one before it is in the trace beside this tab.");
+}
+
+/* ---------- My agent: what the analysis could say about me ----------
+
+   Decision 0039 clause 4. Behind `plant.read` and scoped to the signed-in
+   account by the route itself - there is no way to ask it about anybody else -
+   so an operator who may not read the trace can still read their own. */
+
+async function loadMine() {
+  const page = await api("/ai/me");
+  const who = await FS.whoami().catch(() => null);
+  $("#mine-who").textContent = who ? `— ${who.code} (${who.role})` : `— ${page.person}`;
+
+  const facts = $("#mine-facts");
+  facts.textContent = "";
+  const fact = (label, value) => {
+    const box = el("div", "fact");
+    box.appendChild(el("span", "k", label));
+    box.appendChild(el("span", "v", value));
+    facts.appendChild(box);
+  };
+  const conversations = page.conversations || {};
+  const turns = page.turns || {};
+  fact("Your conversations", `${conversations.showing} of ${conversations.total}`);
+  fact("Your turns", `${turns.showing} of ${turns.total}`);
+  fact("Times an analysis named you", String(page.named_in_total));
+  $("#mine-note").textContent =
+    (page.kept_days > 0
+      ? `This plant keeps ${page.kept_days} day(s) of trace, so what is here is what it has; `
+      : "This plant keeps every turn, so this is all of them; ")
+    + "older turns are deleted as new ones are written, and a deleted turn is "
+    + "gone from this page too.";
+
+  const named = page.named_in || [];
+  $("#named-count").textContent = `— ${named.length}`;
+  const namedBody = $("#named-table tbody");
+  namedBody.textContent = "";
+  for (const row of named) {
+    const tr = el("tr");
+    tr.appendChild(el("td", "mono", FS.fmt.stamp(row.ts)));
+    tr.appendChild(el("td", null, row.by));
+    tr.appendChild(el("td", "muted small", row.everybody
+      ? `every account, grouped by ${row.grouped_by || "role"}`
+      : `you by name, grouped by ${row.grouped_by || "role"}`));
+    namedBody.appendChild(tr);
+  }
+  const noneNamed = $("#named-empty");
+  noneNamed.classList.toggle("hidden", named.length > 0);
+  noneNamed.textContent =
+    "No analysis on this plant has named you. That is a reading of the audit "
+    + "trail, not an empty page: naming a person needs `people.analyse`, which "
+    + "no role here holds unless somebody granted it.";
+
+  const rows = conversations.conversations || [];
+  $("#mine-count").textContent = `— showing ${conversations.showing} of ${conversations.total}`;
+  const body = $("#mine-table tbody");
+  body.textContent = "";
+  for (const row of rows) {
+    const tr = el("tr");
+    tr.appendChild(el("td", "mono", FS.fmt.stamp(row.started)));
+    tr.appendChild(el("td", null, row.brain));
+    tr.appendChild(el("td", row.screen ? "mono" : "muted", screenText(row)));
+    tr.appendChild(el("td", "opened", row.opened_with));
+    tr.appendChild(el("td", "mono", String(row.turns)));
+    tr.appendChild(el("td", "mono", String(row.errors || 0)));
+    tr.appendChild(el("td", "mono", `$${row.usd.toFixed(4)}`));
+    body.appendChild(tr);
+  }
+  const empty = $("#mine-empty");
+  empty.classList.toggle("hidden", rows.length > 0);
+  empty.textContent = "You have not talked to this plant's AI in the window it keeps.";
+
+  const rollup = page.rollup;
+  const groupsBody = $("#mine-groups tbody");
+  groupsBody.textContent = "";
+  if (!rollup) {
+    $("#mine-groups-count").textContent = "— unknown";
+    $("#mine-groups-note").textContent =
+      `The rollup could not be read: ${page.rollup_unreadable}. That is a fact `
+      + "about this plant's calendar, not an empty answer about you.";
+    return;
+  }
+  const groups = rollup.groups || [];
+  $("#mine-groups-count").textContent =
+    `— showing ${groups.length} of ${rollup.groups_total}`;
+  for (const group of groups) {
+    const tr = el("tr");
+    tr.appendChild(el("td", null, group.asked || group.key));
+    tr.appendChild(el("td", "mono", String(group.turns)));
+    tr.appendChild(el("td", "mono", String(group.sessions)));
+    tr.appendChild(el("td", "mono", FS.fmt.stamp(group.first_seen)));
+    tr.appendChild(el("td", "mono", FS.fmt.stamp(group.last_seen)));
+    groupsBody.appendChild(tr);
+  }
+  $("#mine-groups-note").textContent =
+    `${rollup.turns_total} turn(s) of yours in this window, in `
+    + `${rollup.groups_total} group(s), ${rollup.groups_of_one} of them asked once. `
+    + `${rollup.wordless_turns} turn(s) carried no words at all — pressing a button `
+    + "is a turn nobody typed. Grouping is a judgment and the words are yours: "
+    + `${rollup.normalisation}`;
+}
+
 /* ---------- tabs ---------- */
 
 const LOADERS = {
+  explore: loadExplore,
   conversations: loadConversations,
   status: loadStatus,
+  mine: loadMine,
   settings: loadSettings,
 };
 
 function onTab(name) {
   clearBanner();
-  (LOADERS[name] || loadConversations)().catch(fail);
+  (LOADERS[name] || LOADERS[firstTab()])().catch(fail);
+}
+
+/* Two gates on this page, not one.
+
+   The trace, the status of the brains and the exploration are all `audit.read`:
+   an exploration reads what other people typed, and the gate on the trace has
+   to be the gate on the analysis of it, or the analysis would be the way round
+   the gate.
+
+   `My agent` is `plant.read`, which every role holds, and it is scoped to the
+   signed-in account by the route rather than by this file. That is decision
+   0039 clause 4: an operator who may not read anybody's conversations can still
+   read their own, and can see every time an analysis named them. A reciprocity
+   clause behind a capability no operator holds would have promised nothing. */
+function myTabs() {
+  return FS.can("audit.read")
+    ? ["explore", "conversations", "status", "mine", "settings"]
+    : (FS.can("plant.read") ? ["mine"] : []);
+}
+
+function firstTab() {
+  return myTabs()[0] || "conversations";
 }
 
 (async function boot() {
   const who = await FS.whoami().catch(() => null);
-  const allowed = FS.can("audit.read");
-  $("#denied").classList.toggle("hidden", allowed);
+  const mine = myTabs();
+  const allowed = mine.length > 0;
+  const whole = FS.can("audit.read");
+  $("#denied").classList.toggle("hidden", whole);
   $("#ai-tabs").classList.toggle("hidden", !allowed);
   $("#ai-main").classList.toggle("hidden", !allowed);
-  if (!allowed) {
-    $("#denied-who").textContent = who ? `${who.code} (${who.role})` : "nobody";
-    return;
+  $("#denied-who").textContent = who ? `${who.code} (${who.role})` : "nobody";
+  $("#denied-mine").classList.toggle("hidden", !allowed);
+  if (!allowed) return;
+  /* The tabs and the panels somebody may not open are removed rather than
+     disabled: a tab that is there and answers 403 is a screen telling somebody
+     to try, and a panel left in the document is a panel a script can still
+     read out of. */
+  for (const tab of document.querySelectorAll("#ai-tabs .tab[data-tab]")) {
+    if (!mine.includes(tab.dataset.tab)) tab.remove();
+  }
+  for (const panel of document.querySelectorAll(".tab-panel[data-panel]")) {
+    if (!mine.includes(panel.dataset.panel)) panel.remove();
   }
   FS.applyCapGates();
-  $("#conv-q").addEventListener("input", drawConversations);
-  $("#conv-since").addEventListener("change",
-    () => loadConversations().catch(fail));
-  $("#trace-save").addEventListener("click", () => saveTraceDays().catch(fail));
+  if (whole) {
+    $("#conv-q").addEventListener("input", drawConversations);
+    $("#conv-since").addEventListener("change",
+      () => loadConversations().catch(fail));
+    $("#trace-save").addEventListener("click", () => saveTraceDays().catch(fail));
+    $("#explore-send").addEventListener("click", () => sendExplore());
+    $("#explore-new").addEventListener("click", newExploration);
+    $("#explore-input").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") sendExplore();
+    });
+  }
   FS.tabs.init(document, onTab);
 })().catch(fail);
+
+function sendExplore() {
+  const box = $("#explore-input");
+  const question = box.value.trim();
+  if (!question) return;
+  box.value = "";
+  ask(question).catch(fail);
+}

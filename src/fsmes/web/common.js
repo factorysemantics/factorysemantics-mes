@@ -82,11 +82,17 @@
        is putting AI and Agents into this system as first class citizens" -
        after an assistant failure whose only record was a screenshot.
 
-       Behind `audit.read`, like Ops, because the trace is the record of what
-       was done in this plant and by whom. Somebody who may not read the audit
-       trail does not see the chip at all rather than seeing one that refuses. */
+       Most of it is behind `audit.read`, like Ops, because the trace is the
+       record of what was done in this plant and by whom. The chip itself is
+       `plant.read`, which every role holds, because since 2026-09-29 the
+       screen has one tab that is everybody's: `My agent`, where a person sees
+       their own conversations and every analysis that named them (decision
+       0039 clause 4). A reciprocity clause reachable only by typing the
+       address would have promised nothing. Somebody without `audit.read`
+       opens it on that tab and the tabs that are not theirs are not on the
+       page - so the chip leads somewhere rather than refusing. */
     { group: "AI", items: [
-      { href: "/dashboard/ai", label: "AI", cap: "audit.read" },
+      { href: "/dashboard/ai", label: "AI", cap: "plant.read" },
     ] },
   ];
 
