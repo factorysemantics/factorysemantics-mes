@@ -814,7 +814,15 @@ because a filtered graph that kept the old total is a list that reads complete.
 - **Empty node kinds are drawn empty** (§1, step 5) rather than omitted, so the
   reader sees which questions this plant cannot answer at all.
 - **An edge labelled with seconds carries how much of the window was watched, or
-  it carries nothing** (the harness §6 rule 4).
+  it carries nothing** (the harness §6 rule 4). *Watched* means the coverage
+  ledger's `observed_seconds` for that machine over that window — the same figure
+  `oee_breakdown` reports — and never the window's own length. The first graph
+  this product drew for a person got that wrong (2026-09-29: 604,800 s claimed
+  where the ledger said 37,303), so the envelope carries a `watched` block with
+  `requested_hours` and `clamped` beside the seconds. The graph's own window is
+  not clamped to the ledger: a question is recorded whether or not a machine was
+  being watched, so the two halves of the picture cover different lengths of time
+  and the block says which.
 
 ---
 
@@ -885,6 +893,21 @@ served **3 nodes of 15 and 1 edge of 14** of its trace graph at 6,000 and
 rows of 40 to 26 of 40. What §1 still cannot say is what it said it could not:
 the screen a question came from, the workcenter a person works at, and anything
 linking a question to a stop — D8, D9 and *nothing*, in that order.
+
+**Two live explorations on bottling the same afternoon settled the two things
+only a real model could settle, and found a third.** Asked §1's question, the
+agent read `trace_rollup` → `trace_graph` → `downtime_pareto` in that order and
+answered honestly — and drew **nothing**; asked with *"draw"* in the sentence it
+drew both, after two rounds spent guessing `tool_use` ids. So: **a graph or a
+pareto the agent has read is drawn, not described**, which is now a line in the
+prompt and a `draws` expectation on the §1 case; and **`draw` takes a tool name
+as well as an id**, meaning that tool's most recent answer, so a guess costs no
+round trip while an invented id (`downtime_pareto_1`) is still refused. The third
+was an honesty bug in D3's envelope: `trace_graph` claimed 604,800 watched
+seconds — the whole requested window — where the ledger said 37,303, and the
+agent repeated it. §7's rule now says *watched* means the coverage ledger's
+`observed_seconds`, and the envelope carries a `watched` block stating the window
+those seconds came from.
 
 **The fastest route to Scott seeing his own example answered is D3 → D4 → D5**,
 and D1 can run alongside since it is a migration that touches nothing else.

@@ -1051,7 +1051,11 @@ picture:
    *"no workspace holds such a setting"* on a truncated list in September.
 4. **Coverage on the edges that carry a number.** If an edge is labelled with
    seconds or units, it carries how much of the window was watched, or it
-   carries nothing.
+   carries nothing. *Watched* is the coverage ledger's own `observed_seconds` for
+   that machine over that window, not the window's length: on 2026-09-29 the
+   first graph drawn for a person claimed 604,800 watched seconds where the
+   ledger said 37,303, because it took the window less the recorded
+   disconnections and the plant had recorded none.
 
 *What it must not claim.* **It is a picture of what the records say, not a model
 of the plant.** It cannot be asked to find a root cause, and a thicker line is
