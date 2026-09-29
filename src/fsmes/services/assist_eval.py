@@ -270,6 +270,12 @@ def _case(raw: dict, role: str, source_file: str, problems: list[str],
         # nothing, which is the refusal `draw` already gives.
         if tool not in (*case.reads, *case.reads_any):
             problems.append(f"{where}: draws {tool!r}, which this case never reads")
+    if case.draws and case.expect not in ("read", "answer"):
+        # `draws` is scored where reads are scored, which is on a question. A
+        # walk or a refusal that carried one would be an expectation nothing
+        # ever checks, which is worse than not having it.
+        problems.append(f"{where}: draws is scored on a question, and this case "
+                        f"expects {case.expect!r}")
     if case.draws and case.kind != "analysis":
         # Only one kind holds the tool at all: the floor assistant answers beside
         # somebody standing at a machine, where a picture is a dashboard nobody

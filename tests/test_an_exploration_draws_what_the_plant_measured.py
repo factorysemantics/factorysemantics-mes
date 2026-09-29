@@ -493,6 +493,16 @@ def test_a_case_that_asks_for_a_drawing_it_never_read_is_refused_by_the_suite():
                       "operator", "operator.toml", floor, kind="floor")
     assert any("only an analysis case" in problem for problem in floor), floor
 
+    # And a `draws` on an expectation the scorer never reaches: a walk and a
+    # refusal are not scored through the reads, so a drawing demanded there
+    # would be an expectation nothing checks.
+    walked: list[str] = []
+    assist_eval._case({"id": "made-up", "request": "show me the graph",
+                       "expect": "walk", "guide": "some-walk",
+                       "reads": ["trace_graph"], "draws": ["trace_graph"]},
+                      "analyst", "analyst.toml", walked, kind="analysis")
+    assert any("scored on a question" in problem for problem in walked), walked
+
 
 def test_an_exploration_that_described_a_graph_instead_of_drawing_it_fails_the_case():
     """The scorer's own half. A turn with the three reads and no chart is the
