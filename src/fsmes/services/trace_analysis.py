@@ -32,21 +32,19 @@ what the totals could not account for.
 
 ## What this module cannot say, and says so instead
 
-Three silences, each with the milestone that closes it, named in the envelope
-rather than left for a reader to notice:
+**One silence is left, and two closed.** Milestone D1 gave `ai_turns` a
+`screen` and a shift stamp and `personnel` a `home_equipment_id`, so `screen=`
+filters on a recorded column and `by="workcenter"` groups people by the line
+they were put on. Neither is backfilled and neither is ever guessed: a turn
+from before the column existed carries no screen, a person the plant has not
+placed has no work centre, and both are counted as *unattributed* out loud
+rather than folded into a group that looks complete.
 
-* **No question records the screen it was asked from.** `web/assist.js` posts
-  `screen` and `api/routers/assist.py` declares it; nothing reads it, so
-  `ai_turns` has no column for it. `screen=` therefore matches nothing, and says
-  so with `D1` named, rather than returning every turn as though the filter had
-  been applied.
-* **No person has a workcenter.** `personnel` is `code`, `name`, `role` and a
-  password hash. `by="workcenter"` returns its groups with an empty breakdown
-  and every turn unattributed, and names `personnel.home_equipment_id` and D1.
 * **Nothing links a question to a stop.** There is no causal edge here and no
   timestamp correlation that would be honest, so the graph draws question
   clusters and downtime clusters and never an edge between them. The design
-  page calls that the single most important honesty rule on it.
+  page calls that the single most important honesty rule on it. This one has
+  no milestone, because nothing records the link.
 """
 
 from __future__ import annotations
@@ -69,9 +67,9 @@ from fsmes.domain import (
     MaintenanceOrder,
     Person,
 )
+from fsmes.services import ai_trace, masterdata, plant_settings
 from fsmes.services import calendar as calendar_service
 from fsmes.services import connection as connection_service
-from fsmes.services import plant_settings
 
 #: How a question's text is reduced before turns are grouped by it. Stated in
 #: every envelope as `normalisation`, because grouping text is a judgment and a
@@ -116,10 +114,7 @@ NODE_KINDS = ("role", "workcenter", "question_group", "screen", "machine",
 EDGE_KINDS: dict[str, str | None] = {
     "asked": None,
     "followed_by": None,
-    "asked_from": (
-        "no turn records the screen it was asked from: the browser sends it and "
-        "nothing reads it, so `ai_turns` has no column for it (milestone D1)."
-    ),
+    "asked_from": None,
     "visited": (
         "nothing here records a page visit or a dwell time - no table, no "
         "beacon, no log this product keeps - so there is no source and no "
@@ -147,6 +142,32 @@ REFUSED_MEASURES: dict[str, str] = {
     ),
     "eigenvector": (
         "refused: PageRank's objection, worse on a graph this sparse."
+    ),
+}
+
+#: Why a declared node kind can come back empty. Printed for the kinds this
+#: answer has none of, so a reader can tell *nothing happened* from *nothing
+#: is recorded* - the two that a graph drawn without them reads as the same.
+#: Only the kinds that rest on a column nothing backfills need a sentence;
+#: the rest are empty because the window holds none, which is said plainly.
+NODE_KIND_SILENCES: dict[str, str] = {
+    "screen": (
+        "no turn in this window records the screen it was asked from. "
+        "`ai_turns.screen` is written from what the panel posts and is not "
+        "backfilled, so a plant that has not asked a question since the column "
+        "arrived has none - which is not the same as questions coming from "
+        "nowhere."
+    ),
+    "workcenter": (
+        "nobody who asked in this window has been put at a work centre. "
+        "`personnel.home_equipment_id` is a plant's own answer to *where does "
+        "this person work* and is null until somebody sets it; the questions are "
+        "on the `unattributed` node instead, with their count."
+    ),
+    "shift": (
+        "no row in this window carries a shift. Either this plant has no shift "
+        "patterns - in which case nothing can be attributed to one and that is "
+        "the finding - or every row here predates the stamp."
     ),
 }
 
@@ -252,20 +273,21 @@ def _roles(db: Session) -> dict[str, str]:
 
 
 def _attribute(turn: AiTurn, by: str, roles: dict[str, str],
-               shifts: dict[int, str | None]) -> str | None:
+               shifts: dict[int, str | None],
+               centres: dict[str, str | None]) -> str | None:
     """Which group of `by` this turn belongs to, or None for *not attributed*.
 
     None is a real answer and is counted rather than dropped (house rule: the
     unlabelled are reported as unlabelled). A turn with no person on it, a
-    person this plant no longer has, an instant no shift pattern covers, and
-    every turn at all when `by="workcenter"` - each of them lands here.
+    person this plant no longer has, an instant no shift pattern covered when
+    the row was written, a person nobody has put at a work centre - each of
+    them lands here.
     """
     if by == "role":
         return roles.get(turn.person) if turn.person else None
     if by == "shift":
         return shifts.get(turn.id)
-    # `workcenter`: a person has no equipment link in this product at all.
-    return None
+    return centres.get(turn.person) if turn.person else None
 
 
 def trace_rollup(db: Session, hours: float | None = None, shift: str | None = None,
@@ -307,27 +329,43 @@ def trace_rollup(db: Session, hours: float | None = None, shift: str | None = No
     turns = _turns(db, start, end)
     if person:
         turns = [t for t in turns if t.person == person]
+    without_a_screen = sum(1 for t in turns if not t.screen)
     if screen is not None:
-        # The column does not exist, so no turn can match. Returning everything
-        # would be reporting an unfiltered answer as a filtered one.
-        turns = []
-        notes.append(EDGE_KINDS["asked_from"])
+        wanted = ai_trace.screen_path(screen) or screen
+        turns = [t for t in turns if t.screen == wanted]
+        if without_a_screen:
+            notes.append(
+                f"{without_a_screen} turn(s) in this window record no screen and "
+                f"cannot match any filter: `ai_turns.screen` is not backfilled, so "
+                f"every turn taken before it existed - and every design-chat turn, "
+                f"whose panel names a screen in words rather than as a path - is "
+                f"outside this answer rather than counted against another screen."
+            )
 
     roles = _roles(db)
     shifts: dict[int, str | None] = {}
     if by == "shift":
         for turn in turns:
+            # The stamp the row was written with, which is the shift the plant
+            # was running then (decision 0028). A turn from before the column
+            # existed has none and is resolved against today's patterns rather
+            # than dropped - the best this plant can say about it, and worse
+            # than a stamp, which is why the stamp exists.
+            if turn.shift_code:
+                shifts[turn.id] = turn.shift_code
+                continue
             found = calendar_service.shift_for(db, turn.ts)
             shifts[turn.id] = found.code if found else None
+    centres: dict[str, str | None] = {}
     if by == "workcenter":
+        centres = masterdata.home_work_centers(db)
+        placed = sum(1 for code in centres.values() if code)
         notes.append(
-            "no person at this plant has a workcenter: `personnel` holds a code, a "
-            "name and a role and nothing that points at equipment, so every turn "
-            "below is unattributed by workcenter. The nearest thing that exists is "
-            "the station one browser last chose, which lives in that browser and is "
-            "not a fact about a person. Milestone D1 (`analysis-data-columns`) adds "
-            "a nullable `personnel.home_equipment_id`, and this breakdown fills for "
-            "every person a plant sets one on."
+            f"a person is grouped by the work centre above the equipment the plant "
+            f"put them at (`personnel.home_equipment_id`), and {placed} of "
+            f"{len(centres)} people have one. Nobody is placed by where they have "
+            f"worked: a person with no home equipment, and one whose home station "
+            f"hangs outside any work centre, are both counted as unattributed."
         )
 
     previous_start, previous_end, previous_note = _previous(start, end, kept_days)
@@ -358,7 +396,7 @@ def trace_rollup(db: Session, hours: float | None = None, shift: str | None = No
         group["sessions"].add(turn.session)
         group["first_seen"] = min(group["first_seen"], turn.ts)
         group["last_seen"] = max(group["last_seen"], turn.ts)
-        where = _attribute(turn, by, roles, shifts)
+        where = _attribute(turn, by, roles, shifts, centres)
         if where is None:
             group["unattributed"] += 1
             unattributed += 1
@@ -404,6 +442,12 @@ def trace_rollup(db: Session, hours: float | None = None, shift: str | None = No
         # never dropped: three turns with no person is a hole with a number on
         # it, not three turns fewer.
         "unattributed_turns": unattributed,
+        # Of every turn in the window, how many record no screen. Stated
+        # whether or not a screen filter was asked for, because "four
+        # questions came from Quality" means one thing when every turn has a
+        # screen on it and another when half of them predate the column.
+        "turns_without_a_screen": without_a_screen,
+        "screen": screen,
         "repeated_groups": repeated,
         "new_groups": len(out_groups) - repeated,
         "repeated_share": round(repeated / len(out_groups), 4) if out_groups else None,
@@ -478,6 +522,7 @@ def _graph_facts(db: Session, start: datetime, end: datetime) -> dict:
 
     # --- the trace: role -> question group, and question group -> question group
     roles = _roles(db)
+    centres = masterdata.home_work_centers(db)
     turns = _turns(db, start, end)
     by_session: dict[str, list[AiTurn]] = defaultdict(list)
     for turn in turns:
@@ -491,6 +536,30 @@ def _graph_facts(db: Session, start: datetime, end: datetime) -> dict:
         else:
             source = node("role", role, role, 1)
         edge(source, question, "asked", 1)
+
+        # Which line the person was put on, and which screen the question was
+        # asked from. Both are nullable columns nothing backfills, so both
+        # holes are nodes with a degree on them rather than absences: a
+        # question asked by somebody nobody placed, and one asked before the
+        # plant recorded screens, are each countable on the picture.
+        centre = centres.get(turn.person) if turn.person else None
+        if centre is None:
+            here = node("unattributed", "workcenter",
+                        "questions from people with no work centre", 1)
+        else:
+            here = node("workcenter", centre, centre, 1)
+        edge(here, question, "asked", 1)
+
+        if turn.screen:
+            edge(question, node("screen", turn.screen, turn.screen, 1), "asked_from", 1)
+        else:
+            edge(question, node("unattributed", "screen",
+                                "turns that record no screen", 1), "asked_from", 1)
+
+        if turn.shift_code:
+            edge(question, node("shift", turn.shift_code, turn.shift_code, 1),
+                 "fell_in", 1)
+
         by_session[turn.session].append(turn)
 
     for rows in by_session.values():
@@ -596,23 +665,31 @@ def trace_graph(db: Session, hours: float | None = None, shift: str | None = Non
                 limit: int | None = None) -> dict:
     """The plant's questions and its stops as one graph of recorded facts.
 
-    Design page §7. Nodes are roles, question groups, machines, downtime
-    reasons, who named them, maintenance orders and shifts, plus two that exist
-    to make holes visible - `unattributed` for turns with no person and
-    `unlabelled` for stops nobody named - each carrying its degree, so the hole
-    is a thing on the picture with a number on it rather than a tidy graph that
-    happens to be three turns short.
+    Design page §7. Nodes are roles, work centres, question groups, screens,
+    machines, downtime reasons, who named them, maintenance orders and shifts,
+    plus two that exist to make holes visible - `unattributed` for turns with no
+    person, no work centre or no screen, and `unlabelled` for stops nobody named
+    - each carrying its degree, so the hole is a thing on the picture with a
+    number on it rather than a tidy graph that happens to be three turns short.
 
-    **Every node kind is in every answer, empty ones included.** `screen` and
-    `workcenter` are empty on every plant today and are declared anyway, with
-    the reason: a graph that omitted them would read as a complete picture of a
-    plant where those questions came from nowhere.
+    **Every node kind is in every answer, empty ones included**, and one that
+    came back empty says why it might have: a graph that omitted `screen` would
+    read as a complete picture of a plant where questions came from nowhere.
+    `screen`, `workcenter` and `shift` each rest on a nullable column nothing
+    backfills, so each is empty on a plant that has not filled it, and the
+    questions it could not place are on the `unattributed` node with a count.
 
-    **Every edge is a recorded fact.** `asked_from` and `visited` have no source
-    in this product and are returned as empty edge kinds carrying the sentence
-    that says why, not left out. There is no edge between a question and a stop
-    at all: nothing links the two, and drawing one because the timestamps are
-    close would be inventing the causation.
+    **Every edge is a recorded fact.** `visited` has no source in this product
+    at all and is returned as an empty edge kind carrying the sentence that says
+    why, not left out. There is no edge between a question and a stop: nothing
+    links the two, and drawing one because the timestamps are close would be
+    inventing the causation.
+
+    A question group carries two `asked` edges where the plant knows both - one
+    from the asker's role and one from their work centre - and each weighs the
+    turns behind *that* edge. They are not two counts of the same thing added
+    up: `turns_total` on the rollup is the count of turns, and this is a
+    picture of which groups a question reached.
 
     The measures are size, what the biggest component touches and what it does
     not, what changed against the window of the same length before this one, and
@@ -692,11 +769,10 @@ def trace_graph(db: Session, hours: float | None = None, shift: str | None = Non
         "edge_kinds": drawn,
         "empty_edge_kinds": empty_edge_kinds,
         "empty_node_kinds": {
-            "screen": EDGE_KINDS["asked_from"],
-            "workcenter": (
-                "no person here has a workcenter: `personnel` is a code, a name and "
-                "a role, and nothing points at equipment (milestone D1)."
-            ),
+            kind: NODE_KIND_SILENCES.get(
+                kind, "nothing in this window is one of these.")
+            for kind in NODE_KINDS
+            if not any(r["kind"] == kind for r in kept.values())
         },
         "nodes": sorted(kept.values(), key=lambda r: (r["kind"], -r["weight"], r["id"])),
         "edges": sorted(edges, key=lambda r: (r["kind"], -r["weight"], r["from"], r["to"])),

@@ -274,8 +274,7 @@ def create_person(session: Session, *, code: str, name: str, role: str = "operat
                   home_equipment: str | None = None, actor: str = "system") -> Person:
     _ensure_unique(session, Person, code)
     home = get_equipment(session, home_equipment) if home_equipment else None
-    obj = Person(code=code, name=name, role=role,
-                 home_equipment_id=home.id if home else None)
+    obj = Person(code=code, name=name, role=role, home_equipment=home)
     session.add(obj)
     session.flush()
     audit.record(
@@ -314,7 +313,7 @@ def set_home_equipment(session: Session, *, code: str, equipment: str | None,
     person = get_person(session, code)
     home = get_equipment(session, equipment) if equipment else None
     before = person.home_equipment
-    person.home_equipment_id = home.id if home else None
+    person.home_equipment = home
     session.flush()
     audit.record(
         session,

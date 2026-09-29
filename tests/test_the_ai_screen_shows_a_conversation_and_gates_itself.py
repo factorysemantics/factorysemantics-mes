@@ -34,7 +34,9 @@ from sqlalchemy.orm import Session
 pytestmark = [pytest.mark.slow, pytest.mark.browser]
 
 #: The conversation the page is read against: four turns, one of each thing
-#: that can happen, in the order Scott's own afternoon went.
+#: that can happen, in the order Scott's own afternoon went. Two of them
+#: carry a screen and two do not - which is the ordinary state of a plant
+#: that upgraded, because `ai_turns.screen` is not backfilled.
 SESSION = "ab12cd34ef56"
 
 
@@ -45,6 +47,7 @@ def _trace_rows():
     return [
         dict(ts=now - timedelta(minutes=9), session=SESSION, brain="floor",
              person="ADMIN", model="claude-sonnet-5", kind="proposals",
+             screen="/dashboard/config/quality",
              asked="I want a non-conformance to have a prefix CR instead of NC",
              said="I will change it.",
              tools=[{"tool": "plant_settings", "args": {"find": "prefix"},
@@ -58,6 +61,7 @@ def _trace_rows():
              input_tokens=2000, output_tokens=60, usd=0.0051),
         dict(ts=now - timedelta(minutes=7), session=SESSION, brain="floor",
              person="ADMIN", model="claude-sonnet-5", kind="guide",
+             screen="/dashboard/quality",
              asked="could you show me where?",
              said="Here it is on your own screen.",
              guide="record-check", guide_steps=4, usd=0.0012),
@@ -205,6 +209,19 @@ def test_the_conversation_list_names_the_person_and_says_its_total(admin, plant)
     assert "ADMIN" in row and "floor" in row
     # Every list states its total (STYLE.md rule 4).
     assert "of 1" in page.locator("#conv-count").inner_text()
+    page.close()
+
+
+def test_the_list_says_which_screen_a_conversation_was_opened_from(admin, plant):
+    """And that it moved. Naming only the first screen of a conversation
+    that crossed two would read as a fact about the whole of it, so the row
+    says how many there were rather than quietly picking one."""
+    page = _open(admin, plant)
+    page.wait_for_function(
+        "() => (document.querySelector('#conv-table tbody tr') || {}).innerText"
+        "        ?.includes('/dashboard/config/quality')", timeout=15000)
+    row = page.locator("#conv-table tbody tr").first.inner_text()
+    assert "+1" in row, row
     page.close()
 
 

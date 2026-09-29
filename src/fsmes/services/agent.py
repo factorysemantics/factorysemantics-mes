@@ -136,6 +136,7 @@ NEEDS: dict[str, str] = {
     # who the plant may name as having done something, so it is gated where
     # accounts are.
     "add_person": "users.manage",
+    "set_home_equipment": "users.manage",
     "create_user": "users.manage",
     "create_role": "users.manage",
     "update_role": "users.manage",

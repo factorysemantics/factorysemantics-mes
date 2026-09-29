@@ -52,6 +52,32 @@ goes under Honesty with a migration line, so plant people can find it.
   themes. The rule it is built to keep: **a chart is presentation-ready when its
   footer survives being pasted into a slide**, so the total and the coverage
   sentence go into the file and a test says they are still there.
+- **Five nullable columns, and the plant stops dropping facts it already had.**
+  One Alembic revision, additive and nullable, nothing else:
+  `ai_turns.screen` (the browser has posted it since the assistant panel
+  existed and the API declared it; nothing stored it), `shift_code`/`shift_day`
+  on `ai_turns` and `audit_log` (the same pair every floor table carries,
+  resolved at write time from the plant calendar as it stood — decision 0028),
+  `production_logs.booked_by` (the account the booking's own audit row already
+  named), and `personnel.home_equipment_id` (a nullable work centre or
+  station, edited on the personnel screen, by `add_person` and by a new
+  `set_home_equipment`).
+
+  **What it makes answerable.** *Which work centre asks which questions* and
+  *OEE and scrap in a given person's shift* were unanswerable in principle
+  rather than for want of a better model. `/analysis/trace/rollup` now filters
+  on a real `screen=` instead of matching nothing, groups by `workcenter` off
+  the line above a person's home equipment, and reads the shift a turn was
+  stamped with rather than re-resolving it against today's roster. The graph
+  draws `asked_from` — question group to screen — and the `screen`,
+  `workcenter` and `shift` node kinds fill. `/dashboard/ai`'s conversation list
+  shows the screen, and says how many other screens a conversation moved
+  through rather than presenting the first one as the whole of it.
+
+  **Where a person works grants nothing.** `home_equipment_id` is not a role
+  and no capability reads it; it says where to *group* somebody. Setting or
+  clearing it is `users.manage` and writes `person.home_equipment_set` to the
+  audit trail, so the person can see that somebody said it.
 
 - **Three reads that answer a management question from the records: `trace_rollup`,
   `trace_graph` and `maintenance_mttr`.** *"What is the biggest problem for our
@@ -1836,6 +1862,29 @@ goes under Honesty with a migration line, so plant people can find it.
   can fall between two levels, beside the level carrying the most probability.
 
 ### Honesty
+
+- **Nothing is backfilled into the five new columns, and null is *not
+  attributed*.** Every row written before this release keeps a null in
+  `ai_turns.screen`, the two shift columns on `ai_turns` and `audit_log`,
+  `production_logs.booked_by` and `personnel.home_equipment_id`, and no
+  screen, envelope or tool turns that into a value. A shift could have been
+  re-resolved onto old `audit_log` rows the way `c6a4b81f39d7` did for the
+  floor tables, and it would have been wrong here: that migration stamped
+  rows against the patterns in force at the time, while an audit row from a
+  year ago would be stamped against a roster written since. `booked_by`
+  could have been copied out of the audit trail, and that turns a join a
+  reader can check into a column they cannot.
+
+  So every place that uses one of these columns states what it could not
+  attribute: `turns_without_a_screen` on the trace rollup and on every
+  conversation row, the unattributed count on a `workcenter` breakdown, and
+  an `unattributed` node carrying its degree on the graph. A booking from a
+  counter delta or from another system names nobody rather than naming
+  `"system"`; a person the plant has not placed reads "—" on the personnel
+  screen rather than being filed under the first line on the list; and a
+  node kind that comes back empty says why it might be, so *nothing
+  happened* and *nothing is recorded* are told apart. **Migration:**
+  `c7a2e94b16d3`, additive and nullable; no existing figure changes.
 
 - **The downtime pareto states both totals.** It groups by code where there is
   one and by typed text where there is not, and the two never merge — a code is
