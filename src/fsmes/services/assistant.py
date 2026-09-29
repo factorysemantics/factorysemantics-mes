@@ -2359,6 +2359,11 @@ WITHOUT_A_WALK: dict[str, str] = {
         "tab has an anchor (masterdata-people-filters); the form itself does "
         "not yet, so authoring the walk adds one."
     ),
+    "set_home_equipment": (
+        "the Works at column on the People tab of /dashboard/masterdata - one "
+        "select per row, so the walk has to land on a row rather than on a "
+        "control the page draws once, and there is no anchor for that yet."
+    ),
     "register_gauge": "the Register a gauge form on /dashboard/gauges (gauge-register).",
     "calibrate_gauge": "the Record a calibration form on /dashboard/gauges (gauge-calibrate).",
     "issue_certificate": (

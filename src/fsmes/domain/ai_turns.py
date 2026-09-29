@@ -38,6 +38,7 @@ from sqlalchemy import JSON, Float, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from fsmes.db import Base, utcnow
+from fsmes.domain.common import ShiftStamped
 
 #: The brains that write here. `floor` is the assistant panel's agent - the
 #: cloud model with the plant's own tools; `analysis` is the analysis agent,
@@ -53,7 +54,7 @@ from fsmes.db import Base, utcnow
 BRAINS = ("floor", "analysis", "design")
 
 
-class AiTurn(Base):
+class AiTurn(ShiftStamped, Base):
     """One exchange between a person and one of this plant's brains."""
 
     __tablename__ = "ai_turns"
@@ -78,6 +79,29 @@ class AiTurn(Base):
     person: Mapped[str] = mapped_column(String(40), index=True)
     #: Which model answered, as the plant had it configured at the time.
     model: Mapped[str] = mapped_column(String(60), default="")
+
+    #: Which screen the question was asked from, as the route path the browser
+    #: was on - `/dashboard/config/engineering`, never the query string. The
+    #: panel has always sent it and this table used to drop it, so "which
+    #: screen do people ask about" was unanswerable in principle rather than
+    #: for want of a better model (design page section 4, milestone D1).
+    #:
+    #: Null is *not recorded*, never *no screen*: a turn from the design chat
+    #: carries a screen the panel names in words rather than a path, and one
+    #: replayed by a test or a script was asked from nowhere. Nothing is
+    #: backfilled, so every row written before this column existed is null.
+    #:
+    #: **The query string is stripped before it is stored.** `?setting=x` names
+    #: a thing the person was looking at, and a column meant to say *where*
+    #: must not become a second copy of *what*.
+    screen: Mapped[str | None] = mapped_column(String(80))
+
+    # `shift_code`/`shift_day` (ShiftStamped) are the shift the turn was taken
+    # in, resolved from the plant calendar as it stood when the row was written
+    # (decision 0028), so "OEE and scrap in a user's shift" can put the
+    # questions and the floor tables side by side. Null where no pattern
+    # covered the instant, which is *not attributed* and not a shift nobody
+    # named.
 
     #: What the panel did with this turn: `reply`, `proposals`, `guide`,
     #: `error`, `unavailable`. The panel's own word, so the trace and the

@@ -226,10 +226,28 @@ function wireSpecs() {
 /* ---------- people ---------- */
 
 async function loadPeople() {
+  /* The people tab can be the first one opened, and the choice of where
+     somebody works is a list of this plant's equipment. Read once: the tab
+     reloads every twenty seconds and the tree does not. */
+  if (!equipment.length) equipment = await api("/masterdata/equipment");
   people = await api("/masterdata/personnel");
   const roles = [...new Set(people.map((p) => p.role))].sort();
   fill($("#person-filter-role"), roles.map((r) => ({ code: r })), (r) => r.code, "Any role");
+  fillHomeChoices($("#person-home"));
   drawPeople();
+}
+
+/* A work centre or a station: a person is grouped by the line they work on,
+   and a plant that runs one machine per line says so by naming the machine.
+   "nowhere named" is a choice somebody makes on purpose, which is why it is
+   the first option and not an empty box. */
+function homeChoices() {
+  return equipment.filter((e) => e.level === "work_center" || e.level === "work_unit");
+}
+
+function fillHomeChoices(select, chosen) {
+  fill(select, homeChoices(), (e) => `${e.code} — ${e.name}`, "nowhere named");
+  select.value = chosen || "";
 }
 
 function drawPeople() {
@@ -239,12 +257,26 @@ function drawPeople() {
   filters.pOffset = page.offset;
   const body = $("#person-table tbody");
   body.replaceChildren();
+  const mayEdit = window.FS.can("users.manage");
   for (const p of page.items) {
     const tr = el("tr");
     tr.append(el("td", "code", p.code), el("td", null, p.name), el("td", "muted", p.role));
+    /* Rule 8 read the other way: the plant has not said where this person
+       works, and an em dash says that. Not "unassigned", which sounds like
+       a state somebody put them in, and not the first line on the list. */
+    tr.append(el("td", p.home_equipment ? "code" : "muted", p.home_equipment || "—"));
+    const cell = el("td");
+    if (mayEdit) {
+      const choose = el("select");
+      choose.setAttribute("aria-label", `Where ${p.code} normally works`);
+      fillHomeChoices(choose, p.home_equipment);
+      choose.addEventListener("change", () => setHome(p.code, choose.value).catch(fail));
+      cell.append(choose);
+    }
+    tr.append(cell);
     body.append(tr);
   }
-  if (!page.items.length) { const tr = el("tr"); const td = el("td", "muted", "Nobody matches."); td.colSpan = 3; tr.append(td); body.append(tr); }
+  if (!page.items.length) { const tr = el("tr"); const td = el("td", "muted", "Nobody matches."); td.colSpan = 5; tr.append(td); body.append(tr); }
   $("#person-count").textContent = FS.countText(page, people.length);
   FS.pager($("#person-pager"), page, (offset) => { filters.pOffset = offset; drawPeople(); });
 }
@@ -265,13 +297,24 @@ function wireFilters() {
   bind("person-q", "pQ", drawPeople); bind("person-filter-role", "pRole", drawPeople);
 }
 
+/* `at` rather than `equipment`, which is this module's own list of the
+   plant's tree and would be shadowed here by a single code. */
+async function setHome(code, at) {
+  await api(`/masterdata/personnel/${encodeURIComponent(code)}/home-equipment`,
+            { method: "PUT", body: { equipment: at || null } });
+  toast(at ? `${code} works at ${at}.`
+           : `Where ${code} works is no longer recorded.`);
+  await loadPeople();
+}
+
 function wirePeople() {
   $("#person-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
       await api("/masterdata/personnel", { method: "POST", body: {
         code: $("#person-code").value.trim().toUpperCase(), name: $("#person-name").value.trim(),
-        role: $("#person-role").value.trim() || "operator" } });
+        role: $("#person-role").value.trim() || "operator",
+        home_equipment: $("#person-home").value || null } });
       toast("Person added.");
       $("#person-form").reset();
       await loadPeople();

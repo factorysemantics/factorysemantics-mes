@@ -214,14 +214,17 @@ screen = "/dashboard/ai"
 expect = "read"
 reads = ["trace_rollup"]
 contains = ["LINE1"]
-requires = ["machine:MIX01"]
-expected = "not_yet"
-handoff = "analysis-data-columns"
-note = """D1. `personnel` has a code, a name and a role and nothing that points
-at equipment, so today the rollup comes back with an empty breakdown saying so,
-and this case asks for the thing that is missing rather than for the sentence
-about it: an answer that names an actual work centre. It goes green when a
-nullable `personnel.home_equipment_id` exists and somebody has set one."""
+requires = ["machine:MIX01", "home:SCOTT"]
+note = """D1 landed, so this is no longer waiting on a milestone - it is waiting
+on a plant. `personnel.home_equipment_id` exists and `by="workcenter"` groups
+people by the line above the equipment they were put at; what a run cannot do is
+put them there, because that is `users.manage` and an agent deployment does not
+decide who works on LINE1 (decision 0035). So a plant that has placed nobody
+reports this case *not arranged*, with that reason, and answers the question with
+an unattributed count - which is the truth about that plant, not a gap in the
+suite. The case still asks for a work centre by name rather than for the sentence
+about the hole, because a case that only demanded the word "no" would pass on
+today's honest silence and keep passing the day somebody filled it in."""
 
 [[case]]
 id = "analyst-asks-what-pages-people-spend-time-on"
@@ -276,10 +279,12 @@ reads_any = ["oee_breakdown", "trace_rollup"]
 contains = ["shift_code"]
 contains_any = [["scrap"]]
 expected = "not_yet"
-handoff = "analysis-data-columns"
-note = """The question whose words have to change. `ShiftStamped` stamps rows,
-not people; `production_logs` has no actor at all; and `ai_turns` and `audit_log`
-carry no shift stamp. So "a user's shift" means "the shift the rows they touched
-fell in", and the honest answer is OEE and scrap in that shift beside what this
-person did in it - never "this person's OEE". D1 is the migration that makes the
-sentence mean something."""
+handoff = "analysis-in-the-ai-tab"
+note = """The question whose words have to change, now half answered. D1 gave
+`ai_turns` and `audit_log` a shift stamp and `production_logs` a `booked_by`, so
+"the shift a person's rows fell in" is a join the plant can make - which is what
+this case was waiting on and why it no longer names D1. What is missing is the
+other half: nothing composes the two sides into one answer, and per-person is
+0039's gated path anyway (`people.analyse`, which no shipped role holds), so the
+honest reply is OEE and scrap in that shift beside what this person did in it -
+never "this person's OEE". D5 is where that answer gets composed."""

@@ -229,7 +229,7 @@ def _trace_days(db) -> float:
     return float(plant_settings.setting(db, "admin", "ai_trace_days"))
 
 
-def _record(sess, *, since=None) -> None:
+def _record(sess, *, since=None, screen: str | None = None) -> None:
     """Write the turn that just finished into this plant's own trace.
 
     After the model, never before it: this opens the plant's write lock for
@@ -247,6 +247,12 @@ def _record(sess, *, since=None) -> None:
     row = getattr(sess, "last_turn", None)
     if not row:
         return
+    if screen is not None:
+        # The one fact only this layer knows. `agent` builds the turn and has
+        # never been told where the person was standing; the browser posts it
+        # on the message and the route has it in hand. `ai_trace.screen_path`
+        # is what decides whether it is a path worth keeping.
+        row = {**row, "screen": screen}
     try:
         with deps.short_write() as db:
             if since is not None:
@@ -411,7 +417,10 @@ def agent_message(body: AgentIn, user: UserDep) -> dict:
             or agent.open_session(user["sub"], plant, capabilities, kind=kind,
                                   guides=offerable, roles=roles, **budget))
     out = agent.message(sess, body.message, name=name, role=role)
-    _record(sess)
+    # Where the question was asked from. A confirm and a decline carry none:
+    # the panel does not post one on them, and guessing the screen of the
+    # message before would record a place the plant was never told about.
+    _record(sess, screen=body.screen)
     if out.get("kind") == "guide" and out.get("guide"):
         # `show_guide` handed back the walk itself. The reply the panel reads
         # is the same shape the guide router makes, so a walk starts the same

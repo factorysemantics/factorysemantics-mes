@@ -74,13 +74,37 @@ def register(mcp, call, write, identify) -> dict:
                      + (f" at op {operation_seq}" if operation_seq is not None else ""))
 
     @mcp.tool()
-    def add_person(plant: str, code: str, name: str, role: str = "operator", dry_run: bool = False,
+    def add_person(plant: str, code: str, name: str, role: str = "operator",
+                   home_equipment: str | None = None, dry_run: bool = False,
                    on_behalf_of: str | None = None, client_ref: str | None = None) -> dict:
         """Add a person without a sign-in (create_user makes an account).
+        `home_equipment` is the work center or station they normally work at,
+        which groups their questions and their shift and grants nothing.
         users.manage - human by default."""
         identify(on_behalf_of, client_ref)
-        return write(plant, "/masterdata/personnel", {"code": code, "name": name, "role": role},
-                     dry_run, f"add person {code} as {role}")
+        return write(plant, "/masterdata/personnel",
+                     {"code": code, "name": name, "role": role,
+                      "home_equipment": home_equipment},
+                     dry_run, f"add person {code} as {role}"
+                     + (f" at {home_equipment}" if home_equipment else ""))
+
+    @mcp.tool()
+    def set_home_equipment(plant: str, code: str, equipment: str | None = None,
+                           dry_run: bool = False, on_behalf_of: str | None = None,
+                           client_ref: str | None = None) -> dict:
+        """Say where a person normally works - a work center or a station -
+        or pass no equipment to say the plant no longer knows.
+
+        It is not a role and it restricts nothing: it is what lets "which
+        work centre asks which questions" be answered, and a person with none
+        is counted as unattributed rather than put somewhere plausible.
+        users.manage - human by default."""
+        identify(on_behalf_of, client_ref)
+        return write(plant, f"/masterdata/personnel/{code}/home-equipment",
+                     {"equipment": equipment}, dry_run,
+                     (f"put {code} at {equipment}" if equipment
+                      else f"clear where {code} works"),
+                     method="PUT")
 
     @mcp.tool()
     def update_role(plant: str, code: str, name: str, capabilities: list[str],
@@ -115,4 +139,5 @@ def register(mcp, call, write, identify) -> dict:
                      dry_run, f"draft document {code}")
 
     return {f.__name__: f for f in (materials, bill_of_material, people, create_equipment, create_material,
-                                    add_bom_component, add_person, update_role, create_document)}
+                                    add_bom_component, add_person, set_home_equipment, update_role,
+                                    create_document)}

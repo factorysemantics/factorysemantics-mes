@@ -67,8 +67,19 @@ async function loadConversations() {
 
 function matches(row, q) {
   if (!q) return true;
-  return [row.person, row.brain, row.opened_with, row.session, row.model]
+  return [row.person, row.brain, row.screen, row.opened_with, row.session, row.model]
     .join(" ").toLowerCase().includes(q);
+}
+
+/* Where the conversation was opened, and how honest that one word is.
+   A conversation follows a person around the product: naming only the
+   first screen on a row whose turns crossed three would read as a fact
+   about the whole of it, so the row says how many there were. A turn from
+   before this was recorded, and the design chat, carry none - and "—" is
+   *not recorded*, not "no screen". */
+function screenText(row) {
+  if (!row.screen) return "—";
+  return row.screens > 1 ? `${row.screen} +${row.screens - 1}` : row.screen;
 }
 
 function outcomeText(counts) {
@@ -87,6 +98,11 @@ function drawConversations() {
     tr.appendChild(el("td", "mono", FS.fmt.stamp(row.started)));
     tr.appendChild(el("td", null, row.person));
     tr.appendChild(el("td", null, row.brain));
+    const where = el("td", row.screen ? "mono" : "muted", screenText(row));
+    if (row.screen && row.screens > 1) {
+      where.title = `${row.screens} screens in this conversation`;
+    }
+    tr.appendChild(where);
     tr.appendChild(el("td", "opened", row.opened_with));
     tr.appendChild(el("td", "mono", String(row.turns)));
     tr.appendChild(el("td", null, outcomeText(row.proposals)));

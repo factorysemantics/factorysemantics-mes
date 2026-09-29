@@ -12,9 +12,10 @@ from sqlalchemy import JSON, Index, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from fsmes.db import Base, utcnow
+from fsmes.domain.common import ShiftStamped
 
 
-class AuditLog(Base):
+class AuditLog(ShiftStamped, Base):
     __tablename__ = "audit_log"
     __table_args__ = (Index("ix_audit_entity", "entity_type", "entity_id"),)
 
@@ -30,3 +31,9 @@ class AuditLog(Base):
     entity_id: Mapped[str] = mapped_column(String(60))  # business code, not the numeric PK
     before: Mapped[dict | None] = mapped_column(JSON)
     after: Mapped[dict | None] = mapped_column(JSON)
+    # `shift_code`/`shift_day` (ShiftStamped) are the shift the action fell in,
+    # resolved when the row was written from the plant calendar as it stood
+    # (decision 0028) - so a change and the production it explains can be read
+    # in the same unit a plant is run in. Null is *not attributed*: a plant
+    # with no shift patterns, or an instant no pattern covers. Nothing is
+    # backfilled, so every row written before this column existed is null.

@@ -113,6 +113,17 @@ jobs:
           # non-zero unless the database is at the head the package ships, so
           # the two ways of asking have to agree, on PostgreSQL as well.
           fsmes db-status
+          # And back down one, and up again. A downgrade is the step a plant
+          # reaches for at the worst possible moment, and on PostgreSQL it is
+          # the one most likely to be quietly wrong: SQLite rewrites a table
+          # to drop a column and never notices a constraint that has no name,
+          # while PostgreSQL drops it by the name the upgrade gave it. Only
+          # the newest revision, because that is the one this pull request
+          # wrote and walking the whole chain down would say nothing about it
+          # that is not already said by building it up.
+          python -m alembic downgrade -1
+          python -m alembic upgrade head
+          fsmes db-status
 
       # The suite drops the migrated schema and builds its own from the
       # model, which is the same thing every other cell does. Running it

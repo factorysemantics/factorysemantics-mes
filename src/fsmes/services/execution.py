@@ -38,6 +38,27 @@ from fsmes.services import Conflict, Invalid, NotFound, audit, calendar, masterd
 _COUNTED_ELSEWHERE = frozenset({ProductionSource.OPC, ProductionSource.EXTERNAL})
 
 
+def booked_by(actor: str, source: ProductionSource) -> str | None:
+    """Who to name on a booking, or None when nobody typed it.
+
+    The same string the `production.reported` audit row gets - the person an
+    agent acted for when there was one, else the actor itself - so the
+    booking and the audit row name the same account and a reader can check
+    one against the other.
+
+    **None for a counter delta and for a count another system handed over.**
+    A machine has no actor, and the name on an EXTERNAL row would be whoever
+    this MES's inbound contract happens to run as, which is a fact about this
+    MES and not about who made the units. `source_system` is where that one
+    belongs, and it is already there. Writing `"system"` into this column
+    would turn "nobody typed this" into an answer (house rule 2).
+    """
+    if source in _COUNTED_ELSEWHERE:
+        return None
+    named = getattr(actor, "on_behalf_of", None) or actor
+    return str(named)[:40] or None
+
+
 def get_lot(session: Session, code: str) -> MaterialLot:
     lot = session.scalar(select(MaterialLot).where(MaterialLot.code == code))
     if lot is None:
@@ -196,7 +217,8 @@ def report(
         if op is None:
             if source in _COUNTED_ELSEWHERE:
                 record_unassigned(session, equipment=equipment, good=good, scrap=scrap,
-                                  source=source, source_system=source_system, ts=ts)
+                                  source=source, source_system=source_system,
+                                  actor=actor, ts=ts)
                 return None
             raise Invalid(f"no active operation on equipment {equipment_code!r}")
     else:
@@ -219,6 +241,7 @@ def report(
         scrap_qty=scrap,
         source=source,
         source_system=source_system,
+        booked_by=booked_by(actor, source),
         **({"ts": ts} if ts is not None else {}),
     )
     # The shift these units were *counted* in, from the booking's own instant
@@ -245,6 +268,7 @@ def record_unassigned(session: Session, *, equipment: Equipment,
                       good: float = 0, scrap: float = 0,
                       source: ProductionSource = ProductionSource.OPC,
                       source_system: str | None = None,
+                      actor: str = "system",
                       ts: datetime | None = None) -> ProductionLog:
     """Record units a machine counted with no order open to book them against.
 
@@ -267,6 +291,7 @@ def record_unassigned(session: Session, *, equipment: Equipment,
         scrap_qty=scrap,
         source=source,
         source_system=source_system,
+        booked_by=booked_by(actor, source),
         **({"ts": ts} if ts is not None else {}),
     )
     calendar.attribute(session, row, ts or utcnow(), equipment.id)

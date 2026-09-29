@@ -168,6 +168,7 @@
             <input id="person-code" placeholder="Code" required>
             <input id="person-name" placeholder="Name" required>
             <input id="person-role" placeholder="Role" value="operator">
+            <select id="person-home" aria-label="Where they normally work"></select>
             <button id="person-submit">Add</button>
           </div>
         </form>
@@ -178,8 +179,12 @@
           <input id="person-q" type="search" placeholder="Code or name" aria-label="Person code or name">
           <select id="person-filter-role" aria-label="Role"><option value="">Any role</option></select>
         </div>
+        <p class="muted small">Where somebody works groups their questions and their
+          shift. It is not a role: it grants nothing and stops nothing, and a person
+          the plant has not placed reads “—” and is counted as unattributed rather
+          than put on a line that looks plausible.</p>
         <div class="table-wrap"><table id="person-table">
-          <thead><tr><th>Code</th><th>Name</th><th>Role</th></tr></thead>
+          <thead><tr><th>Code</th><th>Name</th><th>Role</th><th>Works at</th><th></th></tr></thead>
           <tbody></tbody>
         </table></div>
         <div id="person-pager" class="pager"></div>

@@ -94,6 +94,17 @@ class ProductionLog(ShiftStamped, Base):
     # anything this MES saw itself, because there is no other system to name.
     source_system: Mapped[str | None] = mapped_column(String(80))
     ts: Mapped[datetime] = mapped_column(default=utcnow, index=True)
+    # Who booked it: the account code the audit row for this booking carries -
+    # the person an agent acted for when there was one, else the actor itself.
+    # The audit trail has held this fact since the table existed and this table
+    # dropped it, so "scrap in a user's shift" needed a join nobody could make.
+    #
+    # **Null for anything no person booked.** A counter delta and a count
+    # handed over by another system have no actor to name, and writing
+    # `"system"` there would turn an absence into an answer (house rule 2).
+    # Nothing is backfilled: every row written before this column existed is
+    # null whoever booked it.
+    booked_by: Mapped[str | None] = mapped_column(String(40))
 
     # Every OEE window asks the same question of this table: one machine's
     # bookings between two instants. On `equipment_id` alone that is every

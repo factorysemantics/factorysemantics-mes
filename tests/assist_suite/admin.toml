@@ -610,6 +610,20 @@ this is an admin's file - and the register is what the plant may name as having
 done something, so being on it matters even without a password."""
 
 [[case]]
+id = "admin-says-where-somebody-works"
+request = "Scott normally works on PACK01 - record that against him"
+screen = "/dashboard/masterdata"
+expect = "propose"
+tool = "set_home_equipment"
+args = { code = "SCOTT", equipment = "PACK01" }
+requires = ["person:SCOTT", "machine:PACK01"]
+note = """The other half of the personnel register, and the same gate:
+`users.manage`, because saying where somebody works is the plant's own record
+of its people. It grants nothing and stops nothing - no capability reads it -
+and it is what makes "which work centre asks which questions" answerable at
+all. Proposed and not done, like every other write: a person presses Do it."""
+
+[[case]]
 id = "admin-registers-a-gauge"
 request = "register a refractometer GA-BRIX01 at the sample port, calibrated every 180 days"
 screen = "/dashboard/gauges"

@@ -1252,16 +1252,21 @@ def test_the_scripted_run_arranges_every_fixture_the_suite_asks_for(scored):
     everything a run may put there is there. A case that starts coming back not
     arranged here is a fixture that stopped being made.
 
-    With one exception, and it is a fact about the plant rather than a gap here.
-    A recommended setpoint change needs a tag the plant's own manifest declares
-    writable with bounds - the first of the three guards between a recommendation
-    and a PLC - and a seeded demo plant has no manifest at all. So the one case
-    that needs a recommendation waiting is reported not arranged, with that
-    sentence beside it, rather than asked on a plant where nothing is waiting.
+    With two exceptions, and both are facts about the plant rather than gaps
+    here. A recommended setpoint change needs a tag the plant's own manifest
+    declares writable with bounds - the first of the three guards between a
+    recommendation and a PLC - and a seeded demo plant has no manifest at all.
+    And the work-centre question needs somebody to have been *put* at a work
+    centre, which is `users.manage` and therefore the plant's own act and not a
+    run's (decision 0035): a seeded demo plant has placed nobody, so the case is
+    reported not arranged with that sentence rather than asked on a plant where
+    the honest answer is an unattributed count.
     """
     unmade = {o.case.id: o.missing for o in scored if not o.arranged}
-    assert set(unmade) == {"admin-approves-an-adjustment"}, unmade
+    assert set(unmade) == {"admin-approves-an-adjustment",
+                           "analyst-asks-which-workcenters-are-asking-what"}, unmade
     assert unmade["admin-approves-an-adjustment"] == ("adjustment:MIX01",)
+    assert unmade["analyst-asks-which-workcenters-are-asking-what"] == ("home:SCOTT",)
 
 
 def test_a_case_whose_fixture_is_missing_is_counted_apart_from_pass_and_fail():

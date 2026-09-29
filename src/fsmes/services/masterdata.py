@@ -270,9 +270,11 @@ def create_routing(
     return routing
 
 
-def create_person(session: Session, *, code: str, name: str, role: str = "operator", actor: str = "system") -> Person:
+def create_person(session: Session, *, code: str, name: str, role: str = "operator",
+                  home_equipment: str | None = None, actor: str = "system") -> Person:
     _ensure_unique(session, Person, code)
-    obj = Person(code=code, name=name, role=role)
+    home = get_equipment(session, home_equipment) if home_equipment else None
+    obj = Person(code=code, name=name, role=role, home_equipment=home)
     session.add(obj)
     session.flush()
     audit.record(
@@ -281,9 +283,75 @@ def create_person(session: Session, *, code: str, name: str, role: str = "operat
         action="person.created",
         entity_type="person",
         entity_id=code,
-        after={"name": name, "role": role},
+        after={"name": name, "role": role,
+               "home_equipment": home.code if home else None},
     )
     return obj
+
+
+def get_person(session: Session, code: str) -> Person:
+    obj = session.scalar(select(Person).where(Person.code == code))
+    if obj is None:
+        raise NotFound(f"person {code!r} not found")
+    return obj
+
+
+def set_home_equipment(session: Session, *, code: str, equipment: str | None,
+                       actor: str = "system") -> Person:
+    """Say where somebody normally works, or say that the plant does not know.
+
+    `equipment` is a work center or a station code; None clears it, and
+    clearing is a real edit rather than a gap - a plant that has stopped
+    knowing where somebody works should be able to say so, and the rollups
+    will then count them as unattributed out loud.
+
+    This changes nothing about what the person may do. It is not a role and
+    no capability reads it; it is the grouping "which work centre asks which
+    questions" needs, and the audit row says who set it so a person can see
+    that somebody did.
+    """
+    person = get_person(session, code)
+    home = get_equipment(session, equipment) if equipment else None
+    before = person.home_equipment
+    person.home_equipment = home
+    session.flush()
+    audit.record(
+        session,
+        actor=actor,
+        action="person.home_equipment_set",
+        entity_type="person",
+        entity_id=code,
+        before={"home_equipment": before.code if before else None},
+        after={"home_equipment": home.code if home else None},
+    )
+    return person
+
+
+def home_work_centers(session: Session) -> dict[str, str | None]:
+    """{person code: the work centre they are grouped under, or None}.
+
+    One read of `personnel` and one of `equipment` for the whole plant,
+    because the alternative is a relationship load per row and a rollup over
+    a hundred people should not be a hundred queries.
+
+    A home station answers with the line above it; a home work centre
+    answers with itself; a station hanging outside any work centre answers
+    with None, which is the same *not attributed* as having no home at all.
+    A rollup counts both rather than inventing a line for them.
+    """
+    nodes = {eq.id: eq for eq in session.scalars(select(Equipment))}
+
+    def centre(node_id: int | None) -> str | None:
+        node = nodes.get(node_id) if node_id else None
+        seen: set[int] = set()
+        while node is not None and node.id not in seen:
+            if node.level == EquipmentLevel.WORK_CENTER:
+                return node.code
+            seen.add(node.id)
+            node = nodes.get(node.parent_id) if node.parent_id else None
+        return None
+
+    return {p.code: centre(p.home_equipment_id) for p in session.scalars(select(Person))}
 
 
 def material_codes(session: Session) -> dict[int, str]:

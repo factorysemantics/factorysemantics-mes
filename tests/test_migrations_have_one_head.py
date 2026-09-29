@@ -25,3 +25,37 @@ def test_the_migrations_are_found_inside_the_package_not_the_working_directory()
     assert location.parent.name == "fsmes"
     assert (location / "env.py").is_file()
     assert list((location / "versions").glob("*.py")), "no migration scripts alongside the package"
+
+
+def test_the_newest_revision_goes_down_again_and_back_up(tmp_path):
+    """A downgrade is the step a plant reaches for at the worst moment.
+
+    Run on a scratch SQLite file rather than on the suite's own database,
+    because the suite builds its schema from the model and emptying it
+    between tests is not the same thing as walking the chain. CI's
+    `postgres` job runs the same three commands against PostgreSQL 16,
+    where a batch rewrite behaves differently and an unnamed constraint
+    cannot be dropped at all.
+
+    The URL goes on the Alembic configuration and **not** in the
+    environment: `migrations/env.py` falls back to `get_settings()`, which
+    is cached for the life of the process, so a `MES_DATABASE_URL` set here
+    is ignored the moment any earlier test has read the settings - and the
+    chain then runs against whatever `sqlite:///fsmes.db` resolves to in the
+    working directory. This test passed alone and failed in the suite until
+    the URL moved onto the configuration, which is the difference.
+    """
+    from alembic import command
+
+    scratch = tmp_path / "chain.db"
+    config = alembic_config()
+    config.set_main_option("sqlalchemy.url", f"sqlite:///{scratch}")
+
+    command.upgrade(config, "head")
+    command.downgrade(config, "-1")
+    command.upgrade(config, "head")
+
+    import sqlite3
+    with sqlite3.connect(scratch) as conn:
+        at = conn.execute("SELECT version_num FROM alembic_version").fetchone()[0]
+    assert at == head_revision()

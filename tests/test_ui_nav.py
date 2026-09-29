@@ -378,3 +378,48 @@ def test_the_vocabulary_can_still_be_drafted_from_inside_configuration(browser, 
                                timeout=15000)
     finally:
         page.close()
+
+
+# --------------------------------------------- where a person works, on screen
+
+def test_the_personnel_list_says_an_em_dash_where_the_plant_has_not_placed_somebody(
+        browser, plant):
+    """Milestone D1, at the only end a person sees it from.
+
+    `personnel.home_equipment_id` is nullable and nothing backfills it, so
+    on every plant that upgrades every row starts empty. What the screen
+    must not do is fill that in - not with the first line on the list, not
+    with "unassigned", which reads as a state somebody put them in. An em
+    dash, and a select beside it for saying otherwise.
+    """
+    page = _open(browser, plant, "/dashboard/masterdata")
+    try:
+        page.locator('.tab[data-tab="people"]').click()
+        # Wait for the value the assertion is about, never for the box that
+        # will hold it: on GitHub's runner the row exists before the cell is
+        # filled (#112, 2026-09-26).
+        page.wait_for_function(
+            "() => [...document.querySelectorAll('#person-table tbody tr')]"
+            "        .some(r => r.cells[0].textContent.trim() === 'SCOTT'"
+            "                && r.cells[3].textContent.trim() === '—')",
+            timeout=15000)
+
+        row = page.locator("#person-table tbody tr", has_text="SCOTT").first
+        row.locator("select").select_option("PACK01")
+        page.wait_for_function(
+            "() => [...document.querySelectorAll('#person-table tbody tr')]"
+            "        .some(r => r.cells[0].textContent.trim() === 'SCOTT'"
+            "                && r.cells[3].textContent.trim() === 'PACK01')",
+            timeout=15000)
+
+        # And back off it, because a plant that has stopped knowing where
+        # somebody works must be able to say so.
+        row = page.locator("#person-table tbody tr", has_text="SCOTT").first
+        row.locator("select").select_option("")
+        page.wait_for_function(
+            "() => [...document.querySelectorAll('#person-table tbody tr')]"
+            "        .some(r => r.cells[0].textContent.trim() === 'SCOTT'"
+            "                && r.cells[3].textContent.trim() === '—')",
+            timeout=15000)
+    finally:
+        page.close()
