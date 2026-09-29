@@ -4113,8 +4113,12 @@ quiet fall-back to eight hours.</p>
 with their keys, which one is running, the total, and the clock the boundaries
 are drawn on. The <strong>Analysis</strong> screen's <em>Shift</em> selector is driven by it, and
 keeps its choice in the address bar so a screen can be handed to somebody else.</p>
-<p>The MCP tools <code>downtime</code> and <code>tag_trend</code> take the same <code>shift</code> argument, and
-<code>shifts</code> lists them.</p>
+<p>The MCP tools take the same <code>shift</code> argument — <code>oee_breakdown</code>,
+<code>state_timeline</code>, <code>downtime_pareto</code> and <code>tag_trend</code>, the four analyses an agent
+reads — and <code>shifts</code> lists the keys they take. Leaving both <code>shift</code> and <code>hours</code>
+out is this plant's own <code>default_report_hours</code>, and every answer states the
+<code>requested_hours</code> it was given, so nothing downstream reads a window as a fact
+about a shift.</p>
 <h3 id="a-shift-still-running">A shift still running<a class="headerlink" href="#a-shift-still-running" title="Permanent link">&para;</a></h3>
 <p>It is clipped to now, not to the hour it is rostered to end. Asking for
 <code>shift=current</code> two hours into an eight-hour shift reports two hours. The other
