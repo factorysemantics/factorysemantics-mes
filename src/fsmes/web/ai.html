@@ -26,22 +26,61 @@
   <header data-nav="ai"></header>
 
   <div id="denied" class="panel denied hidden">
-    <h2>Not your screen</h2>
+    <h2>Most of this screen is not yours</h2>
     <p class="muted">The AI trace needs the <code>audit.read</code> capability —
       the same one the audit trail is behind, because this is the record of what
       was done in this plant and by whom. You are signed in as
       <strong id="denied-who"></strong>.</p>
+    <p class="muted" id="denied-mine">Your own record is still yours: the
+      <strong>My agent</strong> tab below shows every conversation you have had
+      with this plant's AI, and every time an analysis named you.</p>
   </div>
 
   <p id="banner" class="banner hidden"></p>
 
   <div id="ai-tabs" class="tabs hidden" role="tablist" data-assist="ai-tabs">
+    <!-- Conversations stays first, and so stays the tab this screen opens on
+         with no fragment in the address. Explore is the new thing and the
+         reason most people will come here from now on, but the screen's
+         identity is the record of what this plant's AI did (#112), and moving
+         somebody's landing tab under them is a change nobody asked for. -->
     <button class="tab" role="tab" data-tab="conversations">Conversations</button>
+    <button class="tab" role="tab" data-tab="explore">Explore</button>
     <button class="tab" role="tab" data-tab="status">Status</button>
+    <button class="tab" role="tab" data-tab="mine">My agent</button>
     <button class="tab" role="tab" data-tab="settings">Settings</button>
   </div>
 
   <main id="ai-main" class="object-main hidden">
+    <section class="tab-panel" data-panel="explore">
+      <div class="panel">
+        <h2>Explore <span class="muted">— ask the analysis agent a question nobody wrote down</span></h2>
+        <p class="muted small">
+          This agent reads and only reads: every analysis this plant computes, the
+          state and tag history, the quality record, the audit trail and the trace
+          beside this tab. It cannot book, propose, approve or change anything. Ask
+          it something, and where the shape is the answer it draws the plant's own
+          payload beside its words — the same chart the screens draw, stating the
+          same total and the same coverage.
+        </p>
+        <p id="explore-state" class="muted small" data-assist="explore-state"></p>
+        <div id="explore-log" class="explore-log" data-assist="explore-log"></div>
+        <div class="filter-bar explore-ask">
+          <input id="explore-input" type="text" aria-label="Ask the analysis agent"
+                 placeholder="What is the biggest problem for our operators?"
+                 data-assist="explore-input">
+          <button id="explore-send" data-assist="explore-send">Ask</button>
+          <button id="explore-new" class="ghost" data-assist="explore-new">Start again</button>
+        </div>
+        <p id="explore-cost" class="muted small" data-assist="explore-cost"></p>
+        <p class="muted small">
+          An exploration lives as long as this conversation does. It is not a
+          dashboard and nothing here is published to anybody: a chart becomes part
+          of a screen only when somebody decides it should be.
+        </p>
+      </div>
+    </section>
+
     <section class="tab-panel" data-panel="conversations">
       <div class="panel">
         <h2>Conversations <span id="conv-count" class="muted count">—</span></h2>
@@ -121,6 +160,69 @@
       </div>
     </section>
 
+
+    <section class="tab-panel" data-panel="mine">
+      <div class="panel">
+        <h2>My agent <span id="mine-who" class="muted"></span></h2>
+        <p class="muted small">
+          Everything this plant's analysis could say about you, shown to you. That
+          is decision 0039 clause 4, and the test it sets for any analysis this
+          product ever runs: if the plant would not show it to the person it is
+          about, it should not be run. Nothing here is about anybody else, and
+          there is no way to ask this screen about anybody else.
+        </p>
+        <div id="mine-facts" class="facts"></div>
+        <p id="mine-note" class="muted small"></p>
+      </div>
+
+      <div class="panel">
+        <h2>When an analysis named you <span id="named-count" class="muted count">—</span></h2>
+        <p class="muted small">
+          Naming a person in an analysis needs the <code>people.analyse</code>
+          capability, which no shipped role holds, and every answer that names one
+          writes the row below. An empty list is a plant where no analysis has
+          named anybody — which is a measurement, not a blank.
+        </p>
+        <div class="table-wrap">
+          <table id="named-table" data-assist="mine-named">
+            <thead><tr><th>When</th><th>Who asked</th><th>What they asked for</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p id="named-empty" class="muted small hidden"></p>
+      </div>
+
+      <div class="panel">
+        <h2>Your conversations <span id="mine-count" class="muted count">—</span></h2>
+        <div class="table-wrap">
+          <table id="mine-table" data-assist="mine-conversations">
+            <thead><tr>
+              <th>Started</th><th>Brain</th><th>Screen</th><th>Opened with</th>
+              <th>Turns</th><th>Errors</th><th>Cost</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p id="mine-empty" class="muted small hidden"></p>
+      </div>
+
+      <div class="panel">
+        <h2>Your questions, grouped <span id="mine-groups-count" class="muted count">—</span></h2>
+        <p class="muted small">
+          The same rollup the analysis agent reads, narrowed to your own turns:
+          which questions you asked more than once, and which you asked only once.
+        </p>
+        <div class="table-wrap">
+          <table id="mine-groups" data-assist="mine-groups">
+            <thead><tr><th>Question</th><th>Turns</th><th>Conversations</th>
+              <th>First seen</th><th>Last seen</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p id="mine-groups-note" class="muted small"></p>
+      </div>
+    </section>
+
     <section class="tab-panel" data-panel="settings">
       <div class="panel">
         <h2>How long the trace is kept</h2>
@@ -153,6 +255,10 @@
 </div>
 <div id="toast" class="toast hidden"></div>
 <script src="/static/common.js"></script>
+<!-- The chart kit, because Explore draws the plant's own payloads beside the
+     conversation. One renderer for every chart in this product: a second one
+     here is exactly the drift kit.js exists to prevent. -->
+<script src="/static/kit.js"></script>
 <script src="/static/ai.js"></script>
 <script src="/static/assist.js"></script>
 <script src="/static/themes.js"></script>

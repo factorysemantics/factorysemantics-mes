@@ -615,7 +615,7 @@ class Settings(BaseSettings):
     # What one conversation with the floor agent may spend.
     admin_agent_max_rounds: int = 12
     admin_agent_session_ttl_seconds: int = 30 * 60
-    admin_agent_result_limit: int = 6000
+    admin_agent_result_limit: int = 12000
 
     # How much of this plant reaches a model: the assistant's facts, and the
     # design chat's three budgets.

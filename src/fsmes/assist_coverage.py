@@ -137,7 +137,8 @@ EXCLUDED: dict[str, str] = {
         "this is how the assistant is asked. A tool for it would be the "
         "assistant calling itself.",
     "POST /assist/agent":
-        "the same: the floor assistant's own conversation endpoint.",
+        "the same: the conversation endpoint both agents answer on - the panel's "
+        "floor assistant, and the AI tab's exploration.",
     "POST /assist/agent/confirm":
         "\"Do it\" - the person's confirmation of a proposal. The loop reads "
         "it; a tool that pressed it would be the assistant confirming itself.",

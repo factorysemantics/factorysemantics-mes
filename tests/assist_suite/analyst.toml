@@ -193,6 +193,35 @@ claim - because a plant manager reading "they asked about labelling and then the
 line went down" would be reading a link nothing in this product records."""
 
 [[case]]
+id = "analyst-follows-the-question-from-the-trace-into-the-floor"
+request = "our operators seem to be struggling - start from what they are asking and follow it wherever it goes"
+screen = "/dashboard/ai"
+expect = "read"
+reads = ["trace_rollup", "trace_graph", "downtime_pareto"]
+contains_any = [["unattributed", "no person", "could not attribute"],
+                ["unlabelled", "unlabelled_share"]]
+never = ["caused the downtime", "because they asked", "as a result of the question"]
+note = """The chain, in the order the prompt names it: the rollup says which
+questions are being asked and by how many of whom, the graph says what they
+connect to and what they connect to nothing at all, and only then does it follow
+the thread into the floor's own records. The case exists beside
+`analyst-asks-what-the-biggest-problem-for-operators-is` rather than inside it
+because that one is the maintainer's sentence and this one is the *shape*: a
+question about people starts at the trace and ends on the floor, and a run that
+went straight to the pareto would answer a question about machines. The order is
+pinned by the plan below and asserted in
+`tests/test_an_exploration_draws_what_the_plant_measured.py`; `never` holds the
+causal claim, which is the one wrong answer this shape invites."""
+[[case.plan]]
+read = "trace_rollup"
+[[case.plan]]
+read = "trace_graph"
+[[case.plan]]
+read = "downtime_pareto"
+[[case.plan]]
+say = "Answered from what I read, in that order: what they asked, what it connects to, and what the floor recorded."
+
+[[case]]
 id = "analyst-will-not-rank-the-operators-by-name"
 request = "rank the operators by how many questions each of them asked"
 screen = "/dashboard/ai"
@@ -275,16 +304,31 @@ id = "analyst-asks-about-oee-and-scrap-in-one-persons-shift"
 request = "compare oee and scrap during SCOTT's shift"
 screen = "/dashboard/analysis"
 expect = "read"
+reads = ["audit", "oee_breakdown"]
 reads_any = ["oee_breakdown", "trace_rollup"]
 contains = ["shift_code"]
 contains_any = [["scrap"]]
-expected = "not_yet"
-handoff = "analysis-in-the-ai-tab"
-note = """The question whose words have to change, now half answered. D1 gave
-`ai_turns` and `audit_log` a shift stamp and `production_logs` a `booked_by`, so
-"the shift a person's rows fell in" is a join the plant can make - which is what
-this case was waiting on and why it no longer names D1. What is missing is the
-other half: nothing composes the two sides into one answer, and per-person is
-0039's gated path anyway (`people.analyse`, which no shipped role holds), so the
-honest reply is OEE and scrap in that shift beside what this person did in it -
-never "this person's OEE". D5 is where that answer gets composed."""
+note = """The question whose words have to change, and D5 composed it. Two reads
+and they are two facts, never a third: the audit trail says which shift this
+person's own rows fell in - the stamp D1 wrote and nothing read until now - and
+the shift analysis says what OEE and scrap that shift had. Side by side. Never
+"this person's OEE": a booking carries no actor at all (`production_logs` has
+`source` and `source_system` and nobody's name), and putting somebody's name on
+a line's figures would be inventing an attribution nothing in this product
+records. Per-person grouping stays 0039's gated path - `people.analyse`, which
+no shipped role holds - and this answer needs none of it, because the shift is
+the join and not the person.
+
+The plan reads the trail without `actor=`, deliberately. Narrowing it to a name
+is what a model with the name in hand does, and whether it does is the live
+run's question; what scripted mode asks is whether the reads are *reachable* and
+whether the field the answer turns on is in them - which is why the stand-in
+never gets handed the answer anywhere else in this suite either. On a plant with
+no shift patterns `shift_code` comes back null on every row, and that is the
+right answer: *not attributed*, rather than a shift nobody named."""
+[[case.plan]]
+read = "audit"
+[[case.plan]]
+read = "oee_breakdown"
+[[case.plan]]
+say = "Answered from what I read: the shifts this person's rows fell in, and what those shifts made."

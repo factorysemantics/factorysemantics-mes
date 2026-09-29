@@ -524,17 +524,44 @@ def test_the_graph_says_how_many_nodes_and_edges_it_is_showing_of_how_many(
     assert set(trace_analysis.NODE_KINDS) == set(just_questions["node_kinds"])
 
 
-def test_a_graph_too_big_for_one_answer_says_what_it_left_out(
+def test_this_plants_whole_graph_now_fits_one_answer(
         wired, a_trace_worth_reading, a_floor_with_stops_and_repairs):
+    """The measurement behind raising `RESULT_LIMIT`, kept as a test.
+
+    At 6,000 characters this two-machine plant's graph came back **3 nodes of 15
+    and 1 edge of 14**: the declared kinds, their reasons and the refused
+    measures are most of the frame, so almost nothing was left for the picture.
+    At 12,000 it is 15 of 15 and 14 of 14. That is what the raise bought, and it
+    is the reason an exploration can read a graph and then follow the thread -
+    three nodes is not a thread.
+
+    Measured on 2026-09-29 for `analysis-in-the-ai-tab`. If this starts failing
+    because the plant grew, the number to move is not the assertion: it is
+    `RESULT_LIMIT`, deliberately, with a new measurement beside it.
+    """
+    served = _graph(wired)
+    whole = mcp_server.trace_graph("testplant", hours=4)
+    assert "error" not in whole, whole
+    assert whole["nodes_showing"] == served["nodes_total"] >= 15
+    assert whole["edges_showing"] == served["edges_total"] >= 14
+    assert "more" not in whole
+
+
+def test_a_graph_too_big_for_one_answer_says_what_it_left_out(
+        wired, a_trace_worth_reading, a_floor_with_stops_and_repairs,
+        monkeypatch):
     """The bound this module has kept since #108: as many whole nodes as fit,
     heaviest first, the totals beside them, and the sentence naming the three
     ways to ask for less. Never a silent cut.
 
-    The whole graph of even this two-machine plant does not fit one tool result -
-    the declared kinds, their reasons and the refused measures are most of the
-    frame - which is a real finding about the shape of this answer and the reason
-    the tool asks the plant for fewer nodes rather than dropping them itself.
+    Held against the budget that no longer fits this plant rather than against
+    the plant's own size, because the rule is about the budget: a plant twice
+    this one overruns 12,000 exactly as this one overran 6,000, and the paging
+    is what has to be right when it does.
     """
+    from fsmes.services import agent as agent_service
+
+    monkeypatch.setattr(agent_service, "RESULT_LIMIT", 6000)
     served = _graph(wired)
     paged = mcp_server.trace_graph("testplant", hours=4)
     assert "error" not in paged, paged

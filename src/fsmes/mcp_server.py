@@ -886,7 +886,16 @@ def create_user(plant: str, code: str, name: str, password: str,
 def audit(plant: str, actor: str | None = None, limit: int = 30) -> dict:
     """The append-only audit trail, newest first - humans and agents in the
     same spine. actor="AGENT" answers "what has the agent done to my plant"
-    in one call."""
+    in one call.
+
+    Each row carries the shift it fell in (`shift_code`, `shift_day`), stamped
+    when it was written. That is how "during somebody's shift" becomes a
+    question this plant can answer: the shift a person's rows fell in, with the
+    shift analyses beside it. It is never that person's OEE - a booking carries
+    no actor at all - and an answer that put their name on a line's figures
+    would be inventing an attribution nothing here records. Null is *not
+    attributed*: no shift pattern covered that instant.
+    """
     path = f"/audit?limit={limit}"
     if actor:
         path += f"&actor={actor}"

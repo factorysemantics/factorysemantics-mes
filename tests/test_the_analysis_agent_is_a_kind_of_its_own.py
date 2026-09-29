@@ -302,14 +302,18 @@ def test_its_prompt_says_it_explores_explains_and_changes_nothing():
     assert "Do it" not in said
 
 
-def test_the_charts_are_left_to_the_tab_in_one_named_place():
-    """`analysis-in-the-ai-tab` writes the two sentences about what an
-    exploration draws. Until it does, the prompt promises words and numbers
-    rather than a picture - and the place to replace has a name, so nobody has
-    to read the prompt looking for it."""
+def test_the_charts_are_asked_for_in_one_named_place():
+    """`analysis-in-the-ai-tab` wrote the sentences about what an exploration
+    draws, and they are still in one named constant rather than loose in the
+    prompt. What the paragraph has to carry is the rule the whole design turns
+    on: the model NAMES a read and passes no numbers.
+
+    The rest of that rule - the refusals, the envelope, what reaches the trace -
+    is in `tests/test_an_exploration_draws_what_the_plant_measured.py`."""
     assert agent.ANALYSIS_CHARTS in agent.system_for(agent.ANALYSIS)
-    assert "not built yet" in agent.ANALYSIS_CHARTS
-    assert "a picture is not yours to promise" in agent.ANALYSIS_CHARTS
+    assert agent.DRAW_TOOL in agent.ANALYSIS_CHARTS
+    assert "you never pass numbers" in agent.ANALYSIS_CHARTS
+    assert "not to decorate a sentence" in agent.ANALYSIS_CHARTS
 
 
 # ------------------------------------------------- a conversation of its own

@@ -14,15 +14,27 @@ asked and what it did.
 
 ## Who may read it
 
-`audit.read` — supervisor and above, and the `agent` role. The same gate the
-audit trail is behind, and for the same reason: this is the record of what was
-done in this plant and by whom. Somebody without it does not see the **AI**
-chip at all, rather than seeing one that refuses.
+`audit.read` — supervisor and above, and the `agent` role — for the trace, the
+brains and Explore. The same gate the audit trail is behind, and for the same
+reason: this is the record of what was done in this plant and by whom.
+
+**One tab is everybody's.** *My agent* is behind `plant.read`, and it is the
+reason the **AI** chip is now in the nav for every signed-in role rather than
+only for the people who may read the trace: a person seeing their own record is
+[decision 0039](../decisions/0039-an-analysis-is-recorded-code-that-can-only-read.md)
+clause 4, and a clause reachable only by typing the address would have promised
+nothing. Somebody without `audit.read` opens the screen on that tab, and the
+tabs that are not theirs are not on the page at all — the chip leads somewhere
+rather than refusing.
 
 Changing how long the trace is kept needs `users.manage`, like every other
 number on Setup › Configuration.
 
-## The three tabs
+## The five tabs
+
+The screen opens on **Conversations**, which is what it opened on before there
+were five: the tab is the record of what this plant's AI did, and moving
+somebody's landing tab under them is a change nobody asked for.
 
 **Conversations.** One row per conversation — who, when, how many turns, what
 was proposed and what became of each proposal, how many turns failed, and what
@@ -31,16 +43,105 @@ person typed, what the assistant said back, every tool it called with the one
 sentence the panel showed, every proposal with its outcome, and the
 walkthrough it put on the screen.
 
+**Explore.** Ask the analysis agent a question nobody wrote down, and read the
+answer with the plant's own charts beside it. See
+[Explore](#explore-asking-a-question-nobody-wrote-down) below.
+
 **Status.** Which brains are on and why the rest are off — the model server,
 the GPU, the cloud brain's spend against its cap, and every assigned job the
 local model has, with when each last did anything. The same rows the Ops
 screen's Local AI panel shows; this tab is where they belong beside the
 conversations they produce.
 
+**My agent.** Your own record, and only yours. See
+[My agent](#my-agent-your-own-record) below. It is the one tab on this screen
+that is **not** behind `audit.read`.
+
 **Settings.** How long the trace is kept, and links to the Setup rows that
 gate the assistant itself: what one conversation may spend, how much of the
 plant it is told, and when a daily AI artifact is called late. Those are
 Setup's rows and this page links to them rather than copying them.
+
+## Explore — asking a question nobody wrote down
+
+**Who may.** `audit.read`, like the rest of this screen except *My agent*: an
+exploration reads what other people typed, so the gate on the trace is the gate
+on an analysis of it.
+
+Type a question and the analysis agent answers. Where the shape is the answer it
+draws a chart beside its words — the network of who is asking what, a pareto, a
+series over time — and then follows the thread wherever the plant's own records
+take it. A question about the people here starts at the trace: which questions
+are being asked and by how many of whom, then what those questions connect to
+**and what they connect to nothing at all**, and only then the floor's records.
+The absence is usually the finding.
+
+**Every chart is the plant's arithmetic, drawn.** The agent does not compute a
+series and hand it over: it names a read it already made, and the server attaches
+that read's own payload, which the browser draws with the same chart kit every
+screen in this product draws with. A chart spec carrying numbers of its own, or
+naming no read at all, is refused with a sentence rather than drawn. So the
+figure in the words and the figure in the picture are the same figure, and there
+is no path by which they could disagree.
+
+**It is interactive two ways.** You ask the next question in words. Or you click
+a node on a graph — which does not run a query behind the agent's back: it puts
+a question to the agent, which reads, and answers, and draws again. Every re-draw
+re-states its totals, because a filtered picture that kept the old total is a
+list that reads complete.
+
+**Take one away.** Each exploration chart has an SVG and a PNG button. What you
+get is the picture you are looking at, with the coverage sentence still on it:
+a chart is presentation-ready when its footer survives being pasted into a slide.
+
+**What it costs.** Every reply says what that answer cost, what this exploration
+has spent against what one exploration may spend (`$0.25` by default), and where
+the month stands. At the cap the agent stops and says what the month has left,
+which is the budget that does not reset. Estimates at list prices; the Console
+is the bill.
+
+**When the agent is off** — a plant with no key, a spent month, shadow mode —
+Explore is still there and says which and why. A state with a reason is not a
+missing screen. In shadow mode the cloud brain is refused outright, because this
+analysis carries the words people typed and a plant lending us its data to watch
+did not agree to that.
+
+**An exploration is not a dashboard.** It lives as long as the conversation and
+goes with the trace at `ai_trace_days`. Nothing on this tab is drawn that nobody
+asked for, and nothing here is published to anybody: a chart becomes part of a
+screen only when somebody decides it should be.
+
+### What the trace keeps of a chart
+
+The `draw` call is a tool call like any other, and it lands in the turn's `tools`
+with a one-line summary: **the shape, the tool it was drawn from, the total, the
+coverage word and the title.** Never the envelope. The same sentence this page
+already makes about tool results holds for pictures — the trace records what the
+person was shown, not a second copy of the plant's rows outside the tables that
+own them.
+
+## My agent — your own record
+
+**Who may.** `plant.read`, which every role holds. An operator who may not read
+the trace still sees this tab, and it is the only one they see; a supervisor sees
+it beside the rest, and it is still theirs and not the plant's. The account is
+the signed-in one and there is no way to ask this screen — or the route behind
+it — about anybody else.
+
+Three things, each the same read the analysis agent makes, narrowed to you:
+
+- **Your conversations** with this plant's AI, in the window it keeps.
+- **Every time an analysis named you** — the `analysis.person_named` rows, with
+  when and by whom. An answer that named everybody named you too, and that is
+  shown as such rather than left to be inferred from an absence.
+- **Your questions, grouped** the way the rollup groups them: what you asked more
+  than once, what you asked once, and how many of your turns carried no words at
+  all.
+
+This is [decision 0039](../decisions/0039-an-analysis-is-recorded-code-that-can-only-read.md)
+clause 4, and it is the test to apply to any analysis this product ever adds:
+**if the plant would not show it to the person it is about, it should not be
+run.**
 
 ## What is recorded
 
@@ -151,9 +252,10 @@ search the trail for their own code and find every analysis that named them.
 `GET /audit?entity_type=personnel` is that search.
 
 **An analysis a plant will not show the person it is about should not be run.**
-That is the test to apply to anything added here later. An operator seeing
-everything the analysis could say about them, on their own account, is the piece
-still to build.
+That is the test to apply to anything added here later, and it is built: the
+[My agent](#my-agent-your-own-record) tab is an operator seeing everything the
+analysis could say about them, on their own account, behind a capability every
+role holds.
 
 One thing to know before any of this: **on any plant running this today, a
 supervisor can already read every operator's questions verbatim** for as long as
@@ -236,11 +338,12 @@ what the assistant told the night shift.
 | `GET /ai/turns?session=…` | one conversation's turns, oldest first |
 | `GET /ai/turns` | the plant's most recent turns, newest first |
 | `GET /ai` | the status rows — the brains, the GPU, the assigned jobs |
+| `GET /ai/me` | the signed-in person's own record: their conversations, their turns, the rollup filtered to them, and every analysis that named them. Behind `plant.read`, and it takes no person — the account is the one signed in |
 | `GET /analysis/trace/rollup` | the questions this plant asked, grouped by role, workcenter or shift — with the unattributed count and the totals |
 | `GET /analysis/trace/graph` | those questions and the plant's stops as one graph of recorded facts, with the empty kinds declared and the centralities refused |
 | `GET /analysis/maintenance/mttr` | repair time over time, with the count of repairs nobody timed beside it |
 
-The first four and the two `/analysis/trace/` reads are behind `audit.read` — an analysis of the trace must not be a way around the gate on the trace; the MTTR is behind `plant.read` like every other read of the floor. Every list states its total.
+`GET /ai/me` is behind `plant.read` for the reason above; the other four and the two `/analysis/trace/` reads are behind `audit.read` — an analysis of the trace must not be a way around the gate on the trace; the MTTR is behind `plant.read` like every other read of the floor. Every list states its total.
 
 `GET /assist/agent/status` is the other one worth knowing: it answers for
 one agent (`?kind=analysis`) and carries a `kinds` object beside it saying

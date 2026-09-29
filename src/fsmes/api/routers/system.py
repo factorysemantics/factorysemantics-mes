@@ -1,5 +1,7 @@
 """System endpoints: health, shadow mode, metrics, audit trail queries."""
 
+import logging
+
 from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse
 from sqlalchemy import func, select, text
@@ -8,10 +10,12 @@ from sqlalchemy.orm import Session
 from fsmes import identity
 from fsmes import shadow as shadow_mode
 from fsmes.api import deps
-from fsmes.api.deps import DbDep, ReadDbDep, require
+from fsmes.api.deps import DbDep, ReadDbDep, UserDep, require
 from fsmes.domain import AuditLog, ErpMessage, MessageStatus, OrderStatus, TagValue, WorkOrder
 from fsmes.services import connection as connection_service
 from fsmes.services import line_clock
+
+log = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -304,6 +308,73 @@ def _trace_days(db) -> float:
     return float(plant_settings.setting(db, "admin", "ai_trace_days"))
 
 
+@router.get("/ai/me", dependencies=[require("plant.read")])
+def ai_about_me(user: UserDep, db: ReadDbDep, since_days: float | None = None) -> dict:
+    """Everything this plant's analysis could say about the person asking - to
+    the person asking, and to nobody else.
+
+    Decision 0039 clause 4, reciprocity, and the test it states for any future
+    analysis: *if the plant would not show it to the person it is about, it
+    should not be run.* So this is the same three reads the analysis agent makes
+    about people, each one narrowed to the signed-in account and narrowed here
+    rather than by a parameter a caller could widen:
+
+    - the conversations they had with this plant's AI, which is what
+      `/ai/conversations` shows a supervisor about everybody;
+    - every time an analysis named them - the `analysis.person_named` audit rows
+      decision 0039 clause 3 writes, with when and by whom, so the record of
+      having been analysed reaches the person analysed;
+    - the question rollup filtered to their own turns, which is the analysis
+      itself, about them.
+
+    **Behind `plant.read`, not `audit.read`.** An operator cannot read the trace
+    and must not be able to: the gate on the trace is the gate on everybody
+    else's words. Their own words are not somebody else's, and a clause that
+    promised a person sight of their own record behind a capability no operator
+    holds would have promised nothing.
+
+    `person` is never a parameter. The account is the signed-in one and there is
+    no way to ask this route about anybody else - which is what makes it safe to
+    put behind a capability every role holds.
+    """
+    from fsmes.services import ai_trace, trace_analysis
+
+    me = user["sub"]
+    since = _since(since_days)
+    naming = db.scalars(
+        select(AuditLog).where(AuditLog.action == "analysis.person_named")
+        .order_by(AuditLog.id.desc()).limit(200)).all()
+    named_in = [
+        {"ts": row.ts, "by": row.actor,
+         # An answer that named everybody named this person too, and a row that
+         # said so only by absence would be a record the person could not read.
+         "everybody": bool((row.after or {}).get("all_accounts")),
+         "grouped_by": (row.after or {}).get("by")}
+        for row in naming
+        if row.entity_id == me or (row.after or {}).get("all_accounts")
+    ]
+    out: dict = {
+        "person": me,
+        "kept_days": _trace_days(db),
+        "conversations": ai_trace.conversations(db, person=me, since=since, limit=50),
+        "turns": ai_trace.turns(db, person=me, since=since, limit=50),
+        "named_in": named_in,
+        "named_in_total": len(named_in),
+    }
+    try:
+        out["rollup"] = trace_analysis.trace_rollup(db, person=me)
+    except ValueError as exc:
+        # A plant whose calendar cannot place the window is a fact about the
+        # plant, not a reason to show somebody a blank page about themselves.
+        # The exception's own words stay in the plant's log: what it says can
+        # carry a stack frame or a path, and this page is read by every
+        # account holding plant.read (CodeQL, PR #135).
+        log.warning("my-agent rollup unreadable for %s", me, exc_info=exc)
+        out["rollup_unreadable"] = ("the plant's calendar could not place the "
+                                    "window; the plant's log has the detail")
+    return out
+
+
 @router.get("/audit", dependencies=[require("audit.read")])
 def audit_trail(
     db: DbDep,
@@ -327,6 +398,16 @@ def audit_trail(
             "action": entry.action,
             "entity_type": entry.entity_type,
             "entity_id": entry.entity_id,
+            # Which shift this row fell in, stamped when it was written
+            # (decision 0028, columns added by D1). It is here because it is the
+            # only honest half of *"compare OEE and scrap during SCOTT's shift"*:
+            # `production_logs` carries no actor and `audit_log` carries no
+            # production, so what a plant can say is **OEE and scrap in shift B,
+            # beside the rows this person wrote in shift B** - two facts side by
+            # side, never "this person's OEE". Null where no pattern covers the
+            # instant, which is *not attributed* and not a shift called nothing.
+            "shift_code": entry.shift_code,
+            "shift_day": entry.shift_day,
             "before": entry.before,
             "after": entry.after,
         }

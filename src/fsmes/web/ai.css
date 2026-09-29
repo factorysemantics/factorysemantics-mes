@@ -75,3 +75,55 @@
   border: 1px solid var(--down); border-radius: var(--radius);
   color: var(--down);
 }
+
+/* ---------- Explore: the exploration beside the conversation ----------
+
+   A column of what was said, with the plant's own charts in it. Same rule as
+   the rest of this file: every colour is a palette variable, so all four themes
+   follow without this stylesheet naming one. */
+
+/* The column grows and the PAGE scrolls: looking at the first screenshot of
+   this panel on 2026-09-29, a 60vh box with its own scrollbar had the network
+   graph half out of view the moment a second chart arrived, and a picture you
+   have to scroll a box to see is a picture you do not read. An exploration is
+   something somebody sits down with. */
+.explore-log {
+  display: flex; flex-direction: column; gap: 8px;
+  margin: 10px 0;
+}
+
+.explore-msg {
+  padding: 8px 10px; border-radius: var(--radius);
+  border: 1px solid var(--line); overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.explore-msg.me { background: var(--panel-2); font-weight: 600; }
+.explore-msg.bot { background: var(--panel); }
+.explore-msg.thinking { background: transparent; border-style: dashed; color: var(--muted); }
+
+.explore-trace { font-family: var(--mono); font-size: 12px; }
+.explore-trace summary { color: var(--muted); cursor: pointer; }
+.explore-trace .trace-row {
+  display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;
+  padding: 2px 0 2px 14px;
+}
+.explore-trace .trace-row span { color: var(--muted); overflow-wrap: anywhere; }
+.explore-trace .trace-row.bad code { color: var(--down); }
+
+.explore-chart {
+  margin: 0; padding: 8px 10px;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--panel);
+}
+.explore-chart figcaption {
+  display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.explore-chart .chart-title { font-weight: 600; }
+/* Wide pictures scroll inside their own box rather than taking the page with
+   them: a graph 900 wide on a 600-wide panel must not make the panel scroll. */
+.explore-chart .chart-host { overflow-x: auto; }
+.explore-chart .chart-tools { display: flex; gap: 6px; margin-top: 6px; }
+
+.explore-ask { margin-top: 8px; }
+.explore-ask input { flex: 1 1 320px; }
