@@ -208,3 +208,13 @@ class Person(Base):
     name: Mapped[str] = mapped_column(String(120))
     role: Mapped[str] = mapped_column(String(40), default="operator")
     password_hash: Mapped[str | None] = mapped_column(String(200))  # None = cannot sign in
+    # Where this person normally works - a work center or a station. The one
+    # link between a person and the plant's equipment tree, and the reason
+    # "which work centre asks which questions" can be answered at all.
+    #
+    # **It grants nothing.** It is not a role, not a restriction, and no
+    # capability reads it: somebody with a home station may work anywhere, and
+    # somebody with none may work everywhere. It says where to *group* them,
+    # and null means the plant has not said - which every rollup that uses it
+    # counts out loud rather than folding into a group.
+    home_equipment_id: Mapped[int | None] = mapped_column(ForeignKey("equipment.id"))
