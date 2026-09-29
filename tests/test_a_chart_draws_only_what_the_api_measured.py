@@ -354,6 +354,8 @@ DRAW = """([kind, envelope, options, theme]) => {
                           width: Number(e.getAttribute('width') || 0)})),
         polylines: [...node.querySelectorAll('polyline.trend-line')]
             .map((p) => p.getAttribute('points')),
+        bands: [...node.querySelectorAll('polygon.trend-band')]
+            .map((p) => p.getAttribute('points')),
         hatchPatterns: node.querySelectorAll('defs pattern').length,
         /* Rule 6: every colour a mark resolves to, and the palette the theme
            says those may come from. Resolved in the page, because a variable
@@ -494,6 +496,12 @@ def test_an_unknown_reading_breaks_the_line_rather_than_being_joined_through(pag
     assert joined.count(",") == 4, "four readings, in two runs, and no more"
     assert any("no reading" in f["text"] for f in got["footer"]), \
         "the chart draws the hole but does not say what it is"
+    # And the min/max band breaks in the same place. The first draft drew it as
+    # one polygon across the hole, painted over the hatch that said there was
+    # nothing there - on the daylight palette it was the most visible thing on
+    # the chart, and it was a spread for half an hour nobody measured.
+    assert len(got["bands"]) == 2, (
+        f"{len(got['bands'])} band(s) - the spread must break where the readings do")
 
 
 def test_a_disconnected_stretch_is_hatched_and_not_a_shade_of_grey(page):

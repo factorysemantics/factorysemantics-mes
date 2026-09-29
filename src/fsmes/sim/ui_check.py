@@ -65,6 +65,12 @@ WATCHED = {
     "table": "table:not(#ai-consumers)",
     "primary-button": "button",
     "filter-bar": ".filters",
+    # Every chart kit.js draws. Watched on the frame rather than on a mark: a
+    # mark is coloured by the state it reports, which is runtime data and the
+    # reason `.pill` is not on this list. The frame's own box, type and colour
+    # are a deliberate look, and the chart contract says they are the same
+    # wherever a chart is drawn.
+    "chart": "svg.fs-chart",
     # Not .pill: a pill is coloured by the state it reports, so its computed
     # style is runtime data. The first crawl proved it - the station page
     # filed six findings because a machine went from running to idle between

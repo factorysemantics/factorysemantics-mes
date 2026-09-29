@@ -624,13 +624,25 @@
           const xs = xsOf(points);
           if (band) {
             /* The band is what stops a one-second excursion disappearing into
-               an average, so it is drawn first and the mean goes over it. */
-            const upper = points.map((p, i) => [xs[i], p[band.high]]).filter(([, v]) => isNum(v));
-            const lower = points.map((p, i) => [xs[i], p[band.low]]).filter(([, v]) => isNum(v)).reverse();
-            if (upper.length && lower.length) {
-              const outline = upper.concat(lower).map(([x, v]) => `${x},${yAt(v)}`);
-              add(g, "polygon", { points: outline.join(" "), class: "trend-band" });
-            }
+               an average, so it is drawn first and the mean goes over it - and
+               it breaks at the holes exactly as the line does. Drawn as one
+               polygon across a gap it was a spread for half an hour nobody
+               measured, painted over the hatch that said so; on a light theme
+               that was the most visible thing on the chart. */
+            let span = [];
+            const flushBand = () => {
+              if (span.length > 1) {
+                const outline = span.map(([x, , hi]) => `${x},${yAt(hi)}`)
+                  .concat(span.slice().reverse().map(([x, lo]) => `${x},${yAt(lo)}`));
+                add(g, "polygon", { points: outline.join(" "), class: "trend-band" });
+              }
+              span = [];
+            };
+            points.forEach((p, i) => {
+              if (isNum(p[band.low]) && isNum(p[band.high])) span.push([xs[i], p[band.low], p[band.high]]);
+              else flushBand();
+            });
+            flushBand();
           }
           /* One polyline per run of readings — never one through the gaps. */
           let run = [];
@@ -961,8 +973,16 @@
           if (!has(envelope[key])) continue;
           const x = left + ((envelope[key] - lowEdge) / xSpan) * plot;
           add(g, "line", { x1: x, y1: top, x2: x, y2: top + plotH, class: "limit-line" });
-          add(g, "text", { x, y: top - 3, class: "axis", "text-anchor": "middle" },
-              `${text} ${envelope[key]}`);
+          /* A spec limit sits at the edge of the data far more often than not,
+             so the label is anchored INTO the plot rather than centred on the
+             rule: centred, "upper spec 101.5" was half off the right-hand side
+             of the picture. */
+          const near = 60;
+          const anchor = x - left < near ? "start" : (left + plot - x < near ? "end" : "middle");
+          add(g, "text", {
+            x: anchor === "start" ? x + 2 : (anchor === "end" ? x - 2 : x),
+            y: top - 3, class: "axis", "text-anchor": anchor,
+          }, `${text} ${envelope[key]}`);
         }
         for (const [x, value] of [[left, lowEdge], [left + plot, highEdge]]) {
           add(g, "text", { x, y: top + plotH + 14, class: "axis",
