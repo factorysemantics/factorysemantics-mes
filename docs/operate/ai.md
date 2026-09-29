@@ -104,9 +104,8 @@ enough to book production.
 ## Who may be named in an analysis, and who finds out
 
 The analysis agent can roll this trace up — which questions are being asked,
-how often, by how many people. Decision 0039 — *an analysis is a recorded computation that can only read, and
-it counts people before it names one*, in `docs/decisions/` — is the position on
-doing that to people, and it is four sentences.
+how often, by how many people. [Decision 0039](../decisions/0039-an-analysis-is-recorded-code-that-can-only-read.md)
+is the position on doing that to people, and it is four sentences.
 
 **Counts before names.** A rollup over people comes back grouped by **role, by
 workcenter or by shift — never by account.** That is the default in the code and

@@ -304,14 +304,21 @@ def test_no_tool_the_analysis_module_registers_can_change_anything():
 
 
 def test_every_analysis_tool_is_offered_to_anybody_who_may_read_the_plant():
-    """No new capability. `plant.read` is the gate on every read in this
-    product, and a read gated on more would be a read an operator could not
-    make of their own line."""
+    """The catalogue is built by exclusion, so a read joins it by being a read.
+
+    That is true of the two whose *routes* carry `audit.read` as well
+    (`trace_rollup` and `trace_graph`, the gate `/ai` already uses on the same
+    rows): they are offered, and the API refuses the call - the same shape the
+    `audit` tool has had since it existed. A catalogue that tried to mirror
+    every route's gate would be a second answer to "who may read this", and the
+    two would disagree the first time a gate changed.
+    """
     from fsmes.services import agent
 
     offered = {t["name"] for t in agent.catalogue({"plant.read"})}
     assert {"oee_breakdown", "state_timeline", "downtime_pareto",
-            "tag_trend"} <= offered
+            "tag_trend", "trace_rollup", "trace_graph",
+            "maintenance_mttr"} <= offered
 
 
 class _Collector:
