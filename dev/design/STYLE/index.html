@@ -2067,6 +2067,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-chart-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The chart contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-ui-check-watches" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3855,6 +3866,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-chart-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The chart contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-ui-check-watches" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3951,10 +3973,62 @@ where the crawler cannot.</p>
     same <code>.kpi</code> strip when there are KPIs, themed via the palette from day
     one — and they are crawled automatically (ui-check reads the routes from
     <code>app.py</code>), so a new screen is watched the day it exists.</li>
+<li><strong>Every chart obeys the chart contract below</strong>, and is drawn by
+    <code>kit.js</code> — <code>FS.kit.chart(kind, envelope, options)</code>. A second chart
+    engine on a second screen is how two screens come to state coverage
+    differently, which is the thing <code>kit.js</code> exists to make impossible.</li>
 </ol>
+<h2 id="the-chart-contract">The chart contract<a class="headerlink" href="#the-chart-contract" title="Permanent link">&para;</a></h2>
+<p>A rendered chart is the most convincing wrong thing this product can draw
+(house rule 6), so the six rules below are not style — they are the honesty
+rules this MES already keeps, applied to a picture. They come from
+<a href="../agentic-harness/">the agentic-harness design page</a>, §9 M1, which is where
+the reasoning lives; this is the short form a reviewer can hold in their head.</p>
+<ol>
+<li><strong>A chart draws what the API measured.</strong> It computes nothing. Every number
+   on the picture is a number the envelope carried, and it appears verbatim in
+   a <code>data-value</code> attribute so a test can say so. Laying numbers out is
+   allowed; working one out is not — which is why the histogram refuses to bin
+   a series and asks the API for the bins.</li>
+<li><strong>Every figure carries its coverage</strong>, because the envelope it came from
+   does. <code>data-coverage</code> is a number, <code>null</code> when it could not be computed, or
+   <code>absent</code> when the payload has no such field: three different facts. A row
+   below this plant's coverage floor is drawn withheld at <strong>full width</strong> with
+   its ledger, never omitted, never averaged away, and never as a shorter bar —
+   a shorter bar reads as a measurement of a machine rather than of how little
+   of it anybody saw (<a href="../../decisions/0033-availability-is-a-share-of-what-was-watched/">0033</a>).</li>
+<li><strong>Unknown is drawn as unknown</strong> — a rendering of its own: hatched, marked
+   <code>data-unknown="true"</code>, and the line breaks rather than being drawn through
+   the hole. Not a gap, not a zero, not a smooth line (rule 8 above,
+   <a href="../../decisions/0030-a-lost-connection-is-unknown-time/">0030</a>).</li>
+<li><strong>Honest axes.</strong> A y-axis that does not start at zero says so on itself; a
+   window the MES could not fill says what it truncated; a rate carries its
+   denominator; and a shape that depends on a choice — a bin width, a bar
+   scale — states the choice.</li>
+<li><strong>Every chart states its total</strong>, in text on the chart and in <code>data-total</code>,
+   including the rows nobody drew (rule 4 above, applied to a picture).</li>
+<li><strong>The palette, and all four themes</strong> (rules 2 and 3 above). Nothing in
+   <code>kit.js</code> names a colour: every mark carries a class from <code>styles.css</code>, so
+   all four themes follow without the page knowing a chart exists.</li>
+</ol>
+<p>And every chart carries a <code>&lt;title&gt;</code> and a <code>&lt;desc&gt;</code> assembled from the same
+sentences as its visible footer, so what a screen reader is told and what a
+sighted reader sees cannot drift apart.</p>
+<p><strong>No build step, and nothing vendored</strong> (rule 9 above,
+<a href="../../decisions/0005-plain-html-no-build-step/">0005</a>). Hand-drawn SVG,
+extended in <code>kit.js</code> rather than duplicated. A charting library would have to
+be vendored under <code>web/vendor/</code> with its version, licence and SHA-256, and is a
+decision record when it happens — the three.js precedent was accepted because
+WebGL cannot be hand-drawn. None of the four shapes needed one.</p>
+<p>Pinned by <code>tests/test_a_chart_draws_only_what_the_api_measured.py</code>: every shape,
+every rule, in all four themes, from fixed envelopes.</p>
 <h2 id="what-ui-check-watches">What ui-check watches<a class="headerlink" href="#what-ui-check-watches" title="Permanent link">&para;</a></h2>
 <p>Components: <code>header</code>, <code>.kpi</code>, <code>.panel</code>, <code>table</code>, <code>.pill</code>, <code>button</code>,
-<code>.filters</code> — first instance per page, plus a count.
+<code>.filters</code>, <code>svg.fs-chart</code> — first instance per page, plus a count. The chart
+is watched on its frame and not on a mark, for the same reason <code>.pill</code> is not
+watched at all: a mark is coloured by the state it reports, which is runtime
+data, and a check that fires on the plant working is a check people learn to
+ignore.
 Properties: color, background-color, border, border-radius, font-size,
 font-weight, padding, display.</p>
 <p>Add a component here and to <code>WATCHED</code> in <code>src/fsmes/sim/ui_check.py</code> in the
