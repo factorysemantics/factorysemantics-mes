@@ -128,16 +128,10 @@
   flex: 1;
 }
 
-/* ---------- SVG chart bits ---------- */
-.axis { fill: var(--muted); font-size: 10px; }
-.grid-line { stroke: var(--line); stroke-width: 1; }
-.row-label { fill: var(--text); font-size: 11px; font-family: var(--mono); }
-.bar-label { fill: var(--text); font-size: 11px; }
-.series-good { fill: var(--running); }
-.series-scrap { fill: var(--down); }
-.trend-band { fill: var(--accent); opacity: 0.18; }
-.trend-line { fill: none; stroke: var(--accent); stroke-width: 1.6; }
-.cum-line { fill: none; stroke: var(--idle); stroke-width: 1.4; stroke-dasharray: 3 3; }
+/* The SVG chart bits used to live here. They belong to kit.js, which three
+   screens share, so they are in styles.css now - a kit chart drawn anywhere
+   else came out unstyled, and the chart contract has to look the same
+   wherever it is drawn. */
 
 .empty {
   color: var(--muted);

@@ -62,11 +62,67 @@ where the crawler cannot.
     same `.kpi` strip when there are KPIs, themed via the palette from day
     one — and they are crawled automatically (ui-check reads the routes from
     `app.py`), so a new screen is watched the day it exists.
+13. **Every chart obeys the chart contract below**, and is drawn by
+    `kit.js` — `FS.kit.chart(kind, envelope, options)`. A second chart
+    engine on a second screen is how two screens come to state coverage
+    differently, which is the thing `kit.js` exists to make impossible.
+
+## The chart contract
+
+A rendered chart is the most convincing wrong thing this product can draw
+(house rule 6), so the six rules below are not style — they are the honesty
+rules this MES already keeps, applied to a picture. They come from
+[the agentic-harness design page](agentic-harness.md), §9 M1, which is where
+the reasoning lives; this is the short form a reviewer can hold in their head.
+
+1. **A chart draws what the API measured.** It computes nothing. Every number
+   on the picture is a number the envelope carried, and it appears verbatim in
+   a `data-value` attribute so a test can say so. Laying numbers out is
+   allowed; working one out is not — which is why the histogram refuses to bin
+   a series and asks the API for the bins.
+2. **Every figure carries its coverage**, because the envelope it came from
+   does. `data-coverage` is a number, `null` when it could not be computed, or
+   `absent` when the payload has no such field: three different facts. A row
+   below this plant's coverage floor is drawn withheld at **full width** with
+   its ledger, never omitted, never averaged away, and never as a shorter bar —
+   a shorter bar reads as a measurement of a machine rather than of how little
+   of it anybody saw ([0033](../decisions/0033-availability-is-a-share-of-what-was-watched.md)).
+3. **Unknown is drawn as unknown** — a rendering of its own: hatched, marked
+   `data-unknown="true"`, and the line breaks rather than being drawn through
+   the hole. Not a gap, not a zero, not a smooth line (rule 8 above,
+   [0030](../decisions/0030-a-lost-connection-is-unknown-time.md)).
+4. **Honest axes.** A y-axis that does not start at zero says so on itself; a
+   window the MES could not fill says what it truncated; a rate carries its
+   denominator; and a shape that depends on a choice — a bin width, a bar
+   scale — states the choice.
+5. **Every chart states its total**, in text on the chart and in `data-total`,
+   including the rows nobody drew (rule 4 above, applied to a picture).
+6. **The palette, and all four themes** (rules 2 and 3 above). Nothing in
+   `kit.js` names a colour: every mark carries a class from `styles.css`, so
+   all four themes follow without the page knowing a chart exists.
+
+And every chart carries a `<title>` and a `<desc>` assembled from the same
+sentences as its visible footer, so what a screen reader is told and what a
+sighted reader sees cannot drift apart.
+
+**No build step, and nothing vendored** (rule 9 above,
+[0005](../decisions/0005-plain-html-no-build-step.md)). Hand-drawn SVG,
+extended in `kit.js` rather than duplicated. A charting library would have to
+be vendored under `web/vendor/` with its version, licence and SHA-256, and is a
+decision record when it happens — the three.js precedent was accepted because
+WebGL cannot be hand-drawn. None of the four shapes needed one.
+
+Pinned by `tests/test_a_chart_draws_only_what_the_api_measured.py`: every shape,
+every rule, in all four themes, from fixed envelopes.
 
 ## What ui-check watches
 
 Components: `header`, `.kpi`, `.panel`, `table`, `.pill`, `button`,
-`.filters` — first instance per page, plus a count.
+`.filters`, `svg.fs-chart` — first instance per page, plus a count. The chart
+is watched on its frame and not on a mark, for the same reason `.pill` is not
+watched at all: a mark is coloured by the state it reports, which is runtime
+data, and a check that fires on the plant working is a check people learn to
+ignore.
 Properties: color, background-color, border, border-radius, font-size,
 font-weight, padding, display.
 

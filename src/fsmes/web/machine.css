@@ -68,7 +68,6 @@
 .wip-station .qty { font-size: var(--fs-xl); font-weight: 650; font-variant-numeric: tabular-nums; }
 .wip-station .qty.negative { color: var(--down); }
 .wip-arrow { align-self: center; color: var(--muted); }
-.limit-line { stroke: var(--idle); stroke-width: 1; stroke-dasharray: 4 3; }
 .scene-frame { width: 100%; height: 70vh; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
 
 /* ---------- the tag browser ---------- */

@@ -12,6 +12,29 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **Charts that say what they do not know.** `kit.js` — the one set of chart
+  shapes every screen draws through — grows `FS.kit.chart(kind, envelope,
+  options)` and four shapes an analysis needs: a line series, bars (a pareto
+  when the cumulative line is on), the state timeline, and a histogram. They
+  take the API's own payload, with its coverage, its ledger and its totals
+  still on it, and draw it under a **chart contract** now written into
+  `docs/design/STYLE.md`: a chart computes nothing and every plotted number
+  appears verbatim in the markup; every figure carries its coverage, and a
+  station below this plant's coverage floor is drawn withheld at full width
+  with its ledger rather than as a shorter bar; unknown is hatched and breaks
+  the line rather than being drawn through; a y-axis that does not start at
+  zero says so, a truncated window says what it truncated, a rate carries its
+  denominator and a bin width is stated; every chart states its total,
+  including the rows nobody drew; and every mark takes its colour from the
+  palette, in all four themes. Each chart carries a text description built
+  from the same sentences as its visible footer, so a screen reader and the
+  screen cannot disagree.
+
+  No new dependency, nothing vendored, no build step: hand-drawn SVG, extended
+  in `kit.js` rather than duplicated, because `kit.js` exists precisely so that
+  two screens can never state coverage differently. Pinned by 52 browser tests
+  across the four shapes and the four themes.
+
 - **A live faithfulness run asks each role as an account that holds it.**
   `fsmes assist eval --live` signed in once and asked every role's questions as
   that one person, which made three of the four per-role numbers meaningless: an
@@ -489,6 +512,16 @@ goes under Honesty with a migration line, so plant people can find it.
   untrue about itself.
 
 ### Changed
+
+- **The shift analysis screen's downtime pareto and state timeline are drawn by
+  the chart kit.** The pareto now prints what its payload always knew and the
+  picture never said: the total downtime, how much of it was unlabelled, the
+  window it had to truncate, and the minutes in it that nobody was watching.
+  Unlabelled stops are hatched rather than shaded, because they are not a
+  reason. On every timeline — analysis, the machine page, the line view and the
+  schedule board — a stretch where the MES had lost sight of a machine is now
+  hatched instead of being a solid grey block that looks like a measurement,
+  and the chart says how many machines it drew out of how many the line has.
 
 - **The request suite scores what a reply means, not the words the database
   stores it under.** The dated live run of 2026-09-27 found four places where the
