@@ -43,7 +43,7 @@ are listed on one page.
 | `walkthrough_default_capability` | `"plant.read"` | What a recording asks of a viewer when nobody says otherwise |
 | `agent_max_rounds` | `12` | Turns the floor agent may take on one message before it must stop and say something |
 | `agent_session_ttl_seconds` | `1800` | How long a conversation lives without a message |
-| `agent_result_limit` | `6000` | How much of one tool result the agent is shown; the rest is marked truncated |
+| `agent_result_limit` | `12000` | How much of one tool result the agent is shown; the rest is marked truncated. 6000 until 2026-09-29, when a trace graph measured 3 nodes of 15 at that size |
 | `assistant_context_chars` | `3000` | How much of the plant's own facts reach the local model |
 | `design_compress_budget` | `2500` | How long the design chat's on-device summary of a screen may be |
 | `design_compress_source_chars` | `12000` | How much of a screen is handed to that summary |

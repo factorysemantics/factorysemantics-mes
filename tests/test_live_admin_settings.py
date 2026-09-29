@@ -82,7 +82,9 @@ def test_a_plant_that_configures_nothing_reads_exactly_what_it_read_before(sessi
     assert plant_settings.setting(session, "admin", "pending_approvals_page_size") == 20
     assert plant_settings.setting(session, "admin", "agent_max_rounds") == 12
     assert plant_settings.setting(session, "admin", "agent_session_ttl_seconds") == 30 * 60
-    assert plant_settings.setting(session, "admin", "agent_result_limit") == 6000
+    # 12,000 since 2026-09-29: an exploration that reads a graph and then
+    # follows the thread got 3 nodes of 15 at 6,000.
+    assert plant_settings.setting(session, "admin", "agent_result_limit") == 12000
     assert plant_settings.setting(session, "admin", "assistant_context_chars") == 3000
     assert plant_settings.setting(session, "admin", "assistant_timeout_seconds") == 60.0
     assert plant_settings.setting(session, "admin", "ai_rollup_stale_hours") == 40

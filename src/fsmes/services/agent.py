@@ -54,7 +54,18 @@ EFFORT = os.environ.get("MES_AGENT_EFFORT", "low")
 # by somebody else's save.
 MAX_ROUNDS = 12            # model turns per person message before it must stop
 SESSION_TTL = 30 * 60      # seconds a conversation lives without a message
-RESULT_LIMIT = 6000        # characters of a tool result the model sees
+# Characters of a tool result the model sees. Six thousand until 2026-09-29,
+# raised on two pieces of measured evidence rather than on a feeling:
+# Administration's settings list pages twelve of thirty-nine rows at six
+# thousand (`test_every_settings_list_fits_in_one_tool_result`), and the trace
+# graph's FRAME alone - the window, the empty node kinds and their sentences,
+# the refused measures - is about 2,600 characters of the 3,600 a list may use,
+# which left three of thirteen nodes in the answer. An exploration that reads a
+# graph and then follows the thread cannot do either on a page that small. The
+# paging stays exactly as it was: every list still states its total and names
+# the call that reaches the rest, and this raises the budget rather than
+# removing the honesty.
+RESULT_LIMIT = 12000
 
 # List prices per million tokens: input, output, cache read, cache write.
 # Estimates only - the Console is the bill. Updated 2026-09-03.
@@ -472,6 +483,12 @@ class Kind:
     #: (`MES_AGENT_MONTHLY_USD`) is shared whatever this says: every kind's
     #: spend counts against `spend_this_month()`, because it is one bill.
     conversation_usd: float
+    #: Whether it may ask for a chart. The floor assistant may not: the panel
+    #: it answers in is a column of sentences beside somebody standing at a
+    #: machine, and a picture there is a dashboard nobody asked for
+    #: (`docs/design/deep-analysis.md` §2). An exploration is the other
+    #: lifetime - one person, one question - so the analysis kind draws.
+    draws: bool = False
 
     @property
     def brain_env(self) -> str:
@@ -482,16 +499,82 @@ class Kind:
         return f"MES_{self.env}_CONVERSATION_USD"
 
 
+# ---------------------------------------------------------------- the chart
+
+#: The one tool that is not the plant's and not a walk: it is this
+#: conversation's own, and it is how an exploration gets a picture beside its
+#: answer (`docs/design/deep-analysis.md` §1 and §2).
+#:
+#: It takes no numbers and it cannot be given any. The model names a tool call
+#: it already made - `from` is the id of its own `tool_use` block, which is
+#: beside every result it has been handed - and the loop looks that id up in
+#: what the plant actually returned. The envelope goes to the browser; the
+#: browser draws it with `FS.kit.chart`, which writes the total, the coverage
+#: and the footer before any shape draws anything. So every figure in the
+#: picture is a figure the plant computed, and rule 1 of the chart contract is
+#: kept by there being no other way to get a chart at all.
+DRAW_TOOL = "draw"
+
+#: The shapes `kit.js` has. `pareto` is `bars` with the cumulative line on, and
+#: is named here because that is the word a person asking for one uses.
+CHART_SHAPES = ("line", "bars", "pareto", "states", "histogram", "graph")
+
+#: What a spec may carry, and nothing else. A key outside this set is a spec
+#: carrying its own numbers, and it is refused by name rather than ignored:
+#: ignoring it would draw the plant's payload under a title the model believed
+#: described its own arithmetic.
+DRAW_KEYS = ("from", "shape", "title")
+
+
+def chart_tools() -> list[dict]:
+    """The draw tool, as an Anthropic tool definition."""
+    return [
+        {"name": DRAW_TOOL, "write": False,
+         "description":
+             "Draw one chart beside your answer, from a result you have already read. "
+             "`from` is the id of your own tool_use block for that call - the plant's "
+             "own payload is what gets drawn, with its total and its coverage on it. "
+             "You pass no numbers: this tool has nowhere to put them, deliberately.",
+         "input_schema": {
+             "type": "object",
+             "additionalProperties": False,
+             "properties": {
+                 "from": {"type": "string",
+                          "description": "the tool_use id of the call whose answer to draw"},
+                 "shape": {"type": "string", "enum": list(CHART_SHAPES),
+                           "description": "which shape fits what that answer is"},
+                 "title": {"type": "string",
+                           "description": "what this picture is of, in plain words"},
+             },
+             "required": ["from", "shape"]}},
+    ]
+
+
 #: What an exploration draws, and what a chart has to say about its own
-#: coverage. Two sentences, and they are `analysis-in-the-ai-tab`'s to write:
-#: the shapes themselves landed in `kit.js` with #128, and where an exploration
-#: renders is that handoff's question. Until then the honest instruction is the
-#: one below - words and numbers, no picture - and this constant is the place to
-#: replace, so nobody has to read the prompt looking for where the charts go.
+#: coverage. The shapes landed in `kit.js` with #128 and #134; where an
+#: exploration renders was answered on 2026-09-29 - beside the conversation, on
+#: the AI tab's Explore panel - and this is the paragraph that tells the model
+#: how to ask for one.
+#:
+#: The rule in the middle is the load-bearing one: the model NAMES a tool result
+#: and never carries numbers. The server attaches the envelope the plant
+#: computed, straight out of the recorded tool result, and the browser draws
+#: that. So a chart is the plant's own arithmetic drawn twice - once as the
+#: number in the answer and once as the picture beside it - and there is no
+#: path by which the two could come to disagree.
 ANALYSIS_CHARTS = (
-    "Describe the shape you found in words and quote every number you mention: where an "
-    "exploration is drawn, and what a chart must say about its own coverage, is not built "
-    "yet, so a picture is not yours to promise.")
+    f"You can draw what you read. `{DRAW_TOOL}` puts one chart beside your answer: give it the "
+    f"`from` id of the tool call whose answer you want drawn - the id of your own tool_use block, "
+    f"which is beside every result you have been handed - the `shape` "
+    f"({', '.join(CHART_SHAPES)}), and a plain `title` saying what the picture is of. "
+    "The plant's own payload is what gets drawn: you never pass numbers, you never pass a series, "
+    "and a chart that carried figures of yours would be a second arithmetic reachable only "
+    "through you. The picture states its own total and its own coverage, drawn from that same "
+    "payload, so say the figures in words as well and let the two agree. "
+    "Draw when a shape is the answer - a network of what connects to what, a series over time, "
+    "a pareto, a spread - and not to decorate a sentence; a reader asked you a question, not for "
+    "a dashboard. A trace graph is `graph`, a downtime pareto is `bars`, a tag or MTTR series is "
+    "`line`, a state history is `states`.")
 
 ANALYSIS_SYSTEM = """You are the analysis agent inside FactorySemantics MES, a manufacturing \
 execution system, exploring plant "{plant}" for the person who asked.
@@ -522,6 +605,18 @@ were shown as all there is.
 Read before you deny. Never say this plant has no such machine, no such stop and no such record \
 until you have looked for it in this turn.
 
+A question about the people here starts with what they asked. When somebody asks about \
+operators, about the people on this floor, about what is going wrong for them, about the \
+questions being asked or about the biggest problem this plant has, begin with `trace_rollup` to \
+see which questions are being asked and by how many of whom, then `trace_graph` to see what \
+those questions connect to and - this is the half that matters - what they connect to nothing \
+at all. Only then follow the thread into the floor's own records: the downtime pareto, the \
+maintenance repair times, the shift analyses, the tag history. Say what the biggest cluster \
+touches and name what it does not touch, because on a graph of whatever this plant happened to \
+record, the absence is the finding. Nothing in this product links a question to a stop, so two \
+facts stand side by side and never become a third: never say a question caused a stop, or that a \
+stop followed from one, however close the clocks are.
+
 You change nothing and you recommend nothing. You hold no tool that changes this plant: you \
 cannot book, cannot draft, cannot propose, cannot approve and cannot put anything on anybody's \
 screen to sign. Asked to change something, say plainly that you only read, and that the \
@@ -540,11 +635,11 @@ answer instead."""
 KINDS: dict[str, Kind] = {
     FLOOR: Kind(
         name=FLOOR, title="the floor assistant", account="AGENT", role="agent",
-        env="AGENT", writes=True, walks=True, system=SYSTEM,
+        env="AGENT", writes=True, walks=True, draws=False, system=SYSTEM,
         conversation_usd=0.0),
     ANALYSIS: Kind(
         name=ANALYSIS, title="the analysis agent", account="ANALYST", role="analyst",
-        env="ANALYSIS", writes=False, walks=False,
+        env="ANALYSIS", writes=False, walks=False, draws=True,
         system=ANALYSIS_SYSTEM.replace("{charts}", ANALYSIS_CHARTS),
         # A fortieth of the month's $10. One exploration that runs away is a
         # quarter, not the month - and this is a speed bump rather than a wall
@@ -945,6 +1040,13 @@ class Session:
     history: list[Any] = field(default_factory=list)
     pending: dict[str, Proposal] = field(default_factory=dict)
     results: dict[str, dict] = field(default_factory=dict)   # tool_use_id -> tool_result block
+    #: What each read actually returned, whole - tool_use_id -> the plant's own
+    #: payload, before `_tool_result` shortened it for the model. It is what a
+    #: chart is drawn from: the model names a call and the envelope comes from
+    #: here, so a picture cannot carry a number the plant did not compute.
+    #: Bounded to the last `PAYLOADS_KEPT` reads of the conversation, because
+    #: this is a conversation in memory and not a second copy of the plant.
+    payloads: dict[str, Any] = field(default_factory=dict)
     awaiting: list[str] = field(default_factory=list)        # tool_use ids of the paused turn
     done: list[dict] = field(default_factory=list)           # writes performed, for the evidence walk
     transcript: list[dict] = field(default_factory=list)
@@ -984,6 +1086,12 @@ class Session:
     turn_usage: dict = field(default_factory=dict)
     turn_error: str | None = None
     turn_asked: str = ""
+    #: The charts this turn asked for, each with the envelope the server
+    #: attached. They go to the browser on the reply and are summarised - shape,
+    #: tool, total, coverage word - for the trace: a chart's envelope in the
+    #: trace would be a second copy of the plant's rows outside the tables that
+    #: own them, which is the one thing `ai_turns` promises not to be.
+    turn_charts: list[dict] = field(default_factory=list)
     #: Where this turn's own tool calls start in `transcript`. The transcript
     #: is cleared when the person says something and grows across a confirm
     #: and the rounds that follow it, so a turn's calls are the tail from
@@ -1061,6 +1169,9 @@ def open_session(user: str, plant: str, capabilities: set[str], *,
         # catalogue would speak to at all: without `plant.read` there is no
         # conversation to show anything in.
         tools += guide_tools()
+    if the_kind.draws and tools:
+        # Same rule for the same reason: nothing to draw without a read.
+        tools += chart_tools()
     note = (withheld_note(set(capabilities), roles) if the_kind.writes
             else no_write_note(the_kind))
     sess = Session(id=uuid.uuid4().hex[:12], user=user, plant=plant,
@@ -1245,9 +1356,29 @@ def _prime(sess: Session, name: str, role: str) -> str:
 
 def _reply(sess: Session, kind: str, say: str, **extra: Any) -> dict:
     out = {"kind": kind, "session": sess.id, "say": say,
-           "transcript": list(sess.transcript), "done": list(sess.done), **extra}
+           "transcript": list(sess.transcript), "done": list(sess.done),
+           "cost": _cost_so_far(sess), **extra}
+    if sess.turn_charts:
+        # The envelope goes to the browser, which draws it. It does not go to
+        # the trace: `_record_turn` takes the summary beside it.
+        out["charts"] = [dict(spec) for spec in sess.turn_charts]
     _record_turn(sess, kind, say, extra)
     return out
+
+
+def _cost_so_far(sess: Session) -> dict:
+    """What this turn cost, what the conversation has spent against its own
+    cap, and where the month stands - so a reply can say what it cost without
+    the screen asking a second endpoint and getting a different moment's answer.
+
+    Estimates at list prices, every one of them; the Console is the bill, and
+    every screen that draws these says so.
+    """
+    return {"turn_usd": round(_cost(MODEL, sess.turn_usage or {}), 6),
+            "conversation_usd": round(sess.spent_usd, 6),
+            "conversation_cap_usd": sess.cap_usd,
+            "month_usd": round(spend_this_month(), 6),
+            "month_cap_usd": monthly_cap_usd()}
 
 
 def _record_turn(sess: Session, kind: str, say: str, extra: dict) -> None:
@@ -1288,6 +1419,7 @@ def _begin_turn(sess: Session, asked: str = "") -> None:
     sess.turn_usage = _zero_usage()
     sess.turn_error = None
     sess.turn_asked = asked
+    sess.turn_charts = []
     sess.turn_from = len(sess.transcript)
     sess.last_turn = None
 
@@ -1503,7 +1635,16 @@ def _drive(sess: Session) -> dict:
                 args = dict(block.input or {})
                 spec = sess.tool_by_name.get(block.name)
                 sess.turn_tools.append(block.name)
-                if block.name in GUIDE_TOOLS and spec is not None:
+                if block.name == DRAW_TOOL and spec is not None:
+                    payload, drawn = _draw(sess, args)
+                    if drawn is not None:
+                        sess.turn_charts.append(drawn)
+                    sess.results[block.id] = _tool_result(block.id, payload, sess.result_limit)
+                    sess.transcript.append({"tool": block.name, "args": args,
+                                            "ok": drawn is not None,
+                                            "summary": (_drawn_summary(drawn) if drawn
+                                                        else payload["error"])})
+                elif block.name in GUIDE_TOOLS and spec is not None:
                     before = shown
                     shown, payload = _walk_me(sess, block.name, args, already=shown)
                     if shown is not before:
@@ -1546,6 +1687,10 @@ def _drive(sess: Session) -> dict:
                                                 "args": dict(prop.args), "outcome": "open"})
                 else:
                     payload = execute(block.name, args, plant=sess.plant)
+                    # Kept whole, beside the shortened copy the model reads: a
+                    # chart is drawn from what the plant returned, not from what
+                    # fitted in the answer.
+                    _remember_payload(sess, block.id, block.name, payload)
                     sess.results[block.id] = _tool_result(block.id, payload, sess.result_limit)
                     sess.transcript.append({"tool": block.name, "args": args,
                                             "ok": not (isinstance(payload, dict) and "error" in payload),
@@ -1569,6 +1714,110 @@ def _drive(sess: Session) -> dict:
                 return _reply(sess, "guide", say.strip(), guide=shown)
             _commit_results(sess)
         return _reply(sess, "reply", "I stopped after too many steps without finishing. Try a smaller ask.")
+
+
+#: How many read payloads one conversation keeps for drawing. Twenty-four is
+#: two full rounds of a twelve-round budget, so anything read in this turn or
+#: the one before it can still be drawn, and a long exploration does not grow
+#: without a bound.
+PAYLOADS_KEPT = 24
+
+
+def _remember_payload(sess: Session, tool_use_id: str, tool: str, payload: Any) -> None:
+    """Keep what a read returned, so a chart can be drawn from it later.
+
+    Errors are not kept: a chart of a refusal is not a chart, and keeping one
+    would let `draw` name an id whose answer was a sentence about why there was
+    no answer.
+    """
+    if not sess.the_kind.draws:
+        return
+    if not isinstance(payload, dict) or "error" in payload:
+        return
+    sess.payloads[tool_use_id] = {"tool": tool, "envelope": payload}
+    while len(sess.payloads) > PAYLOADS_KEPT:
+        sess.payloads.pop(next(iter(sess.payloads)))
+
+
+def _drawn_summary(spec: dict) -> str:
+    """How a chart reaches the trace: shape, tool, total, coverage word, and
+    the title the person read - and never the envelope.
+
+    It is the transcript line of the `draw` call, so it lands in `ai_turns.tools`
+    with every other tool call of the turn and needs no column of its own. That
+    is the whole record this table is allowed to keep of a picture: a second copy
+    of the plant's rows here would be a way around the capabilities those rows
+    are behind, which is the promise the AI screen makes in so many words."""
+    parts = [f"{spec['shape']} of {spec['tool']}"]
+    if spec.get("total") is not None:
+        parts.append(f"total {spec['total']}")
+    parts.append(f"coverage {spec['coverage']}")
+    if spec.get("title"):
+        parts.append(f"titled {spec['title']!r}")
+    return ", ".join(parts)
+
+
+def _total_of(envelope: dict) -> Any:
+    """The envelope's own statement of how many things it is about, if it makes
+    one. Never counted here: a total this function worked out would be a figure
+    the plant never measured, which is rule 1 from the other side."""
+    for key in ("total", "nodes_total", "groups_total", "orders_total",
+                "machines_total", "turns_total"):
+        if key in envelope:
+            return envelope[key]
+    return None
+
+
+def _coverage_word(envelope: dict) -> str:
+    """Which of the three coverage facts this payload carries, in the kit's own
+    words - a figure, `null` when it could not be computed, or `absent` when the
+    payload has no such field. They are three different facts and the trace says
+    which one, the way the chart does."""
+    if envelope.get("coverage") == "absent" or "coverage" not in envelope:
+        return "absent"
+    if envelope.get("coverage") is None:
+        return "null"
+    return str(envelope["coverage"])
+
+
+def _draw(sess: Session, args: dict) -> tuple[dict, dict | None]:
+    """The model asked for a chart. Hand back what the model is told, and the
+    spec the browser draws - or nothing, and a plain sentence saying why.
+
+    Two refusals, and both are the same rule from opposite ends. A spec that
+    names no tool result has nothing of the plant's in it; a spec that carries
+    its own numbers has something that is not the plant's in it. Either way the
+    picture would be stating a figure this MES never measured, in the most
+    convincing medium the product has.
+    """
+    extra = sorted(k for k in args if k not in DRAW_KEYS)
+    if extra:
+        return ({"error":
+                 f"a chart draws what the plant measured, so {DRAW_TOOL} takes no data of its "
+                 f"own: it takes the id of a call you made ({', '.join(DRAW_KEYS)}) and nothing "
+                 f"else. Drop {', '.join(extra)} and name the read you want drawn."}, None)
+    shape = str(args.get("shape") or "").strip()
+    if shape not in CHART_SHAPES:
+        return ({"error": f"no chart shape {shape!r}: {', '.join(CHART_SHAPES)}"}, None)
+    from_id = str(args.get("from") or "").strip()
+    held = sess.payloads.get(from_id)
+    if held is None:
+        read = [f"{row['tool']} ({tid})" for tid, row in sess.payloads.items()]
+        return ({"error":
+                 f"nothing in this conversation was read under the id {from_id!r}, so there is "
+                 f"nothing to draw: a chart is a tool result, and this tool has no numbers of "
+                 f"its own. "
+                 + (f"You have read: {', '.join(read)}." if read
+                    else "Read something first, then draw it.")}, None)
+    tool, envelope = held["tool"], held["envelope"]
+    spec = {"id": f"c{len(sess.turn_charts) + 1}", "from": from_id, "tool": tool,
+            "shape": shape, "title": str(args.get("title") or "").strip() or tool,
+            "total": _total_of(envelope), "coverage": _coverage_word(envelope),
+            "envelope": envelope}
+    told = {"drawn": f"{shape} of {tool} is beside your answer",
+            "states": "the picture carries its own total and coverage from that payload; "
+                      "say the figures in words too"}
+    return (told, spec)
 
 
 def _walks_on_offer(sess: Session) -> list[dict]:
@@ -1713,4 +1962,8 @@ def _kind_status(kind: Kind) -> dict:
     ok, why = available(kind)
     return {"kind": kind.name, "title": kind.title, "available": ok, "reason": why,
             "account": kind.account, "role": kind.role, "writes": kind.writes,
+            # Whether it may ask for a chart. A screen that offers one kind an
+            # exploration and the other a column of sentences should read that
+            # off the kind rather than hold a list of its own.
+            "draws": kind.draws,
             "brain": brain(kind), "conversation_cap_usd": conversation_cap_usd(kind)}

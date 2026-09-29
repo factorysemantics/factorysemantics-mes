@@ -578,9 +578,11 @@ SCHEMA: tuple[Section, ...] = (
             "like `token_ttl_seconds`, which is already the plant's.",
             "MES_ADMIN_AGENT_SESSION_TTL_SECONDS"),
         Key("agent_result_limit", "int",
-            "How many characters of one tool result the agent is shown. 6000 "
+            "How many characters of one tool result the agent is shown. 12000 "
             "by default; the rest is marked truncated rather than dropped "
-            "silently.",
+            "silently. It was 6000 until 2026-09-29, when an exploration that "
+            "reads a graph and then follows the thread was measured against it "
+            "and got three nodes of thirteen.",
             "MES_ADMIN_AGENT_RESULT_LIMIT"),
         Key("assistant_context_chars", "int",
             "How much of the plant's own facts reach the local model when it "

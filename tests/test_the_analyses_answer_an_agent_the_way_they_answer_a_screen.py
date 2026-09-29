@@ -34,6 +34,7 @@ from fsmes.domain import (
     TagValue,
 )
 from fsmes.services import auth, plant_settings
+from fsmes.services.agent import RESULT_LIMIT
 
 
 @pytest.fixture()
@@ -402,7 +403,11 @@ def test_a_trend_over_more_samples_than_fit_asks_the_plant_for_wider_buckets(
     # min and max, and the whole window is still covered.
     assert all({"mean", "min", "max", "n"} <= set(point) for point in answer["points"])
     assert sum(point["n"] for point in answer["points"]) == 400
-    assert len(json.dumps(answer, default=str)) <= 6000
+    # The module's own budget, read rather than written down a second time -
+    # `RESULT_LIMIT` moved to 12,000 on 2026-09-29 and a literal here would
+    # have measured the number this file remembered instead of the one the
+    # plant uses.
+    assert len(json.dumps(answer, default=str)) <= RESULT_LIMIT
 
 
 def test_a_trend_that_fits_is_left_exactly_as_the_plant_answered(wired, session):
