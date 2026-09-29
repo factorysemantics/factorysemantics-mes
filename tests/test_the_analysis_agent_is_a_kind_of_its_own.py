@@ -322,7 +322,10 @@ def test_it_proposes_nothing_even_when_the_model_reaches_for_a_write(scripted):
     # analyst conversation and would read as though a supervisor could ask for it.
     said = out["transcript"][0]["summary"]
     assert "the analysis agent holds no tool that does" in said
-    assert "whatever their role" in said
+    assert "the assistant in the panel can propose it to whoever signs it" in said
+    # Both facts survive the 160 characters a transcript line is summarised to,
+    # which is the only length a person actually reads.
+    assert len(said) <= 160
 
 
 # ------------------------------------------------------------- what it costs

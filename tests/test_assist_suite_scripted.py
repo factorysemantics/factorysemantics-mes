@@ -42,7 +42,36 @@ BY_ID = {case.id: case for case in SUITE}
 
 def test_the_suite_is_readable_and_covers_every_role_a_plant_signs_people_in_as():
     assert len(SUITE) >= 40, f"the suite is meant to be a suite: {len(SUITE)} case(s)"
-    assert {case.role for case in SUITE} == {"operator", "supervisor", "admin", "agent"}
+    assert {case.role for case in SUITE} == {"operator", "supervisor", "admin", "agent",
+                                             "analyst"}
+
+
+def test_every_agent_kind_this_product_has_is_asked_something():
+    """A kind nobody asks anything of is a kind nobody measures. The floor
+    assistant is four files; the analysis agent is one, and its file says so at
+    the top rather than leaving the reader to infer it from the role."""
+    assert {case.kind for case in SUITE} == set(agent.KINDS)
+    analysis = [case for case in SUITE if case.kind == agent.ANALYSIS]
+    assert len(analysis) >= 10, f"the analysis agent has {len(analysis)} case(s)"
+    assert {case.role for case in analysis} == {"analyst"}
+    # Three of them ask it for a change, which is the thing it cannot do.
+    assert sum(1 for case in analysis if case.expect == "refuse") >= 3
+
+
+def test_no_case_asks_an_agent_for_a_tool_that_agent_does_not_hold():
+    """Except on purpose. A `propose` case put to an agent with no write tools
+    would be a case that can never pass, and a `read` case naming a tool that
+    agent is not offered is the same mistake with a quieter failure."""
+    for case in SUITE:
+        offered = {t["name"] for t in agent.catalogue(
+            set(caps.BUILTIN_ROLES[case.role]["capabilities"]), for_kind=case.kind)}
+        for tool in (*case.reads, *case.reads_any):
+            assert tool in offered, f"{case.id}: {tool} is not offered to {case.kind}"
+        if case.expect == "propose":
+            assert case.tool in offered, f"{case.id}: {case.tool} is not offered to {case.kind}"
+        if case.expect == "refuse" and case.tool:
+            assert case.tool not in offered, (
+                f"{case.id}: {case.tool} *is* offered, so nothing would refuse it")
 
 
 def test_every_case_names_a_role_this_product_actually_has():
@@ -227,7 +256,7 @@ def test_no_case_marked_not_yet_is_passing_already(scored):
 
 def test_the_run_says_a_pass_rate_for_every_role(scored):
     counts = assist_eval.tally(scored)
-    assert set(counts["roles"]) == {"operator", "supervisor", "admin", "agent"}
+    assert set(counts["roles"]) == {"operator", "supervisor", "admin", "agent", "analyst"}
     # Three buckets and every case in exactly one of them. The third is not
     # always empty even here: a fixture can need something of the plant's own
     # that a seeded demo plant has no way to declare.

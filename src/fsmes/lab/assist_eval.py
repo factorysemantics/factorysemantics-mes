@@ -216,13 +216,13 @@ def run_scripted_case(case: Case, plant: str) -> Turn:
 
     capabilities = capabilities_of(case.role)
     guides = assistant.listed_guides(capabilities)
-    tools = agent.catalogue(capabilities)
+    tools = agent.catalogue(capabilities, for_kind=case.kind)
     offered = frozenset(t["name"] for t in tools)
     writes = frozenset(t["name"] for t in tools if t["write"])
 
     with _a_brain_that_is_on():
         session = agent.open_session(case.role.upper(), plant, capabilities,
-                                     guides=guides)
+                                     kind=case.kind, guides=guides)
         if case.over_proposal:
             agent._call_model = scripted_model(tuple(case.before))
             agent.message(session, case.before_request or "(the turn before)",

@@ -299,10 +299,15 @@ def not_this_kinds(tool: str, kind: Kind) -> dict | None:
     if kind.writes:
         return None
     if tool in NEEDS or tool in PER_CALL_NEEDS:
+        # The order of the clauses is load-bearing: a tool result is summarised
+        # to 160 characters in the transcript the panel shows and in the turn
+        # record, so what a reader can least afford to lose comes first - the
+        # agent holds none of these, and who can.
         return {"error": (f"{tool} changes the plant, and {kind.title} holds no tool that "
-                          f"does - not for anybody, whatever their role. Say that you only "
-                          f"read, and that the assistant in the panel can propose this to "
-                          f"whoever signs it. Never that there is no way to do it."),
+                          f"does - the assistant in the panel can propose it to whoever "
+                          f"signs it, and that is the answer. Say that you only read; never "
+                          f"that there is no way to do it, and never that the person's own "
+                          f"role is what stopped it, because it is not."),
                 "reads_only": True, "agent": kind.name}
     return None
 
