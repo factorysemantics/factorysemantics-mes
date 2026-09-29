@@ -997,7 +997,9 @@
   /* The one entry point. `pareto` is `bars` with the cumulative line on. */
   function chart(kind, envelope, options = {}) {
     const name = kind === "pareto" ? "bars" : kind;
-    const shape = SHAPES[name];
+    /* Own property only: SHAPES["constructor"] is a function, and a lookup that
+       did not ask would happily call it as a chart shape. */
+    const shape = Object.hasOwn(SHAPES, name) ? SHAPES[name] : null;
     if (!shape) {
       throw new TypeError(`kit.chart: no such chart kind: ${kind} `
                           + `(${Object.keys(SHAPES).join(", ")}, pareto)`);

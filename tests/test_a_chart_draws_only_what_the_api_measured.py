@@ -579,6 +579,19 @@ def test_the_kit_refuses_to_bin_a_series_for_you(page):
     assert "the API's choice" in refused
 
 
+def test_a_kind_the_kit_does_not_have_is_refused_by_name(page):
+    """And a name that happens to be on every object in JavaScript is refused
+    too: `SHAPES["constructor"]` is a function, and a lookup that did not ask
+    whether the key was its own would have called it as a chart shape."""
+    for kind in ("sunburst", "constructor", "toString"):
+        refused = page.evaluate(
+            """(kind) => { try { FS.kit.chart(kind, {window: {start: 'a', end: 'b'}});
+                                 return null; }
+                           catch (e) { return String(e); } }""", kind)
+        assert refused and "no such chart kind" in refused, (
+            f"kit.chart({kind!r}) was not refused: {refused!r}")
+
+
 # ------------------------------------------------------- rule 5: every total
 
 @pytest.mark.parametrize("name", sorted(SHAPES))
