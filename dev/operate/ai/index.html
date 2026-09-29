@@ -1173,6 +1173,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#who-may-be-named-in-an-analysis-and-who-finds-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Who may be named in an analysis, and who finds out
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-is-not-recorded-and-why" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4018,6 +4029,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#who-may-be-named-in-an-analysis-and-who-finds-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Who may be named in an analysis, and who finds out
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-is-not-recorded-and-why" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4244,6 +4266,36 @@ reader's. That is true of both kinds and is not new — the floor
 assistant's <code>agent</code> role has held <code>audit.read</code> since it existed — but it
 is worth knowing before granting either account more.</p>
 </blockquote>
+<h2 id="who-may-be-named-in-an-analysis-and-who-finds-out">Who may be named in an analysis, and who finds out<a class="headerlink" href="#who-may-be-named-in-an-analysis-and-who-finds-out" title="Permanent link">&para;</a></h2>
+<p>The analysis agent can roll this trace up — which questions are being asked,
+how often, by how many people. <a href="../../decisions/0039-an-analysis-is-recorded-code-that-can-only-read/">Decision 0039</a>
+is the position on doing that to people, and it is four sentences.</p>
+<p><strong>Counts before names.</strong> A rollup over people comes back grouped by <strong>role, by
+workcenter or by shift — never by account.</strong> That is the default in the code and
+not a rule in a prompt: with nobody asking for names, no key in any breakdown is
+a person's code. The honest business question is which work is hard, not who is
+slow.</p>
+<p><strong>Naming a person is a capability of its own: <code>people.analyse</code>.</strong> <strong>No role this
+product ships holds it</strong> — not the administrator, and not the analyst whose own
+job this analysis is. A plant that wants a per-operator answer defines a role,
+grants it on purpose, and can say why. <code>audit.read</code> is deliberately <em>not</em> that
+gate: reading one conversation to find out why the assistant failed, and ranking
+eleven operators by how often they asked for help, are two different acts, and
+two acts should not share one gate.</p>
+<p><strong>Every per-person answer is recorded.</strong> It writes an audit row —
+<code>analysis.person_named</code>, against <code>personnel</code>/the person's code — so somebody can
+search the trail for their own code and find every analysis that named them.
+<code>GET /audit?entity_type=personnel</code> is that search.</p>
+<p><strong>An analysis a plant will not show the person it is about should not be run.</strong>
+That is the test to apply to anything added here later. An operator seeing
+everything the analysis could say about them, on their own account, is the piece
+still to build.</p>
+<p>One thing to know before any of this: <strong>on any plant running this today, a
+supervisor can already read every operator's questions verbatim</strong> for as long as
+the trace is kept — <code>audit.read</code> gates <code>/ai</code>, and the payload carries <code>person</code>
+and the words that were typed. The analysis opens no new door. What it adds is
+that reading becomes cheap and rankable, and that is the act these three
+sentences gate.</p>
 <h2 id="what-is-not-recorded-and-why">What is not recorded, and why<a class="headerlink" href="#what-is-not-recorded-and-why" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>The system prompt.</strong> Never. A test asserts a recorded turn does not
@@ -4326,9 +4378,21 @@ what the assistant told the night shift.</p>
 <td><code>GET /ai</code></td>
 <td>the status rows — the brains, the GPU, the assigned jobs</td>
 </tr>
+<tr>
+<td><code>GET /analysis/trace/rollup</code></td>
+<td>the questions this plant asked, grouped by role, workcenter or shift — with the unattributed count and the totals</td>
+</tr>
+<tr>
+<td><code>GET /analysis/trace/graph</code></td>
+<td>those questions and the plant's stops as one graph of recorded facts, with the empty kinds declared and the centralities refused</td>
+</tr>
+<tr>
+<td><code>GET /analysis/maintenance/mttr</code></td>
+<td>repair time over time, with the count of repairs nobody timed beside it</td>
+</tr>
 </tbody>
 </table>
-<p>All four are behind <code>audit.read</code>. Every list states its total.</p>
+<p>The first four and the two <code>/analysis/trace/</code> reads are behind <code>audit.read</code> — an analysis of the trace must not be a way around the gate on the trace; the MTTR is behind <code>plant.read</code> like every other read of the floor. Every list states its total.</p>
 <p><code>GET /assist/agent/status</code> is the other one worth knowing: it answers for
 one agent (<code>?kind=analysis</code>) and carries a <code>kinds</code> object beside it saying
 the same of every kind this plant has — its account, its role, whether it

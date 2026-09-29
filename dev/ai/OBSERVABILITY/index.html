@@ -3959,6 +3959,13 @@ when this document and the panel disagree, one of them has a bug.</p>
 <td>the AI screen, <code>fsmes ai conversations</code>, or read the turn log</td>
 </tr>
 <tr>
+<td>Analysis agent (cloud) — <em>account <code>ANALYST</code>, role <code>analyst</code></em></td>
+<td>the analysis conversation; off in shadow mode, which says so</td>
+<td>every read tool and no write tool: the four shift analyses, plus <code>trace_rollup</code>, <code>trace_graph</code> and <code>maintenance_mttr</code> over this plant's own AI trace, stops and repairs. It counts people by role, workcenter or shift and names one only where a plant has granted <code>people.analyse</code> — which no shipped role holds</td>
+<td>the same <code>ai_turns</code> table, with <code>brain: analysis</code>; an answer that named a person also writes <code>analysis.person_named</code> to the audit trail against <code>personnel/&lt;code&gt;</code></td>
+<td>the AI screen, or <code>GET /audit?entity_type=personnel</code> for who was named</td>
+</tr>
+<tr>
 <td>Instruction drafting</td>
 <td><code>fsmes draft-instructions</code></td>
 <td>qwen drafts work instructions from facts the plant holds</td>
