@@ -43,6 +43,16 @@ EXCLUDED = {
     "POST /quality/severities/{code}/approve/{revision}":
         "the panel does call it, by the path the server hands each row - which is what "
         "lets one panel sign several kinds - so the path is never written in a script",
+    # the three deep-analysis reads: the plant's own arithmetic behind the
+    # worked example of docs/design/deep-analysis.md, serving the tools until
+    # the tab that draws them exists
+    "GET /analysis/trace/rollup": "D5 draws them - `analysis-in-the-ai-tab`, rewritten "
+                                  "against the design page. Until then these serve the "
+                                  "analysis agent's trace_rollup",
+    "GET /analysis/trace/graph": "D5 draws them; D4 (`analysis-graph-shape`) is the "
+                                 "`graph` shape in kit.js this one feeds",
+    "GET /analysis/maintenance/mttr": "D5 draws them; until then it serves "
+                                      "maintenance_mttr",
     # system plumbing
     "GET /metrics": "for Prometheus, not a screen",
     "GET /pack": "for the fleet console, which is a page of its own and not a plant's screen",

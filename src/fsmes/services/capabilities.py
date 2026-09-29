@@ -78,6 +78,20 @@ CAPABILITIES: dict[str, str] = {
     "signals.define":    "Set the numbers behind the plant's signals: how hard the OPC "
                          "agent retries, how densely tags are sampled, how fast an "
                          "approved trigger reaches a machine",
+    # Naming a person in an aggregate answer. Decision 0039 clause 3, and the
+    # only capability in this table that **no shipped role holds** - not the
+    # administrator, and not the analyst whose whole job is the analysis this
+    # gates. A plant that wants a per-operator ranking grants it deliberately,
+    # to a role it defines, and every answer it unlocks writes an audit row the
+    # person named can find (`analysis.person_named`).
+    #
+    # `audit.read` is deliberately not this gate. Reading one conversation to
+    # find out why the assistant failed, and ranking eleven operators by how
+    # often they asked for help, are two different acts, and two acts should not
+    # share one gate - which is what an analysis over a table built to debug an
+    # assistant would otherwise be.
+    "people.analyse":    "Name a person in an analysis: see a rollup broken down by "
+                         "account rather than by role, workcenter or shift",
 }
 
 _VIEWER = ("plant.read",)

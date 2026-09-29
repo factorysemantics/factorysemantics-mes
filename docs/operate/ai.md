@@ -101,6 +101,43 @@ enough to book production.
 > assistant's `agent` role has held `audit.read` since it existed — but it
 > is worth knowing before granting either account more.
 
+## Who may be named in an analysis, and who finds out
+
+The analysis agent can roll this trace up — which questions are being asked,
+how often, by how many people. [Decision 0039](../decisions/0039-an-analysis-is-recorded-code-that-can-only-read.md)
+is the position on doing that to people, and it is four sentences.
+
+**Counts before names.** A rollup over people comes back grouped by **role, by
+workcenter or by shift — never by account.** That is the default in the code and
+not a rule in a prompt: with nobody asking for names, no key in any breakdown is
+a person's code. The honest business question is which work is hard, not who is
+slow.
+
+**Naming a person is a capability of its own: `people.analyse`.** **No role this
+product ships holds it** — not the administrator, and not the analyst whose own
+job this analysis is. A plant that wants a per-operator answer defines a role,
+grants it on purpose, and can say why. `audit.read` is deliberately *not* that
+gate: reading one conversation to find out why the assistant failed, and ranking
+eleven operators by how often they asked for help, are two different acts, and
+two acts should not share one gate.
+
+**Every per-person answer is recorded.** It writes an audit row —
+`analysis.person_named`, against `personnel`/the person's code — so somebody can
+search the trail for their own code and find every analysis that named them.
+`GET /audit?entity_type=personnel` is that search.
+
+**An analysis a plant will not show the person it is about should not be run.**
+That is the test to apply to anything added here later. An operator seeing
+everything the analysis could say about them, on their own account, is the piece
+still to build.
+
+One thing to know before any of this: **on any plant running this today, a
+supervisor can already read every operator's questions verbatim** for as long as
+the trace is kept — `audit.read` gates `/ai`, and the payload carries `person`
+and the words that were typed. The analysis opens no new door. What it adds is
+that reading becomes cheap and rankable, and that is the act these three
+sentences gate.
+
 ## What is not recorded, and why
 
 - **The system prompt.** Never. A test asserts a recorded turn does not
@@ -175,8 +212,11 @@ what the assistant told the night shift.
 | `GET /ai/turns?session=…` | one conversation's turns, oldest first |
 | `GET /ai/turns` | the plant's most recent turns, newest first |
 | `GET /ai` | the status rows — the brains, the GPU, the assigned jobs |
+| `GET /analysis/trace/rollup` | the questions this plant asked, grouped by role, workcenter or shift — with the unattributed count and the totals |
+| `GET /analysis/trace/graph` | those questions and the plant's stops as one graph of recorded facts, with the empty kinds declared and the centralities refused |
+| `GET /analysis/maintenance/mttr` | repair time over time, with the count of repairs nobody timed beside it |
 
-All four are behind `audit.read`. Every list states its total.
+The first four and the two `/analysis/trace/` reads are behind `audit.read` — an analysis of the trace must not be a way around the gate on the trace; the MTTR is behind `plant.read` like every other read of the floor. Every list states its total.
 
 `GET /assist/agent/status` is the other one worth knowing: it answers for
 one agent (`?kind=analysis`) and carries a `kinds` object beside it saying

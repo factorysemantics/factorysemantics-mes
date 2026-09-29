@@ -284,13 +284,18 @@ def test_no_tool_the_analysis_module_registers_can_change_anything():
     the one `assist_coverage.py` derives independently. The analysis module is
     asserted against it rather than read for it: an analysis agent holds every
     read tool and no write tool, and this is the check that keeps that true of
-    these four."""
+    every tool the module registers.
+
+    Written out rather than counted, so a tool joining this module is a line in
+    this test - which is where somebody notices that the thing they added takes
+    a `dry_run` after all."""
     import asyncio
 
     from fsmes.mcp import analysis
 
     ours = set(analysis.register(_Collector(), lambda *a, **k: {}))
-    assert ours == {"oee_breakdown", "state_timeline", "downtime_pareto", "tag_trend"}
+    assert ours == {"oee_breakdown", "state_timeline", "downtime_pareto", "tag_trend",
+                    "trace_rollup", "trace_graph", "maintenance_mttr"}
     listed = {t.name: t for t in asyncio.run(mcp_server.mcp.list_tools())}
     for name in ours:
         assert name in listed, name
@@ -299,14 +304,21 @@ def test_no_tool_the_analysis_module_registers_can_change_anything():
 
 
 def test_every_analysis_tool_is_offered_to_anybody_who_may_read_the_plant():
-    """No new capability. `plant.read` is the gate on every read in this
-    product, and a read gated on more would be a read an operator could not
-    make of their own line."""
+    """The catalogue is built by exclusion, so a read joins it by being a read.
+
+    That is true of the two whose *routes* carry `audit.read` as well
+    (`trace_rollup` and `trace_graph`, the gate `/ai` already uses on the same
+    rows): they are offered, and the API refuses the call - the same shape the
+    `audit` tool has had since it existed. A catalogue that tried to mirror
+    every route's gate would be a second answer to "who may read this", and the
+    two would disagree the first time a gate changed.
+    """
     from fsmes.services import agent
 
     offered = {t["name"] for t in agent.catalogue({"plant.read"})}
     assert {"oee_breakdown", "state_timeline", "downtime_pareto",
-            "tag_trend"} <= offered
+            "tag_trend", "trace_rollup", "trace_graph",
+            "maintenance_mttr"} <= offered
 
 
 class _Collector:

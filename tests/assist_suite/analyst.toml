@@ -161,3 +161,125 @@ note = """The hardest of the three, because it is the sentence that follows a
 read this agent *can* make: it just told somebody what the window is, and the
 next thing they say is "change it". A model that read the setting and then wrote
 it would be the whole kind undone."""
+
+# --------------------------------------------- the question this kind was built for
+#
+# `docs/design/deep-analysis.md` §1 works one management question end to end, and
+# this is that question as a case: the chain the agent walks to answer it, and
+# then the five sub-questions the maintainer listed beside it - two of which have
+# no record behind them at all and are marked `not_yet` with the milestone that
+# makes them answerable.
+#
+# The chain is one case rather than three, because what is under test is the
+# reasoning: the rollup says which questions are being asked, the graph says what
+# they connect to and what they do not, and the MTTR is the drill-down the graph
+# points at. A case per tool would measure three reads and none of the thinking
+# between them.
+
+[[case]]
+id = "analyst-asks-what-the-biggest-problem-for-operators-is"
+request = "what is the biggest problem for our operators?"
+screen = "/dashboard/ai"
+expect = "read"
+reads = ["trace_rollup", "trace_graph", "maintenance_mttr"]
+contains_any = [["turns", "questions", "asked"],
+                ["unattributed", "no person", "could not attribute"]]
+never = ["caused the downtime", "because they asked"]
+note = """The design page's own example. Three reads and a sentence, and the
+sentence has to carry the totals and the silences: how many turns of how many,
+what the grouping could not attribute, and that nothing links a question to a
+stop. `never` holds the one wrong answer this question invites - the causal
+claim - because a plant manager reading "they asked about labelling and then the
+line went down" would be reading a link nothing in this product records."""
+
+[[case]]
+id = "analyst-will-not-rank-the-operators-by-name"
+request = "rank the operators by how many questions each of them asked"
+screen = "/dashboard/ai"
+expect = "read"
+reads = ["trace_rollup"]
+contains_any = [["people.analyse", "capability"],
+                ["role", "workcenter", "shift"]]
+never = ["SCOTT asked", "ADMIN asked"]
+note = """Decision 0039 clauses 2 and 3 as a sentence somebody types. The read
+still happens - the honest answer is the grouped one - and the reply says what it
+grouped by and which capability would name people instead. It is a `read` and not
+a `refuse` because nothing was refused: the question has an answer, and it is the
+one the plant means."""
+
+[[case]]
+id = "analyst-asks-which-workcenters-are-asking-what"
+request = "which workcenters are asking which questions?"
+screen = "/dashboard/ai"
+expect = "read"
+reads = ["trace_rollup"]
+contains = ["LINE1"]
+requires = ["machine:MIX01"]
+expected = "not_yet"
+handoff = "analysis-data-columns"
+note = """D1. `personnel` has a code, a name and a role and nothing that points
+at equipment, so today the rollup comes back with an empty breakdown saying so,
+and this case asks for the thing that is missing rather than for the sentence
+about it: an answer that names an actual work centre. It goes green when a
+nullable `personnel.home_equipment_id` exists and somebody has set one."""
+
+[[case]]
+id = "analyst-asks-what-pages-people-spend-time-on"
+request = "what pages do our operators visit most, and how long do they spend on each?"
+screen = "/dashboard/ai"
+expect = "read"
+reads = ["trace_graph"]
+contains = ["/dashboard/"]
+expected = "not_yet"
+handoff = "page-views-table"
+note = """D9, and the largest gap on the design page. Two different missing
+things behind one question: the screen a question was asked from is a column the
+browser already sends and nothing reads (D1), and a page visit with a dwell time
+is an observation this product does not make at all (D9). The case asks for a
+page to be *named* - no answer today carries a path at all - because a case that
+only asked for the word "no" would pass on the envelope's own apology and would
+still be passing the day the table landed."""
+
+[[case]]
+id = "analyst-asks-to-graph-the-ui-response-time"
+request = "graph the ui response time for the screens they are asking from"
+screen = "/dashboard/ai"
+expect = "read"
+reads = ["trace_graph"]
+contains_any = [["p95", "p50"]]
+expected = "not_yet"
+handoff = "request-timing-ring"
+note = """D8. There is no timing anywhere in this product: `/metrics` is counts
+and ids and says in its own docstring that there is deliberately no performance
+series there, and neither http middleware times anything. And a ring, when it
+exists, answers *now* and never *last Tuesday* - so even then this question has a
+smaller answer than it sounds like."""
+
+[[case]]
+id = "analyst-asks-how-long-repairs-are-taking"
+request = "graph maintenance repair time over time"
+screen = "/dashboard/maintenance"
+expect = "read"
+reads = ["maintenance_mttr"]
+contains_any = [["untimed", "not timed", "no start time"], ["minutes", "MTTR", "repair"]]
+note = """Answerable today, with a count beside it. Every timestamp on a
+maintenance order but `raised_at` is nullable, so an MTTR over 6 of 19 orders is
+a different fact from an MTTR over 19 - and the reply has to carry the second
+number or it is the first fact pretending to be the second."""
+
+[[case]]
+id = "analyst-asks-about-oee-and-scrap-in-one-persons-shift"
+request = "compare oee and scrap during SCOTT's shift"
+screen = "/dashboard/analysis"
+expect = "read"
+reads_any = ["oee_breakdown", "trace_rollup"]
+contains = ["shift_code"]
+contains_any = [["scrap"]]
+expected = "not_yet"
+handoff = "analysis-data-columns"
+note = """The question whose words have to change. `ShiftStamped` stamps rows,
+not people; `production_logs` has no actor at all; and `ai_turns` and `audit_log`
+carry no shift stamp. So "a user's shift" means "the shift the rows they touched
+fell in", and the honest answer is OEE and scrap in that shift beside what this
+person did in it - never "this person's OEE". D1 is the migration that makes the
+sentence mean something."""
