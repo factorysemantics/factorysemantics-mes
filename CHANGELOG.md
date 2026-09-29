@@ -35,6 +35,36 @@ goes under Honesty with a migration line, so plant people can find it.
   two screens can never state coverage differently. Pinned by 52 browser tests
   across the four shapes and the four themes.
 
+- **The four shift analyses are agent tools, and answer with the payload the
+  screen gets.** `oee_breakdown`, `state_timeline`, `downtime_pareto` and
+  `tag_trend` are read tools on the `analysis` module. Each sends one `GET` to
+  `/analysis/...` and hands back what came back, whole — so an agent reading
+  them inherits the honesty of decisions 0030, 0031 and 0033 instead of being
+  told about it in a prompt. Until now OEE and the Gantt had no tool at all, and
+  an agent asked about them would have had to rebuild them out of the state
+  history; a second arithmetic reachable only through a model is what those
+  decisions exist to prevent.
+
+  **What "the payload the screen gets" amounts to differs by analysis, and the
+  tools say so per tool rather than implying all four carry the same:**
+  `oee_breakdown` carries `coverage`, `coverage_floor`, the `coverage_note` that
+  withholds a figure and the whole `ledger`, per station and for the line;
+  `downtime_pareto` carries `unknown_seconds` and `unknown_share` — how blind
+  the window was — and no ratio and no ledger; `state_timeline` and `tag_trend`
+  carry no coverage figure at all, because a Gantt and a trend are what the MES
+  recorded and neither says what share of the window it was watching. Nothing
+  supplies a figure its route does not serve, and a test pins which payload
+  carries what — the same fact the chart kit draws as `data-coverage=absent`.
+  `labelled_by`, `requested_hours` and every total come through untouched.
+
+  No write tool, no new capability: `plant.read` is the whole gate, and a test
+  asserts no tool on this module takes `dry_run`. An answer too wide for one
+  tool result bounds itself and says so — a list holds its tail back with the
+  call that reaches the rest, a Gantt asks the plant for the machines that fit,
+  and a trend asks for fewer, wider buckets rather than dropping every nth point
+  and losing the excursions `min` and `max` exist to keep. Four cases in the
+  request suite, one per analysis.
+
 - **A live faithfulness run asks each role as an account that holds it.**
   `fsmes assist eval --live` signed in once and asked every role's questions as
   that one person, which made three of the four per-role numbers meaningless: an
@@ -522,6 +552,17 @@ goes under Honesty with a migration line, so plant people can find it.
   schedule board — a stretch where the MES had lost sight of a machine is now
   hatched instead of being a solid grey block that looks like a measurement,
   and the chart says how many machines it drew out of how many the line has.
+
+- **`downtime` and `tag_trend` no longer carry a default window of their own.**
+  Both were declared in `mcp_server.py` with `hours=8.0` and `hours=1.0`. The
+  routes have no default on purpose: `hours` left out is this plant's
+  `[process] default_report_hours`, read at the moment of the request, which is
+  what makes it editable on Engineering's Configuration page with no restart —
+  so a tool defaulting to eight told a twelve-hour plant its own default was
+  somebody else's, in the one place nobody would look. They are now
+  `downtime_pareto` and `tag_trend` on the `analysis` module, where the registry
+  always said they belonged, and both take `line` as well. An integration that
+  called `downtime` by name calls `downtime_pareto`.
 
 - **The request suite scores what a reply means, not the words the database
   stores it under.** The dated live run of 2026-09-27 found four places where the
