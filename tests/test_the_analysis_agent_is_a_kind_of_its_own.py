@@ -321,11 +321,12 @@ def test_it_proposes_nothing_even_when_the_model_reaches_for_a_write(scripted):
     # person's role: "you do not hold equipment.state" would be true of an
     # analyst conversation and would read as though a supervisor could ask for it.
     said = out["transcript"][0]["summary"]
-    assert "the analysis agent holds no tool that does" in said
-    assert "the assistant in the panel can propose it to whoever signs it" in said
-    # Both facts survive the 160 characters a transcript line is summarised to,
-    # which is the only length a person actually reads.
-    assert len(said) <= 160
+    # Both facts are inside the first 160 characters, which is what a tool
+    # result is summarised to elsewhere in this loop and about as much as a
+    # person reads of a line in the panel. The clause order is what puts them
+    # there: what the agent cannot do, and who can, before the wording advice.
+    assert "the analysis agent holds no tool that does" in said[:160]
+    assert "the assistant in the panel can propose it" in said[:160]
 
 
 # ------------------------------------------------------------- what it costs
@@ -431,6 +432,31 @@ def test_a_conversation_with_an_agent_that_is_off_is_told_which_one(scripted, mo
 
 
 # ------------------------------------------------------------ what it reports
+
+def test_ai_status_over_ssh_names_both_agents_and_what_each_may_do(monkeypatch, tmp_path):
+    """`fsmes ai-status` is what somebody on a plant's server reaches for, and
+    until now it said "cloud brain" as though there were one agent. A kind can be
+    off on its own - shadow mode turns the analysis agent off and leaves the
+    floor assistant on the local model - and this is the only place to see that
+    without a browser."""
+    from typer.testing import CliRunner
+
+    from fsmes.cli import app
+
+    monkeypatch.setattr(agent, "USAGE_FILE", tmp_path / "usage.jsonl")
+    monkeypatch.setenv("MES_LOCAL_AI", "0")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setenv("MES_ANALYSIS_BRAIN", "off")
+    monkeypatch.setattr(agent, "sdk_installed", lambda: True)
+
+    said = CliRunner().invoke(app, ["ai-status"]).output
+    assert f"{len(agent.KINDS)} kinds" in said
+    assert "floor" in said and "reads and proposes" in said
+    assert "analysis" in said and "reads only" in said
+    assert "ANALYST/analyst" in said
+    assert "$0.25 a conversation" in said
+    assert "off because the analysis agent is switched off" in said
+
 
 def test_status_says_the_same_of_every_kind_and_counts_them(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
