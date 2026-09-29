@@ -3989,9 +3989,11 @@ assistant read the plant's own OEE or work one out for itself" is answered by
 <code>tag_trend</code> are the four that reach the plant's own analyses, and an answer about
 a KPI with none of them in the turn is an answer to look at twice. Of the four,
 <strong><code>oee_breakdown</code> is the one that carries the coverage ledger</strong>;
-<code>downtime_pareto</code> carries only how blind its window was (<code>unknown_seconds</code>,
-<code>unknown_share</code>), and <code>state_timeline</code> and <code>tag_trend</code> carry no coverage figure,
-because their routes serve none.</p>
+<code>downtime_pareto</code> carries the line's coverage and no per-machine ledger
+(<code>coverage</code>, <code>watched_seconds</code>, <code>unknown_seconds</code>, <code>unknown_share</code>, out of the
+same ledger arithmetic since 2026-09-29 — before that they were the recorded
+disconnections and read as nought on a plant with none), and <code>state_timeline</code>
+and <code>tag_trend</code> carry no coverage figure, because their routes serve none.</p>
 <p>Ollama itself: <code>127.0.0.1:11434</code> on <code>main</code> (override with <code>MES_OLLAMA</code>),
 qwen3:8b ≈ 5.6 GB loaded, idle-unloads after a few minutes. <code>MES_LOCAL_AI=0</code>
 declares a machine with no local model: the Ops screen's Local AI panel is
