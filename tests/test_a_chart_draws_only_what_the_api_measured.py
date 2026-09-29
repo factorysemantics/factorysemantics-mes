@@ -2,9 +2,10 @@
 
 House rule 6: a rendered chart can be completely convincing and completely
 wrong, so a visualisation is looked at with real data and then pinned with a
-test. This is the pinning half for `kit.js`'s four shapes — a line series,
-bars and the pareto, the state timeline and a histogram — against the six
-rules of `docs/design/agentic-harness.md` §9 M1 and the chart contract in
+test. This is the pinning half for `kit.js`'s five shapes — a line series,
+bars and the pareto, the state timeline, a histogram and the network graph of
+`docs/design/deep-analysis.md` §7 — against the six rules of
+`docs/design/agentic-harness.md` §9 M1 and the chart contract in
 `docs/design/STYLE.md`:
 
 1. A chart draws what the API measured. Every number the envelope carried is
@@ -20,6 +21,11 @@ rules of `docs/design/agentic-harness.md` §9 M1 and the chart contract in
 5. Every chart states its total, including the rows nobody drew.
 6. Colour comes from the palette and nowhere else, in all four themes.
 
+And, since 2026-09-29, the seventh thing the frame does for every shape: what
+the READER narrowed the picture to — a hover, a legend switch, a threshold, a
+brushed axis — re-states the total, in `data-total` and in the footer. A
+filtered chart that kept the old total is a list that reads complete.
+
 Each shape is fed a FIXED envelope, so what is asserted is the drawing and not
 the plant: a live plant's numbers change between runs, and a test that has to
 be re-read every time is a test nobody reads. The plant is here for the last
@@ -29,6 +35,13 @@ kit, so the kit and the screens cannot drift apart.
 Same shape as `test_ui_oee_above_rated.py`: a seeded plant on a loopback port
 of the operating system's choosing, driven by Chromium, touching nothing
 anybody else is running.
+
+The interaction tests drive a REAL pointer — `page.mouse`, so the affordance
+is exercised and not just the function behind it — and every one of them then
+waits on the state it is about to assert (`wait_for_function` on the chart's
+own `data-total` or `data-hover-value`), never on the element that will hold
+it and never on a sleep. Three tests in three days went green on loopback and
+red on a slower machine for exactly that reason (#112, #113).
 """
 
 import socket
@@ -137,7 +150,86 @@ HISTOGRAM = {
     ],
 }
 
-#: kind, envelope, options — the four shapes as a screen or the analysis agent
+#: The network of `docs/design/deep-analysis.md` §7, as its step-5 worked
+#: example draws it: what the trace recorded, what the floor recorded, the two
+#: holes that exist so the gaps are things with numbers on them, and three node
+#: kinds the model declares that this plant has no record of at all.
+#:
+#: Every edge here is a recorded fact. There is deliberately NO edge from a
+#: question to a stop: nothing in this product links the two, and the single
+#: most important honesty rule on that page is that the picture must not draw
+#: the link a plant manager most wants drawn.
+GRAPH = {
+    "window": dict(WINDOW, clamped=False, hours=2.0, requested_hours=2),
+    "nodes": [
+        {"id": "role:operator", "kind": "role", "label": "operator",
+         "weight": 6, "degree": 2},
+        {"id": "q:label-a-stop", "kind": "question_group",
+         "label": "how do I label a stop", "weight": 41, "degree": 3},
+        {"id": "q:next-order", "kind": "question_group",
+         "label": "what is my next order", "weight": 22, "degree": 2},
+        # Three turns with no person on them. Its number is its DEGREE.
+        {"id": "unattributed", "kind": "unattributed", "label": "unattributed",
+         "weight": 3, "degree": 1},
+        {"id": "eq:FILL01", "kind": "machine", "label": "FILL01",
+         "weight": 2420, "degree": 3},
+        {"id": "eq:CAP02", "kind": "machine", "label": "CAP02",
+         "weight": 900, "degree": 1},
+        {"id": "reason:mechanical", "kind": "downtime_reason", "label": "mechanical",
+         "weight": 2140, "degree": 2},
+        # 1 180 stopped seconds nobody named. Its number is its DEGREE too.
+        {"id": "unlabelled", "kind": "unlabelled", "label": "unlabelled",
+         "weight": 1180, "degree": 1},
+        {"id": "mo:MO-0344", "kind": "maintenance_order", "label": "MO-0344",
+         "weight": 46, "degree": 1},
+    ],
+    "edges": [
+        {"from": "role:operator", "to": "q:label-a-stop", "kind": "asked", "weight": 41},
+        {"from": "unattributed", "to": "q:label-a-stop", "kind": "asked", "weight": 3},
+        {"from": "role:operator", "to": "q:next-order", "kind": "asked", "weight": 22},
+        {"from": "q:label-a-stop", "to": "q:next-order", "kind": "followed_by",
+         "weight": 9},
+        {"from": "eq:FILL01", "to": "reason:mechanical", "kind": "stopped_with",
+         "weight": 1240, "unit": "seconds", "watched_seconds": 7200},
+        {"from": "eq:CAP02", "to": "reason:mechanical", "kind": "stopped_with",
+         "weight": 900, "unit": "seconds", "watched_seconds": 7200},
+        # Seconds with no record of how much of the window anybody watched. The
+        # harness's §6 rule 4: the number cannot be checked, so it is not
+        # printed and the edge is drawn as the unknown it is.
+        {"from": "eq:FILL01", "to": "unlabelled", "kind": "stopped_with",
+         "weight": 1180, "unit": "seconds"},
+        {"from": "eq:FILL01", "to": "mo:MO-0344", "kind": "repaired_by", "weight": 46},
+    ],
+    "node_kinds": [
+        {"kind": "role", "nodes": 1},
+        {"kind": "workcenter", "nodes": 0, "note": "no person records one",
+         "unknown": True},
+        {"kind": "question_group", "nodes": 2},
+        {"kind": "screen", "nodes": 0, "note": "no question records one",
+         "unknown": True},
+        {"kind": "machine", "nodes": 2},
+        {"kind": "downtime_reason", "nodes": 1},
+        {"kind": "maintenance_order", "nodes": 1},
+        {"kind": "shift", "nodes": 0, "note": "no shift stamp reaches a turn"},
+        {"kind": "unattributed", "nodes": 1},
+        {"kind": "unlabelled", "nodes": 1},
+    ],
+    "measures": {
+        "threshold": 3,
+        "components": 2,
+        "biggest": {"label": "labelling a stop", "weight": 41, "of_weight": 380,
+                    "unit": "turns",
+                    "touches": ["role", "question_group", "unattributed"],
+                    "absent": ["downtime reason", "machine"]},
+        "refused": "betweenness, PageRank and eigenvector centrality are refused — "
+                   "a centrality over an edge set that is whatever happens to be "
+                   "recorded is a number with no meaning",
+    },
+    "showing": {"nodes": 9, "edges": 8},
+    "total": {"nodes": 340, "edges": 20},
+}
+
+#: kind, envelope, options — the five shapes as a screen or the analysis agent
 #: would ask for them.
 SHAPES = {
     "pareto": ("pareto", PARETO, {"labelWidth": 96, "noun": "reason"}),
@@ -145,6 +237,7 @@ SHAPES = {
     "line": ("line", LINE, {"value": "mean", "band": {"low": "min", "high": "max"},
                             "zero": False, "y": {"label": "temperature °C"}}),
     "histogram": ("histogram", HISTOGRAM, {}),
+    "graph": ("graph", GRAPH, {"height": 300}),
 }
 
 
@@ -314,6 +407,15 @@ DRAW = """([kind, envelope, options, theme]) => {
         const box = document.createElement('div');
         box.id = 'fs-chart-probe';
         box.style.width = '760px';
+        /* Pinned to the corner of the viewport and above everything: the
+           interaction tests below drive a real pointer at these marks, and a
+           probe that sat below the fold of a screen full of panels could not
+           be clicked at all. */
+        box.style.position = 'fixed';
+        box.style.top = '0';
+        box.style.left = '0';
+        box.style.zIndex = '9999';
+        box.style.background = 'var(--panel)';
         document.body.appendChild(box);
         return box;
     })();
@@ -339,8 +441,7 @@ DRAW = """([kind, envelope, options, theme]) => {
         labelledby: node.getAttribute('aria-labelledby'),
         title: node.querySelector('title') ? node.querySelector('title').textContent : null,
         desc: node.querySelector('desc') ? node.querySelector('desc').textContent : null,
-        footer: [...node.querySelectorAll('text')]
-            .filter((t) => /^chart-/.test(t.getAttribute('class') || ''))
+        footer: [...node.querySelectorAll('text[data-footer]')]
             .map((t) => ({cls: t.getAttribute('class'), text: t.textContent})),
         values: [...node.querySelectorAll('[data-value]')]
             .map((e) => e.getAttribute('data-value')),
@@ -404,6 +505,13 @@ def test_every_number_the_envelope_carried_is_on_the_chart_verbatim(page, name):
         "line": ["61.25", "61.9", "60.75", "60.4"],
         # The empty bin carries no value, because there was no count to carry.
         "histogram": ["12", "148", "", "143", "35"],
+        # Edges in the order the envelope carried them, then the nodes, then
+        # the kinds this plant has no node of. The two holes carry their
+        # DEGREE — 1 each — and not their 3 turns and 1 180 seconds, because
+        # what a hole is, is what it touches (§7).
+        "graph": ["41", "3", "22", "9", "1240", "900", "1180", "46",
+                  "6", "41", "22", "1", "2420", "900", "2140", "1", "46",
+                  "0", "0", "0"],
     }[name]
     assert got["values"] == expected, (
         f"{name} drew {got['values']} — every plotted value must be the "
@@ -468,7 +576,8 @@ def test_a_withheld_row_prints_its_ledger_and_not_only_the_word_withheld(page):
 # ------------------------------------------------------ rule 3: unknown drawn
 
 @pytest.mark.parametrize("name,expect", [("line", True), ("states", True),
-                                         ("pareto", True), ("histogram", True)])
+                                         ("pareto", True), ("histogram", True),
+                                         ("graph", True)])
 def test_unknown_is_a_rendering_of_its_own_and_never_a_gap(page, name, expect):
     """Rule 3, and the reason this kit exists rather than a polyline. A hole in
     a chart reads as "nothing happened"; a zero reads as a measurement; a line
@@ -721,3 +830,710 @@ def test_the_analysis_screen_draws_its_timeline_through_the_same_shape(page):
     assert chart.get_attribute("data-kind") == "states"
     total = chart.get_attribute("data-total")
     assert "machines drawn" in total, f"the timeline states no total: {total!r}"
+
+
+# ------------------------------------------------ the network graph (§7)
+
+#: Everything about the drawn graph a test needs, read in ONE pass inside the
+#: page for the same reason `DRAW` is: a handle taken and then read across two
+#: calls is a handle into a document that may have been redrawn in between.
+GRAPH_FACTS = """() => {
+    const node = document.querySelector('#fs-chart-probe svg.fs-chart');
+    const attrs = (el, names) => Object.fromEntries(
+        names.map((n) => [n, el.getAttribute(n)]));
+    return {
+        total: node.getAttribute('data-total'),
+        coverage: node.getAttribute('data-coverage'),
+        coverageKind: node.getAttribute('data-coverage-kind'),
+        filtered: node.getAttribute('data-filtered'),
+        desc: node.querySelector('desc').textContent,
+        footer: [...node.querySelectorAll('text[data-footer]')]
+            .map((t) => ({cls: t.getAttribute('class'), text: t.textContent})),
+        nodes: [...node.querySelectorAll('[data-node]')].map((e) => ({
+            ...attrs(e, ['data-node', 'data-node-kind', 'data-label', 'data-value',
+                         'data-degree', 'data-weight', 'data-unknown', 'fill']),
+            title: e.querySelector('title') ? e.querySelector('title').textContent : '',
+            cx: Number(e.getAttribute('cx')), cy: Number(e.getAttribute('cy')),
+            cls: e.getAttribute('class'),
+        })),
+        edges: [...node.querySelectorAll('[data-edge-kind]')].map((e) => attrs(e,
+            ['data-edge-kind', 'data-from', 'data-to', 'data-value',
+             'data-watched', 'data-unknown'])),
+        empties: [...node.querySelectorAll('[data-empty="true"]')].map((e) => attrs(e,
+            ['data-node-kind', 'data-label', 'data-value', 'data-unknown'])),
+        labels: [...node.querySelectorAll('text.graph-label')].map((t) => t.textContent),
+        legend: [...node.querySelectorAll('[data-legend]')]
+            .map((e) => e.getAttribute('data-legend')),
+        markup: node.outerHTML,
+        plot: node.querySelector('g.chart-plot').innerHTML,
+    };
+}"""
+
+
+def graph(page, theme="control-room"):
+    drawn(page, "graph", theme)
+    return page.evaluate(GRAPH_FACTS)
+
+
+def test_the_graph_draws_the_edges_somebody_recorded_and_no_others(page):
+    """§7's first rule, and the harness's §6 rule 1 in the medium where it is
+    hardest to keep: an edge nobody observed is not an edge. Every line on this
+    picture is one row of the envelope, between two nodes the envelope carried,
+    and nothing joins two nodes because they ended up near each other."""
+    got = graph(page)
+    assert len(got["nodes"]) == len(GRAPH["nodes"])
+    assert len(got["edges"]) == len(GRAPH["edges"])
+    ids = {n["id"] for n in GRAPH["nodes"]}
+    for edge in got["edges"]:
+        assert edge["data-from"] in ids and edge["data-to"] in ids, edge
+    recorded = {(e["from"], e["to"], e["kind"]) for e in GRAPH["edges"]}
+    assert {(e["data-from"], e["data-to"], e["data-edge-kind"])
+            for e in got["edges"]} == recorded
+
+
+def test_a_node_kind_this_plant_records_nothing_of_is_drawn_empty_not_omitted(page):
+    """§1 step 5, and rule 5 applied to a KIND of thing rather than a count. A
+    graph that quietly left `screen` and `workcenter` out would read as a
+    complete picture of a plant where the questions came from nowhere. They are
+    on the picture, with the zero the envelope stated and a name."""
+    got = graph(page)
+    empty = {k["data-node-kind"]: k for k in got["empties"]}
+    assert set(empty) == {"workcenter", "screen", "shift"}, (
+        f"the kinds drawn empty were {sorted(empty)}")
+    for kind in empty.values():
+        assert kind["data-value"] == "0", "an empty kind must carry its own zero"
+        assert kind["data-label"], "an empty kind is drawn with no name on it"
+    printed = " ".join(f["text"] for f in got["footer"])
+    assert "declared by the model and recorded by nothing on this plant" in printed
+    assert "3 node kinds declared and empty here" in got["total"]
+
+
+def test_the_unattributed_node_carries_its_degree_because_a_hole_is_what_it_touches(page):
+    """§7: the `unattributed` and `unlabelled` nodes carry their DEGREE, so the
+    hole is a thing on the picture with a number on it rather than a tidy graph
+    that happens to be three turns short. Degree and weight are different
+    numbers here on purpose — three turns, one edge — so a shape that wrote the
+    weight out of habit would fail this."""
+    got = graph(page)
+    holes = {n["data-node"]: n for n in got["nodes"]
+             if n["data-node"] in ("unattributed", "unlabelled")}
+    assert set(holes) == {"unattributed", "unlabelled"}
+    assert holes["unattributed"]["data-value"] == "1", "that is the weight, not the degree"
+    assert holes["unattributed"]["data-degree"] == "1"
+    assert holes["unlabelled"]["data-value"] == "1"
+    for hole in holes.values():
+        assert hole["data-unknown"] == "true"
+        assert (hole["fill"] or "").startswith("url(#"), (
+            f"a hole is painted {hole['fill']} rather than hatched")
+    printed = " ".join(f["text"] for f in got["footer"])
+    assert "each carries its degree and not a weight" in printed
+
+
+def test_the_graph_never_claims_a_coverage_nobody_measured(page):
+    """§7. A graph of records is not a rate over a watched window, and one
+    carrying a coverage percentage would be claiming something nobody measured.
+    `absent` is the third value `data-coverage` has for exactly this."""
+    got = graph(page)
+    assert got["coverage"] == "absent"
+    assert got["coverageKind"] == "absent"
+
+
+def test_the_graph_states_what_it_left_out_in_ss7s_own_words(page):
+    """Rule 5. "Showing 60 of 340 nodes; 12 edges not drawn" — the sentence the
+    design page writes, because a graph of nine nodes out of three hundred and
+    forty is not a picture of the plant and nothing else on it says so."""
+    got = graph(page)
+    assert "showing 9 of 340 nodes" in got["total"], got["total"]
+    assert "12 edges not drawn" in got["total"], got["total"]
+
+
+def test_an_edge_in_seconds_with_no_watched_window_does_not_print_its_number(page):
+    """The harness's §6 rule 4, on an edge: an edge labelled with seconds
+    carries how much of the window was watched, or it carries nothing. The
+    1 180 unlabelled seconds have no watched figure beside them, so the edge is
+    drawn as the unknown it is and the footer says why."""
+    got = graph(page)
+    blind = [e for e in got["edges"] if e["data-unknown"] == "true"]
+    assert len(blind) == 1, f"{len(blind)} edges drawn as unknown"
+    assert blind[0]["data-to"] == "unlabelled"
+    assert blind[0]["data-watched"] is None
+    watched = [e for e in got["edges"]
+               if e["data-edge-kind"] == "stopped_with" and e["data-watched"]]
+    assert len(watched) == 2, "the two stops that DO carry a watched window"
+    printed = " ".join(f["text"] for f in got["footer"])
+    assert "so the seconds are not printed" in printed
+
+
+def test_the_graph_prints_the_measures_it_was_given_and_refuses_a_centrality(page):
+    """§7's fourth measure, which is a refusal. Betweenness, PageRank and
+    eigenvector centrality over an edge set that is *whatever happens to be
+    recorded* would be the most convincing wrong number this product could
+    show. The chart does not offer one — and what it does print, it prints from
+    the envelope: the component count and the biggest cluster are the API's
+    arithmetic, never the browser's (rule 1)."""
+    got = graph(page)
+    printed = " ".join(f["text"] for f in got["footer"])
+    assert "2 connected components" in printed, printed
+    assert "41 of 380 turns" in printed
+    # The absence IS the finding: a cluster with no edge to a stop says so,
+    # rather than leaving a silence a plant manager will read a link into.
+    assert "it touches no downtime reason" in printed
+    assert "centrality" in printed and "refused" in printed
+    # And it is only ever a sentence in the footer: nothing on a mark claims a
+    # centrality, so there is no number on the picture that could be read as
+    # one.
+    assert "centrality" not in got["plot"], "a centrality reached a mark"
+
+
+def test_the_layout_is_the_same_picture_every_time_it_is_drawn(page):
+    """A force layout seeded from `Math.random` would make a screenshot
+    baseline, an export and this test three different pictures of one graph,
+    and the first one to disagree would be blamed on the plant. The starting
+    positions are a golden-angle spiral seeded by the node's index, and the
+    iteration count is fixed."""
+    first = graph(page)
+    second = graph(page)
+    assert [(n["data-node"], n["cx"], n["cy"]) for n in first["nodes"]] == \
+           [(n["data-node"], n["cx"], n["cy"]) for n in second["nodes"]]
+
+
+# ------------------------------------- what the reader narrowed it to (rule 5)
+
+def _box(page, selector):
+    """Where a mark is, in the viewport, so a REAL pointer can be put on it."""
+    got = page.evaluate(
+        """(sel) => { const e = document.querySelector(sel);
+                      if (!e) return null;
+                      const r = e.getBoundingClientRect();
+                      return {x: r.x + r.width / 2, y: r.y + r.height / 2,
+                              left: r.x, right: r.right, top: r.y,
+                              bottom: r.bottom}; }""", selector)
+    assert got, f"nothing on the page matches {selector}"
+    return got
+
+
+def _total(page):
+    return page.evaluate(
+        "() => document.querySelector('#fs-chart-probe svg.fs-chart')"
+        ".getAttribute('data-total')")
+
+
+def _await_total(page, phrase):
+    """Wait for the state being asserted — the chart's own total — and never
+    for the element that will hold it."""
+    page.wait_for_function(
+        """(phrase) => {
+            const node = document.querySelector('#fs-chart-probe svg.fs-chart');
+            return node && (node.getAttribute('data-total') || '').includes(phrase);
+        }""", arg=phrase, timeout=10000)
+
+
+@pytest.mark.parametrize("name,selector", [
+    ("pareto", '#fs-chart-probe [data-label="changeover"]'),
+    ("states", '#fs-chart-probe [data-state="running"]'),
+    ("line", '#fs-chart-probe circle.series-count[data-value="61.25"]'),
+    ("histogram", '#fs-chart-probe [data-from="99.5"]'),
+    ("graph", '#fs-chart-probe [data-node="eq:FILL01"]'),
+])
+def test_hovering_a_mark_says_that_marks_own_number_and_what_was_watched(
+        page, name, selector):
+    """Rule 1 in the hand and rule 2 beside it. What appears under the pointer
+    is the `data-value` the mark already carries — never a number worked out on
+    the way to a tooltip — with the chart's coverage sentence under it, so a
+    figure and how much of the window it covers are read together."""
+    drawn(page, name)
+    at = _box(page, selector)
+    page.mouse.move(at["x"], at["y"])
+    page.wait_for_function(
+        """() => { const h = document.querySelector('#fs-chart-probe .chart-hover');
+                   return h && h.getAttribute('data-hover-value') !== null; }""",
+        timeout=10000)
+    said, want = page.evaluate(
+        """(sel) => [
+            document.querySelector('#fs-chart-probe .chart-hover')
+                .getAttribute('data-hover-value'),
+            document.querySelector(sel).getAttribute('data-value'),
+        ]""", selector)
+    assert said == want, f"{name} hovered {want!r} and said {said!r}"
+    lines = page.evaluate(
+        "() => [...document.querySelectorAll('#fs-chart-probe .chart-hover text')]"
+        ".map((t) => t.textContent)")
+    assert len(lines) > 1, f"{name} said {lines} — a number with no coverage beside it"
+
+
+def test_switching_a_kind_off_in_the_legend_takes_it_out_of_the_total_too(page):
+    """§7's "what is interactive", and the reason it is one sentence: *every one
+    of those re-states the totals*, because a filtered graph that kept the old
+    total is a list that reads complete. Clicked with a real pointer, because a
+    legend nobody can click is not a legend."""
+    drawn(page, "pareto")
+    before = _total(page)
+    assert "showing 3 of 3 reasons" in before
+    at = _box(page, '#fs-chart-probe [data-legend="row:jam"]')
+    page.mouse.click(at["x"], at["y"])
+    _await_total(page, "showing 2 of 3 reasons")
+    after = _total(page)
+    assert after != before
+    assert "1 switched off in the legend" in after, after
+    gone = page.evaluate(
+        "() => document.querySelectorAll('#fs-chart-probe [data-label=\"jam\"]').length")
+    assert gone == 0, "the row left the total but not the picture"
+    printed = page.evaluate(
+        "() => [...document.querySelectorAll('#fs-chart-probe text.chart-total')]"
+        ".map((t) => t.textContent)")
+    assert printed == [after], "the screen and the markup disagree about the total"
+
+
+def test_moving_the_threshold_re_states_the_total_and_drops_only_lighter_edges(page):
+    """§7 again. The threshold is a choice the shape depends on, so rule 4 says
+    the chart states it — and rule 5 says the total is of what is drawn. Dragged
+    with a real pointer to the far end of its own track; what is asserted is the
+    invariant, not a count: every edge still on the picture is at least as heavy
+    as the number the handle is sitting on."""
+    drawn(page, "graph", "control-room")
+    before = _total(page)
+    track = _box(page, '#fs-chart-probe [data-chrome="slider-track"]')
+    handle = _box(page, "#fs-chart-probe .chart-slider-handle")
+    page.mouse.move(handle["x"], handle["y"])
+    page.mouse.down()
+    page.mouse.move(track["right"] - 1, track["y"], steps=4)
+    page.mouse.up()
+    page.wait_for_function(
+        """(before) => {
+            const node = document.querySelector('#fs-chart-probe svg.fs-chart');
+            return node && node.getAttribute('data-total') !== before;
+        }""", arg=before, timeout=10000)
+    got = page.evaluate(GRAPH_FACTS)
+    at = float(page.evaluate(
+        "() => document.querySelector('#fs-chart-probe .chart-slider-handle')"
+        ".getAttribute('data-threshold')"))
+    assert at > 0, "the handle did not move"
+    for edge in got["edges"]:
+        assert float(edge["data-value"]) >= at, (
+            f"an edge of {edge['data-value']} survived a threshold of {at}")
+    assert len(got["edges"]) < len(GRAPH["edges"])
+    assert got["filtered"] == "true"
+    notes = [f["text"] for f in got["footer"] if f["cls"] == "chart-filter-note"]
+    assert any("threshold" in n for n in notes), notes
+    assert f"{len(got['edges'])} of 20 edges drawn" in got["total"], got["total"]
+
+
+@pytest.mark.parametrize("name,phrase", [("line", "outside the brushed range"),
+                                         ("states", "in the brushed range")])
+def test_brushing_the_time_axis_re_states_the_total(page, name, phrase):
+    """Rule 4's window half, applied to a choice the READER made. A chart zoomed
+    into two of its eight hours that kept the old total is a picture claiming to
+    be the whole window — so the axis narrows, the readings outside it leave,
+    and the footer says which stretch of the clock is on the screen."""
+    drawn(page, name)
+    before = _total(page)
+    surface = _box(page, "#fs-chart-probe [data-brush-surface]")
+    page.mouse.move(surface["left"] + 30, surface["y"])
+    page.mouse.down()
+    page.mouse.move(surface["left"] + (surface["right"] - surface["left"]) * 0.55,
+                    surface["y"], steps=6)
+    page.mouse.up()
+    _await_total(page, phrase)
+    after = _total(page)
+    assert after != before, "the brush did not change what the chart says it drew"
+    notes = page.evaluate(
+        "() => [...document.querySelectorAll('#fs-chart-probe text.chart-filter-note')]"
+        ".map((t) => t.textContent)")
+    assert any("brushed to" in n for n in notes), notes
+    said = page.evaluate(
+        "() => document.querySelector('#fs-chart-probe svg.fs-chart desc').textContent")
+    for note in notes:
+        assert note.rstrip(".") in said, (
+            "the footer says the axis was brushed and the description does not")
+
+
+def test_a_brushed_chart_gives_the_whole_window_back_on_a_click(page):
+    """The way out, which a filter without one does not have. A drag narrows; a
+    single click gives the window back, and the total goes back with it."""
+    drawn(page, "line")
+    whole = _total(page)
+    surface = _box(page, "#fs-chart-probe [data-brush-surface]")
+    page.mouse.move(surface["left"] + 30, surface["y"])
+    page.mouse.down()
+    page.mouse.move(surface["left"] + 260, surface["y"], steps=6)
+    page.mouse.up()
+    _await_total(page, "outside the brushed range")
+    page.mouse.click(surface["left"] + 120, surface["y"])
+    page.wait_for_function(
+        """(whole) => {
+            const node = document.querySelector('#fs-chart-probe svg.fs-chart');
+            return node && node.getAttribute('data-total') === whole;
+        }""", arg=whole, timeout=10000)
+    assert page.evaluate(
+        "() => document.querySelector('#fs-chart-probe svg.fs-chart')"
+        ".getAttribute('data-filtered')") is None
+
+
+def test_expanding_a_node_is_an_event_the_page_handles_and_the_kit_draws_nothing(page):
+    """§7's "expanding a node into its records" belongs to the page (D5), not to
+    the chart: the kit says which node was asked for, with its id and its kind,
+    and draws nothing new itself. A chart that went and fetched the records
+    would be a chart with a page inside it."""
+    drawn(page, "graph")
+    page.evaluate(
+        """() => { window.__expanded = [];
+                   document.querySelector('#fs-chart-probe svg.fs-chart')
+                     .addEventListener('fs-chart-expand',
+                       (e) => window.__expanded.push(e.detail)); }""")
+    # The PLOT, not the whole frame: the click also moved the pointer onto the
+    # node, so the tooltip it left is the hover working, not the kit drawing.
+    before = page.evaluate(
+        "() => document.querySelector('#fs-chart-probe g.chart-plot').innerHTML")
+    at = _box(page, '#fs-chart-probe [data-node="q:label-a-stop"]')
+    page.mouse.click(at["x"], at["y"])
+    page.wait_for_function("() => (window.__expanded || []).length > 0", timeout=10000)
+    said = page.evaluate("() => window.__expanded")
+    assert said == [{"id": "q:label-a-stop", "kind": "question_group",
+                     "label": "how do I label a stop", "value": 41, "degree": 3}]
+    after = page.evaluate(
+        "() => document.querySelector('#fs-chart-probe g.chart-plot').innerHTML")
+    assert after == before, "the kit drew something of its own when a node was clicked"
+
+
+# ------------------------------------------------------ off the page (§3)
+
+EXPORT = """(async ([kind, format]) => {
+    const node = document.querySelector('#fs-chart-probe svg.fs-chart');
+    const blob = await FS.kit.export(node, format);
+    return {type: blob.type, size: blob.size,
+            text: format === 'svg' ? await blob.text() : null};
+})"""
+
+
+@pytest.mark.parametrize("name", sorted(SHAPES))
+def test_an_exported_chart_still_states_its_total_and_its_coverage(page, name):
+    """§3's rule, and the one worth checking in review: **a chart is
+    presentation-ready when its footer survives being pasted into a slide.** An
+    export whose coverage sentence was stripped is not an export this product
+    makes. The file is the chart's own markup, so the total, the coverage and
+    every footer sentence are in it by construction — this is what says they
+    stay there."""
+    want = drawn(page, name)
+    got = page.evaluate(EXPORT, [name, "svg"])
+    assert got["type"].startswith("image/svg+xml")
+    assert f'data-total="{want["total"]}"' in got["text"].replace("&amp;", "&") \
+        or want["total"] in got["text"]
+    assert f'data-coverage="{want["coverage"]}"' in got["text"]
+    for note in want["footer"]:
+        assert note["text"].split("—")[0].strip()[:40] in got["text"].replace(
+            "&#8212;", "—"), f"{name}: the footer sentence {note['text']!r} was stripped"
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_an_export_carries_the_colour_the_theme_resolved_not_a_variable(page, theme):
+    """The picture has to look the same off the page as on it, and a `var(--down)`
+    in a file nobody pasted a stylesheet with is a black chart. The colours are
+    read back from what the theme already resolved — which is not the same as
+    `kit.js` naming one (rule 6): nothing here chooses a colour, it copies the
+    one the reader is looking at."""
+    drawn(page, "pareto", theme)
+    got = page.evaluate(EXPORT, ["pareto", "svg"])
+    assert "var(--" not in got["text"], "an unresolved palette variable left the page"
+    assert "style=" in got["text"], "the export carries no colours at all"
+    # The hatch is a pattern inside the file, so it travels with it.
+    assert "<pattern" in got["text"]
+
+
+def test_an_export_leaves_the_tooltip_behind(page):
+    """A tooltip is where somebody's mouse happened to be, which is not a fact
+    about the plant. Everything else the reader can see goes into the file —
+    the legend and the threshold included, because those are the choices the
+    footer is stating."""
+    drawn(page, "pareto")
+    at = _box(page, '#fs-chart-probe [data-label="changeover"]')
+    page.mouse.move(at["x"], at["y"])
+    page.wait_for_function(
+        """() => { const h = document.querySelector('#fs-chart-probe .chart-hover');
+                   return h && h.getAttribute('data-hover-value') !== null; }""",
+        timeout=10000)
+    got = page.evaluate(EXPORT, ["pareto", "svg"])
+    assert "chart-hover" not in got["text"], "the tooltip was exported"
+    assert "chart-legend-item" in got["text"], "the legend was not"
+
+
+def test_a_chart_exports_as_a_png_the_browser_actually_drew(page):
+    """PNG is the same SVG through a canvas — no server round trip and no second
+    renderer, because a second renderer is the one that drifts (§6 (iii)). It is
+    the one asynchronous thing in this kit: the browser has to decode the SVG
+    before the canvas can take it, so the export waits on the decode rather than
+    hoping it has happened."""
+    drawn(page, "graph")
+    got = page.evaluate(EXPORT, ["graph", "png"])
+    assert got["type"] == "image/png"
+    assert got["size"] > 1000, f"a {got['size']}-byte PNG is an empty canvas"
+
+
+def test_export_refuses_anything_that_is_not_a_chart(page):
+    """Including a format it does not have. The refusal names what it wanted,
+    because the reason this function takes the chart node rather than an
+    envelope is that the footer it has to carry is already on that node."""
+    refused = page.evaluate(
+        """() => { const out = [];
+                   try { FS.kit.export(document.body, 'svg'); } catch (e) { out.push(String(e)); }
+                   try { FS.kit.export(
+                       document.querySelector('#fs-chart-probe svg.fs-chart'), 'pdf'); }
+                   catch (e) { out.push(String(e)); }
+                   return out; }""")
+    assert len(refused) == 2, f"export accepted something it should not have: {refused}"
+    assert "give it a chart" in refused[0]
+    assert "no such format" in refused[1]
+
+
+# ---------------------- and the graph the PLANT builds, not a fixture of one
+
+def test_the_graph_shape_draws_the_envelope_the_plant_itself_returns(page):
+    """The drift-prevention half for the fifth shape, and the reason this one is
+    worth having on top of the fixed envelopes above: `/analysis/trace/graph`
+    (`services/trace_analysis.py`) spells the same graph a different way from
+    the design page — the node kinds as a count by name, the totals as four
+    flat numbers, the biggest cluster as four flat fields, and `coverage` as the
+    WORD "absent" rather than as a missing field. A shape that only ever saw
+    the page's spelling would draw an empty picture against the product's own
+    route and nobody would find out until a screen was built on it (D5).
+
+    This is a live plant, so the numbers are not asserted; that the route's
+    envelope goes through the kit and comes out obeying the contract is."""
+    got = page.evaluate(
+        """async () => {
+            const reply = await fetch('/analysis/trace/graph?hours=8&threshold=0',
+                                      {credentials: 'same-origin'});
+            if (!reply.ok) return {status: reply.status};
+            const envelope = await reply.json();
+            const host = document.getElementById('fs-chart-probe');
+            const node = FS.kit.draw(host, 'graph', envelope, {width: 760, height: 300});
+            return {
+                status: 200,
+                total: node.getAttribute('data-total'),
+                coverage: node.getAttribute('data-coverage'),
+                coverageKind: node.getAttribute('data-coverage-kind'),
+                desc: node.querySelector('desc').textContent,
+                footer: [...node.querySelectorAll('text[data-footer]')]
+                    .map((t) => t.textContent),
+                kinds: [...node.querySelectorAll('[data-node-kind]')]
+                    .map((e) => e.getAttribute('data-node-kind')),
+                empties: [...node.querySelectorAll('[data-empty="true"]')]
+                    .map((e) => e.getAttribute('data-node-kind')),
+                declared: Object.keys(envelope.node_kinds || {}),
+                values: [...node.querySelectorAll('[data-value]')]
+                    .map((e) => e.getAttribute('data-value')),
+            };
+        }""")
+    assert got["status"] == 200, f"/analysis/trace/graph answered {got['status']}"
+    # Rule 5: the total is there and it names what was left out.
+    assert got["total"] and "nodes" in got["total"], got["total"]
+    assert "edges" in got["total"], got["total"]
+    # Rule 2, and the specific way this envelope says it: the WORD "absent".
+    # Before this, `coverageOf` read that word as a figure and the chart said
+    # "Watched —% of the window", which is the exact confusion the three values
+    # of `data-coverage` exist to prevent.
+    assert got["coverage"] == "absent", got["coverage"]
+    assert got["coverageKind"] == "absent"
+    assert "Watched" not in got["desc"], got["desc"]
+    # Every kind on the picture is one the route declared — the shape invents
+    # no kind of its own, and draws every kind the route says is empty.
+    assert got["declared"], "the route declared no node kinds"
+    for kind in got["kinds"]:
+        assert kind in got["declared"], f"{kind} is not a kind the route declared"
+    empty_now = [k for k in got["declared"] if k not in set(got["kinds"]) - set(got["empties"])]
+    assert set(got["empties"]) <= set(got["declared"])
+    assert empty_now, "this plant records every kind, so nothing pins the empty row"
+    assert got["values"], "the chart drew nothing at all"
+    # And the refusal is on the picture, in the route's own words.
+    printed = " ".join(got["footer"])
+    assert "refused" in printed, printed
+
+
+#: The SAME graph in the plant's own spelling — `/analysis/trace/graph`, which
+#: states the node kinds as a count by name, the reasons for the empty ones
+#: separately, the totals as four flat numbers, the biggest cluster as four flat
+#: fields, and `coverage` as the WORD "absent". Fixed, so the two spellings are
+#: pinned whatever a live plant happens to hold.
+#:
+#: It carries what PR #133 adds to that route: `asked_from` edges now that a
+#: turn records its screen, and MORE THAN ONE `unattributed` node — turns with
+#: no person, turns that record no screen, and people who sit outside any work
+#: centre are three different holes, each with its own degree.
+PLANT_GRAPH = {
+    "window": dict(WINDOW, clamped=False, hours=8.0, requested_hours=8),
+    "threshold": 1,
+    "nodes": [
+        {"id": "role:operator", "kind": "role", "label": "operator",
+         "weight": 6.0, "degree": 2},
+        {"id": "question_group:label a stop", "kind": "question_group",
+         "label": "label a stop", "weight": 41.0, "degree": 3},
+        {"id": "screen:/dashboard/ops", "kind": "screen", "label": "/dashboard/ops",
+         "weight": 28.0, "degree": 1},
+        {"id": "machine:FILL01", "kind": "machine", "label": "FILL01",
+         "weight": 2420.0, "degree": 2},
+        {"id": "downtime_reason:MECH", "kind": "downtime_reason", "label": "MECH",
+         "weight": 2140.0, "degree": 2},
+        {"id": "labelling_source:here", "kind": "labelling_source", "label": "here",
+         "weight": 2140.0, "degree": 1},
+        # Three holes, not one. Each is a different thing nobody recorded.
+        {"id": "unattributed:turns", "kind": "unattributed",
+         "label": "turns with no person on them", "weight": 3.0, "degree": 1},
+        {"id": "unattributed:screen", "kind": "unattributed",
+         "label": "turns that record no screen", "weight": 13.0, "degree": 1},
+        {"id": "unattributed:workcenter", "kind": "unattributed",
+         "label": "people outside any work centre", "weight": 4.0, "degree": 0},
+    ],
+    "edges": [
+        {"from": "role:operator", "to": "question_group:label a stop",
+         "kind": "asked", "weight": 41.0, "watched_seconds": None},
+        {"from": "unattributed:turns", "to": "question_group:label a stop",
+         "kind": "asked", "weight": 3.0, "watched_seconds": None},
+        {"from": "question_group:label a stop", "to": "screen:/dashboard/ops",
+         "kind": "asked_from", "weight": 28.0, "watched_seconds": None},
+        {"from": "question_group:label a stop", "to": "unattributed:screen",
+         "kind": "asked_from", "weight": 13.0, "watched_seconds": None},
+        # Seconds, and the machine's own watched window with them.
+        {"from": "machine:FILL01", "to": "downtime_reason:MECH",
+         "kind": "stopped_with", "weight": 2140.0, "watched_seconds": 28800.0},
+        {"from": "downtime_reason:MECH", "to": "labelling_source:here",
+         "kind": "labelled_by", "weight": 2140.0, "watched_seconds": 28800.0},
+    ],
+    "node_kinds": {"role": 1, "workcenter": 0, "question_group": 1, "screen": 1,
+                   "machine": 1, "downtime_reason": 1, "labelling_source": 1,
+                   "maintenance_order": 0, "shift": 0, "unattributed": 3,
+                   "unlabelled": 0},
+    "edge_kinds": {"asked": 2, "followed_by": 0, "asked_from": 2, "visited": 0,
+                   "stopped_with": 1, "labelled_by": 1, "repaired_by": 0,
+                   "fell_in": 0},
+    "empty_node_kinds": {
+        "workcenter": "no person here has a work centre; the ones that could not be "
+                      "placed are on the unattributed node with their count.",
+        "maintenance_order": "nothing in this window is one of these.",
+        "shift": "nothing in this window is one of these.",
+        "unlabelled": "nothing in this window is one of these.",
+    },
+    "empty_edge_kinds": {
+        "visited": "nothing here records a page visit or a dwell time - no table, "
+                   "no beacon, no log this product keeps.",
+    },
+    "nodes_showing": 9, "nodes_total": 9,
+    "edges_showing": 6, "edges_total": 6,
+    "measures": {
+        "components": 2,
+        "threshold": 1,
+        "biggest_component_nodes": 5,
+        "biggest_component_weight": 85.0,
+        "biggest_component_touches": ["question_group", "role", "screen", "unattributed"],
+        "biggest_component_does_not_touch": ["downtime_reason", "machine"],
+        "absence_note": "what the biggest cluster does not touch is a finding, not a "
+                        "gap in the drawing - and nothing here links a question to a "
+                        "stop at all.",
+        "refused": {
+            "betweenness": "refused: a shortest path here runs over whatever this "
+                           "plant happens to have recorded.",
+            "pagerank": "refused: these edges are the records that exist, not a "
+                        "sample.",
+        },
+    },
+    "unknown_seconds": 900.0,
+    "unknown_share": 0.031,
+    "machines_total": 11,
+    "coverage": "absent",
+    "coverage_note": "a graph of records is not a rate over a watched window. An "
+                     "edge weighted in seconds carries that machine's watched "
+                     "seconds, or null.",
+}
+
+
+def plant_graph(page, theme="control-room"):
+    page.evaluate(DRAW, ["graph", PLANT_GRAPH, {"height": 300, "width": 760}, theme])
+    return page.evaluate(GRAPH_FACTS)
+
+
+def test_the_plants_own_spelling_of_the_graph_draws_the_same_contract(page):
+    """`/analysis/trace/graph` writes the same graph a different way from the
+    design page: kinds as a count by name, totals as four flat numbers, the
+    biggest cluster as four flat fields, `coverage` as the word "absent". The
+    kit reads either, because its job is to draw what the API measured and not
+    to make the API spell it a particular way."""
+    got = plant_graph(page)
+    assert got["coverage"] == "absent" and got["coverageKind"] == "absent"
+    assert "showing 9 of 9 nodes" in got["total"], got["total"]
+    assert "6 of 6 edges drawn" in got["total"], got["total"]
+    assert len(got["edges"]) == len(PLANT_GRAPH["edges"])
+    printed = " ".join(f["text"] for f in got["footer"])
+    assert "2 connected components" in printed, printed
+    # The flat biggest-cluster fields, in a sentence, with the absence in it.
+    assert "the biggest cluster is 5 nodes" in printed, printed
+    assert "it touches no downtime_reason" in printed, printed
+    # Both refusals, each in the route's own words.
+    assert "betweenness refused" in printed and "pagerank refused" in printed
+
+
+def test_every_hole_the_plant_records_is_its_own_node_with_its_own_degree(page):
+    """PR #133's shape, and §7's rule under it. Turns with no person, turns that
+    record no screen, and people who sit outside any work centre are three
+    different things nobody recorded — so they are three nodes with three
+    degrees, not one lump called "unknown". The one with no edge at all is the
+    hardest and the most useful: a hole of degree 0 is still drawn."""
+    got = plant_graph(page)
+    holes = {n["data-node"]: n for n in got["nodes"]
+             if n["data-node-kind"] == "unattributed"}
+    assert set(holes) == {"unattributed:turns", "unattributed:screen",
+                          "unattributed:workcenter"}
+    assert holes["unattributed:turns"]["data-value"] == "1"
+    assert holes["unattributed:screen"]["data-value"] == "1"
+    # Four people outside any work centre, and nothing joins them to anything.
+    # `data-value` is the degree because §7 says a hole is what it touches — and
+    # this one touches nothing, so the four would be lost if the mark carried
+    # only that. It carries both, and says both.
+    alone = holes["unattributed:workcenter"]
+    assert alone["data-value"] == "0" and alone["data-degree"] == "0"
+    assert alone["data-weight"] == "4", "the four people fell off the picture"
+    assert "4 of them" in alone["title"] and "0 edges reach it" in alone["title"], (
+        alone["title"])
+    for hole in holes.values():
+        assert hole["data-unknown"] == "true"
+        assert (hole["fill"] or "").startswith("url(#")
+
+
+def test_an_empty_kind_with_a_reason_is_a_zero_and_not_an_unknown(page):
+    """The distinction PR #133 makes it possible to get wrong. Since that change
+    the route gives EVERY empty kind a sentence, and most of them say "nothing
+    in this window is one of these" — which is a measured zero. "Nobody could
+    have recorded this" is a different fact, and a shape that read "has a
+    sentence" as "is unknown" would hatch four kinds this plant simply had none
+    of, which is house rule 2 backwards."""
+    got = plant_graph(page)
+    empty = {k["data-node-kind"]: k for k in got["empties"]}
+    assert set(empty) == {"workcenter", "maintenance_order", "shift", "unlabelled"}
+    for kind in empty.values():
+        assert kind["data-value"] == "0"
+        assert kind["data-unknown"] is None, (
+            f"{kind['data-node-kind']} is drawn as unknown; it is a measured zero")
+
+
+def test_an_asked_from_edge_is_drawn_now_that_a_turn_records_its_screen(page):
+    """The edge kind that had no source at all until PR #133 gave `ai_turns` its
+    `screen` column. Both ends are drawn: the screens a question was asked from,
+    and the turns that record no screen — because the second is the measure of
+    how much the first is worth."""
+    got = plant_graph(page)
+    asked_from = [e for e in got["edges"] if e["data-edge-kind"] == "asked_from"]
+    assert len(asked_from) == 2, got["edges"]
+    assert {e["data-to"] for e in asked_from} == {"screen:/dashboard/ops",
+                                                  "unattributed:screen"}
+    assert {e["data-value"] for e in asked_from} == {"28", "13"}
+
+
+def test_an_edge_in_seconds_carries_the_machines_watched_window(page):
+    """The harness's §6 rule 4, the way round that is a reassurance. The plant's
+    envelope names no unit; what says these two are seconds is that they carry a
+    watched window, which is a thing nobody would put beside a count of
+    questions. The chart says so under the picture."""
+    got = plant_graph(page)
+    timed = [e for e in got["edges"] if e["data-watched"]]
+    assert len(timed) == 2, got["edges"]
+    assert all(e["data-watched"] == "28800" for e in timed)
+    assert all(e["data-unknown"] is None for e in timed)
+    printed = " ".join(f["text"] for f in got["footer"])
+    assert "carry the machine's own watched window" in printed, printed

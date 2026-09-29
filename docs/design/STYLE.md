@@ -66,6 +66,52 @@ where the crawler cannot.
     `kit.js` — `FS.kit.chart(kind, envelope, options)`. A second chart
     engine on a second screen is how two screens come to state coverage
     differently, which is the thing `kit.js` exists to make impossible.
+    The kinds are `line`, `bars` (alias `pareto`), `states`, `histogram`
+    and `graph`.
+
+    **The `graph` shape**, the network of the deep-analysis design page
+    (`docs/design/deep-analysis.md` §7, which lands with its own change),
+    keeps four rules of its own on top of the six:
+
+    - **Every edge is a recorded fact.** The shape draws the edges the
+      envelope carries and never one between two nodes that ended up near
+      each other. A picture is where "an edge nobody observed is not an
+      edge" is hardest to keep and easiest to break.
+    - **The holes are things with numbers on them.** `unattributed` and
+      `unlabelled` are nodes, hatched, carrying their **degree** rather
+      than a weight — what a hole is, is what it touches — so the reader
+      sees the three turns with no person rather than a tidy graph that is
+      three turns short.
+    - **Empty node kinds are drawn empty.** A kind the model declares and
+      this plant records nothing of is on the picture with its zero and
+      its name. A graph that quietly omitted `screen` would read as a
+      complete picture of a plant where the questions came from nowhere.
+    - **Coverage is `absent`, always, and there is no centrality.** A graph
+      of records is not a rate over a watched window. And betweenness,
+      PageRank and eigenvector centrality over an edge set that is
+      *whatever happens to be recorded* would be the most convincing wrong
+      number this product could show, so the shape does not offer one.
+
+    Node kinds and edge kinds map to palette variables in `styles.css` and
+    nowhere in `kit.js` (rule 2). Under the night-shift palette three node
+    kinds are close in hue, because that palette is deliberately low-blue;
+    the legend and the node names carry the distinction there.
+
+14. **What the reader narrowed a chart to re-states its total.** Hovering a
+    mark says that mark's own `data-value` with the coverage sentence under
+    it; the legend switches a kind out; the threshold moves; the time axis
+    brushes. Every one of those rewrites `data-total` **and** the footer,
+    because a filtered chart that kept the old total is a list that reads
+    complete (rule 4). The frame does this for every shape, so a new shape
+    cannot forget it. The controls are drawn inside the `<svg>` — there is
+    no `<button>` in SVG, so they carry `role`, `tabindex` and an
+    `aria-label`, and they answer a keyboard.
+
+15. **A chart is presentation-ready when its footer survives the paste.**
+    `FS.kit.export(chart, "svg" | "png")` is the chart node's own markup
+    with the theme's resolved colours inlined and the panel colour behind
+    it. An export whose coverage sentence was stripped is not an export
+    this product makes.
 
 ## The chart contract
 
@@ -110,10 +156,18 @@ sighted reader sees cannot drift apart.
 extended in `kit.js` rather than duplicated. A charting library would have to
 be vendored under `web/vendor/` with its version, licence and SHA-256, and is a
 decision record when it happens — the three.js precedent was accepted because
-WebGL cannot be hand-drawn. None of the four shapes needed one.
+WebGL cannot be hand-drawn. **None of the five shapes needed one, the network
+graph included**: its layout is ninety hand-written lines, and the reason it is
+a shape rather than a vendored engine is that the six rules are *structural*
+here — `frame()` writes `data-total`, `data-coverage`, the `<title>`, the
+`<desc>` and the footer for every shape before the shape draws anything, so a
+new shape inherits all of it and a new engine would inherit none
+(`docs/design/deep-analysis.md` §6, where that is measured against vendoring
+plotly).
 
 Pinned by `tests/test_a_chart_draws_only_what_the_api_measured.py`: every shape,
-every rule, in all four themes, from fixed envelopes.
+every rule, every interaction and the export, in all four themes, from fixed
+envelopes.
 
 ## What ui-check watches
 

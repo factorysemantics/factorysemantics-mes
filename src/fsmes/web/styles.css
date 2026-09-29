@@ -643,3 +643,106 @@ a.obj:hover { text-decoration: underline; }
    never as a shorter bar - a shorter bar reads as a measurement of a machine
    rather than of how little of it we saw (decision 0033). */
 .chart-withheld { fill: var(--muted); font-size: 10px; font-style: italic; }
+/* What the READER chose, said in the footer beside what the plant measured,
+   because a filtered chart whose footer did not say so is a picture claiming
+   to be the whole of something. */
+.chart-filter-note { fill: var(--accent); font-size: 10px; }
+
+/* ---------- the network graph (the `graph` shape) ----------
+   Node kinds and edge kinds map to palette variables HERE and nowhere in
+   kit.js (rule 6), so a plant on the night-shift palette gets a readable
+   graph without the shape knowing a theme exists. A kind this file has no
+   rule for falls back to `--unknown`, which is honest: the picture does not
+   claim to know what it is. */
+.graph-edge { stroke: var(--line); fill: none; }
+.edge-asked { stroke: var(--accent); }
+.edge-followed_by { stroke: var(--quality); stroke-dasharray: 4 3; }
+.edge-asked_from { stroke: var(--setup); }
+.edge-visited { stroke: var(--setup); stroke-dasharray: 2 3; }
+.edge-stopped_with { stroke: var(--down); }
+.edge-labelled_by { stroke: var(--idle); stroke-dasharray: 5 3; }
+.edge-repaired_by { stroke: var(--running); }
+.edge-fell_in { stroke: var(--muted); stroke-dasharray: 1 3; }
+/* Seconds with no record of how much of the window was watched. The number is
+   not printed and the edge is drawn as the unknown it is (harness §6 rule 4). */
+.graph-edge-unknown { stroke: var(--unknown); stroke-dasharray: 2 4; }
+
+/* No `fill` on the base class, deliberately. A hole node is painted with the
+   chart's hatch through its `fill` ATTRIBUTE, and a class rule would override
+   a presentation attribute and quietly turn the hole back into a colour —
+   which is decision 0030's whole point, lost in a stylesheet. So the fill of a
+   drawn node comes from `.graph-node-kind` (the fallback for a kind this file
+   has no rule for) and the `.node-*` rules after it. */
+.graph-node { stroke: var(--panel); stroke-width: 1; }
+.graph-node-kind { fill: var(--unknown); }
+.node-role { fill: var(--accent); }
+.node-workcenter { fill: var(--text); }
+.node-question_group { fill: var(--quality); }
+.node-screen { fill: var(--setup); }
+.node-machine { fill: var(--running); }
+.node-downtime_reason { fill: var(--down); }
+.node-maintenance_order { fill: var(--idle); }
+.node-shift { fill: var(--muted); }
+/* Nine node kinds and eight hues a palette can spare — `--unknown` is reserved
+   for the holes, and a kind painted in it would read as one. So the ninth is
+   told apart by a RING rather than by a colour, which survives all four
+   themes. `labelling_source` gets it because it is the one kind that is not a
+   thing on the floor: it names the system that named a stop. Without this it
+   fell through to the base fill and came out grey, which said "nobody knows"
+   about a fact somebody recorded. */
+.node-labelling_source { fill: var(--muted); stroke: var(--text); stroke-width: 2; }
+/* A kind the model declares and this plant recorded nothing of. Drawn, never
+   omitted: a graph that dropped it would read as a complete picture of a
+   plant where those questions came from nowhere. */
+.graph-node-empty { fill: none; stroke: var(--line); stroke-width: 1;
+                    stroke-dasharray: 2 2; }
+.graph-label { fill: var(--muted); font-size: 10px; }
+.graph-node:focus-visible, .chart-legend-item:focus-visible,
+.chart-slider-handle:focus-visible, [data-brush-surface]:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
+
+/* ---------- what the reader can touch ----------
+   Drawn inside the <svg> rather than as HTML beside it, so that a chart is
+   still one node: `FS.kit.chart()` returns it, `ui-check` watches it, and the
+   export of the deep-analysis page §3 is its own outerHTML — legend, chosen
+   threshold and all. */
+.chart-legend-text { fill: var(--text); font-size: 10px; }
+.chart-legend-item { cursor: pointer; }
+.chart-legend-item.off { opacity: 0.35; }
+.chart-legend-item.off .chart-legend-text { text-decoration: line-through; }
+.chart-legend-swatch { stroke: var(--line); stroke-width: 0.5; }
+/* The hatch is a per-chart pattern id, so a legend swatch for "unknown"
+   cannot reference it; it says the same thing in the same grey. */
+.chart-unknown-swatch { fill: var(--unknown); }
+.edge-swatch { fill: var(--line); }
+.edge-swatch.edge-asked { fill: var(--accent); }
+.edge-swatch.edge-followed_by { fill: var(--quality); }
+.edge-swatch.edge-asked_from, .edge-swatch.edge-visited { fill: var(--setup); }
+.edge-swatch.edge-stopped_with { fill: var(--down); }
+.edge-swatch.edge-labelled_by { fill: var(--idle); }
+.edge-swatch.edge-repaired_by { fill: var(--running); }
+.edge-swatch.edge-fell_in { fill: var(--muted); }
+
+.chart-slider-track { stroke: var(--track); stroke-width: 4; stroke-linecap: round; }
+.chart-slider-done { stroke: var(--accent); stroke-width: 4; stroke-linecap: round; }
+.chart-slider-handle { fill: var(--accent); stroke: var(--panel); stroke-width: 1.5;
+                       cursor: ew-resize; }
+
+/* The surfaces a pointer is caught on: no paint of their own, because a
+   control that tinted the plot would be colouring a measurement. The brush's
+   own surface catches NOTHING — it sits behind the marks and exists to be
+   focused and named; the drag is caught on the frame, so pointing at a bar
+   still tells you what the bar says. */
+.chart-grab { fill: none; pointer-events: all; cursor: ew-resize; }
+.chart-brush-surface { fill: none; pointer-events: none; cursor: crosshair; }
+.chart-brush-span { fill: var(--accent); fill-opacity: 0.14; stroke: var(--accent);
+                    stroke-width: 0.5; pointer-events: none; }
+
+/* The mark's own number under the pointer, with the coverage sentence under
+   it: a figure and how much of the window it covers are read together or not
+   at all (rule 2). */
+.chart-hover { pointer-events: none; }
+.chart-hover-box { fill: var(--panel-2); stroke: var(--line); stroke-width: 1; }
+.chart-hover-value { fill: var(--text); font-size: 11px; font-weight: 600; }
+.chart-hover-note { fill: var(--muted); font-size: 10px; }
