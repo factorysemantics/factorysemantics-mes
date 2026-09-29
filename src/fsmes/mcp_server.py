@@ -546,13 +546,6 @@ def set_machine_state(plant: str, equipment: str, state: str,
                   f"set {equipment} to {state}" + (f" ({reason})" if reason else ""))
 
 
-def _window_query(hours: float, shift: str | None) -> str:
-    """Either a trailing span of hours or a named shift, never both."""
-    if shift:
-        return f"shift={quote(shift, safe='/')}"
-    return f"hours={hours}"
-
-
 @mcp.tool()
 def shifts(plant: str, days: int = 7) -> dict:
     """Which shifts this plant has run lately, which one is running now, and on
@@ -561,32 +554,15 @@ def shifts(plant: str, days: int = 7) -> dict:
             "shifts": _call(plant, "GET", f"/analysis/shifts?days={days}")}
 
 
-@mcp.tool()
-def downtime(plant: str, hours: float = 8.0, shift: str | None = None) -> dict:
-    """Downtime pareto over the window: which reasons cost what, and how much
-    is unlabelled - reported honestly rather than hidden.
-
-    `shift` windows it on the plant's own clock instead of a trailing span of
-    hours: `current`, `previous`, or a day and a code such as
-    `2026-09-14/NIGHT`. It overrides `hours`. Use it whenever the question is
-    about a shift, because "the last eight hours" is not a shift."""
-    return {"plant": plant,
-            "downtime": _call(plant, "GET",
-                              f"/analysis/downtime?{_window_query(hours, shift)}")}
-
-
-@mcp.tool()
-def tag_trend(plant: str, equipment: str, tag: str | None = None,
-              hours: float = 1.0, shift: str | None = None) -> dict:
-    """A machine's process value over time - the signal that drifts before a
-    failure. Omit tag for the machine's primary analog.
-
-    `shift` windows it on the plant's own clock and overrides `hours`:
-    `current`, `previous`, or `2026-09-14/NIGHT`."""
-    path = f"/analysis/tag/{equipment}?{_window_query(hours, shift)}"
-    if tag:
-        path += f"&tag={tag}"
-    return {"plant": plant, "trend": _call(plant, "GET", path)}
+# The pareto and the trend were declared here, each with a window default of
+# its own - `hours=8.0` and `hours=1.0`. The routes deliberately have none: left
+# out, `hours` is this plant's `[process] default_report_hours`, read at the
+# moment of the request. A tool that defaulted to eight told a twelve-hour plant
+# its own default was somebody else's, in the one place nobody would look. They
+# are `downtime_pareto` and `tag_trend` on the analysis module now
+# (`fsmes/mcp/analysis.py`), beside `oee_breakdown` and `state_timeline`, which
+# had no tool at all - and that is also where the registry always said they
+# belonged.
 
 
 # -------------------------------------------------------------- master data
@@ -871,7 +847,7 @@ def _register_modules() -> list[str]:
 
 
 TOOL_MODULES: tuple[str, ...] = tuple(_register_modules())
-"""The modules whose tools this server registered, of the eleven that ship one."""
+"""The modules whose tools this server registered, of the twelve that ship one."""
 
 
 def _allowed_hosts(host: str, port: int) -> list[str]:

@@ -1097,6 +1097,7 @@ REGISTRY: tuple[Module, ...] = (
                     "Shift analysis: OEE losses, the state timeline, downtime pareto and "
                     "tag trends. Its own page because these are questions you sit down with, "
                     "not things you watch."),),
+        tools=("fsmes.mcp.analysis",),
         config_sections=(
             ConfigSection(
                 domain="engineering",
