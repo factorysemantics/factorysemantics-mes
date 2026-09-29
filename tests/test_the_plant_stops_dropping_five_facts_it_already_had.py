@@ -52,6 +52,12 @@ def _at(tz: ZoneInfo, day: date, hour: int, minute: int = 0) -> datetime:
 
 
 def _turn(db, **over) -> AiTurn:
+    # A minute ago unless the test says when. A rollup or a graph takes its
+    # window's `end` as `utcnow()` when it runs, and on a clock as coarse as
+    # Windows' a turn stamped in the same tick lands exactly on `end` and is
+    # outside `ts < end`: CI found it twice on windows-latest 3.12 and nowhere
+    # else (2026-09-29).
+    over.setdefault("ts", utcnow() - timedelta(minutes=1))
     row = {"session": "s1", "user": "SCOTT", "model": "claude-sonnet-5",
            "kind": "reply", "asked": "how do I record a check", "said": "here"}
     return ai_trace.record(db, row | over)
