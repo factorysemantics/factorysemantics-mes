@@ -722,8 +722,12 @@ a.obj:hover { text-decoration: underline; }
                        cursor: ew-resize; }
 
 /* The surfaces a pointer is caught on: no paint of their own, because a
-   control that tinted the plot would be colouring a measurement. */
-.chart-grab { fill: none; pointer-events: all; cursor: crosshair; }
+   control that tinted the plot would be colouring a measurement. The brush's
+   own surface catches NOTHING — it sits behind the marks and exists to be
+   focused and named; the drag is caught on the frame, so pointing at a bar
+   still tells you what the bar says. */
+.chart-grab { fill: none; pointer-events: all; cursor: ew-resize; }
+.chart-brush-surface { fill: none; pointer-events: none; cursor: crosshair; }
 .chart-brush-span { fill: var(--accent); fill-opacity: 0.14; stroke: var(--accent);
                     stroke-width: 0.5; pointer-events: none; }
 

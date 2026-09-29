@@ -556,9 +556,13 @@
       if (slider) drawSlider(node, slider, chromeTop + legendRows.length * 16, view, render);
       if (plan.brushable) drawBrush(node, plan.brushable, view, render);
 
+      /* `data-footer` and not the class: since the frame also draws a legend
+         and a slider, "a text whose class starts with chart-" no longer means
+         "a sentence this chart is making about itself", and the <desc> is
+         assembled from these and only these. */
       notes.forEach((note, index) => {
-        add(node, "text", { x: 4, y: footTop + 8 + index * lineH + 10, class: note.cls },
-            note.text);
+        add(node, "text", { x: 4, y: footTop + 8 + index * lineH + 10,
+                            class: note.cls, "data-footer": "true" }, note.text);
       });
       /* Last, so it paints over everything, and empty until a pointer is on a
          mark. Stripped from an export: a tooltip is where the reader's mouse
@@ -588,8 +592,14 @@
           ? "withheld — below this plant's coverage floor"
           : "unknown — nobody measured this");
       }
+      /* Rule 2 in the hand: a number and how much of the window it covers are
+         read together or not at all — INCLUDING when the answer is that this
+         payload has no coverage figure on it, which is the third of the three
+         facts `data-coverage` exists to tell apart. */
       const cover = coverageOf(envelope);
-      if (cover.text) lines.push(cover.text);
+      lines.push(cover.text
+        || "this payload carries no coverage figure — how much of the window was "
+           + "watched is not part of what it measured");
       return { value, lines };
     }
 
@@ -628,7 +638,18 @@
     /* Delegated on the frame and attached once, because the plot is replaced
        on every redraw and a handler per mark would be re-attached with it. */
     node.addEventListener("pointermove", (event) => {
-      const mark = event.target.closest ? event.target.closest("[data-value]") : null;
+      let mark = event.target.closest ? event.target.closest("[data-value]") : null;
+      if (!mark && document.elementsFromPoint) {
+        /* A line's own stroke, a min/max band, a grid rule, a spec limit: none
+           of them is a reading and every one of them sits over the mark that
+           is. So the pointer looks THROUGH what it landed on for the topmost
+           thing carrying a number — rather than each of those marks having to
+           remember to opt out, which is the kind of rule that holds until
+           somebody adds the next decoration. */
+        mark = document.elementsFromPoint(event.clientX, event.clientY)
+          .find((el) => node.contains(el) && el.hasAttribute
+                        && el.hasAttribute("data-value")) || null;
+      }
       if (!mark || !node.contains(mark)) { clearHover(); return; }
       showHover(mark, atPointer(node, event));
     });
@@ -782,7 +803,14 @@
      into two numbers in the shape's own domain. */
   function drawBrush(node, brushable, view, redraw) {
     const { x, width: w, y, height: h, domain } = brushable;
-    const g = add(node, "g", { class: "chart-brush", "data-chrome": "brush" });
+    /* BEHIND the plot, and catching no pointer of its own. A transparent
+       surface over the marks would take every hover with it, and the first
+       thing a reader does to a chart is point at a bar. The drag is caught on
+       the frame instead and answered only inside this box. */
+    const g = document.createElementNS(NS, "g");
+    g.setAttribute("class", "chart-brush");
+    g.setAttribute("data-chrome", "brush");
+    node.insertBefore(g, node.querySelector("g.chart-plot"));
     const toDomain = (px) => domain[0]
       + ((Math.max(x, Math.min(x + w, px)) - x) / Math.max(w, 1)) * (domain[1] - domain[0]);
     const toPixel = (v) => x + ((v - domain[0]) / Math.max(domain[1] - domain[0], 1e-9)) * w;
@@ -797,7 +825,7 @@
       });
     }
     const surface = add(g, "rect", {
-      x, y, width: w, height: h, class: "chart-grab",
+      x, y, width: w, height: h, class: "chart-brush-surface",
       "data-brush-surface": "true",
       tabindex: "0", role: "button",
       "aria-label": view.brush
@@ -806,15 +834,18 @@
     });
     let from = null;
     let span = null;
-    surface.addEventListener("pointerdown", (event) => {
+    node.addEventListener("pointerdown", (event) => {
+      const start = atPointer(node, event);
+      if (start.x < x || start.x > x + w || start.y < y || start.y > y + h) return;
       event.preventDefault();
-      from = atPointer(node, event).x;
+      from = start.x;
       span = add(g, "rect", { x: from, y, width: 1, height: h, class: "chart-brush-span" });
       const move = (e) => {
         const now = atPointer(node, e).x;
         span.setAttribute("x", Math.min(from, now));
         span.setAttribute("width", Math.max(Math.abs(now - from), 1));
       };
+      span.setAttribute("data-brush-drawing", "true");
       const up = (e) => {
         node.removeEventListener("pointermove", move);
         node.removeEventListener("pointerup", up);
