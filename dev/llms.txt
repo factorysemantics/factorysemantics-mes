@@ -31,6 +31,7 @@
 - [Operate — How-to — plants from a fleet file](https://docs.factorysemantics.com/dev/operate/registry/)
 - [Operate — How-to — the fleet this installation owns](https://docs.factorysemantics.com/dev/operate/fleet/)
 - [Operate — How-to — switch a module off](https://docs.factorysemantics.com/dev/operate/modules/)
+- [Operate — How-to — your plant in it without sending us your data](https://docs.factorysemantics.com/dev/operate/plant-from-your-mes/)
 - [Operate — How-to — running beside an existing MES](https://docs.factorysemantics.com/dev/operate/shadow-mode/)
 - [Operate — How-to — the shadow scorecard](https://docs.factorysemantics.com/dev/operate/shadow-scorecard/)
 - [Operate — How-to — the ERPNext connector](https://docs.factorysemantics.com/dev/operate/erpnext/)
