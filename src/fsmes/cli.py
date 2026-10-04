@@ -2933,6 +2933,59 @@ def config_audit_cmd(
         typer.echo(line)
 
 
+@app.command("skills-zip")
+def skills_zip(
+    name: str = typer.Argument("plant-from-your-mes", help="Which skill folder to package."),
+    out: Path = typer.Option(None, help="Where to write the zip (default: <name>.zip here)."),
+    root: Path = typer.Option(None, help="Repository root (default: found from cwd)."),
+    check: bool = typer.Option(
+        False, "--check",
+        help="Only compare the folder against the shipping list, write nothing. "
+             "This is what CI runs, so a stray file cannot reach a release."),
+) -> None:
+    """Package a skill folder as the zip that ships on a release.
+
+    A skill is a folder somebody else's agent takes in. The contents are listed
+    in `fsmes.skills`, not globbed, so adding a file to a skill is a line in a
+    diff and `--check` fails when the two disagree in either direction.
+
+        fsmes skills-zip --check
+        fsmes skills-zip plant-from-your-mes --out dist/plant-from-your-mes.zip
+    """
+    from fsmes import skills as skills_mod
+
+    if name not in skills_mod.SKILLS:
+        typer.echo(f"no skill called {name}. There is: {', '.join(sorted(skills_mod.SKILLS))}")
+        raise typer.Exit(2)
+
+    here = (root or Path.cwd()).resolve()
+    base = next((c for c in [here, *here.parents] if (c / "skills" / name).is_dir()), None)
+    if base is None:
+        typer.echo(f"no skills/{name}/ above {here}. Run this from a checkout.")
+        raise typer.Exit(2)
+
+    missing, stray = skills_mod.differences(name, base)
+    for path in missing:
+        typer.echo(f"  listed but not on disk: {path}")
+    for path in stray:
+        typer.echo(f"  on disk but not listed: {path}")
+    if missing or stray:
+        typer.echo(f"skills/{name}/ does not match its shipping list "
+                   f"({len(missing)} missing, {len(stray)} stray).")
+        raise typer.Exit(1)
+
+    listed = skills_mod.SKILLS[name]
+    if check:
+        typer.echo(f"skills/{name}/: {len(listed)} file(s), all listed, none stray.")
+        return
+
+    target = Path(out) if out else base / f"{name}.zip"
+    written = skills_mod.build_zip(name, base, target)
+    typer.echo(f"{written} — {len(listed)} file(s), {written.stat().st_size:,} bytes")
+    for relative in listed:
+        typer.echo(f"  {name}/{relative}")
+
+
 assist_app = typer.Typer(
     help="The floor assistant: what it can do for a person, measured (coverage), "
          "and whether it does what people actually ask (eval).")

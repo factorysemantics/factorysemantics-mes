@@ -34,6 +34,13 @@ jobs:
       - name: Lint
         run: python -m ruff check .
 
+      # The skill folders that ship as zips on a release. A second's work, and
+      # it is the only thing that notices a file added to a skill and never
+      # added to its shipping list — or a scratch file left in the folder that
+      # would otherwise be packaged and sent to somebody's plant.
+      - name: Every skill folder matches its shipping list
+        run: fsmes skills-zip --check
+
       - name: Test
         run: python -m pytest
 
