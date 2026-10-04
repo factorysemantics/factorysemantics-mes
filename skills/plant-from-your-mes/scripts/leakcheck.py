@@ -53,7 +53,7 @@ import argparse
 import re
 import sqlite3
 import sys
-from pathlib import Path
+from pathlib import Path, PurePath
 
 #: Units the output may carry verbatim. Short, fixed, and chosen because every
 #: one of them is a unit and none of them is a thing anybody owns. A unit string
@@ -155,14 +155,39 @@ def is_identity(value: str, ours: frozenset[str] | None = None) -> bool:
     return not (ours is not None and " " not in lowered and lowered in ours)
 
 
+def read_only_uri(path: PurePath) -> str:
+    """A SQLite URI that opens a database read-only, on Windows as well.
+
+    Read-only is not a nicety here — it is the first promise this skill makes
+    about somebody's production database, and `mode=ro` in a URI is how SQLite
+    is told to refuse a write at the file level rather than trusting us not to
+    attempt one.
+
+    The Windows part is the fiddly part, and it matters because plant PCs run
+    Windows. A URI is not a path: `file:C:\\plant\\mes.db` is not a URI SQLite
+    can read, because the backslashes are not separators to it. The path has to
+    be spelled with forward slashes and given a leading one, so the drive letter
+    sits where a URI expects a path — `file:///C:/plant/mes.db`. A `?` or a `#`
+    anywhere in the name would end the path early, so both are escaped.
+    """
+    # `as_posix()` on its own leaves a relative path relative, which SQLite would
+    # resolve against its own working directory rather than ours, so an absolute
+    # path is made first — except for a path that is already absolute for its own
+    # flavour, which is what a Windows path handed to this on any machine is.
+    spelled = path if path.is_absolute() else Path(path).resolve()
+    posix = spelled.as_posix().replace("?", "%3f").replace("#", "%23")
+    if not posix.startswith("/"):
+        posix = "/" + posix
+    return f"file://{posix}?mode=ro"
+
+
 def sample_sqlite(path: Path, per_column: int = PER_COLUMN_CAP, total: int = TOTAL_CAP) -> list[str]:
     """Every distinct value this database holds, bounded, as text.
 
     Read-only: the connection is opened in SQLite's own read-only mode, so a
     mistake in this file cannot write to the customer's database.
     """
-    uri = f"file:{path}?mode=ro"
-    db = sqlite3.connect(uri, uri=True)
+    db = sqlite3.connect(read_only_uri(path), uri=True)
     db.text_factory = str
     out: list[str] = []
     try:

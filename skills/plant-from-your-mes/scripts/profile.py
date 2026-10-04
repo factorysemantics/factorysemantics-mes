@@ -336,8 +336,9 @@ class SqliteSource(Source):
     """Straight through a read-only SQLite connection."""
 
     def __init__(self, path: Path, mapping: dict[str, Any], queries: Path, row_cap: int) -> None:
-        uri = f"file:{path}?mode=ro"
-        self.db = sqlite3.connect(uri, uri=True)
+        # Read-only, and spelled as a URI the way SQLite needs it on Windows
+        # too — see `leakcheck.read_only_uri`. Plant PCs run Windows.
+        self.db = sqlite3.connect(leakcheck.read_only_uri(path), uri=True)
         self.db.row_factory = sqlite3.Row
         self.mapping = mapping
         self.queries = queries

@@ -26,7 +26,7 @@ import json
 import subprocess
 import sys
 import tomllib
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import pytest
 import tests.unknown_mes as unknown_mes
@@ -304,6 +304,30 @@ def test_the_leak_check_itself_clears_the_file_against_the_whole_database(blind_
     considered = int(done.stdout.split("passed: 0 of ")[1].split()[0])
     assert considered > 500, f"only {considered} values were even considered — the check is theatre"
     assert blind_run["shape"]["meta"]["leak_check"].startswith("passed: 0 of ")
+
+
+def test_the_read_only_connection_is_a_uri_windows_can_read_too() -> None:
+    """Plant PCs run Windows, and `file:C:\\plant\\mes.db` is not a URI.
+
+    Read-only is the first promise this skill makes about somebody's production
+    database, and it is made by opening the connection with `mode=ro` in a URI.
+    A URI built by pasting a Windows path into it has backslashes where SQLite
+    expects separators and a drive letter where it expects a path, so it either
+    fails to open or opens something else. Spelled right it is
+    `file:///C:/plant/mes.db?mode=ro`.
+    """
+    sys.path.insert(0, str(SKILL / "scripts"))
+    import leakcheck  # shipped as a folder, not as a package
+
+    for windows_path in (r"C:\plant\mes.db", r"D:\MES Data\history.db"):
+        uri = leakcheck.read_only_uri(PureWindowsPath(windows_path))
+        assert "\\" not in uri, uri
+        assert uri.startswith("file:///"), uri
+        assert uri.endswith("?mode=ro"), uri
+        assert uri.count("?") == 1, uri
+    # A `?` or `#` in the name would otherwise end the path early.
+    odd = leakcheck.read_only_uri(PureWindowsPath(r"C:\plant\what#now?.db"))
+    assert odd.count("?") == 1 and "%23" in odd and "%3f" in odd, odd
 
 
 def test_the_leak_check_refuses_to_write_when_something_identifying_is_in_the_output(
