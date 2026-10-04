@@ -1,0 +1,1172 @@
+# plant-shape.toml — the shape of a plant, and nothing that identifies it.
+#
+# Written by plant-from-your-mes from read-only queries. Read this before it
+# leaves your building. Everything in here is a count, a share, a
+# distribution or a pattern. There is no order number, lot, pallet, serial,
+# person, customer, item or free-text note, and the file was checked against
+# the source database's own strings before it was written — see [meta].
+#
+# Stations are ST-01, ST-02 … in line order. Tags are AN-/CT-/DS- by kind.
+# Vocabularies (stop reasons, dispositions, states) are mapped onto a fixed
+# standard list. Strings appear only as patterns: AAA-AA-### means three
+# capitals, a dash, two capitals, a dash, three digits.
+#
+# `not measured` means exactly that. It does not mean zero.
+
+[meta]
+written_by = "plant-from-your-mes 1"
+written_at = "2026-10-04T11:03:48Z"
+source_dialect = "sqlite"
+read_only = true
+window_start = "2026-03-02T06:00:00Z"
+window_end = "2026-03-02T07:00:00Z"
+window_hours = 1.0
+rows_read = 20571
+row_cap = 200000
+tables_total = 13
+tables_mapped = 11
+tables_not_understood = 2
+vocabulary_kept = false
+leak_check = "passed: 0 of 1015 identifying values appear in this file (4037 values sampled from the source)"
+queries_not_run = []
+
+[plant]
+stations_total = 6
+naming_note = "the grammar below is a shape derived from values that were then discarded"
+naming_grammar = [
+  { what = "order number", pattern = "AA-####-#######", seen = 2, of_total = 2 },
+  { what = "lot number", pattern = "AAA-#######-#", seen = 328, of_total = 328 },
+  { what = "pallet or container id", pattern = "AAA-######", seen = 56, of_total = 56 },
+  { what = "non-conformance number", pattern = "AAA-####-####", seen = 2, of_total = 2 },
+  { what = "document number", pattern = "AAA-AA-###", seen = 9, of_total = 19 },
+  { what = "document number", pattern = "AA-AAA-###", seen = 6, of_total = 19 },
+  { what = "document number", pattern = "AAA-AAA-####", seen = 4, of_total = 19 },
+]
+
+[[stations]]
+name = "ST-01"
+sequence = 1
+rate_per_min = 107.01
+rate_basis = "good + scrap divided by minutes in the running state"
+scrap_pct = 0.683
+good_total = 5670
+scrap_total = 39
+running_seconds = 3201.0
+analogs_total = 9
+
+[[stations.analogs]]
+name = "AN-01"
+kind = "analog"
+unit = "ms"
+base = 546.0
+noise = 14.6841
+decimals = 1
+running_only = true
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 585.0
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = 0.997
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-02"
+kind = "analog"
+unit = "bpm"
+base = 110.2
+noise = 1.5108
+decimals = 1
+running_only = true
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 115.0
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = 0.999
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-03"
+kind = "counter"
+unit = "ea"
+base = 2896.0
+noise = 1663.6442
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 1.0
+observed_max = 5757.0
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = -0.135
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-04"
+kind = "analog"
+unit = "bar"
+base = 4.41
+noise = 0.0792
+decimals = 2
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 4.19
+observed_max = 4.59
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = -0.027
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-05"
+kind = "analog"
+unit = "A"
+base = 11.2
+noise = 0.3867
+decimals = 2
+running_only = true
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 12.59
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = 0.995
+unit_dropped = false
+
+[[stations.analogs]]
+name = "DS-06"
+kind = "discrete"
+unit = ""
+base = 1.0
+noise = 0.0
+decimals = 1
+running_only = true
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 1.0
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = 0.8
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-07"
+kind = "counter"
+unit = "min"
+base = 26.67
+noise = 15.3879
+decimals = 2
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.02
+observed_max = 53.2
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = -0.135
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-08"
+kind = "counter"
+unit = "ea"
+base = 23.0
+noise = 11.0058
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 39.0
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = -0.161
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-09"
+kind = "counter"
+unit = "ea"
+base = 2919.0
+noise = 1674.5134
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 1.0
+observed_max = 5796.0
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = -0.135
+unit_dropped = false
+
+[[stations]]
+name = "ST-02"
+sequence = 2
+rate_per_min = 104.13
+rate_basis = "good + scrap divided by minutes in the running state"
+scrap_pct = 0.881
+good_total = 5510
+scrap_total = 49
+running_seconds = 3203.0
+analogs_total = 10
+
+[[stations.analogs]]
+name = "AN-01"
+kind = "analog"
+unit = "ms"
+base = 556.0
+noise = 14.5959
+decimals = 1
+running_only = true
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 592.0
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = 0.997
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-02"
+kind = "counter"
+unit = "ea"
+base = 1819.0
+noise = 1419.3449
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 4665.0
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = -0.295
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-03"
+kind = "analog"
+unit = "A"
+base = 14.82
+noise = 0.5021
+decimals = 2
+running_only = true
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 16.05
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = 0.995
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-04"
+kind = "analog"
+unit = ""
+base = 62.1
+noise = 6.0261
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 60.2
+observed_max = 88.1
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = 0.113
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-05"
+kind = "analog"
+unit = "N"
+base = 180.0
+noise = 1.9247
+decimals = 1
+running_only = true
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 185.6
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = 0.999
+unit_dropped = false
+
+[[stations.analogs]]
+name = "DS-06"
+kind = "discrete"
+unit = ""
+base = 1.0
+noise = 0.0
+decimals = 1
+running_only = true
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 1.0
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = 0.956
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-07"
+kind = "counter"
+unit = "min"
+base = 26.73
+noise = 15.4318
+decimals = 2
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.02
+observed_max = 53.23
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = -0.149
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-08"
+kind = "counter"
+unit = "ea"
+base = 14.0
+noise = 12.9148
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 39.0
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = -0.289
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-09"
+kind = "counter"
+unit = "ea"
+base = 1833.0
+noise = 1432.0898
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 4704.0
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = -0.295
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-10"
+kind = "analog"
+unit = "mm/s"
+base = 1.81
+noise = 0.1497
+decimals = 2
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 1.39
+observed_max = 2.24
+modal_state = "running"
+modal_state_share = 0.892
+state_correlation = -0.021
+unit_dropped = false
+
+[[stations]]
+name = "ST-03"
+sequence = 3
+rate_per_min = 108.41
+rate_basis = "good + scrap divided by minutes in the running state"
+scrap_pct = 1.788
+good_total = 5439
+scrap_total = 99
+running_seconds = 3065.0
+analogs_total = 10
+
+[[stations.analogs]]
+name = "AN-01"
+kind = "analog"
+unit = "uS"
+base = 239.8
+noise = 5.9739
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 225.0
+observed_max = 255.5
+modal_state = "running"
+modal_state_share = 0.858
+state_correlation = -0.045
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-02"
+kind = "analog"
+unit = "ms"
+base = 521.0
+noise = 15.4361
+decimals = 1
+running_only = true
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 570.0
+modal_state = "running"
+modal_state_share = 0.858
+state_correlation = 0.997
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-03"
+kind = "analog"
+unit = "%"
+base = 1.81
+noise = 0.0507
+decimals = 2
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 1.61
+observed_max = 1.93
+modal_state = "running"
+modal_state_share = 0.858
+state_correlation = -0.054
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-04"
+kind = "counter"
+unit = "ea"
+base = 2783.0
+noise = 1587.0043
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 1.0
+observed_max = 5522.0
+modal_state = "running"
+modal_state_share = 0.858
+state_correlation = -0.175
+unit_dropped = false
+
+[[stations.analogs]]
+name = "DS-05"
+kind = "discrete"
+unit = ""
+base = 1.0
+noise = 0.0
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 1.0
+modal_state = "running"
+modal_state_share = 0.858
+state_correlation = 0.658
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-06"
+kind = "analog"
+unit = "bar"
+base = 3.21
+noise = 0.0956
+decimals = 2
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 2.81
+observed_max = 3.47
+modal_state = "running"
+modal_state_share = 0.858
+state_correlation = 0.014
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-07"
+kind = "counter"
+unit = "min"
+base = 25.45
+noise = 14.7363
+decimals = 2
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.02
+observed_max = 50.93
+modal_state = "running"
+modal_state_share = 0.858
+state_correlation = -0.175
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-08"
+kind = "counter"
+unit = "ea"
+base = 29.0
+noise = 35.9869
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 100.0
+modal_state = "running"
+modal_state_share = 0.858
+state_correlation = -0.168
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-09"
+kind = "counter"
+unit = "ea"
+base = 2812.0
+noise = 1621.5944
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 1.0
+observed_max = 5622.0
+modal_state = "running"
+modal_state_share = 0.858
+state_correlation = -0.175
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-10"
+kind = "analog"
+unit = "degC"
+base = 71.1
+noise = 1.161
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 68.5
+observed_max = 75.2
+modal_state = "running"
+modal_state_share = 0.858
+state_correlation = 0.088
+unit_dropped = false
+
+[[stations]]
+name = "ST-04"
+sequence = 4
+rate_per_min = 103.85
+rate_basis = "good + scrap divided by minutes in the running state"
+scrap_pct = 1.541
+good_total = 5111
+scrap_total = 80
+running_seconds = 2999.0
+analogs_total = 9
+
+[[stations.analogs]]
+name = "AN-01"
+kind = "analog"
+unit = "lx"
+base = 819.5
+noise = 12.1607
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 789.9
+observed_max = 851.4
+modal_state = "running"
+modal_state_share = 0.836
+state_correlation = -0.037
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-02"
+kind = "analog"
+unit = "ms"
+base = 535.0
+noise = 14.9949
+decimals = 1
+running_only = true
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 579.0
+modal_state = "running"
+modal_state_share = 0.836
+state_correlation = 0.998
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-03"
+kind = "counter"
+unit = "ea"
+base = 2629.0
+noise = 1497.2438
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 1.0
+observed_max = 5190.0
+modal_state = "running"
+modal_state_share = 0.836
+state_correlation = -0.134
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-04"
+kind = "analog"
+unit = "ms"
+base = 42.1
+noise = 2.5869
+decimals = 1
+running_only = true
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 50.0
+modal_state = "running"
+modal_state_share = 0.836
+state_correlation = 0.989
+unit_dropped = false
+
+[[stations.analogs]]
+name = "DS-05"
+kind = "discrete"
+unit = ""
+base = 1.0
+noise = 0.0
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 1.0
+modal_state = "running"
+modal_state_share = 0.836
+state_correlation = 0.604
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-06"
+kind = "analog"
+unit = ""
+base = 2.01
+noise = 0.5147
+decimals = 2
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.23
+observed_max = 3.44
+modal_state = "running"
+modal_state_share = 0.836
+state_correlation = -0.008
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-07"
+kind = "counter"
+unit = "min"
+base = 25.07
+noise = 14.4464
+decimals = 2
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.02
+observed_max = 49.83
+modal_state = "running"
+modal_state_share = 0.836
+state_correlation = -0.134
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-08"
+kind = "counter"
+unit = "ea"
+base = 35.0
+noise = 24.8328
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 80.0
+modal_state = "running"
+modal_state_share = 0.836
+state_correlation = -0.126
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-09"
+kind = "counter"
+unit = "ea"
+base = 2664.0
+noise = 1522.0176
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 1.0
+observed_max = 5270.0
+modal_state = "running"
+modal_state_share = 0.836
+state_correlation = -0.134
+unit_dropped = false
+
+[[stations]]
+name = "ST-05"
+sequence = 5
+rate_per_min = 100.56
+rate_basis = "good + scrap divided by minutes in the running state"
+scrap_pct = 0.803
+good_total = 4941
+scrap_total = 40
+running_seconds = 2972.0
+analogs_total = 9
+
+[[stations.analogs]]
+name = "AN-01"
+kind = "analog"
+unit = "ms"
+base = 571.0
+noise = 14.9474
+decimals = 1
+running_only = true
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 622.0
+modal_state = "running"
+modal_state_share = 0.828
+state_correlation = 0.998
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-02"
+kind = "analog"
+unit = "g"
+base = 499.9
+noise = 3.3548
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 486.9
+observed_max = 505.1
+modal_state = "running"
+modal_state_share = 0.828
+state_correlation = -0.072
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-03"
+kind = "counter"
+unit = "ea"
+base = 2515.5
+noise = 1451.2929
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 1.0
+observed_max = 5017.0
+modal_state = "running"
+modal_state_share = 0.828
+state_correlation = -0.147
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-04"
+kind = "analog"
+unit = "bar"
+base = 2.6
+noise = 0.071
+decimals = 2
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 2.41
+observed_max = 2.79
+modal_state = "running"
+modal_state_share = 0.828
+state_correlation = -0.013
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-05"
+kind = "analog"
+unit = "degC"
+base = 8.365
+noise = 0.2832
+decimals = 2
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 7.45
+observed_max = 9.1
+modal_state = "running"
+modal_state_share = 0.828
+state_correlation = -0.08
+unit_dropped = false
+
+[[stations.analogs]]
+name = "DS-06"
+kind = "discrete"
+unit = ""
+base = 1.0
+noise = 0.0
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 1.0
+modal_state = "running"
+modal_state_share = 0.828
+state_correlation = 0.586
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-07"
+kind = "counter"
+unit = "min"
+base = 24.735
+noise = 14.304
+decimals = 2
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.02
+observed_max = 49.38
+modal_state = "running"
+modal_state_share = 0.828
+state_correlation = -0.147
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-08"
+kind = "counter"
+unit = "ea"
+base = 22.0
+noise = 12.046
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 40.0
+modal_state = "running"
+modal_state_share = 0.828
+state_correlation = -0.151
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-09"
+kind = "counter"
+unit = "ea"
+base = 2537.5
+noise = 1463.1477
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 1.0
+observed_max = 5057.0
+modal_state = "running"
+modal_state_share = 0.828
+state_correlation = -0.147
+unit_dropped = false
+
+[[stations]]
+name = "ST-06"
+sequence = 6
+rate_per_min = 100.09
+rate_basis = "good + scrap divided by minutes in the running state"
+scrap_pct = 0.101
+good_total = 4926
+scrap_total = 5
+running_seconds = 2956.0
+analogs_total = 9
+
+[[stations.analogs]]
+name = "AN-01"
+kind = "analog"
+unit = "bar"
+base = 6.0
+noise = 0.05
+decimals = 2
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 5.88
+observed_max = 6.15
+modal_state = "running"
+modal_state_share = 0.822
+state_correlation = -0.047
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-02"
+kind = "analog"
+unit = "degC"
+base = 38.1
+noise = 0.735
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 36.1
+observed_max = 40.2
+modal_state = "running"
+modal_state_share = 0.822
+state_correlation = 0.115
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-03"
+kind = "analog"
+unit = "ms"
+base = 588.5
+noise = 14.2595
+decimals = 1
+running_only = true
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 626.0
+modal_state = "running"
+modal_state_share = 0.822
+state_correlation = 0.998
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-04"
+kind = "counter"
+unit = "ea"
+base = 2502.5
+noise = 1446.4278
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 1.0
+observed_max = 5002.0
+modal_state = "running"
+modal_state_share = 0.822
+state_correlation = -0.14
+unit_dropped = false
+
+[[stations.analogs]]
+name = "AN-05"
+kind = "analog"
+unit = "1/s"
+base = 3.1
+noise = 0.0991
+decimals = 2
+running_only = true
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 3.4
+modal_state = "running"
+modal_state_share = 0.822
+state_correlation = 0.997
+unit_dropped = false
+
+[[stations.analogs]]
+name = "DS-06"
+kind = "discrete"
+unit = ""
+base = 1.0
+noise = 0.0
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 1.0
+modal_state = "running"
+modal_state_share = 0.822
+state_correlation = 0.575
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-07"
+kind = "counter"
+unit = "min"
+base = 24.6
+noise = 14.2049
+decimals = 2
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.02
+observed_max = 49.12
+modal_state = "running"
+modal_state_share = 0.822
+state_correlation = -0.14
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-08"
+kind = "counter"
+unit = "ea"
+base = 4.0
+noise = 1.7538
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 0.0
+observed_max = 5.0
+modal_state = "running"
+modal_state_share = 0.822
+state_correlation = -0.2
+unit_dropped = false
+
+[[stations.analogs]]
+name = "CT-09"
+kind = "counter"
+unit = "ea"
+base = 2506.5
+noise = 1448.0844
+decimals = 1
+running_only = false
+samples = 360
+sample_interval_s = 10.0
+observed_min = 1.0
+observed_max = 5007.0
+modal_state = "running"
+modal_state_share = 0.822
+state_correlation = -0.14
+unit_dropped = false
+
+[stops]
+found = true
+intervals_total = 270
+seconds_total = 21600.0
+stops_total = 35
+stop_seconds_total = 1901.0
+unlabelled_stops = 7
+unlabelled_share = 0.2
+stops_counted_as = "stopped, down, changeover, maintenance, other"
+waiting_intervals = 97
+waiting_seconds = 1303.0
+waiting_note = "starved and blocked are reported but not counted as stops needing a reason — they are the machine upstream or downstream, not a reason code"
+vocabulary_kept = false
+states = [
+  { state = "running", intervals = 138, seconds = 18396.0, share = 0.8517, p50_seconds = 107.0, p90_seconds = 190.0, max_seconds = 889.0 },
+  { state = "changeover", intervals = 6, seconds = 1440.0, share = 0.0667, p50_seconds = 240.0, p90_seconds = 240.0, max_seconds = 240.0 },
+  { state = "blocked", intervals = 86, seconds = 902.0, share = 0.0418, p50_seconds = 9.0, p90_seconds = 15.0, max_seconds = 119.0 },
+  { state = "starved", intervals = 11, seconds = 401.0, share = 0.0186, p50_seconds = 2.0, p90_seconds = 111.0, max_seconds = 120.0 },
+  { state = "stopped", intervals = 27, seconds = 329.0, share = 0.0152, p50_seconds = 11.0, p90_seconds = 16.0, max_seconds = 18.0 },
+  { state = "down", intervals = 2, seconds = 132.0, share = 0.0061, p50_seconds = 12.0, p90_seconds = 120.0, max_seconds = 120.0 },
+]
+reasons = [
+  { category = "unlabelled", stops = 7, share_of_stops = 0.2, seconds = 81.0, share_of_stop_seconds = 0.0426, note_length_p50 = "not measured", generic_wording = "Stop with no reason recorded against it in the source system at all" },
+  { category = "changeover", stops = 6, share_of_stops = 0.1714, seconds = 1440.0, share_of_stop_seconds = 0.7575, note_length_p50 = 60, generic_wording = "Planned changeover to the next product, set up and proved ou" },
+  { category = "mechanical", stops = 6, share_of_stops = 0.1714, seconds = 69.0, share_of_stop_seconds = 0.0363, note_length_p50 = 53, generic_wording = "Mechanical stop on the machine, part replaced and the" },
+  { category = "quality", stops = 5, share_of_stops = 0.1429, seconds = 61.0, share_of_stop_seconds = 0.0321, note_length_p50 = 59, generic_wording = "Held for a quality check, the line waited for the result be" },
+  { category = "electrical", stops = 4, share_of_stops = 0.1143, seconds = 50.0, share_of_stop_seconds = 0.0263, note_length_p50 = 48, generic_wording = "Electrical fault on the drive, reset at the pane" },
+  { category = "material", stops = 4, share_of_stops = 0.1143, seconds = 59.0, share_of_stop_seconds = 0.031, note_length_p50 = 63, generic_wording = "Nothing arriving at the infeed, the line waited for material fr" },
+  { category = "operator", stops = 3, share_of_stops = 0.0857, seconds = 141.0, share_of_stop_seconds = 0.0742, note_length_p50 = 42, generic_wording = "Nobody on the machine for the period, the" },
+]
+
+[quality]
+found = true
+checks_total = 30
+fail_share = 0.0667
+nonconformances_total = 2
+nonconformances_per_1000_checks = 66.67
+verdicts = [
+  { verdict = "pass", checks = 28, share = 0.9333 },
+  { verdict = "fail", checks = 2, share = 0.0667 },
+]
+dispositions = [
+  { disposition = "none recorded", rows = 28, share = 0.9333 },
+  { disposition = "rework", rows = 1, share = 0.0333 },
+  { disposition = "scrap", rows = 1, share = 0.0333 },
+]
+
+[orders]
+found = true
+orders_seen = 2
+bounded_by = 200000
+qty_p50 = 4800.0
+qty_p90 = 5000.0
+qty_min = 4800.0
+qty_max = 5000.0
+open_hours_p50 = 0.5
+open_hours_p90 = 0.5
+still_open = 0
+
+[shifts]
+found = true
+rows_seen = 3
+distinct_codes = 3
+pattern = [
+  { starts_at_utc = "00:00", hours = 8.0, seen = 1 },
+  { starts_at_utc = "08:00", hours = 8.0, seen = 1 },
+  { starts_at_utc = "16:00", hours = 8.0, seen = 1 },
+]
+
+[documents]
+found = true
+documents_seen = 19
+grammar = [
+  { what = "document number", pattern = "AAA-AA-###", seen = 9, of_total = 19 },
+  { what = "document number", pattern = "AA-AAA-###", seen = 6, of_total = 19 },
+  { what = "document number", pattern = "AAA-AAA-####", seen = 4, of_total = 19 },
+]
+revision_grammar = [
+  { what = "revision", pattern = "Aaa #", seen = 19, of_total = 19 },
+]
+
+[erp]
+found = true
+calls_total = 60
+endpoint_words_carried = false
+touchpoints = [
+  { verb = "GET", path_shape = "/aaa/aaaaaaaa/Aaaa Aaaaa", calls = 20, min_bytes = 412.0, max_bytes = 2363.0, failures = 1, calls_per_hour = 20.0, failure_share = 0.05 },
+  { verb = "POST", path_shape = "/aaa/aaaaaaaa/Aaa Aaaa/AA-####-####/aaaaaaa", calls = 20, min_bytes = 646.0, max_bytes = 2154.0, failures = 2, calls_per_hour = 20.0, failure_share = 0.1 },
+  { verb = "POST", path_shape = "/aaa/aaaaaaaa/Aaaaa Aaaaa", calls = 20, min_bytes = 320.0, max_bytes = 2382.0, failures = 1, calls_per_hour = 20.0, failure_share = 0.05 },
+]
+
+[also_tracked_note]
+what = "tables this MES holds that this file could not use"
+tables_total = 2
+why_it_matters = "each one is a candidate feature for FactorySemantics. Described by shape; the customer's own column names are not carried."
+
+[[also_tracked]]
+name = "UNUSED-01"
+columns_total = 4
+rows_seen = 12
+words_recognised = "kwh"
+note = "Something this MES tracks that FactorySemantics does not model. Described by shape only; no column name of theirs is carried."
+
+[[also_tracked]]
+name = "UNUSED-02"
+columns_total = 7
+rows_seen = 18
+words_recognised = "amount, cost, cycle, tool"
+note = "Something this MES tracks that FactorySemantics does not model. Described by shape only; no column name of theirs is carried."
