@@ -101,6 +101,33 @@ jobs:
           name: dist
           path: dist/
 
+      # The skills that ship beside the wheel: folders somebody else's agent
+      # takes in. Built from the list in `fsmes.skills`, not globbed, and the
+      # contents printed into the log — a release that attaches a zip nobody has
+      # read the manifest of is how a stray file reaches a customer's plant.
+      #
+      # Deliberately NOT in dist/. `pypi` publishes everything in that directory
+      # and a zip that is not a Python distribution either fails the upload or
+      # ends up on PyPI as something nobody asked for.
+      - name: The skills zips, with their contents listed
+        run: |
+          set -euo pipefail
+          mkdir -p skills-dist
+          PYTHONPATH=src python - <<'PY'
+          from pathlib import Path
+
+          from fsmes import skills
+
+          for name in skills.SKILLS:
+              print(f"built {skills.build_zip(name, Path('.'), Path('skills-dist') / f'{name}.zip')}")
+          PY
+          for z in skills-dist/*.zip; do python -m zipfile -l "$z"; done
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: skills
+          path: skills-dist/
+
   wheel-demo:
     # The `build` job checks the wheel's filename and that the config files
     # are inside it. Both were true of a wheel that still did not run. This
@@ -233,6 +260,10 @@ jobs:
         with:
           name: dist
           path: dist/
+      - uses: actions/download-artifact@v8
+        with:
+          name: skills
+          path: skills-dist/
       - name: Release notes from CHANGELOG
         run: |
           v="${GITHUB_REF_NAME#v}"
@@ -241,4 +272,6 @@ jobs:
       - uses: softprops/action-gh-release@v3
         with:
           body_path: notes.md
-          files: dist/*
+          files: |
+            dist/*
+            skills-dist/*

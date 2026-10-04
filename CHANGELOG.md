@@ -12,6 +12,50 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **`plant-from-your-mes`: a skills folder a customer's own assistant takes in,
+  that turns their SQL MES into one safe, readable plant shape.** It ships as
+  `plant-from-your-mes.zip` on the release page (`fsmes skills-zip`). A plant
+  unpacks it next to their own AI assistant, asks *"how do I put my plant into
+  FactorySemantics without giving away anything proprietary?"*, and the
+  assistant runs read-only queries against their own database in widening
+  steps and writes **one file, `plant-shape.toml`**, which they read before it
+  leaves the building.
+
+  Sixteen numbered queries in each of two dialects — SQL Server first, SQLite
+  for our own test — every one of them a single bounded `SELECT`. Three scripts,
+  standard library only, no driver and nothing to install: `profile.py` writes
+  the file (and proposes a draft mapping of their schema from the catalogue
+  alone), `leakcheck.py` **refuses to write it** if any identifying string from
+  the source appears in it, and `explain.py` reads it back in plain words.
+
+  What the file carries: stations as `ST-01`… with their rates and scrap
+  shares, every tag as `AN-`/`CT-`/`DS-` with its base, spread, sampling
+  interval and whether it only moves while the machine runs, the share of time
+  in each state with stop duration distributions, stop reasons as categories
+  with generic wording written to the measured length, the quality loop,
+  order sizes, the shift pattern, their numbering grammar as patterns
+  (`AAA-AA-###`), ERP traffic as path shapes — and `[[also_tracked]]`: the
+  tables their MES holds that FactorySemantics does not model, described by
+  shape, as a feature list.
+
+  What it never carries: an order, work order, lot, pallet, serial, person,
+  customer, item, price, address, free-text note, or one of their table or
+  column names.
+
+  **Proven blind.** `tests/unknown_mes.py` builds a deliberately foreign SQL
+  MES — its own table names, a state column of three-letter words, tag history
+  in one tall table — out of the bottling line's own generated hour, and the
+  skill is run against it with no hint about that schema. It proposes the
+  mapping from the catalogue, and the plant it describes is bottling: six
+  stations in line order, every rate within a tenth of nameplate, every scrap
+  share within a third of a percentage point, all twenty analogs recovered with
+  the right base and spread, counters and ready bits told apart from
+  measurements by shape alone — and not one order code, lot, pallet, operator
+  code, non-conformance number or technician's note in the output.
+  `docs/operate/plant-from-your-mes.md` says what that proves and, just as
+  plainly, what it does not: **no SQL Server has parsed the `queries/mssql/`
+  set**, because there is none here or on the runner. That check is structural.
+
 - **Explore on the AI tab: an exploration that draws what it read.** A person
   holding `audit.read` opens **Explore** on `/dashboard/ai`, types a question,
   and the analysis agent answers beside its own charts — the trace graph of who

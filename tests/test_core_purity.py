@@ -89,6 +89,11 @@ LADDER: tuple[tuple[str, tuple[str, ...]], ...] = (
         # it sits with them. Nothing below imports it, and nothing in it is
         # reachable from a plant that is only being served.
         "lab",
+        # Packaging a skill folder as the zip that ships on a release. It reads
+        # `skills/` and writes a zip; it imports nothing from this package at
+        # all, and nothing in the product imports it — only the CLI and CI do.
+        # An edge because what it meets is a release artifact.
+        "skills",
     )),
     ("cli", (
         # The top of the ladder: everything may be imported by the CLI and
