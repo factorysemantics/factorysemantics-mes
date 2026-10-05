@@ -1570,3 +1570,128 @@ def test_an_edge_in_seconds_carries_the_machines_watched_window(page):
     assert all(e["data-unknown"] is None for e in timed)
     printed = " ".join(f["text"] for f in got["footer"])
     assert "carry the machine's own watched window" in printed, printed
+
+
+# --------------------------------- a moment the reader came here about
+#
+# `options.markers: [{t, label}]` on the two timed shapes. Added 2026-10-05
+# for the panel beside the SPC chart: a pressure dip and a fill weight are an
+# explanation only if they are read against one another, and a marker is how
+# six small charts come to share one instant.
+#
+# It is neither a measurement nor a filter, and both halves of that are
+# asserted below: no mark gains a `data-value` and no total changes.
+
+MARKERS = """([kind, envelope, options, markers]) => {
+    const host = document.getElementById('fs-marker-probe') || (() => {
+        const box = document.createElement('div');
+        box.id = 'fs-marker-probe';
+        box.style.width = '760px';
+        document.body.appendChild(box);
+        return box;
+    })();
+    const plain = FS.kit.chart(kind, envelope, {...options, width: 760});
+    const node = FS.kit.draw(host, kind, envelope,
+                             {...options, width: 760, markers});
+    const rules = [...node.querySelectorAll('[data-marker]')];
+    return {
+        total: node.getAttribute('data-total'),
+        totalWithout: plain.getAttribute('data-total'),
+        coverage: node.getAttribute('data-coverage'),
+        coverageWithout: plain.getAttribute('data-coverage'),
+        marks: rules.map((el) => ({
+            tag: el.tagName.toLowerCase(),
+            at: el.getAttribute('data-marker'),
+            cls: el.getAttribute('class'),
+            stroke: getComputedStyle(el).stroke,
+            value: el.getAttribute('data-value'),
+            x1: Number(el.getAttribute('x1')),
+            title: el.querySelector('title') ? el.querySelector('title').textContent : null,
+        })),
+        labels: [...node.querySelectorAll('text.chart-marker-label')].map((t) => t.textContent),
+        footer: [...node.querySelectorAll('text[data-footer]')].map((t) => t.textContent),
+        desc: node.querySelector('desc').textContent,
+        accent: (() => {
+            const probe = document.createElement('span');
+            probe.style.display = 'none';
+            probe.style.color = 'var(--accent)';
+            document.body.appendChild(probe);
+            const out = getComputedStyle(probe).color;
+            probe.remove();
+            return out;
+        })(),
+    };
+}"""
+
+
+def marked(page, name, markers):
+    kind, envelope, options = SHAPES[name]
+    return page.evaluate(MARKERS, [kind, envelope, dict(options), markers])
+
+
+@pytest.mark.parametrize("name", ("line", "states"))
+def test_a_marker_puts_the_readers_own_moment_on_a_timed_axis(page, name):
+    """One dashed rule, at the instant asked for, with its own time on it."""
+    got = marked(page, name, [{"t": "2026-09-28T11:00:00Z", "label": "this reading"}])
+    assert len(got["marks"]) == 1, got["marks"]
+    mark = got["marks"][0]
+    assert mark["tag"] == "line"
+    assert mark["at"] == "2026-09-28T11:00:00Z"
+    assert mark["cls"] == "chart-marker"
+    assert "this reading" in mark["title"]
+    assert got["labels"] == ["this reading"]
+
+
+@pytest.mark.parametrize("name", ("line", "states"))
+def test_a_marker_is_not_a_measurement_and_carries_no_number(page, name):
+    """Rule 1 from the other side. A mark with a `data-value` is a figure the
+    envelope carried; a marker is a position on the clock, and a hover that
+    read one as the other would be quoting the reader back at themselves."""
+    got = marked(page, name, [{"t": "2026-09-28T11:00:00Z", "label": "this reading"}])
+    assert got["marks"][0]["value"] is None
+
+
+@pytest.mark.parametrize("name", ("line", "states"))
+def test_a_marker_changes_no_total_and_no_coverage(page, name):
+    """Rule 5 and rule 2. Nothing leaves the picture when a marker is put on
+    it, so the total it states must be the same total it stated before -
+    unlike a legend switch or a brush, which do narrow it and say so."""
+    got = marked(page, name, [{"t": "2026-09-28T11:00:00Z", "label": "this reading"}])
+    assert got["total"] == got["totalWithout"]
+    assert got["coverage"] == got["coverageWithout"]
+
+
+@pytest.mark.parametrize("name", ("line", "states"))
+def test_a_markers_own_time_is_in_the_footer_and_in_the_desc(page, name):
+    """The rule and the sentence cannot come to disagree, and a screen reader
+    is told the same thing a sighted reader sees."""
+    got = marked(page, name, [{"t": "2026-09-28T11:00:00Z", "label": "this reading"}])
+    said = [line for line in got["footer"] if "this reading at" in line]
+    assert said, got["footer"]
+    assert said[0] in got["desc"] or said[0].rstrip(".") in got["desc"]
+
+
+@pytest.mark.parametrize("name", ("line", "states"))
+def test_a_marker_outside_the_window_is_not_drawn_and_the_footer_says_so(page, name):
+    """Clamping it to the edge would put the instant somewhere it was not,
+    which is the one thing a marker must never do: the whole reason it is on
+    the picture is that the reader is asking about that moment."""
+    got = marked(page, name, [{"t": "2026-09-28T20:00:00Z", "label": "this reading"}])
+    assert got["marks"] == []
+    assert any("outside the stretch drawn" in line for line in got["footer"]), got["footer"]
+
+
+@pytest.mark.parametrize("name", ("line", "states"))
+def test_a_marker_takes_its_colour_from_the_palette(page, name):
+    """Rule 6. The accent, because the marker is the reader's own position in
+    the picture and not a state the plant reported."""
+    got = marked(page, name, [{"t": "2026-09-28T11:00:00Z", "label": "this reading"}])
+    assert got["marks"][0]["stroke"] == got["accent"]
+
+
+def test_a_histogram_takes_no_marker_because_it_has_no_clock(page):
+    """A marker on an axis of bins would be pointing at a bin index rather
+    than at a moment, which is a picture claiming something it cannot know."""
+    got = marked(page, "histogram", [{"t": "2026-09-28T11:00:00Z", "label": "x"}])
+    assert got["marks"] == []
+    assert got["total"] == got["totalWithout"]
