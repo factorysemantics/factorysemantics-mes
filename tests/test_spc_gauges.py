@@ -9,7 +9,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from fsmes.services import Invalid, gauges, quality, spc
+from fsmes.services import Invalid, NotFound, gauges, quality, spc
 
 
 def _record(session, values, characteristic="brix"):
@@ -160,3 +160,72 @@ def test_an_unknown_calibration_result_is_refused(session):
     session.flush()
     with pytest.raises(Invalid, match="unknown result"):
         gauges.calibrate(session, "G7", result="probably fine", performed_by="TECH")
+
+
+# ------------------------------------------- the gauge on the measurement
+
+def test_a_recorded_check_names_the_gauge_that_took_it(session):
+    """The first question anybody asks about a point on a control chart is
+    whether the process moved or the instrument did, and a check that cannot
+    name its gauge cannot be asked."""
+    gauges.register(session, code="SCALE-9", name="Checkweigher", resolution=0.1)
+    session.flush()
+    check, _nc, _signals = quality.record_check(
+        session, material_code="FG-COLA", characteristic="brix", value=11.0,
+        gauge_code="SCALE-9", actor="test")
+    session.flush()
+    assert check.gauge_id == gauges.get(session, "SCALE-9").id
+    assert gauges.impact(session, "SCALE-9")["count"] == 1
+
+
+def test_a_check_with_no_gauge_says_not_recorded_rather_than_nothing(session):
+    """Null is *not recorded*. It is the honest answer for a plant whose
+    checks arrive without an instrument, and it is not the same claim as
+    saying no gauge was used."""
+    check, _nc, _signals = quality.record_check(
+        session, material_code="FG-COLA", characteristic="brix", value=11.0, actor="test")
+    assert check.gauge_id is None
+
+
+def test_a_reading_from_a_gauge_this_plant_does_not_have_is_refused(session):
+    """Dropping the unknown code instead would leave a reading on the chart
+    that looks exactly like one whose gauge is on the register."""
+    with pytest.raises(NotFound):
+        quality.record_check(session, material_code="FG-COLA", characteristic="brix",
+                             value=11.0, gauge_code="NO-SUCH-SCALE", actor="test")
+
+
+def test_a_gauge_that_is_overdue_still_records_what_it_measured(session):
+    """Refusing here would leave the reading unnamed, which is worse: these
+    readings happen on real floors, and bounding them is what the gauge's
+    impact list is for."""
+    gauges.register(session, code="SCALE-OLD", name="Old scale", interval_days=1)
+    gauges.calibrate(session, "SCALE-OLD", result="pass", performed_by="TECH",
+                     performed_on=date.today() - timedelta(days=40))
+    session.flush()
+    assert gauges.register_list(session)["overdue"] >= 1
+    check, _nc, _signals = quality.record_check(
+        session, material_code="FG-COLA", characteristic="brix", value=11.0,
+        gauge_code="SCALE-OLD", actor="test")
+    assert check.gauge_id is not None
+
+
+def test_the_check_list_a_screen_reads_carries_the_gauge_and_the_station(client, session):
+    """Over the API, because that is where the chart reads it from."""
+    gauges.register(session, code="SCALE-API", name="Checkweigher", resolution=0.1)
+    session.commit()
+    posted = client.post("/quality/checks", json={
+        "material": "FG-COLA", "characteristic": "brix", "value": 11.0,
+        "gauge": "SCALE-API"})
+    assert posted.status_code == 201, posted.text
+    assert posted.json()["gauge"] == "SCALE-API"
+    rows = client.get("/quality/checks", params={"material": "FG-COLA"}).json()["items"]
+    assert rows[0]["gauge"] == "SCALE-API"
+    assert "equipment" in rows[0]
+
+
+def test_an_unknown_gauge_is_refused_over_the_api_too(client):
+    refused = client.post("/quality/checks", json={
+        "material": "FG-COLA", "characteristic": "brix", "value": 11.0,
+        "gauge": "NO-SUCH-SCALE"})
+    assert refused.status_code == 404, refused.text
