@@ -994,6 +994,43 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Fixed
 
+- **The end-to-end KepSim test stopped waiting before the analog history it
+  asserted could exist — so for eleven days this project could not say whether
+  its own process values were being stored.** `tests/test_kepsim.py` carried a
+  non-strict `xfail` from 2026-09-25 that put the question in writing: the
+  replayed line's production and equipment states arrived and
+  `RD01.MotorTemp in tags` failed, and whether that was a test giving up early
+  or the OPC agent dropping analogs *had not been established*. Measured on
+  2026-10-05, it was the test.
+
+  The drive loop returned as soon as production had been booked from three
+  stations, which on a 20x replay is **0.75 s** after the agent dials. Process
+  values are on a second subscription whose interval is `opc_publish_ms` x
+  `opc_history_ratio`, floored at `opc_min_history_ms` — 5,000 ms as shipped —
+  so the **first analog row exists at 5.04 s**, four and a quarter seconds
+  after the assertion ran.
+
+  Nothing was being dropped, then or now. On a replayed line all six stations
+  store **12.00 samples a minute, a gap of 5.00 s**, over a 65-second window —
+  which is that interval exactly. On the live bottling plant, `FILL01.FillWeight`
+  stored **17,280 samples in the 24 hours to 2026-10-05 11:55 UTC, 720 an
+  hour**, at the same rate. Both figures are the setting, not a coincidence.
+
+  The `xfail` is gone and the test waits on the rows it reads: two samples of
+  each named process value, not one, because a single sample is also what an
+  agent that published its opening value and then went quiet would leave
+  behind. Its budget is eight history intervals rather than a fixed number, so
+  a slower runner gets proportionally longer, and its failure message names the
+  tag and the count it actually got. Three runs of three green at 13 s each;
+  verified still red for the other cause by not subscribing the analogs.
+
+  The interval itself is now one named function, `history_interval_ms` in the
+  OPC agent, with two tests pinning it as an **identity on the setting** rather
+  than a count of rows: the ratio moves it, and the floor wins when a plant
+  drops `opc_publish_ms` to catch breakdowns sooner. No behaviour changed and
+  no setting was added — what changed is that the project can now state its
+  stored sample rate and be held to it.
+
 - **A trace graph said each machine had been watched for the whole window, on a
   plant the coverage ledger had barely seen.** The first picture this product
   ever drew for a person carried the number decision 0033 exists to prevent. A
