@@ -67,6 +67,64 @@ is judging: `fsmes` will tell you about that one directly — the gauge register
 applies the rule of ten, with four as the floor, and says when *the control
 chart is charting the instrument*. See `GET /quality/gauges/{code}/resolution`.
 
+## Click a point
+
+A rule firing tells you *that* a reading is unusual. The next six questions are
+always the same ones, and this MES already holds the answers — so on
+**Quality → SPC**, click any dot on the chart and the panel beside it fills
+with that reading's records. Click another and the panel follows; nothing else
+on the page moves. There is no model in it: every line on the panel is a
+record, and nothing on it is guessed.
+
+What you get, in the order people ask:
+
+| The question | What the panel shows |
+|---|---|
+| What was read, and by whom? | The value, the specification it was judged against, who took it, when, which order, which shift, which station |
+| Which rule fired? | The rule, what it means and the hold it raised — and beside it the firings the MES recorded *when the reading arrived*, which is not the same question as what the chart says now |
+| **Did the process move, or did the gauge?** | The instrument, its last calibration and who signed it, whether it is overdue, and whether it can resolve the tolerance it was judging. Then the same characteristic by **every other gauge in the hour either side**, with each one's mean and how far it sat from this one |
+| What was the machine doing? | The state at that instant and what it had just come out of, with the seconds between — plus the state timeline, every stretch it was not running, and each stop's reason or the word *unlabelled* |
+| What were the process values doing? | This station's analogs over the ten minutes before and the two after, as small charts, each with the reading's own time marked on it |
+| What else happened? | A maintenance order that was open, a finding that was raised |
+
+**Every block says how much of its own window was watched.** The three that are
+lists of records — the other gauges, the maintenance orders, the findings — say
+they have **no** coverage figure, because a list of the records in a window is
+not a rate over a watched one. And a tag that stopped arriving is drawn as a
+**broken** line with its missing buckets counted, never as a line through the
+silence: a stale value is not a steady one, and telling those two apart is most
+of why this panel is worth having.
+
+A keyboard reaches it: tab to a reading and press Enter, or use the **Open a
+reading** button, which opens the newest reading a rule fired on.
+
+### Two things it will not tell you
+
+**The gauge comparison bounds the question; it does not settle it.** Two
+instruments measuring the same process in the same hour should agree, and a
+standing difference between them is the instrument — but they measured
+*different pieces*. The controlled comparison is one piece measured twice, and
+no MES can make a floor do that. The panel says so on itself.
+
+**A reading with no gauge, or no station, says *not recorded*.** That is not
+the same as no gauge having taken it, and the MES will not work a station out
+from the order's routing — that would name a machine nobody stood at.
+
+### The same answer, as an API
+
+One read, and the one a screen gets:
+
+```
+GET /quality/spc/{material}/{characteristic}/point/{check_id}
+```
+
+`before_minutes`, `after_minutes` and `neighbour_hours` move the window; ten,
+two and one are the defaults. Nothing in it is worked out for the panel: the
+control limits come from the chart, the trends and the timeline from
+`/analysis`, the gauge's due date from the gauge register, the coverage from
+the ledger. So a figure on the panel and the same figure on the analysis screen
+cannot disagree.
+
 ## Making something else happen
 
 What a plant does next is the plant's decision, so it is configuration, not

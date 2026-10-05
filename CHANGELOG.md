@@ -12,6 +12,76 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **Click a point on the SPC chart and see why it is there - no model, just
+  the records.** Scott, 2026-10-05: *"some kind of UI to show me what brief
+  non-LLM dashboards could look like if I wanted to fully understand why a SPC
+  datapoint is where it is just by clicking on the SPC chart ... the kind of
+  EDA."* Quality -> SPC -> click a dot, and a panel beside the chart fills with
+  everything this MES holds about that reading. Click another and the panel
+  follows; nothing else on the page moves.
+
+  What is on it, in the order the questions get asked:
+
+  - **The reading** - its value, the specification it was judged against, who
+    took it, when, on which order, in which shift, at which station.
+  - **Which rule fired**, and the hold it raised. Beside it, the firings the
+    MES recorded *when the reading arrived* - which is not the same question as
+    what the chart says now, because the chart is drawn over a history that has
+    moved since.
+  - **Did the process move, or did the gauge?** The instrument that took it,
+    its last calibration and who signed it, whether it is overdue, and whether
+    it can resolve the tolerance it was judging at all. Then the same
+    characteristic by **every other gauge in the hour either side**, with each
+    one's mean and how far it sat from this one. The panel says in so many
+    words that this bounds the question rather than settling it: they measured
+    different pieces, and one piece measured on both gauges is the controlled
+    comparison.
+  - **What the machine was doing** - the state it was in at that instant, and
+    what it had just come out of, with the seconds between. A point above the
+    limit forty seconds after a changeover ended is a point about the
+    changeover. The state timeline for that station, and every stretch in the
+    window it was not running, with each stop's reason or the word
+    *unlabelled*.
+  - **This station's process values** over the ten minutes before the reading
+    and the two after, as small charts, each with the reading's own time marked
+    on it - because a pressure dip and a fill weight are an explanation only if
+    they are read against one another. Each chart exports with its footer and
+    its marker on it.
+  - **Anything else in that window** - a maintenance order that was open, a
+    finding that was raised.
+
+  **Every block says how much of its own window was watched**, and the four
+  that are lists of records say that they have no such figure to give rather
+  than printing a share of something they are not. A tag that stopped arriving
+  is drawn as a broken line with its buckets counted, not as a line through the
+  silence: a stale value is not a steady one.
+
+  One read behind it,
+  `GET /quality/spc/{material}/{characteristic}/point/{check_id}`,
+  plant-computed and served as an envelope (decision 0023), so the panel lays
+  numbers out and works none of them out. The control limits are the chart's
+  own, the trends and the timeline are `/analysis`'s, the gauge's due date is
+  the register's, the window's coverage is the ledger's. The window is the
+  request's - `before_minutes`, `after_minutes` and `neighbour_hours`, with
+  ten, two and one as the defaults.
+
+  Three smaller things it needed, each useful on its own:
+
+  - **A third kind of reporting window.** `hours=` is a trailing span and
+    `shift=` is a wall-clock window on the plant's clock; both end now, because
+    both answer *how is it going*. `/analysis/timeline` and `/analysis/tag` now
+    also take a window named by its two ends, for the question that is about a
+    moment in the past. Clamped to when the MES started watching, like the
+    other two.
+  - **Each point on the chart names the reading it is.** The nth dot is a
+    different reading every time a check is recorded; the reading is not.
+  - **`FS.kit.chart` takes `options.markers`** on its two timed shapes - a
+    moment the reader came here about, drawn as a dashed rule with its own time
+    in the footer. Not a measurement and not a filter: it carries no
+    `data-value` and changes no total. One outside the stretch drawn is not
+    drawn at all and the footer says why, rather than being clamped to an edge
+    that would put the instant somewhere it was not.
+
 - **A plant pack carries its gauge register, a check records the gauge that
   took it, and the simulated floor plants five causes an engineer can find
   behind a point on the control chart.** Scott, 2026-10-05: *"click an SPC
@@ -1051,6 +1121,15 @@ goes under Honesty with a migration line, so plant people can find it.
   all six that remain belong to another handoff.
 
 ### Fixed
+
+- **A test of the AI trace failed about one run in twenty-five on nobody's
+  change.** `test_the_trace_records_the_chart_as_a_summary_and_never_the_envelope`
+  asserted that the string `"41"` appears nowhere in the turn row it writes,
+  over a row carrying `"session": uuid4().hex[:12]` - and a random
+  twelve-character hex string contains `41` **4.3 %** of the time, measured.
+  The session id now comes out before the substring check, the way the
+  tool-use id already did. Found and written down by #142's executor; fixed
+  here.
 
 - **The end-to-end KepSim test stopped waiting before the analog history it
   asserted could exist — so for eleven days this project could not say whether
