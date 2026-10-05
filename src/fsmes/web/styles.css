@@ -628,6 +628,15 @@ a.obj:hover { text-decoration: underline; }
    dashed stub that says the two ends are not joined. */
 .chart-break { stroke: var(--unknown); stroke-width: 1; stroke-dasharray: 2 3; }
 
+/* A MOMENT THE READER CAME HERE ABOUT (`options.markers` in kit.js). The
+   reading a dossier panel is open on, put on the clock of every small chart
+   beside it so the pressure dip and the fill weight are read against one
+   another. The accent, because it is the reader's own position in the picture
+   and not a state the plant reported - and dashed, so it can never be read as
+   a limit. */
+.chart-marker { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 4 2; }
+.chart-marker-label { fill: var(--accent); font-size: 10px; }
+
 /* What every chart says about itself, under the plot. Four lines at most, and
    each is a fact the picture cannot carry on its own: the total (rule 5), an
    axis choice that changes the shape (rule 4), the unknown it holds (rule 3)

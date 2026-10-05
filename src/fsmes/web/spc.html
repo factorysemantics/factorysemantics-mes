@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="/static/styles.css">
 <link rel="stylesheet" href="/static/analysis.css">
 <link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/spc.css">
 <link rel="stylesheet" href="/static/assist.css">
 <script>
   /* Before first paint: a daylight user must never see a flash of the
@@ -51,9 +52,19 @@
         never shows it. Capability is withheld while the process is out of control - Cpk on an
         unstable process describes a process that no longer exists.</p>
     </section>
+    <!-- The chart and the dossier of one reading on it, side by side. The
+         panel's column is here whether or not a reading is open, so clicking
+         a point moves nothing else on the page - it fills the box that was
+         already there. -->
+    <div class="spc-split">
     <section class="panel">
-      <h2>Individuals chart <span id="chart-note" class="muted"></span></h2>
+      <h2>Individuals chart <span id="chart-note" class="muted"></span>
+        <button id="open-point" class="ghost small" data-assist="spc-open-point"
+                aria-describedby="point-hint" disabled>Open a reading</button></h2>
       <div id="chart" class="chart"></div>
+      <p id="point-hint" class="muted small">Click a reading to see the records
+        behind it — or tab to one and press Enter. The button opens the newest
+        reading a rule fired on, and the newest reading when none did.</p>
       <p class="legend">
         <span><i class="sw" style="background:var(--accent)"></i>reading</span>
         <span><i class="sw" style="background:var(--running)"></i>centre line</span>
@@ -62,6 +73,25 @@
         <span><i class="sw" style="background:var(--quality)"></i>rule fired</span>
       </p>
     </section>
+
+    <!-- `data-point` is written only once the dossier has arrived and is
+         drawn, and it carries the reading's own id. A test waits on that
+         rather than on the box existing: the box exists before the fetch
+         does, and on loopback the difference is six milliseconds. -->
+    <section class="panel point-panel" id="point-panel" data-assist="spc-point-panel"
+             data-state="idle" data-point="" aria-live="polite">
+      <h2>Why this reading is here <span id="point-which" class="muted"></span></h2>
+      <p id="point-idle" class="muted small">No reading is open. Click one on the
+        chart beside this and every record this MES holds about it appears here:
+        the gauge that took it and when it was last calibrated, the same
+        characteristic by the other gauge in the hour either side, this
+        station's process values over the ten minutes before it, what the
+        machine was doing, and anything else that happened in that window.
+        Nothing is modelled or guessed — every line is a record, and each
+        block says how much of its window anybody was watching.</p>
+      <div id="point-body" hidden></div>
+    </section>
+    </div>
     <section class="panel">
       <h2>Rules that fired <span id="signal-count" class="muted"></span></h2>
       <p class="muted small">A rule is judged when a reading is recorded, not when this page is opened,
@@ -79,7 +109,7 @@
     </section>
   </main>
 
-  <p class="screen-source">chart /quality/spc/{material}/{characteristic} · characteristics /quality/specs</p>
+  <p class="screen-source">chart /quality/spc/{material}/{characteristic} · one reading /quality/spc/{material}/{characteristic}/point/{check_id} · characteristics /quality/specs</p>
 </div>
 <script src="/static/common.js"></script>
 <script src="/static/kit.js"></script>
