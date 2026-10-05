@@ -104,10 +104,18 @@ class Floor:
     """One simulated shop floor, working through the API."""
 
     def __init__(self, settings: Settings, client: httpx.AsyncClient,
-                 rng: random.Random, script: dict | None = None) -> None:
+                 rng: random.Random, script: dict | None = None,
+                 speed: float = 1.0) -> None:
         self.settings = settings
         self.client = client
         self.rng = rng
+        # How many seconds of line time one second of this floor's time is
+        # worth. 1.0 on a real plant and on every plant Scott runs; 30 or 60
+        # on a scored replay, where an hour of line is played in a minute.
+        # It is not a cosmetic factor: *how long a machine was stopped for*
+        # is a fact about the line, and judging a two-minute breakdown by the
+        # four seconds it took to replay would file it as a micro stop.
+        self.speed = speed if speed and speed > 0 else 1.0
         # What this floor does that no PLC reports, as data. Empty for a
         # plant whose pack names no floor script, which is every real one.
         self.script = script or {}
@@ -213,6 +221,14 @@ class Floor:
 
         Only the gauges this floor measures with. Calibrating the rest of a
         plant's register from here would be inventing work nobody did.
+
+        **When** is the script's, and the default is *overdue* rather than
+        *due soon* on purpose. A floor that calibrated on the warning would
+        calibrate the drifting scale in its first twenty seconds, every time
+        a plant is built - and the drifting-gauge story would be over before
+        anybody could open the screen. Overdue is also what a plant with a
+        fortnight's warning window actually does: the warning is for planning
+        the visit, and the visit happens when it falls due.
         """
         if not self.script:
             return []
@@ -222,12 +238,14 @@ class Floor:
             log.warning("could not read the gauge register", error=str(exc)[:160])
             return []
         ours = set(self.bench.gauge_codes)
+        when = str((self.script.get("calibration") or {}).get("when", "overdue"))
         done: list[str] = []
         for row in register.get("gauges") or []:
             code = row.get("code")
             if code not in ours or row.get("status") != "in_service":
                 continue
-            if not (row.get("overdue") or row.get("due_soon")):
+            ready = row.get("overdue") or (when == "due_soon" and row.get("due_soon"))
+            if not ready:
                 continue
             try:
                 response = await self.client.post(
@@ -511,7 +529,13 @@ class Floor:
         # longer than the stop itself, which is near enough to tell a stop
         # somebody cleared where they stood from one that took a fitter, and
         # is not written down anywhere as the duration.
-        seconds = max((_utcnow() - began).total_seconds(), 0.0)
+        #
+        # In *line* seconds. On a replay running an hour of line in a minute,
+        # a two-minute breakdown is over in four seconds of this floor's
+        # time, and judging it by those four would file every breakdown on a
+        # scored run as a micro stop.
+        watched = max((_utcnow() - began).total_seconds(), 0.0)
+        seconds = watched * self.speed
         if seen["state"] == "setup":
             reason_code = stops.get("changeover")
         elif seconds < float(stops.get("micro_stop_under_s") or 0.0):
@@ -536,7 +560,8 @@ class Floor:
             # to name. Both are fine and neither is a label this floor gave.
             return False
         log.info("named a stop", equipment=code, reason=reason_code,
-                 state=seen["state"], about_seconds=round(seconds), labelled=out["labelled"])
+                 state=seen["state"], about_line_seconds=round(seconds),
+                 watched_seconds=round(watched, 1), labelled=out["labelled"])
         return True
 
     # ------------------------------------------------------------- material
@@ -817,6 +842,7 @@ class Floor:
 async def run(settings: Settings, *, inspect_every: float = 8.0,
               issue_every: float = 25.0, review_every: float = 90.0,
               supervise_every: float = 20.0, watch_every: float = 15.0,
+              speed: float = 1.0,
               seed: int = 0, user: str = "FLOOR-SIM", password: str = "operator",
               supervisor: str = "FLOOR-SUP", supervisor_password: str = "supervisor",
               inspect_all: bool = False, finish_orders: bool = True) -> None:
@@ -849,8 +875,8 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
 
     async with httpx.AsyncClient(base_url=base, timeout=20.0) as client, \
             httpx.AsyncClient(base_url=base, timeout=20.0) as sup_client:
-        floor = Floor(settings, client, rng, script)
-        shift = Floor(settings, sup_client, rng, script)
+        floor = Floor(settings, client, rng, script, speed)
+        shift = Floor(settings, sup_client, rng, script, speed)
 
         # The API comes up alongside us; keep trying rather than dying first.
         for _attempt in range(60):

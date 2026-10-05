@@ -296,6 +296,30 @@ def test_every_fill_weight_check_the_floor_takes_off_the_machine_names_a_gauge(p
         "a reading off the machine does not say which machine")
 
 
+def the_week_passes(session: Session, gauge: str = DRIFTING, days: int = 10) -> None:
+    """Age one gauge past its calibration date, as a week of the plant does.
+
+    The pack ships this scale six days from due, which is the state Scott
+    sees on the screen today; the supervisor's visit is what a plant left up
+    for a week gets. Moving the date is how a test gets there in a second.
+    """
+    row = session.scalar(select(Gauge).where(Gauge.code == gauge))
+    row.last_calibrated = row.last_calibrated - timedelta(days=days)
+    session.commit()
+
+
+def test_a_scale_that_is_only_warned_about_is_not_calibrated_yet(plant):
+    """The floor calibrates when a gauge falls due, not when it is warned
+    about. Calibrating on the warning would end the drifting-gauge story in
+    the first twenty seconds of every plant built from this pack."""
+    async def work(floor: Floor):
+        assert await floor.calibrate_what_is_due(by=SUPERVISOR) == []
+
+    on_the_floor(plant, work)
+    gauge = plant.scalar(select(Gauge).where(Gauge.code == DRIFTING))
+    assert gauge.calibrations == []
+
+
 def test_the_drifting_scales_readings_run_high_until_it_is_calibrated(plant):
     """The cause and its trace, in one test. The same bottle weight, measured
     on both scales, and the drifting one reads about 0.6 g heavier - which is
@@ -316,9 +340,11 @@ def test_the_drifting_scales_readings_run_high_until_it_is_calibrated(plant):
             readings[instrument.code] = [
                 instrument.read(truth, rng=random.Random(3), today=date.today())
                 for _ in range(40)]
+        the_week_passes(plant)
+        await floor.read_the_register()
         calibrated = await floor.calibrate_what_is_due(by=SUPERVISOR)
         assert calibrated == [DRIFTING], (
-            f"the supervisor calibrated {calibrated}; the pack has one scale due")
+            f"the supervisor calibrated {calibrated}; one scale has fallen due")
         await floor.read_the_register()
         for instrument in floor.bench.instruments("fill_weight"):
             after[instrument.code] = [
@@ -341,6 +367,8 @@ def test_the_calibration_the_supervisor_records_is_on_the_gauges_own_register(pl
     """It is a plant record, not a simulation detail: the register says who
     did it and when, and the gauge is not overdue afterwards."""
     async def work(floor: Floor):
+        the_week_passes(plant)
+        await floor.read_the_register()
         await floor.calibrate_what_is_due(by=SUPERVISOR)
 
     on_the_floor(plant, work)
@@ -458,6 +486,28 @@ def test_a_stop_cleared_where_somebody_stood_is_a_micro_stop_and_not_a_breakdown
     on_the_floor(plant, work)
     down = [s for s in stops(plant) if s.state is EquipmentStateName.DOWN]
     assert down[0].reason_code == script()["stops"]["micro_stop"]
+
+
+def test_a_breakdown_on_a_sped_up_replay_is_not_filed_as_a_micro_stop(plant):
+    """A scored run plays an hour of line in a minute. A two-minute
+    breakdown is over in four seconds of the floor's own time there, and a
+    floor that judged it by those four seconds would file every breakdown on
+    every scored run as a stop somebody cleared where they stood.
+
+    How long a machine was stopped for is a fact about the line, so the
+    judgment is made in line seconds.
+    """
+    async def work(floor: Floor):
+        floor.speed = 60.0
+        the_machine_goes(plant, "down", ago=4)       # four seconds watched
+        await floor.watch_the_stops()
+        the_machine_goes(plant, "running")
+        await floor.watch_the_stops()
+
+    on_the_floor(plant, work)
+    down = next(s for s in stops(plant) if s.state is EquipmentStateName.DOWN)
+    assert down.reason_code == script()["stops"]["longer_than_a_micro_stop"], (
+        "four minutes of line time was filed as a micro stop")
 
 
 def test_a_changeover_is_named_so_that_a_point_after_it_can_be_explained(plant):

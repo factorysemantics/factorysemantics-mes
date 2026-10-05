@@ -41,6 +41,12 @@
     }
   },
 
+  "calibration": {
+    "_what": "When the simulated shift supervisor calibrates a gauge this floor measures with.",
+    "when": "overdue",
+    "_when": "Not `due_soon`. A floor that calibrated on the warning would calibrate the drifting scale in the first twenty seconds of every plant ever built from this pack, and the drifting-gauge story would be over before anybody could open the screen. Overdue is also what a plant with a fortnight's warning window actually does: the warning is for planning the visit, and the visit happens when it falls due. The pack has SCALE-FILL-02 six days from due, so a plant left up for a week sees the whole story - the drift, the calibration, and clean readings after it."
+  },
+
   "stops": {
     "_what": "Which of this plant's six approved words the floor puts on a stop it watched. Nothing here invents an interval: the MES watched the stop, and this names it afterwards - which is the only moment anybody can, because the moment a machine goes down is the moment nobody knows why yet.",
     "_what_it_will_not_say": "An idle machine is left unlabelled on purpose. This line's tag map maps starved (2) and blocked (3) both onto `idle`, so by the time the MES holds the interval the difference is gone, and the vocabulary's own `starved` and `blocked` cannot be chosen between from anything that was recorded. Guessing one would put a cause in the pareto that nothing observed. The floor says so once, in its log, as a finding about the state map.",

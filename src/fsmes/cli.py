@@ -2529,7 +2529,7 @@ def run_operations(
         watch_every = watch_every / speed
     _asyncio.run(run_floor(settings, inspect_every=inspect_every,
                            issue_every=issue_every, watch_every=watch_every,
-                           seed=seed, inspect_all=inspect_all,
+                           speed=speed, seed=seed, inspect_all=inspect_all,
                            finish_orders=finish_orders,
                            password=settings.operator_password))
 
