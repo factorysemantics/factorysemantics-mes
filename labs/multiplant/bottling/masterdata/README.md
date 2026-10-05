@@ -32,6 +32,29 @@ what the code they replace produces.
 keeps them that way: it seeds one database each way and compares them, and
 fails if either side changes alone.
 
+## The two scales on the filler
+
+`gauges.json` puts this plant's instruments on its register: `SCALE-FILL-01`
+and `SCALE-FILL-02`, both at the filler, both reading to a tenth of a gram
+against a fill-weight tolerance of twelve. Two rather than one, because a
+plant with a single gauge has no way to ask whether the instrument or the
+process moved — which is the first question anybody asks about a point on a
+control chart.
+
+One was calibrated a week ago and one eighty-four days ago against a ninety-day
+interval, so the second is inside its fortnight's warning and due this week.
+That is deliberate: it is the state that makes the calibration screen worth
+opening, and it is the gauge the floor script has drifting.
+
+`calibrated_days_ago` is relative for the same reason `due_in_hours` is. No
+calibration event is invented behind the date — the register records what the
+plant says it knows, which is what a gauge register migrated into a new MES
+looks like.
+
+Which gauge takes which reading, and which of them is drifting, is **not**
+here: it is in this pack's [`floor.json`](../floor.json), because it is a fact
+about the simulated people rather than master data the MES owns.
+
 ## What is not here
 
 - **Rated cycle times.** An equipment entry leaves `ideal_cycle_seconds` out

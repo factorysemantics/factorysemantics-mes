@@ -66,6 +66,11 @@ def plant(tmp_path_factory):
                       for m in load_tag_map(BOTTLING / "tag_map.json")}
             masterdata.seed(session, BOTTLING / "masterdata", cycles)
             auth.ensure_builtin_roles(session)
+            # A pack seeds a plant, not its people: who may sign in is the
+            # fleet's business and a pack holds no password. So this test
+            # makes the one account it needs.
+            auth.create_user(session, code="ADMIN", name="Plant administrator",
+                             password="admin", role="admin")
             session.commit()
 
         sock = socket.socket()

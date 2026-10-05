@@ -162,6 +162,10 @@ A severity code is two to **twenty** characters — it is stored on every non-co
 
 Nothing in the MES releases the next order. On a plant that simulates, `fsmes run-operations` does it as the shift supervisor would; on a real plant it is a person or the ERP.
 
+### What the simulated floor does
+
+`[files] floor` names a **floor script**: which gauge takes a reading, which of them is drifting between calibrations, which of the plant's approved words a stop is named with, and what happens to the material behind a finding. It is read only by `fsmes run-operations`, and a real plant leaves it out and has people instead. The bottling lab pack is the worked example — see [what the simulated floor does](the-simulated-floor.md).
+
 **It refuses to seed into a database that is not at head.** The migration above normally leaves nothing to say, and this is the assertion that it did. Rows written through the ORM into a half-migrated file leave a database with some of this product's tables and no Alembic stamp — which the migrator then disowns outright, because a schema it cannot identify is one it will not guess at. That happened once, on 2026-09-14, and left a plant no command could take forward.
 
 Rated cycle times are not repeated in the master data: leave `ideal_cycle_seconds` out and it is read from the pack's own tag map. OEE performance is ideal cycle × count ÷ runtime, so a rate that drifted from the line it describes produces a number that means nothing.
