@@ -254,7 +254,7 @@ const STOPS_SHOWN = 6;
 
 /* And how many findings, for the same reason and a sharper one. An excursion
    raises a finding per bad piece: twenty-five of them in a twelve-minute window
-   on the bottling replay made this panel five thousand pixels tall, and the two
+   on a replayed line made this panel five thousand pixels tall, and the two
    that mattered - the SPC holds - were buried under twenty-three out-of-spec
    readings all saying the same thing. Majors come first, the total is stated,
    and the Quality screen lists every one of them. */
@@ -539,7 +539,7 @@ function machineBlock(d) {
 
   const stops = d.stops || {};
   section.append(el("h3", "mt", "Stops in this window"));
-  /* Longest first, and only a few rows. On the bottling replay (2026-10-05) a
+  /* Longest first, and only a few rows. On a replayed line (2026-10-05) a
      twelve-minute window held twenty-three stretches, twenty-two of them
      two-second idle blips the floor deliberately does not label - and the one
      thing a person needed to see, a named changeover, was the twenty-third row
@@ -613,7 +613,7 @@ function tagsBlock(d) {
       y: { label: trend.tag },
     });
     /* A tag that said nothing draws an empty box, and an empty box explains
-       nothing. Looking at the bottling replay on 2026-10-05, the filler's
+       nothing. Looking at a replayed line on 2026-10-05, the filler's
        fill-weight setpoint — set once when the order started and never touched
        — was drawn exactly like a tag nobody had been watching. The last value
        it reported before the window is the fact that tells those apart, so it
@@ -650,7 +650,7 @@ function elseBlock(d) {
   const found = d.findings || {};
   section.append(el("h3", "mt", "Findings"));
   /* Majors first, then newest, and only a few rows. An excursion raises one
-     finding per bad piece: on the bottling replay a twelve-minute window held
+     finding per bad piece: on a replayed line a twelve-minute window held
      twenty-five of them, which made this panel five thousand pixels tall and
      buried the two that mattered - the SPC holds - under twenty-three
      out-of-spec readings saying the same thing. Nothing is dropped: the total

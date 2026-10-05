@@ -469,7 +469,7 @@ def _last_before(session: Session, unit: Equipment, tag: str,
     order is set and then never again, and over any twelve minutes afterwards
     it has no samples whatever and is in perfect health.
 
-    On the first look at this with real data (bottling replay, 2026-10-05)
+    On the first look at this with real data (a replayed line, 2026-10-05)
     `FILL01.FillWeightSP` was drawn as an empty box reporting that nobody had
     watched it. That was the panel's own fault, not the plant's, and this is
     the fact that fixes it: the chart is still empty, and under it the panel
@@ -510,7 +510,7 @@ def _tag_block(session: Session, unit: Equipment, tag: str, start: datetime,
     # against the window we ASKED for lands a grid of the wrong WIDTH on the
     # window we get: on a plant twenty minutes old, a 12-minute request
     # realised as 3 minutes put 72 buckets across 172 seconds and every other
-    # one of them read as a bucket nothing arrived in. Measured on the bottling
+    # one of them read as a bucket nothing arrived in. Measured on a replayed
     # replay, 2026-10-05 - the first thing looking at real data found.
     #
     # So the span is read off a deliberately coarse first pass, and the grid is
