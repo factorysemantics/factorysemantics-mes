@@ -96,16 +96,7 @@ def label_stop(
     label somebody here already gave, and never contradicts an observation.
     """
     equipment = masterdata.get_equipment(session, equipment_code)
-    window_end = end or utcnow()
-    candidates = list(session.scalars(
-        select(EquipmentState).where(
-            EquipmentState.equipment_id == equipment.id,
-            EquipmentState.state != EquipmentStateName.RUNNING,
-            EquipmentState.reason.is_(None),
-            EquipmentState.started_at < window_end,
-            or_(EquipmentState.ended_at.is_(None), EquipmentState.ended_at > start),
-        ).order_by(EquipmentState.started_at)
-    ))
+    candidates = unlabelled_stops(session, equipment, start, end)
     if not candidates:
         return []
     for interval in candidates:
@@ -118,6 +109,81 @@ def label_stop(
         entity_type="equipment",
         entity_id=equipment.code,
         after={"reason": reason, "source": source, "intervals": len(candidates),
+               "from": start.isoformat(), "to": end.isoformat() if end else None},
+    )
+    session.flush()
+    return candidates
+
+
+def unlabelled_stops(session: Session, equipment: Equipment, start: datetime,
+                     end: datetime | None = None) -> list[EquipmentState]:
+    """Intervals in this window where the machine was not running and nobody
+    has named why.
+
+    One query, shared by both writers of a label, so a supplied one and an
+    operator's own can never disagree about which intervals are still
+    unnamed. Only intervals that are not already labelled, and only ones
+    where the machine was not running: a label never overwrites one
+    somebody already gave, and never contradicts an observation.
+    """
+    window_end = end or utcnow()
+    return list(session.scalars(
+        select(EquipmentState).where(
+            EquipmentState.equipment_id == equipment.id,
+            EquipmentState.state != EquipmentStateName.RUNNING,
+            EquipmentState.reason.is_(None),
+            EquipmentState.started_at < window_end,
+            or_(EquipmentState.ended_at.is_(None), EquipmentState.ended_at > start),
+        ).order_by(EquipmentState.started_at)
+    ))
+
+
+def name_stops(
+    session: Session,
+    *,
+    equipment_code: str,
+    start: datetime,
+    end: datetime | None = None,
+    reason_code: str,
+    reason: str | None = None,
+    actor: str = "system",
+) -> list[EquipmentState]:
+    """Somebody *here* names a stop this MES already watched, from the list.
+
+    The difference from `label_stop` is whose claim it is, and it is the
+    whole difference: this label was chosen here, from this plant's own
+    approved vocabulary, so `reason_source` stays null and the pareto counts
+    it under *here*. `label_stop` carries another system's word and says so.
+
+    Until this existed, a stop could only be labelled at the moment it
+    began - `POST /equipment/{code}/state` - and the moment a stop begins is
+    the moment nobody knows yet why. A plant whose machine states arrive from
+    an OPC agent never gets that moment at all: the agent writes the state,
+    the reason box is nobody's, and every stop on the plant stayed unlabelled
+    forever. That was 100% of seven days of downtime on the bottling lab
+    plant, measured 2026-10-04.
+
+    No interval is created here, ever, for the same reason `label_stop`
+    creates none: an interval is this MES's own observation, and
+    manufacturing one from a claim would put seconds into availability that
+    nobody watched.
+    """
+    equipment = masterdata.get_equipment(session, equipment_code)
+    candidates = unlabelled_stops(session, equipment, start, end)
+    if not candidates:
+        return []
+    for interval in candidates:
+        interval.reason_code = reason_code[:40]
+        # The sentence the rest of the product already reads, from the
+        # approved term, so a code and its text can never disagree.
+        interval.reason = (reason or reason_code)[:120]
+    audit.record(
+        session,
+        actor=actor,
+        action="equipment.stop_labelled",
+        entity_type="equipment",
+        entity_id=equipment.code,
+        after={"reason_code": reason_code, "reason": reason, "intervals": len(candidates),
                "from": start.isoformat(), "to": end.isoformat() if end else None},
     )
     session.flush()

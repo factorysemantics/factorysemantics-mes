@@ -13,8 +13,8 @@
 #
 #     fsmes lab run labs/experiments/two-plants-two-zones.toml
 #
-# About five minutes: two plants, fifty minutes of line time each at 30x, run
-# one after another so neither competes with the other for the machine.
+# About six minutes: two plants, an hour of line time each at 30x, run one
+# after another so neither competes with the other for the machine.
 #
 # It also asks what `fsmes fleet console` made of the pair. The plants run one
 # after another - two replaying at speed on one laptop compete for the same
@@ -36,11 +36,13 @@ configuration had leaked into it."""
 
 packs = ["../multiplant/bottling", "../multiplant/machining"]
 
-# Fifty minutes, which is past Northgate's breakdown at 2700-2880 s and past
-# the bottling line's counter reset at 3000 s. A shorter run would cut the
-# scripts off, and this refuses to run a script it cannot finish rather than
-# score half of one.
-duration = 3000
+# The whole hour, which is this plan's own rule applied again: it refuses to
+# run a script it cannot finish rather than score half of one. Fifty minutes
+# was enough until 2026-10-05, when the bottling line's script grew a tag that
+# goes quiet from 2700 s to the end of the hour - so fifty minutes now cuts a
+# scripted event in half, and the builder says so rather than playing part of
+# it. Past Northgate's breakdown at 2700-2880 s either way.
+duration = 3600
 seed     = 11
 speed    = 30
 

@@ -15,6 +15,7 @@ written by `fsmes pack apply`:
       bom.json                 which components a material takes, and where
       routings.json            the operations, in order, on named equipment
       quality_specs.json       what a characteristic must measure
+      gauges.json              the instruments that take the measurements
       lots.json                material on hand at the start
       work_orders.json         the order book: what to make, in what order, what is released
       maintenance_plans.json   the recurring jobs, and what makes each due
@@ -59,6 +60,7 @@ KINDS: dict[str, str] = {
     "bom": "which components a material takes, and at which operation",
     "routings": "the operations, in order, each on a named machine",
     "quality_specs": "what a characteristic must measure for a material",
+    "gauges": "the instruments that take the measurements, and how often each is calibrated",
     "lots": "material on hand when the plant starts",
     "work_orders": "the order book: what to make, in what order, and what is released",
     "maintenance_plans": "the recurring jobs on a machine, and what makes each due",
@@ -73,6 +75,7 @@ REQUIRED: dict[str, tuple[str, ...]] = {
     "bom": ("parent", "component", "quantity"),
     "routings": ("code", "name", "material", "operations"),
     "quality_specs": ("material", "characteristic"),
+    "gauges": ("code", "name"),
     "lots": ("code", "material", "quantity"),
     "work_orders": ("code", "material", "quantity"),
     "maintenance_plans": ("code", "name", "equipment", "trigger", "interval"),
@@ -87,6 +90,8 @@ OPTIONAL: dict[str, tuple[str, ...]] = {
     "bom": ("operation_seq",),
     "routings": (),
     "quality_specs": ("unit", "min", "max"),
+    "gauges": ("kind", "location", "interval_days", "warn_days", "resolution",
+               "calibrated_days_ago"),
     "lots": (),
     "work_orders": ("priority", "release", "due_in_hours"),
     "maintenance_plans": ("instructions", "document_code", "expected_minutes"),
@@ -177,6 +182,29 @@ def problems(directory: Path) -> list[str]:
                 if value and value not in known_materials:
                     out.append(f"{kind}.json #{index} names material {value!r}, which "
                                "materials.json does not declare.")
+    # A gauge's numbers, offline, because every one of them is a claim about
+    # whether a measurement can be believed. A resolution of zero would make
+    # the rule-of-ten check divide by nothing, and a calibration interval of
+    # zero days is a gauge that is overdue the instant it is registered.
+    for index, row in enumerate(data.rows("gauges"), start=1):
+        where = f"gauges.json #{index}"
+        for name in ("interval_days", "warn_days", "resolution", "calibrated_days_ago"):
+            value = row.get(name)
+            if value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                out.append(f"{where} has {name} {value!r}; that is a number.")
+            elif name == "warn_days" and value < 0:
+                out.append(f"{where} wants {value} days of warning; `warn_days` counts "
+                           "the days before a gauge falls due, so it is never negative.")
+            elif name == "calibrated_days_ago" and value < 0:
+                out.append(f"{where} was last calibrated {value} days ago, which is in "
+                           "the future. `calibrated_days_ago` is relative because a pack "
+                           "is seeded whenever somebody builds the plant, and an absolute "
+                           "date in one ages.")
+            elif name in ("interval_days", "resolution") and value <= 0:
+                out.append(f"{where} has {name} {value!r}; that is a positive number.")
+
     for index, row in enumerate(data.rows("work_orders"), start=1):
         due = row.get("due_in_hours")
         if due is None:
@@ -311,6 +339,7 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
 
     from sqlalchemy import select
 
+    from fsmes import identity
     from fsmes.db import utcnow
     from fsmes.domain import (
         BomItem,
@@ -318,6 +347,7 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
         DowntimeReasonStatus,
         Equipment,
         EquipmentLevel,
+        Gauge,
         MaintenancePlan,
         Material,
         MaterialLot,
@@ -421,6 +451,29 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
                                 unit=row.get("unit", ""), min_value=row.get("min"),
                                 max_value=row.get("max")))
         count("quality_specs", made=True)
+
+    # The instruments. A gauge the plant says was calibrated on a date keeps
+    # that date; no `Calibration` row is invented behind it, because a pack
+    # states what the plant knows and nobody here performed a calibration. A
+    # register migrated into a new MES looks exactly like this: a last-done
+    # date, and the certificate wherever the paperwork actually is.
+    for row in data.rows("gauges"):
+        code = row["code"]
+        if session.scalar(select(Gauge.id).where(Gauge.code == code)):
+            count("gauges", made=False)
+            continue
+        since = row.get("calibrated_days_ago")
+        gauge = Gauge(
+            code=code, name=row["name"], kind=row.get("kind", "general"),
+            location=row.get("location"), resolution=row.get("resolution"),
+            last_calibrated=(None if since is None
+                             else identity.today() - timedelta(days=int(since))),
+            **({} if row.get("interval_days") is None
+               else {"interval_days": int(row["interval_days"])}),
+            **({} if row.get("warn_days") is None
+               else {"warn_days": int(row["warn_days"])}))
+        session.add(gauge)
+        count("gauges", made=True)
 
     for row in data.rows("lots"):
         code = row["code"]

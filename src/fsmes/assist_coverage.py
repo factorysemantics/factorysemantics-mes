@@ -155,6 +155,20 @@ EXCLUDED: dict[str, str] = {
         "not: every account holding it loses every capability at once, and "
         "what it granted is not recoverable from the row that is gone. The "
         "screen keeps it; the assistant walks an admin to it.",
+
+    # ---- a cause nobody observed is not a cause --------------------------
+    "POST /equipment/{code}/stops/label":
+        "naming a stop is somebody's account of why a machine stopped, and "
+        "nothing in the record says why - the MES watched the interval and "
+        "the vocabulary is a list of candidates. A tool here would let a "
+        "model choose between six reasons from the shape of the data and "
+        "write the answer into the pareto as though a person on the floor "
+        "had said it, which is how a plant's downtime analysis becomes "
+        "fiction with a confidence interval. House rule 3: unlabelled data "
+        "is reported as unlabelled. The honest assistant answer is to show "
+        "which stops are unnamed and let whoever was there say. Another "
+        "system's label has its own front door (`fsmes inbound`), and it "
+        "records who claimed it.",
 }
 
 #: Write routes with no `require(...)` of their own because their gate is a

@@ -16,6 +16,14 @@ Refill station's recorded FillWeight rather than inventing a number, so a
 quality excursion in the simulated line becomes a failing check and an open
 non-conformance without either side being told about the other.
 
+A reading is taken *by an instrument*, and which one is the floor's own fact
+rather than the MES's: the plant's pack puts its gauges on the register, and
+the pack's floor script says which gauge measures what, how often each is
+picked up, and which one is drifting between calibrations. See
+`fsmes.sim.measurement`. A plant with no floor script is unchanged - it
+records what the tag said and names no gauge, which is *not recorded* and is
+the honest answer.
+
 It also works the order book, because a supervisor does. The MES does not
 finish an order at its quantity and will not start (decision 0029): reaching a
 number and being finished are different facts, and the MES only knows the
@@ -32,11 +40,16 @@ from __future__ import annotations
 import asyncio
 import random
 import re
+import time
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import structlog
 
+from fsmes import identity
 from fsmes.config import Settings
+from fsmes.sim import measurement
+from fsmes.sim.measurement import Bench
 
 log = structlog.get_logger("operations")
 
@@ -66,14 +79,51 @@ def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]", "", text.lower())
 
 
+def _utcnow() -> datetime:
+    """Now, naive UTC - the same instant the MES stores on every row."""
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+def _as_moment(value) -> datetime | None:
+    """An instant out of a JSON response, naive UTC.
+
+    The API answers in ISO 8601, sometimes with a zone and sometimes without
+    (every stored instant is naive UTC). Both come back here as the naive UTC
+    the next request has to send.
+    """
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value))
+    except ValueError:
+        return None
+    return parsed.astimezone(UTC).replace(tzinfo=None) if parsed.tzinfo else parsed
+
+
 class Floor:
     """One simulated shop floor, working through the API."""
 
     def __init__(self, settings: Settings, client: httpx.AsyncClient,
-                 rng: random.Random) -> None:
+                 rng: random.Random, script: dict | None = None,
+                 speed: float = 1.0) -> None:
         self.settings = settings
         self.client = client
         self.rng = rng
+        # How many seconds of line time one second of this floor's time is
+        # worth. 1.0 on a real plant and on every plant Scott runs; 30 or 60
+        # on a scored replay, where an hour of line is played in a minute.
+        # It is not a cosmetic factor: *how long a machine was stopped for*
+        # is a fact about the line, and judging a two-minute breakdown by the
+        # four seconds it took to replay would file it as a micro stop.
+        self.speed = speed if speed and speed > 0 else 1.0
+        # What this floor does that no PLC reports, as data. Empty for a
+        # plant whose pack names no floor script, which is every real one.
+        self.script = script or {}
+        # The gauges this floor measures with. Built with no register until
+        # `read_the_register` has been able to ask the plant for one, so a
+        # floor whose first read fails records readings with no gauge rather
+        # than refusing to inspect.
+        self.bench = Bench(self.script)
         # The last value this floor recorded for each characteristic, so it
         # does not write the same reading down twice. See `inspect`.
         self._last_recorded: dict[str, float] = {}
@@ -81,6 +131,20 @@ class Floor:
         # It is reset the moment an order is released, so a book that is
         # refilled and empties again says so again.
         self._said_the_book_is_empty = False
+        # Which shift is running, and when that answer stops being true. The
+        # shift is read from the plant rather than from this script's own
+        # idea of a clock: the patterns are the plant's master data, and a
+        # floor that decided for itself when night began would stamp its
+        # measurements against one calendar and the MES against another.
+        self._shift: str | None = None
+        self._shift_until: float = 0.0
+        # What was stopped the last time this floor looked: machine -> the
+        # state it was in and the instant it began. A stop is named when it
+        # is no longer there, which is the first moment its length is known.
+        self._stopped: dict[str, dict] = {}
+        # That an idle machine cannot be told from a starved or a blocked one
+        # is said once, not every twenty seconds.
+        self._said_idle_cannot_be_told_apart = False
 
     async def sign_in(self, code: str, password: str) -> None:
         r = await self.client.post("/auth/login", json={"code": code, "password": password})
@@ -108,6 +172,122 @@ class Floor:
                 return out
             offset += len(page["items"])
 
+    # ------------------------------------------------------------- gauges
+
+    async def read_the_register(self) -> int:
+        """Ask the plant which gauges it has, and how each one stands.
+
+        The register is the authority on resolution and on when a gauge was
+        last calibrated, so it is read from the plant rather than repeated in
+        the floor's script - which is what makes a calibration recorded on
+        the screen take effect in the next reading this floor takes.
+
+        Returns how many gauges came back. A read that fails leaves the
+        bench as it was and says so: measuring with no gauge is worse than
+        measuring with yesterday's register, but neither is worth refusing to
+        inspect over.
+        """
+        if not self.script:
+            return 0
+        try:
+            register = await self.get("/quality/gauges")
+        except httpx.HTTPError as exc:
+            log.warning("could not read the gauge register; readings will name "
+                        "whatever gauge the last read knew about",
+                        error=str(exc)[:160])
+            return 0
+        rows = register.get("gauges") or []
+        self.bench = Bench(self.script, rows)
+        missing = [code for code in self.bench.gauge_codes
+                   if code not in {row.get("code") for row in rows}]
+        if missing:
+            # Said out loud, every read: a script that names a gauge the
+            # plant has never registered is a story nobody can follow in the
+            # records, and silently measuring without it is how that becomes
+            # invisible.
+            log.warning("the floor script names gauges this plant does not have",
+                        gauges=missing, registered=len(rows))
+        return len(rows)
+
+    async def calibrate_what_is_due(self, by: str = "FLOOR-SUP") -> list[str]:
+        """Calibrate every gauge the floor script uses that has fallen due.
+
+        What a plant actually does, and the reason a drifting gauge is a
+        *story* rather than a permanent offset: the gauge goes out slowly,
+        the calibration finds it, and the readings after it are clean. The
+        result is `adjusted` - found out and brought back - rather than
+        `fail_as_found`, which takes the gauge off the floor and would quietly
+        end the story instead of closing it.
+
+        Only the gauges this floor measures with. Calibrating the rest of a
+        plant's register from here would be inventing work nobody did.
+
+        **When** is the script's, and the default is *overdue* rather than
+        *due soon* on purpose. A floor that calibrated on the warning would
+        calibrate the drifting scale in its first twenty seconds, every time
+        a plant is built - and the drifting-gauge story would be over before
+        anybody could open the screen. Overdue is also what a plant with a
+        fortnight's warning window actually does: the warning is for planning
+        the visit, and the visit happens when it falls due.
+        """
+        if not self.script:
+            return []
+        try:
+            register = await self.get("/quality/gauges")
+        except httpx.HTTPError as exc:
+            log.warning("could not read the gauge register", error=str(exc)[:160])
+            return []
+        ours = set(self.bench.gauge_codes)
+        when = str((self.script.get("calibration") or {}).get("when", "overdue"))
+        done: list[str] = []
+        for row in register.get("gauges") or []:
+            code = row.get("code")
+            if code not in ours or row.get("status") != "in_service":
+                continue
+            ready = row.get("overdue") or (when == "due_soon" and row.get("due_soon"))
+            if not ready:
+                continue
+            try:
+                response = await self.client.post(
+                    f"/quality/gauges/{code}/calibrate",
+                    json={"result": "adjusted", "performed_by": by,
+                          "notes": "Found reading high against the reference weight "
+                                   "and adjusted. Routine, on the calibration schedule."})
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                log.warning("calibration refused", gauge=code,
+                            status=exc.response.status_code, detail=exc.response.text[:160])
+                continue
+            done.append(code)
+            log.info("calibrated a gauge", gauge=code, result="adjusted", by=by,
+                     was_overdue=bool(row.get("overdue")))
+        if done:
+            await self.read_the_register()
+        return done
+
+    async def current_shift(self) -> str | None:
+        """Which shift the plant says is running, cached for a minute.
+
+        `None` means the plant is not in a shift, which a plant that does not
+        work nights genuinely is at three in the morning - and is not an
+        error. The answer is the plant's own calendar, on the plant's own
+        clock.
+        """
+        now = time.monotonic()
+        if now < self._shift_until:
+            return self._shift
+        try:
+            answer = await self.get("/analysis/shifts", days=1)
+        except httpx.HTTPError:
+            # Keep whatever was known; a missed shift read widens nothing
+            # and narrows nothing, it just leaves the last answer standing.
+            self._shift_until = now + 60.0
+            return self._shift
+        key = answer.get("current")
+        self._shift = key.split("/", 1)[-1] if key else None
+        self._shift_until = now + 60.0
+        return self._shift
+
     # ---------------------------------------------------------- inspections
 
     async def _measured_value(self, spec: dict, machines: list[dict]) -> tuple[float | None, str | None]:
@@ -134,6 +314,21 @@ class Floor:
             # twice, and on a control chart it collapses the moving range and
             # makes ordinary noise look like a point beyond three sigma.
             if analog.get("value") is not None:
+                stale = self._too_old(analog.get("at"))
+                if stale is not None:
+                    # The tag has stopped arriving. The number on the screen
+                    # is the last one that did, and writing it down as a
+                    # measurement would be recording a reading nobody took -
+                    # once a minute, for as long as the tag stayed quiet,
+                    # each one looking exactly like a bottle somebody
+                    # weighed. Said out loud, and the check falls back to a
+                    # plausible value with no gauge and no station on it,
+                    # which is what the record should show.
+                    log.warning("a tag has gone quiet; recording a plausible value "
+                                "with no gauge and no station",
+                                equipment=machine["code"], tag=analog.get("name"),
+                                last_seen_s_ago=round(stale), characteristic=spec["characteristic"])
+                    return None, None
                 return float(analog["value"]), machine["code"]
             try:
                 trend = await self.get(f"/analysis/tag/{machine['code']}", hours=0.2)
@@ -143,6 +338,24 @@ class Floor:
             if points:
                 return float(points[-1]["mean"]), machine["code"]
         return None, None
+
+    def _too_old(self, observed) -> float | None:
+        """How many seconds stale this reading is, or `None` if it is fresh.
+
+        The window is the floor script's (`measurement.stale_after_s`); a
+        plant with no script has none and takes every reading as it finds it,
+        which is what this did before. A reading with no time on it is taken
+        as fresh: not knowing when something was measured is a reason to say
+        so, not a reason to call it old.
+        """
+        window = self.bench.stale_after_s
+        if not window:
+            return None
+        at = _as_moment(observed)
+        if at is None:
+            return None
+        age = (_utcnow() - at).total_seconds()
+        return age if age > window else None
 
     def _plausible_value(self, spec: dict) -> float:
         """No matching tag: sample around the spec, mostly inside it.
@@ -166,8 +379,10 @@ class Floor:
             return
         chosen = specs if every_spec else [self.rng.choice(specs)]
         active = [o for o in orders if o.get("status") in ACTIVE_STATUSES]
+        shift = await self.current_shift() if self.script else None
         for spec in chosen:
             value, station = await self._measured_value(spec, machines)
+            measured = value is not None
             if value is None:
                 value, station = self._plausible_value(spec), None
             elif self._last_recorded.get(spec["characteristic"]) == value:
@@ -183,20 +398,42 @@ class Floor:
                 continue
             same = [o for o in active if o.get("material") == spec["material"]]
             order = self.rng.choice(same or active)["code"] if (same or active) else None
+            # The instrument, and what it says the value is - the gauge's own
+            # bias, the spread of two readings of one thing, and the
+            # resolution it can actually write down.
+            #
+            # Only for a value that came off the machine. A plausible number
+            # was not measured by anything, and putting a gauge's name on it
+            # would be the one lie that makes the whole record unusable: an
+            # engineer reading the chart afterwards could no longer tell a
+            # measurement from a stand-in.
+            gauge = None
+            # The number the machine reported, kept as it stood: the guard
+            # above asks whether this floor has already written *this stored
+            # reading* down, and a gauge's own error would make two readings
+            # of one sample look like two samples.
+            as_the_tag_had_it = value
+            if measured:
+                gauge, value = self.bench.measure(
+                    spec["characteristic"], value, rng=self.rng,
+                    today=identity.today(self.settings), shift_code=shift)
             body = {"material": spec["material"], "characteristic": spec["characteristic"],
                     "value": round(value, 3)}
             if order:
                 body["order"] = order
             if station:
                 body["equipment"] = station
+            if gauge:
+                body["gauge"] = gauge
             try:
                 r = await self.client.post("/quality/checks", json=body)
                 r.raise_for_status()
                 out = r.json()
-                self._last_recorded[spec["characteristic"]] = value
+                self._last_recorded[spec["characteristic"]] = as_the_tag_had_it
                 log.info("inspected", characteristic=spec["characteristic"],
                          value=round(value, 3), result=out.get("result"),
-                         order=order, equipment=station)
+                         order=order, equipment=station, gauge=gauge,
+                         measured=measured, shift=shift)
                 # A control-chart rule fired on the write. Logged where a
                 # person watching the run will see it, with the hold it raised.
                 for signal in out.get("spc") or []:
@@ -207,6 +444,125 @@ class Floor:
             except httpx.HTTPStatusError as exc:
                 log.warning("inspection refused", status=exc.response.status_code,
                             detail=exc.response.text[:160])
+
+    # ---------------------------------------------------------------- stops
+
+    async def watch_the_stops(self) -> list[str]:
+        """Remember what is stopped, and name each stop once it has come back.
+
+        A stop is named *afterwards*, because the moment a machine goes down
+        is the moment nobody knows why yet - and on a plant whose states
+        arrive from an OPC agent there is no moment at all when a person is
+        asked. That is why every stop on this plant was unlabelled: 100% of
+        seven days of downtime, measured 2026-10-04.
+
+        What this floor can honestly say is what a person with a clipboard
+        can: which machine stopped, when, and roughly for how long. A short
+        stop somebody cleared where they stood is a micro stop; a long one is
+        a breakdown; a stop still going when it is looked at is nobody's
+        answer yet. Which of the plant's approved words each of those is, is
+        the script's - this never chooses a word of its own.
+
+        **It does not name an idle machine, on purpose.** This line's tag map
+        maps *starved* and *blocked* both onto `idle`, so by the time the MES
+        holds the interval the difference is gone - and the vocabulary's own
+        `starved` and `blocked` cannot be chosen between from what was
+        recorded. Guessing one would be putting a cause in the pareto that
+        nothing observed. It is said once, in the log, as a finding.
+        """
+        stops = self.script.get("stops") or {}
+        if not stops:
+            return []
+        try:
+            states = await self.get("/equipment/states")
+        except httpx.HTTPError as exc:
+            log.warning("could not read the machine states", error=str(exc)[:160])
+            return []
+
+        watchable = {"down": "longer_than_a_micro_stop", "setup": "changeover"}
+        stopped_now: dict[str, dict] = {}
+        idle_unlabelled = 0
+        for row in states:
+            if row.get("reason") or row.get("reason_code"):
+                continue
+            state = str(row.get("state") or "")
+            if state == "idle":
+                idle_unlabelled += 1
+                continue
+            if state in watchable and row.get("since"):
+                stopped_now[row["equipment"]] = {"state": state, "since": row["since"]}
+
+        if idle_unlabelled and not self._said_idle_cannot_be_told_apart:
+            self._said_idle_cannot_be_told_apart = True
+            log.info(
+                "an idle machine is left unlabelled, and that is the honest answer",
+                machines=idle_unlabelled,
+                note="this plant's tag map maps starved and blocked both onto idle, so "
+                     "the difference is gone before the MES holds the interval; the "
+                     "vocabulary has a word for each and nothing recorded says which")
+
+        named: list[str] = []
+        for code, seen in list(self._stopped.items()):
+            now = stopped_now.get(code)
+            if now and now["since"] == seen["since"]:
+                continue              # the same stop, still going
+            if await self._name_the_stop(code, seen):
+                named.append(code)
+            self._stopped.pop(code, None)
+        self._stopped.update(stopped_now)
+        return named
+
+    async def _name_the_stop(self, code: str, seen: dict) -> bool:
+        """Put one of the plant's approved words on a stop that has ended.
+
+        The window is the instant the stop began and one second of it, so
+        exactly the interval that started then is named - never the idle or
+        running stretch that followed it, which is what a window reaching
+        up to now would have swept in as well.
+        """
+        stops = self.script.get("stops") or {}
+        began = _as_moment(seen["since"])
+        if began is None:
+            return False
+        # How long it was, as a person who looked twice would know it: from
+        # when it began to when it was noticed back. That is up to one look
+        # longer than the stop itself, which is near enough to tell a stop
+        # somebody cleared where they stood from one that took a fitter, and
+        # is not written down anywhere as the duration.
+        #
+        # In *line* seconds. On a replay running an hour of line in a minute,
+        # a two-minute breakdown is over in four seconds of this floor's
+        # time, and judging it by those four would file every breakdown on a
+        # scored run as a micro stop.
+        watched = max((_utcnow() - began).total_seconds(), 0.0)
+        seconds = watched * self.speed
+        if seen["state"] == "setup":
+            reason_code = stops.get("changeover")
+        elif seconds < float(stops.get("micro_stop_under_s") or 0.0):
+            reason_code = stops.get("micro_stop")
+        else:
+            reason_code = stops.get("longer_than_a_micro_stop")
+        if not reason_code:
+            return False
+        try:
+            response = await self.client.post(
+                f"/equipment/{code}/stops/label",
+                json={"reason_code": reason_code, "start": began.isoformat(),
+                      "end": (began + timedelta(seconds=1)).isoformat()})
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            log.warning("could not name a stop", equipment=code, reason=reason_code,
+                        status=exc.response.status_code, detail=exc.response.text[:160])
+            return False
+        out = response.json()
+        if not out.get("labelled"):
+            # The interval was already named, or nothing unlabelled was there
+            # to name. Both are fine and neither is a label this floor gave.
+            return False
+        log.info("named a stop", equipment=code, reason=reason_code,
+                 state=seen["state"], about_line_seconds=round(seconds),
+                 watched_seconds=round(watched, 1), labelled=out["labelled"])
+        return True
 
     # ------------------------------------------------------------- material
 
@@ -380,39 +736,113 @@ class Floor:
 
     # ---------------------------------------------------------- supervision
 
-    async def review_nonconformances(self, keep_open: int = 3) -> None:
-        """Close the older non-conformances, leaving a few genuinely open.
+    async def review_nonconformances(self, keep_open: int = 3) -> int:
+        """Work through the open non-conformances the way a shift does.
 
-        A plant where nothing is ever closed is as unrealistic as one where
-        nothing ever fails, and an NCR list that only grows tells an operator
-        nothing about which problems are live.
+        Three steps, each recorded against the person who took it: somebody
+        picks it up, somebody decides what happens to the material, and only
+        then is it closed. Decision 0024 refuses the shortcut, and this loop
+        was taking it - it posted `/close` on an undispositioned record, the
+        product refused, the refusal was logged and nothing else happened.
+        What that produced on the bottling lab plant by 2026-10-04 was
+        **887 open non-conformances, none of them ever reviewed**, so the
+        quality screen and every "what is the biggest problem here" answer
+        said the same thing for a week.
+
+        Which disposition each severity gets is the script's, with its
+        reason, because *use as is* on a batch that failed its specification
+        is a concession somebody has to be able to defend a year later - and
+        a simulated plant that invented the sentence would be writing the one
+        field nobody can check. A plant with no script closes nothing, which
+        is what this did before.
+
+        The newest few are left alone on purpose: a plant where every finding
+        is closed by the end of the shift is as unrealistic as one where
+        nothing ever is. Returns how many were taken all the way to closed.
         """
+        rules = self.script.get("nonconformances") or {}
+        if not rules:
+            return 0
+        keep_open = int(rules.get("leave_open", keep_open))
+        per_pass = int(rules.get("per_pass", 2))
         # Every plant retired on 2026-09-06 had every non-conformance it ever
         # raised still open - thousands - and this loop had said nothing,
         # because both failures below were swallowed. A loop that cannot
         # report its own failure is one nobody finds out is broken.
         try:
-            page = await self.get("/quality/nonconformances?status=open&limit=200")
+            page = await self.get("/quality/nonconformances", status=["open", "under_review"],
+                                  limit=200)
         except httpx.HTTPError as exc:
             log.warning("could not read open non-conformances", error=str(exc)[:160])
-            return
-        ncs = page["items"] if isinstance(page, dict) else page
-        stale = [n for n in ncs if n.get("status") == "open"][:-keep_open or None]
-        for nc in stale[:2]:
-            try:
-                response = await self.client.post(f"/quality/nonconformances/{nc['code']}/close")
-                if response.status_code >= 400:
-                    log.warning("could not close non-conformance", code=nc["code"],
-                                status=response.status_code, detail=response.text[:160])
-                    continue
-                log.info("closed non-conformance", code=nc["code"])
-            except httpx.HTTPError as exc:
-                log.warning("could not close non-conformance", code=nc["code"], error=str(exc)[:160])
+            return 0
+        rows = page["items"] if isinstance(page, dict) else page
+        total = page.get("total") if isinstance(page, dict) else len(rows)
+        # Newest first out of the API, so the newest `keep_open` are the ones
+        # left alone and the oldest are the ones worked.
+        waiting = [n for n in rows if n.get("status") in ("open", "under_review")]
+        working = waiting[keep_open:][-per_pass:] if keep_open else waiting[-per_pass:]
+        closed = 0
+        for nc in working:
+            if await self._work_one_nonconformance(nc, rules):
+                closed += 1
+        if closed:
+            log.info("worked through non-conformances", closed=closed,
+                     left_open=max(len(waiting) - closed, 0), open_in_total=total)
+        return closed
+
+    async def _work_one_nonconformance(self, nc: dict, rules: dict) -> bool:
+        """Review, disposition, close - one record, in that order.
+
+        Any step the product refuses stops this record and says so. A floor
+        that pressed on would be writing a history in which a decision was
+        taken twice or out of order.
+        """
+        code = nc["code"]
+        by_severity = rules.get("by_severity") or {}
+        verdict = by_severity.get(str(nc.get("severity"))) or rules.get("otherwise") or {}
+        disposition, reason = verdict.get("disposition"), verdict.get("reason")
+        if not disposition or not reason:
+            # No rule for this severity and no fallback: left open, which is
+            # the honest state for a finding nobody has decided about.
+            return False
+
+        if nc.get("status") == "open" and not await self._post(
+                f"/quality/nonconformances/{code}/review",
+                what="review a non-conformance", code=code):
+            return False
+        if not await self._post(f"/quality/nonconformances/{code}/disposition",
+                                json={"disposition": disposition, "reason": reason},
+                                what="disposition a non-conformance", code=code):
+            return False
+        log.info("dispositioned a non-conformance", code=code, disposition=disposition,
+                 severity=nc.get("severity"))
+        if not rules.get("close_after_disposition", True):
+            return False
+        if not await self._post(f"/quality/nonconformances/{code}/close",
+                                what="close a non-conformance", code=code):
+            return False
+        log.info("closed a non-conformance", code=code, disposition=disposition)
+        return True
+
+    async def _post(self, path: str, *, json: dict | None = None, what: str,
+                    code: str) -> bool:
+        """One write, with its refusal reported rather than swallowed."""
+        try:
+            response = await self.client.post(path, json=json)
+            response.raise_for_status()
+            return True
+        except httpx.HTTPStatusError as exc:
+            log.warning(f"could not {what}", code=code, status=exc.response.status_code,
+                        detail=exc.response.text[:160])
+        except httpx.HTTPError as exc:
+            log.warning(f"could not {what}", code=code, error=str(exc)[:160])
+        return False
 
 
 async def run(settings: Settings, *, inspect_every: float = 8.0,
               issue_every: float = 25.0, review_every: float = 90.0,
-              supervise_every: float = 20.0,
+              supervise_every: float = 20.0, watch_every: float = 15.0,
+              speed: float = 1.0,
               seed: int = 0, user: str = "FLOOR-SIM", password: str = "operator",
               supervisor: str = "FLOOR-SUP", supervisor_password: str = "supervisor",
               inspect_all: bool = False, finish_orders: bool = True) -> None:
@@ -429,14 +859,24 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
 
     `finish_orders` is False for a scripted over-run, where nobody stopping
     the line is the whole point.
+
+    `watch_every` is how often the floor looks at the machines to see what
+    has stopped and what has come back - the look that lets it name a stop
+    afterwards. It is the floor's own cadence and not a sampling rate: the
+    MES's record of the interval comes from the OPC agent either way, and a
+    floor that looked less often names fewer stops rather than recording
+    shorter ones.
     """
     base = f"http://{settings.api_host}:{settings.api_port}"
     rng = random.Random(seed)
+    # What this floor does that no PLC reports, as data - or nothing, which
+    # is every real plant and is the behaviour this had before scripts.
+    script = measurement.load(settings.floor_script_file)
 
     async with httpx.AsyncClient(base_url=base, timeout=20.0) as client, \
             httpx.AsyncClient(base_url=base, timeout=20.0) as sup_client:
-        floor = Floor(settings, client, rng)
-        shift = Floor(settings, sup_client, rng)
+        floor = Floor(settings, client, rng, script, speed)
+        shift = Floor(settings, sup_client, rng, script, speed)
 
         # The API comes up alongside us; keep trying rather than dying first.
         for _attempt in range(60):
@@ -458,9 +898,15 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
                         user=supervisor, error=str(exc)[:120])
             shift = None
 
+        gauges_known = await floor.read_the_register()
+        if shift is not None and script:
+            await shift.read_the_register()
+
         log.info("shop floor online", endpoint=base, inspect_every=inspect_every,
                  issue_every=issue_every, supervise_every=supervise_every,
-                 finishes_orders=finish_orders and shift is not None)
+                 finishes_orders=finish_orders and shift is not None,
+                 floor_script=str(settings.floor_script_file) if script else None,
+                 gauges_on_the_register=gauges_known)
 
         async def every(seconds: float, work) -> None:
             while True:
@@ -485,19 +931,43 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
             await floor.issue_material(orders, lots)
 
         async def do_review(summary, orders):
+            # The register, every pass: a gauge somebody took out of service
+            # on the screen is out of service for this floor too, within the
+            # minute and without a restart.
+            await floor.read_the_register()
             if shift is not None:
                 await shift.review_nonconformances()
 
+        async def watch_the_stops() -> None:
+            # Its own loop, because it needs nothing but the machine states -
+            # the dashboard and the order book that `every` reads for the
+            # rest would be two requests a look for nothing.
+            while True:
+                await asyncio.sleep(watch_every)
+                try:
+                    await floor.watch_the_stops()
+                except httpx.HTTPError as exc:
+                    log.warning("the stop watch failed", error=str(exc)[:160])
+
         async def do_supervise(summary, orders):
             # The supervisor's client, not the operator's: what this does -
-            # finishing an order, releasing the next - is a supervisor's act,
-            # and the audit row has to say so.
+            # finishing an order, releasing the next, calibrating a gauge
+            # that has fallen due - is a supervisor's act, and the audit row
+            # has to say so.
             if shift is not None:
                 await shift.work_the_book(orders, finish=finish_orders)
+                if await shift.calibrate_what_is_due():
+                    # The operator measures with whatever the register now
+                    # says. A bench still holding the old calibration date
+                    # would go on adding a bias the plant has just removed,
+                    # and the records would show a gauge that was calibrated
+                    # and never came back.
+                    await floor.read_the_register()
 
         await asyncio.gather(
             every(inspect_every, do_inspect),
             every(issue_every, do_issue),
             every(review_every, do_review),
             every(supervise_every, do_supervise),
+            watch_the_stops(),
         )

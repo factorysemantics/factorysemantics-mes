@@ -110,6 +110,7 @@ nav:
       - Reference — this plant's own engineering numbers: operate/engineering-numbers.md
       - Reference — this plant's own administration numbers: operate/administration-numbers.md
       - Reference — plant packs: operate/packs.md
+      - Explanation — what the simulated floor does: operate/the-simulated-floor.md
       - How-to — plants from a fleet file: operate/registry.md
       - How-to — the fleet this installation owns: operate/fleet.md
       - How-to — switch a module off: operate/modules.md

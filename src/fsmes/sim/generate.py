@@ -50,6 +50,11 @@ EVENT_TYPES = {
     "changeover": "the whole line is changing over: planned, and never downtime",
     "micro_stops": "short random stops, pre-rolled from the seed so a run repeats",
     "drift": "an analog ramps from its base to `to` across the window",
+    "offset": "an analog is held `offset` off its base for the window - a dip or a "
+              "step, rather than a ramp, which is what a valve closing or a "
+              "pressure falling away actually looks like",
+    "quiet": "a tag stops arriving: the machine runs on, every other signal reports, "
+             "and this one publishes nothing at all for the window",
     "scrap_burst": "the station's scrap rate is `scrap_pct` for the window",
     "counter_reset": "the station's counters go back to zero at `at`",
     "starve": "nothing arrives: the machine is willing and has nothing to work on",
@@ -63,6 +68,17 @@ EVENT_TYPES = {
 #: would have been. What changes is that nobody is there to read them, which
 #: is why it lives in the manifest rather than in the CSVs.
 OBSERVER_TYPES = ("disconnect",)
+
+#: What a quiet tag looks like in a generated table: an empty cell. The
+#: machine's row is written as usual and this one column has nothing in it,
+#: so the replay server writes no value, no data change is notified, and the
+#: MES's last sample for that tag keeps the moment it actually arrived.
+#:
+#: Not a magic number in the data - zero would be a reading of zero, and the
+#: last value repeated would be a reading somebody could believe. A tag that
+#: has stopped arriving must be *absent*, because the whole question
+#: downstream is whether a value is old.
+QUIET = None
 
 #: Scripted states that are not the machine's fault and are not a breakdown.
 #: A plant that counts them as downtime reports an availability figure that is
@@ -116,6 +132,18 @@ def _validate_line(config: dict, label: str) -> dict:
         for key in ("start", "end", "at"):
             if key in event and not 0 <= int(event[key]) <= duration:
                 sys.exit(f"{label}: event {kind!r} {key}={event[key]} is outside 0..{duration}.")
+        # An event that moves or silences one named signal must name one this
+        # station has. A typo here used to simulate as nothing at all: the
+        # run still produced a report, and the report said the plant behaved.
+        if kind in ("offset", "quiet") and station in names:
+            signals = [a.get("name", "Value")
+                       for a in station_analogs(stations[names.index(station)])]
+            if event.get("analog") and event["analog"] not in signals:
+                sys.exit(f"{label}: event {kind!r} names analog {event['analog']!r} on "
+                         f"{station}, which has {', '.join(signals) or 'none'}.")
+        if kind == "offset" and "offset" not in event:
+            sys.exit(f"{label}: an {kind!r} event says how far off base it holds "
+                     "the analog - `offset`, in the signal's own units.")
         # An effect moves an analog on *another* station for the event's
         # window - the physics between machines that a real line has and a
         # per-station script cannot express. Each must name a real analog.
@@ -277,6 +305,8 @@ def simulate(config: dict) -> dict[str, list[list]]:
     effects: dict[str, list[dict]] = {}               # target station -> analog offsets from elsewhere
     starved: dict[str, list[tuple[int, int]]] = {}    # station -> windows with nothing to work on
     blocked: dict[str, list[tuple[int, int]]] = {}    # station -> windows with nowhere to put it
+    offsets: dict[str, list[dict]] = {}               # station -> analog held off its base
+    quiet: dict[str, list[dict]] = {}                 # station -> windows a tag does not arrive in
 
     for event in config.get("events", []):
         kind, station = event["type"], event.get("station")
@@ -298,6 +328,10 @@ def simulate(config: dict) -> dict[str, list[list]]:
             starved.setdefault(station, []).append((int(event["start"]), int(event["end"])))
         elif kind == "block":
             blocked.setdefault(station, []).append((int(event["start"]), int(event["end"])))
+        elif kind == "offset":
+            offsets.setdefault(station, []).append(event)
+        elif kind == "quiet":
+            quiet.setdefault(station, []).append(event)
         elif kind == "micro_stops":
             # Pre-roll the random micro-stops so the run stays deterministic.
             every_lo, every_hi = event.get("every_s", [90, 150])
@@ -417,6 +451,14 @@ def simulate(config: dict) -> dict[str, list[list]]:
                     in_burst = in_win(t, int(burst["start"]), int(burst["end"]))
                     if in_burst and "analog_offset" in burst:
                         value += float(burst["analog_offset"])
+                # Held off its base for a window: a valve closing, a supply
+                # pressure falling away, a step rather than a ramp. No alarm
+                # bit of its own - the signal is inside its own range and
+                # only the effect downstream makes it matter.
+                for held in offsets.get(name, []):
+                    if signal in _targets(held, analogs) and in_win(
+                            t, int(held["start"]), int(held["end"])):
+                        value += float(held["offset"])
                 # What another station's event does to this one. No alarm bit
                 # is raised here: the symptom shows, the cause is elsewhere,
                 # and finding it is the agent's job.
@@ -427,6 +469,16 @@ def simulate(config: dict) -> dict[str, list[list]]:
                     value = 0.0
                 else:
                     value += rng.gauss(0.0, float(analog.get("noise", 0.0)))
+                # A tag that has gone quiet publishes nothing. The noise is
+                # drawn first and thrown away on purpose: the rest of the
+                # line must be byte-identical to a run without this event, so
+                # a scenario can be read as "this one tag stopped arriving"
+                # and nothing else.
+                if any(signal in _targets(gap, analogs)
+                       and in_win(t, int(gap["start"]), int(gap["end"]))
+                       for gap in quiet.get(name, [])):
+                    values.append(QUIET)
+                    continue
                 values.append(round(value, int(analog.get("decimals", 2))))
 
             cycle_ms = (
@@ -478,7 +530,7 @@ def write_output(config: dict, rows: dict[str, list[list]], out: Path,
         with (out / f"{table}.csv").open("w", encoding="ascii", newline="\n") as f:
             f.write(",".join(header) + "\n")
             for row in rows[table]:
-                f.write(",".join(str(v) for v in row) + "\n")
+                f.write(",".join("" if v is QUIET else str(v) for v in row) + "\n")
 
     # schema.ini pins column types so the ODBC text driver never guesses wrong.
     int_cols = {"TSec", "State", "GoodCount", "ScrapCount", "CycleTimeMs",
@@ -644,6 +696,11 @@ def _scenario_rows(config: dict) -> list[tuple[str, str]]:
             # so an unknown kind stops the write instead of printing a blank.
             what = {"down": "DOWN",
                     "drift": f"analog drifts to {event.get('to')}",
+                    "offset": (f"{event.get('analog', 'its process value')} held "
+                               f"{float(event.get('offset', 0.0)):+g} off base"),
+                    "quiet": (f"{event.get('analog', 'its process value')} stops "
+                              "arriving - the machine runs on and every other "
+                              "signal reports"),
                     "scrap_burst": f"scrap burst {event.get('scrap_pct')}%",
                     "starve": "STARVED — nothing arriving, nothing wrong with it",
                     "block": "BLOCKED — nowhere to put it, nothing wrong with it"}[kind]

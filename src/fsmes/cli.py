@@ -2477,6 +2477,10 @@ def run_operations(
                                         help="Seconds between quality checks (MES_OPS_INSPECT_EVERY)."),
     issue_every: float = typer.Option(float(os.environ.get("MES_OPS_ISSUE_EVERY", "25")),
                                       help="Seconds between material issues (MES_OPS_ISSUE_EVERY)."),
+    watch_every: float = typer.Option(float(os.environ.get("MES_OPS_WATCH_EVERY", "15")),
+                                      help="Seconds between looks at what has stopped and "
+                                           "what has come back, which is how a stop gets "
+                                           "named afterwards (MES_OPS_WATCH_EVERY)."),
     inspect_all: bool = typer.Option(os.environ.get("MES_OPS_INSPECT_ALL", "false").lower() == "true",
                                      help="Record every specification each pass, not one (MES_OPS_INSPECT_ALL)."),
     finish_orders: bool = typer.Option(
@@ -2487,13 +2491,21 @@ def run_operations(
 ) -> None:
     """Generate the shop-floor activity a PLC never reports.
 
-    Inspections, material issue and the shift supervisor's own work - closing
-    non-conformances, finishing an order the line has made the number for,
-    releasing the next order in the book - performed through the public API
-    exactly as an operator's browser or an agent would. Without it the quality
-    screens, the non-conformance flow and genealogy are empty pages on top of
-    a working database, and a line runs one order for as long as the plant is
-    up.
+    Inspections, material issue and the shift supervisor's own work - working
+    through the non-conformances, finishing an order the line has made the
+    number for, releasing the next order in the book - performed through the
+    public API exactly as an operator's browser or an agent would. Without it
+    the quality screens, the non-conformance flow and genealogy are empty
+    pages on top of a working database, and a line runs one order for as long
+    as the plant is up.
+
+    What else it does is the plant's own, as data: `[files] floor` in the pack
+    names a script saying which gauge takes a reading, which of them is
+    drifting between calibrations, which of the plant's approved words a stop
+    gets named with, and what happens to the material behind a finding. A
+    plant with no floor script records what the tag said, names no gauge and
+    labels nothing - which is what this did before scripts existed, and is
+    what every real plant wants, because it has people instead.
 
     It never invents an order. Decision 0029 is untouched: the MES still does
     not finish an order at its quantity. What finishes one here is the
@@ -2510,8 +2522,14 @@ def run_operations(
     speed = float(os.environ.get("MES_SIM_SPEED") or 1.0)
     if speed > 0:
         inspect_every, issue_every = inspect_every / speed, issue_every / speed
+        # The look that names a stop is on the floor's clock too: an hour
+        # replayed in a minute has its stops begin and end sixty times as
+        # fast, and a floor still looking every fifteen real seconds would
+        # miss every one of them.
+        watch_every = watch_every / speed
     _asyncio.run(run_floor(settings, inspect_every=inspect_every,
-                           issue_every=issue_every, seed=seed, inspect_all=inspect_all,
+                           issue_every=issue_every, watch_every=watch_every,
+                           speed=speed, seed=seed, inspect_all=inspect_all,
                            finish_orders=finish_orders,
                            password=settings.operator_password))
 

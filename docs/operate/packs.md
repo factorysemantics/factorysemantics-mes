@@ -92,7 +92,7 @@ Never this process's own default. Until 2026-09-14 that is exactly what a pack n
 
 **Pack before database.** A schema migration may need a value the pack now carries, so the pack is applied first — and `fsmes pack apply` runs the migrations itself, in that order.
 
-Master data is seeded from `masterdata/`, one file per kind: `equipment.json`, `materials.json`, `bom.json`, `routings.json`, `quality_specs.json`, `lots.json`, `work_orders.json`, `maintenance_plans.json`, `shifts.json`, `downtime_reasons.json`, `nc_severities.json`. An entry whose code already exists is counted as present and **left alone, never updated** — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which `fsmes fleet list` and the console now show as *answered, but empty*.
+Master data is seeded from `masterdata/`, one file per kind: `equipment.json`, `materials.json`, `bom.json`, `routings.json`, `quality_specs.json`, `gauges.json`, `lots.json`, `work_orders.json`, `maintenance_plans.json`, `shifts.json`, `downtime_reasons.json`, `nc_severities.json`. An entry whose code already exists is counted as present and **left alone, never updated** — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which `fsmes fleet list` and the console now show as *answered, but empty*.
 
 ### The words an operator picks from
 
@@ -125,6 +125,24 @@ A severity code is two to **twenty** characters — it is stored on every non-co
 
 **A pack that seeds this list must seed `minor` and `major`.** The product opens non-conformances itself — a recorded check outside its specification, and the SPC rules — and it writes those two words. A plant whose list lacked one would find out at the moment a machine raised a hold, so `fsmes pack check` refuses it offline instead. The **names** and the sentences beside them are the plant's; only the codes are fixed, and only those two.
 
+### The instruments that take the measurements
+
+`gauges.json` is the plant's gauge register: a `code` and a `name`, plus the optional `kind`, `location`, `resolution`, `interval_days`, `warn_days` and `calibrated_days_ago`.
+
+```json
+[
+  {"code": "SCALE-01", "name": "Checkweigher scale 1, filler", "kind": "scale",
+   "location": "FILL01", "resolution": 0.1, "interval_days": 90, "warn_days": 14,
+   "calibrated_days_ago": 7}
+]
+```
+
+**`resolution` is what the gauge can read to, and it is the field worth arguing about.** A gauge that resolves a third of the tolerance it is asked to judge cannot judge it, and `GET /quality/gauges/{code}/resolution` answers that question against any tolerance you give it. A fill weight held to twelve grams, measured on a scale reading to a tenth of a gram, can be defended.
+
+**`calibrated_days_ago` is relative, for the same reason `due_in_hours` is**: a pack is seeded whenever somebody builds the plant, and an absolute date in one ages until every gauge in the register reads overdue. Left out, the gauge has never been calibrated — which the register reports as *overdue*, because a gauge nobody has calibrated is not fine until proven otherwise.
+
+**No calibration event is invented behind the date.** The register records what the plant says it knows; nobody here performed a calibration, and a last-done date with the certificate wherever the paperwork actually is, is exactly what a gauge register migrated into a new MES looks like.
+
 ### The order book
 
 `work_orders.json` is the plant's **schedule**, not one order to give the counters somewhere to book. Each entry is a code, a material and a quantity; `priority`, `release` and `due_in_hours` are optional.
@@ -143,6 +161,10 @@ A severity code is two to **twenty** characters — it is stored on every non-co
 **Size it against the line.** The slowest station in the pack's own `tag_map.json` sets the rate: 3,600 ÷ its `cycle_seconds` is units an hour. The three lab packs hold more than twenty-four hours of their own line's rated output, and each says its arithmetic in its `masterdata/README.md`. A book of one order is how a lab plant came to report an order 70× over on 2026-09-18 — correctly, and uselessly.
 
 Nothing in the MES releases the next order. On a plant that simulates, `fsmes run-operations` does it as the shift supervisor would; on a real plant it is a person or the ERP.
+
+### What the simulated floor does
+
+`[files] floor` names a **floor script**: which gauge takes a reading, which of them is drifting between calibrations, which of the plant's approved words a stop is named with, and what happens to the material behind a finding. It is read only by `fsmes run-operations`, and a real plant leaves it out and has people instead. The bottling lab pack is the worked example — see [what the simulated floor does](the-simulated-floor.md).
 
 **It refuses to seed into a database that is not at head.** The migration above normally leaves nothing to say, and this is the assertion that it did. Rows written through the ORM into a half-migrated file leave a database with some of this product's tables and no Alembic stamp — which the migrator then disowns outright, because a schema it cannot identify is one it will not guess at. That happened once, on 2026-09-14, and left a plant no command could take forward.
 

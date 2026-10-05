@@ -19,6 +19,7 @@ from fsmes.domain import (
     QualitySpec,
 )
 from fsmes.services import Conflict, NotFound, audit, calendar, masterdata, workorders
+from fsmes.services import gauges as gauge_service
 
 #: What this plant calls a non-conformance on the record itself. `NC` by
 #: default, giving `NC-00017`, which is what was here before the
@@ -83,6 +84,7 @@ def record_check(
     value: float,
     work_order_code: str | None = None,
     equipment_code: str | None = None,
+    gauge_code: str | None = None,
     actor: str = "system",
 ) -> tuple[QualityCheck, NonConformance | None, list[dict]]:
     """One reading, judged against the specification, and what it set off.
@@ -92,6 +94,15 @@ def record_check(
     run here, on the write, not only when somebody opens the chart - a
     control chart that only computes on demand tells whoever happened to
     look, which is nobody at two in the morning. See decision record 0027.
+
+    `gauge_code` is the instrument that took the reading. Left out, the check
+    says *not recorded* - which is the honest answer and is not the same as
+    saying nothing took it. An unknown code is refused rather than dropped: a
+    reading attributed to a gauge this plant does not have would read, on the
+    chart, exactly like a reading attributed to one it does. A gauge that is
+    overdue or out of service is **not** refused: those readings happen on
+    real floors, they are what `GET /quality/gauges/{code}/impact` exists to
+    bound, and refusing them here would simply leave the gauge unnamed.
     """
     material = masterdata.get_material(session, material_code)
     spec = session.scalar(
@@ -105,11 +116,13 @@ def record_check(
     )
     wo = workorders.get(session, work_order_code) if work_order_code else None
     station = masterdata.get_equipment(session, equipment_code) if equipment_code else None
+    instrument = gauge_service.get(session, gauge_code) if gauge_code else None
     now = utcnow()
     check = QualityCheck(
         spec=spec,
         work_order_id=wo.id if wo else None,
         equipment_id=station.id if station else None,
+        gauge_id=instrument.id if instrument else None,
         value=value,
         result=CheckResult.PASS if in_spec else CheckResult.FAIL,
         checked_by=actor,
@@ -128,7 +141,8 @@ def record_check(
         action="quality.checked",
         entity_type="workorder" if wo else "material",
         entity_id=wo.code if wo else material_code,
-        after={"characteristic": characteristic, "value": value, "result": check.result.value},
+        after={"characteristic": characteristic, "value": value, "result": check.result.value,
+               "gauge": instrument.code if instrument else None},
     )
 
     nc = None

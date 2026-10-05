@@ -167,10 +167,17 @@ def load_table(directory: Path, name: str) -> list[dict[str, float | int]]:
             f"No replay data at {path}. Generate it first:\n"
             f"    fsmes sim-generate labs/kepsim/line.json"
         )
-    rows: list[dict[str, float | int]] = []
+    rows: list[dict[str, float | int | None]] = []
     with path.open(encoding="ascii", newline="") as f:
         for raw in csv.DictReader(f):
-            rows.append({k: (int(v) if v.lstrip("-").isdigit() else float(v)) for k, v in raw.items()})
+            # An empty cell is a tag that was not publishing at that second -
+            # `fsmes.sim.generate`'s `quiet` event. It is kept as None rather
+            # than read as zero: zero is a reading, and the difference
+            # between a reading of zero and no reading at all is the whole
+            # point of the scenario that writes one.
+            rows.append({k: (None if v is None or v == ""
+                             else int(v) if v.lstrip("-").isdigit() else float(v))
+                         for k, v in raw.items()})
     if not rows:
         raise ValueError(f"{path} has a header but no rows")
     return rows
@@ -334,6 +341,10 @@ class ReplayMachine:
         self.setpoints = setpoints or {}
         self.follows = follows or {}
         commanded = set(setpoints or ())
+        # `not in rows[0]` is the column being absent from the table, which
+        # is a tag map and a generator that disagree. A column that is
+        # present and empty on the first row is a quiet tag, which is a
+        # scenario and not a mistake.
         missing = [tag for tag in spec.tags
                    if tag not in rows[0] and tag not in commanded and not _is_inspection_tag(tag)]
         if missing:
@@ -353,6 +364,13 @@ class ReplayMachine:
             if tag in self.setpoints or _is_inspection_tag(tag):
                 continue          # commanded or event-driven, never replayed from a column
             value = row[tag]
+            if value is None:
+                # The tag is quiet for this second: write nothing. No value
+                # means no data change, so the MES is never notified and its
+                # last sample keeps the moment it really arrived - which is
+                # what lets anything downstream tell a stale reading from a
+                # steady one.
+                continue
             if tag in self.follows:
                 sp = self.setpoints.get(self.follows[tag])
                 if sp is not None:

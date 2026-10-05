@@ -174,6 +174,13 @@ SCHEMA: tuple[Section, ...] = (
         Key("masterdata", "path",
             "A directory of this plant's equipment, materials, routings and "
             "specifications, as data. `fsmes pack apply` seeds from it."),
+        Key("floor", "path",
+            "What this plant's *simulated* floor does that no PLC reports: "
+            "which gauge takes a reading, which of them is drifting, which "
+            "stops it labels from the vocabulary, and how it dispositions a "
+            "non-conformance. Only read by `fsmes run-operations`; a real "
+            "plant leaves it out and has people instead.",
+            "MES_FLOOR_SCRIPT_FILE"),
     )),
     Section("erp",
             "The ERP boundary: which connector, and what this plant asks of "

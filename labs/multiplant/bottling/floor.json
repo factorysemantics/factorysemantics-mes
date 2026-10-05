@@ -1,0 +1,83 @@
+{
+  "_what": "What the simulated floor at ACME bottling does that no PLC reports: which scale takes a fill-weight reading, how far the drifting one is out, which stops it labels from the plant's own vocabulary, and how the shift supervisor dispositions a non-conformance. Read only by `fsmes run-operations`.",
+  "_why_data": "The same argument as line.json. A story scripted in a loop body cannot be read by a test, by a scorer, or by the person who has to explain the records afterwards - so the stories this floor plants are written here, each with the trace it leaves, and `fsmes.sim.operations` never changes when the story does.",
+  "_the_stories_planted_here": [
+    "the drifting gauge: SCALE-FILL-02 reads high by 0.01 g for every day since its last calibration, up to 0.6 g, and is clean again the shift the supervisor calibrates it. Trace: group the fill-weight checks by gauge and SCALE-FILL-02's mean sits above SCALE-FILL-01's.",
+    "the night shift: two readings of one bottle disagree by more at night than by day, because the plant at night is thinner - fewer people, less light, nobody to ask. Trace: the spread of the night shift's readings is wider than the day's, while the process behind them is the same.",
+    "the stops: this floor labels what it sees stopped from the six approved reasons, and leaves the ones it genuinely cannot explain as `not_yet_determined` rather than guessing. Trace: the downtime pareto has bars with names on them, and says how much came from the list.",
+    "the paperwork: the supervisor reviews a non-conformance, decides what happens to the material, and closes it - and leaves a few open on purpose, because a plant where every finding is closed by the end of the shift is not a plant."
+  ],
+  "_see_also": "The line's own four stories - the nozzle-pressure dip, the first fills after a changeover, the tag that goes quiet, the washer running hot - are in labs/kepsim/line.json, because they are things the machines do. This file is only what the people do.",
+
+  "measurement": {
+    "_what": "How a number on a tag becomes a measurement somebody took.",
+    "stale_after_s": 60,
+    "_stale_after_s": "A process value older than this is not a reading. The floor records a plausible value instead, with no gauge and no station, and says so in the log - which is what a shift does when the display is frozen and nobody has climbed up to look. Seconds on the clock, not line seconds: how often a sample arrives is a fact about this MES (`opc_min_history_ms`, five seconds as shipped) rather than about the line, so sixty is twelve samples' worth of silence at any replay speed. It does mean a replay fast enough to run the fifteen-minute quiet window in under a minute never trips it - at 30x that window is thirty seconds of real time - which is a property of replaying an hour in a minute and not of the rule.",
+    "default_spread": 0.0,
+    "shift_spread": {
+      "NIGHT": 2.5
+    },
+    "characteristics": {
+      "fill_weight": {
+        "spread": 0.3,
+        "_spread": "Grams. How much two readings of the same bottle disagree, day shift. The scales resolve to a tenth of a gram, so this is the hand and the bottle rather than the instrument.",
+        "gauges": [
+          {
+            "gauge": "SCALE-FILL-01",
+            "share": 3,
+            "_share": "The scale that lives at the filler takes three readings in four."
+          },
+          {
+            "gauge": "SCALE-FILL-02",
+            "share": 1,
+            "drift": {
+              "per_day": 0.01,
+              "max_bias": 0.6
+            },
+            "_drift": "Grams per day since its last calibration, to a ceiling of 0.6 g. A real gauge does not drift forever: it goes out, stays out, and is found at the next calibration. The pack has this one calibrated 84 days ago against a 90-day interval, so it is reading about 0.6 g high today and is due this week."
+          }
+        ]
+      }
+    }
+  },
+
+  "calibration": {
+    "_what": "When the simulated shift supervisor calibrates a gauge this floor measures with.",
+    "when": "overdue",
+    "_when": "Not `due_soon`. A floor that calibrated on the warning would calibrate the drifting scale in the first twenty seconds of every plant ever built from this pack, and the drifting-gauge story would be over before anybody could open the screen. Overdue is also what a plant with a fortnight's warning window actually does: the warning is for planning the visit, and the visit happens when it falls due. The pack has SCALE-FILL-02 six days from due, so a plant left up for a week sees the whole story - the drift, the calibration, and clean readings after it."
+  },
+
+  "stops": {
+    "_what": "Which of this plant's six approved words the floor puts on a stop it watched. Nothing here invents an interval: the MES watched the stop, and this names it afterwards - which is the only moment anybody can, because the moment a machine goes down is the moment nobody knows why yet.",
+    "_what_it_will_not_say": "An idle machine is left unlabelled on purpose. This line's tag map maps starved (2) and blocked (3) both onto `idle`, so by the time the MES holds the interval the difference is gone, and the vocabulary's own `starved` and `blocked` cannot be chosen between from anything that was recorded. Guessing one would put a cause in the pareto that nothing observed. The floor says so once, in its log, as a finding about the state map.",
+    "_what_it_misses": "A stop shorter than one look (MES_OPS_WATCH_EVERY, 15 s) is never seen and stays unlabelled - the 12-second stop on the loader most passes. That residue is real and the pareto reports it as unlabelled, which is house rule 3 doing its job rather than a gap in this file.",
+    "micro_stop_under_s": 60,
+    "micro_stop": "micro_stop",
+    "_micro_stop": "A stop this short was cleared by whoever was standing there - a jam, a misfeed, a reset. Nothing is broken and nothing needs reporting.",
+    "longer_than_a_micro_stop": "breakdown",
+    "_longer_than_a_micro_stop": "Longer than a minute and the machine was willing to run, so something failed and somebody fixed it. On this line that is exactly what a `down` state means: the tag map maps only a genuine fault to DOWN.",
+    "changeover": "changeover",
+    "_changeover": "A machine in setup on this line is the whole line changing over between orders. Labelling it is what makes it findable later - a planned stop that ended three minutes before a point on the fill-weight chart is the explanation for that point, and an unnamed setup interval explains nothing."
+  },
+  "nonconformances": {
+    "_what": "What the shift supervisor does with a finding, by rule, so the quality screen shows a plant working through its paperwork rather than a list that only grows.",
+    "per_pass": 6,
+    "leave_open": 3,
+    "_leave_open": "How many of the newest findings are left alone every pass. A plant where nothing is open is as unrealistic as one where nothing is ever closed.",
+    "close_after_disposition": true,
+    "by_severity": {
+      "major": {
+        "disposition": "scrap",
+        "reason": "Out of specification on a critical characteristic; the affected bottles were scrapped at the filler."
+      },
+      "minor": {
+        "disposition": "rework",
+        "reason": "Underweight bottles pulled off the line and refilled on the same order."
+      }
+    },
+    "otherwise": {
+      "disposition": "use_as_is",
+      "reason": "Inside the customer's own limit though outside ours; released as is on the shift supervisor's name."
+    }
+  }
+}

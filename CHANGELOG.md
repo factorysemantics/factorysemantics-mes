@@ -12,6 +12,64 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **A plant pack carries its gauge register, a check records the gauge that
+  took it, and the simulated floor plants five causes an engineer can find
+  behind a point on the control chart.** Scott, 2026-10-05: *"click an SPC
+  point and see why it is there."* Measured on the bottling lab plant the day
+  before: 0 of the last 500 quality checks named a gauge, seven days of
+  downtime were 100 % unlabelled, and 887 non-conformances had been raised and
+  never reviewed. None of that was an MES bug - it was a plant with no people
+  in it, and an analysis is only as good as what the plant recorded.
+
+  - `masterdata/gauges.json` is the eleventh kind of master data: a code and a
+    name, plus `kind`, `location`, `resolution`, `interval_days`, `warn_days`
+    and `calibrated_days_ago` (relative, for the same reason an order's due
+    date is). The bottling pack ships the two scales on its filler, one of
+    them six days from its calibration.
+  - `POST /quality/checks` takes a `gauge`, and the check list reports it
+    beside the station. An unknown code is refused rather than dropped; an
+    overdue gauge is not refused, because those readings happen and bounding
+    them is what the gauge's impact list is for. `null` is *not recorded*,
+    which is a different fact from a reading nothing measured.
+  - `POST /equipment/{code}/stops/label` names a stop that has already
+    happened, from the plant's approved vocabulary. The existing route labels
+    a stop at the moment it begins, which is the moment nobody knows why yet -
+    and a plant whose states arrive from an OPC agent never gets that moment
+    at all. It creates no interval, ever.
+  - `[files] floor` in a pack names a **floor script** for `fsmes
+    run-operations`: which gauge measures what, how often each is picked up,
+    which one is drifting between calibrations, how much wider the night
+    shift's readings are, which approved word a stop is named with, and what
+    happens to the material behind a finding. A plant with no script behaves
+    exactly as before. See *what the simulated floor does* in the operator
+    docs.
+  - The simulated shift supervisor now reviews, dispositions **and** closes a
+    non-conformance - the three steps decision 0024 requires. The old loop
+    posted `/close` on an undispositioned record, the product refused, the
+    refusal was logged and nothing else happened, which is where the 887 came
+    from. It also calibrates a gauge that has fallen due.
+  - The line description gains two event types: `offset` (an analog held off
+    its base for a window - a dip or a step, which is what a pressure falling
+    away looks like) and `quiet` (a tag stops arriving; an empty cell, so the
+    replay writes no value and the MES's last sample keeps the moment it
+    really arrived). `labs/kepsim/scenario.md` lists every planted story and
+    where to find its trace.
+
+  What the floor deliberately will **not** do: label an idle machine, because
+  this line's tag map maps starved and blocked both onto `idle` and nothing
+  recorded says which; name a stop shorter than one of its looks, whose
+  seconds the pareto still reports as unlabelled; or grow an assistant tool
+  for naming stops, because a model choosing between six reasons from the
+  shape of the data would be writing fiction into the pareto.
+
+- **A process value now says when it was read.** `analog_reading` - behind
+  `/dashboard/summary`, `/line/events` and the station screen - reports `at`
+  beside `name` and `value`. A value with no time on it cannot be judged
+  stale, and a tag that has stopped arriving looks exactly like one holding
+  steady. Nothing withholds a reading on account of its age; whether it is
+  too old to use is the reader's judgment, and the simulated floor is the
+  first reader to make it.
+
 - **`plant-from-your-mes`: a skills folder a customer's own assistant takes in,
   that turns their SQL MES into one safe, readable plant shape.** It ships as
   `plant-from-your-mes.zip` on the release page (`fsmes skills-zip`). A plant

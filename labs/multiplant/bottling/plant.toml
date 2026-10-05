@@ -40,6 +40,12 @@ simulate     = true
 tag_map    = "tag_map.json"
 replay_dir = "../../kepsim/out"
 masterdata = "masterdata"
+# What this plant's simulated floor does that no PLC reports: which scale
+# takes a fill-weight reading, which one is drifting between calibrations,
+# which of the six approved words a stop is named with, and what happens to
+# the material behind a finding. Read only by `fsmes run-operations`; a real
+# plant leaves this out and has people instead.
+floor      = "floor.json"
 
 [oee]
 # This plant will not report a KPI for a window it watched less than 80% of.

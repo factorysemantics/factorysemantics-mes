@@ -9,6 +9,8 @@ from sqlalchemy import func, select
 from fsmes.api import paging
 from fsmes.api.deps import ActorDep, DbDep, require
 from fsmes.domain import (
+    Equipment,
+    Gauge,
     Material,
     NcDisposition,
     NcStatus,
@@ -137,6 +139,10 @@ class CheckIn(BaseModel):
     value: float
     order: str | None = None
     equipment: str | None = None
+    # Which instrument took it. Left out is *not recorded*, which is a
+    # different fact from a reading nothing measured, and the only honest
+    # answer for a plant whose checks arrive without one.
+    gauge: str | None = None
 
 
 @router.post("/checks", status_code=201, dependencies=[require("quality.record")])
@@ -155,10 +161,11 @@ def record_check(body: CheckIn, db: DbDep, actor: ActorDep) -> dict:
         value=body.value,
         work_order_code=body.order,
         equipment_code=body.equipment,
+        gauge_code=body.gauge,
         actor=actor,
     )
     return {"result": check.result, "value": check.value, "non_conformance": nc.code if nc else None,
-            "spc": signals}
+            "gauge": body.gauge, "spc": signals}
 
 
 @router.get("/checks")
@@ -180,12 +187,17 @@ def list_checks(
     one - "what did this shift measure" is a question about a window, and
     scrolling back through a quarter to find it is not an answer.
 
-    There is no station filter, and that is not an oversight: a measurement
-    records the material, the characteristic, the inspector, the gauge and
-    the order it was taken against, and *not* the machine it was taken at.
-    Deriving one from the order's route would name a station nobody stood at.
-    Filtering by station needs that fact recorded first, which is a schema
-    change and somebody's decision, not this endpoint's guess.
+    Every row says which instrument took the reading and which machine it was
+    taken at, and `null` in either is *not recorded* rather than nothing. A
+    control chart whose points cannot name their gauge cannot answer the first
+    question anybody asks about a point: did the process move, or did the
+    instrument?
+
+    There is still no station filter. A station is recorded when the reading
+    came from a machine's own tag and is absent when an operator's number
+    came from somewhere else, so filtering on it would quietly drop every
+    check that was taken by hand - which is somebody's decision about what a
+    filtered list means, not this endpoint's guess.
     """
     query = select(QualityCheck).order_by(QualityCheck.id.desc())
     if result:
@@ -209,6 +221,15 @@ def list_checks(
     ids = {c.work_order_id for c in checks if c.work_order_id}
     if ids:
         order_codes = {wo.id: wo.code for wo in db.scalars(select(WorkOrder).where(WorkOrder.id.in_(ids)))}
+    gauge_codes = {}
+    gauge_ids = {c.gauge_id for c in checks if c.gauge_id}
+    if gauge_ids:
+        gauge_codes = {g.id: g.code for g in db.scalars(select(Gauge).where(Gauge.id.in_(gauge_ids)))}
+    stations = {}
+    station_ids = {c.equipment_id for c in checks if c.equipment_id}
+    if station_ids:
+        stations = {e.id: e.code for e in db.scalars(
+            select(Equipment).where(Equipment.id.in_(station_ids)))}
     return paging.page(
         [
             {
@@ -217,6 +238,8 @@ def list_checks(
                 "value": c.value,
                 "result": c.result,
                 "checked_by": c.checked_by,
+                "gauge": gauge_codes.get(c.gauge_id),
+                "equipment": stations.get(c.equipment_id),
                 "order": order_codes.get(c.work_order_id),
                 "ts": c.ts,
             }

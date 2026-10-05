@@ -73,7 +73,14 @@ def build(session: Session, *, replay_dir: Path | None = None, tag_map: Path | N
                     str(spec.to_state(row["State"])),
                     int(row["GoodCount"]),
                     int(row["ScrapCount"]),
-                    round(float(row[spec.analog]), 1),
+                    # `null` for a tick the tag was not publishing in - the
+                    # generator's `quiet` event. The player already draws a
+                    # null reading as "—"; writing the last value instead
+                    # would put a reading in the recording that the plant
+                    # never sent, which is the one thing a recording of a
+                    # plant must not do.
+                    (None if row[spec.analog] is None
+                     else round(float(row[spec.analog]), 1)),
                 ]
                 for row in rows
             ],

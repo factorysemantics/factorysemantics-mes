@@ -53,6 +53,12 @@ EXCLUDED = {
                                  "`graph` shape in kit.js this one feeds",
     "GET /analysis/maintenance/mttr": "D5 draws them; until then it serves "
                                       "maintenance_mttr",
+    # naming a stop after the fact: no screen offers it yet
+    "POST /equipment/{code}/stops/label":
+        "no screen names a past stop yet - the station screen labels one at the "
+        "moment it begins, which is the moment nobody knows why. The simulated "
+        "floor and an operator with the API are the callers until the panel that "
+        "opens on a point (`spc-point-panel`) grows the control",
     # system plumbing
     "GET /metrics": "for Prometheus, not a screen",
     "GET /pack": "for the fleet console, which is a page of its own and not a plant's screen",
