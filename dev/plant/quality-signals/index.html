@@ -809,6 +809,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#click-a-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Click a point
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Click a point">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#two-things-it-will-not-tell-you" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two things it will not tell you
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-same-answer-as-an-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The same answer, as an API
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#making-something-else-happen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4044,6 +4083,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#click-a-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Click a point
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Click a point">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#two-things-it-will-not-tell-you" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two things it will not tell you
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-same-answer-as-an-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The same answer, as an API
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#making-something-else-happen" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4145,6 +4223,76 @@ a point beyond three sigma, and the MES will raise a hold about it.</p>
 is judging: <code>fsmes</code> will tell you about that one directly — the gauge register
 applies the rule of ten, with four as the floor, and says when <em>the control
 chart is charting the instrument</em>. See <code>GET /quality/gauges/{code}/resolution</code>.</p>
+<h2 id="click-a-point">Click a point<a class="headerlink" href="#click-a-point" title="Permanent link">&para;</a></h2>
+<p>A rule firing tells you <em>that</em> a reading is unusual. The next six questions are
+always the same ones, and this MES already holds the answers — so on
+<strong>Quality → SPC</strong>, click any dot on the chart and the panel beside it fills
+with that reading's records. Click another and the panel follows; nothing else
+on the page moves. There is no model in it: every line on the panel is a
+record, and nothing on it is guessed.</p>
+<p>What you get, in the order people ask:</p>
+<table>
+<thead>
+<tr>
+<th>The question</th>
+<th>What the panel shows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What was read, and by whom?</td>
+<td>The value, the specification it was judged against, who took it, when, which order, which shift, which station</td>
+</tr>
+<tr>
+<td>Which rule fired?</td>
+<td>The rule, what it means and the hold it raised — and beside it the firings the MES recorded <em>when the reading arrived</em>, which is not the same question as what the chart says now</td>
+</tr>
+<tr>
+<td><strong>Did the process move, or did the gauge?</strong></td>
+<td>The instrument, its last calibration and who signed it, whether it is overdue, and whether it can resolve the tolerance it was judging. Then the same characteristic by <strong>every other gauge in the hour either side</strong>, with each one's mean and how far it sat from this one</td>
+</tr>
+<tr>
+<td>What was the machine doing?</td>
+<td>The state at that instant and what it had just come out of, with the seconds between — plus the state timeline, every stretch it was not running, and each stop's reason or the word <em>unlabelled</em></td>
+</tr>
+<tr>
+<td>What were the process values doing?</td>
+<td>This station's analogs over the ten minutes before and the two after, as small charts, each with the reading's own time marked on it</td>
+</tr>
+<tr>
+<td>What else happened?</td>
+<td>A maintenance order that was open, a finding that was raised</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Every block says how much of its own window was watched.</strong> The three that are
+lists of records — the other gauges, the maintenance orders, the findings — say
+they have <strong>no</strong> coverage figure, because a list of the records in a window is
+not a rate over a watched one. And a tag that stopped arriving is drawn as a
+<strong>broken</strong> line with its missing buckets counted, never as a line through the
+silence: a stale value is not a steady one, and telling those two apart is most
+of why this panel is worth having.</p>
+<p>A keyboard reaches it: tab to a reading and press Enter, or use the <strong>Open a
+reading</strong> button, which opens the newest reading a rule fired on.</p>
+<h3 id="two-things-it-will-not-tell-you">Two things it will not tell you<a class="headerlink" href="#two-things-it-will-not-tell-you" title="Permanent link">&para;</a></h3>
+<p><strong>The gauge comparison bounds the question; it does not settle it.</strong> Two
+instruments measuring the same process in the same hour should agree, and a
+standing difference between them is the instrument — but they measured
+<em>different pieces</em>. The controlled comparison is one piece measured twice, and
+no MES can make a floor do that. The panel says so on itself.</p>
+<p><strong>A reading with no gauge, or no station, says <em>not recorded</em>.</strong> That is not
+the same as no gauge having taken it, and the MES will not work a station out
+from the order's routing — that would name a machine nobody stood at.</p>
+<h3 id="the-same-answer-as-an-api">The same answer, as an API<a class="headerlink" href="#the-same-answer-as-an-api" title="Permanent link">&para;</a></h3>
+<p>One read, and the one a screen gets:</p>
+<div class="highlight"><pre><span></span><code>GET /quality/spc/{material}/{characteristic}/point/{check_id}
+</code></pre></div>
+<p><code>before_minutes</code>, <code>after_minutes</code> and <code>neighbour_hours</code> move the window; ten,
+two and one are the defaults. Nothing in it is worked out for the panel: the
+control limits come from the chart, the trends and the timeline from
+<code>/analysis</code>, the gauge's due date from the gauge register, the coverage from
+the ledger. So a figure on the panel and the same figure on the analysis screen
+cannot disagree.</p>
 <h2 id="making-something-else-happen">Making something else happen<a class="headerlink" href="#making-something-else-happen" title="Permanent link">&para;</a></h2>
 <p>What a plant does next is the plant's decision, so it is configuration, not
 code. The trigger catalogue offers a tag called <strong><code>spc.signal</code></strong>: no PLC
