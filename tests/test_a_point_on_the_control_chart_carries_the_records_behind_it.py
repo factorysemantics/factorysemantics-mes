@@ -571,3 +571,83 @@ def test_the_bucket_is_wide_enough_that_an_ordinary_cadence_is_not_a_hole(sessio
     trend = next(t for t in out["tags"]["trends"] if t["tag"] == "Temperature")
     assert trend["bucket_seconds"] >= SAMPLE_SECONDS * 2
     assert trend["buckets_with_no_reading"] == 0
+
+
+# ----------------------------- what looking at real data found (2026-10-05)
+#
+# Two of these came off the first throwaway bottling replay and neither was
+# visible from the code. They are here rather than in the browser file because
+# both are facts about the read.
+
+
+def test_a_tag_with_nothing_in_the_window_drawn_reports_unknown_and_not_zero(
+        session, scales):
+    """Two things look identical here, and the panel has to say so.
+
+    A value that has not changed publishes nothing on a fabric that notifies on
+    change; a window the MES had not started watching holds nothing either.
+    Either way the chart is empty - and on the bottling replay the filler's
+    fill-weight **setpoint**, set once when the order started, was drawn exactly
+    like a tag nobody had been watching, with a coverage of **0 %** on it. That
+    was the panel's fault and not the plant's: `null` is *could not be
+    computed*, zero is *nobody watched any of it*, and those are different
+    claims.
+
+    `PACK01` is the reproduction: this MES holds no state interval for it at
+    all, so the window realised is empty however much of one was asked for.
+    """
+    from fsmes.domain import TagValue
+    from fsmes.services import masterdata
+
+    packer = masterdata.get_equipment(session, "PACK01")
+    check = _reading(session, 11.0, gauge="SCALE-A", equipment="PACK01")
+    session.add(TagValue(equipment_id=packer.id, tag="PACK01.Setpoint",
+                         ts=check.ts - timedelta(minutes=4), value_num=11.0))
+    session.flush()
+
+    out = spc_point.dossier(session, "FG-COLA", "brix", check.id)
+    quiet = next(t for t in out["tags"]["trends"] if t["tag"] == "Setpoint")
+    assert quiet["samples"] == 0
+    assert quiet["coverage"] is None, "silence is reported as zero coverage"
+    assert "has not changed publishes nothing" in quiet["coverage_note"]
+    assert "had not started watching" in quiet["coverage_note"]
+    last = quiet["last_before_window"]
+    assert last is not None and last["value"] == 11.0
+    assert last["seconds_before_window"] > 0
+
+
+def test_an_analogs_buckets_are_laid_against_the_window_the_trend_actually_drew(
+        session, point, scales):
+    """The first thing real data found, and it was arithmetic.
+
+    `tag_trend` clamps its start to when the tag was first recorded. A bucket
+    count worked out against the window that was *asked for* then lands a grid
+    of the wrong width on the window that comes back - on the replay, seventy-two
+    buckets across a hundred and seventy-two seconds, so every other bucket
+    read as a bucket nothing arrived in and the tag looked half dead.
+    """
+    from fsmes.domain import TagValue
+    from fsmes.services import masterdata
+
+    mixer = masterdata.get_equipment(session, "MIX01")
+    check = _reading(session, 11.0, gauge="SCALE-A", equipment="MIX01")
+    # A tag whose history begins only two minutes before the reading, against a
+    # ten-minute request: the window realised is a third of the window asked
+    # for, and - because the tag reports right across it - every bucket in it
+    # holds a sample. Before the fix it did not: the grid was 72 buckets wide
+    # on a window a fifth that long, and every other bucket read as empty.
+    moment = check.ts - timedelta(minutes=2)
+    while moment <= check.ts + timedelta(minutes=3):
+        session.add(TagValue(equipment_id=mixer.id, tag="MIX01.Late",
+                             ts=moment, value_num=5.0))
+        moment += timedelta(seconds=SAMPLE_SECONDS)
+    session.flush()
+
+    out = spc_point.dossier(session, "FG-COLA", "brix", check.id)
+    late = next(t for t in out["tags"]["trends"] if t["tag"] == "Late")
+    assert late["samples"] > 0
+    assert late["bucket_seconds"] >= SAMPLE_SECONDS * 2, (
+        "the grid is finer than the cadence, so an arriving tag reads as a "
+        f"tag with holes in it: {late['bucket_seconds']} s buckets")
+    assert late["buckets_with_no_reading"] == 0
+    assert late["coverage"] == 1.0

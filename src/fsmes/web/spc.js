@@ -245,6 +245,21 @@ async function load() {
    rather than on the box that will hold it (#112, 2026-09-26).
    ====================================================================== */
 
+/* How many stops the panel lists before it starts counting instead. The Gantt
+   beside the list draws every one of them, and the line under it states the
+   total, the seconds and the named/unlabelled split - so nothing is hidden;
+   what this stops is a table of twenty identical two-second idle blips with
+   the one named changeover at the bottom of it. */
+const STOPS_SHOWN = 6;
+
+/* And how many findings, for the same reason and a sharper one. An excursion
+   raises a finding per bad piece: twenty-five of them in a twelve-minute window
+   on the bottling replay made this panel five thousand pixels tall, and the two
+   that mattered - the SPC holds - were buried under twenty-three out-of-spec
+   readings all saying the same thing. Majors come first, the total is stated,
+   and the Quality screen lists every one of them. */
+const FINDINGS_SHOWN = 6;
+
 /* How much of this block's own window anybody watched — three different facts
    and three different sentences. `coverage: "absent"` is the third: this block
    is a list of the records in a window, not a rate over a watched one, and
@@ -524,8 +539,17 @@ function machineBlock(d) {
 
   const stops = d.stops || {};
   section.append(el("h3", "mt", "Stops in this window"));
+  /* Longest first, and only a few rows. On the bottling replay (2026-10-05) a
+     twelve-minute window held twenty-three stretches, twenty-two of them
+     two-second idle blips the floor deliberately does not label - and the one
+     thing a person needed to see, a named changeover, was the twenty-third row
+     of a table of identical lines. Nothing is dropped: the count, the seconds
+     and the named/unlabelled split are stated under it (style rule 4), and the
+     Gantt beside it draws every interval. */
+  const listed = [...(stops.stops || [])].sort((a, b) => b.seconds - a.seconds);
+  const shown = listed.slice(0, STOPS_SHOWN);
   section.append(pointTable(["State", "Reason", "For", "From"],
-    (stops.stops || []).map((row) => [
+    shown.map((row) => [
       row.state,
       /* House rule 3: an unlabelled stop is reported as unlabelled, never
          filed under a reason nothing observed. */
@@ -535,10 +559,16 @@ function machineBlock(d) {
     ]),
     "The machine did not stop in this window."));
   if (stops.total) {
+    const rest = listed.length - shown.length;
     section.append(el("p", "muted small",
       `${stops.total} stretch${stops.total === 1 ? "" : "es"} not running, `
       + `${kit.duration(stops.seconds)} in all — ${stops.labelled} named, `
-      + `${stops.unlabelled} unlabelled.`));
+      + `${stops.unlabelled} unlabelled.`
+      + (rest > 0
+        ? ` Longest ${shown.length} listed; ${rest} more, each `
+          + `${kit.duration(shown[shown.length - 1].seconds)} or shorter — all of `
+          + "them on the chart below."
+        : "")));
   }
   return closeWith(section, d.timeline);
 }
@@ -569,7 +599,7 @@ function tagsBlock(d) {
     + `published in this window, over the ${d.window.before_minutes} minutes before the `
     + `reading and the ${d.window.after_minutes} after. The reading is marked on each.`));
   for (const trend of trends) {
-    smallChart(section, trend.tag || "value", "line", trend, {
+    const box = smallChart(section, trend.tag || "value", "line", trend, {
       value: "mean",
       /* Min and max along with the mean, so a one-second excursion that an
          average would smooth away still appears. */
@@ -582,6 +612,23 @@ function tagsBlock(d) {
       markers: trend.markers,
       y: { label: trend.tag },
     });
+    /* A tag that said nothing draws an empty box, and an empty box explains
+       nothing. Looking at the bottling replay on 2026-10-05, the filler's
+       fill-weight setpoint — set once when the order started and never touched
+       — was drawn exactly like a tag nobody had been watching. The last value
+       it reported before the window is the fact that tells those apart, so it
+       goes under the box in so many words, and the chart's own window line
+       above says whether the window was truncated. */
+    if (trend.samples === 0) {
+      const last = trend.last_before_window;
+      box.append(el("p", "point-watched", last
+        ? `Nothing in the window drawn — it last reported ${last.value} at `
+          + `${fmt.stamp(last.ts)}, ${kit.duration(last.seconds_before_window)} `
+          + "before the window opened. A value that has not changed publishes "
+          + "nothing."
+        : "Nothing in the window drawn, and this MES holds no earlier sample of "
+          + "it either."));
+    }
   }
   return section;
 }
@@ -602,8 +649,18 @@ function elseBlock(d) {
 
   const found = d.findings || {};
   section.append(el("h3", "mt", "Findings"));
+  /* Majors first, then newest, and only a few rows. An excursion raises one
+     finding per bad piece: on the bottling replay a twelve-minute window held
+     twenty-five of them, which made this panel five thousand pixels tall and
+     buried the two that mattered - the SPC holds - under twenty-three
+     out-of-spec readings saying the same thing. Nothing is dropped: the total
+     and the scope are stated under it, and the Quality screen lists them all. */
+  const rows = [...(found.nonconformances || [])].sort((a, b) =>
+    (a.severity === "major" ? 0 : 1) - (b.severity === "major" ? 0 : 1)
+    || String(b.created_at).localeCompare(String(a.created_at)));
+  const shown = rows.slice(0, FINDINGS_SHOWN);
   section.append(pointTable(["Finding", "Severity", "Status", "What", "Raised"],
-    (found.nonconformances || []).map((row) => {
+    shown.map((row) => {
       const link = el("a", "obj", row.code);
       link.href = `/dashboard/quality?n_q=${encodeURIComponent(row.code)}&n_status=`;
       return [link, row.severity, row.status,
@@ -611,8 +668,17 @@ function elseBlock(d) {
               fmt.clock(row.created_at)];
     }),
     "Nothing was raised in this window."));
-  section.append(el("p", "muted small",
-    `${found.total || 0} raised in this window. ${found.scope || ""}`));
+  const majors = rows.filter((row) => row.severity === "major").length;
+  const rest = rows.length - shown.length;
+  const all = el("a", "obj", "the Quality screen");
+  all.href = "/dashboard/quality?n_status=";
+  const line = el("p", "muted small");
+  line.append(`${found.total || 0} raised in this window`
+    + (majors ? `, ${majors} of them major` : "")
+    + (rest > 0 ? `. Majors and the newest ${shown.length} listed; ${rest} more on ` : ". "));
+  if (rest > 0) line.append(all, ". ");
+  line.append(found.scope || "");
+  section.append(line);
   return closeWith(section, found);
 }
 

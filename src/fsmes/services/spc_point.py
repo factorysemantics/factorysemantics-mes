@@ -459,15 +459,45 @@ def _bucketed(envelope: dict, buckets: int) -> tuple[list[dict], int, float]:
     return out, buckets - len(held), width
 
 
+def _last_before(session: Session, unit: Equipment, tag: str,
+                 start: datetime) -> dict | None:
+    """The newest sample of this tag from BEFORE the window, or None.
+
+    The one fact that tells a tag which went quiet apart from a tag which has
+    nothing to say. OPC UA notifies on change, so a value sitting still sends
+    nothing at all - a filler's fill-weight setpoint publishes once when the
+    order is set and then never again, and over any twelve minutes afterwards
+    it has no samples whatever and is in perfect health.
+
+    On the first look at this with real data (bottling replay, 2026-10-05)
+    `FILL01.FillWeightSP` was drawn as an empty box reporting that nobody had
+    watched it. That was the panel's own fault, not the plant's, and this is
+    the fact that fixes it: the chart is still empty, and under it the panel
+    can now say what the value was and how long before the window it was last
+    reported.
+    """
+    row = session.execute(
+        select(TagValue.ts, TagValue.value_num)
+        .where(TagValue.equipment_id == unit.id, TagValue.tag == tag,
+               TagValue.value_num.is_not(None), TagValue.ts < start)
+        .order_by(TagValue.ts.desc()).limit(1)).first()
+    if row is None:
+        return None
+    ts, value = row
+    return {"value": value, "ts": ts,
+            "seconds_before_window": round((start - ts).total_seconds(), 1)}
+
+
 def _tag_block(session: Session, unit: Equipment, tag: str, start: datetime,
                end: datetime, at: datetime, cadence: float | None,
                cadence_source: str | None) -> dict:
     """One of the station's analogs over the window, with the reading marked.
 
     The envelope is `analysis.tag_trend`'s own - its window, its bucketing, its
-    min/max band - with four things added that are about *this* question: the
+    min/max band - with a few things added that are about *this* question: the
     moment the reading was taken, the buckets nothing arrived in, how many
-    samples the tag managed, and the share of the window it spoke in at all.
+    samples the tag managed, the last value it reported before the window, and
+    the share of the window it spoke in at all.
 
     A second bucketer here is how two screens come to draw the same tag
     differently, which is the thing `kit.js` and the analysis reads both exist
@@ -475,13 +505,33 @@ def _tag_block(session: Session, unit: Equipment, tag: str, start: datetime,
     rather than re-implemented, and the only arithmetic below is filling in the
     buckets it had nothing to report.
     """
-    span = max((end - start).total_seconds(), 1.0)
+    # What window will the analysis read actually realise? It clamps its start
+    # to when this tag was first recorded, and a bucket count worked out
+    # against the window we ASKED for lands a grid of the wrong WIDTH on the
+    # window we get: on a plant twenty minutes old, a 12-minute request
+    # realised as 3 minutes put 72 buckets across 172 seconds and every other
+    # one of them read as a bucket nothing arrived in. Measured on the bottling
+    # replay, 2026-10-05 - the first thing looking at real data found.
+    #
+    # So the span is read off a deliberately coarse first pass, and the grid is
+    # chosen against the window the second pass will draw.
+    probe = analysis.tag_trend(session, unit.code, tag=tag,
+                              window=(start, end), buckets=2)
+    drawn = probe.get("window") or {}
+    span = (max((drawn["end"] - drawn["start"]).total_seconds(), 1.0)
+            if drawn.get("start") and drawn.get("end")
+            else max((end - start).total_seconds(), 1.0))
     buckets = _buckets_for(span, cadence)
     envelope = analysis.tag_trend(session, unit.code, tag=tag,
                                   window=(start, end), buckets=buckets)
     points, empty, width = _bucketed(envelope, buckets)
     samples = sum(p.get("n", 0) for p in points)
     spoke = buckets - empty
+    # Before the window DRAWN, for the same reason the grid is laid against it:
+    # a sample inside the window asked for but outside the one realised is
+    # exactly the sample a reader looking at an empty chart needs.
+    last = _last_before(session, unit, tag, drawn.get("start") or start)
+    silent = samples == 0
     return {
         **envelope,
         "points": points,
@@ -496,6 +546,9 @@ def _tag_block(session: Session, unit: Equipment, tag: str, start: datetime,
         "samples": samples,
         "buckets": buckets,
         "buckets_with_no_reading": empty,
+        # What this tag last said before the window, so a tag that is simply
+        # not changing is not read as a tag nobody watched.
+        "last_before_window": last,
         # The cadence the bucket was chosen against, and where the number came
         # from - carried so a reader can tell "this tag went quiet" from "this
         # plant has no configured cadence and the bucket is a default".
@@ -505,15 +558,39 @@ def _tag_block(session: Session, unit: Equipment, tag: str, start: datetime,
         # drawn - and never the machine's watched share: a tag can go quiet on
         # a machine nobody lost sight of, which is the whole point of drawing
         # this beside the state timeline rather than instead of it.
-        "coverage": round(spoke / buckets, 4),
+        #
+        # `null`, not zero, for a tag that said nothing whatever. On a
+        # change-driven fabric that is what a value sitting still looks like,
+        # and "nobody watched any of this window" would be a different claim
+        # and the wrong one. Unknown is not zero, here as everywhere.
+        "coverage": None if silent else round(spoke / buckets, 4),
         "coverage_note": (
-            f"{spoke} of {buckets} buckets of {round(width, 1)} s in this window hold "
-            f"a sample ({samples} in all); the rest are drawn as no reading rather "
-            f"than as a line through them"
-            + ("" if cadence else
-               " — this plant publishes on no configured cadence, so the bucket is "
-               "this product's default rather than a multiple of the rate analogs "
-               "are stored at")),
+            (
+                # Two things look identical here and the reader is owed both,
+                # because this answer cannot tell them apart: a value that has
+                # not changed publishes nothing on a fabric that notifies on
+                # change, and a window the MES had not started watching holds
+                # nothing either. The window line the chart already prints says
+                # which, and the last value before the window is the fact that
+                # makes the empty box mean something.
+                "this tag reported nothing in the window drawn. A value that has "
+                "not changed publishes nothing on a fabric that notifies on "
+                "change, and a window this MES had not started watching holds "
+                "nothing either — the window line says which"
+                + (f"; it last reported {last['value']} at "
+                   f"{last['ts'].isoformat()}, "
+                   f"{round(last['seconds_before_window'] / 60, 1)} min before this "
+                   f"window" if last else
+                   ", and this MES holds no earlier sample of it either")
+            ) if silent else (
+                f"{spoke} of {buckets} buckets of {round(width, 1)} s in this window "
+                f"hold a sample ({samples} in all); the rest are drawn as no reading "
+                f"rather than as a line through them"
+                + ("" if cadence else
+                   " — this plant publishes on no configured cadence, so the bucket "
+                   "is this product's default rather than a multiple of the rate "
+                   "analogs are stored at")
+            )),
     }
 
 
