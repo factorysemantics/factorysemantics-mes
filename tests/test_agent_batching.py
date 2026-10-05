@@ -192,6 +192,49 @@ def test_process_values_are_sampled_slower_than_decisions():
     assert agent.MIN_HISTORY_MS >= 1000
 
 
+class _Publishing:
+    """Just the one setting the history interval is a multiple of."""
+
+    def __init__(self, publish_ms: int) -> None:
+        self.opc_publish_ms = publish_ms
+
+
+def test_the_stored_sample_rate_is_the_interval_the_settings_name(monkeypatch):
+    """A process value is stored once per history interval, and that interval
+    *is* `opc_publish_ms` x `opc_history_ratio`, floored at `opc_min_history_ms`.
+
+    Pinned as an identity rather than as a count of rows, because a count is a
+    measurement of this machine on this afternoon and the promise the
+    Configuration page makes is about the number. Measured on a replayed KepSim
+    line on 2026-10-05: 500 ms x 10 gave a stored sample every 5.00 s, 12.00 a
+    minute, on all six stations - which is this function, and nothing else.
+    """
+    controls: dict[str, int] = {}
+    monkeypatch.setattr(agent, "_controls", lambda name, fallback: controls.get(name, fallback))
+
+    # The shipped defaults: ten publish intervals.
+    assert agent.history_interval_ms(_Publishing(500)) == 500 * agent.HISTORY_RATIO
+
+    # A plant that changes the ratio on the Configuration page changes the rate
+    # its history is stored at, with no new release and no new setting.
+    controls["opc_history_ratio"] = 4
+    assert agent.history_interval_ms(_Publishing(500)) == 2000
+    controls["opc_history_ratio"] = 40
+    assert agent.history_interval_ms(_Publishing(500)) == 20_000
+
+
+def test_the_floor_wins_when_the_decisions_are_made_to_arrive_faster(monkeypatch):
+    """Dropping `opc_publish_ms` to catch breakdowns sooner must not quietly
+    multiply what every machine stores. A plant publishing every 50 ms would
+    otherwise store twenty analog samples a second per tag."""
+    controls: dict[str, int] = {}
+    monkeypatch.setattr(agent, "_controls", lambda name, fallback: controls.get(name, fallback))
+
+    assert agent.history_interval_ms(_Publishing(50)) == agent.MIN_HISTORY_MS
+    controls["opc_min_history_ms"] = 2500
+    assert agent.history_interval_ms(_Publishing(50)) == 2500
+
+
 def test_the_agent_says_how_far_behind_it_is(monkeypatch):
     """The scored run reads this to say whether a miss is the MES's or the
     harness's own. A window with no batches says nothing at all."""

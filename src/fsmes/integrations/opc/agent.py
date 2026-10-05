@@ -954,6 +954,25 @@ def health_seconds(settings: Settings) -> float:
     return max(MIN_HEALTH_SECONDS, settings.opc_publish_ms * periods / 1000.0)
 
 
+def history_interval_ms(settings: Settings) -> int:
+    """How often a process value is sampled, and therefore stored, in force now.
+
+    One place, because it is the rate a person reads off the Configuration page
+    and the rate a trend chart is drawn at, and those two have to be the same
+    number. `[controls] opc_history_ratio` is a multiple of the publish
+    interval; `opc_min_history_ms` is the floor under it, so a plant that
+    publishes every 50 ms does not store twenty analog samples a second per tag
+    because somebody made the decisions arrive faster.
+
+    Named and returned rather than computed inline so a test can pin the
+    identity - the stored sample rate *is* this number - instead of counting
+    rows and hoping.
+    """
+    ratio = int(_controls("opc_history_ratio", HISTORY_RATIO))
+    least_ms = int(_controls("opc_min_history_ms", MIN_HISTORY_MS))
+    return max(int(settings.opc_publish_ms) * ratio, least_ms)
+
+
 async def _health_watchdog(client: Client, link: _Link, every: float) -> None:
     """Ask the server whether the session is still there, and stop the
     connection when it is not.
@@ -1016,10 +1035,8 @@ async def run(settings: Settings) -> None:
                     # OPC server holds for the life of a subscription, so
                     # "immediately" for this pair means "when the agent next
                     # subscribes". The Configuration page's own wording says so.
-                    ratio = int(_controls("opc_history_ratio", HISTORY_RATIO))
-                    least_ms = int(_controls("opc_min_history_ms", MIN_HISTORY_MS))
                     history = await client.create_subscription(
-                        max(settings.opc_publish_ms * ratio, least_ms), handler
+                        history_interval_ms(settings), handler
                     )
                     await history.subscribe_data_change(slow, queuesize=QUEUE_SIZE)
                 if groups:

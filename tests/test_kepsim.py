@@ -232,23 +232,37 @@ def test_seeding_the_line_is_idempotent_and_coexists_with_the_demo_plant(db):
 
 # -------------------------------------------------------------------- end-to-end
 
+# The two process values the end-to-end test asserts by name, and therefore the
+# two it has to wait for. Declared here so the wait and the assertion cannot
+# drift apart - which is how the wait came to be satisfied by production alone.
+ANALOGS_ASSERTED = frozenset({"RD01.MotorTemp", "WASH01.WashTemp"})
+# How many samples of each make it history rather than one dot. Two is the
+# smallest claim a single subscription's opening value cannot satisfy on its
+# own - which is the shape this test could not tell from a working agent.
+ANALOG_SAMPLES = 2
+
 
 @pytest.mark.slow
-@pytest.mark.xfail(reason=(
-    "Red, and not made green here. Found on 2026-09-25 when the slow tier was "
-    "brought into CI: three runs out of three on a developer machine fail the "
-    "same assertion, `RD01.MotorTemp in tags` - the replayed line's production "
-    "and equipment states arrive, its analog tag history does not. The drive "
-    "loop returns as soon as production is booked from three stations, and "
-    "analogs are on a separate subscription sampled ten times slower (>= 1 s, "
-    "`HISTORY_RATIO` in the OPC agent), so this may be a test that stops "
-    "waiting too early or a real gap in what the agent records. Which of the "
-    "two it is has not been established, and guessing here would be inventing "
-    "the answer. Not strict: whether it also fails on a slower runner is "
-    "unknown, and a check that went red the day it started passing would be "
-    "worse than one that reports XPASS. Its own handoff, not this one's."))
 def test_replayed_line_becomes_mes_production(generated, tmp_path, monkeypatch):
-    """Replay server -> OPC agent -> MES, with nothing stubbed in between."""
+    """Replay server -> OPC agent -> MES, with nothing stubbed in between.
+
+    This test carried an `xfail` from 2026-09-25 to 2026-10-05, on the open
+    question of whether `RD01.MotorTemp in tags` failed because the test gave
+    up early or because the agent dropped analogs. Measured on 2026-10-05: the
+    test gave up early. Its drive loop returned when production had been booked
+    from three stations, which on a 20x replay is **0.75 s** after the agent
+    dials; the first analog row exists at **5.04 s**, because process values
+    are on a second subscription whose interval is `history_interval_ms` -
+    500 ms x 10. Nothing was dropped. Over a 65 s window all six stations
+    stored 12.00 samples a minute, one every 5.00 s; the live bottling plant
+    stored 17,280 `FILL01.FillWeight` samples in the 24 h to 11:55 UTC, 720 an
+    hour, the same rate.
+
+    So the loop now waits for the history it is about to assert - two samples
+    of each named process value, not one, because one is what an agent that
+    published its opening value and then went quiet would also leave behind.
+    It waits for those rows rather than for a fixed sleep, which is what keeps
+    it honest on a runner slower than the one it was written on."""
     monkeypatch.setenv("MES_DATABASE_URL", f"sqlite:///{(tmp_path / 'e2e.db').as_posix()}")
     monkeypatch.setenv("MES_TAG_MAP_FILE", str(KEPSIM_MAP))
     monkeypatch.setenv("MES_OPC_ENDPOINT", "opc.tcp://127.0.0.1:48411/mes-twin/replay-test")
@@ -272,23 +286,50 @@ def test_replayed_line_becomes_mes_production(generated, tmp_path, monkeypatch):
         workorders.create(session, code="WO-KEPSIM-1", material_code="FG-BOTTLE", quantity=1_000_000)
         workorders.release(session, "WO-KEPSIM-1")
 
+    # Both of the things this test asserts, and how long each honestly needs.
+    # Production is on the fast subscription and arrives inside a second; a
+    # process value cannot exist before its own subscription has published,
+    # and two of them cannot exist before it has published twice - so the
+    # budget is a multiple of that interval rather than a number somebody
+    # liked. Eight intervals is six more than it takes.
+    history_s = agent.history_interval_ms(settings) / 1000.0
+    budget_s = max(30.0, 8 * history_s)
+
     async def drive() -> None:
         # 20 rows/second, so a few seconds of test covers a few minutes of line.
         server = asyncio.create_task(csv_replay.run(settings, directory=generated, speed=20.0))
         await asyncio.sleep(1.0)  # let the server bind before the agent dials
         client = asyncio.create_task(agent.run(settings))
+        missing = "nothing"
         try:
-            deadline = asyncio.get_running_loop().time() + 30
+            deadline = asyncio.get_running_loop().time() + budget_s
             while asyncio.get_running_loop().time() < deadline:
-                await asyncio.sleep(1.0)
+                await asyncio.sleep(0.5)
                 with session_scope() as session:
                     booked = session.scalar(select(func.count()).select_from(ProductionLog))
                     stations = session.scalar(
                         select(func.count(func.distinct(ProductionLog.equipment_id))).select_from(ProductionLog)
                     )
-                if booked and stations >= 3:
+                    # Wait on the rows the assertions below read, not on a
+                    # proxy for them: production booked is not evidence that
+                    # the slower analog subscription has published at all,
+                    # and one sample is not evidence that it published twice.
+                    analogs = dict(session.execute(
+                        select(TagValue.tag, func.count())
+                        .where(TagValue.tag.in_(ANALOGS_ASSERTED))
+                        .group_by(TagValue.tag)
+                    ).all())
+                produced = bool(booked) and stations >= 3
+                thin = sorted(t for t in ANALOGS_ASSERTED if analogs.get(t, 0) < ANALOG_SAMPLES)
+                if produced and not thin:
                     return
-            pytest.fail("the agent never booked production from the replayed line")
+                missing = ("production from three stations" if not produced
+                           else f"{ANALOG_SAMPLES} samples of " + ", ".join(
+                               f"{t} (have {analogs.get(t, 0)})" for t in thin))
+            pytest.fail(
+                f"after {budget_s:g}s of replay the MES is still missing {missing} "
+                f"(process values are sampled every {history_s:g}s)"
+            )
         finally:
             for task in (client, server):
                 task.cancel()
@@ -310,9 +351,17 @@ def test_replayed_line_becomes_mes_production(generated, tmp_path, monkeypatch):
 
         # Tag history kept the machine's own analog names, not a normalised one.
         tags = {tag for (tag,) in session.execute(select(TagValue.tag).distinct())}
-        assert "RD01.MotorTemp" in tags
-        assert "WASH01.WashTemp" in tags
+        assert tags >= ANALOGS_ASSERTED, f"missing {sorted(ANALOGS_ASSERTED - tags)}"
         assert not any(t.endswith(".Temperature") for t in tags), "analog tag names were flattened"
+
+        # And it is history, not one dot: a process value that arrived once
+        # and never again is the shape this test could not tell from a working
+        # agent for eleven days. Two samples is the smallest claim that cannot
+        # be satisfied by a single subscription's opening value.
+        for tag in sorted(ANALOGS_ASSERTED):
+            stored = session.scalar(
+                select(func.count()).select_from(TagValue).where(TagValue.tag == tag))
+            assert stored >= ANALOG_SAMPLES, f"{tag} arrived {stored} time(s): a value, not a trend"
 
     for cached in (config.get_settings, db_module.get_engine, db_module.get_sessionmaker):
         cached.cache_clear()

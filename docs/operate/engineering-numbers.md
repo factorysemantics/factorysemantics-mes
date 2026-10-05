@@ -84,7 +84,7 @@ gantt_screenful = 40
 | `[controls] uns_max_attempts` / `uns_base_backoff_s` / `uns_max_backoff_s` | `8` / `5` / `3600` | How many attempts a namespace publication gets before it is recorded dead, the first wait, and the ceiling the doubling stops at |
 | `[controls] trigger_reload_seconds` | `30.0` | How often a running agent re-reads its approved triggers — which is how fast an approval on screen reaches the machines |
 | `[controls] trigger_default_cooldown_seconds` | `300.0` | The cooldown a newly drafted trigger inherits. Each trigger's own value is the engineer's |
-| `[controls] opc_history_ratio` / `opc_min_history_ms` | `10` / `1000` | How much slower the rest of a machine's tags are sampled than the ones the MES reasons about, and the floor under that interval |
+| `[controls] opc_history_ratio` / `opc_min_history_ms` | `10` / `1000` | How much slower the rest of a machine's tags are sampled than the ones the MES reasons about, and the floor under that interval. These two **are** the rate a process value is stored at: `opc_publish_ms` x the ratio, never below the floor. On the shipped defaults that is one sample every 5 s — 12 a minute, 17,280 a day, per tag, measured on a replayed line and on a lab plant on 2026-10-05 |
 | `[controls] opc_order_sync_seconds` / `opc_adjustment_poll_seconds` | `2.0` / `5.0` | How often the agent checks whether a machine's order code changed, and how often it looks for approved setpoint adjustments to write |
 
 ```toml
