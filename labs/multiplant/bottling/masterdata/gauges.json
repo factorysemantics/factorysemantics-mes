@@ -1,0 +1,22 @@
+[
+  {
+    "code": "SCALE-01",
+    "name": "Checkweigher scale 1, filler",
+    "kind": "scale",
+    "location": "FILL01",
+    "resolution": 0.1,
+    "interval_days": 90,
+    "warn_days": 14,
+    "calibrated_days_ago": 7
+  },
+  {
+    "code": "SCALE-02",
+    "name": "Checkweigher scale 2, filler",
+    "kind": "scale",
+    "location": "FILL01",
+    "resolution": 0.1,
+    "interval_days": 90,
+    "warn_days": 14,
+    "calibrated_days_ago": 84
+  }
+]

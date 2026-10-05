@@ -92,7 +92,7 @@ Never this process's own default. Until 2026-09-14 that is exactly what a pack n
 
 **Pack before database.** A schema migration may need a value the pack now carries, so the pack is applied first — and `fsmes pack apply` runs the migrations itself, in that order.
 
-Master data is seeded from `masterdata/`, one file per kind: `equipment.json`, `materials.json`, `bom.json`, `routings.json`, `quality_specs.json`, `lots.json`, `work_orders.json`, `maintenance_plans.json`, `shifts.json`, `downtime_reasons.json`, `nc_severities.json`. An entry whose code already exists is counted as present and **left alone, never updated** — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which `fsmes fleet list` and the console now show as *answered, but empty*.
+Master data is seeded from `masterdata/`, one file per kind: `equipment.json`, `materials.json`, `bom.json`, `routings.json`, `quality_specs.json`, `gauges.json`, `lots.json`, `work_orders.json`, `maintenance_plans.json`, `shifts.json`, `downtime_reasons.json`, `nc_severities.json`. An entry whose code already exists is counted as present and **left alone, never updated** — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which `fsmes fleet list` and the console now show as *answered, but empty*.
 
 ### The words an operator picks from
 
@@ -124,6 +124,24 @@ A code is two to forty characters, lowercase, starting with a letter — it is g
 A severity code is two to **twenty** characters — it is stored on every non-conformance, in a column twenty characters wide, and a list that could approve a word too long to store would refuse at the one moment it mattered.
 
 **A pack that seeds this list must seed `minor` and `major`.** The product opens non-conformances itself — a recorded check outside its specification, and the SPC rules — and it writes those two words. A plant whose list lacked one would find out at the moment a machine raised a hold, so `fsmes pack check` refuses it offline instead. The **names** and the sentences beside them are the plant's; only the codes are fixed, and only those two.
+
+### The instruments that take the measurements
+
+`gauges.json` is the plant's gauge register: a `code` and a `name`, plus the optional `kind`, `location`, `resolution`, `interval_days`, `warn_days` and `calibrated_days_ago`.
+
+```json
+[
+  {"code": "SCALE-01", "name": "Checkweigher scale 1, filler", "kind": "scale",
+   "location": "FILL01", "resolution": 0.1, "interval_days": 90, "warn_days": 14,
+   "calibrated_days_ago": 7}
+]
+```
+
+**`resolution` is what the gauge can read to, and it is the field worth arguing about.** A gauge that resolves a third of the tolerance it is asked to judge cannot judge it, and `GET /quality/gauges/{code}/resolution` answers that question against any tolerance you give it. A fill weight held to twelve grams, measured on a scale reading to a tenth of a gram, can be defended.
+
+**`calibrated_days_ago` is relative, for the same reason `due_in_hours` is**: a pack is seeded whenever somebody builds the plant, and an absolute date in one ages until every gauge in the register reads overdue. Left out, the gauge has never been calibrated — which the register reports as *overdue*, because a gauge nobody has calibrated is not fine until proven otherwise.
+
+**No calibration event is invented behind the date.** The register records what the plant says it knows; nobody here performed a calibration, and a last-done date with the certificate wherever the paperwork actually is, is exactly what a gauge register migrated into a new MES looks like.
 
 ### The order book
 

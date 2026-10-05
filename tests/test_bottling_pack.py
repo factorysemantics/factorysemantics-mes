@@ -34,6 +34,7 @@ from fsmes.domain import (
     BomItem,
     Equipment,
     EquipmentLevel,
+    Gauge,
     MaintenancePlan,
     Material,
     MaterialLot,
@@ -245,3 +246,39 @@ def test_the_pack_declares_every_kind_this_plant_has(kind):
 
 def test_the_pack_checks_out_offline():
     assert masterdata.problems(DATA) == []
+
+
+def test_the_pack_puts_two_scales_on_the_filler_and_either_can_judge_the_fill_weight():
+    """Two gauges per measured characteristic, because a plant with one has no
+    way to ask whether the instrument or the process moved.
+
+    The resolution matters as much as the existence: a gauge that resolves a
+    third of the tolerance cannot judge it, and a fill weight held to twelve
+    grams measured on a scale reading to a tenth of a gram can be argued with.
+    """
+    session, _ = by_the_pack()
+    scales = sorted(session.scalars(select(Gauge).where(Gauge.kind == "scale")),
+                    key=lambda g: g.code)
+    assert [g.code for g in scales] == ["SCALE-01", "SCALE-02"]
+    spec = session.scalar(select(QualitySpec).where(QualitySpec.characteristic == "fill_weight"))
+    tolerance = spec.max_value - spec.min_value
+    for gauge in scales:
+        assert gauge.location == "FILL01"
+        assert gauge.resolution is not None and gauge.resolution > 0
+        assert tolerance / gauge.resolution >= 10, (
+            f"{gauge.code} resolves {gauge.resolution} against a tolerance of {tolerance}")
+        assert gauge.last_calibrated is not None, (
+            f"{gauge.code} has never been calibrated, so every reading it takes is suspect")
+
+
+def test_one_of_the_fillers_scales_is_nearly_due_for_calibration():
+    """The pack is a plant, not a showroom. One scale was done last week and
+    one is inside its warning window, which is what makes the calibration
+    screen worth opening and is the state the drifting gauge story needs."""
+    session, _ = by_the_pack()
+    from fsmes.services import gauges as gauge_service
+
+    register = {row["code"]: row for row in gauge_service.register_list(session)["gauges"]}
+    assert register["SCALE-01"]["due_soon"] is False
+    assert register["SCALE-02"]["due_soon"] is True, register["SCALE-02"]
+    assert register["SCALE-02"]["overdue"] is False, "a gauge on the floor is in calibration"
