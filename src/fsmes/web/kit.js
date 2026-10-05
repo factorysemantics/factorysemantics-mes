@@ -351,6 +351,49 @@
      payload of the analysis it belongs to without a mapping layer. */
   const keyOf = (row, wanted) => wanted.find((k) => row && k in row);
 
+  /* ---------- a moment the reader came here about ----------
+     `options.markers: [{t, label}]` puts a rule on a time axis at an instant
+     the reader is asking about — the reading a dossier panel is open on, say.
+
+     It is not a measurement and it is not a filter: nothing leaves the
+     picture, no total changes, and the marker's own time goes in the footer so
+     the sentence and the rule cannot come to disagree. It is drawn only on a
+     TIMED axis, because a marker on an axis of bucket positions would be
+     pointing at an index rather than at a moment. A marker outside the stretch
+     drawn — the reader brushed elsewhere — is not drawn and the footer says
+     so, rather than being clamped to the edge, which would put the instant
+     somewhere it was not. */
+  const markersIn = (options, timed) =>
+    (timed ? (options.markers || []) : []).filter((m) => m && m.t);
+
+  function markerNote(markers, start, end) {
+    if (!markers.length) return null;
+    return markers.map((m) => {
+      const at = utc(m.t).getTime();
+      const label = m.label || "marked";
+      return `${label} at ${clockAt(at)}`
+             + (at >= start && at <= end ? "" : " — outside the stretch drawn");
+    }).join(" · ");
+  }
+
+  /* Drawn last by its caller, so it sits over the marks rather than under. */
+  function paintMarkers(g, markers, box) {
+    for (const marker of markers) {
+      const at = utc(marker.t).getTime();
+      if (at < box.start || at > box.end) continue;
+      const x = box.left + ((at - box.start) / Math.max(box.end - box.start, 1)) * box.plot;
+      const rule = add(g, "line", {
+        x1: x, y1: box.top, x2: x, y2: box.top + box.height,
+        class: "chart-marker", "data-marker": raw(marker.t),
+      });
+      add(rule, "title", {}, `${marker.label || "marked"} — ${FS.fmt.clock(marker.t)}`);
+      if (marker.label) {
+        add(g, "text", { x: x + 4, y: box.top + 9, class: "chart-marker-label" },
+            marker.label);
+      }
+    }
+  }
+
   /* The hatch every unknown mark is painted with. One pattern per chart:
      two charts on a page sharing an id is two charts fighting over it. */
   function hatch(node, id) {
@@ -973,6 +1016,7 @@
     }
     const scale = yScale(all, options);
     const label = axisLabel(envelope, options);
+    const markers = markersIn(options, timed);
     /* One x per point, worked out once: a lookup by object identity was
        O(n squared) and wrong the moment two buckets were equal. */
     const xsOf = (points) => points.map((p, index) => (timed
@@ -1027,7 +1071,8 @@
               `${things(drawn, "series")} of ${count(series.length)}`,
               withheld.length ? `${count(withheld.length)} withheld below the coverage floor` : null,
              ].filter(Boolean).join(" · "),
-      axes: [scale.note, label.text ? `y: ${label.text}` : null].filter(Boolean),
+      axes: [scale.note, label.text ? `y: ${label.text}` : null,
+             markerNote(markers, start, end)].filter(Boolean),
       /* Rule 4: the axis the reader is looking at is a choice they made, so
          the chart says which stretch of the clock it is showing. */
       filters: brush
@@ -1125,6 +1170,8 @@
           });
           flush();
         }
+        /* Last, over the series: the moment the reader came here about. */
+        paintMarkers(g, markers, { left, plot, top, height: plotH, start, end });
       },
     };
   }
@@ -1311,6 +1358,7 @@
        not a picture of the line, and nothing in the picture says so. */
     const carried = (envelope.machines || envelope.rows || rows).length;
     const of = has(envelope.machines_total) ? envelope.machines_total : carried;
+    const markers = markersIn(options, true);
 
     return {
       height,
@@ -1329,7 +1377,7 @@
               withheld.length
                 ? `${count(withheld.length)} withheld below the coverage floor` : null,
              ].filter(Boolean).join(" · "),
-      axes: [],
+      axes: [markerNote(markers, start, end)].filter(Boolean),
       filters: brush
         ? [`brushed to ${clockAt(start)}–${clockAt(end)} of `
            + `${clockAt(whole.start)}–${clockAt(whole.end)}`].concat(
@@ -1381,6 +1429,9 @@
                 + `${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`);
           }
         });
+        /* Last, over the rows: the moment the reader came here about. */
+        paintMarkers(g, markers, { left, plot, top,
+                                   height: rows.length * (rowH + gap), start, end });
       },
     };
   }

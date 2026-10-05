@@ -159,6 +159,37 @@ def _window(db: Session, units: list[Equipment], hours: float,
     return start, end
 
 
+def _around(db: Session, units: list[Equipment], start: datetime,
+            end: datetime) -> tuple[datetime, datetime]:
+    """A window somebody named by its two ends, clamped the way `_window` clamps.
+
+    THE THIRD KIND OF WINDOW. `hours=` is a trailing span and `shift=` is a
+    wall-clock window on the plant's own clock; both of them end now, because
+    both answer *how is it going*. A window named by its ends answers a
+    different question - *why is this reading where it is* - and it sits
+    wherever the reading sat, which is almost always in the past
+    (`fsmes.services.spc_point`).
+
+    Clamped to when the MES started watching the machine, for the same reason
+    the other two are: a window reaching back past the first record would
+    report the silence before commissioning as time the machine stood still.
+    The far end is left alone - a window that runs past now is the caller's to
+    ask for, and `_window_json` says how much of it was realised.
+    """
+    seen = equipment_service.first_seen(db, [u.id for u in units])
+    first_seen = min(seen.values()) if seen else None
+    if first_seen is None:
+        return end, end
+    start = max(start, first_seen)
+    return (start, end) if end > start else (end, end)
+
+
+def _span_hours(start: datetime, end: datetime) -> float:
+    """A window's width in hours - what `_window_json` calls `requested_hours`
+    when the caller named both ends rather than a span."""
+    return max(0.0, (end - start).total_seconds() / 3600)
+
+
 def _asked_window(hours: float, shift: calendar_service.Shift | None) -> tuple[datetime, datetime]:
     """The window that was *asked for*, before any clamping to what the MES
     happens to hold.
@@ -458,11 +489,17 @@ def _merge_short(intervals: list[dict], floor_seconds: float) -> list[dict]:
 
 def state_timeline(db: Session, line_code: str | None = None, hours: float | None = None,
                    pixels: int = 1200, equipment: list[str] | None = None,
-                   limit: int | None = None, shift: str | None = None) -> dict:
+                   limit: int | None = None, shift: str | None = None,
+                   window: tuple[datetime, datetime] | None = None) -> dict:
     """Every state interval per machine — the shift drawn as a Gantt.
 
     This is the view that makes a line legible: starvation walking downstream
     from a breakdown is obvious as a picture and nearly invisible as a table.
+
+    `window=(start, end)` draws a stretch of the past instead of a trailing
+    span or a shift — see `_around`. It is what the dossier of a point on a
+    control chart reads, and it reads this rather than a timeline of its own
+    so that two screens cannot come to draw the same minutes differently.
     """
     # None is *this plant's own reporting window*, resolved here rather than
     # in the signature so a caller gets what the plant is running on now.
@@ -492,7 +529,15 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float | Non
         ]
         all_units = units
     units = units[:max(1, limit)]
-    start, end = _window(db, units, hours, the_shift)
+    if window is not None:
+        start, end = _around(db, units, *window)
+        # The width asked for, so the envelope's `clamped` still means "the MES
+        # had not been watching that long" rather than "the caller asked for a
+        # different number of hours".
+        hours = _span_hours(*window)
+        the_shift = None
+    else:
+        start, end = _window(db, units, hours, the_shift)
 
     rows = []
     # The gaps: stretches where the MES could not see the machine at all. They
@@ -736,7 +781,8 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float | No
 
 def tag_trend(
     db: Session, equipment_code: str, tag: str | None = None, hours: float | None = None,
-    buckets: int = 240, shift: str | None = None
+    buckets: int = 240, shift: str | None = None,
+    window: tuple[datetime, datetime] | None = None
 ) -> dict:
     """One machine's process value over the window, averaged into buckets.
 
@@ -748,6 +794,11 @@ def tag_trend(
     Doing it in SQL would mean `julianday` on SQLite and `extract(epoch ...)` on
     PostgreSQL, and this project runs on both — a portability bug here would
     only surface in the deployment that matters.
+
+    `window=(start, end)` trends a stretch of the past instead of a trailing
+    span or a shift — see `_around`. The dossier of a point on a control chart
+    reads this for each of the station's analogs, rather than bucketing a
+    series of its own.
     """
     # None is *this plant's own reporting window*, resolved here rather than
     # in the signature so a caller gets what the plant is running on now.
@@ -755,7 +806,11 @@ def tag_trend(
     unit = masterdata.get_equipment(db, equipment_code)
     the_shift = _shift(db, shift)
     end = utcnow()
-    if the_shift is not None:
+    if window is not None:
+        start, end = _around(db, [unit], *window)
+        hours = _span_hours(*window)
+        the_shift = None
+    elif the_shift is not None:
         start, end = the_shift.starts_at, min(the_shift.ends_at, end)
         start = min(start, end)
     else:

@@ -324,9 +324,14 @@ def test_the_trace_records_the_chart_as_a_summary_and_never_the_envelope(explori
     assert "graph of trace_graph" in summary
     assert "total 13" in summary and "coverage absent" in summary
 
-    written = json.dumps(row, default=str)
+    # The row's own identifiers come out before the substring check, the way
+    # `tu_1` already did. `session` is `uuid4().hex[:12]`, and a random
+    # twelve-character hex string contains "41" about four times in a hundred -
+    # so this assertion failed about one run in twenty-five, for ever, on
+    # nobody's change (found on #142's CI, 2026-10-05).
+    written = json.dumps(row, default=str).replace('"tu_1"', "").replace(row["session"], "")
     assert "how do I label a stop" not in written, "an envelope reached the trace"
-    assert "41" not in written.replace('"tu_1"', ""), "a figure off the payload reached the trace"
+    assert "41" not in written, "a figure off the payload reached the trace"
 
 
 # ---------------------------------------------------------------- the cost

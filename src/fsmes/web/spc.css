@@ -1,0 +1,82 @@
+/* Quality › SPC: the chart, and the dossier of one reading beside it.
+
+   Palette only (style rule 2) - every colour here resolves to a variable in
+   themes.css, so all four themes follow without this file knowing they exist.
+   Nothing declares a property `.panel` already sets (rule 1): the point panel
+   is a `.panel` with a column position and an inner rhythm, and that is all. */
+
+/* The chart and the panel, side by side. The panel's column is here whether or
+   not a reading is open: a layout that appeared on the first click would move
+   the chart out from under the dot the reader had just clicked, and the whole
+   ask was that nothing else moves. */
+.spc-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: var(--s4);
+  align-items: start;
+}
+/* One column under a laptop width. The panel goes below the chart rather than
+   beside it, which is the same reading order a screen reader already gets. */
+@media (max-width: 1200px) {
+  .spc-split { grid-template-columns: 1fr; }
+}
+
+/* The dossier is long - six blocks and up to six small charts - so it scrolls
+   in its own box rather than making the page as tall as the deepest block.
+   The chart beside it stays on screen while the reader goes down it. */
+.point-panel {
+  position: sticky;
+  top: var(--s3);
+  max-height: calc(100vh - 7rem);
+  overflow-y: auto;
+}
+@media (max-width: 1200px) {
+  .point-panel { position: static; max-height: none; }
+}
+
+/* A block inside the dossier: a heading, then its records, then the one line
+   saying how much of its own window was watched. */
+.point-block { border-top: 1px solid var(--line); padding-top: var(--s3); margin-top: var(--s3); }
+.point-block:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+.point-block h3 { margin: 0 0 var(--s2); font-size: 13px; color: var(--muted); font-weight: 600; }
+
+/* The reading itself, at the top, big enough to be the answer to "which point
+   did I click". */
+.point-value { font-family: var(--mono); font-size: 22px; color: var(--text); }
+.point-value .unit { font-size: 13px; color: var(--muted); margin-left: 4px; }
+
+/* Label and value, in two columns. A value nobody recorded is "—" and the
+   label stays, because a row that disappeared would read as a question nobody
+   asked (style rule 8). */
+.point-facts { display: grid; grid-template-columns: auto 1fr; gap: 3px var(--s3); margin: 0; }
+.point-facts dt { color: var(--muted); font-size: 12px; }
+.point-facts dd { margin: 0; font-size: 12px; color: var(--text); }
+.point-facts dd.mono { font-family: var(--mono); }
+
+/* One small chart, with the buttons that take it off the page under it. The
+   same shape the AI tab's charts use, for the same reason: an export is the
+   chart node's own markup and the footer goes with it. */
+.point-chart { margin-top: var(--s3); }
+.point-chart h4 {
+  margin: 0 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.point-chart .chart-host { overflow-x: auto; }
+.point-chart .chart-host svg { display: block; max-width: 100%; }
+.point-chart .chart-tools { display: flex; gap: 6px; margin-top: 4px; }
+
+/* What a block says about its own window. Every block has one, including the
+   three that say they have no such figure to give. */
+.point-watched { margin: var(--s2) 0 0; font-size: 11px; color: var(--muted); }
+
+/* The reading the panel is open on, on the chart. Thicker and ringed rather
+   than recoloured: the dot's colour already says whether a rule fired on it,
+   and overwriting that to show selection would hide the more important fact. */
+.spc-dot, .spc-flag { cursor: pointer; }
+.spc-selected { stroke: var(--accent); stroke-width: 2.5; fill: var(--accent); }
+.spc-dot:focus-visible, .spc-flag:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
