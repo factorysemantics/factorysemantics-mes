@@ -5126,8 +5126,8 @@ one a plant manager most wants broken.</p>
 </tr>
 <tr>
 <td><strong>"measure specific features over time per opc tag"</strong></td>
-<td><strong>Yes for the tags that arrive — and that caveat is red in CI</strong></td>
-<td><code>tag_trend</code> returns mean/min/max per bucket, and asks the plant for fewer, wider buckets rather than sampling, so an excursion is never dropped (<code>mcp/analysis.py</code>). But <code>tests/test_kepsim.py</code> carries a non-strict <code>xfail</code>: on three runs of three, a replayed line's production and equipment states arrived and <strong>its analog tag history did not</strong>. Whether that is a test giving up early or a real gap in what the OPC agent records <em>has not been established</em>. So a per-tag chart states its <code>tag_values</code> coverage, or it draws nothing</td>
+<td><strong>Yes</strong></td>
+<td><code>tag_trend</code> returns mean/min/max per bucket, and asks the plant for fewer, wider buckets rather than sampling, so an excursion is never dropped (<code>mcp/analysis.py</code>). The <code>xfail</code> in <code>tests/test_kepsim.py</code> that qualified this answer was <strong>settled on 2026-10-05: the test stopped waiting too early</strong>, 0.75 s in, and the first analog row exists at 5.04 s because process values are sampled at <code>history_interval_ms</code> (<code>opc_publish_ms</code> x <code>opc_history_ratio</code>, floored at <code>opc_min_history_ms</code> — 5 s as shipped). Nothing was dropped: a replayed line stores 12.00 samples a minute per station, and bottling stored 17,280 <code>FILL01.FillWeight</code> samples in the 24 h to 2026-10-05 11:55 UTC. A per-tag chart still states its <code>tag_values</code> coverage — the resolution is a plant setting, so the reader has to be told which one they are looking at</td>
 </tr>
 </tbody>
 </table>
@@ -5411,8 +5411,8 @@ of this section.</p>
 <tr>
 <td><code>tag_values</code></td>
 <td><code>equipment_id</code>, <code>tag</code>, <code>ts</code>, <code>value_num</code>, <code>value_text</code></td>
-<td>analogs may not arrive at all (the <code>xfail</code>)</td>
-<td>state <code>tag_values</code> coverage on every per-tag figure</td>
+<td>nothing — analogs arrive, at <code>history_interval_ms</code> (settled 2026-10-05); what is missing is the <em>resolution</em> on the figure, not the rows</td>
+<td>state <code>tag_values</code> coverage and the sampling interval on every per-tag figure</td>
 <td>no</td>
 </tr>
 <tr>
