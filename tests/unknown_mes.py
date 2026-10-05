@@ -295,6 +295,13 @@ def build(target: Path, line_json: Path) -> Path:
             for column, value in row.items():
                 if column in SKIP_COLUMNS:
                     continue
+                if value == "" or value is None:
+                    # The generator's `quiet` event: that tag was not
+                    # publishing at that second, so their historian has no
+                    # row for it. A real one is full of these, and a fake
+                    # one that filled the gap in would be teaching the skill
+                    # to expect a tag history with no holes in it.
+                    continue
                 samples.append((tag_ids[(name, column)], stamp, float(value)))
     db.executemany("INSERT INTO tag_sample (tag_id, sample_ts, num_value) VALUES (?,?,?)", samples)
 
@@ -377,7 +384,11 @@ def build(target: Path, line_json: Path) -> Path:
         rows = {int(r["TSec"]): r for r in tables[fill["name"]]}
         for second in range(0, duration, 120):
             row = rows.get(second)
-            if row is None:
+            if row is None or row["FillWeight"] in ("", None):
+                # No reading at that second: the tag was not publishing, and
+                # their MES has no check for it either. A foreign MES with a
+                # measurement for every two minutes of a quiet tag would be a
+                # foreign MES that invented them.
                 continue
             measured = float(row["FillWeight"])
             verdict = "PASS" if 492.0 <= measured <= 508.0 else "FAIL"

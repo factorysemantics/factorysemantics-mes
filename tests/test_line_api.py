@@ -162,6 +162,19 @@ def test_stations_carry_their_live_state_and_order(client, running_order):
 # ------------------------------------------------------- the machine's own analog
 
 
+def named(analog: dict | None) -> dict | None:
+    """One analog reading without the moment it was taken.
+
+    `at` is on every reading and is a timestamp, so these tests compare the
+    two facts they are about - which signal, and what it read - and the one
+    test that is about the moment asserts it on its own.
+    """
+    if analog is None:
+        return None
+    return {"name": analog["name"], "value": analog["value"]}
+
+
+
 def test_the_analog_comes_from_the_tag_map_when_it_knows_the_machine(client, session):
     """MIX01 is in config/tag_map.json, which says its process value is called
     Temperature. That declaration wins over anything else the machine happens to
@@ -170,7 +183,7 @@ def test_the_analog_comes_from_the_tag_map_when_it_knows_the_machine(client, ses
     _tag(session, "MIX01", "SomeOtherReading", 999.0)  # later, but not what the map names
 
     stations = {s["code"]: s for s in client.get("/line/events", params={"line": "LINE1"}).json()["stations"]}
-    assert stations["MIX01"]["analog"] == {"name": "Temperature", "value": 57.5}
+    assert named(stations["MIX01"]["analog"]) == {"name": "Temperature", "value": 57.5}
 
 
 def test_a_machine_that_calls_it_something_else_is_still_read(client, kepsim, session):
@@ -181,7 +194,7 @@ def test_a_machine_that_calls_it_something_else_is_still_read(client, kepsim, se
     _tag(session, "LD01", "State", 1)  # structural — must not be mistaken for the process value
 
     stations = {s["code"]: s for s in client.get("/line/events", params={"line": "SIMLINE"}).json()["stations"]}
-    assert stations["LD01"]["analog"] == {"name": "FeedRate", "value": 109.2}
+    assert named(stations["LD01"]["analog"]) == {"name": "FeedRate", "value": 109.2}
     assert stations["RD01"]["analog"] is None  # published nothing yet, and we do not guess
 
 
@@ -190,13 +203,17 @@ def test_the_dashboard_reads_the_same_process_value(client, kepsim, session):
     so every KepSim station showed a blank reading."""
     _tag(session, "WASH01", "WashTemp", 71.4)
     machines = {m["code"]: m for m in client.get("/dashboard/summary").json()["machines"]}
-    assert machines["WASH01"]["analog"] == {"name": "WashTemp", "value": 71.4}
+    assert named(machines["WASH01"]["analog"]) == {"name": "WashTemp", "value": 71.4}
 
 
 def test_analog_reading_is_the_one_helper_both_screens_use(session, kepsim):
     _tag(session, "FILL01", "FillWeight", 500.6)
     filler = session.scalar(select(Equipment).where(Equipment.code == "FILL01"))
-    assert line_service.analog_reading(session, filler) == {"name": "FillWeight", "value": 500.6}
+    reading = line_service.analog_reading(session, filler)
+    assert named(reading) == {"name": "FillWeight", "value": 500.6}
+    assert reading["at"] is not None, (
+        "a process value with no time on it cannot be judged stale, and a tag that "
+        "has stopped arriving looks exactly like one holding steady")
 
 
 # ------------------------------------------------------------------- provenance

@@ -259,7 +259,7 @@ def test_the_pack_puts_two_scales_on_the_filler_and_either_can_judge_the_fill_we
     session, _ = by_the_pack()
     scales = sorted(session.scalars(select(Gauge).where(Gauge.kind == "scale")),
                     key=lambda g: g.code)
-    assert [g.code for g in scales] == ["SCALE-01", "SCALE-02"]
+    assert [g.code for g in scales] == ["SCALE-FILL-01", "SCALE-FILL-02"]
     spec = session.scalar(select(QualitySpec).where(QualitySpec.characteristic == "fill_weight"))
     tolerance = spec.max_value - spec.min_value
     for gauge in scales:
@@ -279,6 +279,6 @@ def test_one_of_the_fillers_scales_is_nearly_due_for_calibration():
     from fsmes.services import gauges as gauge_service
 
     register = {row["code"]: row for row in gauge_service.register_list(session)["gauges"]}
-    assert register["SCALE-01"]["due_soon"] is False
-    assert register["SCALE-02"]["due_soon"] is True, register["SCALE-02"]
-    assert register["SCALE-02"]["overdue"] is False, "a gauge on the floor is in calibration"
+    assert register["SCALE-FILL-01"]["due_soon"] is False
+    assert register["SCALE-FILL-02"]["due_soon"] is True, register["SCALE-FILL-02"]
+    assert register["SCALE-FILL-02"]["overdue"] is False, "a gauge on the floor is in calibration"

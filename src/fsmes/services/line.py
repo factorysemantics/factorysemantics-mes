@@ -261,7 +261,13 @@ def layout(db: Session, line_code: str | None = None) -> dict:
 
 
 def analog_reading(db: Session, unit: Equipment) -> dict | None:
-    """The machine's latest process value, as {"name": ..., "value": ...}.
+    """The machine's latest process value, as {"name", "value", "at"}.
+
+    `at` is when the reading was observed, and it is not decoration: a
+    process value with no time on it cannot be judged stale, and a tag that
+    has stopped updating looks exactly like a tag holding steady. Whether a
+    reading is too old to use is the reader's judgment - this says when it
+    was taken and nothing more.
 
     Real lines disagree about what a machine's process value is called —
     MotorTemp, WashTemp, FillWeight, FeedRate, AirPressure — which is precisely
@@ -274,7 +280,7 @@ def analog_reading(db: Session, unit: Equipment) -> dict | None:
     else.
     """
     name = tag_map_analogs().get(unit.code)
-    query = select(TagValue.tag, TagValue.value_num).where(
+    query = select(TagValue.tag, TagValue.value_num, TagValue.ts).where(
         TagValue.equipment_id == unit.id, TagValue.value_num.is_not(None)
     )
     if name:
@@ -285,8 +291,8 @@ def analog_reading(db: Session, unit: Equipment) -> dict | None:
     row = db.execute(query.order_by(TagValue.id.desc()).limit(1)).first()
     if row is None:
         return None
-    tag, value = row
-    return {"name": tag.split(".", 1)[-1], "value": value}
+    tag, value, observed = row
+    return {"name": tag.split(".", 1)[-1], "value": value, "at": observed}
 
 
 def events(db: Session, line_code: str | None = None, since: int = -1) -> dict:

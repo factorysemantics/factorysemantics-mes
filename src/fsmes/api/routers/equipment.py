@@ -1,11 +1,13 @@
 """Equipment endpoints: current states, manual state changes, per-machine OEE."""
 
+from datetime import datetime
+
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 from fsmes.api.deps import ActorDep, DbDep, ReadDbDep, require
 from fsmes.domain import EquipmentStateName
-from fsmes.services import Invalid, equipment, reasons
+from fsmes.services import Invalid, equipment, masterdata, reasons
 from fsmes.services import connection as connection_service
 
 router = APIRouter()
@@ -101,6 +103,68 @@ def set_state(code: str, body: StateIn, db: DbDep, actor: ActorDep) -> dict:
             "reason": s.reason, "reason_code": s.reason_code}
 
 
+class StopLabelIn(BaseModel):
+    """One stop this MES watched, named from the plant's own list."""
+
+    reason_code: str
+    # The window the stop sits in. `end` left out means *up to now*, which is
+    # how a floor labels the stop it is standing in front of.
+    start: datetime
+    end: datetime | None = None
+
+
+@router.post("/{code}/stops/label", dependencies=[require("equipment.state")])
+def label_stops(code: str, body: StopLabelIn, db: DbDep, actor: ActorDep) -> dict:
+    """Name a stop that has already happened, from the approved vocabulary.
+
+    `POST /{code}/state` labels a stop at the moment it begins, and the
+    moment a stop begins is the moment nobody knows why yet. A plant whose
+    machine states arrive from an OPC agent never gets that moment at all -
+    the agent writes the state and the reason box is nobody's - so every stop
+    stayed unlabelled for as long as the plant ran. This is where somebody
+    says what it was afterwards.
+
+    **No interval is created.** The intervals are this MES's own
+    observations; if nothing was observed in the window, nothing is labelled
+    and the answer says so. Manufacturing a stop from a claim about one would
+    put seconds into availability that nobody watched.
+
+    Already-labelled intervals are left exactly as they are, and so is
+    anything the machine ran through: a label never overwrites a label and
+    never contradicts an observation. The answer states how many intervals it
+    named and how many are still unnamed in the window, so a caller that
+    expected one stop and labelled nine finds out.
+    """
+    vocabulary = reasons.catalog(db)
+    if body.reason_code not in vocabulary:
+        raise Invalid(
+            f"{body.reason_code!r} is not one of this plant\'s {len(vocabulary)} approved "
+            "downtime reasons. Read GET /equipment/downtime-reasons for the list - it "
+            "carries an explicit code for a reason nobody has determined yet, which is "
+            "an answer, where a blank is not.")
+    named = equipment.name_stops(
+        db, equipment_code=code, start=body.start, end=body.end,
+        reason_code=body.reason_code, reason=reasons.names(db).get(body.reason_code),
+        actor=actor)
+    still = equipment.unlabelled_stops(
+        db, masterdata.get_equipment(db, code), body.start, body.end)
+    return {
+        "equipment": code,
+        "reason_code": body.reason_code,
+        "reason": reasons.names(db).get(body.reason_code),
+        "from": body.start,
+        "to": body.end,
+        "labelled": len(named),
+        "stops": [{"state": s.state, "started_at": s.started_at, "ended_at": s.ended_at}
+                  for s in named],
+        # Unknown is not zero, and neither is "nothing left to do".
+        "still_unlabelled_in_the_window": len(still),
+        "note": (None if named else
+                 "nothing unlabelled was observed in that window, so nothing was "
+                 "named; no interval is ever created here"),
+    }
+
+
 @router.get("/{code}/oee")
 def oee(code: str, db: ReadDbDep, hours: float | None = None) -> dict:
     return equipment.oee(db, equipment_code=code, hours=hours)
@@ -110,7 +174,7 @@ def oee(code: str, db: ReadDbDep, hours: float | None = None) -> dict:
 # Literal paths first: FastAPI matches in registration order, and `/{code}`
 # would otherwise swallow `/tree` and `/alarms`.
 
-from fsmes.services import masterdata, tags  # noqa: E402
+from fsmes.services import tags  # noqa: E402
 
 
 @router.get("/tree")

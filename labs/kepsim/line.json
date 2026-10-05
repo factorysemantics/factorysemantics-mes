@@ -1,6 +1,6 @@
 {
-  "_what": "ACME Beverages, Kansas City \u2014 the six-station bottling line. This is the reference plant: the one CI replays, the one the demo shows, and the one the honesty scores are measured against.",
-  "_why_data": "Until 2026-08-31 this line lived in labs/kepsim/generate_line.py as hardcoded Python. That made it unscoreable \u2014 a scorer needs ground truth it can read, and a scripted event buried in a loop body is not readable. Describing the line as data is what turned 'the MES seems fine' into a number.",
+  "_what": "ACME Beverages, Kansas City — the six-station bottling line. This is the reference plant: the one CI replays, the one the demo shows, and the one the honesty scores are measured against.",
+  "_why_data": "Until 2026-08-31 this line lived in labs/kepsim/generate_line.py as hardcoded Python. That made it unscoreable — a scorer needs ground truth it can read, and a scripted event buried in a loop body is not readable. Describing the line as data is what turned 'the MES seems fine' into a number.",
   "_states": "State column values: 0 stopped, 1 running, 2 starved, 3 blocked, 4 down, 5 changeover. Stations sit behind finite buffers, so a 'down' event genuinely starves everything downstream and blocks everything upstream.",
   "channel": "SimLine",
   "dsn": "LineSimCSV",
@@ -235,7 +235,23 @@
   ],
   "events": [
     {
-      "_why": "a stop too short to ripple through buffers of 20 \u2014 the MES should see downtime on LD and no disturbance anywhere else",
+      "_why": "the nozzle-pressure story, and the one an engineer should be able to find in two clicks: the filler's supply pressure falls away 10% for six minutes, nothing alarms, and every bottle filled in that window is four grams light. The failing fill-weight checks are on the filler and so is the cause, one tag over - which is the easy version of the washer story below, and the one that makes a panel on a control-chart point worth opening",
+      "type": "offset",
+      "station": "Refill",
+      "analog": "NozzlePressure",
+      "offset": -0.26,
+      "start": 120,
+      "end": 480,
+      "effects": [
+        {
+          "station": "Refill",
+          "analog": "FillWeight",
+          "offset": -4.0
+        }
+      ]
+    },
+    {
+      "_why": "a stop too short to ripple through buffers of 20 — the MES should see downtime on LD and no disturbance anywhere else",
       "type": "down",
       "station": "LD",
       "start": 600,
@@ -251,7 +267,7 @@
       "end": 1500
     },
     {
-      "_why": "and then it fails. Buffers of 20 mean the ripple takes a while \u2014 starved walks downstream, blocked walks upstream. Contrast with Northgate's buffers of 6, where it is nearly instant",
+      "_why": "and then it fails. Buffers of 20 mean the ripple takes a while — starved walks downstream, blocked walks upstream. Contrast with Northgate's buffers of 6, where it is nearly instant",
       "type": "down",
       "station": "RD",
       "start": 1500,
@@ -280,13 +296,22 @@
       "end": 2640
     },
     {
+      "_why": "the first bottles after a restart run heavy: the filler comes back with its lines full and over-delivers until the loop settles. Thirty seconds of it, which is three or four checks - enough to be a point or two above the control limit with a changeover ending immediately before, and the reason the changeover has to be labelled rather than left as an unnamed setup interval",
+      "type": "offset",
+      "station": "Refill",
+      "analog": "FillWeight",
+      "offset": 5.0,
+      "start": 2640,
+      "end": 2670
+    },
+    {
       "_why": "the counter snaps to zero mid-run, as a PLC does after a power blip. Never invent production: a reset must re-baseline and book nothing",
       "type": "counter_reset",
       "station": "RD",
       "at": 3000
     },
     {
-      "_why": "death by a thousand cuts on the palletiser \u2014 pure OEE performance loss, and invisible in an availability number",
+      "_why": "death by a thousand cuts on the palletiser — pure OEE performance loss, and invisible in an availability number",
       "type": "micro_stops",
       "station": "Palletiser",
       "every_s": [
@@ -297,6 +322,18 @@
         8,
         18
       ]
+    },
+    {
+      "_why": "the coverage story, as one tag rather than the whole endpoint: FillWeight stops arriving for fifteen minutes while the filler runs on and every other signal on it reports. The MES's last sample keeps the moment it really arrived, so anything reading it can tell a stale value from a steady one - and the simulated floor, which can, records a plausible value with no gauge and no station on it for as long as it lasts. A disconnect event would have taken the whole line, which is a different fault",
+      "type": "quiet",
+      "station": "Refill",
+      "analog": "FillWeight",
+      "start": 2700,
+      "end": 3600
     }
+  ],
+  "_the_stories_planted_here": [
+    "A scorer and a person both have to be able to read what was *meant* to happen, so every event carries its own `_why`. Four of the stories behind a point on the fill-weight control chart are here, because they are things the machines do: the nozzle-pressure dip (02:00-08:00), the washer running three degrees hot (30:00-35:00, the harder one - the cause is a station upstream), the first fills after the changeover (44:00-44:30), and FillWeight going quiet (45:00-60:00).",
+    "The two stories that belong to the people are in the plant pack's own floor.json: the drifting scale, and the night shift's wider spread. Together they are the five causes a shift's worth of this line contains at least one of each of."
   ]
 }

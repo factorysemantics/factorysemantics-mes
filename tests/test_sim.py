@@ -293,7 +293,7 @@ def test_bottling_is_now_describable_as_data():
                           Path("config/tag_map_kepsim.json"))
     kinds = sorted({e.type for e in bottling["events"]})
     assert kinds == ["changeover", "counter_reset", "down", "drift",
-                     "micro_stops", "scrap_burst"]
+                     "micro_stops", "offset", "quiet", "scrap_burst"]
     # The precursor names the analog it moves, because RD has two and the
     # healthy one must not be credited as the warning.
     drift = next(e for e in bottling["events"] if e.type == "drift")

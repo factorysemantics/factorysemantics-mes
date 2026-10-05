@@ -1,6 +1,6 @@
 [
   {
-    "code": "SCALE-01",
+    "code": "SCALE-FILL-01",
     "name": "Checkweigher scale 1, filler",
     "kind": "scale",
     "location": "FILL01",
@@ -10,7 +10,7 @@
     "calibrated_days_ago": 7
   },
   {
-    "code": "SCALE-02",
+    "code": "SCALE-FILL-02",
     "name": "Checkweigher scale 2, filler",
     "kind": "scale",
     "location": "FILL01",

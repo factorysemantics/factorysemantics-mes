@@ -134,6 +134,14 @@ class Settings(BaseSettings):
     # anything.
     line_layout_file: Path = Path("config/line_layout.json")
 
+    # What the simulated floor does that no PLC reports: which gauge takes a
+    # reading, how far the drifting one is out, which stops it labels from
+    # the plant's vocabulary, and how it dispositions a non-conformance.
+    # Optional, and unset on every real plant: a floor with no script records
+    # what the tag said, names no gauge and labels nothing, which is exactly
+    # what it did before scripts existed. See `fsmes.sim.measurement`.
+    floor_script_file: Path | None = None
+
     # Client security. Empty means anonymous and unencrypted, which is all the
     # bundled simulator needs. A real server (KEPServerEX and friends) usually
     # offers only SignAndEncrypt with a named user, e.g.

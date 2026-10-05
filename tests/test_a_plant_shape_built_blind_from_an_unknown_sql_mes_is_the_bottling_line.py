@@ -35,12 +35,16 @@ ROOT = Path(__file__).resolve().parent.parent
 SKILL = ROOT / "skills" / "plant-from-your-mes"
 LINE_JSON = ROOT / "labs" / "kepsim" / "line.json"
 
-#: The three analogs the bottling scenario deliberately pushes around: a drift
+#: The four analogs the bottling scenario deliberately pushes around: a drift
 #: on the rinser's motor temperature, a scrap burst that offsets the washer's
-#: temperature, and the effect that burst has on fill weight downstream. Their
-#: *base* still comes back (a median is robust); their spread is wider than the
-#: line's noise figure, because the line really did wobble more than that.
-SCRIPTED = {("RD", "MotorTemp"), ("Washer", "WashTemp"), ("Refill", "FillWeight")}
+#: temperature, the nozzle pressure held 10% low for six minutes, and fill
+#: weight, which three separate events move. Their *base* still comes back (a
+#: median is robust); their spread is wider than the line's noise figure,
+#: because the line really did wobble more than that - and a skill that
+#: reported the declared noise instead of the measured spread would be
+#: reporting the plant it was told about rather than the one it read.
+SCRIPTED = {("RD", "MotorTemp"), ("Washer", "WashTemp"), ("Refill", "FillWeight"),
+            ("Refill", "NozzlePressure")}
 
 #: The washer's scrap burst takes it to 10% for five minutes, so its measured
 #: scrap share must come back *above* its nameplate rather than near it.
@@ -247,7 +251,11 @@ def test_a_stop_with_no_reason_against_it_is_reported_as_unlabelled_and_not_as_o
 def test_the_quality_loop_and_the_orders_and_the_shifts_come_back(blind_run: dict) -> None:
     shape = blind_run["shape"]
     assert shape["quality"]["found"] is True
-    assert shape["quality"]["checks_total"] == 30
+    # Twenty-three, not thirty: the scenario takes FillWeight off the air for
+    # the last fifteen minutes of the hour, and their MES has no check for a
+    # second nothing was measured in. A foreign MES that filled those in
+    # would be inventing measurements.
+    assert shape["quality"]["checks_total"] == 23
     assert shape["quality"]["nonconformances_total"] >= 1
     assert shape["orders"]["found"] is True
     assert shape["orders"]["orders_seen"] == len(blind_run["line"]["orders"])
