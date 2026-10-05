@@ -112,6 +112,37 @@ def _out(session: Session, gauge: Gauge, today: date | None = None) -> dict:
     }
 
 
+def state(session: Session, code: str, today: date | None = None) -> dict:
+    """One gauge's register entry - due date, overdue, due soon and all.
+
+    The same answer `register_list` gives for that row, from the same function,
+    because the dossier of a point on a control chart has to say whether the
+    instrument could be believed - and a second opinion computed somewhere
+    else is how one screen comes to call a gauge due soon while another calls
+    it fine.
+    """
+    return _out(session, get(session, code), today)
+
+
+def last_calibration(session: Session, code: str) -> dict | None:
+    """The most recent calibration recorded against this gauge, or None.
+
+    `last_calibrated` on the gauge is a date; this is the event - who did it,
+    what it found, and the certificate. A reading taken after a
+    `fail_as_found` is a number rather than a measurement, and a panel showing
+    that reading has to be able to say so.
+    """
+    row = session.scalars(
+        select(Calibration).where(Calibration.gauge_id == get(session, code).id)
+        .order_by(Calibration.performed_on.desc(), Calibration.id.desc())
+        .limit(1)).first()
+    if row is None:
+        return None
+    return {"performed_on": row.performed_on, "result": row.result.value,
+            "performed_by": row.performed_by, "certificate": row.certificate,
+            "notes": row.notes}
+
+
 def register(session: Session, *, code: str, name: str, kind: str = "general",
              interval_days: int | None = None, resolution: float | None = None,
              location: str | None = None, warn_days: int | None = None,

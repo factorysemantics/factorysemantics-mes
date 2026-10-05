@@ -216,7 +216,13 @@ def chart(session: Session, material: str, characteristic: str,
         "lower_spec": spec.min_value,
         "upper_spec": spec.max_value,
         "n": len(values),
-        "points": [{"value": v, "ts": t} for v, t in zip(values, stamps, strict=False)],
+        # Each point names the reading it is, so a reader who wants to know why
+        # a point is where it is can ask about THAT reading rather than about
+        # the nth dot on a chart that moves every time a check is recorded.
+        # `/quality/spc/{material}/{characteristic}/point/{check}` is the
+        # answer; `services.spc_point` assembles it.
+        "points": [{"value": v, "ts": t, "check": i}
+                   for v, t, i in zip(values, stamps, [c.id for c in checks], strict=False)],
         # Which of the four rules raise a hold on this plant, and all four
         # rule numbers beside them. Stated on every chart, whatever the plant
         # chose, so a rule that fires and opens nothing is explained rather

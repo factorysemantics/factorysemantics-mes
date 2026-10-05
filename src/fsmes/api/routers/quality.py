@@ -409,6 +409,46 @@ def spc(material: str, characteristic: str, db: DbDep,
     return spc_service.chart(db, material, characteristic, limit)
 
 
+@router.get("/spc/{material}/{characteristic}/point/{check_id}")
+def spc_point(
+    material: str, characteristic: str, check_id: int, db: DbDep,
+    before_minutes: float = Query(
+        None, gt=0, le=1440,
+        description="How many minutes of the station's process values to read "
+                    "before the reading. Ten when it is left out."),
+    after_minutes: float = Query(
+        None, ge=0, le=1440,
+        description="How many minutes after it. Two when it is left out."),
+    neighbour_hours: float = Query(
+        None, gt=0, le=24,
+        description="How far either side to look for the same characteristic "
+                    "measured by another gauge. One hour when it is left out."),
+) -> dict:
+    """Why is this reading where it is — the records behind one point.
+
+    The gauge that took it and its calibration state; the same characteristic
+    by every other gauge in the hour either side; the station's analogs over
+    the window with the reading marked; what the machine was doing and what it
+    had just come out of; and the stops, maintenance orders and findings in
+    that window. Every block says how much of its window was watched, and the
+    three that are lists of records say that they have no such figure.
+
+    No model, and nothing recomputed: the control limits are the chart's, the
+    trends are `/analysis/tag`'s, the timeline is `/analysis/timeline`'s and
+    the gauge's due date is the register's.
+    """
+    from fsmes.services import spc_point as dossier
+
+    asked = {
+        name: value for name, value in (
+            ("before_minutes", before_minutes),
+            ("after_minutes", after_minutes),
+            ("neighbour_hours", neighbour_hours),
+        ) if value is not None
+    }
+    return dossier.dossier(db, material, characteristic, check_id, **asked)
+
+
 @router.get("/gauges")
 def gauges(
     db: DbDep,

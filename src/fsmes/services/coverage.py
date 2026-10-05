@@ -397,6 +397,45 @@ def sample_interval() -> tuple[float | None, str | None]:
     )
 
 
+def analog_sample_interval() -> tuple[float | None, str | None]:
+    """How often a process value is *stored* on this plant, and where from.
+
+    Not the same number as `sample_interval` above, and the difference matters.
+    That one is the publish interval - how fast the decisions arrive. Analog
+    history is stored more slowly on purpose: the publish interval times
+    `[controls] opc_history_ratio`, with `opc_min_history_ms` as the floor, so
+    a plant that publishes every 50 ms does not store twenty samples a second
+    per tag because somebody made the decisions arrive faster.
+
+    That identity is `integrations.opc.agent.history_interval_ms`, which is
+    where the agent applies it when it subscribes. It is named again here
+    because a service may not import the agent - the ladder in
+    `test_core_purity`, and the agent is a different process besides - and
+    because anything that buckets a trend needs it: a chart bucketed at the
+    publish rate would report nineteen samples missing out of every twenty.
+    `test_a_point_on_the_control_chart_carries_the_records_behind_it` pins the
+    two answers against each other so they cannot drift apart.
+
+    Config, not code, and *stated* rather than assumed, like its sibling: a
+    plant with no configured publish interval has no cadence this can honestly
+    report, and the source sentence travels with the number.
+    """
+    from fsmes.config import get_settings
+
+    settings = get_settings()
+    ms = getattr(settings, "opc_publish_ms", None)
+    if not ms or ms <= 0:
+        return None, None
+    ratio = int(getattr(settings, "controls_opc_history_ratio", 1) or 1)
+    least = int(getattr(settings, "controls_opc_min_history_ms", 0) or 0)
+    stored = max(int(ms) * max(ratio, 1), least)
+    return round(stored / 1000.0, 3), (
+        "this plant's configured analog history interval - its OPC publish "
+        "interval times [controls] opc_history_ratio, floored at "
+        "opc_min_history_ms - and not a measurement of any one interval"
+    )
+
+
 # ------------------------------------------------------------- the floor
 
 
