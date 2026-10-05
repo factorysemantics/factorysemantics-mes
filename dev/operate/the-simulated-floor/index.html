@@ -10,27 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://docs.factorysemantics.com/dev/ai/assist-eval/2026-09-27-live-operator/">
+        <link rel="canonical" href="https://docs.factorysemantics.com/dev/operate/the-simulated-floor/">
       
       
+        <link rel="prev" href="../packs/">
+      
+      
+        <link rel="next" href="../registry/">
       
       
         
       
       
-      <link rel="icon" href="../../../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.7">
     
     
       
-        <title>Assistant faithfulness — 2026-09-27 - FactorySemantics MES</title>
+        <title>Explanation — what the simulated floor does - FactorySemantics MES</title>
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -49,9 +53,9 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#assistant-faithfulness-2026-09-27" class="md-skip">
+        <a href="#what-the-simulated-floor-does-and-the-stories-it-plants" class="md-skip">
           Skip to content
         </a>
       
@@ -94,7 +98,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="FactorySemantics MES" class="md-header__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+    <a href="../.." title="FactorySemantics MES" class="md-header__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -114,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Assistant faithfulness — 2026-09-27
+              Explanation — what the simulated floor does
             
           </span>
         </div>
@@ -227,7 +231,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../.." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -248,7 +252,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../plant/" class="md-tabs__link">
+        <a href="../../plant/" class="md-tabs__link">
           
   
   
@@ -264,11 +268,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../../operate/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -288,7 +294,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../develop/" class="md-tabs__link">
+        <a href="../../develop/" class="md-tabs__link">
           
   
   
@@ -308,7 +314,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../agents/" class="md-tabs__link">
+        <a href="../../agents/" class="md-tabs__link">
           
   
   
@@ -328,7 +334,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../releases/" class="md-tabs__link">
+        <a href="../../releases/" class="md-tabs__link">
           
   
   
@@ -348,7 +354,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../LANDSCAPE/" class="md-tabs__link">
+        <a href="../../LANDSCAPE/" class="md-tabs__link">
           
   
   
@@ -382,7 +388,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="FactorySemantics MES" class="md-nav__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
+    <a href="../.." title="FactorySemantics MES" class="md-nav__button md-logo" aria-label="FactorySemantics MES" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -412,7 +418,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -491,7 +497,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../plant/" class="md-nav__link">
+      <a href="../../plant/" class="md-nav__link">
         
   
   
@@ -519,7 +525,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../plant/first-line/" class="md-nav__link">
+      <a href="../../plant/first-line/" class="md-nav__link">
         
   
   
@@ -599,7 +605,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../onboarding/GUIDE-IT/" class="md-nav__link">
+      <a href="../../onboarding/GUIDE-IT/" class="md-nav__link">
         
   
   
@@ -627,7 +633,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../onboarding/GUIDE-ENGINEERING/" class="md-nav__link">
+      <a href="../../onboarding/GUIDE-ENGINEERING/" class="md-nav__link">
         
   
   
@@ -663,7 +669,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../plant/reading-oee/" class="md-nav__link">
+      <a href="../../plant/reading-oee/" class="md-nav__link">
         
   
   
@@ -691,7 +697,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../plant/quality-signals/" class="md-nav__link">
+      <a href="../../plant/quality-signals/" class="md-nav__link">
         
   
   
@@ -719,7 +725,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../plant/shifts/" class="md-nav__link">
+      <a href="../../plant/shifts/" class="md-nav__link">
         
   
   
@@ -747,7 +753,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../plant/never-invent-production/" class="md-nav__link">
+      <a href="../../plant/never-invent-production/" class="md-nav__link">
         
   
   
@@ -779,26 +785,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -816,7 +827,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -834,7 +845,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -862,7 +873,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/first-plant/" class="md-nav__link">
+      <a href="../first-plant/" class="md-nav__link">
         
   
   
@@ -890,7 +901,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/deploy/" class="md-nav__link">
+      <a href="../deploy/" class="md-nav__link">
         
   
   
@@ -918,7 +929,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/opc-readonly/" class="md-nav__link">
+      <a href="../opc-readonly/" class="md-nav__link">
         
   
   
@@ -946,7 +957,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/opc-disconnections/" class="md-nav__link">
+      <a href="../opc-disconnections/" class="md-nav__link">
         
   
   
@@ -974,7 +985,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/coverage/" class="md-nav__link">
+      <a href="../coverage/" class="md-nav__link">
         
   
   
@@ -1002,7 +1013,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/assistant-coverage/" class="md-nav__link">
+      <a href="../assistant-coverage/" class="md-nav__link">
         
   
   
@@ -1030,7 +1041,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/who-names-the-reasons/" class="md-nav__link">
+      <a href="../who-names-the-reasons/" class="md-nav__link">
         
   
   
@@ -1058,7 +1069,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/ai/" class="md-nav__link">
+      <a href="../ai/" class="md-nav__link">
         
   
   
@@ -1086,7 +1097,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/quality-severities/" class="md-nav__link">
+      <a href="../quality-severities/" class="md-nav__link">
         
   
   
@@ -1114,7 +1125,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/quality-numbers/" class="md-nav__link">
+      <a href="../quality-numbers/" class="md-nav__link">
         
   
   
@@ -1142,7 +1153,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/erp-settings/" class="md-nav__link">
+      <a href="../erp-settings/" class="md-nav__link">
         
   
   
@@ -1170,7 +1181,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/engineering-numbers/" class="md-nav__link">
+      <a href="../engineering-numbers/" class="md-nav__link">
         
   
   
@@ -1198,7 +1209,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/administration-numbers/" class="md-nav__link">
+      <a href="../administration-numbers/" class="md-nav__link">
         
   
   
@@ -1226,7 +1237,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/packs/" class="md-nav__link">
+      <a href="../packs/" class="md-nav__link">
         
   
   
@@ -1251,10 +1262,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../../operate/the-simulated-floor/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — what the simulated floor does
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1270,6 +1308,70 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-a-plant-that-behaves-is-not-enough" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why a plant that behaves is not enough
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-five-stories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The five stories
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-the-floor-will-not-say" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the floor will not say
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-the-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading the script
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1282,7 +1384,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/registry/" class="md-nav__link">
+      <a href="../registry/" class="md-nav__link">
         
   
   
@@ -1310,7 +1412,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/fleet/" class="md-nav__link">
+      <a href="../fleet/" class="md-nav__link">
         
   
   
@@ -1338,7 +1440,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/modules/" class="md-nav__link">
+      <a href="../modules/" class="md-nav__link">
         
   
   
@@ -1366,7 +1468,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/plant-from-your-mes/" class="md-nav__link">
+      <a href="../plant-from-your-mes/" class="md-nav__link">
         
   
   
@@ -1394,7 +1496,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/shadow-mode/" class="md-nav__link">
+      <a href="../shadow-mode/" class="md-nav__link">
         
   
   
@@ -1422,7 +1524,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/shadow-scorecard/" class="md-nav__link">
+      <a href="../shadow-scorecard/" class="md-nav__link">
         
   
   
@@ -1450,7 +1552,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/erpnext/" class="md-nav__link">
+      <a href="../erpnext/" class="md-nav__link">
         
   
   
@@ -1478,7 +1580,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/uns/" class="md-nav__link">
+      <a href="../uns/" class="md-nav__link">
         
   
   
@@ -1506,7 +1608,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/backup/" class="md-nav__link">
+      <a href="../backup/" class="md-nav__link">
         
   
   
@@ -1534,7 +1636,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/tls/" class="md-nav__link">
+      <a href="../tls/" class="md-nav__link">
         
   
   
@@ -1562,7 +1664,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/upgrade/" class="md-nav__link">
+      <a href="../upgrade/" class="md-nav__link">
         
   
   
@@ -1590,7 +1692,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/confirmation-files/" class="md-nav__link">
+      <a href="../confirmation-files/" class="md-nav__link">
         
   
   
@@ -1618,7 +1720,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/erp-confirmations/" class="md-nav__link">
+      <a href="../../reference/erp-confirmations/" class="md-nav__link">
         
   
   
@@ -1646,7 +1748,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/inbound/" class="md-nav__link">
+      <a href="../inbound/" class="md-nav__link">
         
   
   
@@ -1674,7 +1776,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/settings/" class="md-nav__link">
+      <a href="../../reference/settings/" class="md-nav__link">
         
   
   
@@ -1702,7 +1804,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/cli/" class="md-nav__link">
+      <a href="../../reference/cli/" class="md-nav__link">
         
   
   
@@ -1730,7 +1832,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/" class="md-nav__link">
+      <a href="../../reference/api/" class="md-nav__link">
         
   
   
@@ -1758,7 +1860,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/first-week/" class="md-nav__link">
+      <a href="../first-week/" class="md-nav__link">
         
   
   
@@ -1786,7 +1888,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/compatibility/" class="md-nav__link">
+      <a href="../compatibility/" class="md-nav__link">
         
   
   
@@ -1814,7 +1916,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../operate/security/" class="md-nav__link">
+      <a href="../security/" class="md-nav__link">
         
   
   
@@ -1901,7 +2003,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../develop/" class="md-nav__link">
+      <a href="../../develop/" class="md-nav__link">
         
   
   
@@ -1929,7 +2031,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../ARCHITECTURE/" class="md-nav__link">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
         
   
   
@@ -1957,7 +2059,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../develop/your-first-module/" class="md-nav__link">
+      <a href="../../develop/your-first-module/" class="md-nav__link">
         
   
   
@@ -1985,7 +2087,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../develop/erp-connectors/" class="md-nav__link">
+      <a href="../../develop/erp-connectors/" class="md-nav__link">
         
   
   
@@ -2013,7 +2115,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../develop/experiments/" class="md-nav__link">
+      <a href="../../develop/experiments/" class="md-nav__link">
         
   
   
@@ -2041,7 +2143,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../design/STYLE/" class="md-nav__link">
+      <a href="../../design/STYLE/" class="md-nav__link">
         
   
   
@@ -2069,7 +2171,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../design/m8-packs-and-fleet/" class="md-nav__link">
+      <a href="../../design/m8-packs-and-fleet/" class="md-nav__link">
         
   
   
@@ -2097,7 +2199,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../design/config-assistance/" class="md-nav__link">
+      <a href="../../design/config-assistance/" class="md-nav__link">
         
   
   
@@ -2125,7 +2227,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../design/config-audit-2026-09-21/" class="md-nav__link">
+      <a href="../../design/config-audit-2026-09-21/" class="md-nav__link">
         
   
   
@@ -2153,7 +2255,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../design/agentic-harness/" class="md-nav__link">
+      <a href="../../design/agentic-harness/" class="md-nav__link">
         
   
   
@@ -2181,7 +2283,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../design/deep-analysis/" class="md-nav__link">
+      <a href="../../design/deep-analysis/" class="md-nav__link">
         
   
   
@@ -2261,7 +2363,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/" class="md-nav__link">
+      <a href="../../decisions/" class="md-nav__link">
         
   
   
@@ -2289,7 +2391,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0001-apache-2-with-dco/" class="md-nav__link">
+      <a href="../../decisions/0001-apache-2-with-dco/" class="md-nav__link">
         
   
   
@@ -2317,7 +2419,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0002-kernel-and-modules/" class="md-nav__link">
+      <a href="../../decisions/0002-kernel-and-modules/" class="md-nav__link">
         
   
   
@@ -2345,7 +2447,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0003-one-mcp-server/" class="md-nav__link">
+      <a href="../../decisions/0003-one-mcp-server/" class="md-nav__link">
         
   
   
@@ -2373,7 +2475,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0004-never-invent-production/" class="md-nav__link">
+      <a href="../../decisions/0004-never-invent-production/" class="md-nav__link">
         
   
   
@@ -2401,7 +2503,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0005-plain-html-no-build-step/" class="md-nav__link">
+      <a href="../../decisions/0005-plain-html-no-build-step/" class="md-nav__link">
         
   
   
@@ -2429,7 +2531,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
+      <a href="../../decisions/0006-sqlite-laptop-postgresql-plant/" class="md-nav__link">
         
   
   
@@ -2457,7 +2559,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0007-fresh-public-history/" class="md-nav__link">
+      <a href="../../decisions/0007-fresh-public-history/" class="md-nav__link">
         
   
   
@@ -2485,7 +2587,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0008-erp-connectors-are-modules/" class="md-nav__link">
+      <a href="../../decisions/0008-erp-connectors-are-modules/" class="md-nav__link">
         
   
   
@@ -2513,7 +2615,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0009-organisation-not-personal-account/" class="md-nav__link">
+      <a href="../../decisions/0009-organisation-not-personal-account/" class="md-nav__link">
         
   
   
@@ -2541,7 +2643,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0010-github-discussions-only/" class="md-nav__link">
+      <a href="../../decisions/0010-github-discussions-only/" class="md-nav__link">
         
   
   
@@ -2569,7 +2671,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0011-mkdocs-material-generated-reference/" class="md-nav__link">
+      <a href="../../decisions/0011-mkdocs-material-generated-reference/" class="md-nav__link">
         
   
   
@@ -2597,7 +2699,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0012-contributor-covenant-3/" class="md-nav__link">
+      <a href="../../decisions/0012-contributor-covenant-3/" class="md-nav__link">
         
   
   
@@ -2625,7 +2727,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0013-governance-is-one-page/" class="md-nav__link">
+      <a href="../../decisions/0013-governance-is-one-page/" class="md-nav__link">
         
   
   
@@ -2653,7 +2755,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0014-first-public-version-is-0-1-0/" class="md-nav__link">
+      <a href="../../decisions/0014-first-public-version-is-0-1-0/" class="md-nav__link">
         
   
   
@@ -2681,7 +2783,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0015-mcp-registry-name/" class="md-nav__link">
+      <a href="../../decisions/0015-mcp-registry-name/" class="md-nav__link">
         
   
   
@@ -2709,7 +2811,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0016-no-trademark-registration/" class="md-nav__link">
+      <a href="../../decisions/0016-no-trademark-registration/" class="md-nav__link">
         
   
   
@@ -2737,7 +2839,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
+      <a href="../../decisions/0017-one-public-demo-gated-and-bounded/" class="md-nav__link">
         
   
   
@@ -2765,7 +2867,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
+      <a href="../../decisions/0018-public-on-2026-09-08-and-the-pre-tag-check/" class="md-nav__link">
         
   
   
@@ -2793,7 +2895,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0019-count-everything-the-machine-counted/" class="md-nav__link">
+      <a href="../../decisions/0019-count-everything-the-machine-counted/" class="md-nav__link">
         
   
   
@@ -2821,7 +2923,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
+      <a href="../../decisions/0020-what-supported-means-for-an-erp-connector/" class="md-nav__link">
         
   
   
@@ -2849,7 +2951,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0021-one-database-per-plant/" class="md-nav__link">
+      <a href="../../decisions/0021-one-database-per-plant/" class="md-nav__link">
         
   
   
@@ -2877,7 +2979,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0022-what-a-plant-pack-may-contain/" class="md-nav__link">
+      <a href="../../decisions/0022-what-a-plant-pack-may-contain/" class="md-nav__link">
         
   
   
@@ -2905,7 +3007,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0023-the-fleet-console-observes/" class="md-nav__link">
+      <a href="../../decisions/0023-the-fleet-console-observes/" class="md-nav__link">
         
   
   
@@ -2933,7 +3035,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0024-a-nonconformance-has-a-life/" class="md-nav__link">
+      <a href="../../decisions/0024-a-nonconformance-has-a-life/" class="md-nav__link">
         
   
   
@@ -2961,7 +3063,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0025-performance-is-measured-not-capped/" class="md-nav__link">
+      <a href="../../decisions/0025-performance-is-measured-not-capped/" class="md-nav__link">
         
   
   
@@ -2989,7 +3091,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0026-counts-that-outrun-the-run-time/" class="md-nav__link">
+      <a href="../../decisions/0026-counts-that-outrun-the-run-time/" class="md-nav__link">
         
   
   
@@ -3017,7 +3119,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0027-an-spc-signal-raises-a-hold/" class="md-nav__link">
+      <a href="../../decisions/0027-an-spc-signal-raises-a-hold/" class="md-nav__link">
         
   
   
@@ -3045,7 +3147,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0028-which-shift-a-minute-belongs-to/" class="md-nav__link">
+      <a href="../../decisions/0028-which-shift-a-minute-belongs-to/" class="md-nav__link">
         
   
   
@@ -3073,7 +3175,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0029-an-order-does-not-finish-itself/" class="md-nav__link">
+      <a href="../../decisions/0029-an-order-does-not-finish-itself/" class="md-nav__link">
         
   
   
@@ -3101,7 +3203,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0030-a-lost-connection-is-unknown-time/" class="md-nav__link">
+      <a href="../../decisions/0030-a-lost-connection-is-unknown-time/" class="md-nav__link">
         
   
   
@@ -3129,7 +3231,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0031-a-judgment-is-a-proposal/" class="md-nav__link">
+      <a href="../../decisions/0031-a-judgment-is-a-proposal/" class="md-nav__link">
         
   
   
@@ -3157,7 +3259,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0032-a-hosted-judgment-and-the-shadow/" class="md-nav__link">
+      <a href="../../decisions/0032-a-hosted-judgment-and-the-shadow/" class="md-nav__link">
         
   
   
@@ -3185,7 +3287,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0033-availability-is-a-share-of-what-was-watched/" class="md-nav__link">
+      <a href="../../decisions/0033-availability-is-a-share-of-what-was-watched/" class="md-nav__link">
         
   
   
@@ -3213,7 +3315,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0034-a-count-is-owed-until-it-is-booked/" class="md-nav__link">
+      <a href="../../decisions/0034-a-count-is-owed-until-it-is-booked/" class="md-nav__link">
         
   
   
@@ -3241,7 +3343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators/" class="md-nav__link">
+      <a href="../../decisions/0035-configuration-is-authored-by-roles-and-selected-by-operators/" class="md-nav__link">
         
   
   
@@ -3269,7 +3371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/" class="md-nav__link">
+      <a href="../../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/" class="md-nav__link">
         
   
   
@@ -3297,7 +3399,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0038-an-agent-is-an-account-with-a-role-a-budget-and-a-cadence/" class="md-nav__link">
+      <a href="../../decisions/0038-an-agent-is-an-account-with-a-role-a-budget-and-a-cadence/" class="md-nav__link">
         
   
   
@@ -3325,7 +3427,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/0039-an-analysis-is-recorded-code-that-can-only-read/" class="md-nav__link">
+      <a href="../../decisions/0039-an-analysis-is-recorded-code-that-can-only-read/" class="md-nav__link">
         
   
   
@@ -3353,7 +3455,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../decisions/TEMPLATE/" class="md-nav__link">
+      <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
   
@@ -3448,7 +3550,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../agents/" class="md-nav__link">
+      <a href="../../agents/" class="md-nav__link">
         
   
   
@@ -3476,7 +3578,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../agents/connect-mcp-client/" class="md-nav__link">
+      <a href="../../agents/connect-mcp-client/" class="md-nav__link">
         
   
   
@@ -3504,7 +3606,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/tools/" class="md-nav__link">
+      <a href="../../reference/tools/" class="md-nav__link">
         
   
   
@@ -3532,7 +3634,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../agents/write-discipline/" class="md-nav__link">
+      <a href="../../agents/write-discipline/" class="md-nav__link">
         
   
   
@@ -3560,7 +3662,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../agents/evals/" class="md-nav__link">
+      <a href="../../agents/evals/" class="md-nav__link">
         
   
   
@@ -3588,7 +3690,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../ASSIST-EVAL/" class="md-nav__link">
+      <a href="../../ai/ASSIST-EVAL/" class="md-nav__link">
         
   
   
@@ -3675,7 +3777,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../releases/" class="md-nav__link">
+      <a href="../../releases/" class="md-nav__link">
         
   
   
@@ -3703,7 +3805,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../releases/0.2.0/" class="md-nav__link">
+      <a href="../../releases/0.2.0/" class="md-nav__link">
         
   
   
@@ -3790,7 +3892,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../LANDSCAPE/" class="md-nav__link">
+      <a href="../../LANDSCAPE/" class="md-nav__link">
         
   
   
@@ -3818,7 +3920,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../history/private-era/" class="md-nav__link">
+      <a href="../../history/private-era/" class="md-nav__link">
         
   
   
@@ -3873,10 +3975,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#per-role" class="md-nav__link">
+  <a href="#why-a-plant-that-behaves-is-not-enough" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Per role
+        Why a plant that behaves is not enough
       
     </span>
   </a>
@@ -3884,88 +3986,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#what-this-run-put-on-the-plant" class="md-nav__link">
+  <a href="#the-five-stories" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What this run put on the plant
+        The five stories
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="What this run put on the plant">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#as-the-agent-through-the-assistants-own-tools" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        As the agent, through the assistant's own tools
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#the-master-data-as-the-person-signed-in" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The master data, as the person signed in
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#required-cases-that-did-not-pass" class="md-nav__link">
+  <a href="#what-the-floor-will-not-say" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Required cases that did not pass
+        What the floor will not say
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Required cases that did not pass">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operator-brings-a-printed-batch-of-serials-in-operator" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        operator-brings-a-printed-batch-of-serials-in (operator)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#operator-refused-retrying-a-dead-erp-message-operator" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        operator-refused-retrying-a-dead-erp-message (operator)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#marked-not_yet" class="md-nav__link">
+  <a href="#reading-the-script" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Marked not_yet
+        Reading the script
       
     </span>
   </a>
@@ -3989,7 +4035,7 @@
 
 
   
-    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/ai/assist-eval/2026-09-27-live-operator.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/factorysemantics/factorysemantics-mes/edit/main/docs/operate/the-simulated-floor.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -3997,108 +4043,137 @@
   
 
 
-<h1 id="assistant-faithfulness-2026-09-27">Assistant faithfulness — 2026-09-27<a class="headerlink" href="#assistant-faithfulness-2026-09-27" title="Permanent link">&para;</a></h1>
-<p><em>live run, 2026-09-27T18:20:55+00:00. 28 of 30 required cases pass; 0 are marked <code>not_yet</code>.</em></p>
+<h1 id="what-the-simulated-floor-does-and-the-stories-it-plants">What the simulated floor does, and the stories it plants<a class="headerlink" href="#what-the-simulated-floor-does-and-the-stories-it-plants" title="Permanent link">&para;</a></h1>
+<p>A plant that simulates runs two things no PLC can give it. The <strong>line</strong> is
+machines: states, counters and process values, replayed from
+<code>labs/kepsim/out</code> by <code>fsmes run-opc-sim --replay</code>. The <strong>floor</strong> is people:
+<code>fsmes run-operations</code> records quality checks, issues material, names stops,
+works through non-conformances and finishes orders — over the public API,
+exactly as an operator's browser would.</p>
+<p>Neither of them is in the product's code. The line is
+<a href="https://github.com/factorysemantics/factorysemantics-mes/blob/main/labs/kepsim/line.json"><code>labs/kepsim/line.json</code></a>;
+the floor is a <strong>floor script</strong> the plant pack names with <code>[files] floor</code>
+(<code>MES_FLOOR_SCRIPT_FILE</code>). A plant whose pack names no floor script records
+what the tag said, names no gauge and labels no stop — which is what every
+real plant wants, because it has people instead.</p>
+<h2 id="why-a-plant-that-behaves-is-not-enough">Why a plant that behaves is not enough<a class="headerlink" href="#why-a-plant-that-behaves-is-not-enough" title="Permanent link">&para;</a></h2>
+<p>Measured on the bottling lab plant on 2026-10-04, after a week up:</p>
+<ul>
+<li><strong>0 of the last 500 quality checks named a gauge.</strong> The column was there and
+  nothing wrote it, so no reading could answer the first question anybody asks
+  about a point on a control chart: <em>did the process move, or did the gauge?</em></li>
+<li><strong>Seven days of downtime, 100 % unlabelled.</strong> The pareto was one bar.</li>
+<li><strong>887 non-conformances raised and never reviewed.</strong> The quality screen said
+  the same thing for a week, and so did every answer about the biggest problem
+  on the plant.</li>
+</ul>
+<p>None of that is a bug in the MES. It is a plant with no people in it, and an
+analysis is only as good as what the plant recorded.</p>
+<h2 id="the-five-stories">The five stories<a class="headerlink" href="#the-five-stories" title="Permanent link">&para;</a></h2>
+<p>Each one is <strong>data</strong>, each leaves a <strong>trace in the records</strong>, and each recurs
+once an hour because the line's file loops — so any hour of this plant's
+history contains all five.</p>
 <table>
 <thead>
 <tr>
-<th></th>
-<th></th>
+<th>The story</th>
+<th>Where it is written</th>
+<th>What it leaves behind</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Mode</td>
-<td>live</td>
+<td>The filler's supply pressure falls away 10 % for six minutes, with no alarm</td>
+<td><code>line.json</code>, an <code>offset</code> event with an effect on <code>FillWeight</code></td>
+<td>every bottle in that window about four grams light, and <code>NozzlePressure</code> one tag over says why</td>
 </tr>
 <tr>
-<td>Model</td>
-<td>claude-sonnet-5</td>
+<td>The washer runs three degrees hot</td>
+<td><code>line.json</code>, a <code>scrap_burst</code> with an effect downstream</td>
+<td>failing fill weights at the <em>filler</em> whose cause is a station upstream</td>
 </tr>
 <tr>
-<td>Plant</td>
-<td>bottling</td>
+<td>The first bottles after a changeover run heavy</td>
+<td><code>line.json</code>, an <code>offset</code> beginning where the changeover ends</td>
+<td>a point or two above the control limit, immediately after a <strong>planned</strong> stop — which the floor labels <code>changeover</code>, so it can be found</td>
 </tr>
 <tr>
-<td>Plant commit</td>
-<td>09c8ce2c</td>
+<td>One of the two scales is drifting</td>
+<td>the pack's <code>floor.json</code></td>
+<td>that scale's readings run about 0.6 g above the other's, until the supervisor calibrates it</td>
 </tr>
 <tr>
-<td>Suite commit</td>
-<td>09c8ce2c</td>
-</tr>
-<tr>
-<td>Cost</td>
-<td>$0.4158 of a $1.50 budget ($6.89 of $10.0 this month)</td>
-</tr>
-<tr>
-<td>Tokens</td>
-<td>cache_read 1,024,064, cache_write 16,001, input 56,927, output 5,713</td>
+<td>The night shift's readings of the same process are more spread out</td>
+<td>the pack's <code>floor.json</code></td>
+<td>a wider spread on the night shift with no change in the process behind it</td>
 </tr>
 </tbody>
 </table>
-<h2 id="per-role">Per role<a class="headerlink" href="#per-role" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Role</th>
-<th>Asked as</th>
-<th style="text-align: right;">Required</th>
-<th style="text-align: right;">Pass</th>
-<th style="text-align: right;">Rate</th>
-<th style="text-align: right;">not_yet</th>
-<th style="text-align: right;">of those, passing</th>
-<th style="text-align: right;">not arranged</th>
-<th style="text-align: right;">no account</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>operator</td>
-<td>SCOTT</td>
-<td style="text-align: right;">30</td>
-<td style="text-align: right;">28</td>
-<td style="text-align: right;">93%</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">0</td>
-</tr>
-</tbody>
-</table>
-<h2 id="what-this-run-put-on-the-plant">What this run put on the plant<a class="headerlink" href="#what-this-run-put-on-the-plant" title="Permanent link">&para;</a></h2>
-<h3 id="as-the-agent-through-the-assistants-own-tools">As the agent, through the assistant's own tools<a class="headerlink" href="#as-the-agent-through-the-assistants-own-tools" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Put there by this run: nothing</li>
-<li>Already there, and left untouched: <code>setting:engineering/default_report_hours</code>, <code>order:WO-EVAL-1</code>, <code>operation:WO-EVAL-1/10</code>, <code>nonconformance:NC-00001</code>, <code>maintenance:CM-00001</code>, <code>instruction:WI-EVAL-1</code>, <code>trigger:TR-EVAL-1</code>, <code>reason:eval_awaiting_parts</code>, <code>severity:eval_scuff</code>, <code>unit:SN-EVAL-1</code>, <code>unit:SN-EVAL-CASE-1</code></li>
-<li>Could not be arranged — <code>adjustment:MIX01</code>: MIX01 declares no writable setpoint with bounds: a recommended setpoint change names a tag this plant's own manifest declares writable with bounds - the first of the three guards between a recommendation and a PLC - and nothing here writes a plant's manifest, so a plant that declares none has this declared rather than invented for it</li>
-</ul>
-<p>Nothing here is removed afterwards: an MES does not delete an audited record, and neither does this. See <a href="../../ASSIST-EVAL/">ASSIST-EVAL.md</a> for what a person does about each one.</p>
-<h3 id="the-master-data-as-the-person-signed-in">The master data, as the person signed in<a class="headerlink" href="#the-master-data-as-the-person-signed-in" title="Permanent link">&para;</a></h3>
-<p>Nothing. <code>--seed-masterdata</code> was not given, so this run left the plant's own master data alone — materials, equipment, routings, lots and specifications are the plant's, not a suite's.</p>
-<h2 id="required-cases-that-did-not-pass">Required cases that did not pass<a class="headerlink" href="#required-cases-that-did-not-pass" title="Permanent link">&para;</a></h2>
-<h3 id="operator-brings-a-printed-batch-of-serials-in-operator"><code>operator-brings-a-printed-batch-of-serials-in</code> (operator)<a class="headerlink" href="#operator-brings-a-printed-batch-of-serials-in-operator" title="Permanent link">&para;</a></h3>
-<blockquote>
-<p>the marker printed SN-0001 and SN-0002 of FG-COLA on PACK01 for WO-EVAL-1 - bring them in</p>
-</blockquote>
-<ul>
-<li>Expected: <code>propose produce_batch</code> with machine=PACK01, material=FG-COLA, order=WO-EVAL-1, serials=['SN-0001', 'SN-0002']</li>
-<li>It proposed produce_units(machine=PACK01, material=FG-COLA, order=WO-EVAL-1, serial=SN-0001); produce_units(machine=PACK01, material=FG-COLA, order=WO-EVAL-1, serial=SN-0002)</li>
-<li>produce_batch was not proposed: it proposed produce_units(machine=PACK01, material=FG-COLA, order=WO-EVAL-1, serial=SN-0001); produce_units(machine=PACK01, material=FG-COLA, order=WO-EVAL-1, serial=SN-0002)</li>
-</ul>
-<h3 id="operator-refused-retrying-a-dead-erp-message-operator"><code>operator-refused-retrying-a-dead-erp-message</code> (operator)<a class="headerlink" href="#operator-refused-retrying-a-dead-erp-message-operator" title="Permanent link">&para;</a></h3>
-<blockquote>
-<p>the confirmation that went dead on the ERP - put it back in the queue</p>
-</blockquote>
-<ul>
-<li>Expected: a refusal naming 'orders.close', 'can'</li>
-<li>It read erp_outbox and said: "There's actually nothing dead right now — the outbox shows 0 dead and 0 error messages currently. Also, requeuing a dead ERP message is done via erp_retry, whic"</li>
-<li>the refusal never says 'can'</li>
-</ul>
-<h2 id="marked-not_yet">Marked <code>not_yet</code><a class="headerlink" href="#marked-not_yet" title="Permanent link">&para;</a></h2>
-<p>None.</p>
-<hr />
-<p>Written by <code>fsmes assist eval</code>. A bug found in the assistant becomes a case in <code>tests/assist_suite/</code> before it becomes a fix — see <a href="../../ASSIST-EVAL/">ASSIST-EVAL.md</a>.</p>
+<p>And one that is about the MES rather than the plant: <strong>a tag goes quiet for
+fifteen minutes.</strong> <code>FillWeight</code> stops arriving while the filler runs on and
+every other signal on it reports. The MES's last sample keeps the moment it
+really arrived, so the floor can tell a stale value from a steady one — and it
+records a plausible value with <strong>no gauge and no station on it</strong> rather than
+writing the frozen number down once a minute. <code>null</code> in those two columns is
+<em>not recorded</em>, which is a different fact from a reading nothing measured.</p>
+<h2 id="what-the-floor-will-not-say">What the floor will not say<a class="headerlink" href="#what-the-floor-will-not-say" title="Permanent link">&para;</a></h2>
+<p><strong>It does not label an idle machine.</strong> This line's tag map maps <em>starved</em> and
+<em>blocked</em> both onto <code>idle</code>, so by the time the MES holds the interval the
+difference is gone — and the plant's vocabulary has a word for each, neither
+of which anything recorded can choose between. Guessing one would put a cause
+in the pareto that nothing observed. The floor says so once, in its log, as a
+finding about the state map rather than as a gap in the script.</p>
+<p><strong>It does not name a stop it did not see.</strong> A stop shorter than one look
+(<code>MES_OPS_WATCH_EVERY</code>, fifteen seconds) is missed, and the pareto reports
+those seconds as unlabelled. That residue is real, and house rule 3 says it is
+reported as unlabelled rather than filed under "other".</p>
+<p><strong>It names a stop afterwards, not as it begins.</strong> The moment a machine goes
+down is the moment nobody knows why yet, and on a plant whose states arrive
+from an OPC agent nobody is ever asked. <code>POST /equipment/{code}/stops/label</code>
+is where somebody says what it was; it never creates an interval, because an
+interval is this MES's own observation and manufacturing one from a claim
+would put seconds into availability that nobody watched.</p>
+<p><strong>No tool sends that route.</strong> Naming a stop is somebody's account of why a
+machine stopped, and a model choosing between six reasons from the shape of
+the data would be writing fiction into the pareto with a confidence interval
+on it. The assistant's honest answer is to show which stops are unnamed and
+let whoever was there say. Another system's label has its own front door,
+<a href="../inbound/"><code>fsmes inbound</code></a>, and it records who claimed it.</p>
+<h2 id="reading-the-script">Reading the script<a class="headerlink" href="#reading-the-script" title="Permanent link">&para;</a></h2>
+<p>The bottling pack's
+<a href="https://github.com/factorysemantics/factorysemantics-mes/blob/main/labs/multiplant/bottling/floor.json"><code>floor.json</code></a>
+is the worked example, and every block in it carries a <code>_why</code>. The shape:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"measurement"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"stale_after_s"</span><span class="p">:</span><span class="w"> </span><span class="mi">150</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"shift_spread"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"NIGHT"</span><span class="p">:</span><span class="w"> </span><span class="mf">2.5</span><span class="p">},</span>
+<span class="w">    </span><span class="nt">"characteristics"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"fill_weight"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"spread"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.3</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"gauges"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">          </span><span class="p">{</span><span class="nt">"gauge"</span><span class="p">:</span><span class="w"> </span><span class="s2">"SCALE-FILL-01"</span><span class="p">,</span><span class="w"> </span><span class="nt">"share"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">},</span>
+<span class="w">          </span><span class="p">{</span><span class="nt">"gauge"</span><span class="p">:</span><span class="w"> </span><span class="s2">"SCALE-FILL-02"</span><span class="p">,</span><span class="w"> </span><span class="nt">"share"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">           </span><span class="nt">"drift"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"per_day"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.01</span><span class="p">,</span><span class="w"> </span><span class="nt">"max_bias"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.6</span><span class="p">}}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"stops"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"micro_stop_under_s"</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w"> </span><span class="nt">"micro_stop"</span><span class="p">:</span><span class="w"> </span><span class="s2">"micro_stop"</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"longer_than_a_micro_stop"</span><span class="p">:</span><span class="w"> </span><span class="s2">"breakdown"</span><span class="p">,</span><span class="w"> </span><span class="nt">"changeover"</span><span class="p">:</span><span class="w"> </span><span class="s2">"changeover"</span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"nonconformances"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"per_pass"</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="nt">"leave_open"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">                      </span><span class="nt">"by_severity"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"major"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"disposition"</span><span class="p">:</span><span class="w"> </span><span class="s2">"scrap"</span><span class="p">,</span><span class="w"> </span><span class="nt">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="p">}},</span>
+<span class="w">                      </span><span class="nt">"otherwise"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"disposition"</span><span class="p">:</span><span class="w"> </span><span class="s2">"use_as_is"</span><span class="p">,</span><span class="w"> </span><span class="nt">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="p">}}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>The gauges themselves are <strong>master data</strong>, not script: they are in the pack's
+<code>masterdata/gauges.json</code> and on the plant's own register, so a calibration
+recorded on the Gauges screen is in force for the next reading this floor
+takes. The script only says which gauge measures what, how often each is
+picked up, and which one is drifting.</p>
+<p>A disposition's <strong>reason</strong> is in the script on purpose. <em>Use as is</em> on a batch
+that failed its specification is a concession somebody has to defend a year
+later, and a simulated plant that invented the sentence would be writing the
+one field nobody can check.</p>
 
 
 
@@ -4131,6 +4206,44 @@
       
         <footer class="md-footer">
   
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../packs/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Reference — plant packs">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Reference — plant packs
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../registry/" class="md-footer__link md-footer__link--next" aria-label="Next: How-to — plants from a fleet file">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                How-to — plants from a fleet file
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
     
   
   <div class="md-footer-meta md-typeset">
@@ -4189,10 +4302,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "content.tabs.link", "content.code.copy", "content.action.edit", "search.suggest", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "content.tabs.link", "content.code.copy", "content.action.edit", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

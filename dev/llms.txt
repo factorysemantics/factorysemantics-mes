@@ -28,6 +28,7 @@
 - [Operate — Reference — this plant's own engineering numbers](https://docs.factorysemantics.com/dev/operate/engineering-numbers/)
 - [Operate — Reference — this plant's own administration numbers](https://docs.factorysemantics.com/dev/operate/administration-numbers/)
 - [Operate — Reference — plant packs](https://docs.factorysemantics.com/dev/operate/packs/)
+- [Operate — Explanation — what the simulated floor does](https://docs.factorysemantics.com/dev/operate/the-simulated-floor/)
 - [Operate — How-to — plants from a fleet file](https://docs.factorysemantics.com/dev/operate/registry/)
 - [Operate — How-to — the fleet this installation owns](https://docs.factorysemantics.com/dev/operate/fleet/)
 - [Operate — How-to — switch a module off](https://docs.factorysemantics.com/dev/operate/modules/)

@@ -16,7 +16,7 @@
         <link rel="prev" href="../administration-numbers/">
       
       
-        <link rel="next" href="../registry/">
+        <link rel="next" href="../the-simulated-floor/">
       
       
         
@@ -1364,10 +1364,32 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#the-instruments-that-take-the-measurements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The instruments that take the measurements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#the-order-book" class="md-nav__link">
     <span class="md-ellipsis">
       
         The order book
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-the-simulated-floor-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the simulated floor does
       
     </span>
   </a>
@@ -1438,6 +1460,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../the-simulated-floor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation — what the simulated floor does
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -4108,10 +4158,32 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#the-instruments-that-take-the-measurements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The instruments that take the measurements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#the-order-book" class="md-nav__link">
     <span class="md-ellipsis">
       
         The order book
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-the-simulated-floor-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the simulated floor does
       
     </span>
   </a>
@@ -4342,7 +4414,7 @@ Usable, as far as a file can say: 9 file(s) read, nothing refused, 4 thing(s) on
 </ol>
 <p>Never this process's own default. Until 2026-09-14 that is exactly what a pack naming no database got, which is how <code>fsmes fleet create</code> came to migrate and seed a stray <code>./fsmes.db</code> and then record ownership of a plant that had never been created. A database nobody named is not this plant's.</p>
 <p><strong>Pack before database.</strong> A schema migration may need a value the pack now carries, so the pack is applied first — and <code>fsmes pack apply</code> runs the migrations itself, in that order.</p>
-<p>Master data is seeded from <code>masterdata/</code>, one file per kind: <code>equipment.json</code>, <code>materials.json</code>, <code>bom.json</code>, <code>routings.json</code>, <code>quality_specs.json</code>, <code>lots.json</code>, <code>work_orders.json</code>, <code>maintenance_plans.json</code>, <code>shifts.json</code>, <code>downtime_reasons.json</code>, <code>nc_severities.json</code>. An entry whose code already exists is counted as present and <strong>left alone, never updated</strong> — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which <code>fsmes fleet list</code> and the console now show as <em>answered, but empty</em>.</p>
+<p>Master data is seeded from <code>masterdata/</code>, one file per kind: <code>equipment.json</code>, <code>materials.json</code>, <code>bom.json</code>, <code>routings.json</code>, <code>quality_specs.json</code>, <code>gauges.json</code>, <code>lots.json</code>, <code>work_orders.json</code>, <code>maintenance_plans.json</code>, <code>shifts.json</code>, <code>downtime_reasons.json</code>, <code>nc_severities.json</code>. An entry whose code already exists is counted as present and <strong>left alone, never updated</strong> — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which <code>fsmes fleet list</code> and the console now show as <em>answered, but empty</em>.</p>
 <h3 id="the-words-an-operator-picks-from">The words an operator picks from<a class="headerlink" href="#the-words-an-operator-picks-from" title="Permanent link">&para;</a></h3>
 <p><code>downtime_reasons.json</code> is the list the station screen offers when a machine goes down. Each entry is a <code>code</code>, a <code>name</code> and an optional <code>description</code> — the sentence the screen shows beside the choice, and the one an agent reads to tell two reasons apart.</p>
 <div class="highlight"><pre><span></span><code><span class="p">[</span>
@@ -4362,6 +4434,17 @@ Usable, as far as a file can say: 9 file(s) read, nothing refused, 4 thing(s) on
 </code></pre></div>
 <p>A severity code is two to <strong>twenty</strong> characters — it is stored on every non-conformance, in a column twenty characters wide, and a list that could approve a word too long to store would refuse at the one moment it mattered.</p>
 <p><strong>A pack that seeds this list must seed <code>minor</code> and <code>major</code>.</strong> The product opens non-conformances itself — a recorded check outside its specification, and the SPC rules — and it writes those two words. A plant whose list lacked one would find out at the moment a machine raised a hold, so <code>fsmes pack check</code> refuses it offline instead. The <strong>names</strong> and the sentences beside them are the plant's; only the codes are fixed, and only those two.</p>
+<h3 id="the-instruments-that-take-the-measurements">The instruments that take the measurements<a class="headerlink" href="#the-instruments-that-take-the-measurements" title="Permanent link">&para;</a></h3>
+<p><code>gauges.json</code> is the plant's gauge register: a <code>code</code> and a <code>name</code>, plus the optional <code>kind</code>, <code>location</code>, <code>resolution</code>, <code>interval_days</code>, <code>warn_days</code> and <code>calibrated_days_ago</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"SCALE-01"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Checkweigher scale 1, filler"</span><span class="p">,</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"scale"</span><span class="p">,</span>
+<span class="w">   </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FILL01"</span><span class="p">,</span><span class="w"> </span><span class="nt">"resolution"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="nt">"interval_days"</span><span class="p">:</span><span class="w"> </span><span class="mi">90</span><span class="p">,</span><span class="w"> </span><span class="nt">"warn_days"</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="p">,</span>
+<span class="w">   </span><span class="nt">"calibrated_days_ago"</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">}</span>
+<span class="p">]</span>
+</code></pre></div>
+<p><strong><code>resolution</code> is what the gauge can read to, and it is the field worth arguing about.</strong> A gauge that resolves a third of the tolerance it is asked to judge cannot judge it, and <code>GET /quality/gauges/{code}/resolution</code> answers that question against any tolerance you give it. A fill weight held to twelve grams, measured on a scale reading to a tenth of a gram, can be defended.</p>
+<p><strong><code>calibrated_days_ago</code> is relative, for the same reason <code>due_in_hours</code> is</strong>: a pack is seeded whenever somebody builds the plant, and an absolute date in one ages until every gauge in the register reads overdue. Left out, the gauge has never been calibrated — which the register reports as <em>overdue</em>, because a gauge nobody has calibrated is not fine until proven otherwise.</p>
+<p><strong>No calibration event is invented behind the date.</strong> The register records what the plant says it knows; nobody here performed a calibration, and a last-done date with the certificate wherever the paperwork actually is, is exactly what a gauge register migrated into a new MES looks like.</p>
 <h3 id="the-order-book">The order book<a class="headerlink" href="#the-order-book" title="Permanent link">&para;</a></h3>
 <p><code>work_orders.json</code> is the plant's <strong>schedule</strong>, not one order to give the counters somewhere to book. Each entry is a code, a material and a quantity; <code>priority</code>, <code>release</code> and <code>due_in_hours</code> are optional.</p>
 <div class="highlight"><pre><span></span><code><span class="p">[</span>
@@ -4373,6 +4456,8 @@ Usable, as far as a file can say: 9 file(s) read, nothing refused, 4 thing(s) on
 <p><strong>Release one, plan the rest.</strong> A line runs one order at a time, and releasing the whole book puts several released orders on one routing — which leaves the MES choosing between them by priority rather than reading which one the line is running (<a href="../../decisions/0029-an-order-does-not-finish-itself/">decision 0029</a> names that as still inferred).</p>
 <p><strong>Size it against the line.</strong> The slowest station in the pack's own <code>tag_map.json</code> sets the rate: 3,600 ÷ its <code>cycle_seconds</code> is units an hour. The three lab packs hold more than twenty-four hours of their own line's rated output, and each says its arithmetic in its <code>masterdata/README.md</code>. A book of one order is how a lab plant came to report an order 70× over on 2026-09-18 — correctly, and uselessly.</p>
 <p>Nothing in the MES releases the next order. On a plant that simulates, <code>fsmes run-operations</code> does it as the shift supervisor would; on a real plant it is a person or the ERP.</p>
+<h3 id="what-the-simulated-floor-does">What the simulated floor does<a class="headerlink" href="#what-the-simulated-floor-does" title="Permanent link">&para;</a></h3>
+<p><code>[files] floor</code> names a <strong>floor script</strong>: which gauge takes a reading, which of them is drifting between calibrations, which of the plant's approved words a stop is named with, and what happens to the material behind a finding. It is read only by <code>fsmes run-operations</code>, and a real plant leaves it out and has people instead. The bottling lab pack is the worked example — see <a href="../the-simulated-floor/">what the simulated floor does</a>.</p>
 <p><strong>It refuses to seed into a database that is not at head.</strong> The migration above normally leaves nothing to say, and this is the assertion that it did. Rows written through the ORM into a half-migrated file leave a database with some of this product's tables and no Alembic stamp — which the migrator then disowns outright, because a schema it cannot identify is one it will not guess at. That happened once, on 2026-09-14, and left a plant no command could take forward.</p>
 <p>Rated cycle times are not repeated in the master data: leave <code>ideal_cycle_seconds</code> out and it is read from the pack's own tag map. OEE performance is ideal cycle × count ÷ runtime, so a rate that drifted from the line it describes produces a number that means nothing.</p>
 <p>Applying is idempotent. Run it again and it makes nothing twice.</p>
@@ -4473,13 +4558,13 @@ Usable, as far as a file can say: 9 file(s) read, nothing refused, 4 thing(s) on
         
         
           
-          <a href="../registry/" class="md-footer__link md-footer__link--next" aria-label="Next: How-to — plants from a fleet file">
+          <a href="../the-simulated-floor/" class="md-footer__link md-footer__link--next" aria-label="Next: Explanation — what the simulated floor does">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                How-to — plants from a fleet file
+                Explanation — what the simulated floor does
               </div>
             </div>
             <div class="md-footer__button md-icon">
