@@ -22,6 +22,16 @@ ordinary within-sample noise and miss the shift between samples that the plan
 exists to catch. Which of the two a characteristic gets is `QualitySpec.
 sample_size` - the plant's sampling plan, recorded on the specification -
 and never this module's guess. Decision record 0040.
+
+On an individuals chart both halves are drawn. The individuals chart asks
+whether a reading is where it should be; the moving-range chart asks whether
+the gap between consecutive readings is. They are two different failures, and
+only the second one sees a process that stays inside its limits while jumping
+further and further between them - which is the one that makes the first
+chart's limits widen until they stop meaning anything. The mean moving range
+was always here, because sigma is estimated from it; since 2026-10-06 the
+series it is the mean of is on the chart too, with its own centre line, its
+own upper limit (`D4_N2` times the mean moving range) and a rule of its own.
 """
 
 from __future__ import annotations
@@ -93,6 +103,19 @@ MAX_SAMPLE_SIZE = max(SUBGROUP)
 #: chart type from which keys happen to be present.
 INDIVIDUALS = "imr"
 XBAR_R = "xbar_r"
+
+# The moving-range chart's own limits come from the table above, at n = 2,
+# because a moving range *is* a subgroup of two: the upper limit is `D4·R̄`
+# (3.267 times the mean moving range) and the lower one is `D3·R̄`. Named here
+# rather than indexed at each point of use, and read out of the table rather
+# than written down a second time so the two cannot drift apart. `D2_N2` above
+# is the same row's d2 and says so.
+#
+# D3 at n = 2 is zero, so the lower limit is zero. It is stated rather than
+# left out, because a chart with no lower line and a chart whose lower line is
+# nought look the same drawn and are not the same claim.
+D3_N2 = SUBGROUP[2][1]
+D4_N2 = SUBGROUP[2][2]
 # Fewest points worth computing limits from. Below this the limits move so
 # much with each new reading that they mislead more than they inform. The
 # plant's, since the configuration audit of 2026-09-21 named it - `[quality]
@@ -106,9 +129,15 @@ HISTORY = 200
 # figure moves: the Cpk is arithmetic and means the same on every plant.
 CPK_CAPABLE = 1.33
 CPK_MARGINAL = 1.0
-# Which of the four rules raise a hold, and which of those are a major finding.
-# `[quality] hold_rules` and `major_rules`; all four and rule 1 alone, which is
-# what this product has always done.
+# Which rules raise a hold, and which of those are a major finding.
+# `[quality] hold_rules` and `major_rules`; the four individuals rules and rule
+# 1 alone, which is what this product has always done.
+#
+# Rule 5 - the moving range beyond its upper limit - is DRAWN on every plant
+# and is deliberately NOT in this list. A plant that has run this product for
+# a year without a moving-range chart should not come in one morning to a
+# queue of holds about readings it already lived through; it turns the rule on
+# when it has looked at the chart and decided it wants to be called.
 HOLD_RULES = (1, 2, 3, 4)
 MAJOR_RULES = (1,)
 
@@ -389,6 +418,101 @@ def _limits(series: Series) -> dict | None:
     }
 
 
+# ------------------------------------------------------- the moving-range half
+
+#: The moving-range rule's number, and what it means in words. Rules 1 to 4
+#: judge the individuals chart; this one judges the gap between consecutive
+#: readings, which is the half of an IMR chart the individuals half cannot
+#: see. The numbering is the product's for the same reason theirs is: a plant
+#: that renumbered it would publish `SpcSignal.rule = 5` meaning something
+#: nobody else means by it.
+MR_RULE = 5
+MR_WHAT = "a moving range beyond its upper limit"
+
+
+def _moving_ranges(values: list[float]) -> list[float]:
+    """The gap between each reading and the one before it, in order.
+
+    One shorter than the readings: the first reading has nothing before it, so
+    it has no range, and inventing a zero for it would pull the mean down and
+    with it every limit on both charts.
+    """
+    return [abs(b - a) for a, b in itertools.pairwise(values)]
+
+
+def _moving_range_rule(ranges: list[float], upper: float) -> list[dict]:
+    """The one rule a moving-range chart has: a range beyond its upper limit.
+
+    Only the one, and deliberately. The Western Electric zone rules are about
+    a symmetric distribution around a centre line, and a moving range has
+    neither - it is bounded below by zero and skewed right, so "two of three
+    beyond two sigma" below the centre of a moving range is a sentence that
+    looks like statistics and is not. A range *below* the limit is never a
+    signal at n = 2 either: `D3_N2` is zero, and two readings cannot be close
+    enough together to be news.
+    """
+    if upper <= 0:
+        return []
+    return [{"rule": MR_RULE, "index": i, "value": round(value, 4), "what": MR_WHAT}
+            for i, value in enumerate(ranges) if value > upper]
+
+
+def _moving_range(checks: list[QualityCheck], *, fewest: int, note: str | None) -> dict:
+    """The moving-range chart: the series, its limits, and what fired on it.
+
+    Each point names the *later* of the two readings it is the gap between,
+    because that is the reading a person can open - `check` is the same key
+    the individuals points carry and the same id the dossier read takes. The
+    earlier one is named too: a reader asking *which two?* is owed both, and
+    the answer must not be "count back one dot".
+
+    Below `fewest` readings there are no limits, and the same sentence the
+    individuals chart prints says why. Limits from six moving ranges move with
+    every reading exactly as the individuals limits do, and a moving-range
+    chart is the more easily misled of the two: one keyed-in duplicate reading
+    is a range of zero that drags the centre line down and the upper limit
+    with it.
+    """
+    values = [c.value for c in checks]
+    ranges = _moving_ranges(values)
+    points = [
+        {"range": round(value, 4), "ts": checks[i + 1].ts,
+         "check": checks[i + 1].id, "previous_check": checks[i].id}
+        for i, value in enumerate(ranges)
+    ]
+    # The total, stated whether or not the limits could be drawn (house rule:
+    # every list says what it is a list of).
+    base = {"points": points, "n": len(points), "readings": len(values)}
+    if len(values) < fewest or not ranges:
+        return _said({**base, "centre": None, "upper": None, "lower": None,
+                      "signals": [], "note": note})
+    centre = sum(ranges) / len(ranges)
+    return _said({
+        **base,
+        "centre": round(centre, 4),
+        "upper": round(D4_N2 * centre, 4),
+        # Nought, not absent. See `D3_N2`.
+        "lower": round(D3_N2 * centre, 4),
+        "signals": _moving_range_rule(ranges, D4_N2 * centre),
+        "note": None,
+    })
+
+
+def _said(moving: dict) -> dict:
+    """The verdict and the one-word answer, added to a moving-range block.
+
+    Here rather than in `chart` so that every block this module hands out has
+    the same keys whether or not there were enough readings to draw limits
+    from. A reader of the payload that had to check which branch produced it
+    before trusting `stable` is a reader who will get it wrong once.
+    """
+    moving["stable"] = not moving["signals"]
+    moving["verdict"] = _mr_verdict(moving)
+    return moving
+
+
+
+
 def capability(values: list[float], lower_spec: float | None,
                upper_spec: float | None, *, fewest: int,
                samples: list[list[float]] | None = None) -> dict | None:
@@ -514,13 +638,16 @@ def chart(session: Session, material: str, characteristic: str,
                    for v, t, c, k, r in zip(
                        values, series.stamps, series.checks, series.keys,
                        series.ranges or [0.0] * len(values), strict=False)],
-        # Which of the four rules raise a hold on this plant, and all the
-        # rule numbers beside them. Stated on every chart, whatever the plant
+        # Which rules raise a hold on this plant, and every rule number this
+        # product has beside them. Stated on every chart, whatever the plant
         # chose, so a rule that fires and opens nothing is explained rather
         # than noticed: a screen that showed a firing with no hold and said
         # nothing about why is the chart lying by omission (decision 0036).
-        "rules": ([RANGE_RULE, *sorted(RULE_WINDOW)] if series.sampled
-                  else sorted(RULE_WINDOW)),
+        # The moving-range rule is the individuals chart's second half; a
+        # sampled chart's second half is the range chart and its signal is
+        # `RANGE_RULE`. Each kind names the rules it can actually draw.
+        "rules": ([RANGE_RULE, *(r for r in sorted(RULE_WINDOW) if r != MR_RULE)]
+                  if series.sampled else sorted(RULE_WINDOW)),
         "hold_rules": list(hold_rules(session)),
         "major_rules": list(major_rules(session)),
         # Signals this plant does not get to switch off. Empty on an
@@ -556,9 +683,18 @@ def chart(session: Session, material: str, characteristic: str,
     if len(values) < fewest:
         # Say why rather than draw limits nobody should trust. Control limits
         # from six points move with every reading.
+        note = (f"{len(values)} {what}; control limits need at least "
+                f"{fewest} to mean anything{aside}")
         return {**base, "control": None, "capability": None, "signals": [],
-                "note": f"{len(values)} {what}; control limits need at least "
-                        f"{fewest} to mean anything{aside}"}
+                "note": note,
+                # The moving-range half says the same thing with the same
+                # sentence. A reader told why one chart has no limits and left
+                # to guess about the other would reasonably assume the second
+                # one's limits are real. Only on an individuals chart: a
+                # sampled chart's second half is the range chart, and `_limits`
+                # is where that one comes from.
+                **({"moving_range": _moving_range(series.checks, fewest=fewest, note=note)}
+                   if not series.sampled else {})}
 
     control = _limits(series)
     if control is None:
@@ -598,15 +734,35 @@ def chart(session: Session, material: str, characteristic: str,
     found = _western_electric(values, centre, control["sigma"])
     found += _range_signals(series, control)
     signals = _acted_on(session, spec, found, series.keys, sampled=series.sampled)
+    # `stable` and `signals` are the UPPER chart's answer and stay that, which
+    # is what every reader of this payload has meant by them since 2026-09-14.
+    # On an individuals chart the moving-range half carries its own, in its own
+    # block, and the verdict below names it so nobody reading one sentence can
+    # miss it.
     stable = not signals
+    moving = None
+    if not series.sampled:
+        moving = _moving_range(series.checks, fewest=fewest, note=None)
+        # The same firings, each with the hold it raised when the plant holds
+        # on the rule. The verdict is re-said because it counts them.
+        moving["signals"] = _mr_acted_on(session, spec, moving["signals"],
+                                         [c.id for c in series.checks])
+        moving = _said(moving)
     return {
         **base,
         "control": control,
         "capability": capability,
         "signals": signals,
         "stable": stable,
+        # The other half of an IMR chart: the gap between each reading and the
+        # one before it, the series the mean moving range in `control` is the
+        # mean of, with its own centre line, its own upper limit and the one
+        # rule it has. A sampled chart's second half is the range chart inside
+        # `control`, so this key is absent there rather than null.
+        **({"moving_range": moving} if moving is not None else {}),
         # The sentence that keeps the two questions apart.
-        "verdict": _verdict(stable, capability, signals, capable, marginal),
+        "verdict": _verdict(stable, capability, signals, capable, marginal,
+                            moving),
         **({"note": aside[2:]} if aside else {}),
     }
 
@@ -678,8 +834,78 @@ def _holds(rule: int, holds_on: tuple[int, ...]) -> bool:
     return rule in ALWAYS_HOLD or rule in holds_on
 
 
+def _mr_acted_on(session: Session, spec: QualitySpec, signals: list[dict],
+                 ids: list[int]) -> list[dict]:
+    """The moving-range firings, each with the hold it raised when it raised one.
+
+    The same question `_acted_on` answers, and it cannot be the same code: a
+    moving-range signal's `index` counts ranges, and range *i* is the gap
+    between readings *i* and *i + 1*. So the window - and with it the stable
+    key that stops one firing being recorded twice - is those two readings,
+    which is one position along from where the individuals rules would look.
+    Sharing a function by passing a flag through it is how the two indexings
+    would quietly come to be confused.
+    """
+    if not signals:
+        return []
+    holds_on = hold_rules(session)
+    keys = {_key(ids[s["index"]], ids[s["index"] + 1]) for s in signals}
+    holds: dict[str, str | None] = {}
+    for row in session.scalars(select(SpcSignal).where(
+            SpcSignal.spec_id == spec.id, SpcSignal.rule == MR_RULE,
+            SpcSignal.window_key.in_(keys))).all():
+        nc = session.get(NonConformance, row.nonconformance_id) if row.nonconformance_id else None
+        holds[row.window_key] = nc.code if nc else None
+    out = []
+    for signal in signals:
+        earlier, later = ids[signal["index"]], ids[signal["index"] + 1]
+        out.append({**signal,
+                    # The two readings the range is between, by id, so a
+                    # reader can open either of them rather than counting dots.
+                    "check": later, "previous_check": earlier,
+                    "nonconformance": holds.get(_key(earlier, later)),
+                    # Off by default (see `HOLD_RULES`), so on most plants this
+                    # is False and the screen says why rather than leaving a
+                    # firing that opened nothing to be noticed.
+                    "held": MR_RULE in holds_on})
+    return out
+
+
+def _mr_verdict(moving: dict) -> str:
+    """The moving-range chart's own sentence, in the same shape as the
+    individuals chart's. Its own, because the two charts answer two questions
+    and one sentence for both is how a reader comes to think a process that
+    jumps is a process that is behaving."""
+    if moving["n"] == 0:
+        # Ahead of the note about limits, because it is the more specific
+        # truth: there is no series yet, never mind limits for one.
+        return "no moving ranges yet; two readings make the first one"
+    if moving.get("note"):
+        return moving["note"]
+    if moving["signals"]:
+        ranges = len(moving["signals"])
+        return (f"out of control - rule {MR_RULE} fired on "
+                f"{ranges} of {moving['n']} ranges. The process jumps further "
+                f"between consecutive readings than its own variation "
+                f"accounts for, and sigma on both charts is estimated from "
+                f"the mean of this series.")
+    return (f"in control - every one of {moving['n']} moving ranges is inside "
+            f"the upper limit")
+
+
 def _verdict(stable: bool, capability: dict | None, signals: list[dict],
-             capable: float, marginal: float) -> str:
+             capable: float, marginal: float, moving: dict | None = None) -> str:
+    # What the moving-range half adds to the sentence. Nothing, when the
+    # individuals chart has already said *out of control* - it says it once -
+    # and nothing when the moving range is quiet. The one case left is the one
+    # the old sentence got wrong: individuals settled, the moving range not,
+    # and a verdict that read "in control and capable" about it.
+    mr = ""
+    if stable and moving and moving.get("signals"):
+        mr = (f" The moving range is not: rule {MR_RULE} fired on "
+              f"{len(moving['signals'])} of {moving['n']} ranges, so the sigma "
+              f"these limits come from is itself in question - read the moving "
+              f"range first.")
     if not stable:
         rules = sorted({s["rule"] for s in signals if s["rule"] != RANGE_RULE})
         ranged = any(s["rule"] == RANGE_RULE for s in signals)
@@ -694,15 +920,15 @@ def _verdict(stable: bool, capability: dict | None, signals: list[dict],
         return (f"out of control - {' and '.join(said)}. "
                 f"Capability is not meaningful until this is settled.")
     if capability is None:
-        return "in control; capability needs both specification limits to compute"
+        return "in control; capability needs both specification limits to compute" + mr
     cpk = capability["cpk"]
     if cpk >= capable:
-        return f"in control and capable (Cpk {cpk})"
+        return f"in control and capable (Cpk {cpk})" + mr
     if cpk >= marginal:
         return (f"in control but marginal (Cpk {cpk}) - the process fits, with "
-                f"little room for drift")
+                f"little room for drift") + mr
     return (f"in control but not capable (Cpk {cpk}) - the process is stable "
-            f"and stably producing out-of-spec work")
+            f"and stably producing out-of-spec work") + mr
 
 
 # --------------------------------------------------------------- acting on a signal
@@ -711,7 +937,10 @@ def _verdict(stable: bool, capability: dict | None, signals: list[dict],
 #: judge a window ending at that point. The window is what makes a signal
 #: identifiable, so it is written down once and used by both the detector and
 #: the record.
-RULE_WINDOW = {1: 1, 2: 3, 3: 5, 4: 8}
+#:
+#: Rule 5 is the moving-range rule and its window is the two readings the
+#: range is the gap between - which is why it is two and not one.
+RULE_WINDOW = {1: 1, 2: 3, 3: 5, 4: 8, MR_RULE: 2}
 
 #: The range signal's number. Not one of the four Western Electric rules -
 #: those are the four, they are named on this plant's `[quality] hold_rules`
@@ -746,14 +975,23 @@ def major_rules(session: Session) -> tuple[int, ...]:
 
 
 def hold_rules(session: Session) -> tuple[int, ...]:
-    """Which of the four rules raise a quality hold on this plant.
+    """Which rules raise a quality hold on this plant.
 
     Decision [0036](../../docs/decisions/0036-the-chart-draws-every-rule.md):
-    the chart draws and records all four whatever this returns - a rule a
-    plant could switch off the chart would be a chart that lies, which is what
-    0035 said and still says. What a plant chooses is which of them are worth
-    somebody's morning. All four is the default and is what this product has
-    always done.
+    the chart draws every rule whatever this returns - a rule a plant could
+    switch off the chart would be a chart that lies, which is what 0035 said
+    and still says. What a plant chooses is which of them are worth somebody's
+    morning. The four individuals rules are the default and are what this
+    product has always done.
+
+    Rule 5 - the moving range - is the one rule that is **off** by default. It
+    is drawn and recorded on every plant, like the other four; until a plant
+    adds 5 to this list a range beyond its upper limit flags on the chart, is
+    there in the record behind the dot, and calls nobody. A plant that has run
+    for a year without a moving-range chart would get a morning of holds about
+    jumps it already lived through, and would learn to switch the feature off
+    rather than to read it. The record it does get starts at its next reading:
+    nothing is back-filled.
 
     Read at the moment it is needed rather than at import, so a number changed
     on Quality's Configuration page is in force on the next chart drawn.
@@ -762,17 +1000,21 @@ def hold_rules(session: Session) -> tuple[int, ...]:
 
 
 def _rules(session: Session, name: str, fallback: tuple[int, ...]) -> tuple[int, ...]:
-    """One of the two rule lists, narrowed to the four rules this product has.
+    """One of the two rule lists, narrowed to the rules this product has.
 
     Parsed rather than trusted, exactly as `Settings._rule_list` was and for
-    the same reason: anything that is not one of the four is dropped, because
-    the alternative is a plant refusing to draw a chart over a typo in a list
-    that only ever narrows a set. `fsmes pack check` tells a person about the
-    typo offline, the write path on the Configuration page refuses it outright,
-    and the chart payload states what was actually parsed.
+    the same reason: anything that is not one of them is dropped, because the
+    alternative is a plant refusing to draw a chart over a typo in a list that
+    only ever narrows a set. `fsmes pack check` tells a person about the typo
+    offline, the write path on the Configuration page refuses it outright, and
+    the chart payload states what was actually parsed.
+
+    `RULE_WINDOW` is the set, rather than a second list of rule numbers kept
+    here: the rules this product has are the rules it knows a window for, and
+    two lists of them would be two lists to keep in step.
     """
     written = _number(session, name, list(fallback))
-    rules = [r for r in written if r in (1, 2, 3, 4)]
+    rules = [r for r in written if r in RULE_WINDOW]
     return tuple(sorted(dict.fromkeys(rules)))
 
 
@@ -792,7 +1034,20 @@ def _window_key(ids: list[int], index: int, rule: int, *, sampled: bool = False)
     """
     span = RULE_WINDOW.get(rule, 1)
     first = ids[max(0, index - span + 1)]
-    return f"{'s' if sampled else ''}{first}-{ids[index]}"
+    return _key(first, ids[index], sampled=sampled)
+
+
+def _key(first_id: int, last_id: int, *, sampled: bool = False) -> str:
+    """The window key itself, from the two points that bound it. One spelling,
+    used by the individuals rules through `_window_key` and by the
+    moving-range rule directly - because a key written two ways is a firing
+    recorded twice.
+
+    The `s` on a sampled chart's keys is `_window_key`'s doing and is
+    explained there: sample ids and check ids are different numbers from
+    different tables, and a key that could not tell them apart would swallow a
+    new finding as a duplicate of an old one."""
+    return f"{'s' if sampled else ''}{first_id}-{last_id}"
 
 
 def _description(material: str, spec: QualitySpec, signal: dict, control: dict,
@@ -804,6 +1059,14 @@ def _description(material: str, spec: QualitySpec, signal: dict, control: dict,
                 f"({signal['value']}{spec.unit} against mean range {chart['centre']}, "
                 f"upper range limit {chart['upper']} from {n} samples of "
                 f"{control['sample_size']})")
+    if signal["rule"] == MR_RULE:
+        # The moving-range chart's own limits, not the individuals chart's. A
+        # hold that quoted the individuals limits for a rule-5 firing would
+        # send a person to look at the wrong line.
+        return (f"SPC rule {MR_RULE} on {material}/{spec.characteristic}: {signal['what']} "
+                f"({signal['value']}{spec.unit} between two consecutive readings, against a "
+                f"mean moving range of {control['centre']}{spec.unit} and an upper limit of "
+                f"{control['upper']}{spec.unit} from {n} readings)")
     return (f"SPC rule {signal['rule']} on {material}/{spec.characteristic}: {signal['what']} "
             f"({signal['value']}{spec.unit} against centre {control['centre']}, "
             f"control limits [{control['lower']}, {control['upper']}] from {n} {what})")
@@ -834,6 +1097,19 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
     Returns one entry per signal it raised, newest last. A signal whose
     window was already recorded returns nothing: the same points are the
     same finding.
+
+    The moving-range rule is recorded here on every plant, like the other
+    four. Decision 0036 is read literally: every rule is drawn *and recorded*,
+    and the only thing a plant chooses is which of them raises a hold. A dot
+    this screen flags pink whose signal is in no record would leave the click
+    panel saying nothing fired on a flagged reading, which is a lie about the
+    reading. So rule 5 writes its `spc_signal` row everywhere, and raises a
+    non-conformance only where `[quality] hold_rules` names it.
+
+    Nothing is back-filled. `since_id` is the same gate it is for rules 1-4: a
+    firing acts only on a window ending on a reading just written, so a plant
+    that upgrades starts recording moving-range signals from its next reading
+    and its history stays as it was judged at the time.
     """
     from fsmes.services import quality
 
@@ -849,7 +1125,23 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
 
     signals = _western_electric(series.values, control["centre"], control["sigma"])
     signals += _range_signals(series, control)
-    if not signals:
+
+    # The moving-range half's own rule, on an individuals chart only: a
+    # sampled chart's second half is the chart of sample ranges, and
+    # `_range_signals` above is where that one is judged.
+    mr_signals: list[dict] = []
+    mr_control: dict = {}
+    if not series.sampled:
+        ranges = _moving_ranges(series.values)
+        mean_range = sum(ranges) / len(ranges) if ranges else 0.0
+        mr_control = {"centre": round(mean_range, 4),
+                      "upper": round(D4_N2 * mean_range, 4),
+                      "lower": round(D3_N2 * mean_range, 4)}
+        # Recorded on every plant, held only where the plant says so - the
+        # same deal the other four rules get. See the docstring.
+        mr_signals = _moving_range_rule(ranges, D4_N2 * mean_range)
+
+    if not signals and not mr_signals:
         return []
 
     # Only the firings on a point just written; the rest are about points
@@ -868,32 +1160,54 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
             return []
     if since is not None:
         signals = [s for s in signals if series.keys[s["index"]] >= since]
-        if not signals:
+        # For a moving range the point that has to be new is the *later* of
+        # the two readings: that is the one that made the range exist.
+        mr_signals = [s for s in mr_signals if series.keys[s["index"] + 1] >= since]
+        if not signals and not mr_signals:
             return []
 
     material = spec.material.code
     sampled = series.sampled
     n = len(series.values)
-    keys = {_window_key(series.keys, s["index"], s["rule"], sampled=sampled)
-            for s in signals}
+
+    # One firing, the key it is recorded under, the point it is *on*, the
+    # window behind it and the limits it was judged against - gathered here so
+    # the loop below does not have to know that a moving-range index counts
+    # ranges and an individuals index counts points.
+    work: list[tuple[dict, str, QualityCheck, dict, dict]] = []
+    for signal in signals:
+        index = signal["index"]
+        span = RULE_WINDOW.get(signal["rule"], 1)
+        first = max(0, index - span + 1)
+        work.append((signal,
+                     _window_key(series.keys, index, signal["rule"], sampled=sampled),
+                     series.checks[index],
+                     _window_record(series, control, first, index),
+                     control))
+    for signal in mr_signals:
+        index = signal["index"]
+        work.append((signal,
+                     _key(series.keys[index], series.keys[index + 1]),
+                     series.checks[index + 1],
+                     _window_record(series, mr_control, index, index + 1),
+                     mr_control))
+    # Newest last, and within one reading the lower rule number first, so the
+    # order a caller sees does not depend on which list a firing came from.
+    work.sort(key=lambda item: (item[2].id, item[0]["rule"]))
+    keys = {key for _, key, _, _, _ in work}
     already = {
         (row.rule, row.window_key) for row in session.scalars(
             select(SpcSignal).where(SpcSignal.spec_id == spec.id,
                                     SpcSignal.window_key.in_(keys)))
     }
 
-    holds_on = hold_rules(session)
     majors = major_rules(session)
+    holds_on = hold_rules(session)
     raised: list[dict] = []
-    for signal in signals:
-        key = _window_key(series.keys, signal["index"], signal["rule"], sampled=sampled)
+    for signal, key, check, window, limits in work:
         if (signal["rule"], key) in already:
             continue
         already.add((signal["rule"], key))
-        check = series.checks[signal["index"]]
-        span = RULE_WINDOW.get(signal["rule"], 1)
-        first = max(0, signal["index"] - span + 1)
-        window = _window_record(series, control, first, signal["index"])
         row = SpcSignal(
             spec_id=spec.id, rule=signal["rule"], window_key=key, check_id=check.id,
             value=signal["value"], what=signal["what"], window=window)
@@ -922,7 +1236,8 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
             major = (1 in majors) if signal["rule"] == RANGE_RULE else (signal["rule"] in majors)
             nc = quality.open_nc(
                 session,
-                description=_description(material, spec, signal, control, n, sampled=sampled),
+                description=_description(material, spec, signal, limits, n,
+                                        sampled=sampled),
                 severity=MAJOR if major else MINOR,
                 work_order_code=_order_code(session, check),
                 actor=actor,

@@ -224,9 +224,11 @@ CURATED: tuple[Curated, ...] = (
             "That is a product decision, which is why it is on the short "
             "list. Decision 0036 made it on 2026-09-22 and it is built: every "
             "rule is drawn and recorded on every plant, and `[quality] "
-            "hold_rules` chooses which of them raise a hold. All four is the "
-            "shipped default, so a plant that configures nothing is "
-            "unchanged.",
+            "hold_rules` chooses which of them raise a hold. The four "
+            "individuals rules are the shipped default, so a plant that "
+            "configures nothing is unchanged; rule 5, a moving range beyond "
+            "its upper limit, is drawn and recorded everywhere and holds only "
+            "on a plant that names it.",
         settled="Decided and built 2026-09-22 - decision 0036, `[quality] "
                 "hold_rules`. The chart draws and records every rule on every "
                 "plant; only who gets called changed."),

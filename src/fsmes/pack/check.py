@@ -365,14 +365,16 @@ def _coverage_floor(pack: fmt.Pack) -> list[Problem]:
 
 
 def _rule_numbers(where: str, value: list) -> list[Problem]:
-    """A list of Western Electric rule numbers, checked. Two keys hold one -
-    which rules raise a hold, and which of those are major - and they are the
-    same list of four either way.
+    """A list of SPC rule numbers, checked. Two keys hold one - which rules
+    raise a hold, and which of those are major - and they are the same list of
+    five either way: the four Western Electric rules on the individuals chart,
+    and 5 on the moving-range chart.
 
     The rule *numbers* are the product's and always will be: a plant that
     renumbered them would publish `SpcSignal.rule = 3` meaning something
     nobody else means by rule 3. So either key may only ever narrow the set
-    {1, 2, 3, 4}, and a number outside it is a typo rather than a preference.
+    {1, 2, 3, 4, 5}, and a number outside it is a typo rather than a
+    preference.
 
     An empty list is allowed and is a real answer - *record and draw every
     rule, raise a hold on none of them* - because a plant running SPC as an
@@ -384,17 +386,18 @@ def _rule_numbers(where: str, value: list) -> list[Problem]:
     for item in value:
         if isinstance(item, bool) or not isinstance(item, int):
             out.append(Problem(where, (
-                f"holds {item!r}. It is a list of Western Electric rule numbers, "
-                "each a whole number from 1 to 4.")))
+                f"holds {item!r}. It is a list of SPC rule numbers, "
+                "each a whole number from 1 to 5.")))
             continue
-        if item not in (1, 2, 3, 4):
+        if item not in (1, 2, 3, 4, 5):
             out.append(Problem(where, (
-                f"names rule {item}, and this product has four: 1 (a point beyond "
+                f"names rule {item}, and this product has five: 1 (a point beyond "
                 "three sigma), 2 (two of three beyond two sigma), 3 (four of five "
-                "beyond one sigma) and 4 (eight in a row on one side of centre). "
-                "The numbering is the product's, because a plant that renumbered "
-                "the rules would publish a rule number meaning something nobody "
-                "else means by it.")))
+                "beyond one sigma), 4 (eight in a row on one side of centre) and 5 "
+                "(a moving range beyond its upper limit, on the moving-range half "
+                "of the chart). The numbering is the product's, because a plant "
+                "that renumbered the rules would publish a rule number meaning "
+                "something nobody else means by it.")))
         elif item in seen:
             out.append(Problem(where, (
                 f"names rule {item} twice. Once is what it means either way, and a "

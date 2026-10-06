@@ -321,7 +321,9 @@ def test_an_spc_signal_still_raises_its_hold_in_shadow_mode(session, shadow_on):
                              value=value, actor="ines")
     _check, _nc, signals = quality.record_check(session, material_code="FG-COLA",
                                                 characteristic="brix", value=11.9, actor="ines")
-    assert [s["rule"] for s in signals] == [1]
+    # Rule 1 and rule 5, the moving-range rule - both recorded on every
+    # plant, and only rule 1 in the shipped `hold_rules`.
+    assert [s["rule"] for s in signals] == [1, 5]
     assert signals[0]["nonconformance"].startswith("NC-")
 
 

@@ -288,9 +288,11 @@ SCHEMA: tuple[Section, ...] = (
             "ships the value that was in the product's source, so a plant that "
             "writes none of them behaves exactly as it does now.", (
         Key("hold_rules", "ints",
-            "Which Western Electric rules raise a quality hold, as a list of "
-            "rule numbers from 1 to 4. Leave it out and all four do, which is "
-            "what this product has always done. The chart draws and records "
+            "Which SPC rules raise a quality hold, as a list of rule numbers "
+            "from 1 to 5. Leave it out and the four individuals rules do, "
+            "which is what this product has always done; rule 5 - a moving "
+            "range beyond its upper limit - is drawn and recorded on every "
+            "plant and raises a hold only on a plant that adds 5 to this list. The chart draws "
             "every rule whatever this says - a rule a plant switched off the "
             "chart would be a chart that lies (decision 0036); what a plant "
             "chooses here is which of them are worth somebody's morning.",

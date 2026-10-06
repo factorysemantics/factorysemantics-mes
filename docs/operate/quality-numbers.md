@@ -26,7 +26,7 @@ and the second one needs its own argument.
 
 | Key | Ships | What it decides |
 |---|---|---|
-| `hold_rules` | `[1, 2, 3, 4]` | Which Western Electric rules raise a quality hold. Every rule is drawn and recorded whatever this says — [decision 0036](../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md) |
+| `hold_rules` | `[1, 2, 3, 4]` | Which SPC rules raise a quality hold, from 1 to 5. Every rule is drawn on the chart whatever this says — [decision 0036](../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md). Rule 5, a moving range beyond its upper limit, is the one the default leaves out: it is drawn and recorded on every plant and holds only where a plant adds `5` |
 | `major_rules` | `[1]` | Which of those open a **major** non-conformance rather than a minor one. The words come from [this plant's severity list](quality-severities.md) |
 | `cpk_capable` | `1.33` | The Cpk at or above which this plant says *capable* |
 | `cpk_marginal` | `1.0` | The Cpk at or above which it says *marginal* rather than *not capable*. Must be below `cpk_capable` |
@@ -67,9 +67,13 @@ Not everything near these numbers is a plant's to answer. The test is
 plant breaks, it is the plant's. If a number, a topic or an API field would
 mean something different at the two plants, it is the product's.
 
-- **The four Western Electric rules, their numbering and their windows.** A
-  plant that renumbered them would publish `SpcSignal.rule = 3` while meaning
-  something nobody else means by rule 3.
+- **The five SPC rules, their numbering and their windows** — the four
+  Western Electric rules on the individuals chart and rule 5 on the moving
+  range. A plant that renumbered them would publish `SpcSignal.rule = 3` while
+  meaning something nobody else means by rule 3.
+- **The range constants, d2 and D4 at a subgroup of two.** 1.128 and 3.267 are
+  what the method is; a plant that changed them would be drawing a different
+  chart under the same name.
 - **The arithmetic behind Cp, Cpk and Pp.** Only the English word beside the
   figure moves. A Cpk of 1.21 is a Cpk of 1.21 everywhere; whether this plant
   calls that *marginal* is its own business.

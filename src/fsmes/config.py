@@ -14,16 +14,22 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from fsmes import modules as module_registry
 
+#: The rules a plant may name in `hold_rules` or `major_rules`: the four
+#: Western Electric rules on the individuals chart, and 5 - a moving range
+#: beyond its upper limit - on the moving-range chart. The same set
+#: `fsmes.services.spc.RULE_WINDOW` keys, written here too because this module
+#: must not import a service.
+SPC_RULES = (1, 2, 3, 4, 5)
+
 
 def _rule_list(written: str) -> tuple[int, ...]:
-    """A comma list of Western Electric rule numbers, as the four they can be.
+    """A comma list of SPC rule numbers, as the five they can be.
 
-    Parsed rather than trusted: anything that is not one of the four rule
-    numbers is dropped, because the alternative is a plant refusing to start
-    over a typo in a list that only ever narrows a set. `fsmes pack check` is
-    where a person is told about the typo, offline, and the chart payload
-    states what was actually parsed so nobody has to guess which reading
-    applied.
+    Parsed rather than trusted: anything that is not one of the rule numbers
+    is dropped, because the alternative is a plant refusing to start over a
+    typo in a list that only ever narrows a set. `fsmes pack check` is where a
+    person is told about the typo, offline, and the chart payload states what
+    was actually parsed so nobody has to guess which reading applied.
     """
     rules: list[int] = []
     for part in (written or "").split(","):
@@ -31,7 +37,7 @@ def _rule_list(written: str) -> tuple[int, ...]:
         if not part.isdigit():
             continue
         rule = int(part)
-        if rule in (1, 2, 3, 4) and rule not in rules:
+        if rule in SPC_RULES and rule not in rules:
             rules.append(rule)
     return tuple(sorted(rules))
 

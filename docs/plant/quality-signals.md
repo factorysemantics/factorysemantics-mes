@@ -26,7 +26,8 @@ having to go and re-derive it. So the hold carries:
 - the **rule** that fired and what it means in words;
 - the **material and characteristic**;
 - the **readings** of the rule's window — one point for rule 1, three for
-  rule 2, five for rule 3, eight for rule 4;
+  rule 2, five for rule 3, eight for rule 4, and the two either side of the
+  gap for rule 5;
 - the **chart as it stood**: the centre line, sigma, the ±3σ limits and how
   many readings they were computed from. Not recomputed later — recomputing
   gives different numbers, and then nobody can see what the MES acted on;
@@ -112,6 +113,28 @@ one bottle; the centre, the limits, the capability and the verdict beside it
 are the samples' own and are true as they stand. `GET /quality/spc/...`
 answers `"kind": "xbar_r"` and carries the samples, so anything reading the
 API has the whole picture today.
+
+## The other half of the chart
+
+**Quality → SPC** draws two charts, not one. Above is the individuals chart —
+every reading, with the centre line and the ±3σ limits. Below it, about half
+as tall and on the same timeline, is the **moving range**: the gap between each
+reading and the one before it, with its own centre line (R̄, the mean of those
+gaps) and its own upper limit (3.267 × R̄, the constant for a range of two).
+That lower chart is where the sigma behind *both* sets of limits comes from —
+R̄ over d2, 1.128 for two — so a process whose gaps are drifting has moved
+the limits on the chart above it, and the lower chart is where you see that
+happen.
+
+A gap beyond its upper limit is **rule 5**. It is drawn, flagged and recorded
+on every plant, like the other four, but it **raises no hold anywhere unless a
+plant adds `5` to `hold_rules`** — the shipped default is still the four
+individuals rules. A plant that upgrades to this version starts recording
+moving-range firings from its next reading; nothing is written about the jumps
+already in its history. A plant that turns it on gets the same kind of non-conformance, with the
+two readings either side of the gap as its evidence. Clicking a dot on the
+lower chart opens the same panel as the upper one, on the later of its two
+readings.
 
 ## One thing to watch in how you collect readings
 

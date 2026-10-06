@@ -197,7 +197,11 @@ def test_an_spc_hold_is_raised_at_a_word_from_the_plants_own_list(session):
         session, material_code="FG-COLA", characteristic="brix", value=11.9,
         actor="test")
     session.flush()
-    assert [s["rule"] for s in raised] == [1]
+    # Rule 1 on the individuals half and rule 5 on the moving-range half: a
+    # jump this size trips both, and both are recorded on every plant
+    # (decision 0036). Only rule 1 is in the default `hold_rules`, so only
+    # rule 1 graded a record.
+    assert [s["rule"] for s in raised] == [1, 5]
     assert severities.records_labelled(session, "major") == 1
 
 
@@ -438,8 +442,10 @@ def test_every_rule_is_drawn_and_recorded_whatever_the_plant_holds_on(
                                   characteristic="brix", value=11.9, actor="test")[2]
     session.flush()
 
-    assert [s["rule"] for s in raised] == [1]
-    assert raised[0]["nonconformance"] is None and raised[0]["held"] is False
+    # Rule 1 and the moving-range rule, both recorded, neither held: this
+    # plant holds on nothing at all.
+    assert [s["rule"] for s in raised] == [1, spc.MR_RULE]
+    assert all(s["nonconformance"] is None and s["held"] is False for s in raised)
     chart = spc.chart(session, "FG-COLA", "brix")
     # The chart reads the whole window, so it shows every firing in it - the
     # point here is that rule 1 is drawn and that not one signal is held.
@@ -448,9 +454,11 @@ def test_every_rule_is_drawn_and_recorded_whatever_the_plant_holds_on(
     assert all(s["nonconformance"] is None for s in chart["signals"])
     assert chart["stable"] is False and "out of control" in chart["verdict"]
     assert chart["hold_rules"] == []
-    assert chart["rules"] == [1, 2, 3, 4]
+    # Every rule the product has, the moving-range rule included: `rules` is
+    # what could be held on, not what is.
+    assert chart["rules"] == [1, 2, 3, 4, 5]
     # The setting itself is untouched by this test's monkeypatch: what the
-    # default is stays the product's answer.
+    # default is stays the product's answer - and rule 5 is not in it.
     assert get_settings().hold_rules() == (1, 2, 3, 4)
 
 

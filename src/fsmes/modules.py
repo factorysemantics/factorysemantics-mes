@@ -933,9 +933,12 @@ REGISTRY: tuple[Module, ...] = (
                 domain="quality",
                 key="spc_hold_rules",
                 label="Which SPC rules raise a hold",
-                about="The chart draws and records all four Western Electric "
-                      "rules on every plant. Which of them open a non-conformance "
-                      "is this plant's, and defaults to all four (decision 0036).",
+                about="The chart draws and records every rule on every plant: the four "
+                      "Western Electric rules on the individuals half and rule 5, "
+                      "a moving range beyond its upper limit, on the moving-range "
+                      "half. Which of them open a non-conformance is this plant's. "
+                      "The four individuals rules do by default; rule 5 does not "
+                      "until a plant adds it (decision 0036).",
                 href="/dashboard/spc",
                 define="quality.define",
                 edit_here=True,

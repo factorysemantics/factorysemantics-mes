@@ -292,7 +292,7 @@ def test_a_caller_with_no_session_at_all_is_refused_before_anything_else(anon):
     ("serial_digits", "40", "between 1 and 12"),
     ("containment_max_depth", "99", "hard ceiling of twelve"),
     ("nc_code_prefix", "ncr", "upper case"),
-    ("hold_rules", "1,7", "this product has four"),
+    ("hold_rules", "1,7", "this product has five"),
     ("spc_min_points", "twelve", "is not a whole number"),
     ("cpk_capable", "", "is not a number"),
 ])

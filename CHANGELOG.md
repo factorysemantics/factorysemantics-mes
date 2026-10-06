@@ -73,6 +73,34 @@ goes under Honesty with a migration line, so plant people can find it.
   sentence and draws nothing rather than plotting means as if each were one
   bottle, while the centre, limits, capability and verdict beside it are the
   samples' own. Drawing it, and the panel behind a sample, is the follow-up.
+- **The SPC screen draws the moving range as well as the individuals
+  chart - an IMR chart, the way a real MES has one.** Scott, 2026-10-06: *"so
+  the current simulation runs an I chart. I want an IMR chart like a real MES
+  should have."* The service had always estimated sigma from the mean moving
+  range; what was missing was the half of the chart that shows it. Quality ->
+  SPC now draws, under the chart that was there, a second and shorter one: the
+  gap between each reading and the one before it, with its own centre line (R̄)
+  and its own upper limit (3.267 x R̄, the range constant for a subgroup of
+  two), in the same style and on the same timeline. The individuals chart does
+  not move or shrink, and one SVG or PNG export takes both halves.
+
+  - **A gap beyond its upper limit is rule 5.** It is drawn, flagged and
+    recorded on every plant, like the other four - but it **raises no hold
+    unless a plant adds `5` to `[quality] hold_rules`**, and the shipped
+    default is still the four individuals rules. A plant that turns it on gets
+    the same kind of non-conformance, with the two readings either side of the
+    gap as its evidence. The screen's sentence about which rules this plant
+    holds on names it either way. See **Honesty** below for what an upgraded
+    plant will see in its records.
+  - **Clicking a dot on the lower chart opens the same panel** as the upper
+    one, on the later of the gap's two readings - the dot says so in its
+    tooltip and its label. The reading's own point on the moving-range half,
+    and whether it was flagged, is now on the dossier's `on_the_chart` block.
+  - **The chart read gains a `moving_range` block** - the series (one point per
+    reading from the second on, each naming both readings it spans), `centre`,
+    `upper`, `lower`, its own signals and its own verdict. The individuals half
+    is unchanged, key for key. Fewer readings than `spc_min_points` means no
+    moving-range limits either, and the same honest sentence about why.
 
 - **Click a point on the SPC chart and see why it is there - no model, just
   the records.** Scott, 2026-10-05: *"some kind of UI to show me what brief
@@ -2313,6 +2341,22 @@ goes under Honesty with a migration line, so plant people can find it.
   can fall between two levels, beside the level carrying the most probability.
 
 ### Honesty
+
+- **An upgraded plant will see rule-5 signals recorded, and none of them
+  held.** Decision 0036 says every rule is drawn *and recorded*; the only
+  thing a plant chooses is which rules raise a hold. So from this release the
+  moving-range rule writes its `spc_signal` row on every plant, whatever
+  `[quality] hold_rules` says, and raises a non-conformance only where that
+  list names `5`. The alternative was a dot the chart flags whose firing is in
+  no record, which would leave the click panel saying nothing fired on a
+  flagged reading - a lie about the reading. Nothing is backfilled: the rule
+  acts only on a window ending on a reading just written, exactly as rules 1-4
+  do, so a plant that upgrades starts recording moving-range signals from its
+  next reading and its history stays as it was judged at the time. What is new
+  in a default plant's records is therefore rows in `spc_signal` with
+  `rule = 5` and a null `nonconformance_id`; no hold, no non-conformance and
+  no count of open holds changes. A plant that wants the holds too adds `5`
+  to `[quality] hold_rules`.
 
 - **Nothing is backfilled into the five new columns, and null is *not
   attributed*.** Every row written before this release keeps a null in
