@@ -1336,10 +1336,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-five-stories" class="md-nav__link">
+  <a href="#the-six-stories" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The five stories
+        The six stories
       
     </span>
   </a>
@@ -1365,6 +1365,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Reading the script">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-characteristic-nobodys-machine-publishes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A characteristic nobody's machine publishes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -3455,6 +3472,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0040-the-chart-type-follows-the-sampling-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0040 — The chart type follows the sampling plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -3986,10 +4031,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-five-stories" class="md-nav__link">
+  <a href="#the-six-stories" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The five stories
+        The six stories
       
     </span>
   </a>
@@ -4015,6 +4060,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Reading the script">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-characteristic-nobodys-machine-publishes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A characteristic nobody's machine publishes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -4069,10 +4131,10 @@ real plant wants, because it has people instead.</p>
 </ul>
 <p>None of that is a bug in the MES. It is a plant with no people in it, and an
 analysis is only as good as what the plant recorded.</p>
-<h2 id="the-five-stories">The five stories<a class="headerlink" href="#the-five-stories" title="Permanent link">&para;</a></h2>
+<h2 id="the-six-stories">The six stories<a class="headerlink" href="#the-six-stories" title="Permanent link">&para;</a></h2>
 <p>Each one is <strong>data</strong>, each leaves a <strong>trace in the records</strong>, and each recurs
 once an hour because the line's file loops — so any hour of this plant's
-history contains all five.</p>
+history contains all six.</p>
 <table>
 <thead>
 <tr>
@@ -4106,6 +4168,11 @@ history contains all five.</p>
 <td>The night shift's readings of the same process are more spread out</td>
 <td>the pack's <code>floor.json</code></td>
 <td>a wider spread on the night shift with no change in the process behind it</td>
+</tr>
+<tr>
+<td>The nozzle the changeover left behind fills a shade over</td>
+<td>the pack's <code>floor.json</code>, <code>sampling.fill_height.after_changeover</code></td>
+<td>for twenty-five line minutes after each labelled <code>changeover</code>, the <strong>fill-height sample means</strong> sit about half a millimetre above the centre line while the sample <strong>ranges</strong> do not move: the process shifted, its spread did not. The checkweigher's own band absorbs it, so it is invisible on fill weight and plain on the height chart — which is what an X-bar chart is for. Half a millimetre is less than the limits drawn from R-bar, so it is found by splitting the means on the changeover and not by waiting for a rule to fire</td>
 </tr>
 </tbody>
 </table>
@@ -4165,6 +4232,48 @@ is the worked example, and every block in it carries a <code>_why</code>. The sh
 <span class="w">                      </span><span class="nt">"otherwise"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"disposition"</span><span class="p">:</span><span class="w"> </span><span class="s2">"use_as_is"</span><span class="p">,</span><span class="w"> </span><span class="nt">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="p">}}</span>
 <span class="p">}</span>
 </code></pre></div>
+<h3 id="a-characteristic-nobodys-machine-publishes">A characteristic nobody's machine publishes<a class="headerlink" href="#a-characteristic-nobodys-machine-publishes" title="Permanent link">&para;</a></h3>
+<p>Fill height is measured by hand on a bench: five bottles come off the filler,
+are carried to the QI station, are measured one after another, and the five
+readings are posted together as <strong>one sample</strong>
+(<a href="../../decisions/0040-the-chart-type-follows-the-sampling-plan/">decision 0040</a>).
+No tag on this line carries a height, so the floor has to make the pieces —
+and the arithmetic that turns a weight into a height is <strong>this plant's bottle,
+not the product's</strong>, which is why it is in the pack:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"sampling"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"fill_height"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"every_line_s"</span><span class="p">:</span><span class="w"> </span><span class="mi">900</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"from"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"equipment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FILL01"</span><span class="p">,</span><span class="w"> </span><span class="nt">"tag"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FillWeight"</span><span class="p">},</span>
+<span class="w">      </span><span class="nt">"convert"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"offset"</span><span class="p">:</span><span class="w"> </span><span class="mf">12.0</span><span class="p">,</span><span class="w"> </span><span class="nt">"per_unit"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.26</span><span class="p">},</span>
+<span class="w">      </span><span class="nt">"piece_to_piece"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.35</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"after_changeover"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"line_minutes"</span><span class="p">:</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="nt">"offset"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<ul>
+<li><code>every_line_s</code> — line seconds between samples, divided by the replay speed
+  like every other cadence here. Nine hundred is four samples an hour.</li>
+<li><code>from</code> — the five pieces are the <strong>last five stored readings</strong> of that tag
+  off that machine: five different bottles, each weighed at a different
+  instant, which is what a sample of five is. If five readings newer than the
+  last sample are not there, this floor <strong>takes nothing and says so once</strong>
+  rather than measuring the same bottle five times. A sample of five that is
+  one bottle copied five times has a range of zero and would make every chart
+  drawn from it a lie.</li>
+<li><code>convert</code> — <code>height_mm = offset + per_unit × weight_g</code>, one straight line,
+  because the bottle is a cylinder over the band that matters.</li>
+<li><code>piece_to_piece</code> — millimetres, one sigma: the moulding varies, so two
+  bottles holding the same weight do not stand at the same height. This is
+  the variation a sample of five is taken to measure, and it is deliberately
+  larger than the gauge's own spread — an X-bar and R chart whose range came
+  mostly from the instrument would be charting the instrument.</li>
+<li><code>after_changeover</code> — the planted cause in the table above.</li>
+</ul>
+<p>Each of the five pieces is then measured through the bench gauge from the
+register, the same way a single reading is: its resolution rounds the value
+and its drift, if it has any, biases it.</p>
 <p>The gauges themselves are <strong>master data</strong>, not script: they are in the pack's
 <code>masterdata/gauges.json</code> and on the plant's own register, so a calibration
 recorded on the Gauges screen is in force for the next reading this floor

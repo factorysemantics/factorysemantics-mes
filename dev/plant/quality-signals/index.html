@@ -798,6 +798,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#several-pieces-at-a-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Several pieces at a time
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#one-thing-to-watch-in-how-you-collect-readings" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3519,6 +3530,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../decisions/0040-the-chart-type-follows-the-sampling-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0040 — The chart type follows the sampling plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../decisions/TEMPLATE/" class="md-nav__link">
         
   
@@ -4072,6 +4111,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#several-pieces-at-a-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Several pieces at a time
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#one-thing-to-watch-in-how-you-collect-readings" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4212,6 +4262,57 @@ MES does not go back and raise two dozen holds about a fortnight nobody was
 worried about until a moment ago.</p>
 <p>Fewer than twelve readings raises nothing, and the chart says why. Control
 limits computed from six points move with every reading.</p>
+<h2 id="several-pieces-at-a-time">Several pieces at a time<a class="headerlink" href="#several-pieces-at-a-time" title="Permanent link">&para;</a></h2>
+<p>If a characteristic is inspected one piece at a time, everything above is the
+chart you get: individuals and moving range, one point per reading.</p>
+<p>Some characteristics are not inspected that way. Five bottles come off the
+filler every fifteen minutes and are measured together on a bench; what the
+plan says is <em>five at a time</em>, and the right chart for that is <strong>X-bar and
+R</strong>. Tell the plant so by setting <strong>Pieces per sample</strong> on the specification
+(the Specifications tab of Master data, or <code>sample_size</code> in your pack's
+<code>quality_specs.json</code>). Empty or 1 is one at a time and nothing changes.</p>
+<p>With a plan in place:</p>
+<ul>
+<li><strong>The point is the sample's mean</strong>, not each reading, and the limits are
+  built from the average range <em>within</em> the samples. That is the whole reason
+  for sampling: the bottle-to-bottle variation is held inside the sample, so
+  the chart answers whether the <strong>process</strong> moved.</li>
+<li><strong>A second chart watches the ranges.</strong> A sample whose five readings
+  disagree more than they should is its own signal, and it always raises a
+  hold — on every plant, whatever <code>hold_rules</code> says. It has to: the X-bar
+  limits beside it were computed from the average range, and one inflated
+  sample has just widened them.</li>
+<li><strong>The four rules run on the means, once per sample.</strong> Five readings that
+  straddle three sigma individually and average inside the limits fire
+  nothing, because the process did not move. One sample is one evaluation and
+  at most one hold, and the evidence names the sample and all five readings.</li>
+<li><strong>Capability is computed from the within-sample spread</strong> (<code>R̄/d2</code>), which is
+  the process's own variation. <code>Pp</code>/<code>Ppk</code> still use every individual reading,
+  because what your customer received was pieces and not averages.</li>
+<li><strong><code>spc_min_points</code> counts samples.</strong> Twenty points on a line sampling four
+  times an hour is five hours, not twenty readings.</li>
+</ul>
+<p>Record a sample whole, with <code>POST /quality/samples</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="nt">"material"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FG-BOTTLE"</span><span class="p">,</span><span class="w"> </span><span class="nt">"characteristic"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fill_height"</span><span class="p">,</span>
+<span class="w"> </span><span class="nt">"values"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">141.8</span><span class="p">,</span><span class="w"> </span><span class="mf">142.1</span><span class="p">,</span><span class="w"> </span><span class="mf">141.9</span><span class="p">,</span><span class="w"> </span><span class="mf">142.4</span><span class="p">,</span><span class="w"> </span><span class="mf">142.0</span><span class="p">],</span>
+<span class="w"> </span><span class="nt">"order"</span><span class="p">:</span><span class="w"> </span><span class="s2">"WO-1042"</span><span class="p">,</span><span class="w"> </span><span class="nt">"equipment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"QI01"</span><span class="p">,</span><span class="w"> </span><span class="nt">"gauge"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HEIGHT-FILL-01"</span><span class="p">}</span>
+</code></pre></div>
+<p>Exactly as many values as the plan says. Four, or six, is refused with a
+sentence saying how many were expected — and so is a single
+<code>POST /quality/checks</code> against a sampled characteristic, because one reading
+is not a point on this chart.</p>
+<p>Each reading is still stored as its own <code>quality_checks</code> row with its own
+value and gauge; the sample is a record that ties them together. <strong>Nothing
+was backfilled</strong> when this arrived: readings taken before a plan was written
+have no sample, and if you set a sample size on a characteristic that already
+has history, that history is left out of the chart rather than grouped into
+samples nobody took. The chart says how many readings it set aside and why.</p>
+<p>The screen does not draw this chart yet. Until it does, the SPC page says so
+in a sentence and draws nothing, rather than plotting means as if each were
+one bottle; the centre, the limits, the capability and the verdict beside it
+are the samples' own and are true as they stand. <code>GET /quality/spc/...</code>
+answers <code>"kind": "xbar_r"</code> and carries the samples, so anything reading the
+API has the whole picture today.</p>
 <h2 id="one-thing-to-watch-in-how-you-collect-readings">One thing to watch in how you collect readings<a class="headerlink" href="#one-thing-to-watch-in-how-you-collect-readings" title="Permanent link">&para;</a></h2>
 <p>An individuals chart estimates the process's variation from the difference
 between <em>consecutive</em> readings. So a reading written down twice — the same
@@ -4348,7 +4449,9 @@ that is a finding.</p>
 <hr />
 <p>The reasoning, the options that were rejected, and what has still to be
 decided are in decision record
-<a href="../../decisions/0027-an-spc-signal-raises-a-hold/">0027</a>.</p>
+<a href="../../decisions/0027-an-spc-signal-raises-a-hold/">0027</a>. Why the chart type
+follows the sampling plan, and why the range signal is not a fifth rule, is
+<a href="../../decisions/0040-the-chart-type-follows-the-sampling-plan/">0040</a>.</p>
 
 
 

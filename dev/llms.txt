@@ -99,6 +99,7 @@
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0038-an-agent-is-an-account-with-a-role-a-budget-and-a-cadence/)
 - [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0039-an-analysis-is-recorded-code-that-can-only-read/)
+- [Develop — Decisions](https://docs.factorysemantics.com/dev/decisions/0040-the-chart-type-follows-the-sampling-plan/)
 - [Develop — Decisions — Template](https://docs.factorysemantics.com/dev/decisions/TEMPLATE/)
 - [Agents](https://docs.factorysemantics.com/dev/agents/)
 - [Agents — How-to — connect an MCP client](https://docs.factorysemantics.com/dev/agents/connect-mcp-client/)
