@@ -12,6 +12,51 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **The SPC screen draws a sampled characteristic, and a click opens the five
+  bottles behind the dot.** Scott, 2026-10-06: *"test if this type of graphing
+  and functionality can apply to a new type of SPC."* It applies. Quality →
+  SPC on a characteristic with a sampling plan now draws **X-bar and R**: the
+  mean of each sample with `X̿` and `X̿ ± A2·R̄` above, the spread inside each
+  sample with `R̄`, `D4·R̄` and `D3·R̄` below, specification limits where the
+  characteristic has them, and one dot per sample on each half. It is the IMR
+  layout, not a third one — the same two halves in one SVG, so one export
+  takes both; the same dot behaviour, the same panel beside it, the same
+  promise that the chart does not move when the panel opens.
+
+  - **A dot opens the readings behind it.** On an individuals chart a point is
+    a reading, and the panel opens that reading. On a sampled chart a point is
+    an average, so the panel opens the **n readings it is the average of** —
+    each one's value, gauge, who took it, how far it sat from the sample's own
+    mean, and which of them is furthest out. That is the question an X-bar
+    chart cannot answer on its own and the reason to click: five bottles high
+    is a filler setting, one bottle high is a nozzle. It says plainly that one
+    reading is always the furthest, so the naming is not a finding; names
+    none when they are all the same; and names all of them when two tie.
+  - **The window is the stretch the n readings span**, not an instant — plus
+    the minutes before — and every one of their stamps is marked on each
+    trend, so a reader can see which bottle was measured when the nozzle
+    pressure dropped. Everything else is the point panel's own blocks, asked
+    of a sample: where it sat on both halves and what fired, the gauge and its
+    calibration, the machine's state and what it had just come out of, the
+    stops, maintenance, findings, and each block's coverage.
+  - `GET /quality/spc/{material}/{characteristic}/sample/{sample_id}` is the
+    same read as an API. Same `before_minutes`, `after_minutes` and
+    `neighbour_hours`; nothing in it is computed for the panel.
+  - **The heading, the legend and the sentences under the chart follow
+    `kind`** — with or without points. A sampled characteristic that has no
+    samples yet now says so in its own words rather than captioning itself as
+    an individuals chart; on 2026-10-06 the lab plant's `fill_height` read
+    *"individuals and moving range — 0 samples"* under an X-bar plan, which is
+    a caption that undoes decision 0040.
+  - **The chart read gains a top-level `range_chart` block** beside
+    `moving_range` — centre, upper, lower, `n`, `stable`, `verdict`, `flagged`
+    — on sampled characteristics, so the lower half's words are drawn from the
+    same place on either kind of chart. It carries no signals of its own: on a
+    sampled chart rule 5 judges a sample and already arrives in `signals`
+    indexed by the same samples as rules 1–4, and a second copy would have a
+    reader counting every range firing twice. `control.range_chart` is
+    unchanged, key for key.
+
 - **A characteristic can be inspected several pieces at a time, and the chart
   follows the plan.** Until now this product drew one control chart:
   individuals and moving range, one point per reading. That is the right chart
@@ -70,10 +115,9 @@ goes under Honesty with a migration line, so plant people can find it.
     of them count samples rather than readings), and on
     [what the simulated floor does](docs/operate/the-simulated-floor.md).
 
-  The screen does not draw this chart yet — the SPC page says so in one
-  sentence and draws nothing rather than plotting means as if each were one
-  bottle, while the centre, limits, capability and verdict beside it are the
-  samples' own. Drawing it, and the panel behind a sample, is the follow-up.
+  When this landed the screen did not draw the chart — the SPC page said so in
+  one sentence and drew nothing rather than plotting means as if each were one
+  bottle. It draws it now; see the entry above.
 - **The SPC screen draws the moving range as well as the individuals
   chart - an IMR chart, the way a real MES has one.** Scott, 2026-10-06: *"so
   the current simulation runs an I chart. I want an IMR chart like a real MES

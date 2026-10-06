@@ -12,9 +12,9 @@
    second kind rather than as a second screen.
 
    The heading, the legend and the two sentences under the chart follow `kind`
-   too, with or without points: the lab's bottling plant drew a fill-height
-   chart with no samples yet under the words INDIVIDUALS AND MOVING RANGE, and
-   a true picture with a false caption is believed caption-first.
+   too, with or without points: a lab plant drew a sampled chart with no
+   samples yet under the words INDIVIDUALS AND MOVING RANGE, and a true
+   picture with a false caption is believed caption-first.
 
    Is the process stable (control limits from its own variation, four Western
    Electric rules on the individuals half and, since 2026-10-06, the one rule
@@ -581,11 +581,11 @@ async function load() {
 }
 
 /* The words on this screen that are about which chart it is, set in one place
-   from `kind`. On 2026-10-06 the lab's bottling plant drew a fill-height chart
-   with no samples yet under the heading INDIVIDUALS AND MOVING RANGE, with the
-   individuals legend and the individuals explainer under it - a true chart
-   with a false caption, which a reader believes before they believe the
-   picture. So these follow `kind` whether or not there is anything to draw. */
+   from `kind`. On 2026-10-06 a lab plant drew a sampled chart with no samples
+   yet under the heading INDIVIDUALS AND MOVING RANGE, with the individuals
+   legend and the individuals explainer under it - a true chart with a false
+   caption, which a reader believes before they believe the picture. So these
+   follow `kind` whether or not there is anything to draw. */
 function words(data) {
   const sampled = sampledChart(data);
   const n = data.sample_size;
