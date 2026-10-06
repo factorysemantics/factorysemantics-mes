@@ -4176,17 +4176,27 @@ most one non-conformance, and the evidence names the sample and every reading
 in it. Five bottles whose individual values straddle three sigma and whose
 mean sits inside the limits fire nothing, which is the point: the process did
 not move.</p>
-<p>A sample range beyond <code>D4·R̄</code> is its own signal, and it is <strong>not</strong> a fifth
-Western Electric rule. The vocabulary of four rules, their windows and their
-numbering stay what decision
-<a href="../0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/">0036</a>
-fixed. The range signal is recorded as rule <code>0</code>, meaning <em>not one of the
-four</em>, and it always raises a hold whatever the plant holds on: limits built
-from a mean range that one inflated sample widened are not limits, so a plant
-that ignored it would be reading a chart it had quietly broken. The chart
-payload says so on every response — <code>always_hold_rules</code> — so nobody has to
-discover it. Whether a plant may choose otherwise is <code>spc_hold_rules</code>'
-business and a later change.</p>
+<p>A sample range beyond <code>D4·R̄</code> is its own signal: limits built from a mean
+range that one inflated sample widened are not limits, so a plant reading
+only the means would be reading a chart it had quietly broken.</p>
+<div class="admonition warning">
+<p class="admonition-title">Amended the same day — the range signal is rule 5, and the plant chooses</p>
+<p>As first written this record recorded the range signal as rule <code>0</code>,
+<em>not one of the four</em>, and held on it everywhere whatever
+<code>spc_hold_rules</code> said. Hours later the IMR chart landed with <strong>rule 5 —
+a moving range beyond its upper limit</strong> — and a product with two
+numbers for <em>a range beyond its limit</em> would have been a product that
+asked a plant to say so twice. <strong>There is one definition: a range
+beyond its upper limit is rule 5 on either chart</strong> — the moving range
+on an individuals chart, the sample range on a sampled one — drawn and
+recorded on every plant per
+<a href="../0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/">0036</a>,
+and raising a hold where the plant's <code>hold_rules</code> includes 5. Rule <code>0</code>
+and <code>always_hold_rules</code> are gone. The bottling pack names rule 5 on its
+own list, so <code>fill_height</code> there holds on a range as this record
+intended; a plant that upgrades keeps rules 1 to 4 and sees rule-5
+firings recorded, not held.</p>
+</div>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <p>Easier: a line that inspects several pieces at a time gets the chart it
 should always have had, and its capability figure stops being inflated by

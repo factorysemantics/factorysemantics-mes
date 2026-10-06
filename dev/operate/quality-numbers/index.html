@@ -4205,7 +4205,7 @@ and the second one needs its own argument.</p>
 <tr>
 <td><code>hold_rules</code></td>
 <td><code>[1, 2, 3, 4]</code></td>
-<td>Which Western Electric rules raise a quality hold. Every rule is drawn and recorded whatever this says — <a href="../../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/">decision 0036</a></td>
+<td>Which SPC rules raise a quality hold, from 1 to 5. Every rule is drawn on the chart whatever this says — <a href="../../decisions/0036-the-chart-draws-every-rule-the-plant-chooses-which-hold/">decision 0036</a>. Rule 5, a moving range beyond its upper limit, is the one the default leaves out: it is drawn and recorded on every plant and holds only where a plant adds <code>5</code></td>
 </tr>
 <tr>
 <td><code>major_rules</code></td>
@@ -4292,9 +4292,13 @@ second-guessed.</p>
 plant breaks, it is the plant's. If a number, a topic or an API field would
 mean something different at the two plants, it is the product's.</p>
 <ul>
-<li><strong>The four Western Electric rules, their numbering and their windows.</strong> A
-  plant that renumbered them would publish <code>SpcSignal.rule = 3</code> while meaning
-  something nobody else means by rule 3.</li>
+<li><strong>The five SPC rules, their numbering and their windows</strong> — the four
+  Western Electric rules on the individuals chart and rule 5 on the moving
+  range. A plant that renumbered them would publish <code>SpcSignal.rule = 3</code> while
+  meaning something nobody else means by rule 3.</li>
+<li><strong>The range constants, d2 and D4 at a subgroup of two.</strong> 1.128 and 3.267 are
+  what the method is; a plant that changed them would be drawing a different
+  chart under the same name.</li>
 <li><strong>The arithmetic behind Cp, Cpk and Pp.</strong> Only the English word beside the
   figure moves. A Cpk of 1.21 is a Cpk of 1.21 everywhere; whether this plant
   calls that <em>marginal</em> is its own business.</li>
@@ -4412,12 +4416,14 @@ is a sample:</p>
   the hold's evidence names the sample, its five readings and the five rows
   they are stored in.</li>
 </ul>
-<p>One thing on a sampled chart is not a Western Electric rule: a sample whose
-<strong>range</strong> is beyond <code>D4·R̄</code> is its own signal, recorded as rule 0. It is held
-on always and is not in <code>hold_rules</code>, because a range that wide means the five
-pieces disagree — the mean they average to is not describing anything, so
-there is nothing for a plant to opt out of. Every chart response says so in
-<code>always_hold_rules</code>.</p>
+<p>A sampled chart has one more signal, and it is the same <strong>rule 5</strong> an
+individuals chart has: a <strong>range beyond its upper limit</strong> — the spread inside
+one sample here, the gap between two readings there. It is drawn and recorded
+on every plant and raises a hold where <code>hold_rules</code> includes 5, like any other
+rule. It is worth including: a sample whose range is beyond <code>D4·R̄</code> means the
+five pieces disagree, so the mean they average to is not describing anything
+and the X-bar limits beside it were widened by that sample itself. The
+bottling lab pack names 5 on both its lists for exactly that reason.</p>
 <p>Capability is worked out from the within-process sigma, <code>R̄/d2</code>, and not from
 the spread of the means, which is smaller by root n. A Cp computed the other
 way would read about √5 too high on a sample of five, and the SPC screen's

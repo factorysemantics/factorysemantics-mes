@@ -809,6 +809,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-other-half-of-the-chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The other half of the chart
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#one-thing-to-watch-in-how-you-collect-readings" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4122,6 +4133,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#the-other-half-of-the-chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The other half of the chart
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#one-thing-to-watch-in-how-you-collect-readings" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4240,7 +4262,8 @@ having to go and re-derive it. So the hold carries:</p>
 <li>the <strong>rule</strong> that fired and what it means in words;</li>
 <li>the <strong>material and characteristic</strong>;</li>
 <li>the <strong>readings</strong> of the rule's window — one point for rule 1, three for
-  rule 2, five for rule 3, eight for rule 4;</li>
+  rule 2, five for rule 3, eight for rule 4, and the two either side of the
+  gap for rule 5;</li>
 <li>the <strong>chart as it stood</strong>: the centre line, sigma, the ±3σ limits and how
   many readings they were computed from. Not recomputed later — recomputing
   gives different numbers, and then nobody can see what the MES acted on;</li>
@@ -4278,10 +4301,12 @@ R</strong>. Tell the plant so by setting <strong>Pieces per sample</strong> on t
   for sampling: the bottle-to-bottle variation is held inside the sample, so
   the chart answers whether the <strong>process</strong> moved.</li>
 <li><strong>A second chart watches the ranges.</strong> A sample whose five readings
-  disagree more than they should is its own signal, and it always raises a
-  hold — on every plant, whatever <code>hold_rules</code> says. It has to: the X-bar
-  limits beside it were computed from the average range, and one inflated
-  sample has just widened them.</li>
+  disagree more than they should is <strong>rule 5</strong> — the same rule 5 an
+  individuals chart has, a range beyond its upper limit — drawn and recorded
+  on every plant and raising a hold where <code>hold_rules</code> includes 5. Worth
+  including: the X-bar limits beside it were computed from the average range,
+  and one inflated sample has just widened them. The bottling lab plant
+  includes it.</li>
 <li><strong>The four rules run on the means, once per sample.</strong> Five readings that
   straddle three sigma individually and average inside the limits fire
   nothing, because the process did not move. One sample is one evaluation and
@@ -4313,6 +4338,27 @@ one bottle; the centre, the limits, the capability and the verdict beside it
 are the samples' own and are true as they stand. <code>GET /quality/spc/...</code>
 answers <code>"kind": "xbar_r"</code> and carries the samples, so anything reading the
 API has the whole picture today.</p>
+<h2 id="the-other-half-of-the-chart">The other half of the chart<a class="headerlink" href="#the-other-half-of-the-chart" title="Permanent link">&para;</a></h2>
+<p><strong>Quality → SPC</strong> draws two charts, not one. Above is the individuals chart —
+every reading, with the centre line and the ±3σ limits. Below it, about half
+as tall and on the same timeline, is the <strong>moving range</strong>: the gap between each
+reading and the one before it, with its own centre line (R̄, the mean of those
+gaps) and its own upper limit (3.267 × R̄, the constant for a range of two).
+That lower chart is where the sigma behind <em>both</em> sets of limits comes from —
+R̄ over d2, 1.128 for two — so a process whose gaps are drifting has moved
+the limits on the chart above it, and the lower chart is where you see that
+happen.</p>
+<p>A gap beyond its upper limit is <strong>rule 5</strong> — the same rule number a sampled
+chart uses for a sample range beyond <em>its</em> limit, because it is the same
+statement about a process: a range went past the line it is judged by. It is
+drawn, flagged and recorded on every plant, like the other four, but it
+<strong>raises no hold anywhere unless a plant adds <code>5</code> to <code>hold_rules</code></strong> — the
+shipped default is still the four Western Electric rules. A plant that upgrades to this version starts recording
+moving-range firings from its next reading; nothing is written about the jumps
+already in its history. A plant that turns it on gets the same kind of non-conformance, with the
+two readings either side of the gap as its evidence. Clicking a dot on the
+lower chart opens the same panel as the upper one, on the later of its two
+readings.</p>
 <h2 id="one-thing-to-watch-in-how-you-collect-readings">One thing to watch in how you collect readings<a class="headerlink" href="#one-thing-to-watch-in-how-you-collect-readings" title="Permanent link">&para;</a></h2>
 <p>An individuals chart estimates the process's variation from the difference
 between <em>consecutive</em> readings. So a reading written down twice — the same
@@ -4450,7 +4496,8 @@ that is a finding.</p>
 <p>The reasoning, the options that were rejected, and what has still to be
 decided are in decision record
 <a href="../../decisions/0027-an-spc-signal-raises-a-hold/">0027</a>. Why the chart type
-follows the sampling plan, and why the range signal is not a fifth rule, is
+follows the sampling plan, and why a range beyond its limit is rule 5 on
+either chart, is
 <a href="../../decisions/0040-the-chart-type-follows-the-sampling-plan/">0040</a>.</p>
 
 
