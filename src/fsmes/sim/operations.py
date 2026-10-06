@@ -50,6 +50,7 @@ import structlog
 
 from fsmes import identity
 from fsmes.config import Settings
+from fsmes.db import utcnow
 from fsmes.sim import measurement
 from fsmes.sim.measurement import Bench
 
@@ -120,11 +121,19 @@ def _seconds_this_token_has_left(token: str) -> float | None:
     None when it cannot be read: a token in some other shape is not something
     to fail over, and the caller falls back to the configured TTL. Nothing is
     verified here - this reads an expiry, it does not trust a claim.
+
+    `exp` is compared against `utcnow().timestamp()` and not against
+    `time.time()`, because that is what the plant compares it against
+    (`auth.read_token`). The MES's single timestamp convention is naive UTC,
+    and the epoch seconds of a naive datetime are read in the machine's own
+    zone - so on a plant five hours behind UTC the two differ by five hours,
+    and a floor that used the wall clock here would think it had five extra
+    hours of login and find out it did not.
     """
     try:
         body = token.split(".")[0]
         claims = json.loads(base64.urlsafe_b64decode(body + "=" * (-len(body) % 4)))
-        return float(claims["exp"]) - time.time()
+        return float(claims["exp"]) - utcnow().timestamp()
     except (ValueError, TypeError, KeyError):
         return None
 
@@ -208,10 +217,11 @@ class Floor:
         # One re-sign-in at a time. Six loops share this client, and six
         # tasks noticing the same expiry would otherwise sign in six times.
         self._signing_in = asyncio.Lock()
-        # That a fresh login is *also* refused is said once, not once a step:
-        # a password that has changed under a running floor is a thing to fix,
-        # and ten thousand identical lines is how it stays unfound.
-        self._said_a_fresh_login_was_refused = False
+        # That the login will not come back is said once, not once a step: a
+        # password that has changed under a running floor is a thing to fix,
+        # and ten thousand identical lines is how it stays unfound. Cleared by
+        # the next request that works, so a plant that comes back says so.
+        self._said_the_login_will_not_come_back = False
 
     async def sign_in(self, code: str, password: str) -> None:
         r = await self.client.post("/auth/login", json={"code": code, "password": password})
@@ -222,7 +232,6 @@ class Floor:
         """Hold the token, and work out when to replace it."""
         self.client.headers["Authorization"] = f"Bearer {token}"
         self._credentials = (code, password)
-        self._said_a_fresh_login_was_refused = False
         left = _seconds_this_token_has_left(token)
         if left is None:
             left = float(getattr(self.settings, "token_ttl_seconds", 0) or 0)
@@ -250,9 +259,11 @@ class Floor:
                 r.raise_for_status()
                 token = r.json()["token"]
             except (httpx.HTTPError, KeyError) as exc:
-                log.warning("the floor could not sign in again; its next steps will fail "
-                            "until the plant answers", user=code, why=why,
-                            error=str(exc)[:160])
+                if not self._said_the_login_will_not_come_back:
+                    self._said_the_login_will_not_come_back = True
+                    log.error("the floor could not sign in again; no step will succeed "
+                              "until somebody looks", user=code, why=why,
+                              error=str(exc)[:160])
                 return False
             self._remember_the_login(code, password, token)
             log.info("the floor signed in again", user=code, why=why,
@@ -274,7 +285,7 @@ class Floor:
         response = await self.client.request(method, path, json=json, params=params)
         if response.status_code != 401:
             if response.status_code < 400:
-                self._said_a_fresh_login_was_refused = False
+                self._said_the_login_will_not_come_back = False
             return response
         # Refused. Either the login ran out early or it was never valid; both
         # are answered by signing in once and trying the step again, and the
@@ -282,11 +293,13 @@ class Floor:
         if not await self._sign_in_again("the plant refused the floor's login", held):
             return response
         again = await self.client.request(method, path, json=json, params=params)
-        if again.status_code == 401 and not self._said_a_fresh_login_was_refused:
-            self._said_a_fresh_login_was_refused = True
+        if again.status_code == 401 and not self._said_the_login_will_not_come_back:
+            self._said_the_login_will_not_come_back = True
             log.error("the floor signed in again and the plant still refuses it; no step "
                       "will succeed until somebody looks",
                       user=self._credentials[0] if self._credentials else None, path=path)
+        if again.status_code < 400:
+            self._said_the_login_will_not_come_back = False
         return again
 
     async def post(self, path: str, *, json: dict | None = None) -> httpx.Response:
