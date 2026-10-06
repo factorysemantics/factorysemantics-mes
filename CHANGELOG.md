@@ -1241,6 +1241,44 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Fixed
 
+- **The simulated floor stopped twelve hours after start and nothing said so.**
+  On 2026-10-06 both lab plants' floors stopped working at 00:52 and stayed
+  stopped for nine hours. Nothing had crashed. The floor signs in to the plant
+  like anybody else, a login is good for one shift (`[auth]
+  token_ttl_seconds`, twelve hours), and twelve hours to the minute after the
+  plants started every request the floor made came back **401**: each step
+  logged *shop floor step failed* and tried again on the next tick, forever —
+  9,485 of those lines on one plant and 7,381 on the other before it was
+  found. Meanwhile the plant answered every screen and every health check
+  perfectly, because a work order read answers fine whether or not anybody is
+  working. No inspection, no stop named, no non-conformance reviewed, for nine
+  hours, on the plants the analysis is demonstrated on.
+
+  **The floor signs in again.** It replaces its login halfway through the
+  token's life — read out of the token the plant issued rather than out of its
+  own copy of the configuration, so a floor talking to a plant whose settings
+  it does not share still renews in time — and a 401 it meets anyway is
+  answered by signing in once and sending *that step* again, rather than
+  dropping it. Every read and write the floor makes now goes through one place
+  that knows a login can run out, so nothing is left behind the next time a
+  step is added. Each re-sign-in is one line, `the floor signed in again`, with
+  why; a plant that will not issue a new login at all is said once, as an
+  error, not once a step.
+
+  **And `GET /health` now says when the floor last recorded a check** —
+  `"floor": {"last_check_recorded": …, "seconds_since": …}`, `null` on a plant
+  where nobody has recorded one yet, because never inspected is not *a long
+  time ago* and is not zero. A plant that is up and a plant that is being
+  worked are two facts, and a monitor holding only the first reads silence as
+  everything being fine. The floor inspects every eight line seconds, so
+  `seconds_since` above a few minutes on a simulating plant means its floor has
+  stopped. Documented in
+  [the simulated floor](docs/operate/the-simulated-floor.md).
+
+  Only the simulated *floor* was affected. `fsmes score`, `fsmes sweep`, the UI
+  crawl and the agent evals all sign in once too, and all of them finish long
+  inside one shift.
+
 - **A pack setting that is a list survived `fsmes pack check` and then broke
   every experiment.** The pack writer - the code that writes the copy of a
   pack an experiment or a sweep actually starts - wrote each value key by key,
