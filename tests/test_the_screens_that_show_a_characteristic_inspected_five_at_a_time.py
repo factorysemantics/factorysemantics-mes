@@ -314,6 +314,18 @@ def sampled_chart(admin, plant):
     page.close()
 
 
+def _as_written(page, selector: str) -> str:
+    """The words the page says, not the shape the stylesheet shouts them in.
+
+    The chart heading sits in a panel heading, and panel headings are
+    uppercased by CSS. `inner_text` returns the rendered text, so asserting on
+    it would tie this test to a `text-transform` rule that is a matter of
+    taste - and would read the lower-case form, silently, on any run where the
+    stylesheet had not arrived yet.
+    """
+    return " ".join((page.text_content(selector) or "").split())
+
+
 def _dots(page, series: str) -> list[dict]:
     return page.eval_on_selector_all(
         f"#chart circle[data-series='{series}']",
@@ -351,8 +363,12 @@ def test_the_two_halves_are_drawn_from_the_samples_own_centre_and_limits(sampled
     around a mean is the mistake that makes an unstable chart look calm."""
     labels = sampled_chart.eval_on_selector_all(
         "#chart text", "ts => ts.map(t => t.textContent.trim())")
-    assert "X̿" in labels and "R̄" in labels
-    assert "x̄" not in labels, "the individuals centre label on a sampled chart"
+    assert any(t.startswith("X̿ ") for t in labels), \
+        "the centre of the means is named X̿, with its value beside it"
+    assert any(t.startswith("R̄ ") for t in labels), \
+        "the centre of the ranges is named R̄, with its value beside it"
+    assert not any(t.startswith("x̄") for t in labels), \
+        "the individuals centre label on a sampled chart"
     assert any(t.startswith("FG-COLA fill_height (mm) — mean of 5") for t in labels)
     assert any(t.startswith("Range within each sample (mm)") for t in labels)
 
@@ -362,7 +378,7 @@ def test_the_words_around_the_chart_say_which_chart_it_is(sampled_chart):
     follow `kind`, because a chart of five-bottle averages captioned
     *individuals and moving range* is read as single bottles by anybody who
     reads the caption first - and everybody does."""
-    assert sampled_chart.inner_text("#chart-heading") == "Sample average and range (X̄ and R)"
+    assert _as_written(sampled_chart, "#chart-heading") == "Sample average and range (X̄ and R)"
     legend = sampled_chart.inner_text("#chart-legend")
     assert "sample average (mean of 5)" in legend
     assert "X̿ ± A2·R̄" in legend and "D4·R̄ and D3·R̄" in legend
@@ -432,7 +448,7 @@ def test_a_sampled_characteristic_with_no_samples_yet_still_says_which_chart(adm
             "() => { const p = document.querySelector('#chart .empty');"
             " return p && p.textContent.includes('crown_torque'); }",
             timeout=30000)
-        assert page.inner_text("#chart-heading") == "Sample average and range (X̄ and R)"
+        assert _as_written(page, "#chart-heading") == "Sample average and range (X̄ and R)"
         assert "sample average (mean of 4)" in page.inner_text("#chart-legend")
         assert "4 readings inside each sample" in page.inner_text("#chart-explainer")
         said = page.inner_text("#chart .empty")
@@ -458,7 +474,7 @@ def test_a_characteristic_inspected_one_at_a_time_still_draws_its_chart(admin, p
             timeout=30000)
         assert not page.query_selector("#chart .empty")
         assert page.get_attribute("#chart svg", "data-kind") == "spc-imr"
-        assert page.inner_text("#chart-heading") == "Individuals and moving range"
+        assert _as_written(page, "#chart-heading") == "Individuals and moving range"
         assert "reading" in page.inner_text("#chart-legend")
         assert "X̿" not in page.inner_text("#chart-legend")
         assert "gap between each reading and the one before" in \
