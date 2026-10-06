@@ -80,6 +80,44 @@ on it. The assistant's honest answer is to show which stops are unnamed and
 let whoever was there say. Another system's label has its own front door,
 [`fsmes inbound`](inbound.md), and it records who claimed it.
 
+## A floor that has stopped, and how to tell
+
+The floor signs in to the plant like anybody else, and a login is good for one
+shift — `[auth] token_ttl_seconds`, twelve hours by default. On 2026-10-06 both
+lab plants' floors stopped at 00:52 and stayed stopped for nine hours. Nothing
+had crashed: twelve hours to the minute after they started, every request they
+made came back **401**, each step logged *shop floor step failed* and tried
+again on the next tick, and the plant went on answering every screen and every
+health check perfectly, because a work order read answers fine whether or not
+anybody is working.
+
+Two things came out of that, and both are in the product now.
+
+**The floor signs in again.** It replaces its login halfway through the token's
+life — read out of the token the plant issued, not out of this floor's copy of
+the configuration — so the first failed step never happens; and a 401 it meets
+anyway is answered by signing in once and sending *that step* again, rather
+than losing it and recovering on the next tick. Each re-sign-in is one line in
+the log, `the floor signed in again`, with why. A plant that will not issue a
+new login at all — a password changed under a running floor — is said **once**,
+as an error, not once a step.
+
+**`GET /health` says when the floor last recorded a check.**
+
+```json
+"floor": { "last_check_recorded": "2026-10-06T14:52:16", "seconds_since": 31.4 }
+```
+
+A plant that is up and a plant that is being worked are two facts, and a
+monitor that only has the first reads silence as everything being fine. A
+plant where nobody has recorded a check yet answers `null` for both — never
+inspected is not *a long time ago*, and it is not zero.
+
+What to watch it with: the floor inspects every eight line seconds, so
+`seconds_since` above a few minutes on a plant that is meant to be simulating
+means the floor has stopped, whatever else the plant says about itself.
+`/health` needs no credential.
+
 ## Reading the script
 
 The bottling pack's

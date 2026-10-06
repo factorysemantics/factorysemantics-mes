@@ -38,6 +38,8 @@ become unassigned production, which is the true answer (decision 0019).
 from __future__ import annotations
 
 import asyncio
+import base64
+import json
 import random
 import re
 import time
@@ -48,6 +50,7 @@ import structlog
 
 from fsmes import identity
 from fsmes.config import Settings
+from fsmes.db import utcnow
 from fsmes.sim import measurement
 from fsmes.sim.measurement import Bench
 
@@ -98,6 +101,41 @@ def _as_moment(value) -> datetime | None:
     except ValueError:
         return None
     return parsed.astimezone(UTC).replace(tzinfo=None) if parsed.tzinfo else parsed
+
+
+#: Never renew more often than this, however short the plant's token life is.
+#: A plant configured with a two-second login would otherwise have this floor
+#: spending its shift signing in.
+_MIN_SECONDS_BETWEEN_RENEWALS = 5.0
+
+
+def _seconds_this_token_has_left(token: str) -> float | None:
+    """How long the plant says this login is good for, read from the token.
+
+    The login reply does not carry an expiry, but the token does. The MES's
+    token is a base64 payload and a signature (`fsmes.services.auth`), and
+    `exp` in that payload is *the plant's* answer rather than this floor's
+    guess about how the plant was configured - which matters on a floor
+    talking to a plant whose settings it does not share.
+
+    None when it cannot be read: a token in some other shape is not something
+    to fail over, and the caller falls back to the configured TTL. Nothing is
+    verified here - this reads an expiry, it does not trust a claim.
+
+    `exp` is compared against `utcnow().timestamp()` and not against
+    `time.time()`, because that is what the plant compares it against
+    (`auth.read_token`). The MES's single timestamp convention is naive UTC,
+    and the epoch seconds of a naive datetime are read in the machine's own
+    zone - so on a plant five hours behind UTC the two differ by five hours,
+    and a floor that used the wall clock here would think it had five extra
+    hours of login and find out it did not.
+    """
+    try:
+        body = token.split(".")[0]
+        claims = json.loads(base64.urlsafe_b64decode(body + "=" * (-len(body) % 4)))
+        return float(claims["exp"]) - utcnow().timestamp()
+    except (ValueError, TypeError, KeyError):
+        return None
 
 
 class Floor:
@@ -164,14 +202,112 @@ class Floor:
         # one end: a floor that assumed a changeover it never saw would be
         # putting the offset on readings nothing explains.
         self._changeover_ended: datetime | None = None
+        # Who this floor is, kept so it can sign in again on its own. A login
+        # is good for one shift (`[auth] token_ttl_seconds`, twelve hours) and
+        # this floor runs for weeks: on 2026-10-06 both lab plants' floors
+        # stopped dead twelve hours to the minute after they started, every
+        # request from then on answered 401, and nothing on any screen said
+        # so. A simulation is only proof while it runs.
+        self._credentials: tuple[str, str] | None = None
+        # When to sign in again without being asked, on the monotonic clock.
+        # Halfway through the login's life, so the first failed step never
+        # happens rather than being recovered from. Infinity until the first
+        # sign-in, and on a plant whose token life cannot be read at all.
+        self._renew_at: float = float("inf")
+        # One re-sign-in at a time. Six loops share this client, and six
+        # tasks noticing the same expiry would otherwise sign in six times.
+        self._signing_in = asyncio.Lock()
+        # That the login will not come back is said once, not once a step: a
+        # password that has changed under a running floor is a thing to fix,
+        # and ten thousand identical lines is how it stays unfound. Cleared by
+        # the next request that works, so a plant that comes back says so.
+        self._said_the_login_will_not_come_back = False
 
     async def sign_in(self, code: str, password: str) -> None:
         r = await self.client.post("/auth/login", json={"code": code, "password": password})
         r.raise_for_status()
-        self.client.headers["Authorization"] = f"Bearer {r.json()['token']}"
+        self._remember_the_login(code, password, r.json()["token"])
+
+    def _remember_the_login(self, code: str, password: str, token: str) -> None:
+        """Hold the token, and work out when to replace it."""
+        self.client.headers["Authorization"] = f"Bearer {token}"
+        self._credentials = (code, password)
+        left = _seconds_this_token_has_left(token)
+        if left is None:
+            left = float(getattr(self.settings, "token_ttl_seconds", 0) or 0)
+        self._renew_at = (time.monotonic()
+                          + max(left / 2.0, _MIN_SECONDS_BETWEEN_RENEWALS)
+                          if left > 0 else float("inf"))
+
+    async def _sign_in_again(self, why: str, held: str | None) -> bool:
+        """Replace the login this floor is holding. One line in the log, once.
+
+        `held` is the authorization this floor was using when the caller
+        decided a new one was needed. Another task may have replaced it while
+        this one waited for the lock, in which case there is nothing to do and
+        nothing to say - that is the same event, not a second one.
+        """
+        if self._credentials is None:
+            return False
+        async with self._signing_in:
+            if self.client.headers.get("Authorization") != held:
+                return True
+            code, password = self._credentials
+            try:
+                r = await self.client.post("/auth/login",
+                                           json={"code": code, "password": password})
+                r.raise_for_status()
+                token = r.json()["token"]
+            except (httpx.HTTPError, KeyError) as exc:
+                if not self._said_the_login_will_not_come_back:
+                    self._said_the_login_will_not_come_back = True
+                    log.error("the floor could not sign in again; no step will succeed "
+                              "until somebody looks", user=code, why=why,
+                              error=str(exc)[:160])
+                return False
+            self._remember_the_login(code, password, token)
+            log.info("the floor signed in again", user=code, why=why,
+                     good_for_seconds=round(_seconds_this_token_has_left(token) or 0.0))
+            return True
+
+    async def _send(self, method: str, path: str, *, json: dict | None = None,
+                    params: dict | None = None) -> httpx.Response:
+        """One request, with the floor's login kept alive around it.
+
+        Every read and write this floor makes goes through here, so there is
+        one place that knows the login can run out - rather than each of the
+        dozen callers having to.
+        """
+        if time.monotonic() >= self._renew_at:
+            await self._sign_in_again("the login was halfway through its life",
+                                      self.client.headers.get("Authorization"))
+        held = self.client.headers.get("Authorization")
+        response = await self.client.request(method, path, json=json, params=params)
+        if response.status_code != 401:
+            if response.status_code < 400:
+                self._said_the_login_will_not_come_back = False
+            return response
+        # Refused. Either the login ran out early or it was never valid; both
+        # are answered by signing in once and trying the step again, and the
+        # answer to a second refusal is to say so rather than to loop.
+        if not await self._sign_in_again("the plant refused the floor's login", held):
+            return response
+        again = await self.client.request(method, path, json=json, params=params)
+        if again.status_code == 401 and not self._said_the_login_will_not_come_back:
+            self._said_the_login_will_not_come_back = True
+            log.error("the floor signed in again and the plant still refuses it; no step "
+                      "will succeed until somebody looks",
+                      user=self._credentials[0] if self._credentials else None, path=path)
+        if again.status_code < 400:
+            self._said_the_login_will_not_come_back = False
+        return again
+
+    async def post(self, path: str, *, json: dict | None = None) -> httpx.Response:
+        """One write. The response is the caller's to read, refusals and all."""
+        return await self._send("POST", path, json=json)
 
     async def get(self, path: str, **params):
-        r = await self.client.get(path, params=params or None)
+        r = await self._send("GET", path, params=params or None)
         r.raise_for_status()
         return r.json()
 
@@ -267,7 +403,7 @@ class Floor:
             if not ready:
                 continue
             try:
-                response = await self.client.post(
+                response = await self.post(
                     f"/quality/gauges/{code}/calibrate",
                     json={"result": "adjusted", "performed_by": by,
                           "notes": "Found reading high against the reference weight "
@@ -452,7 +588,7 @@ class Floor:
             if gauge:
                 body["gauge"] = gauge
             try:
-                r = await self.client.post("/quality/checks", json=body)
+                r = await self.post("/quality/checks", json=body)
                 r.raise_for_status()
                 out = r.json()
                 self._last_recorded[spec["characteristic"]] = as_the_tag_had_it
@@ -592,7 +728,7 @@ class Floor:
             if station:
                 body["equipment"] = station
         try:
-            response = await self.client.post("/quality/samples", json=body)
+            response = await self.post("/quality/samples", json=body)
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             log.warning("sample refused", characteristic=plan.characteristic,
@@ -718,7 +854,7 @@ class Floor:
         if not reason_code:
             return False
         try:
-            response = await self.client.post(
+            response = await self.post(
                 f"/equipment/{code}/stops/label",
                 json={"reason_code": reason_code, "start": began.isoformat(),
                       "end": (began + timedelta(seconds=1)).isoformat()})
@@ -783,7 +919,7 @@ class Floor:
             body["seq"] = line["seq"]
 
         try:
-            r = await self.client.post("/execution/consume", json=body)
+            r = await self.post("/execution/consume", json=body)
             r.raise_for_status()
             log.info("staged material", order=order["code"], lot=lot["code"],
                      component=line["component"], seq=line.get("seq"),
@@ -825,7 +961,7 @@ class Floor:
             refused = False
             for op in running:
                 try:
-                    response = await self.client.post(
+                    response = await self.post(
                         f"/workorders/{code}/operations/{op['seq']}/complete")
                     response.raise_for_status()
                 except httpx.HTTPStatusError as exc:
@@ -878,7 +1014,7 @@ class Floor:
             return None
         nxt = sorted(book, key=_book_position)[0]
         try:
-            response = await self.client.post(f"/workorders/{nxt['code']}/release")
+            response = await self.post(f"/workorders/{nxt['code']}/release")
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             log.warning("release refused", order=nxt["code"], status=exc.response.status_code,
@@ -1001,7 +1137,7 @@ class Floor:
                     code: str) -> bool:
         """One write, with its refusal reported rather than swallowed."""
         try:
-            response = await self.client.post(path, json=json)
+            response = await self.post(path, json=json)
             response.raise_for_status()
             return True
         except httpx.HTTPStatusError as exc:

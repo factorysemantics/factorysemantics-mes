@@ -12,6 +12,27 @@ def test_health(anon):
     assert body["plant"] == "demo" and body["profile"] == "laptop"
 
 
+def test_health_says_when_the_floor_last_recorded_a_check(anon, client):
+    """The half of 2026-10-06 that nothing on any screen said.
+
+    Both lab plants answered every request for nine hours while their floors
+    were dead. A plant that is up and a plant that is being worked are two
+    facts, and health now carries both.
+    """
+    before = anon.get("/health").json()["floor"]
+    assert before == {"last_check_recorded": None, "seconds_since": None}, (
+        "a plant nobody has inspected on yet reported a time anyway")
+
+    recorded = client.post("/quality/checks",
+                           json={"material": "FG-COLA", "characteristic": "brix", "value": 10.4})
+    assert recorded.status_code == 201
+
+    after = anon.get("/health").json()["floor"]
+    assert after["last_check_recorded"] is not None
+    assert 0 <= after["seconds_since"] < 60, (
+        f"a check recorded just now reads as {after['seconds_since']}s ago")
+
+
 def test_seeded_equipment_visible(client):
     codes = [eq["code"] for eq in client.get("/masterdata/equipment").json()]
     assert {"ACME", "KC1", "LINE1", "MIX01", "PACK01"} <= set(codes)

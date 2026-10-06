@@ -11,13 +11,51 @@ from fsmes import identity
 from fsmes import shadow as shadow_mode
 from fsmes.api import deps
 from fsmes.api.deps import DbDep, ReadDbDep, UserDep, require
-from fsmes.domain import AuditLog, ErpMessage, MessageStatus, OrderStatus, TagValue, WorkOrder
+from fsmes.db import utcnow
+from fsmes.domain import (
+    AuditLog,
+    ErpMessage,
+    MessageStatus,
+    OrderStatus,
+    QualityCheck,
+    TagValue,
+    WorkOrder,
+)
 from fsmes.services import connection as connection_service
 from fsmes.services import line_clock
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _the_floor(db: Session) -> dict:
+    """When somebody on the floor last recorded a check.
+
+    A plant can be up, answering every request, serving every screen - and
+    have nothing happening on its floor. On 2026-10-06 both lab plants were
+    in exactly that state for nine hours: the simulated floor's login had run
+    out, every request it made was refused, and `health`, `smoke` and the
+    screens all said the plant was fine, because a plant that answers a work
+    order read answers it whether or not anybody is working.
+
+    So health says this too. A check is the most frequent thing a floor does
+    and the cheapest one to ask about - the newest row by id, one lookup down
+    the primary key, no scan - and it is a fact the plant holds rather than an
+    inference about a process. On a real plant it is when an inspector last
+    wrote a reading down, which is the same question worth asking.
+
+    Never recorded is `null` and not zero, and not "a long time ago": a plant
+    commissioned this morning has not had a check yet, and that is not the
+    same fact as a floor that stopped. House rule 2.
+    """
+    last = db.scalar(select(QualityCheck.ts).order_by(QualityCheck.id.desc()).limit(1))
+    if last is None:
+        return {"last_check_recorded": None, "seconds_since": None}
+    return {"last_check_recorded": last.isoformat(),
+            # Against the plant's own clock, so a reader does not have to work
+            # out which zone the instant above is in before it means anything.
+            "seconds_since": round((utcnow() - last).total_seconds(), 1)}
 
 
 @router.get("/health")
@@ -54,6 +92,12 @@ def health(db: ReadDbDep) -> dict:
             # read its silence as everything being fine - the same argument
             # `shadow` rides on health for (decision 0030).
             "watching": connection_service.watching(db),
+            # Whether anything is actually happening on the floor. Rides on
+            # health for the same reason `shadow` and `watching` do: a monitor
+            # that knows a plant is up and does not know its floor stopped at
+            # ten to one in the morning reads its silence as everything being
+            # fine. See `_the_floor`.
+            "floor": _the_floor(db),
             # Not part of `summary()`: the id is between this plant and the
             # installation that created it, and has no business in the
             # namespace envelope or the backup manifest. None here means no
