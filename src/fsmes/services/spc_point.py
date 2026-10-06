@@ -42,6 +42,15 @@ Two honesty rules worth naming, because both were easy to get wrong:
   that stopped arriving is a broken line and not a flat one. The quiet-tag
   cause in the lab's own scenario is precisely a value that looks steady and
   is not there.
+Since 2026-10-06 the same six questions are answered of a SAMPLE as well as
+of a reading (`sample_dossier`). A point on an X-bar chart is the average of n
+pieces, so two things change and nothing else does: the n readings behind the
+point are a block of their own, each with its distance from the sample's own
+mean and the furthest named, and the window is the stretch the n readings span
+plus the minutes before rather than an instant - five bottles take minutes to
+measure, and a window centred on one stamp would leave the pressure dip that
+caused them outside the picture.
+
 - **A comparison of records is not a rate over a watched window.** The
   neighbouring readings, the maintenance orders and the findings carry
   `coverage: "absent"` with the reason, the way the trace reads do. Only the
@@ -64,6 +73,7 @@ from fsmes.domain import (
     Material,
     NonConformance,
     QualityCheck,
+    QualitySample,
     QualitySpec,
     SpcSignal,
     TagValue,
@@ -295,7 +305,8 @@ def _recorded_signals(session: Session, check: QualityCheck) -> dict:
 # ------------------------------------------------------------------- the gauge
 
 
-def _gauge_block(session: Session, spec: QualitySpec, check: QualityCheck) -> dict:
+def _gauge_block(session: Session, spec: QualitySpec, gauge_id: int | None,
+                 *, subject: str = "this reading") -> dict:
     """Which instrument took the reading, and whether it could be believed.
 
     `null` for the gauge is *not recorded* - which is the honest answer on a
@@ -303,16 +314,16 @@ def _gauge_block(session: Session, spec: QualitySpec, check: QualityCheck) -> di
     be able to say out loud rather than leaving the first question anybody
     asks about a point looking answered.
     """
-    if not check.gauge_id:
+    if not gauge_id:
         return {"gauge": None, "resolution_check": None, "last_calibration": None,
-                "note": "no gauge is recorded against this reading, which is not the "
-                        "same as no gauge having taken it"}
-    gauge = session.get(Gauge, check.gauge_id)
+                "note": f"no gauge is recorded against {subject}, which is not the "
+                        f"same as no gauge having taken it"}
+    gauge = session.get(Gauge, gauge_id)
     if gauge is None:
         # A foreign key with nothing behind it. Say so; a blank would read as
         # "nobody recorded one", and those are different facts.
         return {"gauge": None, "resolution_check": None, "last_calibration": None,
-                "note": f"this reading names gauge {check.gauge_id}, which is no "
+                "note": f"{subject} names gauge {gauge_id}, which is no "
                         f"longer on the register"}
     block = {
         "gauge": gauges.state(session, gauge.code),
@@ -330,8 +341,8 @@ def _gauge_block(session: Session, spec: QualitySpec, check: QualityCheck) -> di
     return block
 
 
-def _neighbours(session: Session, spec: QualitySpec, check: QualityCheck,
-                hours: float) -> dict:
+def _neighbours(session: Session, spec: QualitySpec, *, at: datetime,
+                gauge_id: int | None, hours: float) -> dict:
     """The same characteristic, by every gauge, within an hour either side.
 
     This is the comparison that separates *the process moved* from *the gauge
@@ -347,8 +358,8 @@ def _neighbours(session: Session, spec: QualitySpec, check: QualityCheck,
     rows = list(session.scalars(
         select(QualityCheck).where(
             QualityCheck.spec_id == spec.id,
-            QualityCheck.ts >= check.ts - span,
-            QualityCheck.ts <= check.ts + span)
+            QualityCheck.ts >= at - span,
+            QualityCheck.ts <= at + span)
         .order_by(QualityCheck.ts)))
 
     codes = {g.id: g.code for g in session.scalars(
@@ -358,7 +369,7 @@ def _neighbours(session: Session, spec: QualitySpec, check: QualityCheck,
     for row in rows:
         groups.setdefault(codes.get(row.gauge_id), []).append(row)
 
-    mine = codes.get(check.gauge_id)
+    mine = codes.get(gauge_id)
     here = groups.get(mine, [])
     my_mean = (sum(r.value for r in here) / len(here)) if here else None
 
@@ -377,7 +388,7 @@ def _neighbours(session: Session, spec: QualitySpec, check: QualityCheck,
             # recorded - there is nothing to be different from.
             "difference_to_this_gauge": (
                 None if (my_mean is None or code == mine) else round(mean - my_mean, 4)),
-            "this_reading": code == mine and check.gauge_id is not None,
+            "this_reading": code == mine and gauge_id is not None,
             # The honest name for the null key, said once per row rather than
             # left for the screen to invent.
             "note": None if code is not None else "no gauge recorded against these",
@@ -385,8 +396,8 @@ def _neighbours(session: Session, spec: QualitySpec, check: QualityCheck,
 
     return {
         "hours": hours,
-        "start": check.ts - span,
-        "end": check.ts + span,
+        "start": at - span,
+        "end": at + span,
         "by_gauge": by_gauge,
         "gauges": len(by_gauge),
         "total": len(rows),
@@ -520,9 +531,9 @@ def _last_before(session: Session, unit: Equipment, tag: str,
 
 
 def _tag_block(session: Session, unit: Equipment, tag: str, start: datetime,
-               end: datetime, at: datetime, cadence: float | None,
+               end: datetime, marks: list[dict], cadence: float | None,
                cadence_source: str | None) -> dict:
-    """One of the station's analogs over the window, with the reading marked.
+    """One of the station's analogs over the window, with the readings marked.
 
     The envelope is `analysis.tag_trend`'s own - its window, its bucketing, its
     min/max band - with a few things added that are about *this* question: the
@@ -566,10 +577,12 @@ def _tag_block(session: Session, unit: Equipment, tag: str, start: datetime,
     return {
         **envelope,
         "points": points,
-        # The reading this panel is about, on the tag's own clock. This is what
+        # The reading - or, on a sampled characteristic, each of the n
+        # readings - this panel is about, on the tag's own clock. This is what
         # makes the picture answer the question: a pressure dip and a fill
-        # weight are only an explanation if they are read against each other.
-        "markers": [{"t": at, "label": "this reading"}],
+        # weight are only an explanation if they are read against each other,
+        # and a sample of five bottles took five minutes of them to measure.
+        "markers": list(marks),
         # The resolution the picture is drawn at, so the axis states its own
         # denominator (chart contract rule 4) rather than leaving a reader to
         # work out what one point of this line is an average of.
@@ -755,9 +768,9 @@ def _maintenance(session: Session, unit: Equipment | None, start: datetime,
     }
 
 
-def _findings(session: Session, check: QualityCheck, start: datetime,
+def _findings(session: Session, order: str | None, start: datetime,
               end: datetime) -> dict:
-    """Non-conformances raised in the window, and the one this reading raised.
+    """Non-conformances raised in the window, and which of them share the order.
 
     Scoped by time and not by machine, because a non-conformance carries an
     order and a lot and no equipment - so narrowing it to a station would mean
@@ -769,7 +782,6 @@ def _findings(session: Session, check: QualityCheck, start: datetime,
             NonConformance.created_at >= start,
             NonConformance.created_at <= end)
         .order_by(NonConformance.created_at)))
-    order = _order_code(session, check)
     return {
         "nonconformances": [{
             "code": row.code, "description": row.description, "severity": row.severity,
@@ -823,7 +835,8 @@ def dossier(session: Session, material: str, characteristic: str, check_id: int,
     cadence, cadence_source = coverage.analog_sample_interval()
     if unit is not None:
         names, tags_total = _analog_tags(session, unit, start, end)
-        tags = [_tag_block(session, unit, name, start, end, check.ts,
+        marks = [{"t": check.ts, "label": "this reading"}]
+        tags = [_tag_block(session, unit, name, start, end, marks,
                            cadence, cadence_source) for name in names]
         timeline = _timeline_block(session, unit, start, end)
         machine = _state_at(session, unit, check.ts)
@@ -840,8 +853,9 @@ def dossier(session: Session, material: str, characteristic: str, check_id: int,
         "reading": _reading(session, spec, check, unit),
         "chart": chart,
         "recorded": _recorded_signals(session, check),
-        "gauge": _gauge_block(session, spec, check),
-        "neighbours": _neighbours(session, spec, check, neighbour_hours),
+        "gauge": _gauge_block(session, spec, check.gauge_id),
+        "neighbours": _neighbours(session, spec, at=check.ts,
+                                  gauge_id=check.gauge_id, hours=neighbour_hours),
         "machine": machine,
         "timeline": timeline,
         "stops": None if timeline is None else _stops(timeline),
@@ -857,7 +871,7 @@ def dossier(session: Session, material: str, characteristic: str, check_id: int,
                 f"this window are drawn")),
         },
         "maintenance": _maintenance(session, unit, start, end),
-        "findings": _findings(session, check, start, end),
+        "findings": _findings(session, _order_code(session, check), start, end),
         # The station's window, as the one figure the panel's own header states.
         # Null when no station is recorded: there is no machine whose watched
         # time this could be a share of.
@@ -865,5 +879,332 @@ def dossier(session: Session, material: str, characteristic: str, check_id: int,
         "coverage_note": (
             None if timeline is not None else
             "no station is recorded against this reading, so how much of this "
+            "window anybody watched is not a question this panel can answer"),
+    }
+
+
+# ------------------------------------------------- the same question, of a sample
+
+def _sample(session: Session, spec: QualitySpec, sample_id: int) -> QualitySample:
+    """The sample, refused unless it is a sample of *this* characteristic.
+
+    The same refusal `_check` makes and for the same reason: an id alone would
+    find the row, and a dossier that drew sample 41's five bottles under a
+    torque specification's limits would have every number on the panel wrong
+    in a way that looks right.
+    """
+    sample = session.get(QualitySample, sample_id)
+    if sample is None or sample.spec_id != spec.id:
+        raise NotFound(
+            f"no sample {sample_id} of {spec.material.code}/{spec.characteristic}")
+    return sample
+
+
+def _sample_readings(session: Session, sample: QualitySample) -> list[QualityCheck]:
+    """The readings recorded under this sample, oldest id first."""
+    return list(session.scalars(
+        select(QualityCheck).where(QualityCheck.sample_id == sample.id)
+        .order_by(QualityCheck.id)))
+
+
+def _readings_block(session: Session, spec: QualitySpec,
+                    readings: list[QualityCheck]) -> dict:
+    """The n pieces behind one point, and which of them pulled the average.
+
+    The question a person asks of a sampled chart is not the one they ask of an
+    individuals chart. A point here is an average, and an average can sit above
+    its limit because every piece was high or because one was very high - two
+    different plants, two different mornings. So each reading says how far it
+    sat from the sample's own mean, and the one furthest out is named.
+
+    *Furthest from the mean* is arithmetic and not blame, and the sentence says
+    so: in a sample of five bottles one of them is always the furthest out, and
+    on a settled process that means nothing whatever. It is the mean's distance
+    from the centre line, on the chart, that makes it worth looking at - and
+    that is the upper chart's answer, not this block's.
+    """
+    values = [c.value for c in readings]
+    mean = (sum(values) / len(values)) if values else None
+    codes = {g.id: g.code for g in session.scalars(
+        select(Gauge).where(Gauge.id.in_({c.gauge_id for c in readings if c.gauge_id})))}
+    gaps = [abs(c.value - mean) for c in readings] if mean is not None else []
+    widest = max(gaps) if gaps else None
+    rows = []
+    for i, check in enumerate(readings):
+        rows.append({
+            "check": check.id,
+            # Which of the n this is, in the order they were recorded. A
+            # person at the filler took them in this order and the telemetry
+            # beside this block is marked in it.
+            "position": i + 1,
+            "value": check.value,
+            "ts": check.ts,
+            "result": check.result.value,
+            "gauge": codes.get(check.gauge_id),
+            "checked_by": check.checked_by,
+            # Signed, because *high* and *low* are different findings, and the
+            # absolute figure beside it because that is what *furthest* means.
+            "difference_to_mean": None if mean is None else round(check.value - mean, 4),
+            "distance_from_mean": None if mean is None else round(abs(check.value - mean), 4),
+            # Every reading tied at the widest distance is named, not the
+            # first of them: a sample of five where two sat equally far out is
+            # a different fact from one where one did.
+            "furthest": (widest is not None and widest > 0
+                         and abs(check.value - mean) == widest),
+            "below_spec": (spec.min_value is not None and check.value < spec.min_value),
+            "above_spec": (spec.max_value is not None and check.value > spec.max_value),
+            # Null means not recorded, here as everywhere.
+            "gauge_note": None if check.gauge_id else "no gauge recorded against this reading",
+        })
+    furthest = [r["check"] for r in rows if r["furthest"]]
+    return {
+        "readings": rows,
+        "total": len(rows),
+        "mean": None if mean is None else round(mean, 4),
+        "range": None if not values else round(max(values) - min(values), 4),
+        "min": None if not values else min(values),
+        "max": None if not values else max(values),
+        "furthest": furthest,
+        "note": (
+            "one of these is always the furthest from the sample's own mean, and "
+            "on a settled process that means nothing at all — it is where the "
+            "MEAN sat against the centre line that makes this point worth "
+            "opening, which is the upper chart's answer and not this table's"
+            + ("" if len(furthest) != len(rows) or len(rows) <= 1 else
+               "; every reading here sits the same distance out, so none of them "
+               "is the one that pulled it")
+            + ("" if len(furthest) < 2 or len(furthest) == len(rows) else
+               f"; {len(furthest)} of them sit equally far out and all are named")),
+        "coverage": "absent", "coverage_note": RECORDS_NOT_A_RATE,
+    }
+
+
+def _sample_on_the_chart(session: Session, material: str, characteristic: str,
+                         sample: QualitySample) -> dict:
+    """The chart this sample is a point on, both halves of it, and what fired.
+
+    Read from `spc.chart` for the same reason the reading's block is: it is the
+    one place control limits are computed, and a second opinion here would be
+    slightly different numbers under the chart the reader is looking at.
+
+    Both halves, because a sampled chart has two and the reader came from one
+    of them: the mean against `X̿ ± A2·R̄` above, the spread against `D4·R̄`
+    below. `signals` is a list and not one firing - rules 1 to 4 judge where
+    the mean sat and rule 5 judges the spread beside it, and both are about
+    this one sample, so two of them can be true at once.
+    """
+    drawn = spc.chart(session, material, characteristic)
+    keys = [p.get("sample") for p in drawn.get("points", [])]
+    index = keys.index(sample.id) if sample.id in keys else None
+    point = drawn["points"][index] if index is not None else None
+    signals = ([s for s in drawn.get("signals", []) if s.get("index") == index]
+               if index is not None else [])
+    lower = drawn.get("range_chart") or {}
+    return {
+        "on_chart": index is not None,
+        # One-based, the way the signals table on the page counts samples.
+        "sample": None if index is None else index + 1,
+        "samples": drawn.get("n"),
+        "readings": drawn.get("readings"),
+        "sample_size": drawn.get("sample_size"),
+        # The two figures this point is, read off the chart rather than
+        # recomputed: the mean plotted above and the range plotted below.
+        "mean": None if point is None else point.get("value"),
+        "range": None if point is None else point.get("range"),
+        "control": drawn.get("control"),
+        "capability": drawn.get("capability"),
+        "stable": drawn.get("stable"),
+        "verdict": drawn.get("verdict") or drawn.get("note"),
+        "note": None if index is not None else (
+            f"this sample is not one of the {drawn.get('n')} points on the chart: "
+            f"either it is older than the history the chart draws, or it holds a "
+            f"different number of readings than the {drawn.get('sample_size')} this "
+            f"specification now asks for"
+            + (f" — {drawn['set_aside']} stored sample(s) are left out for that "
+               f"reason" if drawn.get("set_aside") else "")),
+        "rules": drawn.get("rules"),
+        "hold_rules": drawn.get("hold_rules"),
+        "signals": signals,
+        "set_aside": drawn.get("set_aside"),
+        # The lower half's limits and its own sentence, with whether THIS
+        # sample's spread is the one that went beyond them.
+        "range_chart": {
+            "centre": lower.get("centre"),
+            "upper": lower.get("upper"),
+            "lower": lower.get("lower"),
+            "n": lower.get("n"),
+            "stable": lower.get("stable"),
+            "verdict": lower.get("verdict"),
+            "flagged": any(s.get("rule") == spc.RANGE_RULE for s in signals),
+        },
+    }
+
+
+def _recorded_for_sample(session: Session, readings: list[QualityCheck]) -> dict:
+    """Every rule firing the MES wrote down on any reading of this sample.
+
+    A sampled characteristic's signal is recorded against the LAST reading of
+    the sample (`services.spc.evaluate`), so that the row still names something
+    a person can open. Looking only at that one reading would be right today
+    and wrong the first time that changes, so this asks about all n of them and
+    says which reading each firing was written against.
+    """
+    ids = [c.id for c in readings]
+    rows = [] if not ids else list(session.scalars(
+        select(SpcSignal).where(SpcSignal.check_id.in_(ids))
+        .order_by(SpcSignal.rule)))
+    out = []
+    for row in rows:
+        nc = session.get(NonConformance, row.nonconformance_id) if row.nonconformance_id else None
+        out.append({
+            "rule": row.rule, "what": row.what, "ts": row.ts,
+            "check": row.check_id,
+            "window_key": row.window_key, "window": row.window,
+            "nonconformance": None if nc is None else nc.code,
+            "nonconformance_status": None if nc is None else nc.status.value,
+        })
+    return {"signals": out, "total": len(out),
+            "coverage": "absent", "coverage_note": RECORDS_NOT_A_RATE}
+
+
+def sample_dossier(session: Session, material: str, characteristic: str,
+                   sample_id: int, *,
+                   before_minutes: float = BEFORE_MINUTES,
+                   after_minutes: float = AFTER_MINUTES,
+                   neighbour_hours: float = NEIGHBOUR_HOURS) -> dict:
+    """Everything this MES holds about why one SAMPLE is where it is.
+
+    The same six questions and the same blocks as `dossier`, asked of a point
+    that is an average rather than a reading. Two things are genuinely
+    different and both are in here:
+
+    - **The n readings behind the point.** An average above its limit because
+      every bottle was high and an average above its limit because one bottle
+      was very high are two different mornings, so the five rows, each one's
+      distance from the sample's own mean, and the one furthest out.
+    - **The window is the one the sample spans, not an instant.** Five bottles
+      are measured over minutes; the telemetry runs from the minutes before the
+      FIRST of them to the last plus the usual tail, and every one of the n is
+      marked on each trend. A window centred on the sample's stamp would put
+      the pressure dip that caused it outside the picture.
+
+    Nothing here is computed twice, exactly as in `dossier`: the limits and the
+    firings are `spc.chart`'s, the trends are `analysis.tag_trend`'s, the
+    timeline is `state_timeline`'s, the gauge's due date is the register's.
+    """
+    spec = _spec(session, material, characteristic)
+    sample = _sample(session, spec, sample_id)
+    readings = _sample_readings(session, sample)
+
+    # The sample's own station and gauge, falling back to nothing rather than
+    # to a reading's: a sample is one act of measurement and the row that holds
+    # it is where that fact lives (`domain.quality`).
+    unit = None if not sample.equipment_id else session.get(Equipment, sample.equipment_id)
+    order = (None if not sample.work_order_id else
+             _order_code_of(session, sample.work_order_id))
+
+    stamps = [c.ts for c in readings] or [sample.ts]
+    first, last = min(stamps), max(stamps)
+    start = first - timedelta(minutes=before_minutes)
+    end = max(last, sample.ts) + timedelta(minutes=after_minutes)
+
+    chart = _sample_on_the_chart(session, material, characteristic, sample)
+    behind = _readings_block(session, spec, readings)
+
+    marks = [{"t": row["ts"], "label": f"reading {row['position']}"}
+             for row in behind["readings"]] or [{"t": sample.ts, "label": "this sample"}]
+
+    tags: list[dict] = []
+    tags_total = 0
+    timeline: dict | None = None
+    machine: dict | None = None
+    cadence, cadence_source = coverage.analog_sample_interval()
+    if unit is not None:
+        names, tags_total = _analog_tags(session, unit, start, end)
+        tags = [_tag_block(session, unit, name, start, end, marks,
+                           cadence, cadence_source) for name in names]
+        timeline = _timeline_block(session, unit, start, end)
+        # The state at the sample's own stamp - the moment the plant recorded
+        # the act of measuring - with what it had just come out of, which is
+        # the half that finds a changeover.
+        machine = _state_at(session, unit, sample.ts)
+
+    gauge = _gauge_block(session, spec, sample.gauge_id, subject="this sample")
+    # Whether the readings name an instrument the sample does not. A sample is
+    # one act of measurement by one person with one gauge, so they should not -
+    # and a plant where they do is a finding rather than something to average
+    # over silently.
+    others = sorted({r["gauge"] for r in behind["readings"]
+                     if r["gauge"] and r["gauge"] != (
+                         gauge["gauge"]["code"] if gauge.get("gauge") else None)})
+    if others:
+        gauge["readings_note"] = (
+            f"the readings in this sample name {', '.join(others)} as well, which a "
+            f"sample recorded as one act of measurement should not")
+    else:
+        gauge["readings_note"] = None
+
+    return {
+        "material": material,
+        "characteristic": characteristic,
+        "unit": spec.unit,
+        # Which question this envelope answers. A screen drawing both panels
+        # from one layout must not have to guess from which keys are present.
+        "subject": "sample",
+        "window": {
+            "start": start, "end": end,
+            "before_minutes": before_minutes, "after_minutes": after_minutes,
+            # The sample's own stamp, and the stretch its n readings cover -
+            # which is the thing that is not an instant here.
+            "at": sample.ts,
+            "first_reading": first, "last_reading": last,
+            "spanned_seconds": round((last - first).total_seconds(), 1),
+        },
+        "sample": {
+            "sample": sample.id,
+            "ts": sample.ts,
+            "n": len(readings),
+            "sample_size": spec.sample_size or 1,
+            "mean": behind["mean"],
+            "range": behind["range"],
+            "lower_spec": spec.min_value,
+            "upper_spec": spec.max_value,
+            "checked_by": sample.checked_by,
+            "work_order": order,
+            "shift": sample.shift_code,
+            "shift_day": sample.shift_day,
+            "equipment": None if unit is None else {"code": unit.code, "name": unit.name},
+            # The plan asked for n and the sample holds this many. Equal on
+            # every sample the chart draws; said out loud because a sample that
+            # is not equal is left off the chart and the reader is owed why.
+            "note": (None if len(readings) == (spec.sample_size or 1) else
+                     f"this sample holds {len(readings)} readings where the "
+                     f"specification asks for {spec.sample_size or 1}, so the chart "
+                     f"leaves it out rather than judge it with the wrong constants"),
+        },
+        "readings": behind,
+        "chart": chart,
+        "recorded": _recorded_for_sample(session, readings),
+        "gauge": gauge,
+        "neighbours": _neighbours(session, spec, at=sample.ts,
+                                  gauge_id=sample.gauge_id, hours=neighbour_hours),
+        "machine": machine,
+        "timeline": timeline,
+        "stops": None if timeline is None else _stops(timeline),
+        "tags": {
+            "trends": tags,
+            "shown": len(tags),
+            "total": tags_total,
+            "note": (None if unit is None else (
+                None if tags_total <= len(tags) else
+                f"{len(tags)} of the {tags_total} signals this station published in "
+                f"this window are drawn")),
+        },
+        "maintenance": _maintenance(session, unit, start, end),
+        "findings": _findings(session, order, start, end),
+        "coverage": None if timeline is None else timeline.get("coverage"),
+        "coverage_note": (
+            None if timeline is not None else
+            "no station is recorded against this sample, so how much of this "
             "window anybody watched is not a question this panel can answer"),
     }
