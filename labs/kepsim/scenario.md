@@ -57,7 +57,7 @@ charting the instrument.
 
 | Cause | What it does | The lesson it stages |
 |---|---|---|
-| **The nozzle the changeover left behind** | For 25 line minutes after each changeover (so from 44:00, after the 40:00–44:00 changeover above) every piece in the sample sits about 0.5 mm high — one within-sample sigma. The pack's `sampling.fill_height.after_changeover` | the sample **means** step up and the sample **ranges** do not: the process moved, its spread did not. That is the thing an X-bar chart shows and an individuals chart on fill weight never did, because there the same shift was inside the noise of a single bottle |
+| **The nozzle the changeover left behind** | For 25 line minutes after each changeover (so from 44:00, after the 40:00–44:00 changeover above) every piece in the sample sits about 0.5 mm high — half again the glass's own bottle-to-bottle sigma, and about four tenths of the whole within-sample spread, which the filler's weight variation dominates. The pack's `sampling.fill_height.after_changeover` | the sample **means** step up and the sample **ranges** do not: the process moved, its spread did not. That is the thing an X-bar chart shows and an individuals chart on fill weight never did, because there the same shift was inside the noise of a single bottle |
 
 Two honest notes about it. It is **the floor's own rule, not a line event**:
 the line publishes no height tag, so an `offset` row in `line.json` has

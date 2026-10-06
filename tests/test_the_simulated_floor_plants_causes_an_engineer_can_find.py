@@ -1089,7 +1089,7 @@ def test_within_one_run_a_sample_never_takes_a_bottle_the_last_one_took(plant):
     assert len(the_samples(plant)) == 1
 
 
-def test_the_heights_after_a_changeover_sit_about_one_within_sample_sigma_high(plant):
+def test_the_heights_after_a_changeover_sit_half_a_millimetre_high(plant):
     """The planted cause. Same five weights, sampled twice: once with no
     changeover behind it and once inside the window after one. The offset
     goes on the whole sample, because what the nozzle setting moved is the
@@ -1118,8 +1118,15 @@ def test_the_heights_after_a_changeover_sit_about_one_within_sample_sigma_high(p
     assert len(settled) == 5 and len(after) == 5
     lift = sum(after) / 5 - sum(settled) / 5
     assert lift == pytest.approx(plan.after_changeover_offset, abs=0.35), lift
-    assert lift == pytest.approx(plan.piece_to_piece, abs=0.35), \
-        "about one within-sample sigma, which is what the scenario claims"
+    # Half a millimetre is what the pack plants, and that is all this test
+    # claims. How big it is *relative to the spread* is not a thing one
+    # sample of five can show: here the five weights are held near enough
+    # identical, so the within-sample spread is only the glass. On the line
+    # the five bottles are weighed five seconds apart, their weights differ
+    # by more than their moulding does, and the same half-millimetre is about
+    # four tenths of the spread the range chart sees - which is why this is a
+    # shift found by splitting the means on the changeover rather than one
+    # that trips a control rule.
     # On the ranges it does not show: one offset on five bottles leaves the
     # spread of the five where it was.
     assert abs((max(after) - min(after)) - (max(settled) - min(settled))) < 1.0

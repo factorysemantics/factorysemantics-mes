@@ -1018,7 +1018,7 @@ goes under Honesty with a migration line, so plant people can find it.
 
 - **The bottling lab plant has a new planted cause, and it is planted.** For
   25 line minutes after each changeover the fill-height sample means sit about
-  one within-sample sigma high — a nozzle setting the changeover left behind.
+  half a millimetre high — a nozzle setting the changeover left behind.
   It is the simulated floor's own rule (the line publishes no height tag for a
   line event to act on), it is written down in
   [`floor.json`](labs/multiplant/bottling/floor.json) and
