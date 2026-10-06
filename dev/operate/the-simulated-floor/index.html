@@ -1358,6 +1358,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#a-floor-that-has-stopped-and-how-to-tell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A floor that has stopped, and how to tell
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reading-the-script" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4053,6 +4064,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#a-floor-that-has-stopped-and-how-to-tell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A floor that has stopped, and how to tell
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reading-the-script" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4206,6 +4228,35 @@ the data would be writing fiction into the pareto with a confidence interval
 on it. The assistant's honest answer is to show which stops are unnamed and
 let whoever was there say. Another system's label has its own front door,
 <a href="../inbound/"><code>fsmes inbound</code></a>, and it records who claimed it.</p>
+<h2 id="a-floor-that-has-stopped-and-how-to-tell">A floor that has stopped, and how to tell<a class="headerlink" href="#a-floor-that-has-stopped-and-how-to-tell" title="Permanent link">&para;</a></h2>
+<p>The floor signs in to the plant like anybody else, and a login is good for one
+shift — <code>[auth] token_ttl_seconds</code>, twelve hours by default. On 2026-10-06 both
+lab plants' floors stopped at 00:52 and stayed stopped for nine hours. Nothing
+had crashed: twelve hours to the minute after they started, every request they
+made came back <strong>401</strong>, each step logged <em>shop floor step failed</em> and tried
+again on the next tick, and the plant went on answering every screen and every
+health check perfectly, because a work order read answers fine whether or not
+anybody is working.</p>
+<p>Two things came out of that, and both are in the product now.</p>
+<p><strong>The floor signs in again.</strong> It replaces its login halfway through the token's
+life — read out of the token the plant issued, not out of this floor's copy of
+the configuration — so the first failed step never happens; and a 401 it meets
+anyway is answered by signing in once and sending <em>that step</em> again, rather
+than losing it and recovering on the next tick. Each re-sign-in is one line in
+the log, <code>the floor signed in again</code>, with why. A plant that will not issue a
+new login at all — a password changed under a running floor — is said <strong>once</strong>,
+as an error, not once a step.</p>
+<p><strong><code>GET /health</code> says when the floor last recorded a check.</strong></p>
+<div class="highlight"><pre><span></span><code><span class="nt">"floor"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"last_check_recorded"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-10-06T14:52:16"</span><span class="p">,</span><span class="w"> </span><span class="nt">"seconds_since"</span><span class="p">:</span><span class="w"> </span><span class="mf">31.4</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>A plant that is up and a plant that is being worked are two facts, and a
+monitor that only has the first reads silence as everything being fine. A
+plant where nobody has recorded a check yet answers <code>null</code> for both — never
+inspected is not <em>a long time ago</em>, and it is not zero.</p>
+<p>What to watch it with: the floor inspects every eight line seconds, so
+<code>seconds_since</code> above a few minutes on a plant that is meant to be simulating
+means the floor has stopped, whatever else the plant says about itself.
+<code>/health</code> needs no credential.</p>
 <h2 id="reading-the-script">Reading the script<a class="headerlink" href="#reading-the-script" title="Permanent link">&para;</a></h2>
 <p>The bottling pack's
 <a href="https://github.com/factorysemantics/factorysemantics-mes/blob/main/labs/multiplant/bottling/floor.json"><code>floor.json</code></a>
