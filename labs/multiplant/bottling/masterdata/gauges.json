@@ -18,5 +18,15 @@
     "interval_days": 90,
     "warn_days": 14,
     "calibrated_days_ago": 84
+  },
+  {
+    "code": "HEIGHT-FILL-01",
+    "name": "Fill height gauge, QI bench",
+    "kind": "height gauge",
+    "location": "QI01",
+    "resolution": 0.1,
+    "interval_days": 180,
+    "warn_days": 14,
+    "calibrated_days_ago": 12
   }
 ]
