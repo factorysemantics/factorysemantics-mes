@@ -260,8 +260,8 @@ def test_the_fewest_points_a_sampled_chart_draws_from_counts_samples(session):
 
 def test_a_chart_carries_each_sample_with_its_mean_its_range_and_its_readings(session):
     """So a reader can see the five bottles behind a point without another
-    round trip, and a screen that cannot draw the chart can still say what
-    the point was."""
+    round trip - the chart's tooltips and its empty state both name them
+    before anybody opens the panel that holds the rest."""
     _lower_the_bar(session, 10)
     _take(session, _spec(session), MEANS)
     chart = spc.chart(session, "FG-COLA", "fill_height")

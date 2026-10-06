@@ -970,10 +970,14 @@ def _readings_block(session: Session, spec: QualitySpec,
             "on a settled process that means nothing at all — it is where the "
             "MEAN sat against the centre line that makes this point worth "
             "opening, which is the upper chart's answer and not this table's"
-            + ("" if len(furthest) != len(rows) or len(rows) <= 1 else
-               "; every reading here sits the same distance out, so none of them "
-               "is the one that pulled it")
-            + ("" if len(furthest) < 2 or len(furthest) == len(rows) else
+            # No reading is named when they are all the same distance from
+            # the mean - which, in a sample, means they are all the same
+            # reading. Naming the first of them would be inventing a finding
+            # out of the order somebody typed them in.
+            + ("" if furthest or not rows else
+               "; every reading here is the same, so none of them is the one "
+               "that pulled it")
+            + ("" if len(furthest) < 2 else
                f"; {len(furthest)} of them sit equally far out and all are named")),
         "coverage": "absent", "coverage_note": RECORDS_NOT_A_RATE,
     }

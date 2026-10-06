@@ -8,15 +8,17 @@ X-bar and R has to be able to see what the number means before they type it,
 and a person who leaves it empty has to get back the chart they have always
 had.
 
-**The SPC screen** cannot draw an X-bar and R chart yet. That is most of why
-this file exists: a screen that drew sample means on a chart of individuals
-would put five bottles' average where a reader expects one bottle's reading,
-and nothing on the page would say so. So it draws nothing, says why in one
-sentence, and keeps the figures below - which are the samples' own and true as
-they stand - with the two labels whose *meaning* changes with the sampling
-plan changed to match. A true number under a false word ("Readings 12" over
-sixty bottles; the spread of a mean under "Sigma (within)") is the failure
-this product exists not to have, and it is a failure only a browser can see.
+**The SPC screen** draws it, since 2026-10-06: the mean of each five bottles
+above, the spread inside each five below, one dot per sample on both halves.
+That is most of why this file exists, because the ways this drawing can lie
+are all ways only a browser can see them. A true number under a false word
+("Readings 12" over sixty bottles; the spread of a mean under "Sigma
+(within)") is the failure this product exists not to have. So is a true
+picture under a false caption: on 2026-10-06 the lab's bottling plant drew a
+fill-height chart with no samples yet under the heading INDIVIDUALS AND MOVING
+RANGE, and a reader believes the caption before they believe the picture.
+Every word around the chart that is about *which chart this is* is asserted
+here, with samples and without them.
 
 Marked `browser` as well as `slow`: `pytest -m browser` is the tier CI runs
 Chromium for, and a Playwright file marked only `slow` is a test nothing runs.
@@ -62,7 +64,10 @@ def plant(tmp_path_factory):
     own plan, on the demo plant's finished good so the screens have a sampled
     specification to list beside the one that is inspected one at a time. Brix
     gets its ordinary readings through the same gauge, because "the chart
-    everybody already has still draws" is one of the things asserted here.
+    everybody already has still draws" is one of the things asserted here. And
+    `crown_torque`, four at a time with nothing recorded on it, because a
+    sampled characteristic with no samples yet is a screen that has to say
+    which chart it is about before it has anything to draw.
     """
     import uvicorn
 
@@ -96,6 +101,12 @@ def plant(tmp_path_factory):
             quality.create_spec(session, material_code="FG-COLA",
                                 characteristic="fill_height", unit="mm",
                                 min_value=139.0, max_value=145.0, sample_size=5,
+                                actor="test")
+            # Four at a time and not one reading taken: the state the lab
+            # plant was in when it drew the wrong heading.
+            quality.create_spec(session, material_code="FG-COLA",
+                                characteristic="crown_torque", unit="Nm",
+                                min_value=1.0, max_value=3.0, sample_size=4,
                                 actor="test")
             for mean in MEANS:
                 quality.record_sample(session, material_code="FG-COLA",
@@ -280,45 +291,91 @@ def test_leaving_the_field_empty_writes_no_plan_at_all(specs_tab, plant):
     assert _row(specs_tab, "label_offset")[_column(specs_tab, "Per sample")] == "—"
 
 
-# ------------------------------------------- the chart it cannot draw yet
+# ------------------------------------------------------- the chart it draws
 
 
 @pytest.fixture()
 def sampled_chart(admin, plant):
     """The SPC screen on the sampled characteristic, finished drawing.
 
-    Waited on by the sentence's own text, which the page writes after the read
-    settles, so what every assertion below reads is the finished page.
+    Waited on by the dots themselves - fifteen of them on each half - and not
+    by the <svg> existing: the chart is appended before the read behind it
+    settles, and a test that counted circles then would count none (#112,
+    2026-09-26).
     """
     page = admin.new_page()
     page.goto(f"{plant}/dashboard/spc?spec=FG-COLA%7Cfill_height",
               wait_until="load", timeout=30000)
     page.wait_for_function(
-        "() => { const p = document.querySelector('#chart .empty');"
-        " return p && p.textContent.includes('fill_height'); }",
-        timeout=30000)
+        "n => document.querySelectorAll("
+        " '#chart circle[data-series=\"sample-range\"]').length === n",
+        arg=len(MEANS), timeout=30000)
     yield page
     page.close()
 
 
-def test_the_screen_that_cannot_draw_the_chart_says_so_rather_than_drawing_it(sampled_chart):
-    """Not a blank box, and not a chart of means pretending to be readings.
-    One sentence naming the plan, the chart this characteristic ought to get,
-    and the fact that this screen cannot draw that one yet."""
-    said = sampled_chart.inner_text("#chart .empty")
-    assert "inspected 5 pieces at a time" in said
-    assert "X-bar and R" in said
-    assert "cannot draw that one yet" in said
-    assert "means as if they were single readings" in said
-    assert not sampled_chart.query_selector("#chart circle[data-check]"), \
-        "a dot here would be a sample mean dressed up as one bottle's reading"
+def _dots(page, series: str) -> list[dict]:
+    return page.eval_on_selector_all(
+        f"#chart circle[data-series='{series}']",
+        "cs => cs.map(c => ({sample: c.dataset.sample, check: c.dataset.check,"
+        " cx: Math.round(parseFloat(c.getAttribute('cx'))),"
+        " cy: parseFloat(c.getAttribute('cy')),"
+        " label: c.getAttribute('aria-label'), role: c.getAttribute('role')}))")
+
+
+def test_the_screen_draws_one_dot_per_sample_on_each_half_of_one_chart(sampled_chart):
+    """Fifteen samples of five: fifteen means above, fifteen ranges below, and
+    sixty bottles behind them. Both halves live in one <svg> - that is what
+    makes one export carry both - and a dot on either half is the same sample,
+    at the same place along the chart, opening the same five readings."""
+    assert sampled_chart.get_attribute("#chart svg", "data-kind") == "spc-xbar-r"
+    assert len(sampled_chart.query_selector_all("#chart svg")) == 1
+    means, ranges = _dots(sampled_chart, "xbar"), _dots(sampled_chart, "sample-range")
+    assert len(means) == len(ranges) == len(MEANS)
+    assert [d["sample"] for d in means] == [d["sample"] for d in ranges], \
+        "the two halves are one series of samples seen twice"
+    assert [d["cx"] for d in means] == [d["cx"] for d in ranges], \
+        "a range sits under the mean it belongs to, or neither can be read"
+    assert all(d["check"] is None for d in means), \
+        "a point here is a sample and must not also claim to be one reading"
+    assert all(d["role"] == "button" for d in means + ranges)
+    assert "Sample 15, mean 141.9 mm of 5 readings" in means[-1]["label"]
+    assert "Sample 15, range 2 mm across its 5 readings" in ranges[-1]["label"]
+
+
+def test_the_two_halves_are_drawn_from_the_samples_own_centre_and_limits(sampled_chart):
+    """X̿ above and R̄ below, named on the chart in the letters an SPC book
+    uses, so a reader can tell the centre of fifteen means from the centre of
+    fifteen readings. The limits either side are the sample mean's, which are
+    narrower than the process's own by root n - drawing the process's spread
+    around a mean is the mistake that makes an unstable chart look calm."""
+    labels = sampled_chart.eval_on_selector_all(
+        "#chart text", "ts => ts.map(t => t.textContent.trim())")
+    assert "X̿" in labels and "R̄" in labels
+    assert "x̄" not in labels, "the individuals centre label on a sampled chart"
+    assert any(t.startswith("FG-COLA fill_height (mm) — mean of 5") for t in labels)
+    assert any(t.startswith("Range within each sample (mm)") for t in labels)
+
+
+def test_the_words_around_the_chart_say_which_chart_it_is(sampled_chart):
+    """The heading, the legend and the paragraph under the chart. All three
+    follow `kind`, because a chart of five-bottle averages captioned
+    *individuals and moving range* is read as single bottles by anybody who
+    reads the caption first - and everybody does."""
+    assert sampled_chart.inner_text("#chart-heading") == "Sample average and range (X̄ and R)"
+    legend = sampled_chart.inner_text("#chart-legend")
+    assert "sample average (mean of 5)" in legend
+    assert "X̿ ± A2·R̄" in legend and "D4·R̄ and D3·R̄" in legend
+    said = sampled_chart.inner_text("#chart-explainer")
+    assert "how far apart the 5 readings inside each sample" in said
+    assert "where the sigma behind both sets of limits comes from" in said
 
 
 def test_the_figures_beside_it_count_samples_and_not_readings(sampled_chart):
-    """Twelve points drawn from sixty bottles. "Readings 15" over that would
-    be a true number under a false word, so the label follows the sampling
-    plan, and the readings behind the samples are named in the tooltip rather
-    than dropped."""
+    """Fifteen points drawn from seventy-five bottles. "Readings 15" over that
+    would be a true number under a false word, so the label follows the
+    sampling plan, and the readings behind the samples are named in the tooltip
+    rather than dropped."""
     assert sampled_chart.inner_text("#l-n") == "Samples"
     assert sampled_chart.inner_text("#f-n") == str(len(MEANS))
     said = sampled_chart.get_attribute("#f-n", "title")
@@ -336,30 +393,62 @@ def test_the_sigma_under_the_within_label_is_still_the_within_one(sampled_chart)
     assert "control limits are drawn from that" in said
 
 
-def test_the_centre_the_capability_and_the_verdict_are_the_samples_own(sampled_chart):
-    """The figures withheld would be the other kind of dishonesty: they are
-    computed from the samples and true as they stand, so they stay, and the
-    sentence in the empty chart says whose they are."""
+def test_the_centre_the_capability_and_both_verdicts_are_the_samples_own(sampled_chart):
+    """Every figure on the row, and a sentence for each half. The lower half
+    gets its own: every range inside its upper limit is the thing that makes
+    the sigma behind both sets of limits worth trusting, and a chart that
+    passed judgement only on the averages would be half a verdict."""
     assert sampled_chart.inner_text("#f-centre") == CENTRE
     assert sampled_chart.inner_text("#f-cp") == CP
     assert "in control" in sampled_chart.inner_text("#verdict")
-    assert "the samples' own" in sampled_chart.inner_text("#chart .empty")
+    said = sampled_chart.inner_text("#mr-verdict")
+    assert said.startswith("in control")
+    assert f"every one of {len(MEANS)} sample ranges" in said
 
 
-def test_the_button_that_opens_a_reading_says_a_point_is_not_one(sampled_chart):
-    """The panel answers *why is this reading here*. A point on an X-bar chart
-    is not a reading, so opening one of the five bottles behind it and calling
-    it the point would be the same lie as drawing the means. The button is off,
-    and it says why rather than going grey without a word."""
+def test_the_button_opens_a_sample_and_says_that_is_what_it_is(sampled_chart):
+    """Nothing fired here, so the button offers the newest sample and says so -
+    "open the flagged sample" on a chart where nothing is flagged would promise
+    something that is not there. And it says, where a reader can see it before
+    clicking, that what opens is five bottles and not one."""
     button = sampled_chart.query_selector("#open-point")
-    assert button.is_disabled()
-    assert button.inner_text() == "Each point is a sample, not a reading"
-    assert "the mean of 5 bottles" in button.get_attribute("title")
+    assert not button.is_disabled()
+    assert button.inner_text() == "Open the newest sample"
+    assert "the mean of 5 pieces" in button.get_attribute("title")
+    assert "opens all 5 of them" in button.get_attribute("title")
+
+
+def test_a_sampled_characteristic_with_no_samples_yet_still_says_which_chart(admin, plant):
+    """The lab's 2026-10-06 reading, as a test. `crown_torque` is inspected
+    four at a time and has never been measured: there is nothing to draw, and
+    the heading, the legend and the paragraph still have to be the sampled
+    ones, because a caption is believed whether or not there is a picture under
+    it. The empty box says what would make the first point."""
+    page = admin.new_page()
+    try:
+        page.goto(f"{plant}/dashboard/spc?spec=FG-COLA%7Ccrown_torque",
+                  wait_until="load", timeout=30000)
+        page.wait_for_function(
+            "() => { const p = document.querySelector('#chart .empty');"
+            " return p && p.textContent.includes('crown_torque'); }",
+            timeout=30000)
+        assert page.inner_text("#chart-heading") == "Sample average and range (X̄ and R)"
+        assert "sample average (mean of 4)" in page.inner_text("#chart-legend")
+        assert "4 readings inside each sample" in page.inner_text("#chart-explainer")
+        said = page.inner_text("#chart .empty")
+        assert "inspected 4 pieces at a time" in said
+        assert "4 readings are recorded together as one sample" in said
+        assert page.inner_text("#l-n") == "Samples"
+        assert page.inner_text("#f-n") == "0"
+        assert page.query_selector("#open-point").is_disabled()
+    finally:
+        page.close()
 
 
 def test_a_characteristic_inspected_one_at_a_time_still_draws_its_chart(admin, plant):
     """The promise to every plant already running: brix has no sampling plan,
-    its chart is individuals, and nothing about it has moved."""
+    its chart is individuals, its words are the individuals words, and nothing
+    about it has moved."""
     page = admin.new_page()
     try:
         page.goto(f"{plant}/dashboard/spc?spec=FG-COLA%7Cbrix",
@@ -368,6 +457,13 @@ def test_a_characteristic_inspected_one_at_a_time_still_draws_its_chart(admin, p
             "() => document.querySelectorAll('#chart circle[data-check]').length > 10",
             timeout=30000)
         assert not page.query_selector("#chart .empty")
+        assert page.get_attribute("#chart svg", "data-kind") == "spc-imr"
+        assert page.inner_text("#chart-heading") == "Individuals and moving range"
+        assert "reading" in page.inner_text("#chart-legend")
+        assert "X̿" not in page.inner_text("#chart-legend")
+        assert "gap between each reading and the one before" in \
+            page.inner_text("#chart-explainer")
+        assert not page.query_selector("#chart circle[data-sample]")
         assert page.inner_text("#l-n") == "Readings"
         assert page.inner_text("#f-n") == str(len(BRIX))
         assert page.get_attribute("#f-n", "title") in ("", None)
