@@ -1252,21 +1252,31 @@ def test_the_scripted_run_arranges_every_fixture_the_suite_asks_for(scored):
     everything a run may put there is there. A case that starts coming back not
     arranged here is a fixture that stopped being made.
 
-    With two exceptions, and both are facts about the plant rather than gaps
-    here. A recommended setpoint change needs a tag the plant's own manifest
+    With three exceptions, and all three are facts about the plant rather than
+    gaps here. A recommended setpoint change needs a tag the plant's own manifest
     declares writable with bounds - the first of the three guards between a
     recommendation and a PLC - and a seeded demo plant has no manifest at all.
-    And the work-centre question needs somebody to have been *put* at a work
+    The work-centre question needs somebody to have been *put* at a work
     centre, which is `users.manage` and therefore the plant's own act and not a
     run's (decision 0035): a seeded demo plant has placed nobody, so the case is
     reported not arranged with that sentence rather than asked on a plant where
     the honest answer is an unattributed count.
+
+    And recording a sample needs a characteristic that is inspected several
+    pieces at a time. A sampling plan is part of the specification, so it is
+    master data by the same decision: the demo plant measures brix one reading
+    at a time and names no sampled characteristic, and a run that set a sample
+    size on somebody's characteristic to make its own case runnable would be
+    changing how their chart is drawn. Added 2026-10-06 with `record_sample`.
     """
     unmade = {o.case.id: o.missing for o in scored if not o.arranged}
     assert set(unmade) == {"admin-approves-an-adjustment",
-                           "analyst-asks-which-workcenters-are-asking-what"}, unmade
+                           "analyst-asks-which-workcenters-are-asking-what",
+                           "operator-records-a-sample-of-five"}, unmade
     assert unmade["admin-approves-an-adjustment"] == ("adjustment:MIX01",)
     assert unmade["analyst-asks-which-workcenters-are-asking-what"] == ("home:SCOTT",)
+    assert unmade["operator-records-a-sample-of-five"] == \
+        ("sampled_spec:FG-COLA/fill_height",)
 
 
 def test_a_case_whose_fixture_is_missing_is_counted_apart_from_pass_and_fail():

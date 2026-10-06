@@ -2387,6 +2387,12 @@ WITHOUT_A_WALK: dict[str, str] = {
         "the quarantine/release/scrap row on /dashboard/trace (trace-status), "
         "which the page already gates on quality.close_nc."
     ),
+    "record_sample": (
+        "no control on any screen yet, and honestly so: the form that records a "
+        "sample of n pieces, and the panel that shows the n readings behind a "
+        "point, are the follow-up (spc-xbar-chart-and-panel). What posts a "
+        "sample today is the simulated floor, over HTTP."
+    ),
     "erp_retry": (
         "the Retry button on a dead message in the ERP panel of /dashboard/ops "
         "(ops-erp), which the page already shows only to orders.close."

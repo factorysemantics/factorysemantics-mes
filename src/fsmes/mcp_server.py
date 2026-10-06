@@ -515,6 +515,27 @@ def record_check(plant: str, material: str, characteristic: str, value: float,
 
 
 @mcp.tool()
+def record_sample(plant: str, material: str, characteristic: str, values: list[float],
+                  order: str | None = None, equipment: str | None = None,
+                  gauge: str | None = None, dry_run: bool = False,
+                  on_behalf_of: str | None = None, client_ref: str | None = None) -> dict:
+    """Record a sample of n pieces for a characteristic whose specification is
+    inspected n at a time - all of the readings together, in the order they
+    were taken. The chart's point is their mean, so the rules run once and at
+    most one non-conformance comes out of a sample. Exactly as many readings as
+    the specification's sample_size, or the answer says both numbers."""
+    _identity.set((on_behalf_of.upper() if on_behalf_of else None, client_ref))
+    body: dict = {"material": material, "characteristic": characteristic,
+                  "values": list(values)}
+    for name, value in (("order", order), ("equipment", equipment), ("gauge", gauge)):
+        if value:
+            body[name] = value
+    return _write(plant, "/quality/samples", body, dry_run,
+                  f"record a sample of {len(values)} {characteristic} readings on {material}"
+                  + (f" against {order}" if order else ""))
+
+
+@mcp.tool()
 def nonconformance(plant: str, code: str) -> dict:
     """One non-conformance with every step it has been through: who raised it,
     who reviewed it, what was decided about the material and why, who closed it."""

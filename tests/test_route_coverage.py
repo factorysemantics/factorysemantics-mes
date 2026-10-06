@@ -33,6 +33,15 @@ EXCLUDED = {
     "POST /equipment/downtime-reasons/{code}/approve/{revision}":
         "the panel does call it, by the path the server hands each row - which is what "
         "lets one panel sign several kinds - so the path is never written in a script",
+    # a sample of n pieces, posted whole. No screen posts one yet: the panel
+    # that shows a sample and the form that records one are
+    # `spc-xbar-chart-and-panel`. What posts samples today is the simulated
+    # floor, over HTTP, like any other client - and the agent's record_sample
+    # tool sends it, so a person asking their assistant can already record one.
+    "POST /quality/samples":
+        "the sample panel and its form are the follow-up (spc-xbar-chart-and-panel); "
+        "the simulated floor and the agent's record_sample tool are what post one "
+        "today",
     # the plant's non-conformance severities: the same two, for the same two
     # reasons. That the excuses read identically is the point - the second
     # vocabulary joined the panel without the panel being touched.

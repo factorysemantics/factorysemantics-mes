@@ -398,3 +398,13 @@ that test anyway - it is inside "cancel", which is this capability's own
 description, and inside "cannot", which is the opposite of naming anybody.
 `test_a_read_first_nothing_to_retry_passes_only_when_it_also_says_who_could`
 scores the reply he actually got, both ways."""
+
+[[case]]
+id = "operator-records-a-sample-of-five"
+request = "I measured five bottles for fill height on FG-COLA: 141.8, 142.1, 141.9, 142.4 and 142.0. log the sample"
+screen = "/dashboard/quality"
+expect = "propose"
+tool = "record_sample"
+args = { material = "FG-COLA", characteristic = "fill_height", values = [141.8, 142.1, 141.9, 142.4, 142.0] }
+requires = ["material:FG-COLA", "sampled_spec:FG-COLA/fill_height"]
+note = "five readings are one sample, not five checks: the chart's point is their mean, so record_sample is the tool and record_check would be refused"
