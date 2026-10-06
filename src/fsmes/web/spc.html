@@ -58,11 +58,17 @@
          already there. -->
     <div class="spc-split">
     <section class="panel">
-      <h2>Individuals and moving range <span id="chart-note" class="muted"></span>
+      <!-- The heading, the legend and the two sentences under the chart all
+           follow `kind`: an X-bar and R chart under the words "individuals and
+           moving range" is a true picture with a false caption, which is worse
+           than no caption. They follow it with or without points, because a
+           characteristic with no samples yet is still a sampled one. -->
+      <h2><span id="chart-heading">Individuals and moving range</span>
+        <span id="chart-note" class="muted"></span>
         <span class="spacer"></span>
         <span id="chart-tools" class="chart-tools"></span>
         <button id="open-point" class="ghost small" data-assist="spc-open-point"
-                aria-describedby="point-hint" disabled>Open a reading</button></h2>
+                aria-describedby="point-hint" disabled>Open a point</button></h2>
       <div id="chart" class="chart"></div>
       <!-- The moving-range half's own sentence. Its own, because the two
            halves answer two questions: whether a reading is where it should
@@ -73,27 +79,20 @@
         the gap between two readings and opens the later of them. The button
         opens the newest reading a rule fired on, and the newest reading when
         none did.</p>
-      <p class="legend">
-        <span><i class="sw" style="background:var(--accent)"></i>reading</span>
-        <span><i class="sw" style="background:var(--running)"></i>centre line (x̄, R̄)</span>
-        <span><i class="sw" style="background:var(--idle)"></i>control limits (±3σ above, D4·R̄ below)</span>
-        <span><i class="sw" style="background:var(--down)"></i>specification limits</span>
-        <span><i class="sw" style="background:var(--quality)"></i>rule fired</span>
-      </p>
-      <p class="muted small">The lower chart is the gap between each reading and
-        the one before it. It is where the sigma behind both sets of limits comes
-        from — the mean of that series over d2 — so a process that jumps between
-        consecutive readings has limits worth less than they look, whatever the
-        upper chart says.</p>
+      <p class="legend" id="chart-legend"></p>
+      <p id="chart-explainer" class="muted small"></p>
     </section>
 
     <!-- `data-point` is written only once the dossier has arrived and is
          drawn, and it carries the reading's own id. A test waits on that
          rather than on the box existing: the box exists before the fetch
-         does, and on loopback the difference is six milliseconds. -->
+         does, and on loopback the difference is six milliseconds.
+         `data-sample` is the same contract for a point on an X-bar chart,
+         and the two are never both set: one panel is about one thing. -->
     <section class="panel point-panel" id="point-panel" data-assist="spc-point-panel"
-             data-state="idle" data-point="" aria-live="polite">
-      <h2>Why this reading is here <span id="point-which" class="muted"></span></h2>
+             data-state="idle" data-point="" data-sample="" aria-live="polite">
+      <h2><span id="point-title">Why this reading is here</span>
+        <span id="point-which" class="muted"></span></h2>
       <p id="point-idle" class="muted small">No reading is open. Click one on the
         chart beside this and every record this MES holds about it appears here:
         the gauge that took it and when it was last calibrated, the same
@@ -122,7 +121,7 @@
     </section>
   </main>
 
-  <p class="screen-source">chart /quality/spc/{material}/{characteristic} · one reading /quality/spc/{material}/{characteristic}/point/{check_id} · characteristics /quality/specs</p>
+  <p class="screen-source">chart /quality/spc/{material}/{characteristic} · one reading /quality/spc/{material}/{characteristic}/point/{check_id} · one sample /quality/spc/{material}/{characteristic}/sample/{sample_id} · characteristics /quality/specs</p>
 </div>
 <script src="/static/common.js"></script>
 <script src="/static/kit.js"></script>

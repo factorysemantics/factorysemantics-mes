@@ -102,6 +102,15 @@ Not decided here: drawing the X-bar and R chart on the screen, and the panel
 behind a point. `web/spc.js` says in one sentence that it cannot draw this
 chart yet rather than drawing means as if they were readings.
 
+**Since 2026-10-06 it draws it.** `kind` is what the screen reads: one layout
+draws both kinds — the sample means with `X̿` and `X̿ ± A2·R̄` above, the
+spread inside each sample with `R̄`, `D4·R̄` and `D3·R̄` below — and a click
+on either half opens the n readings behind that sample
+(`GET /quality/spc/{material}/{characteristic}/sample/{sample_id}`). The
+heading, the legend and the sentences under the chart follow `kind` too, with
+or without points: this decision made the chart type a property of the data,
+and a caption that did not follow it would undo that. Nothing above changed.
+
 ## House rules touched
 **Never invent production** (1): nothing is backfilled, nothing is inferred
 from how close together readings arrived, and a reading taken outside a plan

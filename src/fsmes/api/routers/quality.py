@@ -526,6 +526,49 @@ def spc_point(
     return dossier.dossier(db, material, characteristic, check_id, **asked)
 
 
+@router.get("/spc/{material}/{characteristic}/sample/{sample_id}")
+def spc_sample(
+    material: str, characteristic: str, sample_id: int, db: DbDep,
+    before_minutes: float = Query(
+        None, gt=0, le=1440,
+        description="How many minutes of the station's process values to read "
+                    "before the FIRST reading of the sample. Ten when it is "
+                    "left out."),
+    after_minutes: float = Query(
+        None, ge=0, le=1440,
+        description="How many minutes after the last of them. Two when it is "
+                    "left out."),
+    neighbour_hours: float = Query(
+        None, gt=0, le=24,
+        description="How far either side to look for the same characteristic "
+                    "measured by another gauge. One hour when it is left out."),
+) -> dict:
+    """Why is this sample where it is — the records behind one point of an X-bar chart.
+
+    The same question `/point/{check_id}` answers, of a point that is an
+    average rather than a reading. Two things differ: the n readings behind the
+    point come with it - each one's distance from the sample's own mean, and
+    which of them is furthest out - and the window is the stretch those n
+    readings span plus the minutes before, with every one of them marked on
+    each trend. Everything else is the same block: the gauge and its
+    calibration, the same characteristic by every other gauge in the hour
+    either side, what the machine was doing and what it had just come out of,
+    and the stops, maintenance orders and findings in that window.
+
+    No model, and nothing recomputed: both halves' limits are the chart's.
+    """
+    from fsmes.services import spc_point as dossier
+
+    asked = {
+        name: value for name, value in (
+            ("before_minutes", before_minutes),
+            ("after_minutes", after_minutes),
+            ("neighbour_hours", neighbour_hours),
+        ) if value is not None
+    }
+    return dossier.sample_dossier(db, material, characteristic, sample_id, **asked)
+
+
 @router.get("/gauges")
 def gauges(
     db: DbDep,

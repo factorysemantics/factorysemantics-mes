@@ -518,6 +518,80 @@ def _moving_range(checks: list[QualityCheck], *, fewest: int, note: str | None) 
     })
 
 
+def _range_block(series: Series, control: dict | None, signals: list[dict],
+                 note: str | None) -> dict:
+    """The R chart: the spread inside each sample, with its limits and its own sentence.
+
+    The lower half of a sampled chart, in the same shape and the same place in
+    the envelope as `moving_range` is on an individuals one - so a reader, a
+    screen or a test that knows one knows the other. Its limits are the ones
+    `_limits` already worked out (`control.range_chart`), copied and not
+    recomputed; `centre`, `upper` and `lower` are null when there were too few
+    samples for limits at all, and `note` says why in the same words the upper
+    chart uses.
+
+    It carries no `signals` key, and that is the one place the two kinds do not
+    mirror each other. A moving range is the gap between two readings, so the
+    moving-range series is one shorter than the readings and has an index space
+    of its own - which is exactly why it needs its own list of firings. A
+    sample range is the spread inside ONE sample, so both halves of a sampled
+    chart are indexed by the same samples, and rule 5's firings sit in
+    `signals` beside rules 1 to 4 with the same `index`. A second copy here
+    would be the same firing in two lists, which is how a reader counting them
+    comes to report twice as many as the plant had.
+    """
+    points = [
+        {"range": round(spread, 4), "ts": stamp, "sample": key, "check": check.id,
+         "n": series.size}
+        for spread, stamp, key, check in zip(
+            series.ranges, series.stamps, series.keys, series.checks, strict=False)
+    ]
+    limits = (control or {}).get("range_chart") or {}
+    fired = [s for s in signals if s["rule"] == RANGE_RULE]
+    block = {
+        "points": points,
+        # Every list states its total: how many ranges are drawn, and how many
+        # readings they are the spread of.
+        "n": len(points),
+        "readings": len(series.readings),
+        "sample_size": series.size,
+        "centre": limits.get("centre"),
+        "upper": limits.get("upper"),
+        # Nought, not absent, below n = 7: D3 is zero there, so a sample of
+        # five identical readings is unremarkable rather than a signal. See
+        # `SUBGROUP`.
+        "lower": limits.get("lower"),
+        "note": note,
+        # Null, not True, when there are no limits to be inside: a chart with
+        # nothing to judge against has not found the process settled.
+        "stable": None if limits.get("upper") is None else not fired,
+    }
+    block["verdict"] = _range_verdict(block, fired)
+    return block
+
+
+def _range_verdict(block: dict, fired: list[dict]) -> str:
+    """The range chart's own sentence, in the same shape as `_mr_verdict`'s.
+
+    Its own, because the two halves of a sampled chart answer two questions -
+    where the average of five bottles sat, and how far apart those five were -
+    and one sentence for both is how a reader comes to call a process settled
+    when every sample of it is spread twice as wide as the last.
+    """
+    if block["n"] == 0:
+        return (f"no samples yet; the first {block['sample_size']} readings "
+                f"recorded together make the first range")
+    if block.get("note"):
+        return block["note"]
+    if fired:
+        return (f"out of control - rule {RANGE_RULE} fired on {len(fired)} of "
+                f"{block['n']} sample ranges. Those samples are spread wider "
+                f"inside themselves than the rest of the process, and sigma on "
+                f"both charts is estimated from the mean of this series.")
+    return (f"in control - every one of {block['n']} sample ranges is inside "
+            f"the upper range limit")
+
+
 def _said(moving: dict) -> dict:
     """The verdict and the one-word answer, added to a moving-range block.
 
@@ -708,16 +782,24 @@ def chart(session: Session, material: str, characteristic: str,
                 # sampled chart's second half is the range chart, and `_limits`
                 # is where that one comes from.
                 **({"moving_range": _moving_range(series.checks, fewest=fewest, note=note)}
-                   if not series.sampled else {})}
+                   if not series.sampled else
+                   # And the sampled chart's lower half says it too, in its own
+                   # block and the same sentence. The heading, the legend and
+                   # the two sentences under a sampled chart follow `kind` with
+                   # or without samples - a screen reading an envelope with no
+                   # limits in it still has to be told which chart it is about.
+                   {"range_chart": _range_block(series, None, [], note)})}
 
     control = _limits(series)
     if control is None:
         # No variation to judge against. Identical readings are not an
         # in-control process, they are an un-chartable one.
+        flat = (f"{len(values)} {what} with no variation between them; "
+                f"there is nothing for control limits to be computed from{aside}")
         return {**base, "control": None, "capability": None, "signals": [],
-                "note": f"{len(values)} {what} with no variation between them; "
-                        f"there is nothing for control limits to be computed "
-                        f"from{aside}"}
+                "note": flat,
+                **({"range_chart": _range_block(series, None, [], flat)}
+                   if series.sampled else {})}
 
     centre = control["centre"]
     sigma_within = control["sigma_within"]
@@ -774,6 +856,12 @@ def chart(session: Session, material: str, characteristic: str,
         # rule it has. A sampled chart's second half is the range chart inside
         # `control`, so this key is absent there rather than null.
         **({"moving_range": moving} if moving is not None else {}),
+        # The other half of a sampled chart: the spread inside each sample,
+        # with the limits `control.range_chart` holds and a sentence of its
+        # own. In the same place in the envelope as `moving_range`, so one
+        # screen draws both kinds from one shape (decision 0040).
+        **({"range_chart": _range_block(series, control, signals, None)}
+           if series.sampled else {}),
         # The sentence that keeps the two questions apart.
         "verdict": _verdict(stable, capability, signals, capable, marginal,
                             moving),

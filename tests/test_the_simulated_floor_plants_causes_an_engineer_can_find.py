@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import random
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -1089,47 +1090,106 @@ def test_within_one_run_a_sample_never_takes_a_bottle_the_last_one_took(plant):
     assert len(the_samples(plant)) == 1
 
 
+#: How many samples on each side of the changeover the run below takes, and
+#: how many standard errors of the answer it allows. Twelve a side because the
+#: pack's promise is about a run and not about one tray, and the tolerance
+#: falls by the root of it; four standard errors rather than three because a
+#: test that fails one run in three hundred is a test that will fail, and at
+#: twelve a side the shift being looked for is six standard errors out, so
+#: there is room to be generous and still notice if it went missing.
+SAMPLES_EACH_SIDE = 12
+STANDARD_ERRORS_ALLOWED = 4.0
+
+
 def test_the_heights_after_a_changeover_sit_half_a_millimetre_high(plant):
-    """The planted cause. Same five weights, sampled twice: once with no
-    changeover behind it and once inside the window after one. The offset
-    goes on the whole sample, because what the nozzle setting moved is the
-    process and not one bottle - so it shows on the means and not on the
-    ranges, which is the finding an engineer is meant to be able to make."""
+    """The planted cause, measured the way the pack promises it.
+
+    The pack says in its own words how big half a millimetre is: *"a shift a
+    reader finds by splitting the means on the changeover, not one that trips
+    a control rule"*. So this splits the means on the changeover. Twenty-four
+    samples of five bottles, alternating - twelve with nothing behind them and
+    twelve inside the window after a changeover, the same five weights every
+    time - and the planted half millimetre is the difference between the two
+    groups' average mean. The offset goes on the whole sample, because what
+    the nozzle setting moved is the process and not one bottle, so it shows on
+    the means and not on the ranges, which is the finding an engineer is meant
+    to be able to make.
+
+    **One sample either side cannot see it, and that is a fact about the
+    process rather than a gap in the plant.** Five bottles held at one weight
+    still stand about 0.36 mm apart - the glass's own `piece_to_piece` is
+    0.35 mm and the bench gauge sits on top of it - so the standard error of
+    one five-bottle mean is about 0.16 mm and of the difference between two of
+    them about 0.23 mm. Against that, 0.5 mm is barely two standard errors:
+    one sample a side puts the answer anywhere between roughly 0.05 mm and
+    0.95 mm. This test asserted exactly that for a while (`abs=0.35` on a
+    single pair) and failed for it - 0.06 mm on windows 3.12 in #147, and
+    repeatably on any run the clock made a night shift, because the pack
+    widens the bench's spread from 0.10 mm to 0.25 mm at night. That is the
+    same arithmetic that keeps this shift inside a correct control chart's
+    limits. Over N samples a side the standard error falls by root N, so the
+    tolerance below is `STANDARD_ERRORS_ALLOWED` of *those*, worked out from
+    the pack's own spreads at the wider of the two shifts - not a number
+    chosen by hand.
+    """
     plan = the_plan()
+    bench = measurement.Bench(script())
     weights = [499.0, 500.0, 501.0, 500.0, 499.0]
-    settled, after = [], []
+    after_a_changeover: list[bool] = []
 
-    async def both(floor: Floor) -> None:
-        the_filler_has_weighed(plant, weights, from_seconds_ago=200.0)
-        assert await sample_once(floor)
-        settled.extend(the_heights(plant))
+    async def a_run(floor: Floor) -> None:
+        # Each tray is newer than the one before, because the floor refuses to
+        # measure a bottle it has already sampled.
+        at = 25.0 * (2 * SAMPLES_EACH_SIDE + 1)
+        for _ in range(SAMPLES_EACH_SIDE):
+            for inside_the_window in (False, True):
+                # The floor's own record of when a changeover ended, set by
+                # `watch_the_stops` when it names a setup stop; set here
+                # directly so the test is about the cause and not about the
+                # stop watcher, which is pinned above. `None` is a line that
+                # has not changed over.
+                floor._changeover_ended = (
+                    datetime.now(UTC).replace(tzinfo=None) if inside_the_window else None)
+                the_filler_has_weighed(plant, weights, from_seconds_ago=at)
+                assert await sample_once(floor)
+                after_a_changeover.append(inside_the_window)
+                at -= 25.0
 
-        # The line has just changed over and come back. This is the floor's
-        # own record of the instant, set by `watch_the_stops` when it names a
-        # setup stop; set here directly so the test is about the cause and
-        # not about the stop watcher, which is pinned above.
-        floor._changeover_ended = datetime.now(UTC).replace(tzinfo=None)
-        the_filler_has_weighed(plant, weights, from_seconds_ago=20.0)
-        assert await sample_once(floor)
-        after.extend(the_heights(plant)[5:])
+    on_the_floor(plant, a_run)
 
-    on_the_floor(plant, both)
+    heights = the_heights(plant)
+    assert len(after_a_changeover) == 2 * SAMPLES_EACH_SIDE
+    assert len(heights) == 5 * len(after_a_changeover), \
+        f"{len(heights)} readings for {len(after_a_changeover)} samples of five"
+    samples = [heights[i:i + 5] for i in range(0, len(heights), 5)]
+    lifted = [s for s, after in zip(samples, after_a_changeover, strict=True) if after]
+    settled = [s for s, after in zip(samples, after_a_changeover, strict=True) if not after]
 
-    assert len(settled) == 5 and len(after) == 5
-    lift = sum(after) / 5 - sum(settled) / 5
-    assert lift == pytest.approx(plan.after_changeover_offset, abs=0.35), lift
-    # Half a millimetre is what the pack plants, and that is all this test
-    # claims. How big it is *relative to the spread* is not a thing one
-    # sample of five can show: here the five weights are held near enough
-    # identical, so the within-sample spread is only the glass. On the line
-    # the five bottles are weighed five seconds apart, their weights differ
-    # by more than their moulding does, and the same half-millimetre is about
-    # four tenths of the spread the range chart sees - which is why this is a
-    # shift found by splitting the means on the changeover rather than one
-    # that trips a control rule.
+    def average(of: list[float]) -> float:
+        return sum(of) / len(of)
+
+    lift = (average([average(s) for s in lifted])
+            - average([average(s) for s in settled]))
+    # One piece's own spread: the glass and the bench gauge, added as
+    # variances. The wider of the two shifts, because which shift the suite
+    # happens to run in is a fact about the clock and not about the plant.
+    piece = math.hypot(plan.piece_to_piece,
+                       max(bench.spread(plan.characteristic, shift) for shift in ("DAY", "NIGHT")))
+    # The standard error of the difference between the two groups' averages:
+    # five pieces a sample, SAMPLES_EACH_SIDE samples a group, two groups.
+    standard_error = piece * math.sqrt(2.0 / (5 * SAMPLES_EACH_SIDE))
+    allowed = STANDARD_ERRORS_ALLOWED * standard_error
+    assert lift == pytest.approx(plan.after_changeover_offset, abs=allowed), (
+        f"lift {lift:.3f} mm over {SAMPLES_EACH_SIDE} samples a side; the pack plants "
+        f"{plan.after_changeover_offset} mm and {STANDARD_ERRORS_ALLOWED:.0f} standard "
+        f"errors is {allowed:.3f} mm")
     # On the ranges it does not show: one offset on five bottles leaves the
-    # spread of the five where it was.
-    assert abs((max(after) - min(after)) - (max(settled) - min(settled))) < 1.0
+    # spread of the five where it was. A millimetre is loose on purpose - the
+    # range of five readings is a noisier statistic than their mean, and this
+    # test's claim is that the ranges did not move, not how tightly they sat.
+    moved = abs(average([max(s) - min(s) for s in lifted])
+                - average([max(s) - min(s) for s in settled]))
+    assert moved < 1.0, f"the average range moved by {moved:.3f} mm"
 
 
 def test_a_sampled_characteristic_is_not_also_inspected_one_piece_at_a_time(plant):

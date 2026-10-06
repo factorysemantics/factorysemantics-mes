@@ -109,12 +109,22 @@ have no sample, and if you set a sample size on a characteristic that already
 has history, that history is left out of the chart rather than grouped into
 samples nobody took. The chart says how many readings it set aside and why.
 
-The screen does not draw this chart yet. Until it does, the SPC page says so
-in a sentence and draws nothing, rather than plotting means as if each were
-one bottle; the centre, the limits, the capability and the verdict beside it
-are the samples' own and are true as they stand. `GET /quality/spc/...`
-answers `"kind": "xbar_r"` and carries the samples, so anything reading the
-API has the whole picture today.
+**Quality → SPC draws it.** Pick a sampled characteristic and you get two
+charts in the same frame as the individuals one: the mean of each sample above
+with `X̿` and `X̿ ± A2·R̄`, and the spread inside each sample below with `R̄`,
+`D4·R̄` and `D3·R̄`. One dot per sample on each half, flagged where a rule
+fired, and one export takes both. The heading, the legend and the sentences
+under the chart say which chart it is — before the first sample as well as
+after it, because the chart type is a property of the plan and not of the
+data that has arrived so far.
+
+![Quality → SPC on fill height: the sample means above with their limits, the
+spread inside each sample below, and the panel beside them open on the five
+bottles behind one dot.](images/spc-xbar-and-r.png)
+
+Click a dot and the panel beside it opens on **the readings behind that
+point** — see *Click a point*, below, which is the same panel asked a slightly
+different question.
 
 ## The other half of the chart
 
@@ -185,6 +195,32 @@ of why this panel is worth having.
 A keyboard reaches it: tab to a reading and press Enter, or use the **Open a
 reading** button, which opens the newest reading a rule fired on.
 
+### On a sampled chart, the dot is an average — so the panel opens all five
+
+Everything above holds on an X-bar and R chart, with one block more and one
+window wider. A point there is the mean of the sample, which is the thing an
+X-bar chart cannot take apart on its own, so the panel's first block is **the
+readings behind this point**: every reading in the sample with its value, its
+gauge, who took it, and **how far it sat from the sample's own mean**, with the
+one furthest out marked. Five bottles all high is a filler setting; one bottle
+high and four ordinary is a nozzle. That is usually the whole diagnosis, and
+it is one click.
+
+The panel says in the same breath that **one reading is always the furthest**,
+because it is — naming it is a place to look and not a finding. When every
+reading in a sample is identical it names none of them, rather than inventing
+a culprit out of the order somebody typed them in; when two sit equally far
+out it names both.
+
+The window is the one the readings themselves span — first to last, plus the
+minutes before — rather than an instant, and **every reading's stamp is marked
+on every trend**, so which bottle was measured while the nozzle pressure was
+falling is visible rather than inferred. The rules block names where the mean
+sat against `X̿ ± A2·R̄` *and* where the range sat against its own limit,
+because the reader came from one half and may need the other. Clicking a dot
+on the lower chart opens the same sample as the dot above it: a mean and a
+range are two facts about one sample.
+
 ### Two things it will not tell you
 
 **The gauge comparison bounds the question; it does not settle it.** Two
@@ -203,10 +239,13 @@ One read, and the one a screen gets:
 
 ```
 GET /quality/spc/{material}/{characteristic}/point/{check_id}
+GET /quality/spc/{material}/{characteristic}/sample/{sample_id}
 ```
 
-`before_minutes`, `after_minutes` and `neighbour_hours` move the window; ten,
-two and one are the defaults. Nothing in it is worked out for the panel: the
+The second is the same read of a sample: the same blocks, plus the readings,
+over the window those readings span. `before_minutes`, `after_minutes` and
+`neighbour_hours` move the window on either; ten, two and one are the
+defaults. Nothing in it is worked out for the panel: the
 control limits come from the chart, the trends and the timeline from
 `/analysis`, the gauge's due date from the gauge register, the coverage from
 the ledger. So a figure on the panel and the same figure on the analysis screen
