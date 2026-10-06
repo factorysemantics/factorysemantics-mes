@@ -52,7 +52,13 @@ def test_a_point_beyond_three_sigma_raises_a_hold_without_anyone_opening_the_cha
     the whole point: at two in the morning nobody has the screen open."""
     _record(session, STEADY)
     raised = _record(session, [11.9])
-    assert [s["rule"] for s in raised] == [1]
+    # Rule 1 on the individuals half and rule 5 on the moving-range half: a
+    # jump big enough to leave three sigma is usually a gap big enough to
+    # leave the range limit too, and both are recorded on every plant
+    # (decision 0036). Only rule 1 is in the shipped `hold_rules`, so only
+    # rule 1 called anybody.
+    assert [s["rule"] for s in raised] == [1, 5]
+    assert raised[1]["held"] is False and raised[1]["nonconformance"] is None
     holds = _spc_ncs(session)
     assert len(holds) == 1
     assert holds[0].code == raised[0]["nonconformance"]
@@ -108,7 +114,9 @@ def test_a_rule_does_not_fire_backwards_over_readings_nobody_was_worried_about(s
     the reading has to be a new one."""
     _record(session, STEADY)
     raised = _record(session, [11.9])
-    assert {s["rule"] for s in raised} == {1}
+    # Rule 1 and the moving-range rule both fire on the new reading. Nothing
+    # fires on the thirty behind it, which is what this test is about.
+    assert {s["rule"] for s in raised} == {1, 5}
 
 
 def test_an_excursion_that_lasts_is_one_hold_not_twenty(session):

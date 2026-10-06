@@ -43,13 +43,14 @@ goes under Honesty with a migration line, so plant people can find it.
     one sample is one evaluation and at most one hold, and the evidence names
     the sample and every reading in it. Five readings that straddle three
     sigma individually and average inside the limits fire nothing.
-  - **A sample range beyond `D4·R̄` is its own signal and always raises a
-    hold**, on every plant, whatever `spc_hold_rules` says: the X-bar limits
-    beside it were computed from the average range, and one inflated sample
-    has just widened them. It is deliberately *not* a fifth Western Electric
-    rule — the vocabulary of four, their windows and their numbering are what
-    decision 0036 fixed — and is recorded as rule `0`, with
-    `always_hold_rules` on every chart response so nobody has to discover it.
+  - **A sample range beyond `D4·R̄` is a signal of its own** — the X-bar
+    limits beside it were computed from the average range, and one inflated
+    sample has just widened them. It is **rule 5**, the same rule number a
+    moving range beyond its limit gets on an individuals chart (see the IMR
+    entry above): one definition of *a range beyond its limit*, drawn and
+    recorded on every plant, raising a hold where the plant's
+    `spc_hold_rules` includes 5. The bottling lab pack names it on both its
+    rule lists, so `fill_height` there holds on a range and holds major.
   - `GET /quality/spc/...` now says `"kind"`: `imr` as before, or `xbar_r`,
     and carries `samples` beside the existing keys. `spc_min_points` counts
     samples on a sampled characteristic.
@@ -73,6 +74,37 @@ goes under Honesty with a migration line, so plant people can find it.
   sentence and draws nothing rather than plotting means as if each were one
   bottle, while the centre, limits, capability and verdict beside it are the
   samples' own. Drawing it, and the panel behind a sample, is the follow-up.
+- **The SPC screen draws the moving range as well as the individuals
+  chart - an IMR chart, the way a real MES has one.** Scott, 2026-10-06: *"so
+  the current simulation runs an I chart. I want an IMR chart like a real MES
+  should have."* The service had always estimated sigma from the mean moving
+  range; what was missing was the half of the chart that shows it. Quality ->
+  SPC now draws, under the chart that was there, a second and shorter one: the
+  gap between each reading and the one before it, with its own centre line (R̄)
+  and its own upper limit (3.267 x R̄, the range constant for a subgroup of
+  two), in the same style and on the same timeline. The individuals chart does
+  not move or shrink, and one SVG or PNG export takes both halves.
+
+  - **A gap beyond its upper limit is rule 5** - and so is a *sample* range
+    beyond its limit on a sampled chart, because it is one statement about a
+    process and this product gives it one number. Drawn, flagged and recorded
+    on every plant, like the other four, but it **raises no hold unless a
+    plant adds `5` to `[quality] hold_rules`**, and the shipped default is
+    still the four Western Electric rules. A plant that turns it on gets the
+    same kind of non-conformance, with the two readings either side of the gap
+    (or the sample, on a sampled chart) as its evidence, and its severity off
+    `[quality] major_rules` like any other rule's. The screen's sentence about
+    which rules this plant holds on names it either way. See **Honesty** below
+    for what an upgraded plant will see in its records.
+  - **Clicking a dot on the lower chart opens the same panel** as the upper
+    one, on the later of the gap's two readings - the dot says so in its
+    tooltip and its label. The reading's own point on the moving-range half,
+    and whether it was flagged, is now on the dossier's `on_the_chart` block.
+  - **The chart read gains a `moving_range` block** - the series (one point per
+    reading from the second on, each naming both readings it spans), `centre`,
+    `upper`, `lower`, its own signals and its own verdict. The individuals half
+    is unchanged, key for key. Fewer readings than `spc_min_points` means no
+    moving-range limits either, and the same honest sentence about why.
 
 - **Click a point on the SPC chart and see why it is there - no model, just
   the records.** Scott, 2026-10-05: *"some kind of UI to show me what brief
@@ -1209,6 +1241,19 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Fixed
 
+- **A pack setting that is a list survived `fsmes pack check` and then broke
+  every experiment.** The pack writer - the code that writes the copy of a
+  pack an experiment or a sweep actually starts - wrote each value key by key,
+  and a list fell through to the line that quotes a value: a plant naming its
+  SPC hold rules came out of the copy as
+  `hold_rules = "[1, 2, 3, 4, 5]"`. The copy then failed its own
+  `fsmes pack check` with *should be a ints*, and `fsmes lab run` stopped on
+  the first starter plan before it started anything. The format has had
+  list-valued keys since it was written; no shipped pack set one until the
+  bottling pack named its rules in this change, so nothing had ever exercised
+  it. Lists are now written as TOML arrays, and a test points a pack with both
+  rule lists at new data and reads them back as numbers.
+
 - **A test of the AI trace failed about one run in twenty-five on nobody's
   change.** `test_the_trace_records_the_chart_as_a_summary_and_never_the_envelope`
   asserted that the string `"41"` appears nowhere in the turn row it writes,
@@ -2313,6 +2358,34 @@ goes under Honesty with a migration line, so plant people can find it.
   can fall between two levels, beside the level carrying the most probability.
 
 ### Honesty
+
+- **An upgraded plant will see rule-5 signals recorded, and none of them
+  held.** Decision 0036 says every rule is drawn *and recorded*; the only
+  thing a plant chooses is which rules raise a hold. So from this release the
+  moving-range rule writes its `spc_signal` row on every plant, whatever
+  `[quality] hold_rules` says, and raises a non-conformance only where that
+  list names `5`. The alternative was a dot the chart flags whose firing is in
+  no record, which would leave the click panel saying nothing fired on a
+  flagged reading - a lie about the reading. Nothing is backfilled: the rule
+  acts only on a window ending on a reading just written, exactly as rules 1-4
+  do, so a plant that upgrades starts recording moving-range signals from its
+  next reading and its history stays as it was judged at the time. What is new
+  in a default plant's records is therefore rows in `spc_signal` with
+  `rule = 5` and a null `nonconformance_id`; no hold, no non-conformance and
+  no count of open holds changes. A plant that wants the holds too adds `5`
+  to `[quality] hold_rules`.
+
+  **Rule 5 is the same rule on a sampled chart**, where it is the sample
+  range rather than the moving range, and it is the plant's choice there too.
+  The X-bar and R work earlier in this release first recorded that signal as
+  rule `0` and held on it whatever the plant said; both changes are in this
+  one unreleased version, so no plant has ever received rule `0` and nothing
+  needs migrating. A database built from the development branch between the
+  two may hold `spc_signal` rows with `rule = 0`, and nothing rewrites them -
+  they are what that code recorded. The lab's bottling pack now names `5` on
+  `[quality] hold_rules` and `[quality] major_rules`, so a sample range
+  beyond its limit there raises the major hold it was meant to raise; any
+  other plant that wants that adds `5` the same way.
 
 - **Nothing is backfilled into the five new columns, and null is *not
   attributed*.** Every row written before this release keeps a null in

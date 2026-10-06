@@ -227,4 +227,13 @@ def _toml(value) -> str:
         return "true" if value else "false"
     if isinstance(value, (int, float)):
         return str(value)
+    # A list is written as a TOML array, not as the text of a list. The format
+    # has had list-valued keys (`ints`, `strs`, `floats`) since it was written,
+    # but no shipped pack set one until the bottling pack named its hold rules,
+    # and until then this fell through to the quoting line below and wrote
+    # `hold_rules = "[1, 2, 3, 4, 5]"`. The copy then failed its own check with
+    # *should be a ints* and the experiment stopped before it started a plant -
+    # loudly, which is the one good thing about it.
+    if isinstance(value, (list, tuple)):
+        return "[" + ", ".join(_toml(item) for item in value) + "]"
     return '"' + str(value).replace('\\', '\\\\').replace('"', '\\"') + '"'

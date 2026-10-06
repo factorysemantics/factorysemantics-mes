@@ -573,14 +573,22 @@ def test_a_hold_rule_list_reaches_the_plant_as_a_comma_list_a_person_can_read(pa
     assert fmt.settings(fmt.read(pack_dir))["MES_QUALITY_HOLD_RULES"] == "1,2"
 
 
-def test_a_pack_may_only_ever_narrow_the_four_rules(pack_dir):
+def test_a_pack_may_only_ever_narrow_the_rules_the_product_has(pack_dir):
     """The rule numbers are the product's and stay the product's: a plant that
     renumbered them would publish `SpcSignal.rule = 3` meaning something
     nobody else means by rule 3."""
-    written(pack_dir, MINIMAL + "\n[quality]\nhold_rules = [5]\n")
+    written(pack_dir, MINIMAL + "\n[quality]\nhold_rules = [6]\n")
     found = problems(pack_dir)
-    assert any("[quality] hold_rules" in line and "this product has four" in line
+    assert any("[quality] hold_rules" in line and "this product has five" in line
                for line in found)
+
+
+def test_a_pack_may_name_the_moving_range_rule_because_it_is_a_rule(pack_dir):
+    """Rule 5 is off by default and a plant may switch it on. The key that
+    refused it was the key written when the chart had only one half."""
+    written(pack_dir, MINIMAL + "\n[quality]\nhold_rules = [1, 2, 3, 4, 5]\n")
+    assert problems(pack_dir) == []
+    assert fmt.settings(fmt.read(pack_dir))["MES_QUALITY_HOLD_RULES"] == "1,2,3,4,5"
 
 
 def test_a_rule_named_twice_is_said_rather_than_quietly_deduplicated(pack_dir):

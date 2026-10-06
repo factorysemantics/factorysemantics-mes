@@ -205,13 +205,19 @@ def _on_the_chart(session: Session, material: str, characteristic: str,
     """The chart this reading is a point on, and the rule that fired on it.
 
     Read from `spc.chart`, which is the one place that computes control limits
-    and runs the four rules. Recomputing them here would give slightly
-    different numbers from the chart the reader is looking at, which is the
-    whole reason `SpcSignal` stores the window it fired on.
+    and runs the rules. Recomputing them here would give slightly different
+    numbers from the chart the reader is looking at, which is the whole reason
+    `SpcSignal` stores the window it fired on.
 
     A reading older than this plant's `[quality] spc_history` is not on the
     chart at all; `on_chart` is false and says so rather than pretending the
     rules were silent about it.
+
+    `moving_range` is this reading's point on the other half of the chart -
+    the gap between it and the reading before it, the limits that gap was
+    judged against, and whether it was flagged. It is `null` for the first
+    reading on the chart, which has nothing before it to be a gap from, and
+    that is a different fact from a gap of nought.
     """
     drawn = spc.chart(session, material, characteristic)
     ids = [p.get("check") for p in drawn.get("points", [])]
@@ -234,6 +240,31 @@ def _on_the_chart(session: Session, material: str, characteristic: str,
         "rules": drawn.get("rules"),
         "hold_rules": drawn.get("hold_rules"),
         "signal": signal,
+        "moving_range": _moving_range_at(drawn, check.id),
+    }
+
+
+def _moving_range_at(drawn: dict, check_id: int) -> dict | None:
+    """This reading's point on the moving-range half, or null if it has none.
+
+    Found by check id rather than by counting along, because the moving-range
+    series is one shorter than the readings and an off-by-one here would put a
+    person in front of the wrong pair of readings.
+    """
+    moving = drawn.get("moving_range") or {}
+    point = next((p for p in moving.get("points", []) if p.get("check") == check_id), None)
+    if point is None:
+        return None
+    return {
+        "range": point.get("range"),
+        # The other reading of the pair, by id, so the panel can say *from
+        # which* without the reader counting dots.
+        "previous_check": point.get("previous_check"),
+        "centre": moving.get("centre"),
+        "upper": moving.get("upper"),
+        "lower": moving.get("lower"),
+        "flagged": any(s.get("check") == check_id
+                       for s in moving.get("signals", [])),
     }
 
 

@@ -191,3 +191,26 @@ def test_pointing_a_pack_at_new_data_moves_the_setting_the_replay_actually_reads
     assert plants.plant_env("tiny", rebuilt, root)["MES_REPLAY_DIR"] == elsewhere.as_posix()
     # The pack on disk is untouched, so a sweep leaves the plant as it found it.
     assert fleet.compile_pack(fmt.read(pack_dir))["replay_dir"] == (pack_dir / "out").as_posix()
+
+
+def test_the_runs_copy_of_a_pack_keeps_a_list_valued_setting(root, tmp_path):
+    """A pack that names its SPC hold rules is copied with the list intact.
+
+    The copy is written key by key by the pack writer, and a list used to fall
+    through to the line that quotes a value: `hold_rules = "[1, 2, 3, 4, 5]"`.
+    The copy then failed its own `fsmes pack check` with *should be a ints* and
+    the experiment stopped before it started a plant - which is how the
+    bottling pack's hold rules broke `fsmes lab run` on every starter plan.
+    """
+    pack_dir = root / "labs" / "multiplant" / "tiny"
+    (pack_dir / "plant.toml").write_text(
+        PLANT_TOML + '\n[quality]\nhold_rules = [1, 2, 3, 4, 5]\nmajor_rules = [1, 5]\n',
+        encoding="utf-8")
+    elsewhere = tmp_path / "another-hour"
+    generate(pack_dir / "line.json", elsewhere, write_docs=False)
+
+    copy, _ = repoint.pointed_at(fmt.read(pack_dir), tmp_path / "copy", elsewhere)
+
+    quality = fmt.read(copy).table("quality")
+    assert quality["hold_rules"] == [1, 2, 3, 4, 5]
+    assert quality["major_rules"] == [1, 5]

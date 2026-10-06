@@ -1,8 +1,10 @@
-/* Quality › SPC: the individuals chart, with the two questions kept apart.
+/* Quality › SPC: an individuals and moving-range chart, with the two
+   questions kept apart.
 
-   Is the process stable (control limits from its own variation, four
-   Western Electric rules)? Is it capable (Cp, Cpk against the specification,
-   withheld while unstable)? The Quality screen plots readings against spec;
+   Is the process stable (control limits from its own variation, four Western
+   Electric rules on the individuals half and, since 2026-10-06, the one rule
+   the moving-range half has)? Is it capable (Cp, Cpk against the
+   specification, withheld while unstable)? The Quality screen plots readings against spec;
    this one shows whether the process is behaving, which spec limits alone
    never say. Drawn with the shared kit, from the API's own numbers.
 
@@ -50,6 +52,21 @@ function fail(error) {
 
 const num = (v, d = 3) => (v === null || v === undefined ? "—" : Number(v).toFixed(d));
 
+/* The two halves, in one <svg>.
+
+   An IMR chart is a pair: the individuals half asks whether a reading is
+   where it should be, the moving-range half asks whether the gap between
+   consecutive readings is. They are read together, so they share one x scale
+   and one node - which is also what makes `FS.kit.export` carry both halves
+   into one file rather than half a chart.
+
+   The individuals half keeps the geometry it has had: the same height, the
+   same padding, the same scale. The moving-range half is added underneath at
+   about half the height, because it answers a smaller question. Nothing above
+   it moves. */
+const MR_HEIGHT = 128;
+const MR_GAP = 18;
+
 function draw(data) {
   const host = $("#chart");
   host.replaceChildren();
@@ -88,7 +105,20 @@ function draw(data) {
   const x = (i) => left + (i / Math.max(values.length - 1, 1)) * plot;
   const y = (v) => top + plotH - ((v - lo) / (hi - lo)) * plotH;
 
-  const chart = kit.svg(width, height);
+  /* The moving-range half, when there is one. Two readings make the first
+     gap, so a chart with one reading on it has an individuals half and
+     nothing below. */
+  const moving = data.moving_range;
+  const mrPoints = (moving && moving.points) || [];
+  const mrTop = height + MR_GAP;
+  const total = mrPoints.length ? mrTop + MR_HEIGHT : height;
+
+  const chart = kit.svg(width, total);
+  /* `fs-chart` is what `FS.kit.export` asks of a node before it will take it
+     off the page, and what `ui-check` watches. The chart was exportable by
+     hand and by nothing else until the second half arrived. */
+  chart.setAttribute("class", "fs-chart");
+  chart.setAttribute("data-kind", "spc-imr");
   for (let i = 0; i <= 3; i++) {
     const v = lo + ((hi - lo) * i) / 3;
     kit.add(chart, "line", { x1: left, y1: y(v), x2: left + plot, y2: y(v), class: "grid-line" });
@@ -123,6 +153,7 @@ function draw(data) {
        reading every time a check is recorded, and the reading is not. */
     if (point.check === undefined) return;
     dot.setAttribute("data-check", point.check);
+    dot.setAttribute("data-series", "individuals");
     dot.setAttribute("role", "button");
     dot.setAttribute("tabindex", "0");
     dot.setAttribute("aria-label",
@@ -136,7 +167,104 @@ function draw(data) {
     });
   });
   kit.add(chart, "text", { x: left + 4, y: top + 10, class: "axis" }, `${data.material} ${data.characteristic}${data.unit ? ` (${data.unit})` : ""}`);
+  if (mrPoints.length) {
+    /* A group of its own. The two halves share one node so that they line up
+       and one export carries both; the group is how a reader of the markup -
+       or a test - can still say *the lower chart* without measuring pixels. */
+    const half = kit.add(chart, "g", { "data-half": "moving-range" });
+    drawMovingRange(half, data, moving, { left, plot, x, mrTop });
+  }
   host.appendChild(chart);
+  exportTools($("#chart-tools"), chart,
+              `${data.material} ${data.characteristic} IMR chart`);
+}
+
+/* The moving-range half. Drawn into the same node, under the individuals
+   half, against the same x scale: a gap belongs over the later of the two
+   readings it is the gap between, and an IMR pair that did not line up would
+   be two charts rather than one. */
+function drawMovingRange(chart, data, moving, geom) {
+  const { left, plot, x, mrTop } = geom;
+  const top = 14, bottom = 24;
+  const plotH = MR_HEIGHT - top - bottom;
+  const ranges = moving.points.map((p) => p.range);
+  /* Nought is the baseline and is always on the picture. A moving range is
+     bounded below by zero - that is why its lower limit is nought and not a
+     line somebody could cross - and a scale that cropped the bottom off
+     would make a settled process look as if it were wandering. */
+  let hi = Math.max(...ranges, moving.upper || 0, moving.centre || 0);
+  if (hi <= 0) hi = 1;
+  hi *= 1.1;
+  const y = (v) => mrTop + top + plotH - (v / hi) * plotH;
+
+  for (let i = 0; i <= 2; i++) {
+    const v = (hi * i) / 2;
+    kit.add(chart, "line", { x1: left, y1: y(v), x2: left + plot, y2: y(v), class: "grid-line" });
+    kit.add(chart, "text", { x: left - 6, y: y(v) + 3, class: "axis", "text-anchor": "end" },
+            v.toFixed(Math.abs(hi) < 10 ? 2 : 0));
+  }
+  const guide = (v, cls, label) => {
+    if (v === null || v === undefined) return;
+    kit.add(chart, "line", { x1: left, y1: y(v), x2: left + plot, y2: y(v), class: cls });
+    kit.add(chart, "text", { x: left + plot - 4, y: y(v) - 3, class: "axis", "text-anchor": "end" }, `${label} ${v}`);
+  };
+  guide(moving.upper, "limit-line", "UCL");
+  guide(moving.centre, "centre-line", "R̄");
+
+  /* Flagged by reading id, not by counting along. The moving-range series is
+     one shorter than the readings, and an off-by-one here would put a red
+     ring round the wrong gap. */
+  const fired = new Set(moving.signals.map((s) => s.check).filter((c) => c !== undefined));
+  kit.add(chart, "polyline", {
+    points: moving.points.map((p, i) => `${x(i + 1)},${y(p.range)}`).join(" "),
+    class: "trend-line" });
+  moving.points.forEach((point, i) => {
+    const hit = fired.has(point.check);
+    const selected = point.check !== undefined && point.check === openCheck;
+    const dot = kit.add(chart, "circle", { cx: x(i + 1), cy: y(point.range),
+      r: selected ? 5.5 : hit ? 4.5 : 2.5,
+      /* The selected ring is a class of its own. One reading is one reading,
+         and a page that marked it twice under one name would make "the
+         reading that is open" ambiguous to anybody - a reader or a test -
+         counting marks. */
+      class: (hit ? "spc-flag" : "spc-dot") + (selected ? " spc-mr-selected" : "") });
+    const unit = data.unit ? " " + data.unit : "";
+    kit.add(dot, "title", {}, `Moving range ${point.range}${unit} · `
+      + `${kit.utc(point.ts).toLocaleString()} — the gap from the reading `
+      + "before it; opens the later of the two readings");
+    if (point.check === undefined) return;
+    dot.setAttribute("data-check", point.check);
+    dot.setAttribute("data-series", "moving-range");
+    dot.setAttribute("role", "button");
+    dot.setAttribute("tabindex", "0");
+    dot.setAttribute("aria-label",
+      `Moving range ${i + 1}, ${point.range}${unit}, the gap between readings `
+      + `${i + 1} and ${i + 2} — opens reading ${i + 2}, the later of the two`);
+    dot.addEventListener("click", () => openPoint(point.check));
+    dot.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      openPoint(point.check);
+    });
+  });
+  kit.add(chart, "text", { x: left + 4, y: mrTop + 10, class: "axis" },
+          `Moving range${data.unit ? ` (${data.unit})` : ""}`
+          + (moving.centre === null ? " — no limits yet" : ""));
+}
+
+/* The two buttons that take the chart off the page, SVG and PNG, beside the
+   chart rather than inside it: the kit's own frame draws its controls into
+   the <svg> because they change what is drawn, and these do not. */
+function exportTools(host, node, name) {
+  if (!host) return;
+  host.replaceChildren();
+  for (const format of ["svg", "png"]) {
+    const button = el("button", "ghost small", format.toUpperCase());
+    button.type = "button";
+    button.setAttribute("aria-label", `Save the chart as ${format.toUpperCase()}`);
+    button.addEventListener("click", () => exportPointChart(node, name, format));
+    host.append(button);
+  }
 }
 
 async function load() {
@@ -199,13 +327,21 @@ async function load() {
   draw(data);
   const body = $("#signals tbody");
   body.replaceChildren();
-  if (!data.signals.length) {
+  /* Both halves' firings in one table, because a reader asking *what fired*
+     is asking about the chart and not about one half of it. Each row says
+     which rule; rule 5 is the range one - the moving range below this chart,
+     or the sample range on a sampled characteristic - and each firing's own
+     words say which range it was. */
+  const moving = data.moving_range;
+  const fired = [...data.signals,
+                 ...((moving && moving.signals) || []).map((s) => ({ ...s, mr: true }))];
+  if (!fired.length) {
     const tr = el("tr"); const td = el("td", "muted", data.control ? "No rule fired. The process is in control." : "—"); td.colSpan = 4; tr.append(td); body.append(tr);
   }
-  // Which of the four this plant raises a hold on. Said on every chart,
-  // including the one where all four are held, because "all four" and "the
-  // three this plant chose" are different plants and only one of them has a
-  // rule that fires into silence by design (decision 0036).
+  // Which of them this plant raises a hold on. Said on every chart, including
+  // the one where every rule is held, because "every rule" and "the four this
+  // plant chose" are different plants and only one of them has a rule that
+  // fires into silence by design (decision 0036).
   const rules = data.rules || [];
   const holds = data.hold_rules || [];
   const off = rules.filter((rule) => !holds.includes(rule));
@@ -220,16 +356,20 @@ async function load() {
       : holds.length
         ? `This plant raises a hold on ${list(holds)}. `
           + `${list(off).charAt(0).toUpperCase()}${list(off).slice(1)} `
-          + `${off.length === 1 ? "is" : "are"} drawn and recorded and `
+          + `${off.length === 1 ? "is" : "are"} drawn on the chart and `
           + `${off.length === 1 ? "raises" : "raise"} no hold.`
-        : "This plant raises a hold on no rule. Every firing below is drawn and "
-          + "recorded, and none of them opened a non-conformance.";
+        : "This plant raises a hold on no rule. Every firing below is drawn on "
+          + "the chart, and none of them opened a non-conformance.";
 
-  for (const s of data.signals) {
+  for (const s of fired) {
     const tr = el("tr");
     tr.append(el("td", "code", `rule ${s.rule}`));
-    const where = s.points || s.indexes || (s.index !== undefined ? [s.index] : []);
-    tr.append(el("td", "muted small", where.length ? `reading ${where.map((i) => i + 1).join(", ")}` : (s.at !== undefined ? `reading ${s.at + 1}` : "")));
+    /* Where it fired. A moving-range firing is about two readings and says
+       both: its own index counts gaps, and gap n is between readings n and
+       n + 1. */
+    const where = s.mr ? [s.index, s.index + 1]
+      : s.points || s.indexes || (s.index !== undefined ? [s.index] : []);
+    tr.append(el("td", "muted small", where.length ? `reading ${where.map((i) => i + 1).join(s.mr ? " to " : ", ")}` : (s.at !== undefined ? `reading ${s.at + 1}` : "")));
     tr.append(el("td", null, s.description || s.meaning || s.what || JSON.stringify(s)));
     // What it set off. A chart that says a rule fired and stops there leaves
     // the reader wondering whether anybody was told.
@@ -248,7 +388,11 @@ async function load() {
     tr.append(acted);
     body.append(tr);
   }
-  $("#signal-count").textContent = `— ${data.signals.length}`;
+  $("#signal-count").textContent = `— ${fired.length}`;
+  /* The moving-range half's own sentence, under the chart. Its own, because
+     the two halves answer two questions and one sentence for both is how a
+     reader comes to think a process that jumps is a process behaving. */
+  $("#mr-verdict").textContent = moving ? (moving.verdict || "") : "";
   window.__fsmesPageData = data;
 
   /* A keyboard's way in, and a mouse's shortcut: the newest reading a rule
@@ -477,12 +621,21 @@ function ruleBlock(d) {
       "No rule fired on this reading. It is on the chart and the rules were run "
       + "when it was recorded."));
   }
+  /* This reading's point on the other half: the gap from the reading before
+     it. Absent for the first reading on the chart, which has nothing before
+     it to be a gap from - and that is a different fact from a gap of nought,
+     so the row is left out rather than printed as zero. */
+  const mr = chart.moving_range;
   section.append(facts([
     ["Reading", chart.reading ? `${chart.reading} of ${chart.readings}` : null],
     ["Centre", chart.control ? chart.control.centre : null, true],
     ["Control limits", chart.control
       ? `${chart.control.lower} to ${chart.control.upper}` : null, true],
     ["Sigma (within)", chart.control ? chart.control.sigma : null, true],
+    ["Moving range", mr
+      ? `${mr.range}${mr.upper === null ? "" : ` of ${mr.upper} allowed`}`
+        + (mr.flagged ? " — beyond the limit" : "")
+      : null, true],
   ]));
   /* What the MES actually acted on when the reading arrived, which is not the
      same question as what the chart says now: the chart is drawn over a

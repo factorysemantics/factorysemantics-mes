@@ -16,6 +16,10 @@ gave "" on GitHub's runner and the right answer on loopback.
 
 Marked `browser` as well as `slow`: `pytest -m browser` is the tier CI runs
 Chromium for, and a Playwright file marked only `slow` is a test nothing runs.
+
+Since 2026-10-06 the chart has two halves, and the last section of this file is
+the second one: the moving-range chart under the individuals chart, its dots,
+its limits, and the reading one of them opens.
 """
 
 import socket
@@ -608,3 +612,149 @@ def test_the_panel_and_its_control_carry_the_anchors_a_guide_points_at(page):
     left to be noticed."""
     assert page.query_selector('[data-assist="spc-point-panel"]')
     assert page.query_selector('[data-assist="spc-open-point"]')
+
+
+# ------------------------------------------- and the moving-range half, 2026-10-06
+
+# The second chart, under the first.
+#
+# Scott, 2026-10-06: *"so the current simulation runs an I chart. I want an IMR
+# chart like a real MES should have."* The gap between each reading and the one
+# before it, with its own centre line and upper limit, drawn into the same node
+# as the individuals half so the two line up and one export carries both. The
+# dossier read is held back here too: these tests click a dot and wait on the
+# panel's `data-point`, the same way the ones above do.
+
+
+def _dots(page, series):
+    """The dots of one half, in drawing order, as `{check, cx, cy}`."""
+    return page.evaluate(
+        """(series) => [...document.querySelectorAll(
+             `#chart circle[data-series='${series}']`)]
+           .map((c) => ({ check: Number(c.getAttribute('data-check')),
+                          cx: Number(c.getAttribute('cx')),
+                          cy: Number(c.getAttribute('cy')) }))""",
+        series)
+
+
+def test_the_moving_range_half_is_drawn_under_the_individuals_chart(page):
+    """One shorter than the readings, below all of them, in the same `<svg>`.
+
+    The same node because an IMR chart is a pair and is read as one: they share
+    the x scale, and `FS.kit.export` takes the node rather than half of it.
+    """
+    individuals = _dots(page, "individuals")
+    moving = _dots(page, "moving-range")
+    assert len(moving) == len(individuals) - 1
+    assert min(d["cy"] for d in moving) > max(d["cy"] for d in individuals)
+    # One node, and the one the kit will export.
+    assert page.eval_on_selector_all(
+        "#chart svg.fs-chart", "els => els.length") == 1
+    assert page.eval_on_selector_all(
+        "#chart svg.fs-chart circle[data-series='moving-range']",
+        "els => els.length") == len(moving)
+
+
+def test_the_moving_range_half_has_its_own_centre_line_and_upper_limit(page):
+    """Its own, drawn in the same two styles the individuals limits use, and
+    below every individuals dot: the mean moving range and D4 times it. A
+    second chart with no lines on it would be a picture, not a control chart.
+    """
+    below = page.evaluate(
+        """() => {
+             const half = document.querySelector("#chart g[data-half='moving-range']");
+             const of = (cls) => half.querySelectorAll(`line.${cls}`).length;
+             return { limit: of('limit-line'), centre: of('centre-line') };
+           }""")
+    assert below == {"limit": 1, "centre": 1}
+    lower = page.evaluate(
+        """() => [...document.querySelectorAll(
+             "#chart g[data-half='moving-range'] text")]
+           .map((t) => t.textContent).join(' | ')""")
+    assert "UCL" in lower
+    assert "R̄" in lower
+    assert "Moving range" in lower
+    # And the lines are where the dots are, not over the chart above them.
+    assert page.evaluate(
+        """() => {
+             const half = document.querySelector("#chart g[data-half='moving-range']");
+             const lines = [...half.querySelectorAll('line.limit-line, line.centre-line')];
+             const dots = [...document.querySelectorAll(
+               "#chart circle[data-series='individuals']")];
+             const floor = Math.max(...dots.map((d) => Number(d.getAttribute('cy'))));
+             return lines.every((l) => Number(l.getAttribute('y1')) > floor);
+           }""") is True
+
+
+def test_each_moving_range_dot_is_the_gap_that_ends_at_the_reading_it_opens(page):
+    """The identity the whole half rests on: gap *n* is between readings *n*
+    and *n + 1*, is drawn over the later of them, and opens that one. Pinned by
+    reading id rather than by counting dots, because an off-by-one here puts a
+    person in front of the wrong pair of readings."""
+    individuals = _dots(page, "individuals")
+    moving = _dots(page, "moving-range")
+    assert [d["check"] for d in moving] == [d["check"] for d in individuals[1:]]
+    # And drawn in the same column as that later reading, which is what makes
+    # the pair readable as one chart.
+    assert [round(d["cx"]) for d in moving] == [round(d["cx"]) for d in individuals[1:]]
+
+
+def test_clicking_a_moving_range_dot_opens_the_panel_on_the_later_reading(page):
+    """A dot on the lower chart is two readings, and the one it opens is the
+    later. Deliberately not the wild reading's own gap: that one carries the
+    same id as the individuals dot above it, so it would pass whichever of the
+    two readings the page had decided to open."""
+    moving = _dots(page, "moving-range")
+    target = moving[-3]
+    page.click(f"#chart circle[data-series='moving-range'][data-check='{target['check']}']")
+    _await_panel(page, target["check"])
+    assert page.query_selector("#point-panel").get_attribute("data-state") == "open"
+    # And the panel says this reading's moving range, beside the limits it was
+    # judged against.
+    assert "Moving range" in page.inner_text("#point-panel")
+
+
+def test_the_range_that_is_beyond_its_limit_is_the_one_marked(page, plant):
+    """Identity again: the 2.5 jump into the wild reading is the only gap in
+    this plant's history beyond D4 times the mean moving range, so it is the
+    only dot on the lower chart drawn as a firing."""
+    _base, wild = plant
+    flagged = page.evaluate(
+        """() => [...document.querySelectorAll(
+             "#chart circle[data-series='moving-range'].spc-flag")]
+           .map((c) => Number(c.getAttribute('data-check')))""")
+    assert flagged == [wild]
+
+
+def test_the_moving_range_firing_is_in_the_table_of_what_fired(page):
+    """One table for the chart, not one per half: a reader asking *what fired*
+    is asking about the chart. Rule 5 is the moving-range one, and this plant
+    does not hold on it - so the row says so rather than leaving a firing that
+    opened nothing to be noticed (decision 0036)."""
+    rows = page.inner_text("#signals")
+    assert "rule 5" in rows
+    assert "does not hold on this rule" in rows
+    assert "rule 5" in page.inner_text("#hold-rules").lower()
+    # And the lower chart's own sentence, under it. Its own, because the two
+    # halves answer two questions and one sentence for both is how a reader
+    # comes to think a process that jumps is a process behaving.
+    said = page.inner_text("#mr-verdict")
+    assert "rule 5 fired on 1 of 18 ranges" in said
+    assert "out of control" in said
+
+
+def test_one_export_takes_both_halves_off_the_page(page):
+    """`FS.kit.export` is given the node, and the node is the pair. Two buttons
+    and one file: a reader who saved half an IMR chart into a slide would be
+    showing the half that cannot be read on its own."""
+    assert page.eval_on_selector_all("#chart-tools button", "els => els.length") == 2
+    size = page.evaluate(
+        """async () => {
+             const node = document.querySelector('#chart svg.fs-chart');
+             const blob = await window.FS.kit.export(node, 'svg');
+             const text = await blob.text();
+             return { bytes: blob.size,
+                      moving: (text.match(/data-series="moving-range"/g) || []).length };
+           }""")
+    assert size["bytes"] > 0
+    assert size["moving"] > 10

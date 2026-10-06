@@ -65,3 +65,20 @@ coverage_floor = 0.8
 # be hard-coded in `plant_env` for every registry plant, which meant no
 # registry plant could reach an ERP at all - finding 1 of the M8 design.
 mode = "off"
+
+[quality]
+# `fill_height` on this line is inspected five bottles at a time, so its chart
+# is X-bar and R and its second half is the chart of sample ranges. Rule 5 - a
+# range beyond its upper limit - is drawn and recorded on every plant whatever
+# this list says (decision 0036); this plant names it, because a sample whose
+# five bottles disagree that widely has widened the X-bar limits beside it,
+# and reading the means without reading that is reading a broken chart.
+#
+# It is on `major_rules` for the same reason it is on `hold_rules`: the
+# finding is the same kind rule 1 is, a point outside a limit, and this plant
+# calls that major. Rule 5 is a *range* on either chart, so naming it here
+# also means the moving range on this plant's one-at-a-time characteristics
+# raises a hold - which is what a line that measures fill weight every bottle
+# wants, and is the whole reason the number is one rule and not two.
+hold_rules  = [1, 2, 3, 4, 5]
+major_rules = [1, 5]

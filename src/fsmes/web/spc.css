@@ -75,8 +75,13 @@
    than recoloured: the dot's colour already says whether a rule fired on it,
    and overwriting that to show selection would hide the more important fact. */
 .spc-dot, .spc-flag { cursor: pointer; }
-.spc-selected { stroke: var(--accent); stroke-width: 2.5; fill: var(--accent); }
+.spc-selected, .spc-mr-selected { stroke: var(--accent); stroke-width: 2.5; fill: var(--accent); }
 .spc-dot:focus-visible, .spc-flag:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+
+/* The two buttons that take the whole chart - both halves - off the page.
+   In the heading beside the chart rather than under it, so the chart itself
+   is the first thing under the words that name it. */
+#chart-tools { display: inline-flex; gap: 6px; }

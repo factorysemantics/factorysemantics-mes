@@ -470,11 +470,16 @@ def spc(material: str, characteristic: str, db: DbDep,
         limit: int | None = Query(
             None, description="How many readings back to look. The plant's own "
                               "`[quality] spc_history` when it is left out.")) -> dict:
-    """An individuals control chart, with capability and what fired.
+    """An individuals and moving-range control chart, with capability and what fired.
 
     Control limits come from the process's own variation, not the tolerance.
     A process can sit inside spec while drifting badly, and a chart drawn
     against the specification will never show it.
+
+    Two halves, under `points` and `moving_range`. The individuals half asks
+    whether a reading is where it should be; the moving-range half asks
+    whether the gap between consecutive readings is, and it is the series the
+    sigma behind both sets of limits is estimated from.
     """
     from fsmes.services import spc as spc_service
 

@@ -58,20 +58,33 @@
          already there. -->
     <div class="spc-split">
     <section class="panel">
-      <h2>Individuals chart <span id="chart-note" class="muted"></span>
+      <h2>Individuals and moving range <span id="chart-note" class="muted"></span>
+        <span class="spacer"></span>
+        <span id="chart-tools" class="chart-tools"></span>
         <button id="open-point" class="ghost small" data-assist="spc-open-point"
                 aria-describedby="point-hint" disabled>Open a reading</button></h2>
       <div id="chart" class="chart"></div>
+      <!-- The moving-range half's own sentence. Its own, because the two
+           halves answer two questions: whether a reading is where it should
+           be, and whether the gap between consecutive readings is. -->
+      <p id="mr-verdict" class="muted small"></p>
       <p id="point-hint" class="muted small">Click a reading to see the records
-        behind it — or tab to one and press Enter. The button opens the newest
-        reading a rule fired on, and the newest reading when none did.</p>
+        behind it — or tab to one and press Enter. A dot on the lower chart is
+        the gap between two readings and opens the later of them. The button
+        opens the newest reading a rule fired on, and the newest reading when
+        none did.</p>
       <p class="legend">
         <span><i class="sw" style="background:var(--accent)"></i>reading</span>
-        <span><i class="sw" style="background:var(--running)"></i>centre line</span>
-        <span><i class="sw" style="background:var(--idle)"></i>control limits (±3σ)</span>
+        <span><i class="sw" style="background:var(--running)"></i>centre line (x̄, R̄)</span>
+        <span><i class="sw" style="background:var(--idle)"></i>control limits (±3σ above, D4·R̄ below)</span>
         <span><i class="sw" style="background:var(--down)"></i>specification limits</span>
         <span><i class="sw" style="background:var(--quality)"></i>rule fired</span>
       </p>
+      <p class="muted small">The lower chart is the gap between each reading and
+        the one before it. It is where the sigma behind both sets of limits comes
+        from — the mean of that series over d2 — so a process that jumps between
+        consecutive readings has limits worth less than they look, whatever the
+        upper chart says.</p>
     </section>
 
     <!-- `data-point` is written only once the dossier has arrived and is
