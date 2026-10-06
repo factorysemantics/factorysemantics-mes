@@ -30,7 +30,7 @@ and the second one needs its own argument.
 | `major_rules` | `[1]` | Which of those open a **major** non-conformance rather than a minor one. The words come from [this plant's severity list](quality-severities.md) |
 | `cpk_capable` | `1.33` | The Cpk at or above which this plant says *capable* |
 | `cpk_marginal` | `1.0` | The Cpk at or above which it says *marginal* rather than *not capable*. Must be below `cpk_capable` |
-| `spc_min_points` | `12` | The fewest readings control limits are drawn from. The pallet certificate prints whatever this says |
+| `spc_min_points` | `12` | The fewest **points** control limits are drawn from — readings on a chart of individuals, samples on an X-bar and R chart ([the sampled case](#a-characteristic-inspected-several-pieces-at-a-time)). The pallet certificate prints whatever this says |
 | `spc_history` | `200` | How far back a chart and the rules look |
 | `gauge_ratio_adequate` | `10` | How many times finer than the tolerance a gauge must resolve to be called adequate |
 | `gauge_ratio_floor` | `4` | Below this a gauge is too coarse to judge the tolerance at all. Must not be above `gauge_ratio_adequate` |
@@ -173,6 +173,47 @@ pack behaves exactly as it did before any of this existed** — and why
 upgrading to this version moves no data: a plant already running on
 `spc_min_points = 25` from its pack keeps drawing limits from twenty-five
 readings through layer two, with an empty table.
+
+## A characteristic inspected several pieces at a time
+
+A specification can say how many pieces are measured at a time —
+`sample_size` in the pack's `quality_specs.json`, on `POST /quality/specs`,
+and one field on the Specifications tab. Left out, or one, it means what
+every specification written before this existed means: one piece at a time,
+charted exactly as it always was. Above one the readings are a subgroup and
+the chart is X-bar and R, which is
+[decision 0040](../decisions/0040-the-chart-type-follows-the-sampling-plan.md).
+
+Nothing in the table above changes its name, but three of these keys answer
+about a *point* rather than a reading, and on a sampled characteristic a point
+is a sample:
+
+- **`spc_min_points` counts samples.** Twelve means twelve samples — sixty
+  bottles if they are taken five at a time — not twelve bottles. A plant that
+  samples five at a time every fifteen minutes waits three hours for its first
+  limits, and that is the right wait: twelve points is twelve looks at the
+  process however many pieces each look holds.
+- **`spc_history` counts samples** the same way, so a chart's window is the
+  same number of points whichever kind it is.
+- **`hold_rules` and `major_rules` are unchanged, and the rules run on the
+  sample means.** Four readings in a row above the centre line is not a
+  signal; four *samples* in a row is. One sample is one `evaluate`, so a
+  sample whose five readings are all interesting raises at most one hold, and
+  the hold's evidence names the sample, its five readings and the five rows
+  they are stored in.
+
+One thing on a sampled chart is not a Western Electric rule: a sample whose
+**range** is beyond `D4·R̄` is its own signal, recorded as rule 0. It is held
+on always and is not in `hold_rules`, because a range that wide means the five
+pieces disagree — the mean they average to is not describing anything, so
+there is nothing for a plant to opt out of. Every chart response says so in
+`always_hold_rules`.
+
+Capability is worked out from the within-process sigma, `R̄/d2`, and not from
+the spread of the means, which is smaller by root n. A Cp computed the other
+way would read about √5 too high on a sample of five, and the SPC screen's
+*Sigma (within)* figure is the one capability uses with the mean's own spread
+in its tooltip.
 
 ## See also
 

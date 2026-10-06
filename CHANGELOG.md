@@ -64,7 +64,10 @@ goes under Honesty with a migration line, so plant people can find it.
   - Decision record
     [0040](docs/decisions/0040-the-chart-type-follows-the-sampling-plan.md),
     and the sampled case on the
-    [control-chart page](docs/plant/quality-signals.md).
+    [control-chart page](docs/plant/quality-signals.md), on
+    [the quality numbers a plant sets](docs/operate/quality-numbers.md) (which
+    of them count samples rather than readings), and on
+    [what the simulated floor does](docs/operate/the-simulated-floor.md).
 
   The screen does not draw this chart yet — the SPC page says so in one
   sentence and draws nothing rather than plotting means as if each were one
