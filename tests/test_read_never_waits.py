@@ -36,6 +36,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import insert, select, text
 
+import fsmes.api.routers.dashboard as dashboard
 import fsmes.db as db_module
 from fsmes.api.app import create_app
 from fsmes.config import get_settings
@@ -48,6 +49,12 @@ from fsmes.services import auth
 #: deciding the MES is down. The failure it guards against was five seconds
 #: and then an error, so there is no need to split hairs over the number.
 LOGIN_BUDGET_SECONDS = 1.0
+
+#: How long the floor screen is held mid computation, with its read
+#: transaction open, while a sign-in arrives behind it. Long enough that a
+#: sign-in which waited for the screen could not be mistaken for one that did
+#: not, and short enough to pay for in a test suite.
+SCREEN_HELD_OPEN_SECONDS = 2.0
 
 
 def _caches_cleared() -> None:
@@ -149,25 +156,89 @@ def test_a_read_in_flight_does_not_make_a_write_wait(plant_on_disk):
     assert took < LOGIN_BUDGET_SECONDS, f"a write behind an open read took {took:.2f}s"
 
 
-def test_a_login_answers_while_the_floor_screen_is_computing(plant_on_disk):
+def test_a_login_answers_while_the_floor_screen_is_computing(plant_on_disk, monkeypatch):
     """The thing Scott could not do.
 
-    `/dashboard/summary` is asked for on one thread and a sign-in on another
-    while it is still running. The sign-in is the assertion: it must not wait
-    for the screen, however long the screen takes.
+    `/dashboard/summary` is asked for on one thread, with its own read
+    transaction held open for a known interval, and a sign-in arrives on
+    another while it is still open. The sign-in is the assertion: it must not
+    wait for the screen, however long the screen takes.
+
+    What it no longer asserts is a wall-clock second. It did - `took < 1.0` -
+    and that number failed twice on shared runners with nothing wrong with the
+    lock at all: 1.06 s on `ubuntu-latest, 3.13` (main's run 37497028434) and
+    1.41 s on `windows-latest, 3.12` (#147). What it was measuring there was
+    not the lock. Two things were in the way. The refresh was never signed in,
+    so it was a 401 that opened no transaction and held nothing - the test had
+    been measuring a sign-in with nothing behind it since #80. And
+    `TestClient` runs the app in this process, so a refresh that *does*
+    compute holds the GIL and starves the sign-in, which makes the number
+    track how slow the runner is rather than whether anybody waited.
+
+    So both clients sign in, the screen is held open inside its own read
+    transaction by a `time.sleep` that hands the GIL back, and the sign-in is
+    measured against **the screen's own measured time** rather than against
+    the clock: it has to answer before the screen is half way through. A
+    sign-in that waited for the lock would sit out the whole hold - or, before
+    #80, the fifteen-second `busy_timeout` behind it. On a runner twice as
+    slow both numbers double and the assertion says the same thing.
     """
-    client = plant_on_disk
+    # Both clients signed in. The screen is behind the same gate as everything
+    # else, and until this branch the refresh in this test was an unauthorised
+    # 401: it never reached the query, so nothing was ever held open and the
+    # second of wall clock below it was measuring a sign-in on its own.
+    client = _sign_in(plant_on_disk)
     signed_in = _sign_in(TestClient(client.app).__enter__())
-    refreshing = threading.Thread(target=lambda: client.get("/dashboard/summary"))
+
+    # A refresh of this plant, taking SCREEN_HELD_OPEN_SECONDS inside its own
+    # read transaction. Patched rather than slowed from outside because the
+    # transaction has to be *open* while the sign-in arrives, which is the
+    # whole shape of the fault.
+    building = threading.Event()
+    real_build = dashboard._build_summary
+
+    def slowly(*args, **kwargs):
+        building.set()
+        time.sleep(SCREEN_HELD_OPEN_SECONDS)
+        return real_build(*args, **kwargs)
+
+    monkeypatch.setattr(dashboard, "_build_summary", slowly)
+    # The summary is shared across viewers for a second at a time, and the
+    # cache is the module's. An entry another test left behind would answer
+    # this request without computing anything.
+    with dashboard._cache_lock:
+        dashboard._cache.clear()
+
+    refresh: dict = {}
+
+    def refresh_once() -> None:
+        began = time.perf_counter()
+        refresh["response"] = client.get("/dashboard/summary")
+        refresh["took"] = time.perf_counter() - began
+
+    refreshing = threading.Thread(target=refresh_once)
     refreshing.start()
     try:
+        assert building.wait(timeout=30.0), "the screen never began computing"
         began = time.perf_counter()
         response = signed_in.post("/auth/login", json={"code": "ADMIN", "password": "admin"})
         took = time.perf_counter() - began
     finally:
         refreshing.join()
+
     assert response.status_code == 200, response.text
-    assert took < LOGIN_BUDGET_SECONDS, f"signing in during a screen refresh took {took:.2f}s"
+    assert refresh["response"].status_code == 200, refresh["response"].text
+    # The comparison only has teeth if the screen really was slow, so that is
+    # asserted first and separately.
+    assert refresh["took"] >= SCREEN_HELD_OPEN_SECONDS, \
+        f"the screen was not actually held open; it took {refresh['took']:.2f}s"
+    # And the claim itself, against the screen's own time rather than the
+    # clock's: the sign-in answered while the screen was less than half way
+    # through. On a runner twice as slow both numbers double and this still
+    # says the same thing.
+    assert took < refresh["took"] / 2.0, (
+        f"the sign-in took {took:.2f}s while the screen it was behind took "
+        f"{refresh['took']:.2f}s: it waited for it")
 
 
 def test_the_machine_page_answers_while_the_plant_is_being_written_to(plant_on_disk):
