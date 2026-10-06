@@ -1050,8 +1050,9 @@ REGISTRY: tuple[Module, ...] = (
                 pack_keys=("[quality] containment_max_depth",)),
         ),
         tools=("fsmes.mcp.quality", "fsmes.mcp.severities"),
-        tables=("quality_specs", "quality_checks", "non_conformances",
-                "spc_signals", "gauges", "calibrations", "nc_severities"),
+        tables=("quality_specs", "quality_checks", "quality_samples",
+                "non_conformances", "spc_signals", "gauges", "calibrations",
+                "nc_severities"),
     ),
     Module(
         name="kpis",
