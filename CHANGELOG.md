@@ -1241,6 +1241,19 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Fixed
 
+- **A pack setting that is a list survived `fsmes pack check` and then broke
+  every experiment.** The pack writer - the code that writes the copy of a
+  pack an experiment or a sweep actually starts - wrote each value key by key,
+  and a list fell through to the line that quotes a value: a plant naming its
+  SPC hold rules came out of the copy as
+  `hold_rules = "[1, 2, 3, 4, 5]"`. The copy then failed its own
+  `fsmes pack check` with *should be a ints*, and `fsmes lab run` stopped on
+  the first starter plan before it started anything. The format has had
+  list-valued keys since it was written; no shipped pack set one until the
+  bottling pack named its rules in this change, so nothing had ever exercised
+  it. Lists are now written as TOML arrays, and a test points a pack with both
+  rule lists at new data and reads them back as numbers.
+
 - **A test of the AI trace failed about one run in twenty-five on nobody's
   change.** `test_the_trace_records_the_chart_as_a_summary_and_never_the_envelope`
   asserted that the string `"41"` appears nowhere in the turn row it writes,
