@@ -856,3 +856,288 @@ def test_every_cause_the_pack_declares_is_actually_in_one_of_the_two_scripts():
     assert {"offset", "quiet", "changeover", "scrap_burst"} <= kinds
     assert len(events_of("offset", "Refill")) == 2, (
         "the nozzle dip and the heavy first fills are the two offset events")
+
+
+# --------------------------------------- and one behind a point on the
+#                                         fill-height chart
+#
+# The sixth cause, and the first that lives on a chart of means rather than of
+# readings. Fill height is not published by anything on the line - the bottles
+# are carried to a bench and measured by hand five at a time - so the floor
+# takes the last five stored fill weights off the filler, turns each into a
+# height by the one straight line written into `labs/kepsim/scenario.md`, adds
+# the glass's own piece-to-piece variation, and measures each through the bench
+# gauge. The planted cause is the nozzle the changeover left behind: for a
+# window after the line comes back the heights sit about one within-sample
+# sigma high, which shows on the means and not on the ranges.
+
+
+def the_register() -> dict:
+    """The bench height gauge's row in the pack's own gauge register."""
+    rows = json.loads((BOTTLING / "masterdata" / "gauges.json").read_text())
+    rows = rows["items"] if isinstance(rows, dict) else rows
+    return next(g for g in rows if g["code"] == "HEIGHT-FILL-01")
+
+
+def the_plan():
+    """The pack's own sampling plan for fill height, read from the pack."""
+    return measurement.plans(script())["fill_height"]
+
+
+async def sample_once(floor: Floor) -> bool:
+    specs = await the_specs(floor)
+    return await floor.inspect_a_sample(the_plan(), specs, await the_orders(floor))
+
+
+def the_samples(session: Session) -> list:
+    from fsmes.domain import QualitySample
+
+    return list(session.scalars(select(QualitySample).order_by(QualitySample.id)))
+
+
+def the_heights(session: Session) -> list[float]:
+    from fsmes.domain import QualitySpec
+
+    spec = session.scalar(select(QualitySpec).where(QualitySpec.characteristic == "fill_height"))
+    return [c.value for c in the_checks(session) if c.spec_id == spec.id]
+
+
+def the_filler_has_weighed(session: Session, weights, *, from_seconds_ago: float = 60.0) -> None:
+    """A run of fill weights on the filler's history, oldest first.
+
+    Five seconds apart, which is what the generated line publishes, and each
+    one its own stored row - because the five pieces of a sample are five
+    bottles weighed at five instants and not one bottle weighed five times.
+    """
+    for i, weight in enumerate(weights):
+        the_filler_reports(session, weight, seconds_ago=from_seconds_ago - i * 5.0)
+
+
+# ------------------------------------------------ the plan, without a plant
+
+def test_the_sampling_plan_is_the_packs_and_not_this_codes():
+    """Every number of it: how often, which tag the pieces come off, the
+    straight line that turns one into the other, the glass's own spread and
+    the planted cause's window. A floor that held any of these in Python
+    would be a floor that knew what shape one plant's bottle is."""
+    plan = the_plan()
+    assert (plan.equipment, plan.tag) == (FILLER, "FillWeight")
+    assert plan.every_line_s == 900.0, "fifteen line minutes: a tray at a time"
+    assert (plan.offset, plan.per_unit) == (12.0, 0.26)
+    assert plan.piece_to_piece == 0.35
+    assert (plan.after_changeover_minutes, plan.after_changeover_offset) == (25.0, 0.5)
+
+
+def test_a_weight_becomes_a_height_by_the_one_formula_the_scenario_states():
+    """`height_mm = 12.0 + 0.26 * fill_weight_g`, and nothing else. A bottle
+    filled to the middle of its weight specification stands in the middle of
+    its height specification, which is the only reason the two can be read
+    beside each other."""
+    plan = the_plan()
+    assert plan.convert(500.0) == 142.0
+    assert plan.convert(494.0) == pytest.approx(140.44)
+    assert plan.convert(506.0) == pytest.approx(143.56)
+
+
+def test_a_plant_whose_script_has_no_sampling_section_has_no_plans():
+    """Which is every pack written before this existed. A floor with no plan
+    runs its inspection loop exactly as it did and posts no samples."""
+    assert measurement.plans({}) == {}
+    assert measurement.plans({"measurement": {"characteristics": {}}}) == {}
+
+
+def test_a_sampling_entry_that_does_not_say_where_the_pieces_come_from_is_skipped():
+    """Rather than guessed at. A plan with no tag behind it could only be a
+    plan this code invented pieces for."""
+    assert measurement.plans({"sampling": {"x": {"every_line_s": 60}}}) == {}
+    assert measurement.plans({"sampling": {"_why": "a comment"}}) == {}
+
+
+# ---------------------------------------------------- the floor, on a plant
+
+def test_the_pack_inspects_fill_height_five_bottles_at_a_time(plant):
+    """The plan is master data, on the specification, and the floor reads it
+    from the plant rather than from its own script - so a plant that changed
+    the plan on the screen has changed what the floor records."""
+    from fsmes.domain import QualitySpec
+
+    spec = plant.scalar(select(QualitySpec).where(QualitySpec.characteristic == "fill_height"))
+    assert spec is not None, "the pack's quality_specs.json carries it"
+    assert spec.sample_size == 5
+    assert (spec.unit, spec.min_value, spec.max_value) == ("mm", 139.0, 145.0)
+
+
+def test_the_five_pieces_are_five_different_readings_of_the_filler(plant):
+    """Five bottles weighed at five instants, not one bottle weighed five
+    times. Pinned on the readings the floor took off the tag, before the
+    glass and the gauge touch them: had it taken one reading five times the
+    sample's range would be zero and the mean range the limits are built from
+    would collapse."""
+    weights = [496.0, 498.0, 500.0, 502.0, 504.0]
+    the_filler_has_weighed(plant, weights)
+    taken = []
+
+    async def take(floor: Floor) -> None:
+        taken.extend(await floor._pieces(the_plan(), 5) or [])
+
+    on_the_floor(plant, take)
+    assert sorted(taken) == weights, taken
+
+
+def test_a_sample_of_five_is_one_record_over_five_rows(plant):
+    """One `quality_samples` row, five `quality_checks` rows under it, and a
+    range that is not zero. The heights are not all different to the tenth of
+    a millimetre - the bench gauge reads to 0.1 mm and two bottles can land
+    on the same tenth, which is a fact about the gauge and not a sample this
+    floor flattened."""
+    the_filler_has_weighed(plant, [496.0, 498.0, 500.0, 502.0, 504.0])
+    on_the_floor(plant, sample_once)
+
+    assert len(the_samples(plant)) == 1
+    heights = the_heights(plant)
+    assert len(heights) == 5
+    assert max(heights) - min(heights) > 0, heights
+    # Five weights two grams apart are five heights about half a millimetre
+    # apart, plus the glass and the gauge. Still inside the specification.
+    assert min(heights) > 139.0 and max(heights) < 145.0, heights
+
+
+def test_the_sample_names_the_bench_gauge_and_the_station_it_was_measured_at(plant):
+    """The pieces came off the filler and were carried to the height gauge's
+    own station. The record says where the measuring happened, because that
+    is the place a reader can go and look at."""
+    from fsmes.domain import Equipment, QualitySample
+
+    the_filler_has_weighed(plant, [498.0, 499.0, 500.0, 501.0, 502.0])
+    on_the_floor(plant, sample_once)
+
+    sample = the_samples(plant)[0]
+    assert plant.get(Gauge, sample.gauge_id).code == "HEIGHT-FILL-01"
+    # The station the gauge's own register says it lives at, read from the
+    # pack rather than repeated here: a gauge moved on the screen has moved
+    # for this floor too, and a sample that named the station the script was
+    # written against would say a measurement happened somewhere it did not.
+    assert plant.get(Equipment, sample.equipment_id).code == the_register()["location"]
+    tied = [c for c in the_checks(plant) if c.sample_id == sample.id]
+    assert len(tied) == 5
+    assert {gauge_of(plant, c) for c in tied} == {"HEIGHT-FILL-01"}, \
+        "one gauge for the sample: a range measured half on each of two " \
+        "instruments is partly the two instruments disagreeing"
+    assert plant.scalar(select(QualitySample.id).where(
+        QualitySample.id == sample.id)) is not None
+
+
+def test_a_filler_with_no_history_yet_is_not_sampled_at_all(plant):
+    """And the floor says so, once. Four readings is not five bottles, and
+    taking four - or taking one of them twice - would be a sample this floor
+    invented. The honest answer to *what is the fill height* on a plant that
+    has just started is nothing."""
+    the_filler_has_weighed(plant, [499.0, 500.0, 501.0, 502.0])
+    took = []
+
+    async def twice(floor: Floor) -> None:
+        took.append(await sample_once(floor))
+        took.append(await sample_once(floor))
+        took.append(floor._said_no_pieces)
+
+    on_the_floor(plant, twice)
+    assert took[:2] == [False, False]
+    assert took[2] == {"fill_height"}, "said once, not every fifteen minutes"
+    assert the_samples(plant) == []
+    assert the_heights(plant) == []
+
+
+def test_the_next_sample_takes_five_bottles_the_last_one_did_not(plant):
+    """Ten readings on the history and two attempts inside one run gets two
+    samples of five different bottles - the first five, then the next five.
+    A floor that re-measured the same five would be writing one sample down
+    twice."""
+    first = [494.0, 495.0, 496.0, 497.0, 498.0]
+    next_five = [502.0, 503.0, 504.0, 505.0, 506.0]
+    the_filler_has_weighed(plant, first, from_seconds_ago=120.0)
+    took = []
+
+    async def three_goes(floor: Floor) -> None:
+        # The newest five the floor has not used. A tray is taken off the
+        # line now, not an hour ago.
+        took.append(await floor._pieces(the_plan(), 5))
+        # Nothing new has been bottled, so there is nothing to sample.
+        took.append(await floor._pieces(the_plan(), 5))
+        the_filler_has_weighed(plant, next_five, from_seconds_ago=40.0)
+        took.append(await floor._pieces(the_plan(), 5))
+
+    on_the_floor(plant, three_goes)
+    assert sorted(took[0]) == first, took
+    assert took[1] is None, "no five bottles the first sample did not already take"
+    assert sorted(took[2]) == next_five, took
+    assert not set(took[0]) & set(took[2]), "no bottle in both samples"
+
+
+def test_within_one_run_a_sample_never_takes_a_bottle_the_last_one_took(plant):
+    """The memory that makes the samples different: the stamp of the newest
+    reading already used. Five readings on the history and two attempts gets
+    one sample, not two."""
+    the_filler_has_weighed(plant, [496.0, 498.0, 500.0, 502.0, 504.0])
+    took = []
+
+    async def twice(floor: Floor) -> None:
+        took.append(await sample_once(floor))
+        took.append(await sample_once(floor))
+
+    on_the_floor(plant, twice)
+    assert took == [True, False]
+    assert len(the_samples(plant)) == 1
+
+
+def test_the_heights_after_a_changeover_sit_about_one_within_sample_sigma_high(plant):
+    """The planted cause. Same five weights, sampled twice: once with no
+    changeover behind it and once inside the window after one. The offset
+    goes on the whole sample, because what the nozzle setting moved is the
+    process and not one bottle - so it shows on the means and not on the
+    ranges, which is the finding an engineer is meant to be able to make."""
+    plan = the_plan()
+    weights = [499.0, 500.0, 501.0, 500.0, 499.0]
+    settled, after = [], []
+
+    async def both(floor: Floor) -> None:
+        the_filler_has_weighed(plant, weights, from_seconds_ago=200.0)
+        assert await sample_once(floor)
+        settled.extend(the_heights(plant))
+
+        # The line has just changed over and come back. This is the floor's
+        # own record of the instant, set by `watch_the_stops` when it names a
+        # setup stop; set here directly so the test is about the cause and
+        # not about the stop watcher, which is pinned above.
+        floor._changeover_ended = datetime.now(UTC).replace(tzinfo=None)
+        the_filler_has_weighed(plant, weights, from_seconds_ago=20.0)
+        assert await sample_once(floor)
+        after.extend(the_heights(plant)[5:])
+
+    on_the_floor(plant, both)
+
+    assert len(settled) == 5 and len(after) == 5
+    lift = sum(after) / 5 - sum(settled) / 5
+    assert lift == pytest.approx(plan.after_changeover_offset, abs=0.35), lift
+    assert lift == pytest.approx(plan.piece_to_piece, abs=0.35), \
+        "about one within-sample sigma, which is what the scenario claims"
+    # On the ranges it does not show: one offset on five bottles leaves the
+    # spread of the five where it was.
+    assert abs((max(after) - min(after)) - (max(settled) - min(settled))) < 1.0
+
+
+def test_a_sampled_characteristic_is_not_also_inspected_one_piece_at_a_time(plant):
+    """The inspection loop leaves it alone. One reading of a subgroup of five
+    is not a point on its chart, the plant refuses it, and a floor that kept
+    offering it would fill the log with refusals."""
+    the_filler_reports(plant, 500.0)
+
+    async def inspect_everything(floor: Floor) -> None:
+        specs = await the_specs(floor)
+        assert any(s["characteristic"] == "fill_height" for s in specs), \
+            "the plant offers it; the floor is what declines to inspect it this way"
+        await floor.inspect(specs, the_filler_showing(500.0), await the_orders(floor),
+                            every_spec=True)
+
+    on_the_floor(plant, inspect_everything)
+    assert the_heights(plant) == [], "no single reading of a sampled characteristic"
+    assert the_checks(plant), "and fill weight was still inspected"
