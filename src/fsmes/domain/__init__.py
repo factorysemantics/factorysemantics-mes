@@ -56,6 +56,7 @@ from fsmes.domain.quality import (
     NcStatus,
     NonConformance,
     QualityCheck,
+    QualitySample,
     QualitySpec,
     SpcSignal,
 )
@@ -125,6 +126,7 @@ __all__ = [
     "ProductionLog",
     "ProductionSource",
     "QualityCheck",
+    "QualitySample",
     "QualitySpec",
     "RecommendedAdjustment",
     "Role",

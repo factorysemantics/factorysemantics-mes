@@ -12,6 +12,68 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **A characteristic can be inspected several pieces at a time, and the chart
+  follows the plan.** Until now this product drew one control chart:
+  individuals and moving range, one point per reading. That is the right chart
+  when a characteristic is inspected one piece at a time and the wrong one when
+  five bottles are measured together — plotting those five as individuals
+  widens the limits with the bottle-to-bottle variation the sampling was
+  designed to hold constant, and the chart stops answering whether the
+  *process* moved.
+
+  So a specification now carries the plan. **Pieces per sample** on the
+  Specifications tab of Master data, `sample_size` on `POST /quality/specs`,
+  or `sample_size` in a pack's `quality_specs.json` — empty or 1 is one piece
+  at a time and nothing about such a characteristic changes.
+
+  - **A sample is recorded whole.** `POST /quality/samples` takes exactly as
+    many readings as the plan says, and stores each as its own
+    `quality_checks` row with its own value and gauge, tied together by a new
+    `quality_samples` record carrying the stamp, the order, the equipment and
+    the gauge. The wrong number of values is refused with **422** and a
+    sentence saying how many were expected; a single `POST /quality/checks`
+    against a sampled characteristic is refused with one naming the sample
+    size, because one reading is not a point on that chart.
+  - **X-bar and R.** The point is the sample mean, the limits are
+    `X̿ ± A2·R̄`, the range chart's are `D3·R̄` and `D4·R̄`, and capability is
+    computed from `R̄/d2` — the within-sample spread. `Pp`/`Ppk` still use
+    every individual reading, because the customer received pieces, not
+    averages. Constants for n = 2…10.
+  - **The four Western Electric rules run on the means, once per sample**, so
+    one sample is one evaluation and at most one hold, and the evidence names
+    the sample and every reading in it. Five readings that straddle three
+    sigma individually and average inside the limits fire nothing.
+  - **A sample range beyond `D4·R̄` is its own signal and always raises a
+    hold**, on every plant, whatever `spc_hold_rules` says: the X-bar limits
+    beside it were computed from the average range, and one inflated sample
+    has just widened them. It is deliberately *not* a fifth Western Electric
+    rule — the vocabulary of four, their windows and their numbering are what
+    decision 0036 fixed — and is recorded as rule `0`, with
+    `always_hold_rules` on every chart response so nobody has to discover it.
+  - `GET /quality/spc/...` now says `"kind"`: `imr` as before, or `xbar_r`,
+    and carries `samples` beside the existing keys. `spc_min_points` counts
+    samples on a sampled characteristic.
+  - **The bottling lab plant inspects fill height five at a time.**
+    `fill_height` on `FG-BOTTLE`, 139–145 mm, measured on a new height gauge
+    at the QI station; the simulated floor takes the last five stored
+    `FillWeight` readings off the filler every fifteen line minutes, turns
+    each into a height by the pack's own straight line, adds the glass's own
+    piece-to-piece variation, measures each through the bench gauge and posts
+    one sample. If five different readings are not there yet it takes nothing
+    and says so once.
+  - Decision record
+    [0040](docs/decisions/0040-the-chart-type-follows-the-sampling-plan.md),
+    and the sampled case on the
+    [control-chart page](docs/plant/quality-signals.md), on
+    [the quality numbers a plant sets](docs/operate/quality-numbers.md) (which
+    of them count samples rather than readings), and on
+    [what the simulated floor does](docs/operate/the-simulated-floor.md).
+
+  The screen does not draw this chart yet — the SPC page says so in one
+  sentence and draws nothing rather than plotting means as if each were one
+  bottle, while the centre, limits, capability and verdict beside it are the
+  samples' own. Drawing it, and the panel behind a sample, is the follow-up.
+
 - **Click a point on the SPC chart and see why it is there - no model, just
   the records.** Scott, 2026-10-05: *"some kind of UI to show me what brief
   non-LLM dashboards could look like if I wanted to fully understand why a SPC
@@ -939,6 +1001,31 @@ goes under Honesty with a migration line, so plant people can find it.
   Its pair `signals.approve` is still absent on purpose — nothing here has an
   approval step, and a capability that gates nothing is a role saying something
   untrue about itself.
+
+### Honesty
+
+- **Nothing was backfilled when sampling arrived.** `quality_specs.sample_size`
+  and `quality_checks.sample_id` are both nullable and both left null on every
+  existing row. A reading with no sample was not taken as part of one, and a
+  characteristic with no sample size is not one inspected a piece at a time by
+  decree — it is one nobody has written a plan for. Inferring either from how
+  close together readings arrived would be inventing a sampling plan nobody
+  wrote down. Every existing chart is drawn exactly as it was.
+
+  If you set a sample size on a characteristic that already has history, that
+  history is **set aside** rather than grouped into samples nobody took, and
+  the chart says how many readings it left out and why.
+
+- **The bottling lab plant has a new planted cause, and it is planted.** For
+  25 line minutes after each changeover the fill-height sample means sit about
+  half a millimetre high — a nozzle setting the changeover left behind.
+  It is the simulated floor's own rule (the line publishes no height tag for a
+  line event to act on), it is written down in
+  [`floor.json`](labs/multiplant/bottling/floor.json) and
+  [`scenario.md`](labs/kepsim/scenario.md) with the trace it leaves, and it
+  lasts 25 line minutes rather than the two hours a real nozzle would because
+  that scenario file loops hourly — a two-hour window would never close, and
+  every sample on the chart would be a post-changeover one.
 
 ### Changed
 

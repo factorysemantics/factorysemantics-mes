@@ -14,10 +14,13 @@ from __future__ import annotations
 def register(mcp, call, write, identify) -> dict:
     @mcp.tool()
     def spc_chart(plant: str, material: str, characteristic: str, limit: int = 200) -> dict:
-        """The individuals control chart for one characteristic: control
-        limits from the process's own variation, which Western Electric rules
-        fired and where, capability (Cp, Cpk, Pp) - withheld while the process
-        is out of control - and a one-sentence verdict."""
+        """The control chart for one characteristic: control limits from the
+        process's own variation, which Western Electric rules fired and where,
+        capability (Cp, Cpk, Pp) - withheld while the process is out of control
+        - and a one-sentence verdict. `kind` says which chart it is: `imr`,
+        individuals and moving range, for a characteristic inspected one piece
+        at a time, or `xbar_r` for one inspected n at a time, whose points are
+        the sample means and which also carries the samples behind them."""
         return {"plant": plant, **call(plant, "GET", f"/quality/spc/{material}/{characteristic}?limit={limit}")}
 
     @mcp.tool()
@@ -43,14 +46,20 @@ def register(mcp, call, write, identify) -> dict:
     @mcp.tool()
     def create_spec(plant: str, material: str, characteristic: str, unit: str = "",
                     min_value: float | None = None, max_value: float | None = None,
+                    sample_size: int | None = None,
                     dry_run: bool = False, on_behalf_of: str | None = None,
                     client_ref: str | None = None) -> dict:
         """Define a quality specification: a characteristic on a material with
-        its limits. Out-of-spec checks then open non-conformances by themselves."""
+        its limits. Out-of-spec checks then open non-conformances by themselves.
+        `sample_size` is the sampling plan - how many pieces are inspected at a
+        time. Leave it out (or 1) for one at a time, charted as individuals and
+        moving range; 2 to 10 makes it X-bar and R, whose readings arrive
+        together through record_sample."""
         identify(on_behalf_of, client_ref)
         return write(plant, "/quality/specs",
                      {"material": material, "characteristic": characteristic, "unit": unit,
-                      "min_value": min_value, "max_value": max_value},
+                      "min_value": min_value, "max_value": max_value,
+                      "sample_size": sample_size},
                      dry_run, f"define {characteristic} on {material}: {min_value}-{max_value} {unit}".strip())
 
     @mcp.tool()

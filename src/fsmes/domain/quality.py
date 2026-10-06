@@ -25,6 +25,13 @@ class QualitySpec(Base):
     unit: Mapped[str] = mapped_column(String(20), default="")
     min_value: Mapped[float | None]
     max_value: Mapped[float | None]
+    #: How many pieces this characteristic is inspected at a time - the
+    #: sampling plan, which is the plant's decision and not the product's.
+    #: Null or 1 is one piece at a time, which is every specification written
+    #: before this column existed and is left exactly as it was. Above 1 the
+    #: readings are a *subgroup*: the chart's points are the sample means,
+    #: and the rules run on those. See decision 0040.
+    sample_size: Mapped[int | None]
 
     material: Mapped[Material] = relationship()
 
@@ -32,6 +39,38 @@ class QualitySpec(Base):
 class CheckResult(enum.StrEnum):
     PASS = "pass"
     FAIL = "fail"
+
+
+class QualitySample(ShiftStamped, Base):
+    """One subgroup: the n pieces a sampled characteristic was inspected on.
+
+    The readings themselves stay in `quality_checks`, one row each, with
+    `sample_id` pointing here. That is deliberate and it is the smallest
+    shape that keeps every existing query true: a count of checks, the
+    measurements card, the certificate, the gauge's impact list and the
+    inspection history all read `quality_checks`, and a sample stored as five
+    numbers in one row would have made each of them wrong in a different way.
+
+    What this row holds is the facts that belong to the *sample* rather than
+    to a reading: when it was taken, against which specification and order,
+    at which station, with which instrument, and by whom. A sample is one act
+    of measurement by one person with one gauge; recording that five times
+    would invite the five copies to disagree.
+    """
+
+    __tablename__ = "quality_samples"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    spec_id: Mapped[int] = mapped_column(ForeignKey("quality_specs.id"), index=True)
+    work_order_id: Mapped[int | None] = mapped_column(ForeignKey("work_orders.id"), index=True)
+    # The station the pieces were measured at, and the instrument that
+    # measured them. Null is *not recorded* on both, exactly as on a check.
+    equipment_id: Mapped[int | None] = mapped_column(ForeignKey("equipment.id"), index=True)
+    gauge_id: Mapped[int | None] = mapped_column(ForeignKey("gauges.id"), index=True)
+    checked_by: Mapped[str | None] = mapped_column(String(40))
+    ts: Mapped[datetime] = mapped_column(default=utcnow)
+
+    spec: Mapped[QualitySpec] = relationship()
 
 
 class QualityCheck(ShiftStamped, Base):
@@ -57,9 +96,15 @@ class QualityCheck(ShiftStamped, Base):
     # always this MES's own verdict, from this MES's spec. The two disagreeing
     # is a finding, not an error, and losing theirs would hide it.
     supplied_result: Mapped[CheckResult | None] = mapped_column(str_enum(CheckResult))
+    # Which sample this reading is one of, when the specification says the
+    # characteristic is inspected n pieces at a time. Null is a reading taken
+    # on its own, which is every reading written before this column existed
+    # and every reading on a specification with no sampling plan.
+    sample_id: Mapped[int | None] = mapped_column(ForeignKey("quality_samples.id"), index=True)
     ts: Mapped[datetime] = mapped_column(default=utcnow)
 
     spec: Mapped[QualitySpec] = relationship()
+    sample: Mapped[QualitySample | None] = relationship()
 
 
 class NcStatus(enum.StrEnum):

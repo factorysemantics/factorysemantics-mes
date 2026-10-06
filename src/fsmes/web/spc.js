@@ -55,6 +55,23 @@ function draw(data) {
   host.replaceChildren();
   if (!data.points.length) return kit.empty(host, "No readings for this characteristic yet.");
 
+  /* This screen draws individuals. A characteristic inspected several pieces
+     at a time gets X-bar and R instead (decision 0040): its points are sample
+     means and it comes with a second chart of the sample ranges. Drawing the
+     means on this chart would put five bottles' average where a reader expects
+     one bottle's reading, and the dot would open a panel about a check that is
+     one fifth of the point. So it says so, in one sentence, and draws nothing.
+     The figures below the chart are the samples' own and are true as they
+     stand. Drawing it is the follow-up. */
+  if (data.kind && data.kind !== "imr") {
+    return kit.empty(host,
+      `${data.characteristic} is inspected ${data.sample_size} pieces at a time, so its `
+      + `chart is X-bar and R: each point is the mean of a sample, with a range chart `
+      + `beside it. This screen draws individuals only and cannot draw that one yet, so `
+      + `it draws nothing rather than show you means as if they were single readings. `
+      + `The centre, the limits, the capability and the verdict below are the samples' own.`);
+  }
+
   const left = 52, right = 14, top = 12, bottom = 26;
   const width = Math.max(host.clientWidth || 900, 620);
   const height = 260;
@@ -126,9 +143,31 @@ async function load() {
   if (!chosen) return;
   const [material, characteristic] = chosen.split("|");
   const data = await api(`/quality/spc/${encodeURIComponent(material)}/${encodeURIComponent(characteristic)}`);
+  /* The two figures whose *meaning* changes with the sampling plan, so their
+     labels change with it too. On a chart of individuals `n` is readings and
+     the sigma is the process's own spread. On an X-bar and R chart `n` is
+     samples - twelve points drawn from sixty bottles - and `control.sigma` is
+     the spread of a *mean*, which is smaller by root n and is not what
+     capability is worked out from. Printing either one under the individuals
+     label would be a true number under a false word, which is the failure
+     this product exists not to have. So: the count says samples and names the
+     readings behind them, and the sigma stays the within-process one the
+     label promises, with the sigma of a mean in the tooltip because that is
+     what the control limits are drawn from. */
+  const sampled = data.kind && data.kind !== "imr";
+  $("#l-n").textContent = sampled ? "Samples" : "Readings";
   $("#f-n").textContent = data.n;
+  $("#f-n").title = sampled
+    ? `${data.n} samples of ${data.sample_size} — ${data.readings} readings`
+    : "";
   $("#f-centre").textContent = data.control ? num(data.control.centre, 2) : "—";
-  $("#f-sigma").textContent = data.control ? num(data.control.sigma, 3) : "—";
+  const within = data.control
+    && (sampled ? data.control.sigma_within : data.control.sigma);
+  $("#f-sigma").textContent = data.control ? num(within, 3) : "—";
+  $("#f-sigma").title = sampled && data.control
+    ? `Within-process sigma, R̄/d2. A sample mean of ${data.sample_size} varies by `
+      + `${num(data.control.sigma, 3)}, and the control limits are drawn from that.`
+    : "";
   // Capability is withheld while the chart is out of control: the verdict
   // says the number is not meaningful, so the facts row must not print it.
   // The value stays in the tooltip for the engineer who wants it anyway.
@@ -224,9 +263,21 @@ async function load() {
   const target = flaggedChecks.length
     ? flaggedChecks[flaggedChecks.length - 1]
     : checkAt(data.points.length - 1);
-  button.disabled = target === undefined;
-  button.textContent = flaggedChecks.length
-    ? "Open the flagged reading" : "Open the newest reading";
+  /* On a sampled chart this button has nothing honest to open. The panel
+     answers *why is this reading here*, and a point on an X-bar chart is not
+     a reading: opening one of the five bottles behind it and calling it the
+     point would be the same lie as drawing the means as readings. The sample
+     dossier is the follow-up. Until then the button says so rather than
+     going grey without a word. */
+  button.disabled = sampled || target === undefined;
+  button.textContent = sampled
+    ? "Each point is a sample, not a reading"
+    : flaggedChecks.length
+      ? "Open the flagged reading" : "Open the newest reading";
+  button.title = sampled
+    ? `A point here is the mean of ${data.sample_size} bottles. The panel reads `
+      + "one reading's records, so there is nothing for it to open yet."
+    : "";
   button.onclick = () => openPoint(target);
 }
 

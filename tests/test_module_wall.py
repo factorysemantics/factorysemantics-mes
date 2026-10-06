@@ -248,7 +248,9 @@ def test_every_table_the_registry_names_is_a_real_table():
         "module keeps its rows - stays checkable.")
 
     optional = sum(len(m.tables) for m in registry.REGISTRY if not m.kernel)
-    assert optional == 21, (
+    # 22 since quality_samples joined the quality module on 2026-10-06: a
+    # characteristic inspected n at a time keeps its subgroups there.
+    assert optional == 22, (
         f"{optional} of {len(known)} tables belong to a module a plant may switch off")
 
 

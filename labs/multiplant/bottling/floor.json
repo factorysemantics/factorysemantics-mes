@@ -5,6 +5,7 @@
     "the drifting gauge: SCALE-FILL-02 reads high by 0.01 g for every day since its last calibration, up to 0.6 g, and is clean again the shift the supervisor calibrates it. Trace: group the fill-weight checks by gauge and SCALE-FILL-02's mean sits above SCALE-FILL-01's.",
     "the night shift: two readings of one bottle disagree by more at night than by day, because the plant at night is thinner - fewer people, less light, nobody to ask. Trace: the spread of the night shift's readings is wider than the day's, while the process behind them is the same.",
     "the stops: this floor labels what it sees stopped from the six approved reasons, and leaves the ones it genuinely cannot explain as `not_yet_determined` rather than guessing. Trace: the downtime pareto has bars with names on them, and says how much came from the list.",
+    "the nozzle the changeover left behind: for twenty-five line minutes after each changeover the fill-height sample means sit about half a millimetre high, while the sample ranges stay where they were. Trace: on the fill_height chart the means after a labelled changeover stop are above centre, and the range chart beside them is flat.",
     "the paperwork: the supervisor reviews a non-conformance, decides what happens to the material, and closes it - and leaves a few open on purpose, because a plant where every finding is closed by the end of the shift is not a plant."
   ],
   "_see_also": "The line's own four stories - the nozzle-pressure dip, the first fills after a changeover, the tag that goes quiet, the washer running hot - are in labs/kepsim/line.json, because they are things the machines do. This file is only what the people do.",
@@ -18,6 +19,17 @@
       "NIGHT": 2.5
     },
     "characteristics": {
+      "fill_height": {
+        "spread": 0.1,
+        "_spread": "Millimetres. How much two readings of the same bottle disagree on the bench gauge, day shift. The gauge resolves to a tenth of a millimetre, so this is where the operator rests the bottle rather than the instrument.",
+        "gauges": [
+          {
+            "gauge": "HEIGHT-FILL-01",
+            "share": 1,
+            "_share": "One bench gauge at the QI station. Every reading in every sample is taken with it, which is what makes the five readings of a sample comparable with each other."
+          }
+        ]
+      },
       "fill_weight": {
         "spread": 0.3,
         "_spread": "Grams. How much two readings of the same bottle disagree, day shift. The scales resolve to a tenth of a gram, so this is the hand and the bottle rather than the instrument.",
@@ -38,6 +50,35 @@
           }
         ]
       }
+    }
+  },
+
+  "sampling": {
+    "_what": "How this floor gets the pieces for a sample, for a characteristic no machine on the line publishes a tag for. Fill height is measured by hand on a bench: five bottles come off the filler, are carried to the QI station and are measured one after another, and the five readings are posted together as one sample.",
+    "_why_data": "Because the arithmetic that turns a weight into a height is this plant's, not the product's. A different bottle has a different formula and nothing in `fsmes.sim` should know either.",
+    "fill_height": {
+      "every_line_s": 900,
+      "_every_line_s": "Line seconds between samples: every fifteen minutes of line time, which is four samples an hour. Divided by the replay speed like every other cadence on this floor.",
+      "from": {
+        "equipment": "FILL01",
+        "tag": "FillWeight"
+      },
+      "_from": "The five pieces are the last five *stored* FillWeight samples off the filler - five different bottles, each weighed at a different instant, which is what a sample of five is. If five distinct readings newer than the last sample are not there, this floor takes nothing and says so once rather than measuring the same bottle five times.",
+      "convert": {
+        "offset": 12.0,
+        "per_unit": 0.26
+      },
+      "_convert": "height_mm = 12.0 + 0.26 x fill_weight_g. One straight line, because the bottle is a cylinder over the band that matters: 500 g of cola stands 142 mm up the glass, and a gram either way is a quarter of a millimetre. The neck and the base are not in this band and are not modelled.",
+      "piece_to_piece": 0.35,
+      "_piece_to_piece": "Millimetres, one sigma. The glass itself: two bottles holding the same weight do not stand at the same height, because the moulding varies. This is the bottle-to-bottle variation a sample of five is taken to measure, and it is deliberately larger than the gauge's own spread - an X-bar and R chart whose range came mostly from the instrument would be charting the instrument.",
+      "after_changeover": {
+        "line_minutes": 25,
+        "offset": 0.5
+      },
+      "_after_changeover": "The planted cause. For twenty-five minutes of line time after each changeover the heights sit half a millimetre high: the nozzle setting the changeover left behind fills a shade over, which the checkweigher's own band absorbs and the height chart does not. ",
+  "_how_big_half_a_millimetre_is": "Half again the glass's own `piece_to_piece` sigma, and about four tenths of the whole within-sample spread - which on this line the filler dominates, because the five pieces are five bottles weighed five seconds apart and their weights differ by more than their moulding does. So this is a shift a reader finds by splitting the means on the changeover, not one that trips a control rule: the limits drawn from R-bar are wider than the means actually wander. On an hour of this pack every post-changeover sample mean sat above every mean that was not, with no overlap, and the ranges did not move.",
+  "_trace": "The sample means after a labelled `changeover` stop sit above the centre line and the sample ranges do not change - the process moved, the spread did not, which is exactly what an X-bar chart is for and what an individuals chart on fill weight never showed.",
+      "_why_not_two_hours": "The handoff asked for about two hours. This line's KEPSim scenario loops hourly and changes over inside that loop, so a two-hour window would never close and every sample on the chart would be a post-changeover one - the planted cause would be the whole chart and visible as nothing. Twenty-five line minutes is between one and two samples' worth after each changeover, which is a shift a reader can actually see against the ones before it."
     }
   },
 

@@ -145,6 +145,25 @@ class Floor:
         # That an idle machine cannot be told from a starved or a blocked one
         # is said once, not every twenty seconds.
         self._said_idle_cannot_be_told_apart = False
+        # The sampling plans this floor works to: which characteristics it
+        # inspects several pieces at a time, and where the pieces come from.
+        # Empty for a plant whose script has no `sampling` section, which is
+        # every pack written before one existed.
+        self.plans = measurement.plans(self.script)
+        # The newest stored reading each plan has already used, so the next
+        # sample is five *different* pieces. A floor that re-measured the
+        # same five would be writing one sample down twice, and on an X-bar
+        # chart two identical points collapse the mean range the limits are
+        # built from.
+        self._sampled_through: dict[str, datetime] = {}
+        # That there is not yet five pieces' worth of history is said once
+        # per characteristic, not every fifteen minutes until there is.
+        self._said_no_pieces: set[str] = set()
+        # When the last changeover this floor watched came back, so the cause
+        # the pack plants after one can be planted. None until it has seen
+        # one end: a floor that assumed a changeover it never saw would be
+        # putting the offset on readings nothing explains.
+        self._changeover_ended: datetime | None = None
 
     async def sign_in(self, code: str, password: str) -> None:
         r = await self.client.post("/auth/login", json={"code": code, "password": password})
@@ -377,6 +396,13 @@ class Floor:
         line that makes that material."""
         if not specs:
             return
+        # A characteristic inspected several pieces at a time is not inspected
+        # here. One check against it would be refused by the plant - and
+        # rightly: one reading is not a point on an X-bar chart. `inspect_a_sample`
+        # is what records those.
+        specs = [s for s in specs if (s.get("sample_size") or 1) <= 1]
+        if not specs:
+            return
         chosen = specs if every_spec else [self.rng.choice(specs)]
         active = [o for o in orders if o.get("status") in ACTIVE_STATUSES]
         shift = await self.current_shift() if self.script else None
@@ -445,6 +471,146 @@ class Floor:
                 log.warning("inspection refused", status=exc.response.status_code,
                             detail=exc.response.text[:160])
 
+    # ------------------------------------------------------ sampled checks
+
+    async def _pieces(self, plan, n: int) -> list[float] | None:
+        """`n` different stored readings of the plan's tag, newest last.
+
+        Different, and newer than the last sample's: five bottles weighed at
+        five instants. The tag's history is read through `/analysis/tag`,
+        whose buckets are narrow enough here that each stored sample lands in
+        one of its own - so what comes back is the readings themselves and not
+        an average of them, which on a sample of five would flatten the very
+        spread the range chart is drawn from.
+
+        `None` is *not yet*, and is said once per characteristic: a plant
+        whose filler has published four readings since the last sample has not
+        got five bottles, and taking four, or taking one twice, would be a
+        sample this floor invented.
+        """
+        # A window wide enough to hold a sample's worth of history at any
+        # replay speed, and buckets fine enough that two readings five
+        # seconds apart cannot share one.
+        try:
+            trend = await self.get(f"/analysis/tag/{plan.equipment}",
+                                   tag=plan.tag, hours=0.25, buckets=2000)
+        except httpx.HTTPError as exc:
+            log.warning("could not read the tag a sample is taken off",
+                        equipment=plan.equipment, tag=plan.tag, error=str(exc)[:160])
+            return None
+        through = self._sampled_through.get(plan.characteristic)
+        fresh: list[tuple[datetime, float]] = []
+        for point in trend.get("points") or []:
+            if point.get("mean") is None:
+                continue
+            at = _as_moment(point.get("t"))
+            if at is None or (through is not None and at <= through):
+                continue
+            fresh.append((at, float(point["mean"])))
+        if len(fresh) < n:
+            if plan.characteristic not in self._said_no_pieces:
+                self._said_no_pieces.add(plan.characteristic)
+                log.info("not enough history for a sample yet; taking nothing",
+                         characteristic=plan.characteristic, equipment=plan.equipment,
+                         tag=plan.tag, wanted=n, found=len(fresh),
+                         note="a sample is n different pieces; measuring fewer, or "
+                              "measuring one of them twice, would be a sample this "
+                              "floor invented")
+            return None
+        self._said_no_pieces.discard(plan.characteristic)
+        taken = fresh[-n:]
+        self._sampled_through[plan.characteristic] = taken[-1][0]
+        return [value for _at, value in taken]
+
+    def _after_a_changeover(self, plan) -> bool:
+        """Whether the pack's post-changeover window is still open.
+
+        In line minutes, like every other duration this floor judges: on a
+        replay running an hour of line in a minute, twenty-five line minutes
+        is twenty-five seconds of this floor's time.
+        """
+        if not plan.after_changeover_minutes or self._changeover_ended is None:
+            return False
+        since = (_utcnow() - self._changeover_ended).total_seconds() * self.speed
+        return since <= plan.after_changeover_minutes * 60.0
+
+    async def inspect_a_sample(self, plan, specs: list[dict], orders: list[dict]) -> bool:
+        """Measure `sample_size` pieces and post them as one sample.
+
+        The plant says how many: `sample_size` on the specification, which is
+        the sampling plan and is master data. This floor does not choose it
+        and does not post a sample of a different size - a specification whose
+        plan says one piece at a time has no sample to record here.
+        """
+        spec = next((s for s in specs if s.get("characteristic") == plan.characteristic), None)
+        if spec is None:
+            return False
+        size = int(spec.get("sample_size") or 1)
+        if size < 2:
+            return False
+        pieces = await self._pieces(plan, size)
+        if pieces is None:
+            return False
+
+        # The planted cause, if the pack plants one and this floor has watched
+        # a changeover end inside the window. One offset on the whole sample,
+        # because what the nozzle setting moved is the process and not one
+        # bottle - which is why it shows on the means and not on the ranges.
+        offset = plan.after_changeover_offset if self._after_a_changeover(plan) else 0.0
+        shift = await self.current_shift() if self.script else None
+        today = identity.today(self.settings)
+        values: list[float] = []
+        gauge: str | None = None
+        for piece in pieces:
+            true_value = plan.convert(piece) + offset
+            if plan.piece_to_piece:
+                # The glass itself: two bottles holding the same weight do not
+                # stand at the same height. This is the piece-to-piece
+                # variation the sampling exists to measure, and it is added
+                # before the gauge rather than after, because it is the
+                # bottle and not the instrument.
+                true_value += self.rng.gauss(0.0, plan.piece_to_piece)
+            code, reading = self.bench.measure(plan.characteristic, true_value,
+                                               rng=self.rng, today=today, shift_code=shift)
+            gauge = code or gauge
+            values.append(round(reading, 3))
+
+        active = [o for o in orders if o.get("status") in ACTIVE_STATUSES]
+        same = [o for o in active if o.get("material") == spec.get("material")]
+        order = self.rng.choice(same or active)["code"] if (same or active) else None
+        body: dict = {"material": spec["material"], "characteristic": plan.characteristic,
+                      "values": values}
+        if order:
+            body["order"] = order
+        if gauge:
+            # Where the sample was measured, which is the bench and not the
+            # filler: the pieces came off the filler and were carried to the
+            # gauge's own station, and the record says where the measuring
+            # happened because that is what a reader can go and look at.
+            body["gauge"] = gauge
+            station = self.bench.station(gauge)
+            if station:
+                body["equipment"] = station
+        try:
+            response = await self.client.post("/quality/samples", json=body)
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            log.warning("sample refused", characteristic=plan.characteristic,
+                        status=exc.response.status_code, detail=exc.response.text[:160])
+            return False
+        out = response.json()
+        log.info("sampled", characteristic=plan.characteristic, n=len(values),
+                 values=values, mean=out.get("mean"), range=out.get("range"),
+                 result=out.get("results"), order=order, gauge=gauge,
+                 equipment=body.get("equipment"), shift=shift,
+                 after_a_changeover=bool(offset))
+        for signal in out.get("spc") or []:
+            log.warning("spc signal", rule=signal.get("rule"), what=signal.get("what"),
+                        characteristic=plan.characteristic,
+                        nonconformance=signal.get("nonconformance"),
+                        equipment=signal.get("equipment"))
+        return True
+
     # ---------------------------------------------------------------- stops
 
     async def watch_the_stops(self) -> list[str]:
@@ -508,6 +674,13 @@ class Floor:
                 continue              # the same stop, still going
             if await self._name_the_stop(code, seen):
                 named.append(code)
+            if seen["state"] == "setup":
+                # The line has just changed over. The pack's planted cause
+                # hangs off this instant, and it is this floor's own record of
+                # it: the MES holds the labelled interval, and asking it back
+                # every fifteen minutes to learn something this floor watched
+                # happen would be two requests for a fact it already has.
+                self._changeover_ended = _utcnow()
             self._stopped.pop(code, None)
         self._stopped.update(stopped_now)
         return named
@@ -906,7 +1079,14 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
                  issue_every=issue_every, supervise_every=supervise_every,
                  finishes_orders=finish_orders and shift is not None,
                  floor_script=str(settings.floor_script_file) if script else None,
-                 gauges_on_the_register=gauges_known)
+                 gauges_on_the_register=gauges_known,
+                 # Which characteristics this floor inspects several pieces at
+                 # a time, and how often. Said on startup because a plant whose
+                 # pack names a plan the specifications do not carry would
+                 # otherwise look like a floor that had quietly stopped
+                 # sampling.
+                 sampling=[f"{name} every {plan.every_line_s:g} line s"
+                           for name, plan in floor.plans.items()])
 
         async def every(seconds: float, work) -> None:
             while True:
@@ -925,6 +1105,39 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
         async def do_inspect(summary, orders):
             specs = await floor.every("/quality/specs")
             await floor.inspect(specs, summary.get("machines", []), orders, every_spec=inspect_all)
+
+        async def sample_the_bench() -> None:
+            """Its own loop, on each plan's own cadence.
+
+            A sample is not an inspection with more numbers in it: the pieces
+            come off a tag's history rather than off the machine's present
+            value, the five readings are one record, and the cadence is the
+            pack's own - fifteen line minutes on the bottling line, because
+            that is how often somebody walks to the filler with a tray.
+            """
+            if not floor.plans:
+                return
+            due = {name: 0.0 for name in floor.plans}
+            while True:
+                wait = min(plan.every_line_s / floor.speed for plan in floor.plans.values())
+                await asyncio.sleep(max(wait, 1.0))
+                now = time.monotonic()
+                try:
+                    specs = await floor.every("/quality/specs")
+                    orders = (await floor.get("/workorders", status=["released", "running"],
+                                              limit=500))["items"]
+                except httpx.HTTPError as exc:
+                    log.warning("the sampling step failed", error=str(exc)[:160])
+                    continue
+                for name, plan in floor.plans.items():
+                    if now < due[name]:
+                        continue
+                    due[name] = now + plan.every_line_s / floor.speed
+                    try:
+                        await floor.inspect_a_sample(plan, specs, orders)
+                    except httpx.HTTPError as exc:
+                        log.warning("the sampling step failed", characteristic=name,
+                                    error=str(exc)[:160])
 
         async def do_issue(summary, orders):
             lots = (await floor.get("/execution/lots"))["items"]
@@ -970,4 +1183,5 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
             every(review_every, do_review),
             every(supervise_every, do_supervise),
             watch_the_stops(),
+            sample_the_bench(),
         )

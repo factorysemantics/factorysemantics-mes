@@ -30,6 +30,14 @@ class SpecIn(BaseModel):
     unit: str = ""
     min_value: float | None = None
     max_value: float | None = None
+    #: How many pieces this characteristic is inspected at a time - the
+    #: sampling plan, which is this plant's decision and not the product's.
+    #: Left out, or 1, is one piece at a time and is charted as individuals
+    #: and moving range, exactly as every specification written before this
+    #: field existed still is. Above 1 the readings are a subgroup: the
+    #: chart is X-bar and R, its points are the sample means, and readings
+    #: arrive together on `POST /quality/samples`. Decision 0040.
+    sample_size: int | None = None
 
 
 @router.get("/specs/facets")
@@ -112,6 +120,7 @@ def list_specs(
                 unit=s.unit,
                 min_value=s.min_value,
                 max_value=s.max_value,
+                sample_size=s.sample_size,
             )
             for s in rows
         ],
@@ -128,6 +137,7 @@ def create_spec(body: SpecIn, db: DbDep, actor: ActorDep) -> SpecIn:
         unit=body.unit,
         min_value=body.min_value,
         max_value=body.max_value,
+        sample_size=body.sample_size,
         actor=actor,
     )
     return body
@@ -166,6 +176,68 @@ def record_check(body: CheckIn, db: DbDep, actor: ActorDep) -> dict:
     )
     return {"result": check.result, "value": check.value, "non_conformance": nc.code if nc else None,
             "gauge": body.gauge, "spc": signals}
+
+
+class SampleIn(BaseModel):
+    material: str
+    characteristic: str
+    #: Every reading of the sample, in the order they were taken. Exactly as
+    #: many as the specification's `sample_size`, or the answer is 422 with
+    #: both numbers in it: a mean of three charted against limits built for
+    #: five is wrong in a way nobody would ever see on the screen.
+    values: list[float]
+    order: str | None = None
+    equipment: str | None = None
+    #: Which instrument took them. One gauge for the sample, because the five
+    #: readings are compared with each other - a range measured half on one
+    #: instrument and half on another is partly the two instruments
+    #: disagreeing, and nothing downstream could tell. Left out is *not
+    #: recorded*, which is a different fact from nothing having measured them.
+    gauge: str | None = None
+
+
+@router.post("/samples", status_code=201, dependencies=[require("quality.record")])
+def record_sample(body: SampleIn, db: DbDep, actor: ActorDep) -> dict:
+    """Record one sample of n pieces, whole, and say what it set off.
+
+    For a characteristic whose specification carries a `sample_size` above
+    one. The readings are stored one row each - everything that lists
+    measurements or counts checks keeps telling the truth - tied together by
+    a sample id, and the chart's point is their mean. So the rules run
+    **once**, on that mean, and at most one hold comes out of a sample
+    however many of its readings were interesting: five bottles measured
+    together are one look at the process, not five.
+
+    Answers 422 when the number of readings does not match the plan, and 400
+    when the characteristic is inspected one piece at a time - that one goes
+    to `POST /quality/checks`.
+    """
+    sample, checks, nc, signals = quality.record_sample(
+        db,
+        material_code=body.material,
+        characteristic=body.characteristic,
+        values=body.values,
+        work_order_code=body.order,
+        equipment_code=body.equipment,
+        gauge_code=body.gauge,
+        actor=actor,
+    )
+    values = [c.value for c in checks]
+    mean = sum(values) / len(values)
+    return {
+        "sample": sample.id,
+        "n": len(checks),
+        "values": values,
+        "checks": [c.id for c in checks],
+        # The two figures the chart is drawn from, so a caller that posted a
+        # sample does not have to compute them to know what it just plotted.
+        "mean": round(mean, 4),
+        "range": round(max(values) - min(values), 4),
+        "results": [c.result for c in checks],
+        "non_conformance": nc.code if nc else None,
+        "gauge": body.gauge,
+        "spc": signals,
+    }
 
 
 @router.get("/checks")

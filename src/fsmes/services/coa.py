@@ -267,6 +267,47 @@ def listing(session: Session, limit: int = 100, *, material: str | None = None,
             for d in rows], total
 
 
+def _subgroups(checks, size: int) -> list[list[float]]:
+    """The readings grouped into the samples they were taken as, in order.
+
+    By `sample_id`, which is the only honest grouping: slicing a flat list
+    into fives would invent subgroups out of whatever order the rows came
+    back in, and a subgroup nobody took is not a subgroup. A reading with no
+    sample, or a sample holding a different number of readings than the
+    specification now asks for, is left out rather than padded - the
+    certificate states how many pieces it covers either way.
+    """
+    groups: dict[int, list[float]] = {}
+    for check in checks:
+        if check.sample_id is not None:
+            groups.setdefault(check.sample_id, []).append(check.value)
+    return [groups[k] for k in sorted(groups) if len(groups[k]) == size]
+
+
+def _recent_samples(session: Session, spec, until: datetime, fewest: int, size: int):
+    """The most recent `fewest` whole samples at or before `until`.
+
+    The pallet's own window rarely holds enough: a pallet closes in minutes
+    and a sample is taken every fifteen. Same reasoning as the individuals
+    path above, counting samples instead of readings, and the certificate
+    states the span the record covers.
+    """
+    from fsmes.domain import QualitySample
+
+    samples = session.scalars(
+        select(QualitySample).where(QualitySample.spec_id == spec.id,
+                                    QualitySample.ts <= until)
+        .order_by(QualitySample.ts.desc()).limit(fewest)).all()
+    ids = [s.id for s in samples]
+    if not ids:
+        return [], []
+    checks = session.scalars(
+        select(QualityCheck).where(QualityCheck.sample_id.in_(ids))
+        .order_by(QualityCheck.id)).all()
+    checks = sorted(checks, key=lambda c: (c.ts, c.id))
+    return checks, _subgroups(checks, size)
+
+
 # ---------------------------------------------------------------- per pallet
 # The cutlery plant's certificate: one per pallet, stating the capability
 # of every dimensional characteristic over the checks recorded while the
@@ -319,22 +360,46 @@ def gather_pallet(session: Session, serial: str) -> dict:
         specs = session.scalars(select(QualitySpec).where(QualitySpec.material_id == mat.id)
                                 .order_by(QualitySpec.characteristic)).all()
         for spec in specs:
+            # How this characteristic is inspected decides what `fewest`
+            # counts and what the capability arithmetic is. One piece at a
+            # time: readings, sigma from the mean moving range. A sample of
+            # n: samples, sigma from the mean range over d2 - the same
+            # function the control chart uses, so the certificate and the
+            # chart cannot disagree about a Cpk. Decision 0040.
+            size = spc.plan_size(spec)
             in_window = session.scalars(
                 select(QualityCheck).where(QualityCheck.spec_id == spec.id,
                                            QualityCheck.ts >= window[0], QualityCheck.ts <= window[1])
                 .order_by(QualityCheck.ts)).all()
             checks = in_window
-            if len(checks) < fewest:
-                recent = session.scalars(
-                    select(QualityCheck).where(QualityCheck.spec_id == spec.id, QualityCheck.ts <= window[1])
-                    .order_by(QualityCheck.ts.desc()).limit(fewest)).all()
-                checks = sorted(recent, key=lambda c: c.ts)
-            values = [c.value for c in checks]
-            cap = spc.capability(values, spec.min_value, spec.max_value, fewest=fewest)
+            if size > 1:
+                groups = _subgroups(checks, size)
+                if len(groups) < fewest:
+                    checks, groups = _recent_samples(session, spec, window[1], fewest, size)
+                values = [c.value for c in checks]
+                points, readings = len(groups), len(values)
+                cap = spc.capability(values, spec.min_value, spec.max_value,
+                                     fewest=fewest, samples=groups)
+            else:
+                if len(checks) < fewest:
+                    recent = session.scalars(
+                        select(QualityCheck).where(QualityCheck.spec_id == spec.id, QualityCheck.ts <= window[1])
+                        .order_by(QualityCheck.ts.desc()).limit(fewest)).all()
+                    checks = sorted(recent, key=lambda c: c.ts)
+                values = [c.value for c in checks]
+                points, readings = len(values), len(values)
+                cap = spc.capability(values, spec.min_value, spec.max_value, fewest=fewest)
+            short = ("samples" if size > 1 else "checks")
             characteristics.append({
                 "material": material, "characteristic": spec.characteristic, "unit": spec.unit,
                 "lower_spec": spec.min_value, "upper_spec": spec.max_value,
-                "n": len(values), "in_window": len(in_window),
+                # `n` is what capability was computed over - readings for one
+                # at a time, samples for a sampling plan - and `readings` is
+                # always the pieces behind it. Both are stated because a
+                # reader told only one of them will believe the wrong thing
+                # about the other.
+                "n": points, "readings": readings, "sample_size": size,
+                "in_window": len(in_window),
                 "record_start": checks[0].ts if checks else None,
                 "record_end": checks[-1].ts if checks else None,
                 "min": min(values) if values else None,
@@ -342,7 +407,7 @@ def gather_pallet(session: Session, serial: str) -> dict:
                 "failed": sum(1 for c in checks if c.result.value == "fail"),
                 "cpk": cap["cpk"] if cap else None, "cp": cap["cp"] if cap else None,
                 "ppk": cap["ppk"] if cap else None, "stable": cap["stable"] if cap else None,
-                "note": None if cap else (f"{len(values)} checks on record; capability needs "
+                "note": None if cap else (f"{points} {short} on record; capability needs "
                                          f"{fewest} and both limits"),
             })
 
@@ -396,16 +461,25 @@ def render_pallet(data: dict, *, issued_by: str, issued_at: datetime, revision: 
         f"{data['inspections']['failed_on_pallet']} failed on the pallet |",
         "",
         "## Capability — the dimensional checks on record up to the pallet's close", "",
-        "| Material | Characteristic | Spec | Checks | Record from | Mean | Cpk | Ppk | Stable |",
+        # Pieces, not points: a characteristic inspected five at a time has
+        # twelve points and sixty readings, and a certificate that printed
+        # twelve under a column called Checks would be understating what was
+        # measured. The plan is named beside the characteristic so both
+        # figures can be worked out from the row.
+        "| Material | Characteristic | Spec | Pieces | Record from | Mean | Cpk | Ppk | Stable |",
         "|---|---|---|---:|---|---:|---:|---:|---|",
     ]
     for ch in data["characteristics"]:
         spec = f"{_num(ch['lower_spec'])} to {_num(ch['upper_spec'])} {ch['unit'] or ''}".strip()
+        name = ch["characteristic"]
+        if ch.get("sample_size", 1) > 1:
+            name = f"{name} (samples of {ch['sample_size']})"
         cpk = _num(ch["cpk"], 3) if ch["cpk"] is not None else f"— ({ch['note']})"
         ppk = _num(ch["ppk"], 3) if ch["ppk"] is not None else "—"
         stable = "" if ch["stable"] is None else ("yes" if ch["stable"] else "no — see SPC")
         since = _stamp(ch["record_start"]) if ch.get("record_start") else "—"
-        lines.append(f"| {ch['material']} | {ch['characteristic']} | {spec} | {ch['n']} | {since} | "
+        lines.append(f"| {ch['material']} | {name} | {spec} | {ch.get('readings', ch['n'])} | "
+                     f"{since} | "
                      f"{_num(ch['mean']) if ch['mean'] is not None else '—'} | {cpk} | {ppk} | {stable} |")
     lines += ["", "## Contents — every wrap, its stack, its plate, and the pieces in the stack", "",
               "| Wrap | Stack | Plate | Pieces |", "|---|---|---|---|"]

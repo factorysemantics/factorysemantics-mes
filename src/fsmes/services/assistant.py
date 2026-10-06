@@ -1642,6 +1642,17 @@ SURFACES: dict[str, dict] = {
                  "so the band is a decision about what the plant stops for."
              )},
             {"page": "/dashboard/masterdata", "tab": "specs",
+             "anchor": "masterdata-spec-sample-size", "needs": "masterdata.write",
+             "fill": {"value": "{sample_size}", "default": ""},
+             "title": "How many pieces at a time",
+             "body": (
+                 "Empty is one at a time, and the chart plots every reading. A "
+                 "number means a sample: five bottles measured together are one "
+                 "point - their mean - and the chart that gets drawn is X-bar "
+                 "and R rather than individuals (decision 0040). This is the "
+                 "sampling plan, so change it only when the plan changes."
+             )},
+            {"page": "/dashboard/masterdata", "tab": "specs",
              "anchor": "masterdata-spec-submit", "needs": "masterdata.write",
              "title": "Press Add",
              "body": "The characteristic can be measured from the next shift on."},
@@ -2386,6 +2397,12 @@ WITHOUT_A_WALK: dict[str, str] = {
     "set_unit_status": (
         "the quarantine/release/scrap row on /dashboard/trace (trace-status), "
         "which the page already gates on quality.close_nc."
+    ),
+    "record_sample": (
+        "no control on any screen yet, and honestly so: the form that records a "
+        "sample of n pieces, and the panel that shows the n readings behind a "
+        "point, are the follow-up (spc-xbar-chart-and-panel). What posts a "
+        "sample today is the simulated floor, over HTTP."
     ),
     "erp_retry": (
         "the Retry button on a dead message in the ERP panel of /dashboard/ops "

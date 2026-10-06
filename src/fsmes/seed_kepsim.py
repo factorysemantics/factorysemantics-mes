@@ -129,6 +129,13 @@ def seed_kepsim_line(session: Session, tag_map: Path | None = None) -> bool:
             # The generated line runs a fill weight around 500 g with occasional
             # excursions, so this spec catches something real rather than never firing.
             QualitySpec(material=bottle, characteristic="fill_weight", unit="g", min_value=494.0, max_value=506.0),
+            # Fill height is inspected five bottles at a time, which is what a
+            # bottling floor actually does with a bench height gauge: you take
+            # a handful off the line, not one piece. Five readings make one
+            # point on the chart, so this spec is drawn X-bar and R rather than
+            # individuals (decision 0040).
+            QualitySpec(material=bottle, characteristic="fill_height", unit="mm",
+                        min_value=139.0, max_value=145.0, sample_size=5),
             MaterialLot(code="LOT-PREFORM-001", material=preform, quantity=100000, original_quantity=100000),
             MaterialLot(code="LOT-WATER-001", material=water, quantity=50000, original_quantity=50000),
             MaterialLot(code="LOT-CAP-001", material=cap, quantity=100000,

@@ -241,6 +241,15 @@ _MASTER_DATA = ("master data is the plant's own: an agent deployment does not de
                 "materials, equipment, routings, lots or specifications (decision 0035), "
                 "so a run declares this rather than inventing it")
 
+_SAMPLING_PLAN = ("a sampling plan is master data like the specification it is part of: how "
+                  "many pieces a characteristic is inspected at a time is the plant's "
+                  "decision, not a run's (decision 0035), and a run that wrote one onto "
+                  "somebody's characteristic would be changing how their chart is drawn")
+
+_SET_A_PLAN = ("set the sample size on the characteristic, on the Specifications tab of "
+               "Master data, as somebody who holds masterdata.write - or ask this case "
+               "on a plant that already inspects something n at a time")
+
 _SEED_IT = ("put the code on the plant yourself, or run with `--seed-masterdata`, which "
             "puts the demo plant's master data there over the plant's own API as the "
             "account you signed in as - never as the agent")
@@ -279,6 +288,20 @@ def _has_spec(plant: str, code: str) -> bool:
     specification is named everywhere else in this product."""
     material, _, characteristic = code.partition("/")
     return any(s.get("material") == material and s.get("characteristic") == characteristic
+               for s in _rows(_ok(_tools().quality(plant)).get("specs") or {}, "items"))
+
+
+def _has_sampled_spec(plant: str, code: str) -> bool:
+    """`sampled_spec:FG-COLA/fill_height` - a characteristic inspected n at a
+    time, which is what a sample can be recorded against.
+
+    A specification with no sampling plan is not one of these: posting a
+    sample to it is refused, and a case arranged against it would be scored on
+    a refusal nobody asked for.
+    """
+    material, _, characteristic = code.partition("/")
+    return any(s.get("material") == material and s.get("characteristic") == characteristic
+               and (s.get("sample_size") or 1) > 1
                for s in _rows(_ok(_tools().quality(plant)).get("specs") or {}, "items"))
 
 
@@ -591,6 +614,8 @@ KINDS: dict[str, Kind] = {k.name: k for k in (
     Kind("lot", _has_lot, cannot=_MASTER_DATA, fix=_SEED_IT),
     Kind("routing", _has_routing, cannot=_MASTER_DATA, fix=_SEED_IT),
     Kind("spec", _has_spec, cannot=_MASTER_DATA, fix=_SEED_IT),
+    Kind("sampled_spec", _has_sampled_spec,
+         cannot=_SAMPLING_PLAN, fix=_SET_A_PLAN),
     Kind("order", _has_order, _make_order),
     Kind("operation", _has_operation, _make_operation),
     Kind("nonconformance", _has_nonconformance, _make_nonconformance),

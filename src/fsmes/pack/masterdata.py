@@ -89,7 +89,11 @@ OPTIONAL: dict[str, tuple[str, ...]] = {
     "materials": ("unit", "type", "counted_in_pieces"),
     "bom": ("operation_seq",),
     "routings": (),
-    "quality_specs": ("unit", "min", "max"),
+    # `sample_size` is the sampling plan: how many pieces this
+    # characteristic is inspected at a time. Left out, or 1, is one piece at
+    # a time, which is what every pack written before this field existed
+    # says. Decision 0040.
+    "quality_specs": ("unit", "min", "max", "sample_size"),
     "gauges": ("kind", "location", "interval_days", "warn_days", "resolution",
                "calibrated_days_ago"),
     "lots": (),
@@ -204,6 +208,25 @@ def problems(directory: Path) -> list[str]:
                            "date in one ages.")
             elif name in ("interval_days", "resolution") and value <= 0:
                 out.append(f"{where} has {name} {value!r}; that is a positive number.")
+
+    # The sampling plan, offline. A size this product has no constants for
+    # would seed a specification whose chart cannot be drawn, and the plant
+    # would find out when somebody opened the screen. `services.spc.SUBGROUP`
+    # is the table; two to ten, or one piece at a time. Decision 0040.
+    from fsmes.services.spc import MAX_SAMPLE_SIZE
+
+    for index, row in enumerate(data.rows("quality_specs"), start=1):
+        size = row.get("sample_size")
+        if size is None:
+            continue
+        where = f"quality_specs.json #{index}"
+        if isinstance(size, bool) or not isinstance(size, int):
+            out.append(f"{where} has sample_size {size!r}; that is a whole number of "
+                       f"pieces inspected at a time.")
+        elif not 1 <= size <= MAX_SAMPLE_SIZE:
+            out.append(f"{where} wants samples of {size}, which this product cannot "
+                       f"chart. Leave it out (or write 1) for one piece at a time, or "
+                       f"write 2 to {MAX_SAMPLE_SIZE} for a sample of that many.")
 
     for index, row in enumerate(data.rows("work_orders"), start=1):
         due = row.get("due_in_hours")
@@ -447,9 +470,11 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
         if existing:
             count("quality_specs", made=False)
             continue
+        size = row.get("sample_size")
         session.add(QualitySpec(material=material, characteristic=row["characteristic"],
                                 unit=row.get("unit", ""), min_value=row.get("min"),
-                                max_value=row.get("max")))
+                                max_value=row.get("max"),
+                                sample_size=None if size is None else int(size)))
         count("quality_specs", made=True)
 
     # The instruments. A gauge the plant says was calibrated on a date keeps

@@ -113,6 +113,79 @@ class Instrument:
         return round(reading, 6)
 
 
+@dataclass(frozen=True)
+class Plan:
+    """How a simulated floor gets the pieces for one sample.
+
+    A characteristic inspected several pieces at a time needs something the
+    measuring half of this module does not provide: the *pieces*. Fill height
+    is the case this was written for - nothing on the line publishes a height
+    tag, because the bottles are carried to a bench and measured by hand - so
+    the floor takes the last `n` stored readings of a tag that *is* published,
+    turns each into the characteristic by the pack's own straight line, and
+    adds the piece-to-piece variation the sampling exists to measure.
+
+    Every number here is the pack's. The arithmetic that turns a weight into a
+    height is a fact about one plant's bottle and nothing in `fsmes.sim`
+    should know it.
+    """
+
+    characteristic: str
+    #: Line seconds between samples, divided by the replay speed by the caller
+    #: like every other cadence on a simulated floor.
+    every_line_s: float
+    #: The machine and the tag the pieces come off. Each piece is a different
+    #: stored reading of it - five bottles weighed at five instants, not one
+    #: bottle weighed five times.
+    equipment: str
+    tag: str
+    #: `value = offset + per_unit * reading`. A straight line, because a pack
+    #: that needed a curve would be modelling a bottle in a floor script.
+    offset: float = 0.0
+    per_unit: float = 1.0
+    #: One sigma of piece-to-piece variation, in the characteristic's own
+    #: unit: what two pieces holding the same tag value still differ by. Zero
+    #: is a plant that has not written one down, and the sample's range is
+    #: then whatever the tag itself did, which is honest and is usually small.
+    piece_to_piece: float = 0.0
+    #: The planted cause, if the pack plants one: for this many line minutes
+    #: after a changeover the pieces sit this much high.
+    after_changeover_minutes: float = 0.0
+    after_changeover_offset: float = 0.0
+
+    def convert(self, reading: float) -> float:
+        return self.offset + self.per_unit * reading
+
+
+def plans(script: dict) -> dict[str, Plan]:
+    """The sampling plans in one floor script, by characteristic.
+
+    A script with no `sampling` section has none, which is every pack written
+    before this existed and every plant that inspects one piece at a time.
+    """
+    out: dict[str, Plan] = {}
+    for characteristic, entry in (script.get("sampling") or {}).items():
+        if characteristic.startswith("_") or not isinstance(entry, dict):
+            continue
+        source = entry.get("from") or {}
+        convert = entry.get("convert") or {}
+        after = entry.get("after_changeover") or {}
+        if not source.get("equipment") or not source.get("tag"):
+            continue
+        out[characteristic] = Plan(
+            characteristic=characteristic,
+            every_line_s=float(entry.get("every_line_s") or 900.0),
+            equipment=str(source["equipment"]),
+            tag=str(source["tag"]),
+            offset=float(convert.get("offset", 0.0)),
+            per_unit=float(convert.get("per_unit", 1.0)),
+            piece_to_piece=float(entry.get("piece_to_piece") or 0.0),
+            after_changeover_minutes=float(after.get("line_minutes") or 0.0),
+            after_changeover_offset=float(after.get("offset") or 0.0),
+        )
+    return out
+
+
 class Bench:
     """The gauges one simulated floor measures with, and how it picks one.
 
@@ -173,6 +246,17 @@ class Bench:
                 max_bias=float(drift.get("max_bias", 0.0)),
             ))
         return out
+
+    def station(self, gauge: str) -> str | None:
+        """Where the plant's register says this gauge lives, or `None`.
+
+        The register's answer, not the script's: a gauge moved to another
+        station on the screen has moved for this floor too, and a sample that
+        named the station the script was written against would say a
+        measurement happened somewhere it did not.
+        """
+        row = self._register.get(gauge) or {}
+        return row.get("location") or None
 
     def spread(self, characteristic: str, shift_code: str | None) -> float:
         """How much two readings of the same thing disagree, this shift.

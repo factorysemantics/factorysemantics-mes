@@ -105,6 +105,7 @@ HIDDEN = {"list_plants"}
 # checks) and must be one the tool's own routes demand (the ratchet checks).
 NEEDS: dict[str, str] = {
     "record_check": "quality.record",
+    "record_sample": "quality.record",
     "close_nonconformance": "quality.close_nc",
     "review_nonconformance": "quality.close_nc",
     "disposition_nonconformance": "quality.close_nc",

@@ -29,11 +29,11 @@ Measured on the bottling lab plant on 2026-10-04, after a week up:
 None of that is a bug in the MES. It is a plant with no people in it, and an
 analysis is only as good as what the plant recorded.
 
-## The five stories
+## The six stories
 
 Each one is **data**, each leaves a **trace in the records**, and each recurs
 once an hour because the line's file loops — so any hour of this plant's
-history contains all five.
+history contains all six.
 
 | The story | Where it is written | What it leaves behind |
 |---|---|---|
@@ -42,6 +42,7 @@ history contains all five.
 | The first bottles after a changeover run heavy | `line.json`, an `offset` beginning where the changeover ends | a point or two above the control limit, immediately after a **planned** stop — which the floor labels `changeover`, so it can be found |
 | One of the two scales is drifting | the pack's `floor.json` | that scale's readings run about 0.6 g above the other's, until the supervisor calibrates it |
 | The night shift's readings of the same process are more spread out | the pack's `floor.json` | a wider spread on the night shift with no change in the process behind it |
+| The nozzle the changeover left behind fills a shade over | the pack's `floor.json`, `sampling.fill_height.after_changeover` | for twenty-five line minutes after each labelled `changeover`, the **fill-height sample means** sit about half a millimetre above the centre line while the sample **ranges** do not move: the process shifted, its spread did not. The checkweigher's own band absorbs it, so it is invisible on fill weight and plain on the height chart — which is what an X-bar chart is for. Half a millimetre is less than the limits drawn from R-bar, so it is found by splitting the means on the changeover and not by waiting for a rule to fire |
 
 And one that is about the MES rather than the plant: **a tag goes quiet for
 fifteen minutes.** `FillWeight` stops arriving while the filler runs on and
@@ -108,6 +109,52 @@ is the worked example, and every block in it carries a `_why`. The shape:
                       "otherwise": {"disposition": "use_as_is", "reason": "…"}}
 }
 ```
+
+### A characteristic nobody's machine publishes
+
+Fill height is measured by hand on a bench: five bottles come off the filler,
+are carried to the QI station, are measured one after another, and the five
+readings are posted together as **one sample**
+([decision 0040](../decisions/0040-the-chart-type-follows-the-sampling-plan.md)).
+No tag on this line carries a height, so the floor has to make the pieces —
+and the arithmetic that turns a weight into a height is **this plant's bottle,
+not the product's**, which is why it is in the pack:
+
+```json
+{
+  "sampling": {
+    "fill_height": {
+      "every_line_s": 900,
+      "from": {"equipment": "FILL01", "tag": "FillWeight"},
+      "convert": {"offset": 12.0, "per_unit": 0.26},
+      "piece_to_piece": 0.35,
+      "after_changeover": {"line_minutes": 25, "offset": 0.5}
+    }
+  }
+}
+```
+
+- `every_line_s` — line seconds between samples, divided by the replay speed
+  like every other cadence here. Nine hundred is four samples an hour.
+- `from` — the five pieces are the **last five stored readings** of that tag
+  off that machine: five different bottles, each weighed at a different
+  instant, which is what a sample of five is. If five readings newer than the
+  last sample are not there, this floor **takes nothing and says so once**
+  rather than measuring the same bottle five times. A sample of five that is
+  one bottle copied five times has a range of zero and would make every chart
+  drawn from it a lie.
+- `convert` — `height_mm = offset + per_unit × weight_g`, one straight line,
+  because the bottle is a cylinder over the band that matters.
+- `piece_to_piece` — millimetres, one sigma: the moulding varies, so two
+  bottles holding the same weight do not stand at the same height. This is
+  the variation a sample of five is taken to measure, and it is deliberately
+  larger than the gauge's own spread — an X-bar and R chart whose range came
+  mostly from the instrument would be charting the instrument.
+- `after_changeover` — the planted cause in the table above.
+
+Each of the five pieces is then measured through the bench gauge from the
+register, the same way a single reading is: its resolution rounds the value
+and its drift, if it has any, biases it.
 
 The gauges themselves are **master data**, not script: they are in the pack's
 `masterdata/gauges.json` and on the plant's own register, so a calibration

@@ -5,5 +5,13 @@
     "unit": "g",
     "min": 494.0,
     "max": 506.0
+  },
+  {
+    "material": "FG-BOTTLE",
+    "characteristic": "fill_height",
+    "unit": "mm",
+    "min": 139.0,
+    "max": 145.0,
+    "sample_size": 5
   }
 ]

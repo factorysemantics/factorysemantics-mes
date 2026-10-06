@@ -20,9 +20,13 @@ from fastapi.staticfiles import StaticFiles
 
 from fsmes import __version__
 from fsmes.api.deps import current_user
-from fsmes.services import Conflict, Invalid, NotFound
+from fsmes.services import Conflict, Invalid, NotFound, WrongSampleSize
 
-_ERROR_STATUS = {NotFound: 404, Conflict: 409, Invalid: 400}
+# Most derived first is not required - Starlette walks the exception's MRO
+# and takes the nearest registered handler - but it is how this reads: a
+# wrong sample size is a kind of Invalid that is answered 422, because the
+# request is well formed and only disagrees with this plant's sampling plan.
+_ERROR_STATUS = {NotFound: 404, Conflict: 409, WrongSampleSize: 422, Invalid: 400}
 
 WEB_DIR = Path(__file__).parent.parent / "web"
 
