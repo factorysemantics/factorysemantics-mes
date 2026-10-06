@@ -3,8 +3,15 @@
 What Scott asked for on 2026-10-05 begins here: *"What source did it come
 from? What's that source's calibration?"* The register page has existed for
 weeks and every plant built from a pack came up with nothing on it, because a
-pack could not carry a gauge. This is the screen with the pack's two scales on
-it, each with the date it was last calibrated and whether it is due.
+pack could not carry a gauge. This is the screen with the pack's gauges on it,
+each with the date it was last calibrated and whether it is due.
+
+The pack carried two checkweigher scales when this file was written. It
+carries a third instrument now - the bench height gauge the QI station
+measures fill height with, five bottles at a time - so the register is three
+rows and the count below says three. The scales' own assertions are
+untouched: what changed is the plant, not what the screen owes a reader about
+a scale.
 
 **The list is drawn after a fetch, so the test holds the fetch back.** A check
 on loopback proves the code path and not the experience: the page renders in
@@ -181,12 +188,34 @@ def test_the_screen_lists_the_packs_two_scales_with_the_date_each_was_calibrated
         f"{rows['SCALE-FILL-02']}")
 
 
+def test_the_screen_lists_the_bench_gauge_the_fill_height_sample_is_measured_with(register):
+    """The third instrument in the pack. Fill height is inspected five bottles
+    at a time on the QI bench, and the gauge that measures them is a gauge like
+    any other: on the register, where it is, what it resolves to, and when it
+    was last calibrated. A sampled characteristic measured through an
+    instrument nobody could look up would be the gap this screen exists to
+    close."""
+    register.wait_for_function(
+        """() => [...document.querySelectorAll('#gauges-table tbody tr')]
+                   .some(r => /HEIGHT-FILL-01/.test(r.textContent))""",
+        timeout=20000)
+    row = next(r.inner_text() for r in register.query_selector_all("#gauges-table tbody tr")
+               if "HEIGHT-FILL-01" in r.inner_text())
+    assert "QI01" in row, f"the height gauge does not say where it is: {row}"
+    assert "0.1" in row, f"the height gauge does not say what it resolves to: {row}"
+    assert "never" not in row, f"the height gauge shows as never calibrated: {row}"
+    assert "due" not in row.lower(), (
+        "the height gauge is 168 days from due and is being warned about: "
+        f"{row}")
+
+
 def test_the_page_says_how_many_gauges_there_are_and_that_none_is_overdue(register):
     """Every list states its total, and the verdict is the whole register's -
-    a plant whose scales are in calibration should be told so rather than
-    shown a blank."""
+    a plant whose instruments are in calibration should be told so rather than
+    shown a blank. Three now: the filler's two scales and the QI bench's
+    height gauge."""
     register.wait_for_function(
-        """() => document.querySelector('#kpi-gauges').textContent.trim() === '2'""",
+        """() => document.querySelector('#kpi-gauges').textContent.trim() === '3'""",
         timeout=20000)
     register.wait_for_function(
         """() => document.querySelector('#kpi-overdue').textContent.trim() === '0'""",
