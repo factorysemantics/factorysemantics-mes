@@ -53,6 +53,66 @@ worried about until a moment ago.
 Fewer than twelve readings raises nothing, and the chart says why. Control
 limits computed from six points move with every reading.
 
+## Several pieces at a time
+
+If a characteristic is inspected one piece at a time, everything above is the
+chart you get: individuals and moving range, one point per reading.
+
+Some characteristics are not inspected that way. Five bottles come off the
+filler every fifteen minutes and are measured together on a bench; what the
+plan says is *five at a time*, and the right chart for that is **X-bar and
+R**. Tell the plant so by setting **Pieces per sample** on the specification
+(the Specifications tab of Master data, or `sample_size` in your pack's
+`quality_specs.json`). Empty or 1 is one at a time and nothing changes.
+
+With a plan in place:
+
+* **The point is the sample's mean**, not each reading, and the limits are
+  built from the average range *within* the samples. That is the whole reason
+  for sampling: the bottle-to-bottle variation is held inside the sample, so
+  the chart answers whether the **process** moved.
+* **A second chart watches the ranges.** A sample whose five readings
+  disagree more than they should is its own signal, and it always raises a
+  hold — on every plant, whatever `hold_rules` says. It has to: the X-bar
+  limits beside it were computed from the average range, and one inflated
+  sample has just widened them.
+* **The four rules run on the means, once per sample.** Five readings that
+  straddle three sigma individually and average inside the limits fire
+  nothing, because the process did not move. One sample is one evaluation and
+  at most one hold, and the evidence names the sample and all five readings.
+* **Capability is computed from the within-sample spread** (`R̄/d2`), which is
+  the process's own variation. `Pp`/`Ppk` still use every individual reading,
+  because what your customer received was pieces and not averages.
+* **`spc_min_points` counts samples.** Twenty points on a line sampling four
+  times an hour is five hours, not twenty readings.
+
+Record a sample whole, with `POST /quality/samples`:
+
+```json
+{"material": "FG-BOTTLE", "characteristic": "fill_height",
+ "values": [141.8, 142.1, 141.9, 142.4, 142.0],
+ "order": "WO-1042", "equipment": "QI01", "gauge": "HEIGHT-FILL-01"}
+```
+
+Exactly as many values as the plan says. Four, or six, is refused with a
+sentence saying how many were expected — and so is a single
+`POST /quality/checks` against a sampled characteristic, because one reading
+is not a point on this chart.
+
+Each reading is still stored as its own `quality_checks` row with its own
+value and gauge; the sample is a record that ties them together. **Nothing
+was backfilled** when this arrived: readings taken before a plan was written
+have no sample, and if you set a sample size on a characteristic that already
+has history, that history is left out of the chart rather than grouped into
+samples nobody took. The chart says how many readings it set aside and why.
+
+The screen does not draw this chart yet. Until it does, the SPC page says so
+in a sentence and draws nothing, rather than plotting means as if each were
+one bottle; the centre, the limits, the capability and the verdict beside it
+are the samples' own and are true as they stand. `GET /quality/spc/...`
+answers `"kind": "xbar_r"` and carries the samples, so anything reading the
+API has the whole picture today.
+
 ## One thing to watch in how you collect readings
 
 An individuals chart estimates the process's variation from the difference
@@ -170,4 +230,6 @@ that is a finding.
 
 The reasoning, the options that were rejected, and what has still to be
 decided are in decision record
-[0027](../decisions/0027-an-spc-signal-raises-a-hold.md).
+[0027](../decisions/0027-an-spc-signal-raises-a-hold.md). Why the chart type
+follows the sampling plan, and why the range signal is not a fifth rule, is
+[0040](../decisions/0040-the-chart-type-follows-the-sampling-plan.md).
