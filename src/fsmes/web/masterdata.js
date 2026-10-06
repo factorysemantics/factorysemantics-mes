@@ -194,7 +194,8 @@ function drawSpecs() {
   for (const s of page.items) {
     const tr = el("tr");
     tr.append(el("td", "code", s.material), el("td", null, s.characteristic),
-              el("td", "num", s.min_value ?? "—"), el("td", "num", s.max_value ?? "—"), el("td", "muted", s.unit || ""));
+              el("td", "num", s.min_value ?? "—"), el("td", "num", s.max_value ?? "—"), el("td", "muted", s.unit || ""),
+              el("td", "num", s.sample_size ?? "—"));
     const link = el("td");
     const a = el("a", "obj", "SPC");
     a.href = `/dashboard/spc?spec=${encodeURIComponent(s.material)}|${encodeURIComponent(s.characteristic)}`;
@@ -202,7 +203,7 @@ function drawSpecs() {
     tr.append(link);
     body.append(tr);
   }
-  if (!page.items.length) { const tr = el("tr"); const td = el("td", "muted", "No specification matches."); td.colSpan = 6; tr.append(td); body.append(tr); }
+  if (!page.items.length) { const tr = el("tr"); const td = el("td", "muted", "No specification matches."); td.colSpan = 7; tr.append(td); body.append(tr); }
   $("#spec-count").textContent = FS.countText(page, Math.max(specsTotal, page.total));
   FS.pager($("#spec-pager"), page, (offset) => { filters.specOffset = offset; loadSpecs().catch(fail); });
 }
@@ -215,7 +216,11 @@ function wireSpecs() {
         material: $("#spec-material").value, characteristic: $("#spec-char").value.trim(),
         unit: $("#spec-unit").value.trim(),
         min_value: $("#spec-min").value ? Number($("#spec-min").value) : null,
-        max_value: $("#spec-max").value ? Number($("#spec-max").value) : null } });
+        max_value: $("#spec-max").value ? Number($("#spec-max").value) : null,
+        // Empty is *no sampling plan written down*, which is not the same as
+        // one at a time by decree: it is sent as null and the chart goes on
+        // drawing individuals, which is what this product has always drawn.
+        sample_size: $("#spec-n").value ? Number($("#spec-n").value) : null } });
       toast("Specification added.");
       $("#spec-form").reset();
       await loadSpecs();

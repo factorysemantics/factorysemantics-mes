@@ -142,6 +142,9 @@
             <input id="spec-unit" placeholder="Unit" data-assist="masterdata-spec-unit">
             <input id="spec-min" type="number" step="any" placeholder="Min" data-assist="masterdata-spec-min">
             <input id="spec-max" type="number" step="any" placeholder="Max" data-assist="masterdata-spec-max">
+            <input id="spec-n" type="number" step="1" min="1" max="10" placeholder="Pieces per sample"
+                   aria-label="Pieces per sample" title="How many pieces are measured at a time. Empty or 1 is one at a time."
+                   data-assist="masterdata-spec-sample-size">
             <button id="spec-submit" data-assist="masterdata-spec-submit">Add</button>
           </div>
         </form>
@@ -153,7 +156,7 @@
           <select id="spec-filter-material" aria-label="Material"><option value="">Any material</option></select>
         </div>
         <div class="table-wrap"><table id="spec-table" data-assist="masterdata-spec-table">
-          <thead><tr><th>Material</th><th>Characteristic</th><th class="num">Min</th><th class="num">Max</th><th>Unit</th><th></th></tr></thead>
+          <thead><tr><th>Material</th><th>Characteristic</th><th class="num">Min</th><th class="num">Max</th><th>Unit</th><th class="num">Per sample</th><th></th></tr></thead>
           <tbody></tbody>
         </table></div>
         <div id="spec-pager" class="pager"></div>

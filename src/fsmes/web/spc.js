@@ -55,6 +55,23 @@ function draw(data) {
   host.replaceChildren();
   if (!data.points.length) return kit.empty(host, "No readings for this characteristic yet.");
 
+  /* This screen draws individuals. A characteristic inspected several pieces
+     at a time gets X-bar and R instead (decision 0040): its points are sample
+     means and it comes with a second chart of the sample ranges. Drawing the
+     means on this chart would put five bottles' average where a reader expects
+     one bottle's reading, and the dot would open a panel about a check that is
+     one fifth of the point. So it says so, in one sentence, and draws nothing.
+     The figures below the chart are the samples' own and are true as they
+     stand. Drawing it is the follow-up. */
+  if (data.kind && data.kind !== "imr") {
+    return kit.empty(host,
+      `${data.characteristic} is inspected ${data.sample_size} pieces at a time, so its `
+      + `chart is X-bar and R: each point is the mean of a sample, with a range chart `
+      + `beside it. This screen draws individuals only and cannot draw that one yet, so `
+      + `it draws nothing rather than show you means as if they were single readings. `
+      + `The centre, the limits, the capability and the verdict below are the samples' own.`);
+  }
+
   const left = 52, right = 14, top = 12, bottom = 26;
   const width = Math.max(host.clientWidth || 900, 620);
   const height = 260;

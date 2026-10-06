@@ -1642,6 +1642,17 @@ SURFACES: dict[str, dict] = {
                  "so the band is a decision about what the plant stops for."
              )},
             {"page": "/dashboard/masterdata", "tab": "specs",
+             "anchor": "masterdata-spec-sample-size", "needs": "masterdata.write",
+             "fill": {"value": "{sample_size}", "default": ""},
+             "title": "How many pieces at a time",
+             "body": (
+                 "Empty is one at a time, and the chart plots every reading. A "
+                 "number means a sample: five bottles measured together are one "
+                 "point - their mean - and the chart that gets drawn is X-bar "
+                 "and R rather than individuals (decision 0040). This is the "
+                 "sampling plan, so change it only when the plan changes."
+             )},
+            {"page": "/dashboard/masterdata", "tab": "specs",
              "anchor": "masterdata-spec-submit", "needs": "masterdata.write",
              "title": "Press Add",
              "body": "The characteristic can be measured from the next shift on."},
