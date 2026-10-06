@@ -932,11 +932,7 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
                     "unit": spec.unit, "value": signal["value"],
                     "equipment": _equipment_code(session, check),
                     "window": row.window,
-                    **({"sample_size": series.size,
-                        # The sample this fired on, named, with every one of
-                        # its readings: a person asked to work a hold on a
-                        # mean has to be able to see the pieces behind it.
-                        "sample": series.samples[signal["index"]]}
+                    **(_sample_evidence(series, signal["index"])
                        if sampled else {}),
                 },
             )
@@ -948,6 +944,27 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
                        "equipment": _equipment_code(session, check),
                        "window_key": key})
     return raised
+
+
+def _sample_evidence(series: Series, index: int) -> dict:
+    """The sample a rule fired on, as it goes into the hold's evidence.
+
+    Plain values only - the stamp as a string, the readings as numbers -
+    because evidence is stored as JSON and read years later by people and by
+    screens, not by this module. A person asked to work a hold on a mean has
+    to be able to see the pieces behind it, so the five readings and the five
+    rows they are stored in are named here rather than left to be looked up.
+    """
+    sample = series.samples[index]
+    return {
+        "sample_size": series.size,
+        "sample": sample["sample"],
+        "sample_at": sample["ts"].isoformat(),
+        "mean": sample["mean"],
+        "range": sample["range"],
+        "readings": [r["value"] for r in sample["readings"]],
+        "checks": [r["check"] for r in sample["readings"]],
+    }
 
 
 def _window_record(series: Series, control: dict, first: int, last: int) -> dict:
