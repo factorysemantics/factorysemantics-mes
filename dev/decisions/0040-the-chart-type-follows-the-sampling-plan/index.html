@@ -4214,6 +4214,14 @@ limits sooner has to say so.</p>
 <p>Not decided here: drawing the X-bar and R chart on the screen, and the panel
 behind a point. <code>web/spc.js</code> says in one sentence that it cannot draw this
 chart yet rather than drawing means as if they were readings.</p>
+<p><strong>Since 2026-10-06 it draws it.</strong> <code>kind</code> is what the screen reads: one layout
+draws both kinds — the sample means with <code>X̿</code> and <code>X̿ ± A2·R̄</code> above, the
+spread inside each sample with <code>R̄</code>, <code>D4·R̄</code> and <code>D3·R̄</code> below — and a click
+on either half opens the n readings behind that sample
+(<code>GET /quality/spc/{material}/{characteristic}/sample/{sample_id}</code>). The
+heading, the legend and the sentences under the chart follow <code>kind</code> too, with
+or without points: this decision made the chart type a property of the data,
+and a caption that did not follow it would undo that. Nothing above changed.</p>
 <h2 id="house-rules-touched">House rules touched<a class="headerlink" href="#house-rules-touched" title="Permanent link">&para;</a></h2>
 <p><strong>Never invent production</strong> (1): nothing is backfilled, nothing is inferred
 from how close together readings arrived, and a reading taken outside a plan

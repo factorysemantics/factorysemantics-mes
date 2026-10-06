@@ -843,6 +843,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#on-a-sampled-chart-the-dot-is-an-average-so-the-panel-opens-all-five" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        On a sampled chart, the dot is an average — so the panel opens all five
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#two-things-it-will-not-tell-you" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4167,6 +4178,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#on-a-sampled-chart-the-dot-is-an-average-so-the-panel-opens-all-five" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        On a sampled chart, the dot is an average — so the panel opens all five
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#two-things-it-will-not-tell-you" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4332,12 +4354,20 @@ was backfilled</strong> when this arrived: readings taken before a plan was writ
 have no sample, and if you set a sample size on a characteristic that already
 has history, that history is left out of the chart rather than grouped into
 samples nobody took. The chart says how many readings it set aside and why.</p>
-<p>The screen does not draw this chart yet. Until it does, the SPC page says so
-in a sentence and draws nothing, rather than plotting means as if each were
-one bottle; the centre, the limits, the capability and the verdict beside it
-are the samples' own and are true as they stand. <code>GET /quality/spc/...</code>
-answers <code>"kind": "xbar_r"</code> and carries the samples, so anything reading the
-API has the whole picture today.</p>
+<p><strong>Quality → SPC draws it.</strong> Pick a sampled characteristic and you get two
+charts in the same frame as the individuals one: the mean of each sample above
+with <code>X̿</code> and <code>X̿ ± A2·R̄</code>, and the spread inside each sample below with <code>R̄</code>,
+<code>D4·R̄</code> and <code>D3·R̄</code>. One dot per sample on each half, flagged where a rule
+fired, and one export takes both. The heading, the legend and the sentences
+under the chart say which chart it is — before the first sample as well as
+after it, because the chart type is a property of the plan and not of the
+data that has arrived so far.</p>
+<p><img alt="Quality → SPC on fill height: the sample means above with their limits, the
+spread inside each sample below, and the panel beside them open on the five
+bottles behind one dot." src="../images/spc-xbar-and-r.png" /></p>
+<p>Click a dot and the panel beside it opens on <strong>the readings behind that
+point</strong> — see <em>Click a point</em>, below, which is the same panel asked a slightly
+different question.</p>
 <h2 id="the-other-half-of-the-chart">The other half of the chart<a class="headerlink" href="#the-other-half-of-the-chart" title="Permanent link">&para;</a></h2>
 <p><strong>Quality → SPC</strong> draws two charts, not one. Above is the individuals chart —
 every reading, with the centre line and the ±3σ limits. Below it, about half
@@ -4421,6 +4451,28 @@ silence: a stale value is not a steady one, and telling those two apart is most
 of why this panel is worth having.</p>
 <p>A keyboard reaches it: tab to a reading and press Enter, or use the <strong>Open a
 reading</strong> button, which opens the newest reading a rule fired on.</p>
+<h3 id="on-a-sampled-chart-the-dot-is-an-average-so-the-panel-opens-all-five">On a sampled chart, the dot is an average — so the panel opens all five<a class="headerlink" href="#on-a-sampled-chart-the-dot-is-an-average-so-the-panel-opens-all-five" title="Permanent link">&para;</a></h3>
+<p>Everything above holds on an X-bar and R chart, with one block more and one
+window wider. A point there is the mean of the sample, which is the thing an
+X-bar chart cannot take apart on its own, so the panel's first block is <strong>the
+readings behind this point</strong>: every reading in the sample with its value, its
+gauge, who took it, and <strong>how far it sat from the sample's own mean</strong>, with the
+one furthest out marked. Five bottles all high is a filler setting; one bottle
+high and four ordinary is a nozzle. That is usually the whole diagnosis, and
+it is one click.</p>
+<p>The panel says in the same breath that <strong>one reading is always the furthest</strong>,
+because it is — naming it is a place to look and not a finding. When every
+reading in a sample is identical it names none of them, rather than inventing
+a culprit out of the order somebody typed them in; when two sit equally far
+out it names both.</p>
+<p>The window is the one the readings themselves span — first to last, plus the
+minutes before — rather than an instant, and <strong>every reading's stamp is marked
+on every trend</strong>, so which bottle was measured while the nozzle pressure was
+falling is visible rather than inferred. The rules block names where the mean
+sat against <code>X̿ ± A2·R̄</code> <em>and</em> where the range sat against its own limit,
+because the reader came from one half and may need the other. Clicking a dot
+on the lower chart opens the same sample as the dot above it: a mean and a
+range are two facts about one sample.</p>
 <h3 id="two-things-it-will-not-tell-you">Two things it will not tell you<a class="headerlink" href="#two-things-it-will-not-tell-you" title="Permanent link">&para;</a></h3>
 <p><strong>The gauge comparison bounds the question; it does not settle it.</strong> Two
 instruments measuring the same process in the same hour should agree, and a
@@ -4433,9 +4485,12 @@ from the order's routing — that would name a machine nobody stood at.</p>
 <h3 id="the-same-answer-as-an-api">The same answer, as an API<a class="headerlink" href="#the-same-answer-as-an-api" title="Permanent link">&para;</a></h3>
 <p>One read, and the one a screen gets:</p>
 <div class="highlight"><pre><span></span><code>GET /quality/spc/{material}/{characteristic}/point/{check_id}
+GET /quality/spc/{material}/{characteristic}/sample/{sample_id}
 </code></pre></div>
-<p><code>before_minutes</code>, <code>after_minutes</code> and <code>neighbour_hours</code> move the window; ten,
-two and one are the defaults. Nothing in it is worked out for the panel: the
+<p>The second is the same read of a sample: the same blocks, plus the readings,
+over the window those readings span. <code>before_minutes</code>, <code>after_minutes</code> and
+<code>neighbour_hours</code> move the window on either; ten, two and one are the
+defaults. Nothing in it is worked out for the panel: the
 control limits come from the chart, the trends and the timeline from
 <code>/analysis</code>, the gauge's due date from the gauge register, the coverage from
 the ledger. So a figure on the panel and the same figure on the analysis screen
