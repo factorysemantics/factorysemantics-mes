@@ -15,8 +15,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from fsmes import modules as module_registry
 
 #: The rules a plant may name in `hold_rules` or `major_rules`: the four
-#: Western Electric rules on the individuals chart, and 5 - a moving range
-#: beyond its upper limit - on the moving-range chart. The same set
+#: Western Electric rules on the plotted points, and 5 - a range beyond its
+#: upper limit, the moving range on an individuals chart and the sample range
+#: on a sampled one. The same set
 #: `fsmes.services.spc.RULE_WINDOW` keys, written here too because this module
 #: must not import a service.
 SPC_RULES = (1, 2, 3, 4, 5)

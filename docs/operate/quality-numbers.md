@@ -206,12 +206,14 @@ is a sample:
   the hold's evidence names the sample, its five readings and the five rows
   they are stored in.
 
-One thing on a sampled chart is not a Western Electric rule: a sample whose
-**range** is beyond `D4·R̄` is its own signal, recorded as rule 0. It is held
-on always and is not in `hold_rules`, because a range that wide means the five
-pieces disagree — the mean they average to is not describing anything, so
-there is nothing for a plant to opt out of. Every chart response says so in
-`always_hold_rules`.
+A sampled chart has one more signal, and it is the same **rule 5** an
+individuals chart has: a **range beyond its upper limit** — the spread inside
+one sample here, the gap between two readings there. It is drawn and recorded
+on every plant and raises a hold where `hold_rules` includes 5, like any other
+rule. It is worth including: a sample whose range is beyond `D4·R̄` means the
+five pieces disagree, so the mean they average to is not describing anything
+and the X-bar limits beside it were widened by that sample itself. The
+bottling lab pack names 5 on both its lists for exactly that reason.
 
 Capability is worked out from the within-process sigma, `R̄/d2`, and not from
 the spread of the means, which is smaller by root n. A Cp computed the other

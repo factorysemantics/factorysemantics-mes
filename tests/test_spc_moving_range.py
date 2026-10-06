@@ -121,7 +121,7 @@ def test_the_range_beyond_the_upper_limit_is_the_one_that_is_flagged(session):
     moving = spc.chart(session, "FG-COLA", "brix")["moving_range"]
     assert [(s["previous_check"], s["check"]) for s in moving["signals"]] == [
         (checks[10].id, checks[11].id)]
-    assert moving["signals"][0]["rule"] == spc.MR_RULE
+    assert moving["signals"][0]["rule"] == spc.RANGE_RULE
     assert moving["signals"][0]["value"] == 0.7
     assert moving["stable"] is False
 
@@ -191,23 +191,23 @@ def test_the_moving_range_rule_is_recorded_on_a_plant_that_has_not_asked_and_hol
     about jumps it already lived through, which is what would teach it to
     switch the feature off rather than to read it.
     """
-    assert spc.MR_RULE not in spc.hold_rules(session)
+    assert spc.RANGE_RULE not in spc.hold_rules(session)
     _record(session, TWELVE[:11])
     checks, raised = _record(session, [TWELVE[11]])
 
-    mr = [s for s in raised if s["rule"] == spc.MR_RULE]
+    mr = [s for s in raised if s["rule"] == spc.RANGE_RULE]
     assert len(mr) == 1
     # Stated, and stated as not held, rather than left out of the answer.
     assert mr[0]["held"] is False
     assert mr[0]["nonconformance"] is None
 
-    row = session.scalar(select(SpcSignal).where(SpcSignal.rule == spc.MR_RULE))
+    row = session.scalar(select(SpcSignal).where(SpcSignal.rule == spc.RANGE_RULE))
     assert row is not None
     assert row.check_id == checks[0].id
     assert row.nonconformance_id is None
     # No hold anywhere on this plant for the rule it did not ask about.
     assert [nc for nc in _spc_ncs(session)
-            if (nc.evidence or {}).get("rule") == spc.MR_RULE] == []
+            if (nc.evidence or {}).get("rule") == spc.RANGE_RULE] == []
 
 
 def test_nothing_earlier_than_the_reading_just_written_is_recorded(session):
@@ -216,7 +216,7 @@ def test_nothing_earlier_than_the_reading_just_written_is_recorded(session):
     judged at the time, which is not at all."""
     _record(session, TWELVE)
     before = [row.window_key for row in session.scalars(
-        select(SpcSignal).where(SpcSignal.rule == spc.MR_RULE))]
+        select(SpcSignal).where(SpcSignal.rule == spc.RANGE_RULE))]
     assert len(before) == 1
     # The one it recorded is the gap the twelfth reading made, not the ten
     # quiet gaps behind it - and running the rules again adds none of them.
@@ -224,7 +224,7 @@ def test_nothing_earlier_than_the_reading_just_written_is_recorded(session):
     spc.evaluate(session, spec)
     session.flush()
     assert [row.window_key for row in session.scalars(
-        select(SpcSignal).where(SpcSignal.rule == spc.MR_RULE))] == before
+        select(SpcSignal).where(SpcSignal.rule == spc.RANGE_RULE))] == before
 
 
 def test_the_chart_flags_the_range_whatever_the_plant_holds_on(session):
@@ -250,17 +250,17 @@ def test_a_plant_that_turns_the_rule_on_gets_a_hold_naming_both_readings(session
     plant has not chosen.
     """
     _holds_on(session, "5")
-    assert spc.hold_rules(session) == (spc.MR_RULE,)
+    assert spc.hold_rules(session) == (spc.RANGE_RULE,)
     checks, _ = _record(session, QUIET)
     _, raised = _record(session, [10.8])
 
-    mr = [s for s in raised if s["rule"] == spc.MR_RULE]
+    mr = [s for s in raised if s["rule"] == spc.RANGE_RULE]
     assert len(mr) == 1
     assert mr[0]["held"] is True
     assert mr[0]["nonconformance"] is not None
-    assert all(s["held"] is False for s in raised if s["rule"] != spc.MR_RULE)
+    assert all(s["held"] is False for s in raised if s["rule"] != spc.RANGE_RULE)
 
-    row = session.scalar(select(SpcSignal).where(SpcSignal.rule == spc.MR_RULE))
+    row = session.scalar(select(SpcSignal).where(SpcSignal.rule == spc.RANGE_RULE))
     assert row.what == spc.MR_WHAT
     # Both readings, in order, on the record the MES acted on, and the limits
     # the range was judged against rather than the individuals chart's.
@@ -269,7 +269,7 @@ def test_a_plant_that_turns_the_rule_on_gets_a_hold_naming_both_readings(session
     assert row.window["centre"] == pytest.approx(1.8 / 12, abs=0.0001)
 
     hold = [nc for nc in _spc_ncs(session)
-            if (nc.evidence or {}).get("rule") == spc.MR_RULE]
+            if (nc.evidence or {}).get("rule") == spc.RANGE_RULE]
     assert len(hold) == 1
     assert "rule 5" in hold[0].description
     assert "mean moving range" in hold[0].description
@@ -282,7 +282,7 @@ def test_judging_the_same_pair_of_readings_again_raises_nothing_new(session):
     _holds_on(session, "5")
     _record(session, QUIET)
     _record(session, [10.8])
-    rows = select(SpcSignal).where(SpcSignal.rule == spc.MR_RULE)
+    rows = select(SpcSignal).where(SpcSignal.rule == spc.RANGE_RULE)
     before = [row.window_key for row in session.scalars(rows)]
     assert len(before) == 1
     spec = session.scalar(select(QualitySpec).where(QualitySpec.characteristic == "brix"))

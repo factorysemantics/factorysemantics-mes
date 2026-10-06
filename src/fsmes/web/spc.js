@@ -329,7 +329,9 @@ async function load() {
   body.replaceChildren();
   /* Both halves' firings in one table, because a reader asking *what fired*
      is asking about the chart and not about one half of it. Each row says
-     which rule, and rule 5 is the moving-range one. */
+     which rule; rule 5 is the range one - the moving range below this chart,
+     or the sample range on a sampled characteristic - and each firing's own
+     words say which range it was. */
   const moving = data.moving_range;
   const fired = [...data.signals,
                  ...((moving && moving.signals) || []).map((s) => ({ ...s, mr: true }))];

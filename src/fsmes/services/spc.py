@@ -32,6 +32,15 @@ chart's limits widen until they stop meaning anything. The mean moving range
 was always here, because sigma is estimated from it; since 2026-10-06 the
 series it is the mean of is on the chart too, with its own centre line, its
 own upper limit (`D4_N2` times the mean moving range) and a rule of its own.
+
+**A range beyond its upper limit is rule 5, on either chart.** The moving
+range between two readings here, the spread inside one sample on a sampled
+chart - one statement about a process, so one rule number for it, drawn and
+recorded on every plant (decision 0036) and raising a hold where the plant's
+`hold_rules` names it. Two numbers for it, which is what this module briefly
+had, would have meant a plant asking to be called about a range having to say
+so twice and a reader counting how often it happened having to read two
+columns.
 """
 
 from __future__ import annotations
@@ -418,16 +427,27 @@ def _limits(series: Series) -> dict | None:
     }
 
 
-# ------------------------------------------------------- the moving-range half
+# ------------------------------------------------------------- the range rule
 
-#: The moving-range rule's number, and what it means in words. Rules 1 to 4
-#: judge the individuals chart; this one judges the gap between consecutive
-#: readings, which is the half of an IMR chart the individuals half cannot
-#: see. The numbering is the product's for the same reason theirs is: a plant
-#: that renumbered it would publish `SpcSignal.rule = 5` meaning something
-#: nobody else means by it.
-MR_RULE = 5
+#: The range rule's number. Rules 1 to 4 judge where the plotted point sat;
+#: this one judges the *range* beside it, and there is one of those on either
+#: kind of chart - the moving range between two readings on an individuals
+#: chart, the spread inside one sample on a sampled one. One rule, because it
+#: is one statement about a process: the range went beyond its own upper
+#: limit, so the sigma the limits beside it were computed from is in
+#: question. Two numbers for it would mean a plant that asked to hold on a
+#: range had to ask twice, and two columns of `SpcSignal.rule` to read when
+#: somebody counts how often it happens.
+#:
+#: The numbering is the product's, not a plant's, for the same reason 1 to 4
+#: are: a plant that renumbered it would publish `SpcSignal.rule = 5` meaning
+#: something nobody else means by it.
+RANGE_RULE = 5
+
+#: What rule 5 means in words, per chart. The rule is one; the sentence a
+#: person reads has to name the range they are looking at.
 MR_WHAT = "a moving range beyond its upper limit"
+SAMPLE_RANGE_WHAT = "a sample range beyond the upper range limit"
 
 
 def _moving_ranges(values: list[float]) -> list[float]:
@@ -453,7 +473,7 @@ def _moving_range_rule(ranges: list[float], upper: float) -> list[dict]:
     """
     if upper <= 0:
         return []
-    return [{"rule": MR_RULE, "index": i, "value": round(value, 4), "what": MR_WHAT}
+    return [{"rule": RANGE_RULE, "index": i, "value": round(value, 4), "what": MR_WHAT}
             for i, value in enumerate(ranges) if value > upper]
 
 
@@ -643,18 +663,12 @@ def chart(session: Session, material: str, characteristic: str,
         # chose, so a rule that fires and opens nothing is explained rather
         # than noticed: a screen that showed a firing with no hold and said
         # nothing about why is the chart lying by omission (decision 0036).
-        # The moving-range rule is the individuals chart's second half; a
-        # sampled chart's second half is the range chart and its signal is
-        # `RANGE_RULE`. Each kind names the rules it can actually draw.
-        "rules": ([RANGE_RULE, *(r for r in sorted(RULE_WINDOW) if r != MR_RULE)]
-                  if series.sampled else sorted(RULE_WINDOW)),
+        # Five rules on either kind of chart: 1 to 4 on the points, and rule
+        # 5 on the range beside them - the moving range here, the sample range
+        # on a sampled chart.
+        "rules": sorted(RULE_WINDOW),
         "hold_rules": list(hold_rules(session)),
         "major_rules": list(major_rules(session)),
-        # Signals this plant does not get to switch off. Empty on an
-        # individuals chart; the range signal on a sampled one, which always
-        # raises a hold because a range beyond its limit means the X-bar
-        # limits beside it are not true. Decision 0040.
-        "always_hold_rules": [RANGE_RULE] if series.sampled else [],
         # The numbers this plant judges by, beside the figures they judge.
         # The browser used to hold its own copy of the Cpk bar to pick the
         # verdict's colour, so a plant that moved the bar got a green figure
@@ -770,12 +784,16 @@ def chart(session: Session, material: str, characteristic: str,
 def _range_signals(series: Series, control: dict) -> list[dict]:
     """Each sample whose range is beyond the range chart's upper limit.
 
-    Its own signal, not one of the four, and the reason is arithmetic: the
-    four rules judge where the mean sat, and they judge it against limits
-    computed from the mean range. A sample whose five readings are spread
-    much wider than the rest has made those limits wider too, so the mean it
-    reports can look perfectly settled inside limits that the sample itself
-    inflated. The spread is the finding. Decision 0040.
+    Rule 5 on this kind of chart, and the reason it is a rule at all is
+    arithmetic: rules 1 to 4 judge where the mean sat, against limits computed
+    from the mean range. A sample whose five readings are spread much wider
+    than the rest has made those limits wider too, so the mean it reports can
+    look perfectly settled inside limits the sample itself inflated. The
+    spread is the finding.
+
+    The same rule number a moving range beyond its limit has on an
+    individuals chart: one statement about a process, one number for it. See
+    `RANGE_RULE`. Decision 0040.
     """
     if not series.sampled:
         return []
@@ -783,7 +801,7 @@ def _range_signals(series: Series, control: dict) -> list[dict]:
     if ceiling <= 0:
         return []
     return [{"rule": RANGE_RULE, "index": i, "value": round(spread, 4),
-             "what": "a sample range beyond the upper range limit"}
+             "what": SAMPLE_RANGE_WHAT}
             for i, spread in enumerate(series.ranges) if spread > ceiling]
 
 
@@ -824,14 +842,15 @@ def _acted_on(session: Session, spec: QualitySpec, signals: list[dict],
 def _holds(rule: int, holds_on: tuple[int, ...]) -> bool:
     """Whether this plant raises a hold on this signal.
 
-    The four Western Electric rules are the plant's to choose from. The range
-    signal is not on that list and always holds: limits computed from a mean
-    range that one sample inflated are not limits, and a chart that noticed
-    and told nobody is the thing decision 0027 exists to prevent. Whether a
-    plant should be able to switch it off is a question nobody has been asked
-    yet; when it is asked, it becomes a number on that list.
+    Every rule this product has, rule 5 among them, is on the list the plant
+    chooses from. The chart draws and records all five whatever that list says
+    - decision 0036 - and the list decides only which of them are worth
+    somebody's morning. A range beyond its limit used to hold on every plant,
+    whatever the list said; it does not any more, because one rule that
+    answered to nobody's configuration was a rule nobody could find when they
+    went looking for why their plant held.
     """
-    return rule in ALWAYS_HOLD or rule in holds_on
+    return rule in holds_on
 
 
 def _mr_acted_on(session: Session, spec: QualitySpec, signals: list[dict],
@@ -852,7 +871,7 @@ def _mr_acted_on(session: Session, spec: QualitySpec, signals: list[dict],
     keys = {_key(ids[s["index"]], ids[s["index"] + 1]) for s in signals}
     holds: dict[str, str | None] = {}
     for row in session.scalars(select(SpcSignal).where(
-            SpcSignal.spec_id == spec.id, SpcSignal.rule == MR_RULE,
+            SpcSignal.spec_id == spec.id, SpcSignal.rule == RANGE_RULE,
             SpcSignal.window_key.in_(keys))).all():
         nc = session.get(NonConformance, row.nonconformance_id) if row.nonconformance_id else None
         holds[row.window_key] = nc.code if nc else None
@@ -867,7 +886,7 @@ def _mr_acted_on(session: Session, spec: QualitySpec, signals: list[dict],
                     # Off by default (see `HOLD_RULES`), so on most plants this
                     # is False and the screen says why rather than leaving a
                     # firing that opened nothing to be noticed.
-                    "held": MR_RULE in holds_on})
+                    "held": RANGE_RULE in holds_on})
     return out
 
 
@@ -884,7 +903,7 @@ def _mr_verdict(moving: dict) -> str:
         return moving["note"]
     if moving["signals"]:
         ranges = len(moving["signals"])
-        return (f"out of control - rule {MR_RULE} fired on "
+        return (f"out of control - rule {RANGE_RULE} fired on "
                 f"{ranges} of {moving['n']} ranges. The process jumps further "
                 f"between consecutive readings than its own variation "
                 f"accounts for, and sigma on both charts is estimated from "
@@ -902,18 +921,22 @@ def _verdict(stable: bool, capability: dict | None, signals: list[dict],
     # and a verdict that read "in control and capable" about it.
     mr = ""
     if stable and moving and moving.get("signals"):
-        mr = (f" The moving range is not: rule {MR_RULE} fired on "
+        mr = (f" The moving range is not: rule {RANGE_RULE} fired on "
               f"{len(moving['signals'])} of {moving['n']} ranges, so the sigma "
               f"these limits come from is itself in question - read the moving "
               f"range first.")
     if not stable:
-        rules = sorted({s["rule"] for s in signals if s["rule"] != RANGE_RULE})
-        ranged = any(s["rule"] == RANGE_RULE for s in signals)
-        said = []
-        if rules:
-            said.append(f"rule(s) {', '.join(map(str, rules))} fired")
-        if ranged:
-            said.append("a sample range went beyond the range chart's limit")
+        rules = sorted({s["rule"] for s in signals})
+        said = [f"rule(s) {', '.join(map(str, rules))} fired"]
+        if RANGE_RULE in rules:
+            # Rule 5 here is a sample range: these are the points chart's
+            # signals, and an individuals chart's rule 5 is on the moving
+            # range below it and says so in its own sentence. Worth spelling
+            # out, because the limits beside it were computed from the mean
+            # range this sample has just inflated.
+            said.append("one of them is a sample range beyond the range "
+                        "chart's limit, so the limits it is judged against "
+                        "were widened by the sample itself")
         # The process is out of control whether or not this plant raises a
         # hold on the rule that said so. `hold_rules` decides who is called,
         # never what the chart concluded.
@@ -938,21 +961,11 @@ def _verdict(stable: bool, capability: dict | None, signals: list[dict],
 #: identifiable, so it is written down once and used by both the detector and
 #: the record.
 #:
-#: Rule 5 is the moving-range rule and its window is the two readings the
-#: range is the gap between - which is why it is two and not one.
-RULE_WINDOW = {1: 1, 2: 3, 3: 5, 4: 8, MR_RULE: 2}
-
-#: The range signal's number. Not one of the four Western Electric rules -
-#: those are the four, they are named on this plant's `[quality] hold_rules`
-#: list, and adding a fifth member to that vocabulary would mean every plant
-#: with a list written down suddenly had an opinion about something nobody
-#: asked them. Zero says *not one of the four*: a sample whose spread went
-#: beyond the range chart's upper limit, which only a sampled chart can have.
-#: Decision 0040.
-RANGE_RULE = 0
-
-#: Signals a plant does not choose about. See `_holds`.
-ALWAYS_HOLD = (RANGE_RULE,)
+#: Rule 5's entry is the individuals chart's answer: a moving range is the gap
+#: between two readings, so its window is those two. On a sampled chart the
+#: same rule judges the spread inside one sample, which is one point - see
+#: `_window_span`.
+RULE_WINDOW = {1: 1, 2: 3, 3: 5, 4: 8, RANGE_RULE: 2}
 
 #: The pseudo-tag a trigger watches to act on an SPC signal. No PLC publishes
 #: it; the MES raises it. See `fsmes.services.triggers.EVENT_TAGS`.
@@ -1032,9 +1045,26 @@ def _window_key(ids: list[int], index: int, rule: int, *, sampled: bool = False)
     silently swallowed as duplicates of old ones that happened to share a
     number.
     """
-    span = RULE_WINDOW.get(rule, 1)
+    span = _window_span(rule, sampled=sampled)
     first = ids[max(0, index - span + 1)]
     return _key(first, ids[index], sampled=sampled)
+
+
+def _window_span(rule: int, *, sampled: bool) -> int:
+    """How many plotted points a rule judges, on this kind of chart.
+
+    `RULE_WINDOW` is the individuals chart's answer and is right for rules 1
+    to 4 on either. Rule 5 is the one rule whose window depends on the chart:
+    a moving range is the gap *between two readings*, and a sample range is
+    the spread *inside one sample*. The rule means the same thing either way -
+    a range beyond its upper limit - but the points it judged are two on one
+    chart and one on the other, and the window is what goes into the record
+    and into the key. A flat two would record a sampled firing as though it
+    had judged the sample before it as well.
+    """
+    if sampled and rule == RANGE_RULE:
+        return 1
+    return RULE_WINDOW.get(rule, 1)
 
 
 def _key(first_id: int, last_id: int, *, sampled: bool = False) -> str:
@@ -1054,16 +1084,17 @@ def _description(material: str, spec: QualitySpec, signal: dict, control: dict,
                  n: int, *, sampled: bool = False) -> str:
     what = "samples" if sampled else "readings"
     if signal["rule"] == RANGE_RULE:
-        chart = control["range_chart"]
-        return (f"SPC range signal on {material}/{spec.characteristic}: {signal['what']} "
-                f"({signal['value']}{spec.unit} against mean range {chart['centre']}, "
-                f"upper range limit {chart['upper']} from {n} samples of "
-                f"{control['sample_size']})")
-    if signal["rule"] == MR_RULE:
-        # The moving-range chart's own limits, not the individuals chart's. A
-        # hold that quoted the individuals limits for a rule-5 firing would
-        # send a person to look at the wrong line.
-        return (f"SPC rule {MR_RULE} on {material}/{spec.characteristic}: {signal['what']} "
+        # One rule, two ranges. The hold has to name the range the person
+        # will go and look at, and the limits of the chart it was drawn on -
+        # a hold that quoted the points chart's limits for a rule-5 firing
+        # would send them to the wrong line.
+        if sampled:
+            chart = control["range_chart"]
+            return (f"SPC rule {RANGE_RULE} on {material}/{spec.characteristic}: "
+                    f"{signal['what']} ({signal['value']}{spec.unit} against mean range "
+                    f"{chart['centre']}, upper range limit {chart['upper']} from {n} "
+                    f"samples of {control['sample_size']})")
+        return (f"SPC rule {RANGE_RULE} on {material}/{spec.characteristic}: {signal['what']} "
                 f"({signal['value']}{spec.unit} between two consecutive readings, against a "
                 f"mean moving range of {control['centre']}{spec.unit} and an upper limit of "
                 f"{control['upper']}{spec.unit} from {n} readings)")
@@ -1177,7 +1208,7 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
     work: list[tuple[dict, str, QualityCheck, dict, dict]] = []
     for signal in signals:
         index = signal["index"]
-        span = RULE_WINDOW.get(signal["rule"], 1)
+        span = _window_span(signal["rule"], sampled=sampled)
         first = max(0, index - span + 1)
         work.append((signal,
                      _window_key(series.keys, index, signal["rule"], sampled=sampled),
@@ -1230,15 +1261,15 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
 
         nc = _hold_for(session, spec)
         if nc is None:
-            # A range signal is the kind of finding rule 1 is - a point
-            # outside a control limit - so it takes the severity this plant
-            # gives rule 1 rather than one this module invented.
-            major = (1 in majors) if signal["rule"] == RANGE_RULE else (signal["rule"] in majors)
+            # Rule 5's severity is on the plant's own `major_rules` list,
+            # the same as the other four. It used to borrow rule 1's, which
+            # meant a plant that wrote a major-rules list down still could
+            # not say what a range beyond its limit was worth.
             nc = quality.open_nc(
                 session,
                 description=_description(material, spec, signal, limits, n,
                                         sampled=sampled),
-                severity=MAJOR if major else MINOR,
+                severity=MAJOR if signal["rule"] in majors else MINOR,
                 work_order_code=_order_code(session, check),
                 actor=actor,
                 evidence={

@@ -59,17 +59,27 @@ in it. Five bottles whose individual values straddle three sigma and whose
 mean sits inside the limits fire nothing, which is the point: the process did
 not move.
 
-A sample range beyond `D4·R̄` is its own signal, and it is **not** a fifth
-Western Electric rule. The vocabulary of four rules, their windows and their
-numbering stay what decision
-[0036](0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md)
-fixed. The range signal is recorded as rule `0`, meaning *not one of the
-four*, and it always raises a hold whatever the plant holds on: limits built
-from a mean range that one inflated sample widened are not limits, so a plant
-that ignored it would be reading a chart it had quietly broken. The chart
-payload says so on every response — `always_hold_rules` — so nobody has to
-discover it. Whether a plant may choose otherwise is `spc_hold_rules`'
-business and a later change.
+A sample range beyond `D4·R̄` is its own signal: limits built from a mean
+range that one inflated sample widened are not limits, so a plant reading
+only the means would be reading a chart it had quietly broken.
+
+!!! warning "Amended the same day — the range signal is rule 5, and the plant chooses"
+
+    As first written this record recorded the range signal as rule `0`,
+    *not one of the four*, and held on it everywhere whatever
+    `spc_hold_rules` said. Hours later the IMR chart landed with **rule 5 —
+    a moving range beyond its upper limit** — and a product with two
+    numbers for *a range beyond its limit* would have been a product that
+    asked a plant to say so twice. **There is one definition: a range
+    beyond its upper limit is rule 5 on either chart** — the moving range
+    on an individuals chart, the sample range on a sampled one — drawn and
+    recorded on every plant per
+    [0036](0036-the-chart-draws-every-rule-the-plant-chooses-which-hold.md),
+    and raising a hold where the plant's `hold_rules` includes 5. Rule `0`
+    and `always_hold_rules` are gone. The bottling pack names rule 5 on its
+    own list, so `fill_height` there holds on a range as this record
+    intended; a plant that upgrades keeps rules 1 to 4 and sees rule-5
+    firings recorded, not held.
 
 ## Consequences
 Easier: a line that inspects several pieces at a time gets the chart it

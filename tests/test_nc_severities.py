@@ -444,7 +444,7 @@ def test_every_rule_is_drawn_and_recorded_whatever_the_plant_holds_on(
 
     # Rule 1 and the moving-range rule, both recorded, neither held: this
     # plant holds on nothing at all.
-    assert [s["rule"] for s in raised] == [1, spc.MR_RULE]
+    assert [s["rule"] for s in raised] == [1, spc.RANGE_RULE]
     assert all(s["nonconformance"] is None and s["held"] is False for s in raised)
     chart = spc.chart(session, "FG-COLA", "brix")
     # The chart reads the whole window, so it shows every firing in it - the

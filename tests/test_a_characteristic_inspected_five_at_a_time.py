@@ -20,7 +20,7 @@ Decision record 0040. Each test is named after the behaviour it pins.
 import pytest
 from sqlalchemy import select
 
-from fsmes.domain import NonConformance, QualityCheck, QualitySample
+from fsmes.domain import NonConformance, PlantSetting, QualityCheck, QualitySample, SpcSignal
 from fsmes.services import Invalid, WrongSampleSize, plant_settings, quality, spc
 
 # ------------------------------------------------------------- the fixture
@@ -352,12 +352,22 @@ def test_one_sample_is_one_look_at_the_process_and_at_most_one_hold(session):
     assert nc.evidence["values"] == sample_at(100.0)
 
 
-def test_a_sample_range_beyond_the_range_limit_is_its_own_signal(session):
-    """Not one of the four. The four judge where the mean sat, against limits
-    computed from the mean range - so a sample spread much wider than the
-    rest has widened those limits itself and can report a mean that looks
-    perfectly settled inside limits it inflated. The spread is the finding,
-    and this plant does not get to switch it off."""
+def test_a_sample_range_beyond_the_range_limit_is_rule_five(session):
+    """The four rules judge where the mean sat, against limits computed from
+    the mean range - so a sample spread much wider than the rest has widened
+    those limits itself and can report a mean that looks perfectly settled
+    inside limits it inflated. The spread is the finding.
+
+    It is **rule 5**, the number a range beyond its upper limit has on either
+    chart: the moving range between two readings on an individuals chart, the
+    spread inside one sample here. One statement about a process, one number
+    for it - a plant that wanted to be called about a range would otherwise
+    have had to say so twice.
+
+    Recorded on every plant whatever the plant holds on (decision 0036); the
+    hold is the plant's choice, and this plant has not made it, so the firing
+    is reported and reported as unheld.
+    """
     spec = _spec(session)
     _take(session, spec, TWELVE)
     _s, _c, _nc, signals = quality.record_sample(
@@ -365,12 +375,51 @@ def test_a_sample_range_beyond_the_range_limit_is_its_own_signal(session):
         values=[95.0, 105.0, 100.0, 100.0, 100.0], actor="test")
     session.flush()
 
-    assert [s["rule"] for s in signals] == [spc.RANGE_RULE]
+    assert [s["rule"] for s in signals] == [spc.RANGE_RULE] == [5]
     assert signals[0]["value"] == 10.0
-    assert signals[0]["nonconformance"] is not None, "always held, whatever the plant chose"
+    # The default plant holds on rules 1 to 4, so this one is drawn and
+    # recorded and calls nobody - and says so rather than leaving a reader to
+    # wonder whether anybody was told.
+    assert 5 not in spc.hold_rules(session)
+    assert signals[0]["held"] is False
+    assert signals[0]["nonconformance"] is None
+    assert session.scalar(select(SpcSignal).where(SpcSignal.rule == 5)) is not None, \
+        "recorded on every plant: decision 0036 is literal"
     chart = spc.chart(session, "FG-COLA", "fill_height")
-    assert chart["always_hold_rules"] == [0]
-    assert chart["rules"] == [0, 1, 2, 3, 4]
+    assert chart["rules"] == [1, 2, 3, 4, 5]
+    assert "always_hold_rules" not in chart, "no rule answers to nobody's list"
+
+
+def test_a_plant_that_holds_on_rule_five_holds_on_a_sample_range(session):
+    """The other half of the choice, and the one the bottling pack makes.
+
+    `hold_rules` naming 5 is a plant saying *call me about a range beyond its
+    limit*, and it means that on whichever chart the characteristic is on. The
+    hold is the same kind any other rule raises, and its evidence names the
+    sample and its five readings.
+    """
+    session.add(PlantSetting(section="quality", key="hold_rules",
+                             value="1,2,3,4,5", set_by="test"))
+    session.flush()
+    plant_settings.forget(session)
+    assert spc.hold_rules(session) == (1, 2, 3, 4, 5)
+
+    spec = _spec(session)
+    _take(session, spec, TWELVE)
+    _s, _c, _nc, signals = quality.record_sample(
+        session, material_code="FG-COLA", characteristic="fill_height",
+        values=[95.0, 105.0, 100.0, 100.0, 100.0], actor="test")
+    session.flush()
+
+    ranged = [s for s in signals if s["rule"] == spc.RANGE_RULE]
+    assert len(ranged) == 1
+    assert ranged[0]["held"] is True
+    nc = session.scalar(select(NonConformance).where(
+        NonConformance.code == ranged[0]["nonconformance"]))
+    assert nc is not None
+    assert "rule 5" in nc.description
+    assert nc.evidence["sample_size"] == 5
+    assert len(nc.evidence["readings"]) == 5
 
 
 def test_a_settled_run_of_samples_raises_nothing(session):

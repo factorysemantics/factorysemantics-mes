@@ -934,11 +934,12 @@ REGISTRY: tuple[Module, ...] = (
                 key="spc_hold_rules",
                 label="Which SPC rules raise a hold",
                 about="The chart draws and records every rule on every plant: the four "
-                      "Western Electric rules on the individuals half and rule 5, "
-                      "a moving range beyond its upper limit, on the moving-range "
-                      "half. Which of them open a non-conformance is this plant's. "
-                      "The four individuals rules do by default; rule 5 does not "
-                      "until a plant adds it (decision 0036).",
+                      "Western Electric rules on the points, and rule 5 - a range "
+                      "beyond its upper limit - on the range beside them, whichever "
+                      "chart this characteristic is on (the moving range between two "
+                      "readings, or the spread inside one sample). Which of them open "
+                      "a non-conformance is this plant's. The four do by default; "
+                      "rule 5 does not until a plant adds it (decision 0036).",
                 href="/dashboard/spc",
                 define="quality.define",
                 edit_here=True,

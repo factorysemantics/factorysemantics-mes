@@ -43,13 +43,14 @@ goes under Honesty with a migration line, so plant people can find it.
     one sample is one evaluation and at most one hold, and the evidence names
     the sample and every reading in it. Five readings that straddle three
     sigma individually and average inside the limits fire nothing.
-  - **A sample range beyond `D4·R̄` is its own signal and always raises a
-    hold**, on every plant, whatever `spc_hold_rules` says: the X-bar limits
-    beside it were computed from the average range, and one inflated sample
-    has just widened them. It is deliberately *not* a fifth Western Electric
-    rule — the vocabulary of four, their windows and their numbering are what
-    decision 0036 fixed — and is recorded as rule `0`, with
-    `always_hold_rules` on every chart response so nobody has to discover it.
+  - **A sample range beyond `D4·R̄` is a signal of its own** — the X-bar
+    limits beside it were computed from the average range, and one inflated
+    sample has just widened them. It is **rule 5**, the same rule number a
+    moving range beyond its limit gets on an individuals chart (see the IMR
+    entry above): one definition of *a range beyond its limit*, drawn and
+    recorded on every plant, raising a hold where the plant's
+    `spc_hold_rules` includes 5. The bottling lab pack names it on both its
+    rule lists, so `fill_height` there holds on a range and holds major.
   - `GET /quality/spc/...` now says `"kind"`: `imr` as before, or `xbar_r`,
     and carries `samples` beside the existing keys. `spc_min_points` counts
     samples on a sampled characteristic.
@@ -84,14 +85,17 @@ goes under Honesty with a migration line, so plant people can find it.
   two), in the same style and on the same timeline. The individuals chart does
   not move or shrink, and one SVG or PNG export takes both halves.
 
-  - **A gap beyond its upper limit is rule 5.** It is drawn, flagged and
-    recorded on every plant, like the other four - but it **raises no hold
-    unless a plant adds `5` to `[quality] hold_rules`**, and the shipped
-    default is still the four individuals rules. A plant that turns it on gets
-    the same kind of non-conformance, with the two readings either side of the
-    gap as its evidence. The screen's sentence about which rules this plant
-    holds on names it either way. See **Honesty** below for what an upgraded
-    plant will see in its records.
+  - **A gap beyond its upper limit is rule 5** - and so is a *sample* range
+    beyond its limit on a sampled chart, because it is one statement about a
+    process and this product gives it one number. Drawn, flagged and recorded
+    on every plant, like the other four, but it **raises no hold unless a
+    plant adds `5` to `[quality] hold_rules`**, and the shipped default is
+    still the four Western Electric rules. A plant that turns it on gets the
+    same kind of non-conformance, with the two readings either side of the gap
+    (or the sample, on a sampled chart) as its evidence, and its severity off
+    `[quality] major_rules` like any other rule's. The screen's sentence about
+    which rules this plant holds on names it either way. See **Honesty** below
+    for what an upgraded plant will see in its records.
   - **Clicking a dot on the lower chart opens the same panel** as the upper
     one, on the later of the gap's two readings - the dot says so in its
     tooltip and its label. The reading's own point on the moving-range half,
@@ -2357,6 +2361,18 @@ goes under Honesty with a migration line, so plant people can find it.
   `rule = 5` and a null `nonconformance_id`; no hold, no non-conformance and
   no count of open holds changes. A plant that wants the holds too adds `5`
   to `[quality] hold_rules`.
+
+  **Rule 5 is the same rule on a sampled chart**, where it is the sample
+  range rather than the moving range, and it is the plant's choice there too.
+  The X-bar and R work earlier in this release first recorded that signal as
+  rule `0` and held on it whatever the plant said; both changes are in this
+  one unreleased version, so no plant has ever received rule `0` and nothing
+  needs migrating. A database built from the development branch between the
+  two may hold `spc_signal` rows with `rule = 0`, and nothing rewrites them -
+  they are what that code recorded. The lab's bottling pack now names `5` on
+  `[quality] hold_rules` and `[quality] major_rules`, so a sample range
+  beyond its limit there raises the major hold it was meant to raise; any
+  other plant that wants that adds `5` the same way.
 
 - **Nothing is backfilled into the five new columns, and null is *not
   attributed*.** Every row written before this release keeps a null in
