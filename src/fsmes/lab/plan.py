@@ -37,6 +37,13 @@ The shape, in full:
     [floor]
     finish_orders = false
 
+    # The simulated planner, likewise. On by default wherever the pack asks
+    # for a depth: a plant that never runs out of work is what a plant looks
+    # like. A plan whose subject is one order and what the line does past it
+    # turns it off too, so the book it runs out of stays the one the pack
+    # wrote.
+    plan_orders = false
+
     # How often the run looks at the plant while the hour plays, in WALL
     # seconds. It is the resolution of every latency figure, and it is also
     # requests competing with the agent for one machine.
@@ -118,6 +125,7 @@ class Plan:
     #: the number for, and release the next in the book? True everywhere but
     #: in a plan whose subject is the over-run itself.
     floor_finishes_orders: bool = True
+    floor_plans_orders: bool = True
     watch_every_s: float = DEFAULT_WATCH_EVERY_S
 
     @property
@@ -219,13 +227,15 @@ def read_plan(path: Path) -> Plan:
 
     floor = _table(raw, "floor", str(path))
     for key in floor:
-        if key != "finish_orders":
+        if key not in ("finish_orders", "plan_orders"):
             raise PlanError(
                 f"{path}: `[floor] {key}` is not a setting. A plan chooses `finish_orders` - "
                 "whether the simulated shift supervisor finishes an order once the line has "
-                "made its quantity and releases the next one in the book.")
-    if "finish_orders" in floor and not isinstance(floor["finish_orders"], bool):
-        raise PlanError(f"{path}: `[floor] finish_orders` is true or false.")
+                "made its quantity and releases the next one in the book - and `plan_orders` "
+                "- whether the simulated planner keeps the book topped up behind it.")
+    for key in ("finish_orders", "plan_orders"):
+        if key in floor and not isinstance(floor[key], bool):
+            raise PlanError(f"{path}: `[floor] {key}` is true or false.")
 
     watch = _table(raw, "watch", str(path))
     for key in watch:
@@ -266,6 +276,7 @@ def read_plan(path: Path) -> Plan:
         seed=seed,
         overlay={str(k): dict(v) for k, v in overlay.items()},
         floor_finishes_orders=bool(floor.get("finish_orders", True)),
+        floor_plans_orders=bool(floor.get("plan_orders", True)),
         scenario=scenario,
         init=init,
         note=str(raw.get("note") or ""),

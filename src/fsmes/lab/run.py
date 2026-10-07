@@ -372,9 +372,12 @@ def floor_env(plan: Plan) -> dict[str, str]:
     On unless the plan says otherwise. A plan whose subject is the over-run
     itself (`labs/experiments/over-run.toml`) turns it off in writing, so the
     line running past its order is the scenario rather than something nobody
-    got round to.
+    got round to. `MES_OPS_PLAN_ORDERS` is the same switch for the planner:
+    a plan that wants the book to run out keeps the planner from refilling it,
+    whatever depth the pack it loads asks for.
     """
-    return {"MES_OPS_FINISH_ORDERS": "true" if plan.floor_finishes_orders else "false"}
+    return {"MES_OPS_FINISH_ORDERS": "true" if plan.floor_finishes_orders else "false",
+            "MES_OPS_PLAN_ORDERS": "true" if plan.floor_plans_orders else "false"}
 
 
 def export_feedback(results: Path, scores: dict, echo=print) -> list[dict]:

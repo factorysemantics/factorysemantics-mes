@@ -58,6 +58,17 @@ measure = ["booking"]
 [floor]
 finish_orders = false
 
+# And nobody plans behind the line either, for the same reason. Since
+# 2026-10-07 the simulated floor has a production planner who keeps the book
+# topped up to the pack's `planning.keep_planned`, and the bottling pack this
+# plan loads asks for three. That would put new orders into the book during
+# the hour - none of them released, so none of them changes what the line
+# makes, but the orders table this plan tells a reader to look at first would
+# fill up with orders the plan never mentioned. The pack is right to ask for
+# a planner and this plan is right not to have one, so it is turned off here
+# in writing rather than taken out of the pack.
+plan_orders = false
+
 # An empty script, deliberately. The line's own hour has a changeover in it,
 # which would move production onto a second order the MES was never told about
 # and split the very number this plan exists to look at. Nothing goes wrong
@@ -70,4 +81,5 @@ events = []
 # subject of this plan, and it arrives with the pack rather than from a script
 # the plan names - which is why the plan does not name one. The pack now
 # carries nine more orders behind it, all planned and none released; with
-# `finish_orders = false` above, not one of them is touched during this hour.
+# `finish_orders = false` and `plan_orders = false` above, not one of them is
+# touched during this hour and no tenth is added.

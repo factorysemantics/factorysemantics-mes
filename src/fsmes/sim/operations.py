@@ -1388,7 +1388,8 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
               seed: int = 0, user: str = "FLOOR-SIM", password: str = "operator",
               supervisor: str = "FLOOR-SUP", supervisor_password: str = "supervisor",
               planner: str = "FLOOR-PLAN", planner_password: str = "planner",
-              inspect_all: bool = False, finish_orders: bool = True) -> None:
+              inspect_all: bool = False, finish_orders: bool = True,
+              plan_orders: bool = True) -> None:
     """Generate shop-floor activity until stopped.
 
     Three identities, because the plant has three: the floor (an operator)
@@ -1411,7 +1412,11 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
     this existed.
 
     `finish_orders` is False for a scripted over-run, where nobody stopping
-    the line is the whole point.
+    the line is the whole point. `plan_orders` is False for the same reason
+    and in the same place: a plan whose subject is one order and what the line
+    does past it needs the book it runs out of to stay the one the pack wrote,
+    whatever depth that pack asks to keep. The pack is not edited for it - the
+    plan says so in writing, as it already does for the supervisor.
 
     `watch_every` is how often the floor looks at the machines to see what
     has stopped and what has come back - the look that lets it name a stop
@@ -1427,6 +1432,14 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
     script = measurement.load(settings.floor_script_file)
 
     keep = keep_planned(script)
+    if keep > 0 and not plan_orders:
+        # A plan has turned the planner off although this pack asks for a
+        # depth - `labs/experiments/over-run.toml`, whose whole subject is a
+        # book running out. Say which it was, so a reader of the log is not
+        # left wondering why the pack's number did nothing.
+        log.info("the planner is off for this run; the pack's book will not be "
+                 "topped up", keep_planned=keep, plan_orders=False)
+        keep = 0
 
     async with httpx.AsyncClient(base_url=base, timeout=20.0) as client, \
             httpx.AsyncClient(base_url=base, timeout=20.0) as sup_client, \
@@ -1462,7 +1475,8 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
                 # A plant initialised before the planner account existed - every
                 # lab plant built before 2026-10-07. Say so once, and run exactly
                 # as this did before there was a planner: the book empties and
-                # the floor says so. A `fsmes migrate` adds the account.
+                # the floor says so. `fsmes plant <name> migrate` adds the
+                # account.
                 log.warning("no planner account; the order book will not be topped up "
                             "and will empty when the pack's orders are done",
                             user=planner, keep_planned=keep, error=str(exc)[:120])

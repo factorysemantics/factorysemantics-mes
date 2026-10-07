@@ -2492,6 +2492,10 @@ def run_operations(
         os.environ.get("MES_OPS_FINISH_ORDERS", "true").lower() != "false",
         help="Finish an order once the line has made its quantity, and release the next one "
              "in the book (MES_OPS_FINISH_ORDERS). Off for a scripted over-run."),
+    plan_orders: bool = typer.Option(
+        os.environ.get("MES_OPS_PLAN_ORDERS", "true").lower() != "false",
+        help="Let the planner keep the book topped up to the pack's `planning.keep_planned` "
+             "(MES_OPS_PLAN_ORDERS). Off for a plan whose subject is a book running out."),
     seed: int = typer.Option(0, help="Deterministic activity."),
 ) -> None:
     """Generate the shop-floor activity a PLC never reports.
@@ -2546,6 +2550,7 @@ def run_operations(
                            plan_every=plan_every,
                            speed=speed, seed=seed, inspect_all=inspect_all,
                            finish_orders=finish_orders,
+                           plan_orders=plan_orders,
                            password=settings.operator_password))
 
 
