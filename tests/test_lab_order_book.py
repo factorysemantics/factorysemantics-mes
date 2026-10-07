@@ -37,7 +37,7 @@ from fsmes.domain import AuditLog, OrderStatus, ProductionSource, WorkOrder
 from fsmes.integrations.opc.tag_map import load_tag_map
 from fsmes.pack import masterdata
 from fsmes.services import auth, execution
-from fsmes.sim.operations import Floor
+from fsmes.sim.operations import Floor, keep_planned
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKS = ROOT / "labs" / "multiplant"
@@ -48,6 +48,8 @@ STATIONS = ("LD01", "RD01", "WASH01", "QI01", "FILL01", "PAL01")
 
 SUPERVISOR = "FLOOR-SUP"
 SUPERVISOR_PASSWORD = "supervisor"
+PLANNER = "FLOOR-PLAN"
+PLANNER_PASSWORD = "planner"
 
 
 # ----------------------------------------------------------------- the plant
@@ -93,6 +95,8 @@ def plant(tmp_path, monkeypatch):
     auth.ensure_builtin_roles(session)
     auth.create_user(session, code=SUPERVISOR, name="Simulated shift supervisor",
                      password=SUPERVISOR_PASSWORD, role="supervisor")
+    auth.create_user(session, code=PLANNER, name="Simulated production planner",
+                     password=PLANNER_PASSWORD, role="planner")
     session.commit()
 
     yield session
@@ -110,10 +114,25 @@ def as_the_supervisor(session: Session, work) -> None:
     the real routers, the real sign-in, and nothing listening on a port for the
     test to leave behind.
     """
+    signed_in_as(session, SUPERVISOR, SUPERVISOR_PASSWORD, work)
+
+
+def as_the_planner(session: Session, work) -> None:
+    """The same, as `FLOOR-PLAN`.
+
+    A separate sign-in and not a flag, because the point of the planner is
+    that it is a different person holding a different bundle: it may put an
+    order in the book and it may not release one, and a test that ran its work
+    on the supervisor's token would prove nothing about either.
+    """
+    signed_in_as(session, PLANNER, PLANNER_PASSWORD, work)
+
+
+def signed_in_as(session: Session, code: str, password: str, work) -> None:
 
     async def _go():
         floor = Floor(get_settings(), client, random.Random(7))
-        await floor.sign_in(SUPERVISOR, SUPERVISOR_PASSWORD)
+        await floor.sign_in(code, password)
         await work(floor)
 
     session.commit()
@@ -341,3 +360,215 @@ def test_when_the_book_runs_out_the_floor_says_so_once_and_invents_nothing(plant
     assert len(said) == 1, f"the empty book was announced {len(said)} times"
     assert len(plant.scalars(select(WorkOrder)).all()) == len(before), (
         "the floor invented an order rather than say the book was empty")
+
+
+# ----------------------------------------------------------- the planner
+
+
+def every_order_but(session: Session, keep_planned: int) -> None:
+    """Run the pack's book down to `keep_planned` planned orders.
+
+    Which is where every lab plant ends up: bottling's ten orders were all
+    finished by 2026-10-07 04:21 UTC, forty-three hours after it was built.
+    The finished ones stay in the book, because what a plant has made is
+    still the pattern of what it makes.
+    """
+    planned = [row for row in session.scalars(select(WorkOrder)).all()
+               if row.status is OrderStatus.PLANNED]
+    for row in sorted(planned, key=lambda r: r.code)[:len(planned) - keep_planned]:
+        row.status = OrderStatus.COMPLETED
+    session.commit()
+
+
+def planned_codes(session: Session) -> list[str]:
+    return sorted(row.code for row in session.scalars(select(WorkOrder)).all()
+                  if row.status is OrderStatus.PLANNED)
+
+
+def test_the_planner_plans_nothing_when_the_pack_has_not_asked_for_one(plant):
+    """Zero is the default, and zero means the plant behaves exactly as before.
+
+    The scripted over-run experiment depends on this: a plant whose book is
+    meant to run out must be allowed to run out.
+    """
+    assert keep_planned({}) == 0, "a pack that says nothing got a planner"
+    assert keep_planned({"planning": {}}) == 0
+    every_order_but(plant, 0)
+    before = {row.code for row in plant.scalars(select(WorkOrder)).all()}
+
+    async def work(floor: Floor) -> None:
+        assert await floor.plan_the_book(0) == []
+
+    as_the_planner(plant, work)
+
+    assert {row.code for row in plant.scalars(select(WorkOrder)).all()} == before
+
+
+def test_the_planner_keeps_the_book_as_deep_as_the_pack_asked(plant):
+    """Three planned orders behind the line, which is what bottling's pack says."""
+    assert keep_planned(json.loads(
+        (BOTTLING / "floor.json").read_text(encoding="utf-8"))) == 3
+    every_order_but(plant, 0)
+    assert planned_codes(plant) == []
+
+    async def work(floor: Floor) -> None:
+        await floor.plan_the_book(3)
+
+    as_the_planner(plant, work)
+
+    assert planned_codes(plant) == ["WO-ACME-4721", "WO-ACME-4722", "WO-ACME-4723"], (
+        "the planner did not continue this plant's own sequence to the depth asked")
+
+
+def test_the_planner_tops_the_book_up_rather_than_planning_a_fresh_three(plant):
+    """One planned order and a depth of three is two more, not three."""
+    every_order_but(plant, 1)
+    had = planned_codes(plant)
+    assert len(had) == 1
+
+    async def work(floor: Floor) -> None:
+        await floor.plan_the_book(3)
+
+    as_the_planner(plant, work)
+
+    after = planned_codes(plant)
+    assert len(after) == 3, f"the book is {len(after)} deep, not three"
+    assert had[0] in after, "the planner replaced the order that was already waiting"
+
+
+def test_the_planner_never_reuses_an_order_code(plant):
+    """Four passes, and every code the plant has ever held is still unique.
+
+    A planner that counted from a number it held in memory rather than from
+    the book would collide with itself the first time the floor restarted.
+    Each pass here signs in again, which is a restart.
+    """
+    every_order_but(plant, 0)
+
+    async def work(floor: Floor) -> None:
+        await floor.plan_the_book(2)
+
+    for _pass in range(4):
+        as_the_planner(plant, work)
+        # Whatever is planned goes onto the line, so the next pass has to plan
+        # two more rather than find its own two still waiting.
+        for row in plant.scalars(select(WorkOrder)).all():
+            if row.status is OrderStatus.PLANNED:
+                row.status = OrderStatus.COMPLETED
+        plant.commit()
+
+    codes = [row.code for row in plant.scalars(select(WorkOrder)).all()]
+    assert len(codes) == len(set(codes)), "the planner reused a code"
+    assert len(codes) == 10 + 8, f"{len(codes) - 10} orders were planned, not eight"
+
+
+def test_a_planned_order_copies_this_plants_own_book_and_nothing_else(plant):
+    """The book is the pattern of what this plant makes - nothing is invented.
+
+    Material, quantity and priority all come back out of the plant's own
+    orders, read over the API. The floor never opens a pack file.
+    """
+    book = json.loads((BOTTLING / "masterdata" / "work_orders.json").read_text(encoding="utf-8"))
+    known = {(row["material"], float(row["quantity"]), int(row["priority"])) for row in book}
+    every_order_but(plant, 0)
+
+    async def work(floor: Floor) -> None:
+        await floor.plan_the_book(4)
+
+    as_the_planner(plant, work)
+
+    fresh = [row for row in plant.scalars(select(WorkOrder)).all()
+             if row.status is OrderStatus.PLANNED]
+    assert len(fresh) == 4
+    for row in fresh:
+        assert (row.material.code, float(row.quantity), int(row.priority)) in known, (
+            f"{row.code} is for {row.quantity} of {row.material.code} at priority "
+            f"{row.priority}, which this plant has never made")
+        assert row.due_date is not None, f"{row.code} was planned with no due date"
+    dues = sorted(row.due_date for row in fresh)
+    assert dues == [row.due_date for row in sorted(fresh, key=lambda r: r.code)], (
+        "the planned orders are not due in the order they were planned")
+
+
+def test_the_planner_plans_and_does_not_release(plant):
+    """Releasing stays the supervisor's act, so the sequence is a real plant's.
+
+    Not a matter of restraint: `FLOOR-PLAN` holds `orders.create` and does not
+    hold `orders.release`, so the plant itself would refuse.
+    """
+    every_order_but(plant, 0)
+
+    async def work(floor: Floor) -> None:
+        await floor.plan_the_book(2)
+        refused = await floor.post("/workorders/WO-ACME-4721/release")
+        assert refused.status_code == 403, (
+            f"the planner released an order; the plant answered {refused.status_code}")
+
+    as_the_planner(plant, work)
+
+    fresh = [row for row in plant.scalars(select(WorkOrder)).all()
+             if row.code in ("WO-ACME-4721", "WO-ACME-4722")]
+    assert len(fresh) == 2
+    assert {row.status for row in fresh} == {OrderStatus.PLANNED}
+
+
+def test_the_audit_names_the_simulated_planner_and_not_the_mes(plant):
+    """Who put this order in the book has to survive in the record.
+
+    A simulated plant where an order appeared with `system` against it would
+    read, a month later, as the MES having invented production - which is the
+    one thing this product says it never does (decision 0019).
+    """
+    every_order_but(plant, 0)
+
+    async def work(floor: Floor) -> None:
+        await floor.plan_the_book(1)
+
+    as_the_planner(plant, work)
+
+    rows = plant.scalars(
+        select(AuditLog).where(AuditLog.entity_id == "WO-ACME-4721")).all()
+    by_action = {r.action: r.actor for r in rows}
+    assert by_action.get("workorder.created") == PLANNER, (
+        f"the order was created by {by_action.get('workorder.created')!r}")
+
+
+def test_a_plant_whose_book_has_never_held_an_order_plans_nothing_and_says_so(plant):
+    """There is no default order. What a plant makes is not a simulator's to know.
+
+    The honest answer to an empty book on a plant with no pattern in it is to
+    say the pattern is missing - once - and plan nothing, rather than invent a
+    first order of some plausible size.
+    """
+    import structlog
+
+    for row in plant.scalars(select(WorkOrder)).all():
+        plant.delete(row)
+    plant.commit()
+
+    async def work(floor: Floor) -> None:
+        await floor.plan_the_book(3)
+        await floor.plan_the_book(3)
+        await floor.plan_the_book(3)
+
+    with structlog.testing.capture_logs() as captured:
+        as_the_planner(plant, work)
+    said = [row for row in captured
+            if row.get("event", "").startswith("nothing in this plant's book")]
+
+    assert len(said) == 1, f"the missing pattern was announced {len(said)} times"
+    assert plant.scalars(select(WorkOrder)).all() == [], (
+        "the planner invented an order for a plant with no book at all")
+
+
+@pytest.mark.parametrize("pack", ["bottling", "machining", "finewire"])
+def test_every_shipped_lab_pack_asks_for_a_planner(pack):
+    """The three lab plants run for weeks, so all three name a depth.
+
+    A pack is the only place this can be said: how much work a plant keeps in
+    hand is the plant's, not the product's, and the product's own default is
+    no planner at all.
+    """
+    script = json.loads((PACKS / pack / "floor.json").read_text(encoding="utf-8"))
+    assert keep_planned(script) >= 2, f"{pack} keeps {keep_planned(script)} orders planned"
+    assert script["planning"].get("_why"), f"{pack}'s planning block says why it is there"

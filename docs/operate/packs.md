@@ -49,7 +49,7 @@ Every key is enumerated in `fsmes.pack.format`, and **an unknown key is an error
 | `[inbound]` | `mapping`, `sql`, `mqtt_mode` | What other systems tell this plant |
 | `[quality]` | `hold_rules`, `major_rules`, `cpk_capable`, `cpk_marginal`, `spc_min_points`, `spc_history`, `gauge_ratio_adequate`, `gauge_ratio_floor`, `gauge_default_interval_days`, `coa_serials_listed`, `serial_digits`, `nc_code_prefix`, `containment_max_depth` | [This plant's own quality numbers](quality-numbers.md) — every one ships the value that was in the product's source, so a plant that writes none of them behaves exactly as it does now |
 | `[oee]` | `coverage_floor` | How much of a window this MES must have watched before it reports a KPI for it, between 0 and 1. Leave it out and nothing is withheld — see [how much of the window did the MES see](coverage.md) |
-| `[floor]` | `inspect_every`, `issue_every`, `inspect_all` | A simulated plant's own cadence |
+| `[floor]` | `inspect_every`, `issue_every`, `inspect_all`, `plan_every` | A simulated plant's own cadence. `plan_every` is how often the simulated planner looks at the order book; **how deep it keeps it is `planning.keep_planned` in the floor script, and that is 0 — no planner at all — unless the script says otherwise**, so this cadence does nothing on its own |
 | `[[accounts]]` | `code`, `name`, `role`, `password_env` | Accounts `pack apply` creates, from passwords the environment holds |
 
 Everything a person writes lives **inside** the pack directory, by relative path. The one exception is `[files] replay_dir`: generated line data, often shared between plants replaying one line and often enormous, so it may point outward and it is not part of the pack's fingerprint.
@@ -161,6 +161,8 @@ A severity code is two to **twenty** characters — it is stored on every non-co
 **Size it against the line.** The slowest station in the pack's own `tag_map.json` sets the rate: 3,600 ÷ its `cycle_seconds` is units an hour. The three lab packs hold more than twenty-four hours of their own line's rated output, and each says its arithmetic in its `masterdata/README.md`. A book of one order is how a lab plant came to report an order 70× over on 2026-09-18 — correctly, and uselessly.
 
 Nothing in the MES releases the next order. On a plant that simulates, `fsmes run-operations` does it as the shift supervisor would; on a real plant it is a person or the ERP.
+
+**And nothing in the MES plans one either.** A pack's book is finite, so a simulated plant left up for a week finishes it: bottling's lab plant finished the last of its ten orders at 04:21 UTC on 2026-10-07, forty-three hours after it was built, and measured into no order at all from then on — no queue on the station page, an empty characteristic dropdown, every quality check with no order against it. A pack that wants to go on having work says so with `planning.keep_planned` in its floor script, and a simulated production planner (`FLOOR-PLAN`, which holds `orders.create` and `plant.read` and nothing else) keeps the book that deep by copying what the plant already makes. **The default is 0, which is no planner**: a pack that says nothing behaves exactly as it did before this existed, which is what the scripted over-run experiment depends on. The planner never releases what it plans — that stays the supervisor's — so the sequence is a real plant's: planner, then supervisor, then floor.
 
 ### What the simulated floor does
 

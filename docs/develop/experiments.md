@@ -65,6 +65,13 @@ claude = false
 # accident of cadence. `labs/experiments/over-run.toml` is the one that does.
 [floor]
 finish_orders = false
+
+# The simulated production planner, the same way. On wherever the pack asks
+# for a depth (`planning.keep_planned` in its floor script). Turn it off for a
+# plan whose subject is a book running out, so the book stays the one the pack
+# wrote instead of being topped up behind the line. `over-run.toml` turns both
+# off, and says why in the file.
+plan_orders = false
 ```
 
 `duration`, `seed` and `speed` are the whole of the determinism story: **the

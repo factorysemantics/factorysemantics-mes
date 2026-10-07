@@ -2481,12 +2481,21 @@ def run_operations(
                                       help="Seconds between looks at what has stopped and "
                                            "what has come back, which is how a stop gets "
                                            "named afterwards (MES_OPS_WATCH_EVERY)."),
+    plan_every: float = typer.Option(float(os.environ.get("MES_OPS_PLAN_EVERY", "60")),
+                                     help="Seconds between the planner's looks at the order "
+                                          "book (MES_OPS_PLAN_EVERY). How deep it keeps the "
+                                          "book is the pack's `planning.keep_planned`, which "
+                                          "is 0 - no planner - unless a pack says otherwise."),
     inspect_all: bool = typer.Option(os.environ.get("MES_OPS_INSPECT_ALL", "false").lower() == "true",
                                      help="Record every specification each pass, not one (MES_OPS_INSPECT_ALL)."),
     finish_orders: bool = typer.Option(
         os.environ.get("MES_OPS_FINISH_ORDERS", "true").lower() != "false",
         help="Finish an order once the line has made its quantity, and release the next one "
              "in the book (MES_OPS_FINISH_ORDERS). Off for a scripted over-run."),
+    plan_orders: bool = typer.Option(
+        os.environ.get("MES_OPS_PLAN_ORDERS", "true").lower() != "false",
+        help="Let the planner keep the book topped up to the pack's `planning.keep_planned` "
+             "(MES_OPS_PLAN_ORDERS). Off for a plan whose subject is a book running out."),
     seed: int = typer.Option(0, help="Deterministic activity."),
 ) -> None:
     """Generate the shop-floor activity a PLC never reports.
@@ -2510,6 +2519,12 @@ def run_operations(
     It never invents an order. Decision 0029 is untouched: the MES still does
     not finish an order at its quantity. What finishes one here is the
     simulated shift supervisor, and the audit trail says so.
+
+    A pack that asks for one also gets a simulated production planner, who
+    keeps `planning.keep_planned` orders in the book by copying what the plant
+    already makes. That is not the floor inventing production either - it is
+    the person a plant with no ERP does not have, and the order it writes is
+    planned, never released: the supervisor still puts it on the line.
     """
     import asyncio as _asyncio
 
@@ -2527,10 +2542,15 @@ def run_operations(
         # fast, and a floor still looking every fifteen real seconds would
         # miss every one of them.
         watch_every = watch_every / speed
+        # The planner's look too: a plant replaying a day in an hour burns
+        # through its book twenty-four times as fast.
+        plan_every = plan_every / speed
     _asyncio.run(run_floor(settings, inspect_every=inspect_every,
                            issue_every=issue_every, watch_every=watch_every,
+                           plan_every=plan_every,
                            speed=speed, seed=seed, inspect_all=inspect_all,
                            finish_orders=finish_orders,
+                           plan_orders=plan_orders,
                            password=settings.operator_password))
 
 

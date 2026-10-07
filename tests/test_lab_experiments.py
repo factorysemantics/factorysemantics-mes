@@ -610,7 +610,9 @@ def test_a_plan_leaves_the_supervisor_working_the_order_book_unless_it_says_othe
     _pack(tmp_path / "tiny")
     plan = read_plan(_plan_file(tmp_path, 'packs = ["tiny"]\n'))
     assert plan.floor_finishes_orders is True
-    assert floor_env(plan) == {"MES_OPS_FINISH_ORDERS": "true"}
+    assert plan.floor_plans_orders is True
+    assert floor_env(plan) == {"MES_OPS_FINISH_ORDERS": "true",
+                               "MES_OPS_PLAN_ORDERS": "true"}
 
 
 def test_a_plan_can_say_that_nobody_finishes_this_runs_order(tmp_path):
@@ -622,7 +624,8 @@ def test_a_plan_can_say_that_nobody_finishes_this_runs_order(tmp_path):
     _pack(tmp_path / "tiny")
     plan = read_plan(_plan_file(tmp_path, 'packs = ["tiny"]\n\n[floor]\nfinish_orders = false\n'))
     assert plan.floor_finishes_orders is False
-    assert floor_env(plan) == {"MES_OPS_FINISH_ORDERS": "false"}
+    assert floor_env(plan) == {"MES_OPS_FINISH_ORDERS": "false",
+                               "MES_OPS_PLAN_ORDERS": "true"}
 
 
 def test_a_setting_the_floor_does_not_have_is_refused_with_the_one_it_does(tmp_path):
@@ -640,3 +643,27 @@ def test_the_over_run_experiment_is_the_one_that_turns_the_supervisor_off():
     plan = read_plan(Path(__file__).resolve().parents[1]
                      / "labs" / "experiments" / "over-run.toml")
     assert plan.floor_finishes_orders is False
+
+
+def test_a_plan_can_say_that_nobody_plans_behind_this_runs_line(tmp_path):
+    """The planner is on wherever the pack asks for a depth, so a plan whose
+    subject is a book running out has to be able to say no - otherwise the
+    only way to run that experiment would be to edit the pack it loads, and
+    the pack is not wrong."""
+    from fsmes.lab.run import floor_env
+
+    _pack(tmp_path / "tiny")
+    plan = read_plan(_plan_file(tmp_path, 'packs = ["tiny"]\n\n[floor]\nplan_orders = false\n'))
+    assert plan.floor_plans_orders is False
+    assert floor_env(plan) == {"MES_OPS_FINISH_ORDERS": "true",
+                               "MES_OPS_PLAN_ORDERS": "false"}
+
+
+def test_the_over_run_experiment_turns_the_planner_off_as_well():
+    """Read from the shipped plan. The bottling pack it loads asks to keep
+    three orders planned; without this line the planner would put orders into
+    the book all through the hour and the orders table the plan tells a reader
+    to look at first would carry orders the plan never mentioned."""
+    plan = read_plan(Path(__file__).resolve().parents[1]
+                     / "labs" / "experiments" / "over-run.toml")
+    assert plan.floor_plans_orders is False

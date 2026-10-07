@@ -107,6 +107,12 @@ _OPERATOR = (
 #: later release must not silently reach a role whose whole claim is that it
 #: holds two.
 _ANALYST = ("plant.read", "audit.read")
+#: The production planner's bundle: see the plant, and put an order in the
+#: book. Deliberately not the operator's: a planner plans, and releasing an
+#: order to the floor is the supervisor's act, so `orders.release` is not
+#: here. The old ladder could not express this either - anyone who could
+#: create an order could also release it, book against it and close it.
+_PLANNER = ("plant.read", "orders.create")
 _SUPERVISOR = (*_OPERATOR, "orders.close", "quality.close_nc", "audit.read",
                "documents.write", "triggers.write", "adjustments.propose")
 _ADMIN = (*_SUPERVISOR, "masterdata.write", "users.manage",
@@ -182,6 +188,23 @@ BUILTIN_ROLES: dict[str, dict] = {
             "other than an analyst."
         ),
         "capabilities": list(_ANALYST),
+    },
+    # The production planner's role. In a real plant the orders come from a
+    # planner or from the ERP, and this is that person expressed as a bundle:
+    # read the plant, put an order in the book, and nothing else. It is the
+    # second-narrowest role in the product, and it is narrow on purpose -
+    # `orders.release` is the supervisor's, so a plant whose orders arrive
+    # this way still has the sequence planner -> supervisor -> floor that a
+    # real plant has, and the audit trail says which of the three acted.
+    "planner": {
+        "name": "Planner",
+        "description": (
+            "Plan work: create work orders and read the plant. Cannot release "
+            "an order to the floor, book against one or close one - planning "
+            "and running are two acts, and a plant whose planner could do "
+            "both has no sequence left to audit."
+        ),
+        "capabilities": list(_PLANNER),
     },
     "quality_inspector": {
         "name": "Quality Inspector",
