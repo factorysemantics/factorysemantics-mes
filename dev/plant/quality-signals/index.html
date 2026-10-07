@@ -843,6 +843,28 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#the-rest-of-the-line-and-what-it-is-not" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The rest of the line, and what it is not
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-panel-opens-short" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The panel opens short
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#on-a-sampled-chart-the-dot-is-an-average-so-the-panel-opens-all-five" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4178,6 +4200,28 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#the-rest-of-the-line-and-what-it-is-not" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The rest of the line, and what it is not
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-panel-opens-short" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The panel opens short
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#on-a-sampled-chart-the-dot-is-an-average-so-the-panel-opens-all-five" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4433,6 +4477,10 @@ record, and nothing on it is guessed.</p>
 <td>The state at that instant and what it had just come out of, with the seconds between — plus the state timeline, every stretch it was not running, and each stop's reason or the word <em>unlabelled</em></td>
 </tr>
 <tr>
+<td>What was the rest of the line doing?</td>
+<td>Every other station under the same parent as this one, in this material's routing order where the routing names it, with each stop and changeover <strong>in this reading's own window</strong> — named, timed against the reading (<em>ended 3 min before this sample</em>), and linking to that station's page</td>
+</tr>
+<tr>
 <td>What were the process values doing?</td>
 <td>This station's analogs over the ten minutes before and the two after, as small charts, each with the reading's own time marked on it</td>
 </tr>
@@ -4451,6 +4499,31 @@ silence: a stale value is not a steady one, and telling those two apart is most
 of why this panel is worth having.</p>
 <p>A keyboard reaches it: tab to a reading and press Enter, or use the <strong>Open a
 reading</strong> button, which opens the newest reading a rule fired on.</p>
+<h3 id="the-rest-of-the-line-and-what-it-is-not">The rest of the line, and what it is not<a class="headerlink" href="#the-rest-of-the-line-and-what-it-is-not" title="Permanent link">&para;</a></h3>
+<p>A reading says what <em>that station</em> was doing. The thing that explains it is
+often the machine beside it: the packer changing size, the washer stopping. So
+the panel also draws <strong>the rest of this line in the same window</strong> — the other
+work units under the same parent in the equipment tree, each with its stops and
+its changeovers from the same timeline the station's own block reads.</p>
+<p>Read that block as what it says it is. This MES records which line a work unit
+belongs to; it does <strong>not</strong> record which way the product travels, so the block
+never says <em>upstream</em> or <em>downstream</em> and never puts one station's event forward
+as the cause of another's. The order is the material's routing where the routing
+names the station — the block says which routing — and the rest after it by
+code, because a routing's order is a process order and not always a floor's.
+Stations that recorded nothing but running in the window are <strong>named</strong> rather
+than dropped: that is a statement about what this MES holds, not about what the
+machine did. The block says how many of the line's stations it drew out of how
+many there are, and a station with no line above it in the tree gets a block
+that says so instead of an empty one.</p>
+<h3 id="the-panel-opens-short">The panel opens short<a class="headerlink" href="#the-panel-opens-short" title="Permanent link">&para;</a></h3>
+<p>The panel used to run to about four screens, and the three process-value
+trends were most of it. What you now meet when a dot opens is the reading, the
+rules, the machine and the rest of the line; the gauge, this station's trends
+and <em>anything else in this window</em> are one click each, with a summary that says
+what is inside and how much of it ("3 process values, 2 of 3 drawn"). Open one
+and it stays open for you — the choice is kept in your browser, per block, so a
+reader who always wants the trends opens them once.</p>
 <h3 id="on-a-sampled-chart-the-dot-is-an-average-so-the-panel-opens-all-five">On a sampled chart, the dot is an average — so the panel opens all five<a class="headerlink" href="#on-a-sampled-chart-the-dot-is-an-average-so-the-panel-opens-all-five" title="Permanent link">&para;</a></h3>
 <p>Everything above holds on an X-bar and R chart, with one block more and one
 window wider. A point there is the mean of the sample, which is the thing an
@@ -4479,6 +4552,10 @@ instruments measuring the same process in the same hour should agree, and a
 standing difference between them is the instrument — but they measured
 <em>different pieces</em>. The controlled comparison is one piece measured twice, and
 no MES can make a floor do that. The panel says so on itself.</p>
+<p><strong>The line block is a window, not a cause.</strong> Two stations on one line both
+stopping in the same ten minutes is two records; which one explains the reading
+— or whether either does — is the reader's call, and the block says so on
+itself.</p>
 <p><strong>A reading with no gauge, or no station, says <em>not recorded</em>.</strong> That is not
 the same as no gauge having taken it, and the MES will not work a station out
 from the order's routing — that would name a machine nobody stood at.</p>
