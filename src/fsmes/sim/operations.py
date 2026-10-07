@@ -43,7 +43,9 @@ import json
 import random
 import re
 import time
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from itertools import pairwise
 
 import httpx
 import structlog
@@ -80,6 +82,152 @@ def _book_position(order: dict) -> tuple:
 def _slug(text: str) -> str:
     """fill_weight and FillWeight are the same characteristic."""
     return re.sub(r"[^a-z0-9]", "", text.lower())
+
+#: How many orders the planner reads to learn what this plant makes. The same
+#: five hundred every other read on this floor takes a page of. The list comes
+#: back newest first, so one page is the last five hundred orders this plant
+#: made - which on any lab plant is the pack's own book and the planner's
+#: copies of it, and always holds the highest code in use.
+_BOOK_WINDOW = 500
+
+#: A code and the number on the end of it: `WO-ACME-4711` is `WO-ACME-` and
+#: 4711, four digits wide. A code with no number on the end cannot be
+#: continued, and is left out of the pattern rather than guessed at.
+_SEQUENCE = re.compile(r"^(?P<prefix>.*?)(?P<number>\d+)$")
+
+
+@dataclass(frozen=True)
+class Book:
+    """The pattern of what one plant makes, read off its own order book.
+
+    A simulated planner has to plan *this* plant's work, and what this plant
+    makes is already written down - in the orders its pack put in its book. So
+    the pattern is read back from the plant over the same API everything else
+    here uses: the sequence its codes are in, the materials, quantities and
+    priorities in the order they were planned, and how far apart their due
+    dates are. Nothing is invented, and nothing is read off disk - this floor
+    has never opened a pack file and is not about to start.
+
+    A plant whose book has never held an order has no pattern to continue, and
+    `read` answers None. That is the honest answer rather than a first order
+    of some default size: what a plant makes is not something a simulator
+    knows.
+    """
+
+    #: `WO-ACME-` and 4, so the order after 4,720 is `WO-ACME-4721`.
+    prefix: str
+    width: int
+    #: The number the pattern starts at, so which row a new order copies is a
+    #: fact about its own code rather than about how many passes have run.
+    first: int
+    #: The highest number in the book, and the one new codes count on from.
+    last: int
+    #: What this plant makes: material, quantity, priority, in the order the
+    #: book first asked for each. One row per *distinct* combination, not per
+    #: order - bottling's ten orders are seven sizes, three of them asked for
+    #: twice. Distinct on purpose: the planner's own orders land in the same
+    #: book it reads next time, and a pattern that grew by one every time it
+    #: was copied would never come round.
+    rows: tuple[tuple[str, float, int], ...]
+    #: Hours between one order's due date and the next, averaged over the
+    #: book. None when fewer than two orders carry a due date: a planner with
+    #: no spacing to copy plans an order with no due date and says so, rather
+    #: than inventing a date the pack never implied.
+    due_spacing_hours: float | None
+    #: The latest due date in the book, which is what the next one is spaced
+    #: from. None when no order in the book has one.
+    latest_due: datetime | None
+
+    def code_for(self, number: int) -> str:
+        return f"{self.prefix}{number:0{self.width}d}"
+
+    def row_for(self, number: int) -> tuple[str, float, int]:
+        """The material, quantity and priority an order of this number copies.
+
+        In rotation, by the order's own number: the eighth order on a pattern
+        of seven is the first one again. Taken from the number rather than
+        from a counter, so a floor that restarts picks the pattern up where
+        the codes say it is rather than at the top.
+        """
+        return self.rows[(number - self.first) % len(self.rows)]
+
+    def due_for(self, number: int, *, now: datetime) -> datetime | None:
+        """When an order of this number is due: the book's own spacing.
+
+        Never behind now. A plant that has been up for a week has a book whose
+        last due date is days past, and an order planned this morning as due
+        last Tuesday is a date nobody can act on.
+        """
+        if self.due_spacing_hours is None or self.latest_due is None:
+            return None
+        from_here = max(self.latest_due, now)
+        return from_here + timedelta(hours=self.due_spacing_hours * (number - self.last))
+
+    @classmethod
+    def read(cls, orders: list[dict]) -> Book | None:
+        """The pattern in a plant's own order book, or None when there is none.
+
+        Every status, because the pattern is what this plant makes and a
+        completed order is still an example of it.
+        """
+        # Nothing here is a judgement about what the plant *should* make: an
+        # order with no material, no quantity, or a code with no number on the
+        # end of it is one this reader cannot continue, so it is left out of
+        # the pattern rather than filled in.
+        numbered: dict[str, list[tuple[int, int, dict]]] = {}
+        for order in orders:
+            found = _SEQUENCE.match(str(order.get("code") or ""))
+            if not found or not order.get("material"):
+                continue
+            if float(order.get("quantity") or 0) <= 0:
+                continue
+            digits = found.group("number")
+            numbered.setdefault(found.group("prefix"), []).append(
+                (int(digits), len(digits), order))
+        if not numbered:
+            return None
+        # The prefix most of this plant's orders share. A plant migrated from
+        # somewhere else carries a few codes in another shape, and the
+        # sequence to continue is the one it is actually running.
+        prefix = max(sorted(numbered), key=lambda p: len(numbered[p]))
+        run = sorted(numbered[prefix], key=lambda row: row[0])
+        rows: list[tuple[str, float, int]] = []
+        for _n, _w, order in run:
+            row = (str(order["material"]), float(order["quantity"]),
+                   int(order.get("priority") or 50))
+            if row not in rows:
+                rows.append(row)
+        dues = sorted(moment for moment in
+                      (_as_moment(order.get("due_date")) for _n, _w, order in run)
+                      if moment is not None)
+        gaps = [(later - earlier).total_seconds() / 3600.0
+                for earlier, later in pairwise(dues)]
+        return cls(
+            prefix=prefix,
+            width=max(width for _n, width, _order in run),
+            first=run[0][0],
+            last=run[-1][0],
+            rows=tuple(rows),
+            due_spacing_hours=(sum(gaps) / len(gaps)) if gaps else None,
+            latest_due=dues[-1] if dues else None,
+        )
+
+
+def keep_planned(script: dict) -> int:
+    """How many orders this plant's pack wants kept planned ahead of the line.
+
+    **Zero by default, which is off**, and zero is what every pack that says
+    nothing gets: a plant whose book is meant to run out - the scripted
+    over-run experiment is one - behaves exactly as it did before a planner
+    existed. The three lab packs name a number.
+    """
+    planning = script.get("planning") or {}
+    try:
+        return max(int(planning.get("keep_planned") or 0), 0)
+    except (TypeError, ValueError):
+        log.warning("`planning.keep_planned` is not a whole number of orders; "
+                    "planning nothing", value=planning.get("keep_planned"))
+        return 0
 
 
 def _utcnow() -> datetime:
@@ -217,6 +365,10 @@ class Floor:
         # One re-sign-in at a time. Six loops share this client, and six
         # tasks noticing the same expiry would otherwise sign in six times.
         self._signing_in = asyncio.Lock()
+        # That this plant's book holds no pattern to continue is said once.
+        # A planner on a plant whose book has never had an order in it has
+        # nothing to plan from, and saying so every minute would bury it.
+        self._said_there_is_no_pattern = False
         # That the login will not come back is said once, not once a step: a
         # password that has changed under a running floor is a thing to fix,
         # and ten thousand identical lines is how it stays unfound. Cleared by
@@ -1027,6 +1179,86 @@ class Floor:
                  by="the simulated shift supervisor")
         return nxt
 
+    async def plan_the_book(self, keep: int) -> list[str]:
+        """Keep `keep` orders planned ahead of the line. Returns what it planned.
+
+        **This is not the floor inventing production.** The floor's own rule
+        is untouched one method up: `release_next` still never makes an order
+        up when it runs dry, and decision 0019 still stands - nothing is
+        booked that no machine counted. What this is, is the person a lab
+        plant did not have. In a real plant orders come from a planner or from
+        the ERP; the lab plants have no ERP, so after about forty hours both of
+        them ran out of orders and every measurement from then on carried no
+        order at all. This plants the next one, as `FLOOR-PLAN`, over the same
+        `POST /workorders` a planner's browser uses, so the audit trail names
+        who planned it.
+
+        It plans and it does not release: an order goes into the book as
+        *planned* and the simulated shift supervisor puts it on the line
+        (`release_next`), which keeps the sequence planner -> supervisor ->
+        floor that a real plant has.
+
+        What it plans is the plant's own book read back in rotation - see
+        `Book`. `keep` of zero plans nothing, which is every pack that has not
+        asked for a planner.
+        """
+        if keep <= 0:
+            return []
+        try:
+            waiting = await self.get("/workorders", status=["planned"], limit=1)
+            short = keep - int(waiting.get("total") or 0)
+            if short <= 0:
+                return []
+            page = await self.get("/workorders", limit=_BOOK_WINDOW)
+        except httpx.HTTPError as exc:
+            log.warning("could not read the order book to plan from", error=str(exc)[:160])
+            return []
+        book = Book.read(page["items"])
+        if book is None:
+            if not self._said_there_is_no_pattern:
+                self._said_there_is_no_pattern = True
+                log.warning(
+                    "nothing in this plant's book to continue; planning nothing",
+                    orders_read=len(page["items"]), of=page.get("total"),
+                    note="a planner copies what this plant already makes, and this "
+                         "plant has never had an order with a material and a "
+                         "quantity in its book; what a plant makes is not something "
+                         "a simulator knows")
+            return []
+        self._said_there_is_no_pattern = False
+        now = _utcnow()
+        planned: list[str] = []
+        for step in range(short):
+            number = book.last + 1 + step
+            code = book.code_for(number)
+            material, quantity, priority = book.row_for(number)
+            due = book.due_for(number, now=now)
+            body: dict = {"code": code, "material": material,
+                          "quantity": quantity, "priority": priority}
+            if due is not None:
+                body["due_date"] = due.isoformat()
+            try:
+                response = await self.post("/workorders", json=body)
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                # A code already taken, a material with no routing, a refused
+                # capability: all of them are things to say out loud rather
+                # than retry in a loop.
+                log.warning("could not plan an order", order=code,
+                            status=exc.response.status_code,
+                            detail=exc.response.text[:160])
+                break
+            except httpx.HTTPError as exc:
+                log.warning("could not plan an order", order=code, error=str(exc)[:160])
+                break
+            planned.append(code)
+            log.info("planned the next order", order=code, material=material,
+                     quantity=quantity, priority=priority,
+                     due=due.isoformat() if due else None,
+                     copied_from_a_book_of=len(book.rows),
+                     keeping_planned=keep, by="the simulated planner")
+        return planned
+
     async def work_the_book(self, orders: list[dict], *, finish: bool = True) -> None:
         """One pass of what a supervisor does with the schedule.
 
@@ -1151,20 +1383,32 @@ class Floor:
 async def run(settings: Settings, *, inspect_every: float = 8.0,
               issue_every: float = 25.0, review_every: float = 90.0,
               supervise_every: float = 20.0, watch_every: float = 15.0,
+              plan_every: float = 60.0,
               speed: float = 1.0,
               seed: int = 0, user: str = "FLOOR-SIM", password: str = "operator",
               supervisor: str = "FLOOR-SUP", supervisor_password: str = "supervisor",
+              planner: str = "FLOOR-PLAN", planner_password: str = "planner",
               inspect_all: bool = False, finish_orders: bool = True) -> None:
     """Generate shop-floor activity until stopped.
 
-    Two identities, because the plant has two: the floor (an operator) records
-    checks and issues material; the shift supervisor closes non-conformances,
-    finishes an order the line has made the number for and releases the next
-    one in the book. An operator may not close a non-conformance - segregation
-    of duties the product is right to enforce, and which the simulator must
-    respect rather than be granted around - and the order book is the
-    supervisor's for the same reason: the audit trail has to name whoever
-    finished an order, and it has to be true.
+    Three identities, because the plant has three: the floor (an operator)
+    records checks and issues material; the shift supervisor closes
+    non-conformances, finishes an order the line has made the number for and
+    releases the next one in the book; the production planner puts the next
+    order *into* the book and may do nothing else. An operator may not close a
+    non-conformance - segregation of duties the product is right to enforce,
+    and which the simulator must respect rather than be granted around - and
+    the order book is the supervisor's for the same reason: the audit trail
+    has to name whoever finished an order, and it has to be true.
+
+    The planner is the third because a lab plant has no ERP. In a real plant
+    the orders arrive from a planner or from an ERP, never from the floor; the
+    two lab plants had neither, so they ran out of orders about forty hours
+    after they were built and measured into no order from then on. `plan_every`
+    is how often the planner looks at the book; how deep it keeps it is the
+    pack's `planning.keep_planned`, and **zero - no planner at all - is the
+    default**, so a pack that says nothing behaves exactly as it did before
+    this existed.
 
     `finish_orders` is False for a scripted over-run, where nobody stopping
     the line is the whole point.
@@ -1182,10 +1426,14 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
     # is every real plant and is the behaviour this had before scripts.
     script = measurement.load(settings.floor_script_file)
 
+    keep = keep_planned(script)
+
     async with httpx.AsyncClient(base_url=base, timeout=20.0) as client, \
-            httpx.AsyncClient(base_url=base, timeout=20.0) as sup_client:
+            httpx.AsyncClient(base_url=base, timeout=20.0) as sup_client, \
+            httpx.AsyncClient(base_url=base, timeout=20.0) as plan_client:
         floor = Floor(settings, client, rng, script, speed)
         shift = Floor(settings, sup_client, rng, script, speed)
+        plans_the_book = Floor(settings, plan_client, rng, script, speed)
 
         # The API comes up alongside us; keep trying rather than dying first.
         for _attempt in range(60):
@@ -1207,6 +1455,21 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
                         user=supervisor, error=str(exc)[:120])
             shift = None
 
+        if keep > 0:
+            try:
+                await plans_the_book.sign_in(planner, planner_password)
+            except (httpx.HTTPError, KeyError) as exc:
+                # A plant initialised before the planner account existed - every
+                # lab plant built before 2026-10-07. Say so once, and run exactly
+                # as this did before there was a planner: the book empties and
+                # the floor says so. A `fsmes migrate` adds the account.
+                log.warning("no planner account; the order book will not be topped up "
+                            "and will empty when the pack's orders are done",
+                            user=planner, keep_planned=keep, error=str(exc)[:120])
+                plans_the_book = None
+        else:
+            plans_the_book = None
+
         gauges_known = await floor.read_the_register()
         if shift is not None and script:
             await shift.read_the_register()
@@ -1214,6 +1477,11 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
         log.info("shop floor online", endpoint=base, inspect_every=inspect_every,
                  issue_every=issue_every, supervise_every=supervise_every,
                  finishes_orders=finish_orders and shift is not None,
+                 # How many orders the planner keeps planned ahead of the line,
+                 # and nothing when no pack asked for one: a plant that goes
+                 # quiet after its book runs out should say on startup that
+                 # nobody was ever going to plan another.
+                 keeps_planned=keep if plans_the_book is not None else None,
                  floor_script=str(settings.floor_script_file) if script else None,
                  gauges_on_the_register=gauges_known,
                  # Which characteristics this floor inspects several pieces at
@@ -1298,6 +1566,24 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
                 except httpx.HTTPError as exc:
                     log.warning("the stop watch failed", error=str(exc)[:160])
 
+        async def plan_ahead() -> None:
+            """Its own loop, like the stop watch: it needs only the book.
+
+            The planner plans and does not release. What it writes goes into
+            the book as *planned*, and the supervisor's own loop puts it on
+            the line a step later, so the sequence on a lab plant is the one a
+            real plant has - planner, then supervisor, then floor - and each
+            of the three audit rows names the right person.
+            """
+            if plans_the_book is None:
+                return
+            while True:
+                try:
+                    await plans_the_book.plan_the_book(keep)
+                except httpx.HTTPError as exc:
+                    log.warning("the planning step failed", error=str(exc)[:160])
+                await asyncio.sleep(plan_every)
+
         async def do_supervise(summary, orders):
             # The supervisor's client, not the operator's: what this does -
             # finishing an order, releasing the next, calibrating a gauge
@@ -1320,4 +1606,5 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
             every(supervise_every, do_supervise),
             watch_the_stops(),
             sample_the_bench(),
+            plan_ahead(),
         )

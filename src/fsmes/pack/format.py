@@ -790,6 +790,12 @@ SCHEMA: tuple[Section, ...] = (
             "MES_OPS_ISSUE_EVERY"),
         Key("inspect_all", "bool", "Whether a pass records every specification or one.",
             "MES_OPS_INSPECT_ALL"),
+        Key("plan_every", "int",
+            "Seconds between the simulated planner's looks at the order book. "
+            "How deep it keeps the book is `planning.keep_planned` in the "
+            "floor script, which is 0 - no planner at all - unless the script "
+            "says otherwise, so this cadence does nothing on its own.",
+            "MES_OPS_PLAN_EVERY"),
     )),
     Section("accounts", "The accounts this plant creates when it is applied. Each "
             "names the environment variable its password comes from; a variable "
