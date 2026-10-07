@@ -10,6 +10,13 @@
   ],
   "_see_also": "The line's own four stories - the nozzle-pressure dip, the first fills after a changeover, the tag that goes quiet, the washer running hot - are in labs/kepsim/line.json, because they are things the machines do. This file is only what the people do.",
 
+  "planning": {
+    "_what": "How many orders the simulated production planner keeps in this plant's book, ahead of the line.",
+    "_why": "Because a lab plant has no ERP and nobody else was going to. The pack seeds ten orders - about twenty-five hours of line time - and this plant runs for weeks: on 2026-10-07 at 04:21 UTC, forty-three hours after it was built, bottling finished `WO-ACME-4720` and from then on measured fill weight, fill height and everything else into no order at all. The station page said *Nothing queued on this machine*, the characteristic dropdown was empty, and every quality check carried no order. That is not the plant being honest about an empty book, it is the plant having nobody to fill one. In a real plant orders come from a planner or from an ERP, never from the floor; this names the planner.",
+    "keep_planned": 3,
+    "_keep_planned": "Three planned orders behind whatever is on the line, which on this book of 12,000-19,200 bottles is somewhere between eight and twelve hours of work in hand - about what a bottling line's schedule looks like on a Monday morning. `FLOOR-PLAN` creates them over `POST /workorders`, copying material, quantity and priority from this plant's own book in rotation and continuing its code sequence from `WO-ACME-4720`. It never releases one: the simulated shift supervisor still does that, so the audit trail reads planner, then supervisor, then floor. Zero - the default, and what every pack that leaves this block out gets - means no planner, the book empties when the pack's orders are done, and the floor says so once."
+  },
+
   "measurement": {
     "_what": "How a number on a tag becomes a measurement somebody took.",
     "stale_after_s": 60,
