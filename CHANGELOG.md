@@ -12,6 +12,57 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **A simulated plant no longer runs out of work orders.** A pack's book is
+  finite: bottling's ten orders were all finished forty-three hours after the
+  plant was built, and from then on it measured fill weight, fill height and
+  spindle temperature into no order at all — the station page's queue empty,
+  the **Book output** and **Characteristic** dropdowns empty, every check
+  carrying no order. The simulated floor now has a **third identity beside
+  the operator and the shift supervisor: a production planner, `FLOOR-PLAN`**,
+  who keeps the book a few orders deep.
+
+  - **The planner plans from the plant's own book, and nothing else.** It
+    reads the last five hundred orders over `GET /workorders`, takes the
+    material, quantity and priority of the orders already there **in
+    rotation** — the book is the pattern of what this plant makes — continues
+    the code sequence from the highest number in use (never reusing one), and
+    spaces the due dates the way the pack's own are spaced. One `POST
+    /workorders` per order, one log line per order, `by="the simulated
+    planner"`, and the audit row names `FLOOR-PLAN`. A plant whose book has
+    never held an order has no pattern to continue, so the planner says so
+    once and plans nothing.
+  - **It never releases.** `orders.release` is not in the new built-in
+    **planner** role, which holds `orders.create` and `plant.read` and nothing
+    else. Releasing stays the shift supervisor's, so the sequence a lab plant
+    runs is the sequence a real one runs: planner, then supervisor, then
+    floor. Decision 0019 is untouched — nothing is booked that no machine
+    counted, and `Floor.release_next` still never invents an order.
+  - **Off unless a pack asks for it.** How deep the book is kept is
+    `planning.keep_planned` in the floor script (`floor.json`), **0 by
+    default**, so a pack that says nothing behaves exactly as it does today.
+    The three lab packs set it: bottling and machining three, finewire two.
+    How often the planner looks is `floor.plan_every` in `plant.toml`
+    (`MES_OPS_PLAN_EVERY`, sixty seconds), divided by `MES_SIM_SPEED` like
+    every other cadence.
+  - **A plant initialised before the account existed says so once and runs as
+    it did**: no planner, no top-up, one warning line at startup.
+    `fsmes plant <name> migrate` adds the account.
+  - **An experiment can say that nobody plans behind its line**, the way one
+    can already say that nobody finishes its orders: `[floor] plan_orders =
+    false` (`MES_OPS_PLAN_ORDERS`). `labs/experiments/over-run.toml` sets it,
+    and had to — it loads the bottling pack, which now asks to keep three
+    orders planned, and a book that runs out is that experiment's whole
+    subject. The pack is not edited for it; the plan says so in writing.
+
+- **The station page says why there is nothing to do.** When the plant has no
+  released or running order at all, the queue and the quality card now say
+  *No order is open on this plant* instead of *Nothing queued on this
+  machine*. Both were true, and the second sent a reader looking at the
+  machine when the answer was the order book. The count comes from
+  `GET /workorders/summary`, raced against two seconds: a summary that does
+  not arrive leaves the page drawing and the older sentence standing, because
+  unknown is not zero.
+
 - **The SPC screen draws a sampled characteristic, and a click opens the five
   bottles behind the dot.** Scott, 2026-10-06: *"test if this type of graphing
   and functionality can apply to a new type of SPC."* It applies. Quality →
@@ -1104,6 +1155,27 @@ goes under Honesty with a migration line, so plant people can find it.
   every sample on the chart would be a post-changeover one.
 
 ### Changed
+
+- **Bottling's planted changeover shift is 1.5 mm, up from 0.5 mm.** At half a
+  millimetre the nozzle the changeover left behind was real and invisible where
+  anybody was watching: 1.0 sigma of a sample mean, nearly three sigma inside
+  the upper control limit, and a reader found it only by splitting the means on
+  the changeover by hand. The arithmetic, measured off the plant's own chart on
+  a running plant over forty-five samples of five — 225 readings:
+  R̄ = 2.69 mm, so the within-sample sigma is R̄/d₂ = 1.16 mm, a sample mean's
+  own sigma is 0.52 mm, and the X̄ limits are X̿ ± A₂R̄ = 141.88 ± 1.55 mm. At
+  1.5 mm — **2.9 sigma of a sample mean** — the shift lands just under A₂R̄:
+  nearly every post-changeover sample mean breaks the two-sigma line and only
+  the tallest break the three-sigma one, so **rule 2 fires reliably and rule 1
+  catches the high ones**. On the hour this was measured, 7 of 9
+  post-changeover means sat above two sigma against 0 of 15 settled ones, rule 1
+  fired once, and the chart's verdict went to *out of control*. The range chart
+  stays in control throughout — all 45 points inside their upper limit — which
+  is the whole story: the process shifted, its spread did not. Single bottles
+  stay in spec; none of those 45 post-changeover readings reached the 145 mm
+  upper spec, the highest being 144.5. The pack's own prose carries the
+  arithmetic, as it does everywhere; `_how_big_half_a_millimetre_is` is now
+  `_how_big_a_millimetre_and_a_half_is`.
 
 - **`[admin] agent_result_limit` is 12,000 characters, up from 6,000.** Raised
   on two measurements rather than a feeling. The trace graph's *frame* alone —
