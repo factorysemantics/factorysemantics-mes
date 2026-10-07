@@ -832,6 +832,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#a-planner-planning-is-not-the-floor-inventing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A planner planning is not the floor inventing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#how-it-is-tested" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4017,6 +4028,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#a-planner-planning-is-not-the-floor-inventing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A planner planning is not the floor inventing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#how-it-is-tested" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4115,6 +4137,45 @@ report downstream is fiction with a confident face.</p>
    and the order reports how far past it ran. Finishing an order is an act —
    a person, or the ERP — never a number being reached.</li>
 </ol>
+<h2 id="a-planner-planning-is-not-the-floor-inventing">A planner planning is not the floor inventing<a class="headerlink" href="#a-planner-planning-is-not-the-floor-inventing" title="Permanent link">&para;</a></h2>
+<p>On a plant that simulates, the simulated floor used to make up an order code
+and a quantity when it ran out of work, and the line went on looking busy
+against a number nobody had asked for. That stopped on 2026-09-18 (#83): the
+lab packs got a book of ten real orders, and <code>Floor.release_next</code> was left
+with no way to invent one. What it does when the book is empty is say so,
+once, and let the line's output be reported as unassigned production with its
+total — which is rule 5 and
+<a href="../../decisions/0019-count-everything-the-machine-counted/">decision 0019</a>
+doing exactly what they are for.</p>
+<p>A pack's book is finite, though, and both lab plants emptied theirs about
+forty hours after they were built — bottling at 04:21 UTC on 2026-10-07 —
+and then measured into no order at all. The answer is not to let the floor
+invent one again. It is that <strong>a plant has three people in it and a lab plant
+only had two</strong>: an operator, a shift supervisor, and a production planner, who
+in a real plant is where orders come from (or the ERP — this MES is not an
+ERP). So <code>fsmes run-operations</code> has a third identity, <code>FLOOR-PLAN</code>, which
+holds <code>orders.create</code> and <code>plant.read</code> and nothing else, and a pack that asks
+for it with
+<code>planning.keep_planned</code> gets its book kept that deep.</p>
+<p>The distinction is not a technicality:</p>
+<ul>
+<li>The planner creates an order <strong>as itself</strong>, over the public <code>POST
+  /workorders</code>, and the audit row says <code>FLOOR-PLAN</code>. Nothing appears in the
+  book with <code>system</code> against it.</li>
+<li>It copies what the plant <strong>already makes</strong> — material, quantity, priority
+  and code sequence read back out of the plant's own book over the API. It
+  invents no product and no size; a plant whose book has never held an order
+  gets no first order, because what a plant makes is not something a
+  simulator knows.</li>
+<li>It <strong>plans and does not release.</strong> <code>orders.release</code> is the supervisor's, so
+  the order it writes is <em>planned</em> until the simulated supervisor puts it on
+  the line, and the sequence on a lab plant is the sequence in a real one.</li>
+<li>Booking is still the counters'. Nothing here books a unit, and
+  <code>release_next</code> still never invents an order.</li>
+<li><strong>The default is no planner</strong> (<code>keep_planned</code> 0). A pack that says nothing
+  behaves exactly as it did before — including the scripted over-run
+  experiment, whose whole point is a book that runs out.</li>
+</ul>
 <h2 id="how-it-is-tested">How it is tested<a class="headerlink" href="#how-it-is-tested" title="Permanent link">&para;</a></h2>
 <p>Tests are named after the behaviour they pin, so the suite reads as a list
 of promises. Some of them, by name (2026-09-07):</p>
@@ -4128,6 +4189,10 @@ of promises. Some of them, by name (2026-09-07):</p>
 <li><code>test_reaching_the_ordered_quantity_does_not_finish_the_order</code></li>
 <li><code>test_a_line_that_makes_half_again_the_order_reports_an_over_run_of_half</code></li>
 <li><code>test_unknown_scores_are_counted_separately_never_averaged_in</code></li>
+<li><code>test_when_the_book_runs_out_the_floor_says_so_once_and_invents_nothing</code></li>
+<li><code>test_a_plant_whose_book_has_never_held_an_order_plans_nothing_and_says_so</code></li>
+<li><code>test_a_planned_order_copies_this_plants_own_book_and_nothing_else</code></li>
+<li><code>test_the_planner_plans_and_does_not_release</code></li>
 </ul>
 <p>And the scoring harness: <code>fsmes score &lt;plant&gt;</code> replays a scripted hour with
 a known truth — how many pieces the line made, a planned stop, a breakdown,

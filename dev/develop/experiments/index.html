@@ -4542,6 +4542,13 @@ travel together.</p>
 <span class="c1"># accident of cadence. `labs/experiments/over-run.toml` is the one that does.</span>
 <span class="k">[floor]</span>
 <span class="n">finish_orders</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+
+<span class="c1"># The simulated production planner, the same way. On wherever the pack asks</span>
+<span class="c1"># for a depth (`planning.keep_planned` in its floor script). Turn it off for a</span>
+<span class="c1"># plan whose subject is a book running out, so the book stays the one the pack</span>
+<span class="c1"># wrote instead of being topped up behind the line. `over-run.toml` turns both</span>
+<span class="c1"># off, and says why in the file.</span>
+<span class="n">plan_orders</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 </code></pre></div>
 <p><code>duration</code>, <code>seed</code> and <code>speed</code> are the whole of the determinism story: <strong>the
 same seed twice is the same run</strong>, and the report states the seed it used. A
