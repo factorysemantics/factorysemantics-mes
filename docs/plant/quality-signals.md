@@ -181,6 +181,7 @@ What you get, in the order people ask:
 | Which rule fired? | The rule, what it means and the hold it raised — and beside it the firings the MES recorded *when the reading arrived*, which is not the same question as what the chart says now |
 | **Did the process move, or did the gauge?** | The instrument, its last calibration and who signed it, whether it is overdue, and whether it can resolve the tolerance it was judging. Then the same characteristic by **every other gauge in the hour either side**, with each one's mean and how far it sat from this one |
 | What was the machine doing? | The state at that instant and what it had just come out of, with the seconds between — plus the state timeline, every stretch it was not running, and each stop's reason or the word *unlabelled* |
+| What was the rest of the line doing? | Every other station under the same parent as this one, in this material's routing order where the routing names it, with each stop and changeover **in this reading's own window** — named, timed against the reading (*ended 3 min before this sample*), and linking to that station's page |
 | What were the process values doing? | This station's analogs over the ten minutes before and the two after, as small charts, each with the reading's own time marked on it |
 | What else happened? | A maintenance order that was open, a finding that was raised |
 
@@ -194,6 +195,36 @@ of why this panel is worth having.
 
 A keyboard reaches it: tab to a reading and press Enter, or use the **Open a
 reading** button, which opens the newest reading a rule fired on.
+
+### The rest of the line, and what it is not
+
+A reading says what *that station* was doing. The thing that explains it is
+often the machine beside it: the packer changing size, the washer stopping. So
+the panel also draws **the rest of this line in the same window** — the other
+work units under the same parent in the equipment tree, each with its stops and
+its changeovers from the same timeline the station's own block reads.
+
+Read that block as what it says it is. This MES records which line a work unit
+belongs to; it does **not** record which way the product travels, so the block
+never says *upstream* or *downstream* and never puts one station's event forward
+as the cause of another's. The order is the material's routing where the routing
+names the station — the block says which routing — and the rest after it by
+code, because a routing's order is a process order and not always a floor's.
+Stations that recorded nothing but running in the window are **named** rather
+than dropped: that is a statement about what this MES holds, not about what the
+machine did. The block says how many of the line's stations it drew out of how
+many there are, and a station with no line above it in the tree gets a block
+that says so instead of an empty one.
+
+### The panel opens short
+
+The panel used to run to about four screens, and the three process-value
+trends were most of it. What you now meet when a dot opens is the reading, the
+rules, the machine and the rest of the line; the gauge, this station's trends
+and *anything else in this window* are one click each, with a summary that says
+what is inside and how much of it ("3 process values, 2 of 3 drawn"). Open one
+and it stays open for you — the choice is kept in your browser, per block, so a
+reader who always wants the trends opens them once.
 
 ### On a sampled chart, the dot is an average — so the panel opens all five
 
@@ -228,6 +259,11 @@ instruments measuring the same process in the same hour should agree, and a
 standing difference between them is the instrument — but they measured
 *different pieces*. The controlled comparison is one piece measured twice, and
 no MES can make a floor do that. The panel says so on itself.
+
+**The line block is a window, not a cause.** Two stations on one line both
+stopping in the same ten minutes is two records; which one explains the reading
+— or whether either does — is the reader's call, and the block says so on
+itself.
 
 **A reading with no gauge, or no station, says *not recorded*.** That is not
 the same as no gauge having taken it, and the MES will not work a station out

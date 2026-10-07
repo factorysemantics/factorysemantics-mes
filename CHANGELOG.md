@@ -63,6 +63,29 @@ goes under Honesty with a migration line, so plant people can find it.
   not arrive leaves the page drawing and the older sentence standing, because
   unknown is not zero.
 
+- **The point panel shows the rest of the line, and opens about half as
+  long.** Scott, 2026-10-07: clicking a dot said what *that* station was
+  doing, and the changeover that explained the reading had happened on the
+  machine beside it. The panel now carries **The rest of the line** right
+  after the station's own block: every other work unit under the same parent,
+  with each stop and changeover **in this reading's window**, named, timed
+  against the reading (*ended 3 min before this sample*) and linking to that
+  station's page. Nothing is inferred — this MES records which line a station
+  belongs to and not which way the product travels, so the block never says
+  *upstream* or *downstream*, it says which routing put the stations in that
+  order, and it names the stations that recorded nothing rather than dropping
+  them.
+
+  - **The panel folds.** It ran to about four screens on a reading and three
+    process-value trends were most of it. The gauge, this station's trends,
+    *anything else in this window* and the line block when it recorded nothing
+    are now one click each, with a summary that states what is inside and how
+    much of it ("3 process values, 2 of 3 drawn"); the readings, the rules, the
+    machine and the line's own events stay open. Measured on the test plant: a
+    reading's panel is 1,840 pixels where every block open is 3,437, and a
+    sample's is 2,243. A reader's own folds are remembered per block in their
+    browser.
+
 - **The SPC screen draws a sampled characteristic, and a click opens the five
   bottles behind the dot.** Scott, 2026-10-06: *"test if this type of graphing
   and functionality can apply to a new type of SPC."* It applies. Quality →
