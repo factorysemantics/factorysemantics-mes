@@ -83,6 +83,15 @@ LAB_USERS = [
     # retired on 2026-09-06 had every non-conformance still open because the
     # floor tried to close them as an operator and was refused, silently.
     ("FLOOR-SUP", "Simulated shift supervisor", "supervisor", "supervisor"),
+    # The simulated production planner. The third identity, because a plant
+    # has three: in a real plant the orders come from a planner or from the
+    # ERP (never from the floor), and a lab plant has no ERP, so nobody played
+    # that person. Both lab plants duly ran out of orders about forty hours
+    # after they were built and measured into no order from then on. This
+    # account plans the next order; it may not release one - that stays the
+    # supervisor's - so the sequence planner -> supervisor -> floor is the
+    # real plant's and the audit trail names whichever of the three acted.
+    ("FLOOR-PLAN", "Simulated production planner", "planner", "planner"),
     ("ADMIN", "Lab Admin", "admin", "admin"),
     # The MCP server's own sign-in. Admin because master data (routings)
     # requires it; everything it does is audited under this name, so "what did
