@@ -42,6 +42,48 @@ Most ways an MES invents production are small and reasonable-looking:
    and the order reports how far past it ran. Finishing an order is an act —
    a person, or the ERP — never a number being reached.
 
+## A planner planning is not the floor inventing
+
+On a plant that simulates, the simulated floor used to make up an order code
+and a quantity when it ran out of work, and the line went on looking busy
+against a number nobody had asked for. That stopped on 2026-09-18 (#83): the
+lab packs got a book of ten real orders, and `Floor.release_next` was left
+with no way to invent one. What it does when the book is empty is say so,
+once, and let the line's output be reported as unassigned production with its
+total — which is rule 5 and
+[decision 0019](../decisions/0019-count-everything-the-machine-counted.md)
+doing exactly what they are for.
+
+A pack's book is finite, though, and both lab plants emptied theirs about
+forty hours after they were built — bottling at 04:21 UTC on 2026-10-07 —
+and then measured into no order at all. The answer is not to let the floor
+invent one again. It is that **a plant has three people in it and a lab plant
+only had two**: an operator, a shift supervisor, and a production planner, who
+in a real plant is where orders come from (or the ERP — this MES is not an
+ERP). So `fsmes run-operations` has a third identity, `FLOOR-PLAN`, which
+holds `orders.create` and `plant.read` and nothing else, and a pack that asks
+for it with
+`planning.keep_planned` gets its book kept that deep.
+
+The distinction is not a technicality:
+
+- The planner creates an order **as itself**, over the public `POST
+  /workorders`, and the audit row says `FLOOR-PLAN`. Nothing appears in the
+  book with `system` against it.
+- It copies what the plant **already makes** — material, quantity, priority
+  and code sequence read back out of the plant's own book over the API. It
+  invents no product and no size; a plant whose book has never held an order
+  gets no first order, because what a plant makes is not something a
+  simulator knows.
+- It **plans and does not release.** `orders.release` is the supervisor's, so
+  the order it writes is *planned* until the simulated supervisor puts it on
+  the line, and the sequence on a lab plant is the sequence in a real one.
+- Booking is still the counters'. Nothing here books a unit, and
+  `release_next` still never invents an order.
+- **The default is no planner** (`keep_planned` 0). A pack that says nothing
+  behaves exactly as it did before — including the scripted over-run
+  experiment, whose whole point is a book that runs out.
+
 ## How it is tested
 
 Tests are named after the behaviour they pin, so the suite reads as a list
@@ -56,6 +98,10 @@ of promises. Some of them, by name (2026-09-07):
 - `test_reaching_the_ordered_quantity_does_not_finish_the_order`
 - `test_a_line_that_makes_half_again_the_order_reports_an_over_run_of_half`
 - `test_unknown_scores_are_counted_separately_never_averaged_in`
+- `test_when_the_book_runs_out_the_floor_says_so_once_and_invents_nothing`
+- `test_a_plant_whose_book_has_never_held_an_order_plans_nothing_and_says_so`
+- `test_a_planned_order_copies_this_plants_own_book_and_nothing_else`
+- `test_the_planner_plans_and_does_not_release`
 
 And the scoring harness: `fsmes score <plant>` replays a scripted hour with
 a known truth — how many pieces the line made, a planned stop, a breakdown,
