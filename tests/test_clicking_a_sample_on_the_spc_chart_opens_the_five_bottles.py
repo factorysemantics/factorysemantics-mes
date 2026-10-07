@@ -780,18 +780,18 @@ def test_the_station_beside_this_one_is_on_the_sample_panel_too(page, plant):
 
 
 def test_the_sample_panel_opens_with_its_three_longest_blocks_folded(page, plant):
-    """What a reader meets on a sample, and how long it is, as numbers.
+    """What a reader meets on a sample, and how much shorter it is.
 
-    Open: the five readings (618 pixels of them, because five bottles are five
-    rows and their chart), what the rules said (419), what the machine was
+    Open: the five readings (618 pixels of them here, because five bottles are
+    five rows and their chart), what the rules said (419), what the machine was
     doing (362), its timeline (248) and the rest of the line (391) - 2,243 in
     all on this fixture. Folded to one line each: the gauge, the station's
-    process values and the maintenance block, which is where the scrolling
-    was.
+    process values and the maintenance block, which is where the scrolling was.
 
-    That is not one screen and this test does not claim it is. It is the ask's
-    own list of what stays open, measured, so that the next change to this
-    panel has a number to beat.
+    The number asserted is the ratio, not the height: the same markup measured
+    2,243 on one machine and 2,436 on GitHub's runner, so a pixel bound here
+    would be a test about a font. And a sample's panel is not one screen even
+    folded - this says so rather than claiming otherwise.
     """
     _base, sample = plant
     _click_the_shifted_sample(page, sample)
@@ -805,6 +805,15 @@ def test_the_sample_panel_opens_with_its_three_longest_blocks_folded(page, plant
     assert "HEIGHT-01" in says["gauge"]
     assert "2 process values" in says["tags"]
     assert "maintenance order" in says["else"]
-    tall = page.evaluate(
+    folded = page.evaluate(
         "() => document.querySelector('#point-body').scrollHeight")
-    assert tall < 2400, f"the sample panel is {tall}px tall with its blocks folded"
+    for key in ("gauge", "tags", "else"):
+        _unfold(page, key)
+    page.wait_for_function(
+        "(was) => document.querySelector('#point-body').scrollHeight > was",
+        arg=folded, timeout=10000)
+    opened = page.evaluate(
+        "() => document.querySelector('#point-body').scrollHeight")
+    assert folded < 0.7 * opened, (
+        f"folded the panel is {folded}px of the {opened}px it is with every "
+        f"block open, which is not the saving the fold claims")

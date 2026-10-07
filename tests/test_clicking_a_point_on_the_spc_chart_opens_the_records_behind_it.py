@@ -916,35 +916,40 @@ def test_the_panel_opens_about_half_as_long_with_three_trends_behind_a_click(
 
     On 2026-10-07 a reading's panel ran to about 4,100 pixels on the lab plant
     and a reader scrolled past three process-value trends to reach the machine.
-    On this fixture the same panel with every block open is 3,437; folded as it
-    now opens it is 1,840 - the reading (283), what the rules said (366), what
-    the machine was doing (362), its timeline (234) and the rest of the line
-    (391), with the gauge, the trends and the maintenance block one line each.
+    On this fixture, on one developer's machine, it is 1,840 folded against
+    3,437 with every block open - the reading (283), what the rules said (366),
+    what the machine was doing (362), its timeline (234) and the rest of the
+    line (391), with the gauge, the trends and the maintenance block one line
+    each.
 
-    That is not one screen on a laptop and this test does not pretend it is. It
-    is a little over half of what it was, the five open blocks are the five the
-    ask names, and the number is here so the next change to this panel has
-    something to beat.
+    The assertion is the **ratio** and not either number. A height in pixels is
+    a font metric, and this panel measured 2,243 here and 2,436 on GitHub's
+    runner for the same markup - the 2026-09-26 lesson from #112 wearing
+    different clothes. What the fold claims is *about half as long*, and that
+    survives a runner with wider glyphs.
 
-    The chart count is the other half of the same fact. Of the three charts
-    this reading's panel holds, the one a reader meets is the machine's own
-    timeline; the station's two process-value trends are inside the closed
-    fold, which is where the scrolling went. The test asks where each chart
-    sits rather than whether it is painted: Chromium hides a closed
-    `<details>` with `content-visibility`, so the trends keep a layout box and
-    a height of their own while nobody can see them.
+    That it is still not one screen on a laptop this test does not hide. The
+    five open blocks are the five the ask names.
     """
     _base, check = plant
     _click_the_wild_reading(page, check)
-    tall = page.evaluate(
+    folded = page.evaluate(
         "() => document.querySelector('#point-body').scrollHeight")
-    assert tall < 2100, f"the panel is {tall}px tall with its blocks folded"
     where = """els => els.map((e) => {
                  const fold = e.closest('[data-fold]');
                  return fold ? `${fold.dataset.fold}:${fold.open}` : 'open page';
                })"""
     assert page.eval_on_selector_all("#point-body svg.fs-chart", where) == [
         "open page", "tags:false", "tags:false"]
-    _unfold(page, "tags")
+    for key in ("gauge", "tags", "else"):
+        _unfold(page, key)
+    page.wait_for_function(
+        "(was) => document.querySelector('#point-body').scrollHeight > was",
+        arg=folded, timeout=10000)
+    opened = page.evaluate(
+        "() => document.querySelector('#point-body').scrollHeight")
+    assert folded < 0.7 * opened, (
+        f"folded the panel is {folded}px of the {opened}px it is with every "
+        f"block open, which is not the saving the fold claims")
     assert page.eval_on_selector_all("#point-body svg.fs-chart", where) == [
         "open page", "tags:true", "tags:true"]
