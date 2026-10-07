@@ -1,0 +1,10 @@
+{
+  "_what": "What the simulated floor at finewire does that no PLC reports. Read only by `fsmes run-operations`; a real plant leaves this file out and has people instead.",
+  "_why_data": "The same argument as bottling's floor script: a story scripted in a loop body cannot be read by a test, by a scorer, or by the person who has to explain the records afterwards. This plant's script says one thing only - how deep its order book is kept - and everything else this floor does is the behaviour it had before scripts existed.",
+  "planning": {
+    "_what": "How many orders the simulated production planner keeps in this plant's book, ahead of the line.",
+    "_why": "Because a lab plant has no ERP and nobody else was going to. The pack seeds a book of a day or so and this plant runs for weeks, so without a planner it goes dark: on 2026-10-07 both lab plants had finished every order in their packs and were measuring into no order at all - no queue on the station page, an empty characteristic dropdown, every check with no order on it. In a real plant orders come from a planner or from an ERP, never from the floor; this names the planner.",
+    "keep_planned": 2,
+    "_keep_planned": "Two planned orders behind the line. Finewire's book is five orders of 3,000-8,000 kg spaced three to six hours apart, and its drawing line runs one of them for a long time, so two in hand is this plant's equivalent of bottling's three. `FLOOR-PLAN` copies material, quantity and priority from the plant's own book in rotation and continues the `WO-FW-` sequence from the highest code in it; it never releases one, which stays the shift supervisor's act. Zero - the default, and what every pack that leaves this block out gets - means no planner, the book empties when the pack's orders are done, and the floor says so once."
+  }
+}

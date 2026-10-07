@@ -29,6 +29,11 @@ simulate     = true
 tag_map    = "tag_map.json"
 replay_dir = "out"
 masterdata = "masterdata"
+# What this plant's simulated floor does that no PLC reports. On this plant
+# that is one thing - how many orders the simulated planner keeps in the book,
+# because a lab plant has no ERP to send it any. Read only by
+# `fsmes run-operations`; a real plant leaves this out and has people instead.
+floor      = "floor.json"
 
 [oee]
 # This plant will not report a KPI for a window it watched less than 80% of.
