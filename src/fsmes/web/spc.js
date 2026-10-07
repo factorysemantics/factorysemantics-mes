@@ -1256,6 +1256,196 @@ function sampleRuleBlock(d) {
   return closeWith(section, d.recorded);
 }
 
+/* ---------- the rest of the line, and folding the panel to one screen ---------- */
+
+/* The most rows of another station's window this block prints. The answer
+   bounds what it reads; this bounds what is drawn, and the count under the
+   table says what it left, the way the station's own stops table already
+   does. */
+const LINE_ROWS_SHOWN = 4;
+
+/* Which blocks open folded. The panel was 4,100 px on a point and 1,600 on a
+   sample, and the three process-value trends were most of it: a reader
+   scrolled past the gauge and the trends to reach the stops every time. So
+   the readings, the rules and the line's own events are open and the rest is
+   one click, with a summary line that says what is inside and how much of it
+   - nothing is hidden without saying so (style rule 4).
+
+   The state is per block and per reader, in `localStorage`: somebody who
+   opens the trends on every reading should not have to open them again on the
+   next one. Wrapped, because a browser with storage switched off is a browser
+   this panel still has to work in. */
+function foldedByDefault(key) {
+  try {
+    const stored = localStorage.getItem(`fsmes-spc-fold-${key}`);
+    if (stored === "open") return false;
+    if (stored === "closed") return true;
+  } catch (e) { /* storage off: the default below stands */ }
+  return null;
+}
+
+function rememberFold(key, open) {
+  try {
+    localStorage.setItem(`fsmes-spc-fold-${key}`, open ? "open" : "closed");
+  } catch (e) { /* nothing to remember it in, which breaks nothing */ }
+}
+
+/* One built block, behind a summary that states what is inside it.
+
+   The block's own heading becomes the summary's label and the sentence beside
+   it is the count, so a folded block reads as "3 process values, 2 of 3
+   drawn" rather than as a closed box. `data-fold` is the anchor a test and a
+   guide point at. */
+function foldable(section, key, summary, { open }) {
+  const box = el("details", "point-block point-fold");
+  box.dataset.fold = key;
+  const stored = foldedByDefault(key);
+  box.open = stored === null ? open : !stored;
+  const head = el("summary");
+  const title = section.querySelector("h3");
+  head.append(el("span", "point-fold-title", title ? title.textContent : key));
+  head.append(el("span", "point-fold-says", summary));
+  if (title) title.remove();
+  const inner = [...section.childNodes];
+  box.append(head, ...inner);
+  box.addEventListener("toggle", () => rememberFold(key, box.open));
+  return box;
+}
+
+/* What the rest of the line was doing in the same window.
+
+   The block #143 and #147 both asked for: a fill-height sample at the
+   inspection bench twenty minutes after the filler changed over is a sample
+   about the changeover, and the station's own block cannot say so however
+   honest it is.
+
+   Every row is a record on another machine, with that machine's name on it,
+   where it sat relative to this reading, and a link to its page. There is no
+   upstream and no downstream here and no cause named: the answer orders the
+   stations by the routing's step number where the routing names them, says
+   which routing, and leaves the reading to the reader. */
+function lineBlock(d, noun = "reading") {
+  const section = pointBlock("The rest of the line");
+  const line = d.line || {};
+  const stations = line.stations || [];
+  if (!stations.length) {
+    section.append(el("p", "muted small", line.note
+      || `This MES holds nothing about the rest of the line around this ${noun}.`));
+    return section;
+  }
+  section.append(el("p", "muted small",
+    `${line.parent.code} — ${line.parent.name}. Every row is a record on another `
+    + `station in this ${noun}'s own window, in the routing's order. Nothing here `
+    + "says one caused the other."));
+
+  for (const station of stations) {
+    const box = el("div", "line-station");
+    const head = el("h4");
+    const link = el("a", "obj", station.code);
+    link.href = `/dashboard/machine/${encodeURIComponent(station.code)}`;
+    head.append(link, ` ${station.name}`);
+    if (station.routing_seq !== null && station.routing_seq !== undefined) {
+      head.append(el("span", "muted small", ` · step ${station.routing_seq}`));
+    } else {
+      /* Said rather than left blank: a station this material's routing does
+         not name has no step number, which is a fact about the routing. */
+      head.append(el("span", "muted small", " · not in this routing"));
+    }
+    box.append(head);
+
+    /* Changeovers first, then the other stops, longest first inside each. The
+       pack's own words are that "a machine in setup on this line is the whole
+       line changing over", and it was the changeover neither panel could
+       name - so it is not the fifth row of a table of idle blips. */
+    const rows = [...(station.changeovers || []), ...(station.stops || [])];
+    const shown = rows.slice(0, LINE_ROWS_SHOWN);
+    box.append(pointTable(["What", "Reason", "For", "When"],
+      shown.map((row) => [
+        row.state === "setup" ? el("strong", null, "changeover") : row.state,
+        row.reason || el("span", "muted small", "unlabelled"),
+        kit.duration(row.seconds),
+        placed(row, noun),
+      ]),
+      "Nothing recorded on this station in this window."));
+    const rest = rows.length - shown.length;
+    box.append(el("p", "muted small",
+      `${station.not_running_total} stretch`
+      + `${station.not_running_total === 1 ? "" : "es"} not running, `
+      + `${kit.duration(station.seconds)} in all — ${station.labelled} named, `
+      + `${station.unlabelled} unlabelled.`
+      + (rest > 0 ? ` First ${shown.length} listed; ${rest} more.` : "")));
+    const said = watchedLine(station);
+    if (said) box.append(el("p", "point-watched", said));
+    section.append(box);
+  }
+
+  /* How many of the line's stations were drawn, which recorded nothing, and
+     which routing put them in this order (style rule 4). */
+  section.append(el("p", "muted small", line.note || ""));
+  if ((line.quiet || []).length) {
+    section.append(el("p", "muted small",
+      `Recorded nothing but running: ${line.quiet.map((row) => row.code).join(", ")}.`));
+  }
+  return closeWith(section, line);
+}
+
+/* Where one stretch on another machine sat relative to this reading, in the
+   words the answer gave it. Three different sentences for three different
+   facts, and the seconds are the server's: this panel does no arithmetic. */
+function placed(row, noun) {
+  if (row.over_the_reading) return `still in it at this ${noun}`;
+  if (row.ended_seconds_before !== null && row.ended_seconds_before !== undefined) {
+    return `ended ${kit.duration(row.ended_seconds_before)} before this ${noun}`;
+  }
+  if (row.started_seconds_after !== null && row.started_seconds_after !== undefined) {
+    return `started ${kit.duration(row.started_seconds_after)} after this ${noun}`;
+  }
+  /* Open at the end of the window: there is no end to measure from, and
+     "ended 0 min before" would be the wrong sentence (style rule 8). */
+  return `${fmt.clock(row.start)}, still open`;
+}
+
+/* The one-line summaries the folded blocks carry. Each says what is inside and
+   how many of it, because a closed box that states nothing is a list that
+   reads complete. */
+function gaugeSummary(d) {
+  const g = d.gauge || {};
+  const n = d.neighbours || {};
+  const who = g.gauge ? g.gauge.code : "no gauge recorded";
+  return `${who}, ${n.total || 0} reading${(n.total || 0) === 1 ? "" : "s"} by `
+       + `${n.gauges || 0} gauge${(n.gauges || 0) === 1 ? "" : "s"} in the hour either side`;
+}
+
+function tagsSummary(d) {
+  const tags = d.tags || {};
+  const total = tags.total || 0;
+  if (!total) return "none published in this window";
+  return `${total} process value${total === 1 ? "" : "s"}, ${tags.shown} of ${total} drawn`;
+}
+
+function elseSummary(d) {
+  const maint = d.maintenance || {};
+  const found = d.findings || {};
+  return `${maint.total || 0} maintenance order${(maint.total || 0) === 1 ? "" : "s"}, `
+       + `${found.total || 0} finding${(found.total || 0) === 1 ? "" : "s"}`;
+}
+
+function lineSummary(d) {
+  const line = d.line || {};
+  if (!line.parent) return "no line recorded";
+  const stations = line.stations || [];
+  const changeovers = stations.reduce(
+    (n, station) => n + (station.changeovers || []).length, 0);
+  const stops = stations.reduce((n, station) => n + (station.stops || []).length, 0);
+  if (!stations.length) {
+    return `${line.total || 0} other station${(line.total || 0) === 1 ? "" : "s"} on `
+         + `${line.parent.code}, none with a stop or a changeover in this window`;
+  }
+  return `${line.shown} of ${line.total} other station${line.total === 1 ? "" : "s"} on `
+       + `${line.parent.code} — ${changeovers} changeover${changeovers === 1 ? "" : "s"}, `
+       + `${stops} other stop${stops === 1 ? "" : "s"}`;
+}
+
 /* ---------- drawing it, and asking for it ---------- */
 
 function drawPoint(d) {
@@ -1265,12 +1455,23 @@ function drawPoint(d) {
     `— reading ${d.reading.check}, ${fmt.stamp(d.reading.ts)}`;
   body.append(readingBlock(d));
   body.append(ruleBlock(d));
-  body.append(gaugeBlock(d));
+  /* Folded where it already sits rather than moved to the bottom: *did the
+     process move or did the gauge?* is the second question a person asks, and
+     a block that answered it from somewhere else in the panel would be a
+     different panel. A closed `<details>` is one line tall, so its place
+     costs nothing. */
+  body.append(foldable(gaugeBlock(d), "gauge", gaugeSummary(d), { open: false }));
   body.append(machineBlock(d, "reading"));
   timelineChart(body, d, d.reading.equipment,
                 [{ t: d.window.at, label: "this reading" }]);
-  body.append(tagsBlock(d, d.reading.equipment, "reading"));
-  body.append(elseBlock(d));
+  /* And then the rest of the line, in the same window - after the station's
+     own story and its Gantt, because it is the answer to "and it was not this
+     station". Open when there is something in it. */
+  body.append(foldable(lineBlock(d, "reading"), "line", lineSummary(d),
+                       { open: (d.line && (d.line.stations || []).length) > 0 }));
+  body.append(foldable(tagsBlock(d, d.reading.equipment, "reading"), "tags",
+                       tagsSummary(d), { open: false }));
+  body.append(foldable(elseBlock(d), "else", elseSummary(d), { open: false }));
   /* The window the whole panel is about, and how much of it anybody watched.
      Last, because it qualifies everything above it. */
   const foot = el("p", "point-watched",
@@ -1294,7 +1495,7 @@ function drawSample(d) {
     `— sample ${d.sample.sample}, ${fmt.stamp(d.sample.ts)}`;
   body.append(readingsBlock(d));
   body.append(sampleRuleBlock(d));
-  body.append(gaugeBlock(d));
+  body.append(foldable(gaugeBlock(d), "gauge", gaugeSummary(d), { open: false }));
   body.append(machineBlock(d, "sample"));
   /* Every reading marked on the timeline too, not just the sample's stamp: a
      changeover that ended between the second bottle and the third is the
@@ -1302,8 +1503,11 @@ function drawSample(d) {
   timelineChart(body, d, d.sample.equipment,
                 (d.readings.readings || []).map((row) => ({
                   t: row.ts, label: `reading ${row.position}` })));
-  body.append(tagsBlock(d, d.sample.equipment, "sample"));
-  body.append(elseBlock(d));
+  body.append(foldable(lineBlock(d, "sample"), "line", lineSummary(d),
+                       { open: (d.line && (d.line.stations || []).length) > 0 }));
+  body.append(foldable(tagsBlock(d, d.sample.equipment, "sample"), "tags",
+                       tagsSummary(d), { open: false }));
+  body.append(foldable(elseBlock(d), "else", elseSummary(d), { open: false }));
   const foot = el("p", "point-watched",
     `${fmt.clock(d.window.start)}–${fmt.clock(d.window.end)}. `
     + (watchedLine(d) || ""));

@@ -795,8 +795,39 @@ def _line_events(session: Session, station_ids: list[int], start: datetime,
         .distinct()))
 
 
+def _placed_against(interval: dict, at: datetime) -> dict:
+    """The same interval, with where it sits relative to the reading on it.
+
+    *Ended three minutes before this sample* is the sentence that makes a row
+    on another machine mean anything, and it is arithmetic - so it is done here
+    rather than in the panel. `web/spc.js` lays these numbers out and works out
+    none of them (house rule 6), and a panel subtracting its own timestamps
+    would be a second opinion about a plant that has one.
+
+    Three different facts and three keys, because they are not interchangeable:
+    the reading fell inside the stretch; the stretch ended before it; the
+    stretch began after it. An interval still open at the end of the window has
+    no end to measure from and says so through `open`, which the timeline
+    already carries.
+    """
+    began, finished = interval.get("start"), interval.get("end")
+    inside = (began is not None and finished is not None
+              and began <= at <= finished)
+    return {
+        **interval,
+        "over_the_reading": inside,
+        "ended_seconds_before": (
+            None if inside or finished is None or interval.get("open")
+            or finished > at else round((at - finished).total_seconds(), 1)),
+        "started_seconds_after": (
+            None if inside or began is None or began <= at
+            else round((began - at).total_seconds(), 1)),
+    }
+
+
 def _line_block(session: Session, unit: Equipment | None, start: datetime,
-                end: datetime, *, material_id: int, noun: str = "reading") -> dict:
+                end: datetime, *, at: datetime, material_id: int,
+                noun: str = "reading") -> dict:
     """What the rest of this line was doing in the same window.
 
     The block that #143 and #147 both asked for in the same words: *"the panel
@@ -865,8 +896,9 @@ def _line_block(session: Session, unit: Equipment | None, start: datetime,
     for eq in drawn:
         timeline = _timeline_block(session, eq, start, end)
         intervals = _stops(timeline)
-        changeovers = [i for i in intervals["stops"] if i.get("state") == "setup"]
-        stops = [i for i in intervals["stops"] if i.get("state") != "setup"]
+        placed = [_placed_against(row, at) for row in intervals["stops"]]
+        changeovers = [i for i in placed if i.get("state") == "setup"]
+        stops = [i for i in placed if i.get("state") != "setup"]
         stations.append({
             "code": eq.code,
             "name": eq.name,
@@ -1059,7 +1091,7 @@ def dossier(session: Session, material: str, characteristic: str, check_id: int,
         # planted in the lab were findable at the station, and the two that
         # were not - the washer's hot-running stop and the line's changeover -
         # happened on a machine beside it.
-        "line": _line_block(session, unit, start, end,
+        "line": _line_block(session, unit, start, end, at=check.ts,
                             material_id=spec.material_id, noun="reading"),
         "tags": {
             "trends": tags,
@@ -1401,7 +1433,7 @@ def sample_dossier(session: Session, material: str, characteristic: str,
         # changeover that ended between the second bottle and the third is the
         # answer to a sampled point, and it is the filler's changeover rather
         # than the bench's.
-        "line": _line_block(session, unit, start, end,
+        "line": _line_block(session, unit, start, end, at=sample.ts,
                             material_id=spec.material_id, noun="sample"),
         "tags": {
             "trends": tags,

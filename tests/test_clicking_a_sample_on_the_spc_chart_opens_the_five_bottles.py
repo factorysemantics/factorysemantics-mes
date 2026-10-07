@@ -149,6 +149,7 @@ def plant(tmp_path_factory):
                 check.ts = at - timedelta(minutes=offset)
 
             mixer = session.scalar(select(Equipment).where(Equipment.code == "MIX01"))
+            packer = session.scalar(select(Equipment).where(Equipment.code == "PACK01"))
             session.add_all([
                 # Watching this machine since long before the window, so the
                 # minutes the panel asks for are minutes it can answer for.
@@ -166,6 +167,18 @@ def plant(tmp_path_factory):
                                ended_at=at - timedelta(seconds=40)),
                 EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.RUNNING,
                                started_at=at - timedelta(seconds=40)),
+                # And the station beside it, which changed size six minutes
+                # before these five bottles were taken and which neither panel
+                # could name until 2026-10-07.
+                EquipmentState(equipment_id=packer.id, state=EquipmentStateName.IDLE,
+                               started_at=at - timedelta(hours=3),
+                               ended_at=at - timedelta(minutes=11)),
+                EquipmentState(equipment_id=packer.id, state=EquipmentStateName.SETUP,
+                               reason="Size change", reason_code="changeover",
+                               started_at=at - timedelta(minutes=11),
+                               ended_at=at - timedelta(minutes=6)),
+                EquipmentState(equipment_id=packer.id, state=EquipmentStateName.RUNNING,
+                               started_at=at - timedelta(minutes=6)),
                 MaintenanceOrder(
                     code="MO-FILLER", equipment_id=mixer.id,
                     kind=MaintenanceKind.CORRECTIVE, status=MaintenanceStatus.IN_PROGRESS,
@@ -254,11 +267,23 @@ def _signed_in(chromium, base, code, password):
 DRAWN = SAMPLES + 2
 
 
-def _open_spc(context, base, theme="control-room"):
-    """The SPC page on fill height, with the dossier read held back."""
+def _open_spc(context, base, theme="control-room", remembered_folds=False):
+    """The SPC page on fill height, with the dossier read held back.
+
+    The folds a reader opened are remembered in `localStorage` and the context
+    is shared by every test in this file, so each page starts from the panel's
+    own defaults unless a test says it is asking about the remembering.
+    """
     page = context.new_page()
     page.add_init_script(
         f"try {{ localStorage.setItem('fsmes-theme', {theme!r}); }} catch (e) {{}}")
+    if not remembered_folds:
+        page.add_init_script(
+            """try {
+                 for (const key of Object.keys(localStorage)) {
+                   if (key.startsWith('fsmes-spc-fold-')) localStorage.removeItem(key);
+                 }
+               } catch (e) {}""")
 
     def held(route):
         page.wait_for_timeout(HELD_BACK_MS)
@@ -314,6 +339,21 @@ def _await_panel(page, sample_id):
 def _click_the_shifted_sample(page, sample_id):
     page.click(f"#chart circle[data-series='xbar'][data-sample='{sample_id}']")
     _await_panel(page, sample_id)
+
+
+def _unfold(page, key):
+    """Open one of the blocks the panel opens folded, and wait for it to be open.
+
+    Since 2026-10-07 the panel opens about one screen long: the readings, the
+    rules and the line's own events are open and the gauge, this station's
+    trends and the maintenance block are one click each. The wait is on the
+    `<details>`' own `open` state rather than on a timeout, because the browser
+    lays it out and this page's script does not (#112).
+    """
+    page.click(f'[data-fold="{key}"] > summary')
+    page.wait_for_function(
+        "(k) => document.querySelector(`[data-fold=\"${k}\"]`).open === true",
+        arg=key, timeout=10000)
 
 
 def _dots(page, series):
@@ -587,6 +627,8 @@ def test_the_gauge_the_maintenance_order_and_the_unlabelled_stop_are_all_there(
         page, plant):
     _base, shifted = plant
     _click_the_shifted_sample(page, shifted)
+    _unfold(page, "gauge")
+    _unfold(page, "else")
     text = page.inner_text("#point-panel")
     assert "HEIGHT-01" in text
     assert "QA-LEAD" in text
@@ -705,6 +747,8 @@ def test_an_operator_opens_a_sample_the_way_a_supervisor_does(chromium, plant):
         page = _open_spc(context, base)
         try:
             _click_the_shifted_sample(page, shifted)
+            _unfold(page, "gauge")
+            _unfold(page, "else")
             text = page.inner_text("#point-panel")
             assert "HEIGHT-01" in text
             assert "MO-FILLER" in text
@@ -713,3 +757,54 @@ def test_an_operator_opens_a_sample_the_way_a_supervisor_does(chromium, plant):
             _close(page)
     finally:
         context.close()
+
+
+# ----------------------------------- the rest of the line, and one screen of it
+
+
+def test_the_station_beside_this_one_is_on_the_sample_panel_too(page, plant):
+    """The same block on the sample panel, because the question is the same
+    one: five bottles went high, and the station next to the filler had
+    changed size six minutes before them. Named, with its own page a click
+    away, and with no claim that one caused the other."""
+    _base, sample = plant
+    _click_the_shifted_sample(page, sample)
+    block = page.inner_text('[data-fold="line"]')
+    assert "The rest of the line" in block
+    assert "PACK01" in block
+    assert "changeover" in block
+    assert "Size change" in block
+    assert "before this sample" in block
+    assert page.get_attribute(
+        '[data-fold="line"] a.obj[href*="PACK01"]', "href") == "/dashboard/machine/PACK01"
+
+
+def test_the_sample_panel_opens_with_its_three_longest_blocks_folded(page, plant):
+    """What a reader meets on a sample, and how long it is, as numbers.
+
+    Open: the five readings (618 pixels of them, because five bottles are five
+    rows and their chart), what the rules said (419), what the machine was
+    doing (362), its timeline (248) and the rest of the line (391) - 2,243 in
+    all on this fixture. Folded to one line each: the gauge, the station's
+    process values and the maintenance block, which is where the scrolling
+    was.
+
+    That is not one screen and this test does not claim it is. It is the ask's
+    own list of what stays open, measured, so that the next change to this
+    panel has a number to beat.
+    """
+    _base, sample = plant
+    _click_the_shifted_sample(page, sample)
+    open_now = page.evaluate(
+        """() => Object.fromEntries([...document.querySelectorAll('[data-fold]')]
+             .map((d) => [d.dataset.fold, d.open]))""")
+    assert open_now == {"gauge": False, "line": True, "tags": False, "else": False}
+    says = page.evaluate(
+        """() => Object.fromEntries([...document.querySelectorAll('[data-fold]')]
+             .map((d) => [d.dataset.fold, d.querySelector('summary').innerText]))""")
+    assert "HEIGHT-01" in says["gauge"]
+    assert "2 process values" in says["tags"]
+    assert "maintenance order" in says["else"]
+    tall = page.evaluate(
+        "() => document.querySelector('#point-body').scrollHeight")
+    assert tall < 2400, f"the sample panel is {tall}px tall with its blocks folded"

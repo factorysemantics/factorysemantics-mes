@@ -857,3 +857,42 @@ def test_the_block_draws_a_bounded_number_of_stations_and_states_how_many_it_lef
     assert block["with_events"] == 3
     assert block["total"] == 4
     assert "2 more of which did and are not drawn" in block["note"]
+
+
+def test_each_row_says_where_it_sits_relative_to_the_reading_and_the_panel_does_no_sums(
+        session, point, line):
+    """*Ended five minutes before this reading* is what makes a row on another
+    machine mean anything, and it is arithmetic — so the answer carries it and
+    the panel lays it out (house rule 6).
+
+    Three different facts and three keys: the reading fell inside the stretch,
+    the stretch ended before it, the stretch began after it. The packer's
+    changeover ended three minutes before; the idle it was in when the window
+    opened ended before that; neither was running when the reading was taken.
+    """
+    out = spc_point.dossier(session, "FG-COLA", "brix", point.id)
+    drawn = {station["code"]: station for station in out["line"]["stations"]}
+    changeover = drawn["PACK01"]["changeovers"][0]
+    assert changeover["ended_seconds_before"] == pytest.approx(180, abs=2)
+    assert changeover["over_the_reading"] is False
+    assert changeover["started_seconds_after"] is None
+    idle = drawn["PACK01"]["stops"][0]
+    assert idle["ended_seconds_before"] > changeover["ended_seconds_before"]
+
+
+def test_a_stretch_the_reading_fell_inside_says_so_rather_than_claiming_it_ended(
+        session, point):
+    """A machine still down when the reading was taken is the strongest row on
+    the block, and "ended 0 min before" would be the wrong sentence for it."""
+    packer = masterdata.get_equipment(session, "PACK01")
+    at = point.ts
+    session.add(EquipmentState(
+        equipment_id=packer.id, state=EquipmentStateName.DOWN, reason="Infeed jam",
+        started_at=at - timedelta(minutes=4), ended_at=at + timedelta(minutes=1)))
+    session.flush()
+    out = spc_point.dossier(session, "FG-COLA", "brix", point.id)
+    drawn = {station["code"]: station for station in out["line"]["stations"]}
+    jam = [row for row in drawn["PACK01"]["stops"] if row["reason"] == "Infeed jam"]
+    assert len(jam) == 1
+    assert jam[0]["over_the_reading"] is True
+    assert jam[0]["ended_seconds_before"] is None
