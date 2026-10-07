@@ -20,6 +20,13 @@ let completing = null;     // a maintenance order awaiting findings
 let qSpecs = [];           // specs for what this machine is running now
 let qSpecsTotal = 0;       // how many that material has in all
 let qMaterial = null;      // the material those specs belong to
+// Whether this plant has any released or running order at all, or null for
+// "the count did not come back". Empty on this machine and empty on the whole
+// plant are two different facts and send a person to two different places:
+// the first is a scheduling question for this line, the second means nobody
+// has planned any work. Null stays null - an unread count is not a plant with
+// no orders in it (house rule: unknown is not zero).
+let anyOpenOrder = null;
 
 function live(ok) {
   $("#live-dot").className = "dot" + (ok ? "" : " bad");
@@ -268,12 +275,14 @@ function wireReason() {
 function renderQueue() {
   const list = $("#queue");
   const canBook = window.FS.can("production.book");
-  const showing = JSON.stringify([canBook, queue.map((entry) => [
+  const showing = JSON.stringify([canBook, anyOpenOrder, queue.map((entry) => [
     entry.order, entry.seq, entry.operation, entry.good_qty, entry.quantity, entry.status])]);
   if (alreadyShowing(list, showing)) return;
   list.textContent = "";
   if (!queue.length) {
-    list.appendChild(el("li", "muted", "Nothing queued on this machine."));
+    list.appendChild(el("li", "muted", anyOpenOrder === false
+      ? "No order is open on this plant."
+      : "Nothing queued on this machine."));
     return;
   }
   for (const entry of queue) {
@@ -486,7 +495,13 @@ async function renderQuality() {
   $("#q-value").disabled = nothingToJudge;
   let spec;
   if (!material) {
-    spec = "Nothing is queued on this machine, so there is nothing to inspect.";
+    // Which of the two is true matters more than it looks: on 2026-10-07 a
+    // lab plant had finished every order in its pack and this card said
+    // "nothing is queued on this machine", which reads as a broken dropdown
+    // on a working line rather than as a plant with an empty book.
+    spec = anyOpenOrder === false
+      ? "No order is open on this plant, so there is nothing to inspect."
+      : "Nothing is queued on this machine, so there is nothing to inspect.";
   } else if (!qSpecs.length) {
     spec = `No characteristic has a specification for ${material}.`;
   } else {
@@ -701,20 +716,42 @@ function wireMaintenance() {
 
 /* ---------- the loop ---------- */
 
+/* How long the queue waits for the order counts before drawing without them.
+   Under one refresh tick, because a station screen's job is to show the
+   machine: a slow or broken /workorders/summary must cost this page the
+   sentence about the plant's book and nothing else. */
+const SUMMARY_MS = 2000;
+
+/* The counts by status, or null when they do not arrive in time - which is
+   "unknown", and reads on the screen as the queue line this page has always
+   drawn. Zero would be a claim that the plant has nothing planned, which a
+   request that never answered is no evidence for. */
+function openOrders() {
+  return Promise.race([
+    api("/workorders/summary").catch(() => null),
+    new Promise((resolve) => { setTimeout(() => resolve(null), SUMMARY_MS); }),
+  ]);
+}
+
 async function refresh() {
   if (!machine) return;
   try {
-    const [states, dispatch] = await Promise.all([
+    const [states, dispatch, book] = await Promise.all([
       api("/equipment/states"),
       api(`/workorders/dispatch?equipment=${encodeURIComponent(machine)}`),
+      openOrders(),
     ]);
+    const byStatus = book && book.by_status;
+    anyOpenOrder = byStatus
+      ? (byStatus.released || 0) + (byStatus.running || 0) > 0
+      : null;
     renderState(states);
     queue = dispatch.filter((entry) => entry.status !== "done");
     renderQueue();
     renderBookTargets();
     await renderQuality();
     await renderMaintenance();
-    window.__fsmesPageData = { machine, state: current, queue };
+    window.__fsmesPageData = { machine, state: current, queue, anyOpenOrder };
     live(true);
   } catch (err) {
     live(false);
