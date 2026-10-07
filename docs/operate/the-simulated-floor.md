@@ -42,7 +42,7 @@ history contains all six.
 | The first bottles after a changeover run heavy | `line.json`, an `offset` beginning where the changeover ends | a point or two above the control limit, immediately after a **planned** stop — which the floor labels `changeover`, so it can be found |
 | One of the two scales is drifting | the pack's `floor.json` | that scale's readings run about 0.6 g above the other's, until the supervisor calibrates it |
 | The night shift's readings of the same process are more spread out | the pack's `floor.json` | a wider spread on the night shift with no change in the process behind it |
-| The nozzle the changeover left behind fills a shade over | the pack's `floor.json`, `sampling.fill_height.after_changeover` | for twenty-five line minutes after each labelled `changeover`, the **fill-height sample means** sit about half a millimetre above the centre line while the sample **ranges** do not move: the process shifted, its spread did not. The checkweigher's own band absorbs it, so it is invisible on fill weight and plain on the height chart — which is what an X-bar chart is for. Half a millimetre is less than the limits drawn from R-bar, so it is found by splitting the means on the changeover and not by waiting for a rule to fire |
+| The nozzle the changeover left behind fills a shade over | the pack's `floor.json`, `sampling.fill_height.after_changeover` | for twenty-five line minutes after each labelled `changeover`, the **fill-height sample means** sit about a millimetre and a half above the centre line while the sample **ranges** do not move: the process shifted, its spread did not. The checkweigher's own band absorbs it, so it is invisible on fill weight and plain on the height chart — which is what an X-bar chart is for. A millimetre and a half is 2.9 sigma of a sample mean on this line and lands just under A₂R̄, so nearly every post-changeover sample mean breaks the two-sigma line (rule 2 fires reliably) and the tallest break the three-sigma one (rule 1); the pack's `_how_big_a_millimetre_and_a_half_is` has the arithmetic |
 
 And one that is about the MES rather than the plant: **a tag goes quiet for
 fifteen minutes.** `FillWeight` stops arriving while the filler runs on and
@@ -118,6 +118,56 @@ What to watch it with: the floor inspects every eight line seconds, so
 means the floor has stopped, whatever else the plant says about itself.
 `/health` needs no credential.
 
+## Keeping the book full
+
+A pack's order book is finite. Bottling's ten orders are about twenty-five
+hours of its line's rated output, and the lab plant runs for weeks: on
+2026-10-07 at 04:21 UTC, forty-three hours after it was built, it finished
+`WO-ACME-4720` and from then on had no released or running order at all. The
+station page said *Nothing queued on this machine*, the characteristic
+dropdown was empty, and every quality check carried no order — the screens
+and the analysis on top of them all hang off an open order.
+
+The floor does not fix that by inventing one; it never will again
+([decision 0019](../decisions/0019-count-everything-the-machine-counted.md)).
+What was missing was a person. A plant has three — an operator, a shift
+supervisor, and a **production planner**, who in a real plant is where the
+orders come from, or the ERP is. A lab plant has no ERP, so a pack can ask
+for the planner:
+
+```json
+{
+  "planning": {
+    "keep_planned": 3
+  }
+}
+```
+
+Three orders planned behind whatever is on the line. `FLOOR-PLAN` — a third
+identity, holding `orders.create` and `plant.read` and nothing else — creates them over
+`POST /workorders`, and what it writes comes out of the plant's own book,
+read back over the API: the materials, quantities and priorities this plant
+has already made, in rotation; the code sequence continued from the highest
+one in the book; the due dates spaced the way the book's own are. It opens no
+pack file and invents nothing. A plant whose book has never held an order
+gets **no** order — it says the pattern is missing, once, and plans nothing.
+
+It plans and does not release. `orders.release` belongs to the supervisor, so
+a planned order waits until `work_the_book` puts it on the line, and the
+audit trail reads planner, then supervisor, then floor — three rows, three
+names, the way a real plant's would.
+
+**`keep_planned` is 0 by default, and 0 is no planner.** A pack that says
+nothing behaves exactly as it did before this existed, which is what
+`labs/experiments/over-run.toml` depends on: a book that runs out is the
+whole point of that experiment. How often the planner looks is the floor's
+own cadence, `[floor] plan_every` (`MES_OPS_PLAN_EVERY`, sixty seconds),
+divided by the replay speed like every other cadence here.
+
+A plant initialised before the account existed has no `FLOOR-PLAN` to sign in
+as. The floor says so once — *no planner account; the order book will not be
+topped up* — and runs as it did before. `fsmes plant <name> migrate` adds it.
+
 ## Reading the script
 
 The bottling pack's
@@ -126,6 +176,7 @@ is the worked example, and every block in it carries a `_why`. The shape:
 
 ```json
 {
+  "planning": {"keep_planned": 3},
   "measurement": {
     "stale_after_s": 150,
     "shift_spread": {"NIGHT": 2.5},

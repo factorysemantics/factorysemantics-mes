@@ -926,7 +926,7 @@ def test_the_sampling_plan_is_the_packs_and_not_this_codes():
     assert plan.every_line_s == 900.0, "fifteen line minutes: a tray at a time"
     assert (plan.offset, plan.per_unit) == (12.0, 0.26)
     assert plan.piece_to_piece == 0.35
-    assert (plan.after_changeover_minutes, plan.after_changeover_offset) == (25.0, 0.5)
+    assert (plan.after_changeover_minutes, plan.after_changeover_offset) == (25.0, 1.5)
 
 
 def test_a_weight_becomes_a_height_by_the_one_formula_the_scenario_states():
@@ -1101,33 +1101,32 @@ SAMPLES_EACH_SIDE = 12
 STANDARD_ERRORS_ALLOWED = 4.0
 
 
-def test_the_heights_after_a_changeover_sit_half_a_millimetre_high(plant):
+def test_the_heights_after_a_changeover_sit_a_millimetre_and_a_half_high(plant):
     """The planted cause, measured the way the pack promises it.
 
-    The pack says in its own words how big half a millimetre is: *"a shift a
-    reader finds by splitting the means on the changeover, not one that trips
-    a control rule"*. So this splits the means on the changeover. Twenty-four
-    samples of five bottles, alternating - twelve with nothing behind them and
-    twelve inside the window after a changeover, the same five weights every
-    time - and the planted half millimetre is the difference between the two
-    groups' average mean. The offset goes on the whole sample, because what
-    the nozzle setting moved is the process and not one bottle, so it shows on
-    the means and not on the ranges, which is the finding an engineer is meant
-    to be able to make.
+    This splits the means on the changeover: twenty-four samples of five
+    bottles, alternating - twelve with nothing behind them and twelve inside
+    the window after a changeover, the same five weights every time - and the
+    planted offset is the difference between the two groups' average mean. It
+    asserts whatever the pack plants, not a number of its own, so the pack
+    moving from 0.5 mm to 1.5 mm on 2026-10-07 moves this test with it. The
+    offset goes on the whole sample, because what the nozzle setting moved is
+    the process and not one bottle, so it shows on the means and not on the
+    ranges, which is the finding an engineer is meant to be able to make.
 
     **One sample either side cannot see it, and that is a fact about the
     process rather than a gap in the plant.** Five bottles held at one weight
     still stand about 0.36 mm apart - the glass's own `piece_to_piece` is
     0.35 mm and the bench gauge sits on top of it - so the standard error of
     one five-bottle mean is about 0.16 mm and of the difference between two of
-    them about 0.23 mm. Against that, 0.5 mm is barely two standard errors:
-    one sample a side puts the answer anywhere between roughly 0.05 mm and
-    0.95 mm. This test asserted exactly that for a while (`abs=0.35` on a
-    single pair) and failed for it - 0.06 mm on windows 3.12 in #147, and
-    repeatably on any run the clock made a night shift, because the pack
-    widens the bench's spread from 0.10 mm to 0.25 mm at night. That is the
-    same arithmetic that keeps this shift inside a correct control chart's
-    limits. Over N samples a side the standard error falls by root N, so the
+    them about 0.23 mm. Against that, even the 1.5 mm the pack plants today is
+    six standard errors on one pair, and the 0.5 mm it planted until
+    2026-10-07 was barely two: one sample a side put that answer anywhere
+    between roughly 0.05 mm and 0.95 mm. This test asserted exactly that for a
+    while (`abs=0.35` on a single pair) and failed for it - 0.06 mm on windows
+    3.12 in #147, and repeatably on any run the clock made a night shift,
+    because the pack widens the bench's spread from 0.10 mm to 0.25 mm at
+    night. Over N samples a side the standard error falls by root N, so the
     tolerance below is `STANDARD_ERRORS_ALLOWED` of *those*, worked out from
     the pack's own spreads at the wider of the two shifts - not a number
     chosen by hand.
