@@ -67,7 +67,9 @@ from sqlalchemy.orm import Session
 
 from fsmes.domain import (
     Equipment,
+    EquipmentLevel,
     EquipmentState,
+    EquipmentStateName,
     Gauge,
     MaintenanceOrder,
     Material,
@@ -75,6 +77,8 @@ from fsmes.domain import (
     QualityCheck,
     QualitySample,
     QualitySpec,
+    Routing,
+    RoutingOperation,
     SpcSignal,
     TagValue,
     WorkOrder,
@@ -120,6 +124,14 @@ TAG_BUCKETS = 60
 #: over an hour is a chart nobody can read and a payload nobody wanted.
 MIN_BUCKETS = 12
 MOST_BUCKETS = 240
+
+#: The most of the line's other stations one panel reads in full. A line of
+#: sixty work units is a real plant and a panel that read every one of them
+#: would be sixty timeline reads deep; the ones with something in the window
+#: are drawn to this many and the count of the rest is stated, which is the
+#: same bound and the same sentence the stops table and the analogs already
+#: carry.
+MOST_LINE_STATIONS = 8
 
 #: What the blocks that are lists of records say instead of a coverage figure.
 #: `kit.js` reads the word `absent` and prints this sentence rather than
@@ -730,6 +742,221 @@ def _stops(timeline: dict) -> dict:
     }
 
 
+# ------------------------------------------------- the rest of the line
+
+
+def _routing_sequence(session: Session, material_id: int) -> tuple[dict[int, int], list[str]]:
+    """{equipment id: the step number this material's routing gives it}.
+
+    The routing is the only recorded statement this MES holds about the order
+    of the stations on a line, and it is a statement about *this material's*
+    route rather than about the line's plumbing - so it orders the block where
+    it names a station and says nothing where it does not.
+
+    It is deliberately not read as upstream and downstream. Bottling's own
+    routing runs Load → Denest → Wash → Inspect → Fill → Palletise while the
+    bottles come off the filler to the inspection bench, so "the station
+    before this one" worked out from the sequence would be wrong on the very
+    plant this block was written for. A step number is a step number.
+
+    The lowest step per station when a material has more than one routing, and
+    the routing codes come back so the answer can say which were read.
+    """
+    rows = list(session.execute(
+        select(RoutingOperation.equipment_id, func.min(RoutingOperation.seq),
+               func.min(Routing.code))
+        .join(Routing, Routing.id == RoutingOperation.routing_id)
+        .where(Routing.material_id == material_id,
+               RoutingOperation.equipment_id.is_not(None))
+        .group_by(RoutingOperation.equipment_id)))
+    codes = sorted({row[2] for row in rows})
+    return {row[0]: row[1] for row in rows}, codes
+
+
+def _line_events(session: Session, station_ids: list[int], start: datetime,
+                 end: datetime) -> set[int]:
+    """Which of these stations recorded a stretch of not running in the window.
+
+    One query over the same table `_timeline_block` reads, used only to choose
+    which stations are worth reading in full: a line of sixty work units would
+    otherwise be sixty timeline reads and sixty coverage ledgers for a panel
+    that draws eight. Every fact the block then states comes from the timeline
+    itself, so there is one source for the numbers and this is a filter.
+    """
+    if not station_ids:
+        return set()
+    return set(session.scalars(
+        select(EquipmentState.equipment_id)
+        .where(EquipmentState.equipment_id.in_(station_ids),
+               EquipmentState.state != EquipmentStateName.RUNNING,
+               EquipmentState.started_at < end,
+               (EquipmentState.ended_at.is_(None))
+               | (EquipmentState.ended_at > start))
+        .distinct()))
+
+
+def _placed_against(interval: dict, at: datetime) -> dict:
+    """The same interval, with where it sits relative to the reading on it.
+
+    *Ended three minutes before this sample* is the sentence that makes a row
+    on another machine mean anything, and it is arithmetic - so it is done here
+    rather than in the panel. `web/spc.js` lays these numbers out and works out
+    none of them (house rule 6), and a panel subtracting its own timestamps
+    would be a second opinion about a plant that has one.
+
+    Three different facts and three keys, because they are not interchangeable:
+    the reading fell inside the stretch; the stretch ended before it; the
+    stretch began after it. An interval still open at the end of the window has
+    no end to measure from and says so through `open`, which the timeline
+    already carries.
+    """
+    began, finished = interval.get("start"), interval.get("end")
+    inside = (began is not None and finished is not None
+              and began <= at <= finished)
+    return {
+        **interval,
+        "over_the_reading": inside,
+        "ended_seconds_before": (
+            None if inside or finished is None or interval.get("open")
+            or finished > at else round((at - finished).total_seconds(), 1)),
+        "started_seconds_after": (
+            None if inside or began is None or began <= at
+            else round((began - at).total_seconds(), 1)),
+    }
+
+
+def _line_block(session: Session, unit: Equipment | None, start: datetime,
+                end: datetime, *, at: datetime, material_id: int,
+                noun: str = "reading") -> dict:
+    """What the rest of this line was doing in the same window.
+
+    The block that #143 and #147 both asked for in the same words: *"the panel
+    answers what happened at this station, and the planted cause is a station
+    upstream."* A fill-height sample taken at the inspection bench twenty
+    minutes after the filler changed over is a sample about the changeover, and
+    a panel scoped to one station cannot say so however honest it is.
+
+    **Nothing here is inferred.** Two things are recorded and both are used:
+    every work unit has a parent (`Equipment.parent_id`), and a stretch of not
+    running is an interval with a reason on it. The block is the *siblings under
+    the same parent* - it names that parent, so a reader on a plant modelled
+    line → cell → machine can see it scoped to the cell - each with its own
+    stops and changeovers in this window, read from `_timeline_block` and split
+    by `_stops`, which is the same source and the same definition the station's
+    own block above uses. There is no upstream and no downstream in it.
+
+    Bounded: the stations with something in the window are read in full, to
+    `MOST_LINE_STATIONS` of them, and the ones that recorded nothing come back
+    by name in `quiet` with the count. A station in `quiet` recorded no stretch
+    of not running in this window; that is a statement about records and not
+    about the machine, which is why it is worded that way and why the note says
+    so.
+    """
+    empty = {
+        "parent": None, "stations": [], "shown": 0, "total": 0,
+        "with_events": 0, "quiet": [], "routings": [],
+        "coverage": "absent", "coverage_note": RECORDS_NOT_A_RATE,
+    }
+    if unit is None:
+        return {**empty, "note": (
+            f"no station is recorded against this {noun}, so there is no line "
+            f"whose other stations this block could draw")}
+    parent = unit.parent
+    if parent is None:
+        return {**empty, "note": (
+            f"{unit.code} hangs under nothing in this plant's equipment tree, so "
+            f"*the rest of the line* is not a question this MES can answer about "
+            f"it — there is no recorded line to be the rest of")}
+
+    siblings = list(session.scalars(
+        select(Equipment)
+        .where(Equipment.parent_id == parent.id,
+               Equipment.id != unit.id,
+               Equipment.level == EquipmentLevel.WORK_UNIT)
+        .order_by(Equipment.code)))
+    seq, routings = _routing_sequence(session, material_id)
+    # Routing order where the routing names the station, the rest after it by
+    # code. A station the routing says nothing about is not sorted into a
+    # position it never had.
+    siblings.sort(key=lambda eq: (0, seq[eq.id], eq.code) if eq.id in seq
+                  else (1, 0, eq.code))
+
+    if not siblings:
+        return {**empty, "parent": {"code": parent.code, "name": parent.name},
+                "routings": routings, "note": (
+                    f"{unit.code} is the only work unit under {parent.code}, so "
+                    f"there is no rest of the line to draw")}
+
+    spoke = _line_events(session, [eq.id for eq in siblings], start, end)
+    busy = [eq for eq in siblings if eq.id in spoke]
+    quiet = [eq for eq in siblings if eq.id not in spoke]
+    drawn = busy[:MOST_LINE_STATIONS]
+
+    stations = []
+    for eq in drawn:
+        timeline = _timeline_block(session, eq, start, end)
+        intervals = _stops(timeline)
+        placed = [_placed_against(row, at) for row in intervals["stops"]]
+        changeovers = [i for i in placed if i.get("state") == "setup"]
+        stops = [i for i in placed if i.get("state") != "setup"]
+        stations.append({
+            "code": eq.code,
+            "name": eq.name,
+            # Null where this material's routing does not name the station,
+            # which is a normal state and not a gap to be filled in.
+            "routing_seq": seq.get(eq.id),
+            # A changeover is called out from the other stops rather than
+            # counted among them, because the pack's own words are that "a
+            # machine in setup on this line is the whole line changing over" -
+            # and it was the changeover neither panel could name. Both lists
+            # come off one `_stops` of one timeline, so the two cannot disagree
+            # about the same minutes, and `not_running_total` is their sum.
+            "changeovers": changeovers,
+            "stops": stops,
+            "not_running_total": intervals["total"],
+            "labelled": intervals["labelled"],
+            "unlabelled": intervals["unlabelled"],
+            "seconds": intervals["seconds"],
+            "coverage": timeline.get("coverage"),
+            "coverage_note": (
+                "how much of this window anybody was watching this station"),
+        })
+
+    rest = len(busy) - len(drawn)
+    note = (
+        f"{len(stations)} of the {len(siblings)} other work unit"
+        f"{'' if len(siblings) == 1 else 's'} under {parent.code} drawn — the ones "
+        f"that recorded a stop or a changeover in this window"
+        + (f", {rest} more of which did and are not drawn" if rest else "")
+        + (f". {len(quiet)} recorded nothing but running in it, which is a "
+           f"statement about what this MES holds and not about what the machine "
+           f"did." if quiet else ".")
+        + (f" Ordered by {', '.join(routings)}, this material's routing, where it "
+           f"names the station; the rest after it by code."
+           if routings else
+           " No routing of this material names a station, so the order is by code "
+           "and no step number is given.")
+    )
+    return {
+        "parent": {"code": parent.code, "name": parent.name},
+        "stations": stations,
+        "shown": len(stations),
+        # Every list states its total: the other work units under this parent,
+        # drawn or not.
+        "total": len(siblings),
+        "with_events": len(busy),
+        "quiet": [{"code": eq.code, "name": eq.name, "routing_seq": seq.get(eq.id)}
+                  for eq in quiet],
+        "routings": routings,
+        "note": note,
+        # The same word the other record lists carry: this is a list of what
+        # was recorded on other machines in a window, not a rate over a watched
+        # one. Each station inside it carries its own watched share.
+        "coverage": "absent",
+        "coverage_note": RECORDS_NOT_A_RATE,
+    }
+
+
 # ------------------------------------------------- what else was in the window
 
 
@@ -859,6 +1086,13 @@ def dossier(session: Session, material: str, characteristic: str, check_id: int,
         "machine": machine,
         "timeline": timeline,
         "stops": None if timeline is None else _stops(timeline),
+        # And what the rest of the same line was doing in the same window. The
+        # block the station's own answer cannot hold: four of the five causes
+        # planted in the lab were findable at the station, and the two that
+        # were not - the washer's hot-running stop and the line's changeover -
+        # happened on a machine beside it.
+        "line": _line_block(session, unit, start, end, at=check.ts,
+                            material_id=spec.material_id, noun="reading"),
         "tags": {
             "trends": tags,
             "shown": len(tags),
@@ -1195,6 +1429,12 @@ def sample_dossier(session: Session, material: str, characteristic: str,
         "machine": machine,
         "timeline": timeline,
         "stops": None if timeline is None else _stops(timeline),
+        # The same block, over the window the sample's n readings span. A
+        # changeover that ended between the second bottle and the third is the
+        # answer to a sampled point, and it is the filler's changeover rather
+        # than the bench's.
+        "line": _line_block(session, unit, start, end, at=sample.ts,
+                            material_id=spec.material_id, noun="sample"),
         "tags": {
             "trends": tags,
             "shown": len(tags),

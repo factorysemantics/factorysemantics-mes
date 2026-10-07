@@ -30,6 +30,7 @@ import pytest
 
 from fsmes.db import utcnow
 from fsmes.domain import (
+    EquipmentLevel,
     EquipmentState,
     EquipmentStateName,
     MaintenanceKind,
@@ -651,3 +652,247 @@ def test_an_analogs_buckets_are_laid_against_the_window_the_trend_actually_drew(
         f"tag with holes in it: {late['bucket_seconds']} s buckets")
     assert late["buckets_with_no_reading"] == 0
     assert late["coverage"] == 1.0
+
+
+# --------------------------------------------------- the rest of the line
+
+
+@pytest.fixture()
+def line(session, point):
+    """The packer beside the mixer, changing over inside the reading's window.
+
+    The story #143 and #147 both found and neither panel could tell: the thing
+    that explains the reading happened on the machine next to it. Three facts
+    are written here and each one is a test below:
+
+    * `PACK01` in setup, ended three minutes before the reading — inside the
+      window, and the row a reader has to see;
+    * `PACK01` down for two minutes an hour earlier — outside the window, and a
+      row that must not appear;
+    * `AUX01`, a third work unit under the same line that this material's
+      routing says nothing about and that recorded nothing at all.
+    """
+    packer = masterdata.get_equipment(session, "PACK01")
+    masterdata.create_equipment(session, code="AUX01", name="Auxiliary 01",
+                                level=EquipmentLevel.WORK_UNIT, parent_code="LINE1",
+                                actor="test")
+    at = point.ts
+    session.add_all([
+        EquipmentState(equipment_id=packer.id, state=EquipmentStateName.IDLE,
+                       started_at=at - timedelta(hours=3),
+                       ended_at=at - timedelta(minutes=8)),
+        EquipmentState(equipment_id=packer.id, state=EquipmentStateName.SETUP,
+                       reason="Product change", reason_code="changeover",
+                       started_at=at - timedelta(minutes=8),
+                       ended_at=at - timedelta(minutes=3)),
+        EquipmentState(equipment_id=packer.id, state=EquipmentStateName.RUNNING,
+                       started_at=at - timedelta(minutes=3)),
+        # An hour earlier, well outside the twelve minutes the panel asks for.
+        EquipmentState(equipment_id=packer.id, state=EquipmentStateName.DOWN,
+                       reason="Infeed jam", started_at=at - timedelta(hours=1),
+                       ended_at=at - timedelta(minutes=58)),
+    ])
+    session.flush()
+    return packer
+
+
+def test_a_changeover_on_the_station_beside_this_one_is_in_the_window_with_its_name_on_it(
+        session, point, line):
+    """The block this panel was missing. A reading at the mixer whose cause is
+    the packer changing over five minutes earlier is a reading about the
+    changeover, and a panel scoped to one station cannot say so."""
+    out = spc_point.dossier(session, "FG-COLA", "brix", point.id)
+    block = out["line"]
+    assert block["parent"] == {"code": "LINE1", "name": "Packaging Line 1"}
+    drawn = {station["code"]: station for station in block["stations"]}
+    assert "PACK01" in drawn, block["note"]
+    packer = drawn["PACK01"]
+    # The station's name is on the row: a code with no name is a row a reader
+    # has to look up elsewhere.
+    assert packer["name"] == "Packer 01"
+    assert len(packer["changeovers"]) == 1
+    assert packer["changeovers"][0]["reason"] == "Product change"
+    assert packer["changeovers"][0]["state"] == "setup"
+
+
+def test_the_station_itself_is_not_in_the_block_about_the_rest_of_the_line(
+        session, point, line):
+    """Its own stops are the block above. Drawing them twice would have a
+    reader counting one changeover as two."""
+    out = spc_point.dossier(session, "FG-COLA", "brix", point.id)
+    codes = ([station["code"] for station in out["line"]["stations"]]
+             + [station["code"] for station in out["line"]["quiet"]])
+    assert "MIX01" not in codes
+    assert out["line"]["total"] == 2        # PACK01 and AUX01
+
+
+def test_a_stop_outside_the_window_is_not_drawn_in_it(session, point, line):
+    """The packer jammed an hour before this reading. That is a true record and
+    not an answer to this question, and a block that reached for it would make
+    every reading look explained.
+
+    Two stretches of the packer's are inside the window and both are drawn: the
+    tail of the idle it was in when the window opened, clipped to the window,
+    and the changeover after it. The jam is a third record and is not one.
+    """
+    out = spc_point.dossier(session, "FG-COLA", "brix", point.id)
+    drawn = {station["code"]: station for station in out["line"]["stations"]}
+    reasons = [row["reason"] for row in drawn["PACK01"]["stops"]]
+    assert "Infeed jam" not in reasons
+    assert drawn["PACK01"]["not_running_total"] == 2
+    assert [row["state"] for row in drawn["PACK01"]["stops"]] == ["idle"]
+    for row in drawn["PACK01"]["stops"] + drawn["PACK01"]["changeovers"]:
+        assert row["start"] >= out["window"]["start"]
+        assert row["end"] <= out["window"]["end"]
+
+
+def test_a_station_that_recorded_nothing_is_named_rather_than_left_out(
+        session, point, line):
+    """House rule 3, on a list of machines: the auxiliary recorded no stretch
+    of not running in this window, so it comes back by name in `quiet` with the
+    sentence saying that is a statement about records rather than about the
+    machine."""
+    out = spc_point.dossier(session, "FG-COLA", "brix", point.id)
+    block = out["line"]
+    assert [row["code"] for row in block["quiet"]] == ["AUX01"]
+    assert block["shown"] == 1
+    assert block["with_events"] == 1
+    assert "1 of the 2 other work units under LINE1 drawn" in block["note"]
+    assert "not about what the machine did" in block["note"]
+
+
+def test_the_line_is_ordered_by_this_materials_routing_and_says_which_one(
+        session, point, line):
+    """Routing order where the routing names the station, the rest after it by
+    code — and the routing named out loud, because this is a statement about
+    how `FG-COLA` is made and not about the line's plumbing.
+
+    Deliberately not read as upstream and downstream: bottling's own routing
+    runs Inspect before Fill while the bottles come off the filler to the
+    bench, so a step number is a step number here and nothing more.
+    """
+    out = spc_point.dossier(session, "FG-COLA", "brix", point.id)
+    block = out["line"]
+    assert block["routings"] == ["RT-COLA"]
+    assert "RT-COLA" in block["note"]
+    packer = block["stations"][0]
+    assert (packer["code"], packer["routing_seq"]) == ("PACK01", 20)
+    # The auxiliary is not in the routing, so it has no step number and sorts
+    # after the ones that do rather than into a position it never had.
+    assert block["quiet"][0]["routing_seq"] is None
+
+
+def test_each_station_on_the_line_carries_how_much_of_the_window_was_watched(
+        session, point, line):
+    """A stop list with no watched share is a list that reads complete. The
+    figure is the station's own, from the same timeline the intervals came
+    from, and the block around them says it is a list of records and has no
+    figure of its own."""
+    out = spc_point.dossier(session, "FG-COLA", "brix", point.id)
+    block = out["line"]
+    assert block["coverage"] == "absent"
+    assert "not a rate over a watched one" in block["coverage_note"]
+    for station in block["stations"]:
+        assert 0 <= station["coverage"] <= 1
+        assert station["coverage_note"]
+
+
+def test_a_station_with_no_line_above_it_says_so_rather_than_drawing_an_empty_block(
+        session, scales):
+    """A machine hanging outside any line is a real state. *The rest of the
+    line* is then not a question this MES can answer about it, which is a
+    different sentence from a line that was quiet."""
+    masterdata.create_equipment(session, code="LONE01", name="Lone cell 01",
+                                level=EquipmentLevel.WORK_UNIT, actor="test")
+    reading = _reading(session, 11.0, gauge="SCALE-A", equipment="LONE01")
+    out = spc_point.dossier(session, "FG-COLA", "brix", reading.id)
+    block = out["line"]
+    assert block["parent"] is None
+    assert block["stations"] == [] and block["total"] == 0
+    assert "hangs under nothing" in block["note"]
+
+
+def test_a_reading_with_no_station_recorded_says_the_block_cannot_be_drawn(
+        session, scales):
+    """A person with a gauge records no station, so there is no line either.
+    The panel already says that about the machine block; it has to say it here
+    too rather than showing an empty list of stations."""
+    reading = _reading(session, 11.0, gauge="SCALE-A")
+    out = spc_point.dossier(session, "FG-COLA", "brix", reading.id)
+    assert out["line"]["parent"] is None
+    assert "no station is recorded against this reading" in out["line"]["note"]
+
+
+def test_a_line_of_one_work_unit_says_there_is_no_rest_of_it(session, point):
+    """The demo plant's line holds the mixer and the packer. A plant whose line
+    holds one machine has no rest of the line, and saying so is not the same as
+    saying the rest of it was quiet."""
+    packer = masterdata.get_equipment(session, "PACK01")
+    packer.parent = None
+    session.flush()
+    out = spc_point.dossier(session, "FG-COLA", "brix", point.id)
+    assert out["line"]["parent"] == {"code": "LINE1", "name": "Packaging Line 1"}
+    assert out["line"]["total"] == 0
+    assert "only work unit under LINE1" in out["line"]["note"]
+
+
+def test_the_block_draws_a_bounded_number_of_stations_and_states_how_many_it_left(
+        session, point, line, monkeypatch):
+    """A line of sixty work units is a real plant. The ones with something in
+    the window are drawn to a ceiling and the count of the rest is stated
+    (style rule 4) — the same bound the stops table and the analogs carry."""
+    at = point.ts
+    for n in range(2):
+        unit = masterdata.create_equipment(
+            session, code=f"EXTRA0{n}", name=f"Extra 0{n}",
+            level=EquipmentLevel.WORK_UNIT, parent_code="LINE1", actor="test")
+        session.add(EquipmentState(
+            equipment_id=unit.id, state=EquipmentStateName.DOWN, reason="Blocked",
+            started_at=at - timedelta(minutes=5), ended_at=at - timedelta(minutes=4)))
+    session.flush()
+    monkeypatch.setattr(spc_point, "MOST_LINE_STATIONS", 1)
+    out = spc_point.dossier(session, "FG-COLA", "brix", point.id)
+    block = out["line"]
+    assert block["shown"] == 1
+    assert block["with_events"] == 3
+    assert block["total"] == 4
+    assert "2 more of which did and are not drawn" in block["note"]
+
+
+def test_each_row_says_where_it_sits_relative_to_the_reading_and_the_panel_does_no_sums(
+        session, point, line):
+    """*Ended five minutes before this reading* is what makes a row on another
+    machine mean anything, and it is arithmetic — so the answer carries it and
+    the panel lays it out (house rule 6).
+
+    Three different facts and three keys: the reading fell inside the stretch,
+    the stretch ended before it, the stretch began after it. The packer's
+    changeover ended three minutes before; the idle it was in when the window
+    opened ended before that; neither was running when the reading was taken.
+    """
+    out = spc_point.dossier(session, "FG-COLA", "brix", point.id)
+    drawn = {station["code"]: station for station in out["line"]["stations"]}
+    changeover = drawn["PACK01"]["changeovers"][0]
+    assert changeover["ended_seconds_before"] == pytest.approx(180, abs=2)
+    assert changeover["over_the_reading"] is False
+    assert changeover["started_seconds_after"] is None
+    idle = drawn["PACK01"]["stops"][0]
+    assert idle["ended_seconds_before"] > changeover["ended_seconds_before"]
+
+
+def test_a_stretch_the_reading_fell_inside_says_so_rather_than_claiming_it_ended(
+        session, point):
+    """A machine still down when the reading was taken is the strongest row on
+    the block, and "ended 0 min before" would be the wrong sentence for it."""
+    packer = masterdata.get_equipment(session, "PACK01")
+    at = point.ts
+    session.add(EquipmentState(
+        equipment_id=packer.id, state=EquipmentStateName.DOWN, reason="Infeed jam",
+        started_at=at - timedelta(minutes=4), ended_at=at + timedelta(minutes=1)))
+    session.flush()
+    out = spc_point.dossier(session, "FG-COLA", "brix", point.id)
+    drawn = {station["code"]: station for station in out["line"]["stations"]}
+    jam = [row for row in drawn["PACK01"]["stops"] if row["reason"] == "Infeed jam"]
+    assert len(jam) == 1
+    assert jam[0]["over_the_reading"] is True
+    assert jam[0]["ended_seconds_before"] is None

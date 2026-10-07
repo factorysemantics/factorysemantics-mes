@@ -122,6 +122,7 @@ def plant(tmp_path_factory):
             at = wild.ts
 
             mixer = session.scalar(select(Equipment).where(Equipment.code == "MIX01"))
+            packer = session.scalar(select(Equipment).where(Equipment.code == "PACK01"))
             session.add_all([
                 # Watching this machine since long before the window, so the
                 # twelve minutes the panel asks for are twelve it can answer for.
@@ -139,6 +140,18 @@ def plant(tmp_path_factory):
                                ended_at=at - timedelta(seconds=40)),
                 EquipmentState(equipment_id=mixer.id, state=EquipmentStateName.RUNNING,
                                started_at=at - timedelta(seconds=40)),
+                # And the packer beside it, changing over inside the same
+                # window: the story #143 and #147 both found, where the thing
+                # that explains the reading happened on the next machine along.
+                EquipmentState(equipment_id=packer.id, state=EquipmentStateName.IDLE,
+                               started_at=at - timedelta(hours=3),
+                               ended_at=at - timedelta(minutes=8)),
+                EquipmentState(equipment_id=packer.id, state=EquipmentStateName.SETUP,
+                               reason="Size change", reason_code="changeover",
+                               started_at=at - timedelta(minutes=8),
+                               ended_at=at - timedelta(minutes=3)),
+                EquipmentState(equipment_id=packer.id, state=EquipmentStateName.RUNNING,
+                               started_at=at - timedelta(minutes=3)),
                 MaintenanceOrder(
                     code="MO-WINDOW", equipment_id=mixer.id,
                     kind=MaintenanceKind.CORRECTIVE, status=MaintenanceStatus.IN_PROGRESS,
@@ -222,11 +235,24 @@ def _signed_in(chromium, base, code, password):
     return context
 
 
-def _open_spc(context, base, theme="control-room"):
-    """The SPC page, with the dossier read held back by over a second."""
+def _open_spc(context, base, theme="control-room", remembered_folds=False):
+    """The SPC page, with the dossier read held back by over a second.
+
+    The folds a reader opened are remembered in `localStorage` and the context
+    is shared by every test in this file, so one test's click would otherwise
+    decide what the next test finds open. Each page starts from the panel's own
+    defaults unless a test says it is asking about the remembering.
+    """
     page = context.new_page()
     page.add_init_script(
         f"try {{ localStorage.setItem('fsmes-theme', {theme!r}); }} catch (e) {{}}")
+    if not remembered_folds:
+        page.add_init_script(
+            """try {
+                 for (const key of Object.keys(localStorage)) {
+                   if (key.startsWith('fsmes-spc-fold-')) localStorage.removeItem(key);
+                 }
+               } catch (e) {}""")
 
     def held(route):
         page.wait_for_timeout(HELD_BACK_MS)
@@ -281,6 +307,21 @@ def _await_panel(page, check_id):
         "(id) => document.querySelector('#point-panel')"
         ".getAttribute('data-point') === String(id)",
         arg=check_id, timeout=30000)
+
+
+def _unfold(page, key):
+    """Open one of the blocks the panel opens folded, and wait for its text.
+
+    Since 2026-10-07 the panel opens about one screen long: the readings, the
+    rules and the line's own events are open and the gauge, this station's
+    trends and the maintenance block are one click each. The wait is on the
+    block's own `open` attribute rather than on a timeout, because a `<details>`
+    is laid out by the browser and not by this page's script (#112).
+    """
+    page.click(f'[data-fold="{key}"] > summary')
+    page.wait_for_function(
+        "(k) => document.querySelector(`[data-fold=\"${k}\"]`).open === true",
+        arg=key, timeout=10000)
 
 
 # -------------------------------------------------------------- it is clickable
@@ -397,6 +438,7 @@ def test_the_gauge_and_its_last_calibration_are_on_the_panel(page, plant):
     source's calibration?*"""
     _base, check = plant
     _click_the_wild_reading(page, check)
+    _unfold(page, "gauge")
     text = page.inner_text("#point-panel")
     assert "SCALE-A" in text
     assert "QA-LEAD" in text
@@ -408,6 +450,7 @@ def test_the_other_gauge_in_the_same_hour_is_on_the_panel_with_the_difference(
     """The table that separates *the process moved* from *the gauge moved*."""
     _base, check = plant
     _click_the_wild_reading(page, check)
+    _unfold(page, "gauge")
     text = page.inner_text("#point-panel")
     assert "SCALE-B" in text
     assert "this reading's gauge" in text
@@ -437,6 +480,7 @@ def test_an_unlabelled_stop_in_the_window_reads_as_unlabelled(page, plant):
 def test_the_maintenance_order_and_the_finding_in_the_window_are_listed(page, plant):
     _base, check = plant
     _click_the_wild_reading(page, check)
+    _unfold(page, "else")
     text = page.inner_text("#point-panel")
     assert "MO-WINDOW" in text
     assert "Agitator seal weeping" in text
@@ -597,6 +641,8 @@ def test_an_operator_opens_a_reading_the_way_a_supervisor_does(chromium, plant):
         page = _open_spc(context, base)
         try:
             _click_the_wild_reading(page, check)
+            _unfold(page, "gauge")
+            _unfold(page, "else")
             text = page.inner_text("#point-panel")
             assert "SCALE-A" in text
             assert "MO-WINDOW" in text
@@ -758,3 +804,152 @@ def test_one_export_takes_both_halves_off_the_page(page):
            }""")
     assert size["bytes"] > 0
     assert size["moving"] > 10
+
+
+# ----------------------------------- the rest of the line, and one screen of it
+
+
+def test_the_station_beside_this_one_is_on_the_panel_with_its_name_on_it(page, plant):
+    """The ask of 2026-10-07: a reading says what *this* station was doing, and
+    the packer changing over in the same twelve minutes was nowhere on it. Not
+    "upstream" and not "downstream" - this MES does not record which way the
+    bottles go - but *the rest of this line in the same window*, each station
+    named."""
+    _base, check = plant
+    _click_the_wild_reading(page, check)
+    block = page.inner_text('[data-fold="line"]')
+    assert "The rest of the line" in block
+    assert "PACK01" in block
+    assert "Packer 01" in block
+    assert "changeover" in block
+    assert "Size change" in block
+    # Relative to the reading, worked out by the service and not by the page.
+    assert "before this reading" in block
+    # And the station whose reading this is does not appear as its own sibling.
+    assert "MIX01" not in block
+
+
+def test_a_row_about_another_station_links_to_that_stations_page(page, plant):
+    """Reading *PACK01 changed over five minutes before this* and then hunting
+    the machine list for PACK01 is the step the handoff asked to remove. An
+    `<a href>`, not a div with a handler (style rule 6), so it opens in a new
+    tab and a keyboard reaches it."""
+    _base, check = plant
+    _click_the_wild_reading(page, check)
+    href = page.get_attribute('[data-fold="line"] a.obj[href*="PACK01"]', "href")
+    assert href == "/dashboard/machine/PACK01"
+    assert page.eval_on_selector(
+        '[data-fold="line"] a.obj[href*="PACK01"]',
+        "a => a.tagName") == "A"
+
+
+def test_the_line_block_opens_open_when_it_has_events_and_the_quiet_ones_folded(
+        page, plant):
+    """Which blocks a reader finds open is the whole of the fold: the line's
+    own events are why this block exists, so they are not behind a click, and
+    the three blocks that made the panel four thousand pixels long are."""
+    _base, check = plant
+    _click_the_wild_reading(page, check)
+    open_now = page.evaluate(
+        """() => Object.fromEntries([...document.querySelectorAll('[data-fold]')]
+             .map((d) => [d.dataset.fold, d.open]))""")
+    assert open_now == {"gauge": False, "line": True, "tags": False, "else": False}
+
+
+def test_a_folded_block_says_what_is_inside_it_before_it_is_opened(page, plant):
+    """A fold that says "Gauge" and nothing else makes a reader open all three
+    to find out which one holds their answer, which is the long panel again
+    with extra clicks. Every summary states its contents and their count
+    (style rule 4)."""
+    _base, check = plant
+    _click_the_wild_reading(page, check)
+    says = page.evaluate(
+        """() => Object.fromEntries([...document.querySelectorAll('[data-fold]')]
+             .map((d) => [d.dataset.fold,
+                          d.querySelector('summary').innerText]))""")
+    assert "SCALE-A" in says["gauge"]
+    assert "2 process values" in says["tags"]
+    assert "maintenance order" in says["else"]
+    assert "PACK01" in says["line"] or "1 of" in says["line"]
+
+
+def test_a_fold_a_reader_opened_is_still_open_on_the_next_reading(admin, plant):
+    """Remembered per block, so a reader who always wants the trends opens
+    them once. In `localStorage`, in a try/catch: a browser with storage off
+    gets the defaults and nothing throws."""
+    base, check = plant
+    page = _open_spc(admin, base, remembered_folds=True)
+    try:
+        page.evaluate("() => localStorage.removeItem('fsmes-spc-fold-tags')")
+        _click_the_wild_reading(page, check)
+        _unfold(page, "tags")
+        # Another reading in the same panel: the choice is the reader's, not
+        # the reading's.
+        other = page.evaluate(
+            """(id) => Number([...document.querySelectorAll(
+                 "#chart circle[data-check][data-series='individuals']")]
+               .map((c) => Number(c.getAttribute('data-check')))
+               .find((c) => c !== id))""",
+            check)
+        page.click(f"#chart circle[data-check='{other}'][data-series='individuals']")
+        _await_panel(page, other)
+        assert page.evaluate(
+            """() => document.querySelector('[data-fold="tags"]').open""") is True
+        # And across a fresh page, which is what "remembered" means.
+        again = _open_spc(admin, base, remembered_folds=True)
+        try:
+            _click_the_wild_reading(again, check)
+            assert again.evaluate(
+                """() => document.querySelector('[data-fold="tags"]').open""") is True
+            assert again.evaluate(
+                """() => document.querySelector('[data-fold="gauge"]').open""") is False
+        finally:
+            _close(again)
+    finally:
+        page.evaluate("() => localStorage.removeItem('fsmes-spc-fold-tags')")
+        _close(page)
+
+
+def test_the_panel_opens_about_half_as_long_with_three_trends_behind_a_click(
+        page, plant):
+    """The second half of the ask, as a number rather than a feeling.
+
+    On 2026-10-07 a reading's panel ran to about 4,100 pixels on the lab plant
+    and a reader scrolled past three process-value trends to reach the machine.
+    On this fixture, on one developer's machine, it is 1,840 folded against
+    3,437 with every block open - the reading (283), what the rules said (366),
+    what the machine was doing (362), its timeline (234) and the rest of the
+    line (391), with the gauge, the trends and the maintenance block one line
+    each.
+
+    The assertion is the **ratio** and not either number. A height in pixels is
+    a font metric, and this panel measured 2,243 here and 2,436 on GitHub's
+    runner for the same markup - the 2026-09-26 lesson from #112 wearing
+    different clothes. What the fold claims is *about half as long*, and that
+    survives a runner with wider glyphs.
+
+    That it is still not one screen on a laptop this test does not hide. The
+    five open blocks are the five the ask names.
+    """
+    _base, check = plant
+    _click_the_wild_reading(page, check)
+    folded = page.evaluate(
+        "() => document.querySelector('#point-body').scrollHeight")
+    where = """els => els.map((e) => {
+                 const fold = e.closest('[data-fold]');
+                 return fold ? `${fold.dataset.fold}:${fold.open}` : 'open page';
+               })"""
+    assert page.eval_on_selector_all("#point-body svg.fs-chart", where) == [
+        "open page", "tags:false", "tags:false"]
+    for key in ("gauge", "tags", "else"):
+        _unfold(page, key)
+    page.wait_for_function(
+        "(was) => document.querySelector('#point-body').scrollHeight > was",
+        arg=folded, timeout=10000)
+    opened = page.evaluate(
+        "() => document.querySelector('#point-body').scrollHeight")
+    assert folded < 0.7 * opened, (
+        f"folded the panel is {folded}px of the {opened}px it is with every "
+        f"block open, which is not the saving the fold claims")
+    assert page.eval_on_selector_all("#point-body svg.fs-chart", where) == [
+        "open page", "tags:true", "tags:true"]
