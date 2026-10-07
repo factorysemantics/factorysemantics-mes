@@ -515,6 +515,82 @@ def test_every_block_states_its_own_coverage_or_that_it_has_no_such_figure(out):
     assert out["coverage"] == out["timeline"]["coverage"]
 
 
+# --------------------------------------------------- the rest of the line
+
+
+@pytest.fixture()
+def line(session, sample):
+    """The packer changing over inside the stretch the five bottles span.
+
+    The story the bottling floor plants and neither panel could name: the five
+    bottles were measured at one station and the thing that moved them happened
+    at another. The changeover ends six minutes before the sample's own stamp -
+    inside the window the five readings span - and a second stop ninety minutes
+    earlier is outside it.
+    """
+    packer = masterdata.get_equipment(session, "PACK01")
+    at = sample.ts
+    session.add_all([
+        EquipmentState(equipment_id=packer.id, state=EquipmentStateName.IDLE,
+                       started_at=at - timedelta(hours=3),
+                       ended_at=at - timedelta(minutes=11)),
+        EquipmentState(equipment_id=packer.id, state=EquipmentStateName.SETUP,
+                       reason="Size change", reason_code="changeover",
+                       started_at=at - timedelta(minutes=11),
+                       ended_at=at - timedelta(minutes=6)),
+        EquipmentState(equipment_id=packer.id, state=EquipmentStateName.RUNNING,
+                       started_at=at - timedelta(minutes=6)),
+        EquipmentState(equipment_id=packer.id, state=EquipmentStateName.DOWN,
+                       reason="Infeed jam", started_at=at - timedelta(minutes=90),
+                       ended_at=at - timedelta(minutes=88)),
+    ])
+    session.flush()
+    return packer
+
+
+def test_the_changeover_on_the_station_beside_this_one_is_in_the_samples_window(
+        session, sample, line):
+    """The window of a sample is the stretch its five readings span, so the
+    block about the rest of the line is read over that stretch too - and the
+    changeover that ended six minutes before the sample was posted is in it,
+    with the packer's name on it."""
+    out = spc_point.sample_dossier(session, "FG-COLA", "fill_height", sample.id)
+    block = out["line"]
+    assert block["parent"] == {"code": "LINE1", "name": "Packaging Line 1"}
+    drawn = {station["code"]: station for station in block["stations"]}
+    assert "PACK01" in drawn, block["note"]
+    changeovers = drawn["PACK01"]["changeovers"]
+    assert [row["reason"] for row in changeovers] == ["Size change"]
+    # And the one ninety minutes earlier is a record and not an answer.
+    assert "Infeed jam" not in [row["reason"] for row in drawn["PACK01"]["stops"]]
+    for row in changeovers:
+        assert row["start"] >= out["window"]["start"]
+        assert row["end"] <= out["window"]["end"]
+
+
+def test_the_line_block_on_a_sample_states_its_total_and_its_routing(
+        session, sample, line):
+    """The same two sentences the reading's panel carries: how many of the
+    line's other work units were drawn out of how many there are, and which
+    routing put them in that order."""
+    out = spc_point.sample_dossier(session, "FG-COLA", "fill_height", sample.id)
+    block = out["line"]
+    assert block["shown"] == 1 and block["total"] == 1
+    assert block["routings"] == ["RT-COLA"]
+    assert block["stations"][0]["routing_seq"] == 20
+    assert block["coverage"] == "absent"
+
+
+def test_a_sample_with_no_station_recorded_has_no_line_to_ask_about(session, sample):
+    """A sample a person took with a gauge records no station, so there is no
+    line either - and the block says that rather than drawing an empty list."""
+    sample.equipment_id = None
+    session.flush()
+    out = spc_point.sample_dossier(session, "FG-COLA", "fill_height", sample.id)
+    assert out["line"]["parent"] is None
+    assert "no station is recorded against this sample" in out["line"]["note"]
+
+
 # ------------------------------------------------------------------------ the route
 
 
