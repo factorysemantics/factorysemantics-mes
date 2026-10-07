@@ -930,7 +930,7 @@ def _line_block(session: Session, unit: Equipment | None, start: datetime,
         + (f", {rest} more of which did and are not drawn" if rest else "")
         + (f". {len(quiet)} recorded nothing but running in it, which is a "
            f"statement about what this MES holds and not about what the machine "
-           f"did" if quiet else ".")
+           f"did." if quiet else ".")
         + (f" Ordered by {', '.join(routings)}, this material's routing, where it "
            f"names the station; the rest after it by code."
            if routings else
