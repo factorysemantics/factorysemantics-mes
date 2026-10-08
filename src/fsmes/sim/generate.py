@@ -56,6 +56,10 @@ EVENT_TYPES = {
     "quiet": "a tag stops arriving: the machine runs on, every other signal reports, "
              "and this one publishes nothing at all for the window",
     "scrap_burst": "the station's scrap rate is `scrap_pct` for the window",
+    "rate": "the station runs at `rate_per_min` for the window instead of its own "
+            "rate - a second product, a different grade, or the dial turned up "
+            "after a changeover. It moves the counters AND the cycle time, "
+            "because both are what a faster machine looks like in the records",
     "counter_reset": "the station's counters go back to zero at `at`",
     "starve": "nothing arrives: the machine is willing and has nothing to work on",
     "block": "nowhere to put it: the machine is willing and downstream is full",
@@ -141,6 +145,10 @@ def _validate_line(config: dict, label: str) -> dict:
             if event.get("analog") and event["analog"] not in signals:
                 sys.exit(f"{label}: event {kind!r} names analog {event['analog']!r} on "
                          f"{station}, which has {', '.join(signals) or 'none'}.")
+        if kind == "rate" and float(event.get("rate_per_min", 0.0)) <= 0:
+            sys.exit(f"{label}: a 'rate' event says how fast the station runs for "
+                     "the window - `rate_per_min`, a positive number in the "
+                     "station's own units.")
         if kind == "offset" and "offset" not in event:
             sys.exit(f"{label}: an {kind!r} event says how far off base it holds "
                      "the analog - `offset`, in the signal's own units.")
@@ -328,6 +336,7 @@ def simulate(config: dict) -> dict[str, list[list]]:
     blocked: dict[str, list[tuple[int, int]]] = {}    # station -> windows with nowhere to put it
     offsets: dict[str, list[dict]] = {}               # station -> analog held off its base
     quiet: dict[str, list[dict]] = {}                 # station -> windows a tag does not arrive in
+    rates: dict[str, list[dict]] = {}                 # station -> windows it runs at another rate
 
     for event in config.get("events", []):
         kind, station = event["type"], event.get("station")
@@ -353,6 +362,8 @@ def simulate(config: dict) -> dict[str, list[list]]:
             offsets.setdefault(station, []).append(event)
         elif kind == "quiet":
             quiet.setdefault(station, []).append(event)
+        elif kind == "rate":
+            rates.setdefault(station, []).append(event)
         elif kind == "micro_stops":
             # Pre-roll the random micro-stops so the run stays deterministic.
             every_lo, every_hi = event.get("every_s", [90, 150])
@@ -366,6 +377,24 @@ def simulate(config: dict) -> dict[str, list[list]]:
             stops.setdefault(station, []).extend(
                 w for w in windows if not any(in_win(w[0], c0, c1) for c0, c1 in changeovers)
             )
+
+    # What a station runs at this second: its own rate, unless a `rate` event
+    # is holding it somewhere else. One lookup for both the counters and the
+    # cycle time, because those are the two places a faster machine shows up
+    # in the records and a machine that makes more bottles a minute while
+    # publishing the same cycle time is a machine whose own records disagree.
+    #
+    # The RATED cycle does not move: it is the machine's nameplate, it lives
+    # in the pack's tag map, and OEE performance is computed against it. A
+    # station scripted ABOVE its rated rate will therefore count more work
+    # than its run time can hold, and this MES says so rather than printing a
+    # figure (`services/oee.py` COUNTS_OUTRUN_RUN_TIME) - which is correct,
+    # and worth knowing before scripting one.
+    def rate_at(station: dict, t: int) -> float:
+        for window in rates.get(station["name"], []):
+            if in_win(t, int(window["start"]), int(window["end"])):
+                return float(window["rate_per_min"])
+        return float(station["rate_per_min"])
 
     # --- the line itself -------------------------------------------------
     buffers = [initial] * (n - 1)      # buffer[i] sits after station i
@@ -424,7 +453,7 @@ def simulate(config: dict) -> dict[str, list[list]]:
                 states[i] = STARVED       # nothing upstream (station 0 pulls from raw)
                 continue
 
-            accum[i] += float(station["rate_per_min"]) / 60.0
+            accum[i] += rate_at(station, t) / 60.0
             take = int(accum[i])
             if take <= 0:
                 continue  # still RUNNING, just mid-cycle
@@ -524,7 +553,7 @@ def simulate(config: dict) -> dict[str, list[list]]:
                 values.append(round(value, int(analog.get("decimals", 2))))
 
             cycle_ms = (
-                round(60000.0 / float(station["rate_per_min"]) + rng.gauss(0, 15))
+                round(60000.0 / rate_at(station, t) + rng.gauss(0, 15))
                 if shown[i] == RUNNING
                 else 0
             )
