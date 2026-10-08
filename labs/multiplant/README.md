@@ -165,6 +165,59 @@ block is published from the filter's end, so it loses its first twenty seconds
 to *performance* rather than availability — which is where a full buffer
 belongs anyway.
 
+### Replay speed changes what a *sample* is, and nothing else
+
+A sample of five pieces is five **stored** readings, and this product stores an
+analog every `opc_history_ratio` publish intervals with `opc_min_history_ms` as
+the floor under it — here 500 ms x 10, so **one reading every five seconds of
+wall clock, whatever the replay speed**
+(`integrations/opc/agent.py` `history_interval_ms`). Five bottles therefore
+span 25 seconds of wall clock, which is 25 x speed line-seconds: 25 line
+seconds at 1x, five line minutes at 12x, twenty-five line minutes at 60x. And
+the floor will not post a sample until it has five readings it has not measured
+before, so above about 36x the 900-line-second due time arrives with only three
+of them and the sample slips to the next one — 1,800 line seconds apart instead
+of 900.
+
+Neither is a fault. A historian samples on its own clock, and a floor that
+measured four bottles and called it five would be inventing one. But it means a
+compressed replay dilutes any story narrower than a sample's own span, and the
+same is true of the "rest of the line" block on a sample's panel, whose window
+is ten wall minutes — two line hours at 12x, ten line minutes at 1x.
+
+Measured on a scratch plant on 2026-10-08: at 60x the half-hour cold window
+held **one** sample mean, drawn from bottles spread over 25 line minutes, and
+it read 141.18 mm against neighbours near 142 — low, but diluted, and no rule
+fired. At 12x it held **two**, each drawn from five line minutes: 140.58 mm and
+141.12 mm against a centre line of 142.05, and rule 1 fired on both. **The
+fleet runs this file at 1x**, which is the speed it is written for; a replay
+compressed for a quick look wants 12x or less if the fill-height chart is the
+thing being looked at.
+
+### What an eight-hour shift actually looked like
+
+One pass at 12x, 2026-10-08, read in a browser rather than out of the database:
+
+- **State timeline, all six machines:** solid running, one red stripe on RD01
+  with an orange stripe either side of it stepping down the line (the breakdown
+  and its ripple), one purple stripe across all six (the changeover), and
+  PAL01's own micro-stop hatching throughout. Nothing repeats.
+- **Downtime for the pass: 16 s wall = 192 line seconds, 0% unlabelled** —
+  which is the RD breakdown's 180 s plus the loader's 12 s jam, exactly, with
+  nothing else in it. The pareto has two reasons and says so: "2 of 2 reasons
+  across 6 machines".
+- **Non-running intervals recorded over the whole shift:** five `idle`
+  stretches of 11–14 wall seconds, one each on FILL01, LD01, QI01 and WASH01
+  plus LD01's named jam — the breakdown's ripple — and 238 on PAL01, which are
+  its scripted micro-stops and are meant to be there. Before `state_filter_s`
+  every machine looked like PAL01 does.
+- **Fill height, 32 samples:** centre 142.07 mm, R-bar 1.55 mm, limits 141.17
+  to 142.96. Two high (144.08, 143.74) after the changeover, two low (140.58,
+  141.12) in the cold window, one gap where no sample was taken at all —
+  FillWeight had stopped arriving and the floor would not invent five bottles.
+- **FILL01's ProductTemp trend over the shift:** flat at 8.4 degC with one
+  clean step down to 6.4 degC and back, thirty line minutes wide.
+
 ## What to look for once the two are running
 
 - **A planned stop must not count as downtime.** Both plants change over
