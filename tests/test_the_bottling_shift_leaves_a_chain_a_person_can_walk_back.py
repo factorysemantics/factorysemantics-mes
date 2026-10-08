@@ -180,12 +180,30 @@ def test_every_machine_tag_plan_and_characteristic_in_the_key_is_real(chain, lin
 
 
 def test_the_key_says_which_spc_rule_fires_first(chain):
-    """The handoff asked for it, and a reader assumes it is rule 1 because a
-    low mean feels extreme. It is not: a millimetre and a half is under three
-    sigma of a sample mean, so the rule that catches it is the two-of-three
-    beyond two sigma. The key has to say so in words."""
-    assert "_first_rule" in chain and str(chain["_first_rule"]).strip()
-    assert "2" in str(chain["_first_rule"])
+    """The handoff asked for it, and the first draft of this key guessed rule
+    2 from a sigma nobody had measured. The replayed shift says rule 1: the
+    chart's sigma is 0.28 mm and the drop is 1.7 mm, so one point does it on
+    its own. The key has to say which, in words, and say it was measured."""
+    said = str(chain.get("_first_rule") or "")
+    assert said.strip()
+    assert "Rule 1" in said
+    assert "not rule 2" in said
+
+
+def test_the_key_says_when_the_finding_is_stamped_and_not_only_that_it_opens(chain):
+    """A firing joins a hold already open on the same characteristic rather
+    than opening a second one, and the inspector samples every fifteen
+    minutes. Both of those put the finding's timestamp away from the moment
+    the process moved, and a key that did not say so would read as a bug the
+    first time somebody scored it."""
+    said = str(chain.get("_when_the_finding_is_stamped") or "")
+    assert said.strip()
+    finding = [r for link in chain["links"] for r in link["records"]
+               if r["kind"] == "finding"]
+    assert finding, "the key names no finding at all"
+    assert finding[0]["window_s"][1] > 27000, (
+        "the finding's window stops at the cold half hour, which is earlier "
+        "than the MES can stamp it")
 
 
 def test_the_key_says_what_it_does_not_claim(chain):
@@ -428,6 +446,83 @@ def test_a_characteristic_nobody_sampled_in_the_window_is_unknown():
     row = score_chain(key, {"machines": []}, T0, 1.0, evidence)["links"][0]["records"][0]
     assert row["recorded"] is None
     assert "nobody measured" in row["why"]
+
+
+def test_a_short_record_is_found_through_the_slack_its_key_asks_for():
+    """At 30x a four-minute changeover is eight wall seconds, and the scorer
+    finds it by multiplying wall time by the speed. A second of lag in the
+    replay moves it thirty line seconds; on the first scored shift it moved a
+    correctly recorded setup clean out of the window and scored it missing.
+    A record that is short against the speed says in the key how much slip it
+    tolerates, and the card reports the window it was actually judged on."""
+    key = {"links": [{"link": 1, "what": "the line changed over",
+                      "shows_as": "a setup interval", "window_s": [600, 840],
+                      "records": [{"kind": "stop", "equipment": "FILL01",
+                                   "state": "setup", "reason": "changeover",
+                                   "window_s": [600, 840], "slack_s": 300}]}]}
+    # The interval sits 120 line seconds late - outside the keyed window,
+    # inside the slack.
+    timeline = {"window": {"start": _at(-10), "end": _at(2000)},
+                "machines": [{"code": "FILL01", "intervals": [
+                    {"state": "setup", "reason": "Changeover",
+                     "start": _at(720), "end": _at(960)}]}]}
+    row = score_chain(key, timeline, T0, 1.0, {})["links"][0]["records"][0]
+    assert row["recorded"] is True
+    assert row["slack_s"] == 300
+    assert row["judged_sim_s"] == [300, 1140]
+    assert row["window_sim_s"] == [600, 840]
+
+
+def test_a_record_with_no_slack_is_judged_on_its_window_alone():
+    """Slack is asked for, never assumed. A record that does not ask for any
+    is judged on exactly the window the key wrote down, and the card carries
+    no widened window to explain."""
+    key = {"links": [{"link": 1, "what": "the line changed over",
+                      "shows_as": "a setup interval", "window_s": [600, 840],
+                      "records": [{"kind": "stop", "equipment": "FILL01",
+                                   "state": "setup", "window_s": [600, 840]}]}]}
+    timeline = {"window": {"start": _at(-10), "end": _at(2000)},
+                "machines": [{"code": "FILL01", "intervals": [
+                    {"state": "setup", "reason": "Changeover",
+                     "start": _at(900), "end": _at(1140)}]}]}
+    row = score_chain(key, timeline, T0, 1.0, {})["links"][0]["records"][0]
+    assert row["recorded"] is False
+    assert "slack_s" not in row
+    assert "judged_sim_s" not in row
+
+
+def test_a_chart_that_refuses_to_give_a_coverage_rate_is_still_read():
+    """`coverage: "absent"` is on every control chart this product draws, and
+    it means "I am a list of the checks somebody took, not a rate over a
+    watched window". Reading it as "no readings" marked a full chart unknown
+    on the first scored shift, which is the opposite of the honesty the word
+    is there for."""
+    key = {"links": [{"link": 1, "what": "the fill height ran low",
+                      "shows_as": "low points on the chart", "window_s": [0, 300],
+                      "records": [{"kind": "sample", "material": "FG-BOTTLE",
+                                   "characteristic": "fill_height", "below": 140.84}]}]}
+    evidence = {"charts": {"FG-BOTTLE/fill_height": {
+        "kind": "xbar_r", "sample_size": 5,
+        "coverage": "absent", "coverage_note": "a list of the records in this window",
+        "points": [{"value": 140.5, "ts": _at(100)}, {"value": 140.6, "ts": _at(200)}]}}}
+    row = score_chain(key, {"machines": []}, T0, 1.0, evidence)["links"][0]["records"][0]
+    assert row["recorded"] is True
+    assert row["points_in_window"] == 2
+    assert row["points_past_the_bound"] == 2
+
+
+def test_a_material_the_mes_holds_no_checks_on_is_unknown_not_missing():
+    """An empty chart is the MES saying nobody has measured this at all. That
+    is a different sentence from "the readings are there and they are fine"."""
+    key = {"links": [{"link": 1, "what": "the fill height ran low",
+                      "shows_as": "low points on the chart", "window_s": [0, 300],
+                      "records": [{"kind": "sample", "material": "FG-BOTTLE",
+                                   "characteristic": "fill_height", "below": 140.84}]}]}
+    evidence = {"charts": {"FG-BOTTLE/fill_height": {
+        "kind": "xbar_r", "sample_size": 5, "coverage": "absent", "points": []}}}
+    row = score_chain(key, {"machines": []}, T0, 1.0, evidence)["links"][0]["records"][0]
+    assert row["recorded"] is None
+    assert "no fill_height checks" in row["why"]
 
 
 def test_a_link_with_one_record_missing_is_not_recorded_whatever_else_it_has():

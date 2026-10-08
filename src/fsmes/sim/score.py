@@ -527,11 +527,17 @@ def _score_sample(record: dict, start: datetime, end: datetime,
     if chart is None:
         return {"recorded": None,
                 "why": f"nobody asked the MES for the {material} {characteristic} chart"}
-    if chart.get("coverage") == "absent":
+    points = chart.get("points") or []
+    # A control chart's `coverage` is "absent" on EVERY chart, always: it is
+    # the chart saying "I am a list of the checks somebody took, not a rate
+    # over a window somebody watched". Reading it as "no readings" scored
+    # this record unknown on a shift whose chart was full of points. What
+    # says the MES holds nothing is the chart having no points.
+    if not points:
         return {"recorded": None,
-                "why": chart.get("coverage_note")
-                       or f"the MES holds no {characteristic} readings for {material}"}
-    inside = _points_in(chart.get("points") or [], start, end)
+                "why": f"the MES holds no {characteristic} checks on {material} at all, "
+                       "so there is no chart to read"}
+    inside = _points_in(points, start, end)
     if not inside:
         return {"recorded": None,
                 "why": f"nobody measured {material} {characteristic} inside this window, "
@@ -654,9 +660,21 @@ def score_chain(chain: dict | None, timeline: dict, t0: datetime, speed: float,
                 rows.append({"kind": kind, "window_sim_s": list(window),
                              "recorded": None, "why": NO_EVIDENCE})
                 continue
-            start, end = _wall(window, t0, speed)
+            # `slack_s`: how far either side of its own window a record is
+            # still the right one. A replayed shift's clock is the wall clock
+            # times the speed, so every window here is arithmetic on when the
+            # replay began - and at 30x a four-minute changeover is eight wall
+            # seconds, which a second of lag in the replay moves clean off.
+            # A record that is short against the speed says in the key how
+            # much slip it tolerates and why; the judged window is reported
+            # beside the keyed one so nothing is widened quietly.
+            slack = float(record.get("slack_s") or 0.0)
+            judged = (window[0] - slack, window[1] + slack)
+            start, end = _wall(judged, t0, speed)
             scored = _RECORD_SCORERS[kind](record, start, end, evidence, timeline)
             rows.append({"kind": kind, "window_sim_s": list(window),
+                         **({"slack_s": slack, "judged_sim_s": list(judged)}
+                            if slack else {}),
                          "window_wall": [start.isoformat(), end.isoformat()],
                          **scored})
         verdicts = [row["recorded"] for row in rows]
