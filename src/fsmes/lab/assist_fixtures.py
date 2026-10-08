@@ -305,6 +305,49 @@ def _has_sampled_spec(plant: str, code: str) -> bool:
                for s in _rows(_ok(_tools().quality(plant)).get("specs") or {}, "items"))
 
 
+_FLAGGED_SAMPLE = (
+    "a sample that fired a rule is something a process did, not something a run "
+    "can arrange: it takes enough samples for the plant's own control limits to "
+    "mean anything and then one that sits outside them, and a run that recorded "
+    "readings until the rules fired would be writing a process upset into "
+    "somebody's quality record to make a case pass"
+)
+
+_RUN_IT_UNTIL_IT_FIRES = (
+    "ask this case on a plant whose chart has a flagged point - the bottling lab "
+    "plant's fill height does - and name that point's sample in `lookup`"
+)
+
+
+def _has_flagged_sample(plant: str, code: str) -> bool:
+    """`flagged_sample:FG-COLA/fill_height/41` - sample 41 is on this
+    characteristic's chart AND a rule fired on it.
+
+    Both halves, because the question the case asks is *why is this point
+    high*, and a settled point has no answer to it: a dossier of a sample
+    nothing fired on is a true page about an ordinary morning, and a run scored
+    on it would be measuring whether the agent can read rather than whether it
+    can explain.
+    """
+    material, _, rest = code.partition("/")
+    characteristic, _, sample = rest.rpartition("/")
+    if not (material and characteristic and sample.isdigit()):
+        return False
+    chart = _ok(_tools().spc_chart(plant, material=material,
+                                   characteristic=characteristic))
+    wanted = int(sample)
+    points = chart.get("points") or []
+    if not any(p.get("sample") == wanted for p in points):
+        return False
+    # Which indexes the rules fired on, the chart's own answer - never worked
+    # out here from the limits, for the reason the whole kit exists.
+    fired = {i for signal in (chart.get("signals") or [])
+             for i in (signal.get("points") or
+                       ([signal["index"]] if signal.get("index") is not None else []))}
+    return any(index in fired and point.get("sample") == wanted
+               for index, point in enumerate(points))
+
+
 def _has_order(plant: str, code: str) -> bool:
     return _found(_tools().order_detail(plant, code=code))
 
@@ -616,6 +659,8 @@ KINDS: dict[str, Kind] = {k.name: k for k in (
     Kind("spec", _has_spec, cannot=_MASTER_DATA, fix=_SEED_IT),
     Kind("sampled_spec", _has_sampled_spec,
          cannot=_SAMPLING_PLAN, fix=_SET_A_PLAN),
+    Kind("flagged_sample", _has_flagged_sample,
+         cannot=_FLAGGED_SAMPLE, fix=_RUN_IT_UNTIL_IT_FIRES),
     Kind("order", _has_order, _make_order),
     Kind("operation", _has_operation, _make_operation),
     Kind("nonconformance", _has_nonconformance, _make_nonconformance),

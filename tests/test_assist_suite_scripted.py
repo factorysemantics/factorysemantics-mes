@@ -1268,15 +1268,31 @@ def test_the_scripted_run_arranges_every_fixture_the_suite_asks_for(scored):
     at a time and names no sampled characteristic, and a run that set a sample
     size on somebody's characteristic to make its own case runnable would be
     changing how their chart is drawn. Added 2026-10-06 with `record_sample`.
+
+    Four as of 2026-10-07. Asking *why* a flagged sample is high needs a sample
+    that fired a rule, and a rule firing is something a process did: it takes
+    enough samples for the plant's own control limits to mean anything and then
+    one that sits outside them. A run that recorded readings until the rules
+    fired would be writing a process upset into somebody's quality record to
+    make a case pass. So that case is reported not arranged, with the plant it
+    can be asked on - the bottling lab's fill height has such a point - rather
+    than asked here.
     """
     unmade = {o.case.id: o.missing for o in scored if not o.arranged}
     assert set(unmade) == {"admin-approves-an-adjustment",
                            "analyst-asks-which-workcenters-are-asking-what",
+                           "analyst-asks-why-a-flagged-sample-is-high",
                            "operator-records-a-sample-of-five"}, unmade
     assert unmade["admin-approves-an-adjustment"] == ("adjustment:MIX01",)
     assert unmade["analyst-asks-which-workcenters-are-asking-what"] == ("home:SCOTT",)
     assert unmade["operator-records-a-sample-of-five"] == \
         ("sampled_spec:FG-COLA/fill_height",)
+    # Both halves missing, and both named: the specification this plant does not
+    # have, and the point no run may arrange on it.
+    assert unmade["analyst-asks-why-a-flagged-sample-is-high"][0] == \
+        "sampled_spec:FG-COLA/fill_height"
+    assert "flagged_sample:FG-COLA/fill_height/15" in \
+        unmade["analyst-asks-why-a-flagged-sample-is-high"][1]
 
 
 def test_a_case_whose_fixture_is_missing_is_counted_apart_from_pass_and_fail():
