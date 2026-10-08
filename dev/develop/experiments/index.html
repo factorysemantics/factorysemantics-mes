@@ -4516,7 +4516,12 @@ travel together.</p>
 <span class="n">serialization</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
 
 <span class="c1"># A plant named here plays this script instead of its pack's own. The</span>
-<span class="c1"># vocabulary is closed — see below.</span>
+<span class="c1"># vocabulary is closed — see below. A plan that wants the bottling line's</span>
+<span class="c1"># reference *hour* states it: that pack's own line is an eight-hour shift, so</span>
+<span class="c1"># that the plant it builds does not play the same hour over and over, and a</span>
+<span class="c1"># plan asking for 3600 seconds of a shift is refused rather than cutting a</span>
+<span class="c1"># scripted event in half. `one-line-bad-hour.toml` and</span>
+<span class="c1"># `two-plants-two-zones.toml` therefore carry the hour's script themselves.</span>
 <span class="k">[scenario.machining]</span>
 <span class="n">events</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"down"</span><span class="p">,</span><span class="w"> </span><span class="n">station</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"Mill"</span><span class="p">,</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">600</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">720</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">]</span>
 
