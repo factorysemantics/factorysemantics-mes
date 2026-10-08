@@ -654,9 +654,46 @@ function exploreCost(cost) {
     + "Estimates at list prices — the Console is the bill.";
 }
 
+/* The sentence a dot on a control chart adds to the question box.
+
+   Scott, 2026-10-08: "I was wanting to ask about a specific data point, but
+   thought it was hard to type what would have been easy to click." So the
+   click writes the words for him - and writes the point's ID into them, not
+   only its time, because `spc_sample` and `spc_point` are asked by id and a
+   model handed a clock time would have to guess which point that was.
+
+   It is TYPED and not sent, for the same reason the chip's question is: the
+   next turn costs money and the person decides to spend it. An empty box gets
+   a whole question, because "- and the one at 06:52" on its own is not one. */
+function alsoAsk(detail) {
+  const box = $("#explore-input");
+  if (!box || detail.id === undefined || detail.id === null) return;
+  const noun = detail.what === "sample" ? "sample" : "reading";
+  const named = `(${noun} ${detail.id})`;
+  /* Pressed twice, the same dot says nothing new. */
+  if (box.value.includes(named)) return;
+  const when = detail.at ? FS.fmt.stamp(detail.at) : null;
+  const here = when ? `the one at ${when} ${named}` : `${noun} ${detail.id}`;
+  const had = box.value.trim();
+  box.value = had
+    ? `${had} — and ${here}?`
+    : `Why is ${here} where it is?`;
+  box.focus();
+  box.setSelectionRange(box.value.length, box.value.length);
+}
+
 /* One chart, as the person sees it: the kit's own SVG, and a way to take it
    away with its footer on. A payload the shape cannot draw says so in the
-   kit's own words rather than drawing something else. */
+   kit's own words rather than drawing something else.
+
+   A control chart here is pressable, which no other shape on this tab is
+   (#152). The dots of an `spc` chart dispatch `fs-spc-open`, as they do on the
+   SPC screen, and what opening one MEANS here is a question: the point goes
+   into the box above, ringed on the picture so the reader can see which one
+   the sentence is about. Nothing is fetched and nothing is computed by the
+   press - rule 2 of this panel - and the ring is the kit's own
+   `options.selected`, so the chart is redrawn by the one implementation rather
+   than reached into. */
 function drawChart(chart) {
   const box = el("figure", "explore-chart");
   box.dataset.tool = chart.tool;
@@ -664,16 +701,25 @@ function drawChart(chart) {
   const head = el("figcaption");
   head.appendChild(el("span", "chart-title", chart.title || chart.tool));
   head.appendChild(el("span", "muted small",
-    ` — drawn from ${chart.tool}, which this plant computed`));
+    chart.note || ` — drawn from ${chart.tool}, which this plant computed`));
   box.appendChild(head);
   const host = el("div", "chart-host");
   box.appendChild(host);
   exploreLog().appendChild(box);
 
+  const pressable = chart.shape === "spc";
+  let open = chart.selected || {};
+  const render = () => {
+    const plot = plotFor(chart);
+    return FS.kit.draw(host, chart.shape, plot.envelope,
+                       pressable
+                         ? { ...plot.options, openable: true, selected: open }
+                         : plot.options);
+  };
+
   let node = null;
   try {
-    const plot = plotFor(chart);
-    node = FS.kit.draw(host, chart.shape, plot.envelope, plot.options);
+    node = render();
   } catch (err) {
     /* The kit refuses a payload it cannot draw honestly, by name. That refusal
        is the answer here: the sentence beside it already carried the numbers,
@@ -682,6 +728,21 @@ function drawChart(chart) {
     host.appendChild(el("p", "empty",
       `This answer could not be drawn as a ${chart.shape}: ${err.message}`));
     return box;
+  }
+
+  /* On the figure and not on the SVG: the picture is replaced every time the
+     ring moves, and a listener on the node that drew it would go with it. */
+  if (pressable) {
+    box.addEventListener("fs-spc-open", (event) => {
+      const it = event.detail || {};
+      if (it.id === undefined || it.id === null) return;
+      /* Two keys and not one, as on the SPC screen: a sample id and a check id
+         are both small integers, and one field holding either would ring the
+         dot numbered 7 on the wrong half. */
+      open = it.what === "sample" ? { sample: it.id } : { check: it.id };
+      node = render();
+      alsoAsk(it);
+    });
   }
 
   const tools = el("div", "chart-tools");
@@ -747,11 +808,85 @@ function drawExploreTrace(rows) {
   exploreLog().appendChild(details);
 }
 
+/* ---------- what to ask next ----------
+
+   Scott, 2026-10-08: "could the agent extract potential new paths of research
+   and make them buttons? … its flat now." An answer that ends in prose ends;
+   an answer that ends in the questions it opened keeps going, and the person
+   presses rather than types.
+
+   The questions arrive as the LAST thing the model writes: a fenced block
+   whose info string is `next`, one question per line (`ANALYSIS_NEXT` in
+   `services/agent.py` is the paragraph that asks for it). A fenced block and
+   not a tool call, deliberately - a tool call would be another round trip of
+   the whole conversation through the model, which is the cost this handoff
+   came to cut, and the words are the model's either way.
+
+   What is not in here is a decision: every line is a QUESTION put back to the
+   analysis agent, which holds no tool that changes anything. A button that
+   booked, adjusted or approved would be this tab growing a floor agent, and
+   the system words forbid writing one.
+
+   Unparsed is cosmetic and mangled is not, as with the markdown above: a reply
+   with no block gets no buttons, and the block's own text never reaches the
+   screen as a fence because it is cut out of the words before they are
+   rendered. The trace beside this tab still shows what the model wrote, fence
+   and all, because that is the record. */
+
+/* Opened by a fence of three or more backticks with `next` (or `next:`) after
+   it, closed by the next fence or by the end of the answer - a model that
+   stopped mid-block still gets its questions read. */
+const NEXT_BLOCK = /\n*```+[ \t]*next:?[ \t]*\n([\s\S]*?)(?:\n?```+|$)/i;
+/* Three is what the system words ask for. A model that wrote ten gets its
+   first three rather than a screen full of buttons: the cap is this file's,
+   because the screen is this file's. */
+const NEXT_MOST = 3;
+
+function splitNext(text) {
+  const words = String(text || "");
+  const found = NEXT_BLOCK.exec(words);
+  if (!found) return { say: words, next: [] };
+  const next = found[1].split("\n")
+    /* A model asked for lines sometimes writes a list of them. */
+    .map((line) => line.replace(/^\s*(?:[-*\u2022]|\d+[.)])\s*/, "").trim())
+    .filter((line) => line.length > 0)
+    .slice(0, NEXT_MOST);
+  return { say: words.slice(0, found.index) + words.slice(found.index + found[0].length),
+           next };
+}
+
+function drawNextQuestions(questions) {
+  if (!questions.length) return null;
+  const box = el("div", "explore-next");
+  box.dataset.next = String(questions.length);
+  box.appendChild(el("p", "muted small", "Ask this next — the agent's own questions, "
+                                         + "from what it just read:"));
+  const row = el("div", "next-row");
+  for (const question of questions) {
+    const button = el("button", "ghost small", question);
+    button.type = "button";
+    button.addEventListener("click", () => {
+      if (exploreBusy) return;
+      /* Pressed once and then spent: it is in the conversation above as the
+         question it became, and a button that can be pressed twice is a button
+         that can spend the cap twice by accident. The other two stay. */
+      button.disabled = true;
+      ask(question).catch(fail);
+    });
+    row.appendChild(button);
+  }
+  box.appendChild(row);
+  exploreLog().appendChild(box);
+  return box;
+}
+
 function renderExplore(out) {
   exploreSession = out.session || exploreSession;
   drawExploreTrace(out.transcript);
   for (const chart of out.charts || []) drawChart(chart);
-  if (out.say) exploreSay(out.say, "bot");
+  const { say, next } = splitNext(out.say);
+  if (say.trim()) exploreSay(say, "bot");
+  drawNextQuestions(next);
   exploreCost(out.cost);
   if (out.kind === "unavailable") {
     /* Off, or out of budget. Both are states with a reason, and the reason is
@@ -811,6 +946,63 @@ async function loadExplore() {
   }
   $("#explore-input").disabled = false;
   $("#explore-send").disabled = false;
+  await pinChart();
+}
+
+/* ---------- the chart somebody arrived with ----------
+
+   The SPC screen's *Explain this chart* chip lands here carrying names: `spec`
+   is the material and the characteristic, and `sample` or `check` is whichever
+   point had a panel open beside it. This draws that chart at the top of the
+   conversation BEFORE the first question is asked, with that point ringed, so
+   the picture he was looking at is the picture he is talking about - and the
+   dots on it are pressable, so the next point is a click rather than a
+   sentence he has to compose.
+
+   It reads the plant itself (#150): no payload travels in the address and
+   nothing is scraped off the screen he came from, so the chart is the plant's
+   own answer, as it is now, and the sample ids on it are ones `spc_sample` can
+   be asked about. The agent is not called and nothing is spent - a chart drawn
+   from a read the browser is already allowed to do is not a turn.
+
+   Once. `loadExplore` runs every time somebody comes back to this tab, and a
+   chart pinned again on the way back would be the same picture twice in a
+   conversation that had moved on. */
+let pinnedChart = false;
+
+async function pinChart() {
+  if (pinnedChart) return;
+  const query = new URLSearchParams(window.location.search);
+  const spec = query.get("spec");
+  /* The last slash: a characteristic is one of this plant's own words and a
+     material code is whatever a customer's ERP calls it. */
+  const cut = spec ? spec.lastIndexOf("/") : -1;
+  if (cut <= 0 || cut === spec.length - 1) return;
+  pinnedChart = true;
+  const material = spec.slice(0, cut);
+  const characteristic = spec.slice(cut + 1);
+  const number = (name) => {
+    const raw = query.get(name);
+    const value = raw === null ? NaN : Number(raw);
+    return Number.isFinite(value) ? value : undefined;
+  };
+  try {
+    const data = await api(`/quality/spc/${encodeURIComponent(material)}/${encodeURIComponent(characteristic)}`);
+    const figure = drawChart({
+      tool: "spc_chart", shape: "spc", envelope: data,
+      title: `${data.material || material} ${data.characteristic || characteristic}`.trim(),
+      note: " — the chart you came from, read from this plant just now. "
+            + "Press a dot to ask about that point.",
+      selected: { sample: number("sample"), check: number("check") },
+    });
+    figure.classList.add("explore-pinned");
+  } catch (err) {
+    /* Said, not swallowed and not thrown: the question is already typed in the
+       box and the agent can still answer it without the picture. */
+    exploreSay(`The ${material} ${characteristic} chart could not be read just `
+               + `then (${err.message}), so it is not drawn above. The question `
+               + "below still works — the agent reads the chart itself.", "bot");
+  }
 }
 
 function newExploration() {

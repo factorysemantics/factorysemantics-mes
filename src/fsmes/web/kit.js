@@ -2069,11 +2069,13 @@
 
      `options.openable` makes each dot a button that dispatches `fs-spc-open`
      and lets the PAGE decide what opening a point means — the division the
-     graph's `fs-chart-expand` already keeps. Off by default: a dot that looks
-     pressable and is not is worse than one that plainly is not, and on the AI
-     tab the dossier is a question to ask rather than a panel to open.
-     `options.selected` rings whichever point a panel is already open on, so a
-     refresh redraws the selection instead of losing it. */
+     graph's `fs-chart-expand` already keeps. The SPC screen opens the dossier
+     panel beside the chart; the AI tab writes that point into the question
+     box, because the dossier there is a question to ask rather than a panel to
+     open. Off by default all the same: a dot that looks pressable and is not
+     is worse than one that plainly is not, and most charts are read and not
+     pressed. `options.selected` rings whichever point is the one being asked
+     about, so a redraw keeps the selection instead of losing it. */
 
   const SPC_INDIVIDUALS = "imr";
   const SPC_SAMPLED = "xbar_r";
@@ -2169,7 +2171,7 @@
        frame's own legend and threshold controls do (STYLE.md rule 6's intent).
        What opening it MEANS is the page's business, so this dispatches and
        stops. */
-    function openWith(dot, what, id, series, say) {
+    function openWith(dot, what, id, series, say, at) {
       if (!openable || id === undefined || id === null) return;
       dot.setAttribute("role", "button");
       dot.setAttribute("tabindex", "0");
@@ -2177,7 +2179,13 @@
       const fire = (event) => {
         event.stopPropagation();
         dot.dispatchEvent(new CustomEvent("fs-spc-open", {
-          bubbles: true, detail: { what, id, series, label: say },
+          /* `at` is the point's own timestamp, carried because a page that
+             wanted to say WHEN the dot it was handed was would otherwise have
+             to find it again by index in a payload whose two halves are
+             indexed differently - which is the off-by-one this shape already
+             goes out of its way to avoid. The id is still what identifies the
+             point; the stamp is for the words around it. */
+          bubbles: true, detail: { what, id, series, label: say, at },
         }));
       };
       dot.addEventListener("click", fire);
@@ -2271,7 +2279,8 @@
                      + `${point.n || size} readings — open the readings behind it`
                    : `Moving range ${i + 1}, ${point.range}${unit}, the gap between `
                      + `readings ${i + 1} and ${i + 2} — opens reading ${i + 2}, the `
-                     + "later of the two");
+                     + "later of the two",
+                 point.ts);
       });
       add(half, "text", { x: left + 4, y: lowerTop + 10, class: "axis" },
           (sampled
@@ -2416,7 +2425,8 @@
                        + `readings at ${FS.fmt.stamp(point.ts)} — open the readings `
                        + "behind it"
                      : `Reading ${i + 1}, ${point.value}${unit} at `
-                       + `${FS.fmt.stamp(point.ts)} — open the records behind it`);
+                       + `${FS.fmt.stamp(point.ts)} — open the records behind it`,
+                   point.ts);
         });
         /* What this picture is OF, on the picture. The frame's <title> is for a
            screen reader; a chart pasted into a slide has to name itself. */
