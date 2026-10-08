@@ -693,8 +693,16 @@ function alsoAsk(detail) {
    the sentence is about. Nothing is fetched and nothing is computed by the
    press - rule 2 of this panel - and the ring is the kit's own
    `options.selected`, so the chart is redrawn by the one implementation rather
-   than reached into. */
-function drawChart(chart) {
+   than reached into.
+
+   `handle` is how a chart this page may draw AGAIN keeps its place: an object
+   the caller owns, holding the figure that was drawn and the point currently
+   ringed on it. Pass one and the new figure replaces the old one where it
+   stands and inherits its ring; pass nothing and the chart is appended, which
+   is what every chart in an answer does. The figure is replaced rather than
+   emptied and refilled so that no listener and no closure outlives the
+   picture it was about. */
+function drawChart(chart, handle) {
   const box = el("figure", "explore-chart");
   box.dataset.tool = chart.tool;
   box.dataset.shape = chart.shape;
@@ -705,10 +713,23 @@ function drawChart(chart) {
   box.appendChild(head);
   const host = el("div", "chart-host");
   box.appendChild(host);
-  exploreLog().appendChild(box);
+  const standing = handle && handle.figure && handle.figure.parentNode
+    ? handle.figure : null;
+  if (standing) {
+    /* Same picture, same place in the conversation, and whatever the page had
+       marked it with. */
+    for (const name of standing.classList) box.classList.add(name);
+    standing.replaceWith(box);
+  } else {
+    exploreLog().appendChild(box);
+  }
 
   const pressable = chart.shape === "spc";
-  let open = chart.selected || {};
+  let open = chart.selected || (handle && handle.selected) || {};
+  if (handle) {
+    handle.figure = box;
+    handle.selected = open;
+  }
   const render = () => {
     const plot = plotFor(chart);
     return FS.kit.draw(host, chart.shape, plot.envelope,
@@ -740,6 +761,7 @@ function drawChart(chart) {
          are both small integers, and one field holding either would ring the
          dot numbered 7 on the wrong half. */
       open = it.what === "sample" ? { sample: it.id } : { check: it.id };
+      if (handle) handle.selected = open;
       node = render();
       alsoAsk(it);
     });
@@ -859,11 +881,16 @@ function drawNextQuestions(questions) {
   if (!questions.length) return null;
   const box = el("div", "explore-next");
   box.dataset.next = String(questions.length);
-  box.appendChild(el("p", "muted small", "Ask this next — the agent's own questions, "
-                                         + "from what it just read:"));
+  /* Scott, 2026-10-08, of the live pictures: "I didn't see the buttons." So
+     the row carries its own heading and the buttons the weight of the Ask
+     button - this is the next step, and the next step should not need
+     looking for. The questions are still the agent's own words. */
+  box.appendChild(el("p", "next-head", "Ask this next"));
+  box.appendChild(el("p", "muted small",
+                     "The agent's own questions, from what it just read — press one:"));
   const row = el("div", "next-row");
   for (const question of questions) {
-    const button = el("button", "ghost small", question);
+    const button = el("button", "small", question);
     button.type = "button";
     button.addEventListener("click", () => {
       if (exploreBusy) return;
@@ -880,13 +907,39 @@ function drawNextQuestions(questions) {
   return box;
 }
 
+/* The answer on the screen, in the order the model wrote it.
+
+   `parts` is the server's account of that order - `{text}` for a round's words
+   and `{chart}` naming one of `charts` by its id. It exists because a round
+   that ended in a tool call used to lose its words: the model said the good
+   part, read one more record, and only the last round reached the screen
+   (`services/agent.py`, `turn_parts`). A reply without `parts` is read the way
+   every reply was read before it: the charts, then the words. */
+function partsOf(out) {
+  if (out.parts && out.parts.length) return out.parts;
+  return [...(out.charts || []).map((chart) => ({ chart: chart.id })),
+          { text: out.say }];
+}
+
 function renderExplore(out) {
   exploreSession = out.session || exploreSession;
   drawExploreTrace(out.transcript);
-  for (const chart of out.charts || []) drawChart(chart);
-  const { say, next } = splitNext(out.say);
-  if (say.trim()) exploreSay(say, "bot");
-  drawNextQuestions(next);
+  const byId = new Map();
+  (out.charts || []).forEach((chart, i) => byId.set(chart.id ?? `c${i + 1}`, chart));
+  let next = [];
+  for (const part of partsOf(out)) {
+    if (part.chart !== undefined && part.chart !== null) {
+      const chart = byId.get(part.chart);
+      if (chart) showChart(chart);
+      continue;
+    }
+    /* Per part, because the fenced block of questions is the last thing the
+       model writes and "last" is in whichever part it wrote last. */
+    const split = splitNext(part.text || "");
+    if (split.next.length) next = split.next;
+    if (split.say.trim()) exploreSay(split.say, "bot");
+  }
+  const asked = drawNextQuestions(next);
   exploreCost(out.cost);
   if (out.kind === "unavailable") {
     /* Off, or out of budget. Both are states with a reason, and the reason is
@@ -895,7 +948,10 @@ function renderExplore(out) {
       ? `The analysis agent is not answering: ${out.why}.`
       : "The analysis agent is not answering.";
   }
-  exploreLog().lastElementChild?.scrollIntoView({ block: "nearest" });
+  /* The end of the answer, which is the buttons when there are any: a next
+     step below the fold is a next step nobody takes. */
+  (asked || exploreLog().lastElementChild)?.scrollIntoView(
+    { block: asked ? "end" : "nearest" });
 }
 
 async function ask(question) {
@@ -970,6 +1026,61 @@ async function loadExplore() {
    conversation that had moved on. */
 let pinnedChart = false;
 
+/* The pinned chart's handle - the figure it was drawn into, the point ringed on
+   it, and what picture it IS, so the answer that draws the same one again can
+   mark this one instead of stacking a second copy beside it (`samePicture`).
+   Null until something is pinned, which is most conversations. */
+let pinned = null;
+
+/* What makes two control charts the same picture: the same tool, the same
+   specification, and the same window - stated by the ids at both ends of it
+   and how many points lie between, which is the plant's own account of the
+   window and not a clock time this file worked out.
+   Deliberately narrow: a different payload is a different picture and is drawn
+   as one, which is what a reader needs when the agent went and read something
+   else. */
+function samePicture(was, chart) {
+  if (!was || !chart || was.tool !== chart.tool) return false;
+  return was.key === pictureKey(chart.envelope);
+}
+
+function pictureKey(envelope) {
+  if (!envelope || !Array.isArray(envelope.points) || !envelope.points.length) return null;
+  const first = envelope.points[0];
+  const last = envelope.points[envelope.points.length - 1];
+  const at = (point) => (point.sample !== undefined ? `s${point.sample}` : `c${point.check}`);
+  return [envelope.material, envelope.characteristic, envelope.kind,
+          envelope.points.length, at(first), at(last)].join("|");
+}
+
+/* One chart on the screen for one picture.
+
+   Scott, 2026-10-08, from the live run: the manager question put the same
+   control chart on the page twice - once pinned by the chip he pressed, and
+   once again because the agent drew it as part of its answer. Two identical
+   pictures is a reader asking what the difference between them is.
+
+   So the pinned one is MARKED as the answer's chart rather than moved or
+   duplicated: it is first in the conversation because it was there first, and
+   it is re-drawn from the envelope the agent was actually handed, keeping the
+   ring on the dot being asked about. A chart that is not the pinned one is
+   drawn where the answer wrote it. */
+function showChart(chart) {
+  if (pinned && samePicture(pinned, chart)) {
+    const figure = drawChart(
+      { ...chart,
+        note: " — the chart you came from, read from this plant just now, and the "
+              + "one this answer is about. The agent drew the same picture, so it "
+              + "is not drawn twice. Press a dot to ask about that point." },
+      pinned);
+    /* Which of the answer's charts this figure stands in for, so the screen
+       says in its own markup what the note says in words. */
+    figure.dataset.answerChart = chart.id || "";
+    return figure;
+  }
+  return drawChart(chart);
+}
+
 async function pinChart() {
   if (pinnedChart) return;
   const query = new URLSearchParams(window.location.search);
@@ -988,13 +1099,14 @@ async function pinChart() {
   };
   try {
     const data = await api(`/quality/spc/${encodeURIComponent(material)}/${encodeURIComponent(characteristic)}`);
+    pinned = { tool: "spc_chart", key: pictureKey(data), figure: null, selected: null };
     const figure = drawChart({
       tool: "spc_chart", shape: "spc", envelope: data,
       title: `${data.material || material} ${data.characteristic || characteristic}`.trim(),
       note: " — the chart you came from, read from this plant just now. "
             + "Press a dot to ask about that point.",
       selected: { sample: number("sample"), check: number("check") },
-    });
+    }, pinned);
     figure.classList.add("explore-pinned");
   } catch (err) {
     /* Said, not swallowed and not thrown: the question is already typed in the
@@ -1007,6 +1119,8 @@ async function pinChart() {
 
 function newExploration() {
   exploreSession = null;
+  /* The log is emptied, so the figure the handle points at is gone with it. */
+  pinned = null;
   exploreLog().textContent = "";
   $("#explore-cost").textContent = "";
   FS.toast("Fresh exploration. The one before it is in the trace beside this tab.");

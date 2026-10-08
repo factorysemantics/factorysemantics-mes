@@ -688,12 +688,20 @@ a.obj:hover { text-decoration: underline; }
    signals, because one of the four themes will always be the one where a hue
    shift alone is the difference nobody notices on a phone in daylight. */
 .spc-flag { fill: var(--quality); stroke: var(--text); stroke-width: 0.8; }
-/* The point a panel is open on. Thicker and ringed in the accent, which is
-   this product's colour for "where the reader is" and never a state the plant
-   reported. Two class names for one idea, one per half, so that "the point
-   that is open" stays countable in the markup: a chart that marked the same
-   sample twice under one name could not be checked by a test or by a reader. */
-.spc-selected, .spc-mr-selected { stroke: var(--accent); stroke-width: 2.5; fill: var(--accent); }
+/* The point a panel is open on. Named in the accent, which is this product's
+   colour for "where the reader is" and never a state the plant reported. Two
+   class names for one idea, one per half, so that "the point that is open"
+   stays countable in the markup: a chart that marked the same sample twice
+   under one name could not be checked by a test or by a reader.
+
+   The dot keeps its own size and its own fill - the mark is the RING outside
+   it. Until 2026-10-08 the open point was a fatter dot filled with the accent,
+   and on a chart where a flagged point is already fatter there was no telling
+   the two apart; worse, the accent fill hid whether the point the sentence was
+   about had fired a rule at all. */
+.spc-selected, .spc-mr-selected { stroke: var(--accent); stroke-width: 1.5; }
+/* The ring itself: hollow, so the reading inside it is still the reading. */
+.spc-ring { fill: none; stroke: var(--accent); stroke-width: 2; }
 /* Pressable only where the page made it so (`options.openable`): on the AI tab
    these dots open nothing, and a cursor that promised otherwise would be the
    picture making an offer the screen cannot keep. */

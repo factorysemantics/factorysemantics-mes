@@ -104,7 +104,11 @@ def test_a_turn_through_the_panel_is_written_into_the_plants_own_trace(
     assert turn.person == "ADMIN"
     assert turn.kind == "proposals"
     assert turn.asked == "make the non-conformance prefix CR"
-    assert turn.said == "I will change it."
+    # Both text blocks, in the order the model wrote them. The trace is the
+    # plant's record of what its AI said, so it holds all of what it said:
+    # before 2026-10-08 the first round's words were thrown away with the
+    # round, here and on the screen alike.
+    assert turn.said == "Let me look.\n\nI will change it."
     # The tool call the panel showed, with the sentence it showed beside it.
     assert [call["tool"] for call in turn.tools] == ["plant_settings"]
     assert turn.tools[0]["ok"] is True and turn.tools[0]["summary"]

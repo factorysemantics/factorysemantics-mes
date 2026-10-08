@@ -955,8 +955,21 @@ SPC_FACTS = """([envelope, options]) => {
         title: node.querySelector('title').textContent,
         spec: guide('spec-line'), limit: guide('limit-line'),
         centre: guide('centre-line'),
-        upperDots: dots('g.chart-plot > circle'),
-        lowerDots: dots('[data-half] circle'),
+        /* The ring around the point being asked about is a circle of its
+           own, so every dot probe here says "not the ring". */
+        upperDots: dots('g.chart-plot > circle:not(.spc-ring)'),
+        lowerDots: dots('[data-half] circle:not(.spc-ring)'),
+        rings: [...node.querySelectorAll('circle.spc-ring')].map((c) => ({
+            sample: c.getAttribute('data-ring-sample'),
+            check: c.getAttribute('data-ring-check'),
+            fill: getComputedStyle(c).fill,
+            stroke: getComputedStyle(c).strokeWidth,
+            role: c.getAttribute('role'), tabindex: c.getAttribute('tabindex'),
+            hidden: c.getAttribute('aria-hidden'),
+            cx: Math.round(Number(c.getAttribute('cx'))),
+            cy: Math.round(Number(c.getAttribute('cy'))),
+            r: Number(c.getAttribute('r')),
+        })),
         height: Number(node.getAttribute('height')),
     };
 }"""
@@ -1133,6 +1146,32 @@ def test_a_dot_opens_a_point_only_where_the_screen_said_it_could(page):
     # of its own per half so that "the point that is open" stays countable.
     assert "spc-selected" in opened["upperDots"][2]["cls"]
     assert "spc-mr-selected" in opened["lowerDots"][2]["cls"]
+
+    # And "ringed" is a ring. Scott, 2026-10-08, of the fatter dot this used
+    # to draw: it read as a bigger measurement rather than as the sample he
+    # had open. So the mark is a hollow circle AROUND the dot - the reading
+    # inside it is still drawn at the size every other reading is - one per
+    # half, named by the sample it rings, and it takes no pointer and no
+    # keyboard: the dot underneath is the button, and two buttons on one
+    # reading is one button too many.
+    rings = opened["rings"]
+    assert len(rings) == 2, rings
+    assert [r["sample"] for r in rings] == ["13", "13"]
+    assert [r["check"] for r in rings] == [None, None]
+    assert all(r["fill"] == "none" for r in rings), rings
+    assert all(r["role"] is None and r["tabindex"] is None for r in rings)
+    assert all(r["hidden"] == "true" for r in rings)
+    assert opened["upperDots"][2]["r"] == opened["upperDots"][0]["r"]
+    marked = (opened["upperDots"][2], opened["lowerDots"][2])
+    assert len({(r["cx"], r["cy"]) for r in rings}) == 2, "both rings in one place"
+    for ring in rings:
+        dot = next((d for d in marked
+                    if (d["cx"], d["cy"]) == (ring["cx"], ring["cy"])), None)
+        assert dot, (ring, marked)
+        assert ring["r"] > dot["r"], (ring, dot)
+    # An I-MR chart rings a check instead, under the name a check goes by;
+    # that half is pinned on the SPC tab's own chart, drawn from the plant, in
+    # `test_clicking_a_point_on_the_spc_chart_opens_the_records_behind_it.py`.
 
     fired = page.evaluate(
         """() => new Promise((resolve) => {

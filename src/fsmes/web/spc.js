@@ -363,10 +363,18 @@ async function load() {
   $("#mr-verdict").textContent = lower ? (lower.verdict || "") : "";
   window.__fsmesPageData = data;
 
-  /* A keyboard's way in, and a mouse's shortcut: the newest reading a rule
-     fired on, or the newest reading when none did. It says which, because
+  /* A keyboard's way in, and a mouse's shortcut: the WORST point a rule fired
+     on, or the newest reading when none did. It says which rule, because
      "open the flagged reading" on a chart where nothing fired would be a
-     button promising something that is not there. */
+     button promising something that is not there - and because on a chart
+     where forty things fired it has to say which of the forty it means.
+
+     Seen live on 2026-10-08 on a demo line: the button opened the newest
+     flagged reading, which on a chart carrying forty rule-4 flags was a dull
+     500.2 g point eight-in-a-row off centre, and not the 488.6 g rule-1 dip
+     twenty-five minutes earlier that was the event. The agent on the AI tab
+     was then asked, correctly, about the wrong dot, and answered that there
+     was nothing abnormal about it under a chart that flags it. */
   const button = $("#open-point");
   /* By id, of whichever thing a point on this chart is. The nth dot is a
      different point every time a check is recorded; the sample is not. */
@@ -374,20 +382,45 @@ async function load() {
     const point = data.points[index] || {};
     return sampled ? point.sample : point.check;
   };
-  const flaggedIds = data.signals
-    .map((s) => idAt(s.index))
-    .filter((id) => id !== undefined);
-  const target = flaggedIds.length
-    ? flaggedIds[flaggedIds.length - 1]
-    : idAt(data.points.length - 1);
+  const flagged = data.signals
+    .map((s) => ({ signal: s, id: idAt(s.index) }))
+    .filter((hit) => hit.id !== undefined);
+  /* Worst first, newest within a rule. Rule 1 is the alarm - a point beyond
+     three sigma - and rule 5 is the range beside it, the one that says two
+     consecutive readings jumped; rules 2 to 4 are the early warnings, which
+     are worth having and are not the news on a chart that has a rule 1 on it.
+     `services.spc` already calls rule 1 the major one (`MAJOR_RULES`) and
+     this is the same order said in the one place the reader presses. */
+  const worstFirst = (rule) => (rule === 1 ? 0 : rule === 5 ? 1 : 2);
+  const best = flagged.length
+    ? flagged.slice().sort((a, b) =>
+        worstFirst(a.signal.rule) - worstFirst(b.signal.rule)
+        || b.signal.index - a.signal.index)[0]
+    : null;
+  const target = best ? best.id : idAt(data.points.length - 1);
+  const noun = sampled ? "sample" : "reading";
   button.disabled = target === undefined;
-  button.textContent = flaggedIds.length
-    ? (sampled ? "Open the flagged sample" : "Open the flagged reading")
-    : (sampled ? "Open the newest sample" : "Open the newest reading");
-  button.title = sampled
-    ? `A point here is the mean of ${data.sample_size} pieces, and the panel `
-      + `opens all ${data.sample_size} of them with the records around them.`
-    : "";
+  button.textContent = best
+    ? `Open the rule ${best.signal.rule} ${noun}`
+    : `Open the newest ${noun}`;
+  /* Which point that is, and why it is the one: the rule's own sentence from
+     the server, and how many others fired - so a reader who wanted a
+     different dot knows there are others and can press one on the chart. */
+  const others = flagged.length - 1;
+  button.title = [
+    best
+      ? `Rule ${best.signal.rule}: `
+        + `${best.signal.what || best.signal.description || best.signal.meaning || "a rule fired"}`
+        + (others > 0
+            ? `. ${others} other point${others === 1 ? "" : "s"} fired a rule too — `
+              + "press any dot on the chart for that one."
+            : ".")
+      : "Nothing fired a rule on this chart, so this opens the newest point.",
+    sampled
+      ? `A point here is the mean of ${data.sample_size} pieces, and the panel `
+        + `opens all ${data.sample_size} of them with the records around them.`
+      : "",
+  ].filter(Boolean).join(" ");
   button.onclick = () => (sampled ? openSamplePanel(target) : openPoint(target));
 }
 
@@ -436,12 +469,14 @@ function words(data) {
   $("#point-hint").textContent = sampled
     ? `Click a sample to see the ${n} readings behind it — or tab to one and `
       + "press Enter. A dot on the lower chart is the same sample's spread and "
-      + "opens the same readings. The button opens the newest sample a rule "
-      + "fired on, and the newest sample when none did."
+      + "opens the same readings. The button opens the worst sample a rule "
+      + "fired on — rule 1 before rule 5 before the rest, the newest of those "
+      + "— and says which rule that is; the newest sample when none did."
     : "Click a reading to see the records behind it — or tab to one and press "
       + "Enter. A dot on the lower chart is the gap between two readings and "
-      + "opens the later of them. The button opens the newest reading a rule "
-      + "fired on, and the newest reading when none did.";
+      + "opens the later of them. The button opens the worst reading a rule "
+      + "fired on — rule 1 before rule 5 before the rest, the newest of those "
+      + "— and says which rule that is; the newest reading when none did.";
   $("#point-title").textContent = sampled
     ? "Why this sample is here" : "Why this reading is here";
   $("#point-idle").textContent = sampled

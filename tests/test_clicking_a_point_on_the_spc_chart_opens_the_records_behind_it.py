@@ -404,16 +404,88 @@ def test_a_keyboard_reaches_a_reading_and_opens_it(page, plant):
     _await_panel(page, check)
 
 
-def test_the_open_a_reading_button_opens_the_one_a_rule_fired_on(page, plant):
-    """A keyboard's way in without hunting for a dot, and it says which
-    reading it will open rather than promising a flagged one that is not
-    there."""
+def test_the_open_a_reading_button_opens_the_worst_point_and_names_its_rule(
+        page, plant):
+    """A keyboard's way in without hunting for a dot - and it opens the point
+    that is the news, not the most recent one.
+
+    Seen live on 2026-10-08: on a chart with forty rule-4 flags this button
+    opened a dull 500.2 g point and not the 488.6 g rule-1 dip half an hour
+    earlier, so the chip's question and the agent's *why* were about the wrong
+    dot. Rule 1 first, then rule 5, then the early-warning rules, newest
+    within a rule - and the label says which rule is being opened, because a
+    button that picks for you has to say what it picked."""
     _base, check = plant
     button = page.query_selector("#open-point")
     assert button.get_attribute("data-assist") == "spc-open-point"
-    assert button.inner_text().strip() == "Open the flagged reading"
+    assert button.inner_text().strip() == "Open the rule 1 reading"
+    assert "Rule 1" in button.get_attribute("title")
     button.click()
+    # `check` is the wild reading, the only rule 1 on this chart.
     _await_panel(page, check)
+
+
+def test_the_button_passes_over_a_newer_early_warning_for_the_older_alarm(
+        admin, plant):
+    """The live failure of 2026-10-08, pinned.
+
+    The plant's own chart has one flag, so the order this button sorts by
+    cannot be seen on it. Here the chart's readings are the plant's and only
+    the server's verdict is rewritten on the way in: a rule 4 on the newest
+    reading, a rule 5 older than that, and a rule 1 older again. The newest
+    flag is the rule 4; the alarm is the rule 1; the button opens the alarm
+    and says so.
+    """
+    import json
+
+    base, _check = plant
+    page = admin.new_page()
+    picked = {}
+
+    def rewrite(route):
+        reply = route.fetch()
+        data = reply.json()
+        points = data["points"]
+        assert len(points) > 3, "the plant did not record enough readings"
+        order = {"rule4": len(points) - 1, "rule5": len(points) - 2,
+                 "rule1": len(points) - 3}
+        picked["check"] = points[order["rule1"]]["check"]
+        picked["newest"] = points[order["rule4"]]["check"]
+        data["signals"] = [
+            {"rule": 1, "index": order["rule1"],
+             "value": points[order["rule1"]]["value"],
+             "what": "a point beyond three sigma", "nonconformance": None,
+             "held": False},
+            {"rule": 5, "index": order["rule5"],
+             "value": points[order["rule5"]]["value"],
+             "what": "two consecutive readings a long way apart",
+             "nonconformance": None, "held": False},
+            {"rule": 4, "index": order["rule4"],
+             "value": points[order["rule4"]]["value"],
+             "what": "fourteen readings alternating up and down",
+             "nonconformance": None, "held": False},
+        ]
+        route.fulfill(status=reply.status, headers={"Content-Type": "application/json"},
+                      body=json.dumps(data))
+
+    try:
+        page.route("**/quality/spc/*/brix", rewrite)
+        page.goto(f"{base}/dashboard/spc?spec=FG-COLA%7Cbrix", wait_until="load",
+                  timeout=30000)
+        # Wait on the label itself, which is the thing being asserted.
+        page.wait_for_function(
+            "() => (document.querySelector('#open-point')?.textContent || '')"
+            ".includes('rule')", timeout=30000)
+        button = page.query_selector("#open-point")
+        assert button.inner_text().strip() == "Open the rule 1 reading"
+        assert picked["check"] != picked["newest"]
+        title = button.get_attribute("title")
+        assert "Rule 1: a point beyond three sigma" in title
+        assert "2 other points fired a rule too" in title
+        button.click()
+        _await_panel(page, picked["check"])
+    finally:
+        _close(page)
 
 
 def test_the_reading_that_is_open_is_marked_on_the_chart(page, plant):
@@ -428,6 +500,41 @@ def test_the_reading_that_is_open_is_marked_on_the_chart(page, plant):
         arg=check, timeout=10000)
     assert page.eval_on_selector_all(
         "#chart circle.spc-selected", "els => els.length") == 1
+    # The mark is a ring drawn around the dot, not a bigger dot: a reading
+    # drawn larger than its neighbours reads as a larger measurement. Scott,
+    # 2026-10-08, of the fat dot this used to draw. One per half, named by the
+    # check it rings, and neither of them takes a press - the dot does.
+    rings = page.eval_on_selector_all(
+        "#chart circle.spc-ring",
+        """els => els.map((c) => ({check: c.getAttribute('data-ring-check'),
+                                   r: Number(c.getAttribute('r')),
+                                   fill: getComputedStyle(c).fill,
+                                   role: c.getAttribute('role')}))""")
+    assert [r["check"] for r in rings] == [str(check), str(check)], rings
+    assert all(r["fill"] == "none" and r["role"] is None for r in rings)
+    dot_r = page.eval_on_selector(
+        f"#chart circle[data-check='{check}']", "d => Number(d.getAttribute('r'))")
+    assert all(r["r"] > dot_r for r in rings), (rings, dot_r)
+
+
+def test_the_sentence_under_the_chart_says_what_the_button_actually_opens(
+        page, plant):
+    """Found in a live picture on 2026-10-08, not in a test: the button had
+    been taught to open the worst point while the paragraph under the chart
+    still told the reader it opened the newest one. A screen that explains
+    itself wrongly is worse than one that does not explain itself, so the
+    sentence is pinned to the behaviour here."""
+    _base, _check = plant
+    page.wait_for_function(
+        "() => (document.querySelector('#point-hint')?.textContent || '')"
+        ".includes('The button opens')", timeout=10000)
+    hint = page.locator("#point-hint").inner_text()
+    assert "worst" in hint, hint
+    assert "newest reading a rule fired on" not in hint
+    assert "newest sample a rule fired on" not in hint
+    # And it says the order, because "worst" is a judgement and the reader is
+    # owed the rule behind it.
+    assert "rule 1 before rule 5" in hint, hint
 
 
 # ------------------------------------------------------------ what is in it

@@ -392,3 +392,64 @@ plant whose sample 15 is settled - or which has no sampled characteristic at all
 plant: `flagged_sample` is a declared requirement and not an arranged one,
 because recording readings until the rules fire would be writing a process upset
 into somebody's quality record to make a case pass."""
+
+# --------------------------------------------- the question the chip asks for him
+#
+# Scott's own sentence, 2026-10-07, now the *Explain this chart* chip's words on
+# the SPC tab: a plant manager who wants two sentences and one picture, and who
+# has a sample open beside the chart, so he is also asking why that point is
+# where it is. It is the first question anybody will press on this product, and
+# it is one case rather than two because the reply owes all three things at
+# once - the sentences, the picture, and the why.
+#
+# It is here because of what the reply used to do with them. The agent said the
+# two sentences, read the dossier to answer the *why*, and the two sentences
+# were thrown away on the way out: a round that ended in a tool call lost its
+# words (`services/agent.py`, `turn_parts`, 2026-10-08). The case scores the
+# sentences and the why in one reply, which is the thing that was broken.
+
+[[case]]
+id = "analyst-answers-the-managers-two-sentences-and-why-the-sample-is-high"
+request = "I'm the plant manager and I don't understand the SPC tab. How does the FG-COLA fill_height chart look? Two sentences for my boss and the one graph for a slide. And why is sample 15 where it is?"
+screen = "/dashboard/ai"
+expect = "read"
+reads = ["spc_chart", "spc_sample"]
+draws = ["spc_chart"]
+lookup = { material = "FG-COLA", characteristic = "fill_height", sample_id = 15 }
+requires = ["sampled_spec:FG-COLA/fill_height",
+            "flagged_sample:FG-COLA/fill_height/15"]
+contains_any = [["control limit", "rule 1", "out of control"],
+                ["specification", "spec limit", "upper_spec"],
+                ["changeover", "setup", "product change", "size change"]]
+never = ["caused the high reading", "the changeover caused",
+         "because of the changeover"]
+note = """Three groups, and all three have to be in ONE reply: what the chart
+says, what the specification says about it, and what else was happening in that
+sample's own window. The first two are the two sentences a manager repeats; the
+third is the *why* he asked for in the same breath.
+
+That is the whole point of the case. Until 2026-10-08 a reply like this lost its
+first half: the model wrote the two sentences, called `spc_sample` to answer the
+why, and `_drive` returned only the last round's words. The suite could not see
+it, because every case before this one asked for one thing. A case that asked
+for the sentences alone, or the why alone, would pass on the broken loop.
+
+`draws` carries the picture, because "the one graph for a slide" is the request
+and a chart described in prose is a slide nobody can show. `never` is the same
+causal claim the sibling case above refuses: the dossier says the station came
+out of a changeover and how long before, and a plant manager handed "the
+changeover caused it" would act on a link nothing here records."""
+[[case.plan]]
+read = "spc_chart"
+# The two sentences, said in the same round as the drawing - which is the round
+# that used to be thrown away. The stand-in plays the shape the live model
+# takes, so scripted mode walks the same code path the fix is in.
+[[case.plan]]
+say = "The two sentences for your boss, before the picture."
+draw = "spc_chart"
+shape = "spc"
+title = "FG-COLA fill height"
+[[case.plan]]
+read = "spc_sample"
+[[case.plan]]
+say = "And the why, from the records around that sample."

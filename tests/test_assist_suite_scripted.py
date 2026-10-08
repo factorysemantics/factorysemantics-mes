@@ -1277,12 +1277,19 @@ def test_the_scripted_run_arranges_every_fixture_the_suite_asks_for(scored):
     make a case pass. So that case is reported not arranged, with the plant it
     can be asked on - the bottling lab's fill height has such a point - rather
     than asked here.
+
+    Five as of 2026-10-08, and the fifth is the same point asked the way the
+    SPC tab's own chip asks it: the plant manager's two sentences, the graph
+    and the why, in one reply. It needs the same flagged sample for the same
+    reason, so it is reported not arranged here and proved on the lab.
     """
     unmade = {o.case.id: o.missing for o in scored if not o.arranged}
-    assert set(unmade) == {"admin-approves-an-adjustment",
-                           "analyst-asks-which-workcenters-are-asking-what",
-                           "analyst-asks-why-a-flagged-sample-is-high",
-                           "operator-records-a-sample-of-five"}, unmade
+    assert set(unmade) == {
+        "admin-approves-an-adjustment",
+        "analyst-answers-the-managers-two-sentences-and-why-the-sample-is-high",
+        "analyst-asks-which-workcenters-are-asking-what",
+        "analyst-asks-why-a-flagged-sample-is-high",
+        "operator-records-a-sample-of-five"}, unmade
     assert unmade["admin-approves-an-adjustment"] == ("adjustment:MIX01",)
     assert unmade["analyst-asks-which-workcenters-are-asking-what"] == ("home:SCOTT",)
     assert unmade["operator-records-a-sample-of-five"] == \
@@ -1293,6 +1300,9 @@ def test_the_scripted_run_arranges_every_fixture_the_suite_asks_for(scored):
         "sampled_spec:FG-COLA/fill_height"
     assert "flagged_sample:FG-COLA/fill_height/15" in \
         unmade["analyst-asks-why-a-flagged-sample-is-high"][1]
+    assert unmade[
+        "analyst-answers-the-managers-two-sentences-and-why-the-sample-is-high"] \
+        == unmade["analyst-asks-why-a-flagged-sample-is-high"]
 
 
 def test_a_case_whose_fixture_is_missing_is_counted_apart_from_pass_and_fail():
