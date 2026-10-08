@@ -1167,6 +1167,19 @@ class Session:
     #: trace would be a second copy of the plant's rows outside the tables that
     #: own them, which is the one thing `ai_turns` promises not to be.
     turn_charts: list[dict] = field(default_factory=list)
+    #: Everything the model wrote this turn and everything it drew, in the
+    #: order it did it - `{"text": ...}` for a round's words and
+    #: `{"chart": "c1"}` for a picture, named by the id its spec already
+    #: carries in `turn_charts` rather than copied here, because an envelope
+    #: twice in one reply is the plant's rows twice on the wire.
+    #:
+    #: Before this, a round with tool calls dropped its words and looped, and
+    #: only the last round's words were returned: a model that answered and
+    #: then read one more record had its answer thrown away. Seen on
+    #: 2026-10-08 on the manager question - the two sentences for his boss
+    #: never reached the screen. The charts already survived across rounds
+    #: (`turn_charts`); the words did not.
+    turn_parts: list[dict] = field(default_factory=list)
     #: Where this turn's own tool calls start in `transcript`. The transcript
     #: is cleared when the person says something and grows across a confirm
     #: and the rounds that follow it, so a turn's calls are the tail from
@@ -1482,8 +1495,31 @@ def _reply(sess: Session, kind: str, say: str, **extra: Any) -> dict:
         # The envelope goes to the browser, which draws it. It does not go to
         # the trace: `_record_turn` takes the summary beside it.
         out["charts"] = [dict(spec) for spec in sess.turn_charts]
+    if sess.turn_parts:
+        # The order the model wrote in: text and charts, each chart by the id
+        # of its spec above. A screen that has this draws the answer the way
+        # it was written; a screen that has not still has `say` and `charts`,
+        # which is what every reply carried before.
+        out["parts"] = [dict(part) for part in sess.turn_parts]
     _record_turn(sess, kind, say, extra)
     return out
+
+
+def _said(sess: Session) -> str:
+    """Every text block this turn, in the order the model wrote them.
+
+    Joined by a blank line, because the parts are paragraphs of one answer and
+    a model that wrote its verdict in round one and its reasoning in round
+    three meant them to be read in that order. `parts` on the reply keeps the
+    charts between them; this is the same words for a caller that takes one
+    string - the trace, and any screen older than `parts`.
+    """
+    return "\n\n".join(part["text"] for part in sess.turn_parts if "text" in part)
+
+
+def _answer(sess: Session, kind: str, fallback: str = "", **extra: Any) -> dict:
+    """The turn is over and the model had its say - all of it."""
+    return _reply(sess, kind, _said(sess) or fallback, **extra)
 
 
 def _cost_so_far(sess: Session) -> dict:
@@ -1540,6 +1576,7 @@ def _begin_turn(sess: Session, asked: str = "") -> None:
     sess.turn_error = None
     sess.turn_asked = asked
     sess.turn_charts = []
+    sess.turn_parts = []
     sess.turn_from = len(sess.transcript)
     sess.last_turn = None
 
@@ -1744,8 +1781,13 @@ def _drive(sess: Session) -> dict:
             tool_uses = [b for b in response.content if getattr(b, "type", "") == "tool_use"]
             if getattr(response, "stop_reason", None) == "refusal":
                 return _reply(sess, "reply", say or "I cannot help with that one.")
+            # Kept before the round's tool calls are answered, which is where it
+            # was written: the model's text block comes before its `tool_use`
+            # blocks, so this is the order the person reads.
+            if say.strip():
+                sess.turn_parts.append({"text": say.strip()})
             if not tool_uses:
-                return _reply(sess, "reply", say.strip() or "(no reply)")
+                return _answer(sess, "reply", fallback="(no reply)")
 
             proposals: list[Proposal] = []
             shown: dict | None = None
@@ -1759,6 +1801,7 @@ def _drive(sess: Session) -> dict:
                     payload, drawn = _draw(sess, args)
                     if drawn is not None:
                         sess.turn_charts.append(drawn)
+                        sess.turn_parts.append({"chart": drawn["id"]})
                     sess.results[block.id] = _tool_result(block.id, payload, sess.result_limit)
                     sess.transcript.append({"tool": block.name, "args": args,
                                             "ok": drawn is not None,
@@ -1825,15 +1868,20 @@ def _drive(sess: Session) -> dict:
                                    "why": "a proposal is waiting on the person; offer the walk "
                                           "again once they have decided"}, sess.result_limit)
                     shown = None
-                return _reply(sess, "proposals", say.strip(), proposals=[p.public() for p in proposals])
+                return _answer(sess, "proposals", proposals=[p.public() for p in proposals])
             if shown is not None:
                 # The walk goes on the person's screen now; the model's own
                 # sentence goes above it. The results of this round are committed
                 # first, so the next thing they say starts from a whole history.
                 _commit_results(sess)
-                return _reply(sess, "guide", say.strip(), guide=shown)
+                return _answer(sess, "guide", guide=shown)
             _commit_results(sess)
-        return _reply(sess, "reply", "I stopped after too many steps without finishing. Try a smaller ask.")
+        # Out of rounds. Whatever the model managed to say on the way is still
+        # the best of this turn and still cost money, so it is said, with the
+        # sentence about stopping after it rather than instead of it.
+        sess.turn_parts.append(
+            {"text": "I stopped after too many steps without finishing. Try a smaller ask."})
+        return _answer(sess, "reply")
 
 
 #: How many read payloads one conversation keeps for drawing. Twenty-four is
