@@ -190,6 +190,23 @@ def test_the_key_says_which_spc_rule_fires_first(chain):
     assert "not rule 2" in said
 
 
+def test_the_quality_link_says_its_millimetres_came_from_one_replay(chain):
+    """The shift is one seed, so the bottles never move - but the inspector
+    groups five of them every fifteen line minutes, and at speed that is a
+    few wall seconds, so a replay that lags averages different bottles. Two
+    replays here put the low sample mean at 140.16 mm and at 140.88 mm. The
+    link quotes a millimetre to show the size of the move, so it has to say
+    where that millimetre came from, or the next reader will assert it."""
+    quality = [link for link in chain["links"]
+               if any(r["kind"] == "sample" for r in link["records"])]
+    assert quality, "the key names no sampled link at all"
+    said = str(quality[0].get("_why_the_millimetres_move") or "")
+    assert said.strip(), (
+        "the quality link quotes millimetres with no note saying which "
+        "replay they are from")
+    assert "replay" in said
+
+
 def test_the_key_says_when_the_finding_is_stamped_and_not_only_that_it_opens(chain):
     """A firing joins a hold already open on the same characteristic rather
     than opening a second one, and the inspector samples every fifteen

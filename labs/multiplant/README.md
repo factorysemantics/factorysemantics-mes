@@ -225,7 +225,7 @@ bottling` prints the result as its *chain* section.
 | 1 | production — the changeover brings order 4712 and the filler runs it faster | 4:40 → end of shift | a `setup` interval on FILL01, four minutes, labelled *Changeover* by the floor, then a cycle time ~33 ms shorter for the rest of the shift | State Timeline; `/analysis/timeline?equipment=FILL01`; trend `FILL01.CycleTimeMs` |
 | 2 | maintenance — the chiller condenser clean is overdue and nobody starts it | all shift (raised in the first minutes) | a preventive order against `PM-FILL-CHILLER`, still at `due` eight hours later, with no start on it | Maintenance page; `/maintenance/orders?equipment=FILL01&status=due` |
 | 3 | tags — the chiller outlet climbs, its control overshoots, the product ramps cold | 6:20 → end (outlet); 6:40 → 7:00 ramp, cold to 7:30 (product) | `FILL01.ChillerOutletTemp` leaving 3.2 °C and climbing; `FILL01.ProductTemp` walking 8.4 → 6.4 °C; AlarmWord bit 1 set on FILL01 while either drifts | trend graph for FILL01; `/analysis/tag/FILL01?tag=ChillerOutletTemp` and `?tag=ProductTemp` |
-| 4 | quality — the fill-height means run low, a rule fires, the hold is a finding | 7:00 → 7:30 (the finding itself up to the end of the shift) | the 7:15 X̄ point at 140.16 mm — 1.7 mm under the 141.84 mm centre line, past the 141.01 mm lower three-sigma limit — with the range chart flat; the 7:30 point still low at 140.76; one open non-conformance on FG-BOTTLE fill height | SPC panel; `/quality/spc/FG-BOTTLE/fill_height`; `/quality/nonconformances` |
+| 4 | quality — the fill-height means run low, a rule fires, the hold is a finding | 7:00 → 7:30 (the finding itself up to the end of the shift) | an X̄ point below the 141.01 mm lower three-sigma limit — 140.16 mm at 7:15 on the replay the limits were measured on, 1.7 mm under the 141.84 mm centre line — with the range chart flat, the next sample still low, and one open non-conformance on FG-BOTTLE fill height | SPC panel; `/quality/spc/FG-BOTTLE/fill_height`; `/quality/nonconformances` |
 
 **Rule 1 fires first — measured, not guessed.** The first draft of this key
 said rule 2, reasoning from a sigma nobody had looked up. On the replayed shift
@@ -233,6 +233,9 @@ the chart's centre line is 141.84 mm and its sigma 0.277 mm, so the lower
 three-sigma line is at 141.01 mm and the 140.16 mm sample mean at 7:15 is six
 sigma low: *a point beyond three sigma*, on its own, no second point needed.
 The key says which and says it was measured, in `_first_rule`.
+
+**The millimetres are one replay's; the verdict is every replay's.** The bottles are fixed by the seed, but the *samples* are not: the inspector groups five bottles every fifteen line minutes, which at speed is a few wall seconds, so a replay that lags by a second averages different bottles. Two replays here put the low point at 140.16 mm and at 140.88 mm. Both are past the lower three-sigma line, both fire rule 1, both open one finding — so that is what link 4 asserts, and
+`_why_the_millimetres_move` says so in the key. A figure quoted in this README is the size of the move, not a number to assert.
 
 **The finding is stamped later than the firing, and that is the product being
 careful.** A firing joins a hold already open on the same characteristic rather
