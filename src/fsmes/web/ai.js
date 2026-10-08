@@ -515,6 +515,17 @@ const PLOTS = {
     line: (e) => ({ series: [{ label: "good", points: e.points || [] }],
                     value: "good", title: "Good over the window" }),
   },
+  /* The control chart, and the one entry here that names no field. An
+     `spc_chart` payload already IS a control chart: the shape reads `points`,
+     `control`, `signals`, `kind` and both specification limits off it by name,
+     so there is nothing to choose and nothing this file could get wrong. The
+     entry exists for the title - a picture the model titled nothing should
+     still say which characteristic it is of - and because this map is the list
+     of what the explore screen can draw, and a control chart is now on it. */
+  spc_chart: {
+    spc: (e) => ({ title: `${e.material || ""} ${e.characteristic || ""}`.trim()
+                          || "Control chart" }),
+  },
 };
 
 /* The envelope a shape is handed, and the options beside it. The envelope is

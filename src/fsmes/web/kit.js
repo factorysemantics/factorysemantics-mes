@@ -2282,7 +2282,12 @@
 
     return {
       height,
-      title: `${label || "control chart"} — ${sampled
+      /* A caller may name the picture - the chat titles the chart it drew in
+         the words the question used - but what each dot IS stays on the end of
+         it either way. A reader who takes a sample mean for one bottle reads
+         every rule on the chart as something it is not, and that is a mistake
+         no title the model chose is allowed to make possible. */
+      title: `${options.title || label || "control chart"} — ${sampled
         ? `X̄ and R, the mean of each sample of ${count(size)}`
         : "individuals and moving range"}`,
       /* The server's own conclusion, drawn with the picture so a chart that
