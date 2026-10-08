@@ -38,7 +38,23 @@ simulate     = true
 
 [files]
 tag_map    = "tag_map.json"
-replay_dir = "../../kepsim/out"
+# This plant's own line data, generated from `line.json` beside it:
+#
+#     fsmes sim-generate labs/multiplant/bottling/line.json
+#
+# It used to be `../../kepsim/out` - the reference hour. A CSV replay wraps
+# at the end of the file, so an hour of line data put the same changeover at
+# :18 of every hour and the same stops at the same second for as long as the
+# plant was up, and every chart longer than an hour was a stencil. `line.json`
+# here is that same six-station line played as an eight-hour shift, with each
+# planted story happening once; the hour next door is untouched, because it is
+# what CI replays and what the scorer is measured against.
+#
+# `line.json` sits beside `out/` on purpose and not by taste: the product
+# finds a plant's ground truth as `line.json` in the replay directory's parent
+# (`fsmes score`, `fsmes sweep`, `fsmes lab`), so this is also what keeps this
+# plant scoreable. `out/` is generated and never committed.
+replay_dir = "out"
 masterdata = "masterdata"
 # What this plant's simulated floor does that no PLC reports: which scale
 # takes a fill-weight reading, which one is drifting between calibrations,

@@ -1,0 +1,365 @@
+{
+  "_what": "ACME Beverages, Kansas City - the same six-station bottling line as labs/kepsim/line.json, played as an eight-hour shift instead of an hour. This is the file the fleet's bottling plant replays. The hour next door is unchanged and still the reference: it is what CI replays, what the scorer is measured against, and what the honesty numbers are quoted from.",
+  "_why_a_shift": "Because the hour repeats. A CSV replay wraps at the end of the file, so a plant replaying a 3,600-second line puts the same changeover at :18 of every hour, the same stops at the same second, and fill-height sample means that cycle 141.2 / 143.4 / 143.8 / 142.4 for ever. Every chart longer than an hour is then a stencil - a perfectly periodic plant, which is the one thing no real one is - and a window of a plant is what the analysis screens, the control chart and the state timeline all show. Eight hours with each story once, at a time that does not divide the hour, is the smallest thing that makes those screens worth looking at. The line, the stations, the rates, the buffers and the physics are the hour's: only the duration, the seed, the event times and the state filter are different.",
+  "_what_is_new_here": "Two things the hour does not have. (1) The cold-product story: FILL01's ProductTemp runs two degrees cold for half an hour and the fill-height samples taken in that window read low - a tag moving a quality measurement, the mirror of the changeover story in floor.json, and the first cause on this line that is findable from the *height* chart rather than the weight one. (2) `state_filter_s`, which keeps the one- and two-second blocks a bottleneck makes off the machines' state tags.",
+  "_states": "State column values: 0 stopped, 1 running, 2 starved, 3 blocked, 4 down, 5 changeover. Stations sit behind finite buffers, so a 'down' event genuinely starves everything downstream and blocks everything upstream.",
+  "channel": "BottlingShift",
+  "dsn": "BottlingShiftCSV",
+  "seed": 20261107,
+  "_seed": "Not 42. The hour's seed is 42 and its output is pinned by CI; a different seed here is what makes this a different shift of the same line rather than the same hour stretched, so the noise, the scrap draws and the palletiser's micro-stops are all its own.",
+  "duration_s": 28800,
+  "_duration_s": "Eight hours. One shift of this plant's two-shift calendar.",
+  "state_filter_s": 20,
+  "_state_filter_s": "Seconds a starve or a block the buffers produced on their own has to hold before the machine publishes it. Measured on the reference hour before this key existed: 124 emergent idle intervals across the six machines, most of them one to seventeen seconds long, because the palletiser at 102/min is the bottleneck and the buffer above it sits pinned at its capacity of 20 - so FILL01 blocks for two seconds, runs for three, blocks for one, all shift. The MES records every one as an idle interval nobody can name, which is how a quiet sample's panel came to list 25 other stops around it. They are also not how a machine reports itself: a state tag has a filter timer on it, because a drive waiting a moment for the conveyor ahead to move has not stopped. Twenty seconds clears the lot while leaving every scripted stop alone - the loader's 12-second jam and the palletiser's 8-to-18-second micro-stops are stories and are never filtered. The price is in the generator's own comment: a genuinely long block is published from the filter's end, so it loses its first twenty seconds to performance instead of availability, which is where a full buffer belongs anyway. Measured on this shift after it was set: the only unlabelled idle left in eight hours is six intervals between 8241 s and 8403 s, stepping down the line ten seconds apart - the RD breakdown's own ripple, which is the lesson.",
+  "orders": [
+    4711,
+    4712
+  ],
+  "buffers": {
+    "capacity": 20,
+    "initial": 10
+  },
+  "stations": [
+    {
+      "name": "LD",
+      "rate_per_min": 110,
+      "scrap_pct": 0.5,
+      "analogs": [
+        {
+          "name": "FeedRate",
+          "base": 110.0,
+          "noise": 1.5,
+          "running_only": true,
+          "decimals": 1,
+          "setpoint": {
+            "name": "FeedRateSP",
+            "min": 60.0,
+            "max": 140.0,
+            "lag_s": 20.0
+          },
+          "unit": "bpm"
+        },
+        {
+          "name": "InfeedPressure",
+          "base": 4.4,
+          "noise": 0.08,
+          "decimals": 2,
+          "unit": "bar"
+        },
+        {
+          "name": "MotorCurrent",
+          "base": 11.2,
+          "noise": 0.4,
+          "running_only": true,
+          "decimals": 2,
+          "unit": "A"
+        }
+      ]
+    },
+    {
+      "name": "RD",
+      "rate_per_min": 108,
+      "scrap_pct": 1.0,
+      "_why_two": "A real machine exposes more than one signal, and the one that warns you is not the only one on the box. PressForce is healthy throughout; MotorTemp is the precursor. A scorer that cannot tell them apart would credit the MES for watching the wrong tag.",
+      "analogs": [
+        {
+          "name": "PressForce",
+          "base": 180.0,
+          "noise": 2.0,
+          "running_only": true,
+          "decimals": 1,
+          "setpoint": {
+            "name": "PressForceSP",
+            "min": 120.0,
+            "max": 240.0,
+            "lag_s": 15.0
+          },
+          "unit": "N"
+        },
+        {
+          "name": "MotorTemp",
+          "base": 62.0,
+          "noise": 0.6,
+          "decimals": 1
+        },
+        {
+          "name": "MotorCurrent",
+          "base": 14.8,
+          "noise": 0.5,
+          "running_only": true,
+          "decimals": 2,
+          "unit": "A"
+        },
+        {
+          "name": "VibrationRms",
+          "base": 1.8,
+          "noise": 0.15,
+          "decimals": 2,
+          "unit": "mm/s"
+        }
+      ]
+    },
+    {
+      "name": "Washer",
+      "rate_per_min": 115,
+      "scrap_pct": 1.0,
+      "analogs": [
+        {
+          "name": "WashTemp",
+          "base": 71.0,
+          "noise": 0.8,
+          "decimals": 1,
+          "setpoint": {
+            "name": "WashTempSP",
+            "min": 55.0,
+            "max": 85.0,
+            "lag_s": 90.0
+          },
+          "unit": "degC"
+        },
+        {
+          "name": "RinsePressure",
+          "base": 3.2,
+          "noise": 0.09,
+          "decimals": 2,
+          "unit": "bar"
+        },
+        {
+          "name": "ConductivityUs",
+          "base": 240.0,
+          "noise": 6.0,
+          "decimals": 1,
+          "unit": "uS"
+        },
+        {
+          "name": "DetergentPct",
+          "base": 1.8,
+          "noise": 0.05,
+          "decimals": 2,
+          "unit": "%"
+        }
+      ]
+    },
+    {
+      "name": "QI",
+      "rate_per_min": 112,
+      "scrap_pct": 1.5,
+      "analogs": [
+        {
+          "name": "RejectPct",
+          "base": 2.0,
+          "noise": 0.5,
+          "decimals": 2
+        },
+        {
+          "name": "CameraLux",
+          "base": 820.0,
+          "noise": 12.0,
+          "decimals": 1,
+          "unit": "lx"
+        },
+        {
+          "name": "InspectMs",
+          "base": 42.0,
+          "noise": 2.5,
+          "running_only": true,
+          "decimals": 1,
+          "unit": "ms"
+        }
+      ]
+    },
+    {
+      "name": "Refill",
+      "rate_per_min": 105,
+      "scrap_pct": 0.8,
+      "analogs": [
+        {
+          "name": "FillWeight",
+          "base": 500.0,
+          "noise": 2.0,
+          "decimals": 1,
+          "setpoint": {
+            "name": "FillWeightSP",
+            "min": 480.0,
+            "max": 520.0,
+            "lag_s": 30.0
+          },
+          "unit": "g"
+        },
+        {
+          "name": "NozzlePressure",
+          "base": 2.6,
+          "noise": 0.07,
+          "decimals": 2,
+          "unit": "bar"
+        },
+        {
+          "name": "ProductTemp",
+          "base": 8.4,
+          "noise": 0.3,
+          "decimals": 2,
+          "unit": "degC",
+          "_why": "The product's own temperature at the filler. Flat and uninteresting on the reference hour, and the tag Scott asked to see move a quality measurement: cold cola is denser and the filler is volumetric, so a bottle filled cold leaves the valve light and stands short in the glass. The cold window is in `events`."
+        }
+      ]
+    },
+    {
+      "name": "Palletiser",
+      "rate_per_min": 102,
+      "scrap_pct": 0.2,
+      "analogs": [
+        {
+          "name": "AirPressure",
+          "base": 6.0,
+          "noise": 0.05,
+          "decimals": 2,
+          "setpoint": {
+            "name": "AirPressureSP",
+            "min": 4.5,
+            "max": 7.5,
+            "lag_s": 10.0
+          },
+          "unit": "bar"
+        },
+        {
+          "name": "GripperCycles",
+          "base": 3.1,
+          "noise": 0.1,
+          "running_only": true,
+          "decimals": 2,
+          "unit": "1/s"
+        },
+        {
+          "name": "ArmTemp",
+          "base": 38.0,
+          "noise": 0.7,
+          "decimals": 1,
+          "unit": "degC"
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "_why": "the nozzle-pressure story, once, at a time that does not divide the hour: the filler's supply pressure falls away 10% for six minutes, nothing alarms, and every bottle filled in that window is four grams light. The cause is one tag over from the symptom, on the same machine - the easy version of the washer story below, and the one that makes a panel on a control-chart point worth opening",
+      "type": "offset",
+      "station": "Refill",
+      "analog": "NozzlePressure",
+      "offset": -0.26,
+      "start": 2400,
+      "end": 2760,
+      "effects": [
+        {
+          "station": "Refill",
+          "analog": "FillWeight",
+          "offset": -4.0
+        }
+      ]
+    },
+    {
+      "_why": "a stop too short to ripple through buffers of 20 - the MES should see downtime on LD and no disturbance anywhere else. Twelve seconds is also shorter than one look of the simulated floor (15 s), so it stays honestly unlabelled: that residue is real and the pareto is meant to report it",
+      "type": "down",
+      "station": "LD",
+      "start": 4200,
+      "end": 4212
+    },
+    {
+      "_why": "the precursor: the motor heats for twelve minutes before it fails. An agent that reads tag history should be able to warn before the breakdown, and this is the window where that is provable. Once in the shift, not once an hour, which is what makes it a warning rather than a pattern",
+      "type": "drift",
+      "station": "RD",
+      "analog": "MotorTemp",
+      "to": 88.0,
+      "start": 7500,
+      "end": 8220
+    },
+    {
+      "_why": "and then it fails, for three minutes. Buffers of 20 mean the ripple takes a while - starved walks downstream, blocked walks upstream. Contrast with Northgate's buffers of 6, where it is nearly instant",
+      "type": "down",
+      "station": "RD",
+      "start": 8220,
+      "end": 8400
+    },
+    {
+      "_why": "the washer story. A quality excursion tied to its process cause: scrap climbs while the wash runs three degrees hot, and downstream the filler underweights every bottle by nine grams - warm, wet bottles fill short - with no alarm of its own. The failed fill-weight checks land on the filler; the cause is the washer. An agent is scored on naming the cause, not the symptom (agent eval fill_weight_cause)",
+      "type": "scrap_burst",
+      "station": "Washer",
+      "scrap_pct": 10.0,
+      "analog_offset": 3.0,
+      "start": 12600,
+      "end": 12900,
+      "effects": [
+        {
+          "station": "Refill",
+          "analog": "FillWeight",
+          "offset": -9.0
+        }
+      ]
+    },
+    {
+      "_why": "a PLANNED stop, whole line, order 4711 -> 4712, four minutes long, once in the shift. If the MES books this as downtime every availability figure it reports is a lie. This is the single mapping decision with real consequences - and on an eight-hour file it is one labelled changeover on the state timeline instead of eight identical ones",
+      "type": "changeover",
+      "start": 16800,
+      "end": 17040
+    },
+    {
+      "_why": "the first bottles after a restart run heavy: the filler comes back with its lines full and over-delivers until the loop settles. Thirty seconds of it, which is three or four checks - enough to be a point or two above the control limit with a changeover ending immediately before, and the reason the changeover has to be labelled rather than left as an unnamed setup interval",
+      "type": "offset",
+      "station": "Refill",
+      "analog": "FillWeight",
+      "offset": 5.0,
+      "start": 17040,
+      "end": 17070
+    },
+    {
+      "_why": "the coverage story, as one tag rather than the whole endpoint: FillWeight stops arriving for fifteen minutes while the filler runs on and every other signal on it reports. The MES's last sample keeps the moment it really arrived, so anything reading it can tell a stale value from a steady one - and the simulated floor, which can, records a plausible value with no gauge and no station on it for as long as it lasts. A disconnect event would have taken the whole line, which is a different fault",
+      "type": "quiet",
+      "station": "Refill",
+      "analog": "FillWeight",
+      "start": 20700,
+      "end": 21600
+    },
+    {
+      "_why": "the counter snaps to zero mid-run, as a PLC does after a power blip. Never invent production: a reset must re-baseline and book nothing",
+      "type": "counter_reset",
+      "station": "RD",
+      "at": 23400
+    },
+    {
+      "_why": "cold product pours short. The chiller overshoots and for half an hour the cola reaching the filler is two degrees below where it should be; the filler is volumetric, so a denser, colder product leaves the valve light and the bottle stands low in the glass. Nothing on the filler alarms - ProductTemp at 6.4 degC is a perfectly ordinary number for a cold drink - and the only trace is on the quality side: the fill-height sample means taken in this window sit about a millimetre and a half LOW, which is the mirror image of the changeover's millimetre and a half high. Arithmetic in the _how_low_is_low note below",
+      "type": "offset",
+      "station": "Refill",
+      "analog": "ProductTemp",
+      "offset": -2.0,
+      "start": 25200,
+      "end": 27000,
+      "effects": [
+        {
+          "station": "Refill",
+          "analog": "FillWeight",
+          "offset": -5.8
+        }
+      ]
+    },
+    {
+      "_why": "death by a thousand cuts on the palletiser - pure OEE performance loss, and invisible in an availability number. The one story that is meant to repeat all shift, because that is what it is: eight to eighteen seconds every couple of minutes, never the same two in a row",
+      "type": "micro_stops",
+      "station": "Palletiser",
+      "every_s": [
+        110,
+        130
+      ],
+      "duration_s": [
+        8,
+        18
+      ]
+    }
+  ],
+  "_how_low_is_low": "The cold window, checked the way floor.json checks the changeover, and then measured on the generated shift rather than left as arithmetic. The pack's own straight line is height_mm = 12.0 + 0.26 x fill_weight_g, so a millimetre and a half of height is 1.5 / 0.26 = 5.77 g of weight; the effect is -5.8 g. Measured in out/Refill.csv: ProductTemp 8.40 -> 6.40 degC and FillWeight 499.94 -> 494.24 g across the window, which is -5.70 g and converts to a height step of -1.48 mm - 141.99 mm settled against 140.50 mm cold. On this plant's measured chart X-doublebar is 141.88 mm and R-bar 2.69 mm, so within-sample sigma is R-bar / d2 = 1.16 mm, a sample mean's own sigma is 1.16 / sqrt(5) = 0.52 mm, and the X-bar limits are 141.88 +/- A2 x R-bar = 140.33 to 143.43. So -1.48 mm is 2.9 sigma of a sample mean: it puts the means at about 140.5, below the lower two-sigma line at 140.84 and a whisker above the lower control limit at 140.33. Rule 2 - two of three beyond two sigma on one side - is what fires reliably, and rule 1 catches only the lowest of them. The sample RANGES do not move, because nothing here widens the bottle-to-bottle spread: the process moved and its spread did not, which is the whole point of an X-bar and R chart and the exact mirror of the changeover story above it.",
+  "_why_half_an_hour_and_not_twenty_minutes": "Scott's words were 'runs 2 degC cold for 20 min'. This floor samples fill height every 900 line seconds (floor.json `sampling.fill_height.every_line_s`), so a twenty-minute window catches one sample mean and sometimes two - and one low point on its own fires no control rule unless it clears the three-sigma line, which at 2.9 sigma it does not. Thirty minutes catches two or three whatever the replay's phase, which is what rule 2 needs to fire and what makes the dip read as a dip rather than a stray point. Same reasoning, and the same note, as floor.json's `_why_not_half_a_millimetre`: the smallest version of the story that actually shows up where somebody is looking.",
+  "_the_stories_planted_here": [
+    "Each of the hour's stories happens ONCE in this shift, at a time that does not divide the hour, with ordinary running in between: the nozzle-pressure dip (0:40-0:46), the loader's 12-second jam (1:10), the RD motor heating (2:05-2:17) and failing (2:17-2:20), the washer three degrees hot (3:30-3:35), the changeover (4:40-4:44) and the heavy first fills after it (4:44-4:44:30), FillWeight going quiet (5:45-6:00), the counter reset (6:30), and the product running cold (7:00-7:30). The palletiser's micro-stops run throughout, because that is the story.",
+    "Every event carries its own `_why`, because a scorer and a person both have to be able to read what was *meant* to happen. The hour's four fill-weight stories are all here; the cold-product story is the fifth and the first that lands on fill HEIGHT.",
+    "The stories that belong to the people are still in this pack's own floor.json: the drifting scale, the night shift's wider spread, the nozzle the changeover left behind, and the supervisor's paperwork."
+  ],
+  "_do_single_bottles_stay_in_spec": "Mostly, and the arithmetic says how often not. A single reading's own sigma is the tag's noise through the conversion (2.0 g x 0.26 = 0.52 mm), the glass (`piece_to_piece` 0.35 mm) and the bench gauge (`spread` 0.1 mm) together: sqrt(0.52^2 + 0.35^2 + 0.1^2) = 0.63 mm. The lower spec limit is 139 mm, so from a mean of 140.5 that is 2.4 sigma away and about one reading in a hundred falls past it - a handful of out-of-specification findings over the half hour, against none at all in a settled window. That is the same shape as the changeover story's 'a few percent past 145 mm' and it is deliberate: the story has to be legible on the CONTROL chart, where the means walk below the two-sigma line for half an hour, rather than drowned in non-conformances. If a run shows many more than that, this note is wrong and the offset is too big."
+}
