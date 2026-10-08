@@ -369,7 +369,7 @@ async function load() {
      button promising something that is not there - and because on a chart
      where forty things fired it has to say which of the forty it means.
 
-     Seen live on 2026-10-08 on the bottling lab: the button opened the newest
+     Seen live on 2026-10-08 on a demo line: the button opened the newest
      flagged reading, which on a chart carrying forty rule-4 flags was a dull
      500.2 g point eight-in-a-row off centre, and not the 488.6 g rule-1 dip
      twenty-five minutes earlier that was the event. The agent on the AI tab
