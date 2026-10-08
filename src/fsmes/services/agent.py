@@ -624,9 +624,11 @@ ANALYSIS_NEXT = (
     "\"Investigate further\" is not a question anybody can tell the answer of. "
     "Every line is a question and never an instruction: you change nothing here, so never write "
     "a line asking for something to be booked, adjusted, approved, raised or fixed. "
-    "Write the block only when the answer really opened something. An answer that closed its "
-    "question ends at its last sentence, and no block at all is a better answer than three "
-    "questions made up to fill one.")
+    "A read of this plant nearly always leaves something unread beside what you read, so the "
+    "block is how an answer normally ends: if you read anything at all, two or three questions "
+    "are already in what you read. Leave it out only when the answer really closed its question "
+    "and there is honestly nothing next to it left to look at - no block at all is a better "
+    "answer than three questions made up to fill one.")
 
 ANALYSIS_SYSTEM = """You are the analysis agent inside FactorySemantics MES, a manufacturing \
 execution system, exploring plant "{plant}" for the person who asked.

@@ -61,10 +61,16 @@ def test_every_line_is_a_question_and_never_something_to_do():
             f"the words do not rule out a button asking for something to be {verb}")
 
 
-def test_an_answer_that_opened_nothing_is_told_to_end_without_a_block():
-    """Three invented questions are worse than none: they cost money to ask and
-    the reader cannot tell them from the ones the answer really opened."""
-    assert "only when the answer really opened something" in agent.ANALYSIS_NEXT
+def test_the_block_is_the_normal_ending_and_an_answer_that_closed_may_skip_it():
+    """Both halves, because each on its own is wrong. Asked for every time, a
+    model writes three invented questions nobody can tell from the real ones;
+    asked for only when something was "really opened", it wrote them once in
+    three answers when this was measured live on 2026-10-08 - and Scott asked
+    for buttons under the answer, not under some answers. So: the normal
+    ending, with one honest way out."""
+    assert "the block is how an answer normally ends" in agent.ANALYSIS_NEXT
+    assert "Leave it out only when the answer really closed its question" in \
+        agent.ANALYSIS_NEXT
     assert "no block at all is a better answer" in agent.ANALYSIS_NEXT
 
 
