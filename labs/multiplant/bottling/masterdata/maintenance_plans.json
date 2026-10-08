@@ -1,5 +1,14 @@
 [
   {
+    "code": "PM-FILL-CHILLER",
+    "name": "Clean filler chiller condenser",
+    "equipment": "FILL01",
+    "trigger": "calendar_days",
+    "interval": 30.0,
+    "expected_minutes": 90.0,
+    "instructions": "Isolate the chiller, brush and wash the condenser coil, check the fan and the refrigerant pressures, log the outlet temperature before and after."
+  },
+  {
     "code": "PM-FILL-SEALS",
     "name": "Replace filler valve seals",
     "equipment": "FILL01",
