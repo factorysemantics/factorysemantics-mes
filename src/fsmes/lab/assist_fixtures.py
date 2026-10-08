@@ -314,8 +314,9 @@ _FLAGGED_SAMPLE = (
 )
 
 _RUN_IT_UNTIL_IT_FIRES = (
-    "ask this case on a plant whose chart has a flagged point - the bottling lab "
-    "plant's fill height does - and name that point's sample in `lookup`"
+    "ask this case on a plant whose chart already has a flagged point - a filling "
+    "line that came back high from a changeover is the usual one - and name that "
+    "point's sample in `lookup`"
 )
 
 
