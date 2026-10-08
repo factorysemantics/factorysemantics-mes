@@ -1500,7 +1500,15 @@ def _reply(sess: Session, kind: str, say: str, **extra: Any) -> dict:
         # of its spec above. A screen that has this draws the answer the way
         # it was written; a screen that has not still has `say` and `charts`,
         # which is what every reply carried before.
-        out["parts"] = [dict(part) for part in sess.turn_parts]
+        parts = [dict(part) for part in sess.turn_parts]
+        if say and say != _said(sess):
+            # A path that writes its own sentence rather than the model's -
+            # out of budget, an error from the API - says it LAST, under what
+            # the model had already said and drawn. Without this the screen
+            # would read the parts and never show the sentence, and a person
+            # whose turn stopped halfway would not be told that it had.
+            parts.append({"text": say})
+        out["parts"] = parts
     _record_turn(sess, kind, say, extra)
     return out
 
@@ -1780,6 +1788,11 @@ def _drive(sess: Session) -> dict:
             say = "".join(getattr(b, "text", "") for b in response.content if getattr(b, "type", "") == "text")
             tool_uses = [b for b in response.content if getattr(b, "type", "") == "tool_use"]
             if getattr(response, "stop_reason", None) == "refusal":
+                # The refusal is the whole answer, as it was before `parts`
+                # existed: a model that wrote half a thought and then declined
+                # did not mean the half to be read. The charts it had already
+                # drawn stay, because those are the plant's own rows.
+                sess.turn_parts.clear()
                 return _reply(sess, "reply", say or "I cannot help with that one.")
             # Kept before the round's tool calls are answered, which is where it
             # was written: the model's text block comes before its `tool_use`

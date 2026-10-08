@@ -654,6 +654,37 @@ def test_a_round_that_ended_in_a_tool_call_keeps_its_words_and_their_order(
         page.close()
 
 
+def test_a_model_that_declines_halfway_shows_the_refusal_and_not_the_half(
+        admin, plant):
+    """The one shape where keeping every round's words would be wrong. The
+    model writes a line, reads a record, and then declines: the screen shows
+    the refusal, alone. Worth a browser test rather than a server one because
+    the screen is what decides - it reads `parts` in preference to `say`, so a
+    server that sent both would have the refusal swallowed by the half-thought
+    above it."""
+    plant.script[:] = [
+        _turn(_text("Here is what I can see so far."),
+              _use("tu_7", "nonconformances", material="FG-COLA"),
+              stop="tool_use"),
+        _turn(_text("I cannot help with that one."), stop="refusal"),
+    ]
+    page = _explore(admin, plant, "/dashboard/ai#explore")
+    try:
+        page.fill("#explore-input", "tell me something you should not")
+        _ask(page)
+        page.wait_for_function(
+            """() => [...document.querySelectorAll('#explore-log .explore-msg.bot')]
+                   .some(line => line.textContent.includes('I cannot help'))""",
+            timeout=25000)
+        said = "\n".join(page.locator("#explore-log .explore-msg.bot").evaluate_all(
+            "all => all.map(line => line.textContent)"))
+        assert "I cannot help with that one." in said
+        assert "what I can see so far" not in said, (
+            "a model that declined was quoted on the half it wrote first")
+    finally:
+        page.close()
+
+
 def test_pressing_a_button_asks_that_question_in_the_same_conversation(
         admin, plant):
     """The point of the buttons. The press is a turn of the conversation

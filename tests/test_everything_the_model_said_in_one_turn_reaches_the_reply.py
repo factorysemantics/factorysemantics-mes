@@ -24,8 +24,16 @@ So a reply now carries, beside `say`:
   between them, so a caller that never reads `parts` - the eval suite, the
   trace, the panel - gets the whole answer rather than its last paragraph.
 
-The refusal, "spent" and "error" paths are untouched, and each has a test here
-saying so: a turn that was stopped is not a turn with something to say.
+The paths that end a turn without the model finishing it are each tested here,
+because `parts` is the thing the screen reads and a reply whose `parts` and
+whose `say` disagree would show one and swallow the other:
+
+- A **refusal** is the whole answer, as it was before `parts` existed. A model
+  that wrote half a thought and then declined did not mean the half to be read,
+  so the parts are dropped and the refusal stands alone.
+- **Out of budget** and **an error from the API** are not refusals. The words
+  the model already wrote were paid for and are the person's, so they are kept
+  and the sentence saying what happened comes last, under them.
 """
 
 from types import SimpleNamespace
@@ -216,3 +224,66 @@ def test_a_turn_that_ran_out_of_rounds_keeps_the_words_it_managed_and_says_so(
     assert "I stopped after too many steps" in out["say"]
     assert out["parts"][0] == {"text": FOR_HIS_BOSS}
     assert "stopped after too many steps" in out["parts"][-1]["text"]
+
+
+def test_a_model_that_declines_halfway_is_not_quoted_on_the_half_it_wrote(
+        exploring):
+    """A refusal replaces the answer rather than ending it. The reply is the
+    refusal and nothing else, which is what it was before a turn kept its
+    parts - the half-written thought is not put in front of the person as
+    though the model stood behind it."""
+    script, _served = exploring
+    script += [_turn(_text(FOR_HIS_BOSS), _use("tu_1", "spc_sample", sample_id=12),
+                     stop="tool_use"),
+               _turn(_text("I will not help with that."), stop="refusal")]
+    out = agent.message(_open(), "how does the chart look, and why?")
+
+    assert out["say"] == "I will not help with that."
+    assert FOR_HIS_BOSS not in out["say"]
+    assert "parts" not in out
+
+
+def test_a_turn_that_runs_out_of_budget_keeps_its_words_and_says_it_stopped(
+        exploring, monkeypatch):
+    """The conversation's own cap, hit between two rounds. What the model said
+    before the cap is still on the screen, with the reason it went no further
+    underneath it - the person paid for both."""
+    script, _served = exploring
+    stops = iter([None, "this conversation has spent its $0.25"])
+    monkeypatch.setattr(agent, "_spent_its_own_budget", lambda sess: next(stops))
+    script += [_turn(_text(FOR_HIS_BOSS), _use("tu_1", "spc_sample", sample_id=12),
+                     stop="tool_use")]
+    out = agent.message(_open(), "how does the chart look, and why?")
+
+    assert out["kind"] == "unavailable" and out["reason"] == "spent"
+    assert out["parts"][0] == {"text": FOR_HIS_BOSS}
+    assert "I have to stop there" in out["parts"][-1]["text"]
+    # And the sentence the panel reads is still the sentence about stopping.
+    assert out["say"].startswith("I have to stop there")
+
+
+def test_a_turn_the_model_errored_out_of_keeps_the_words_it_already_sent(
+        exploring, monkeypatch):
+    """The API failing on the second call. The same rule: the first round's
+    words are the person's, the error sentence is last, and `say` is still the
+    one line the panel puts in its own banner."""
+    script, _served = exploring
+
+    class TheLineWentDown(Exception):
+        pass
+
+    script += [_turn(_text(FOR_HIS_BOSS), _use("tu_1", "spc_sample", sample_id=12),
+                     stop="tool_use")]
+
+    def answer(sess):
+        if script:
+            return script.pop(0)
+        raise TheLineWentDown("the model did not answer")
+
+    monkeypatch.setattr(agent, "_call_model", answer)
+    out = agent.message(_open(), "how does the chart look, and why?")
+
+    assert out["kind"] == "error" and out["error"] == "TheLineWentDown"
+    assert out["parts"][0] == {"text": FOR_HIS_BOSS}
+    assert "hit an error on that one" in out["parts"][-1]["text"]
+    assert out["say"].startswith("The assistant hit an error")
