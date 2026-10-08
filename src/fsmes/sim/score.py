@@ -99,6 +99,7 @@ def score_run(
     t0: datetime,
     speed: float,
     observe_interval_s: float = 0.5,
+    chain_evidence: dict | None = None,
 ) -> dict:
     """Compare a scripted hour against what the MES recorded.
 
@@ -106,7 +107,16 @@ def score_run(
     `false`. Calling them missed would blame the MES for a limit of the
     harness - the same false accusation this scorer has already made twice for
     other reasons, and the reason it now states its own resolution.
+
+    `chain_evidence` is what somebody fetched from the other record books -
+    tag history, the maintenance list, a control chart, the findings - for the
+    chain this line wrote down. Left out, the chain section still appears and
+    still names its links; every one of them is `null`, because nobody looked.
     """
+    # The written-down chain, if this line has one. Scored first because it
+    # reads a different set of records from everything below it and shares
+    # nothing with them but the clock.
+    chain_card = score_chain(truth.get("chain"), timeline, t0, speed, chain_evidence)
     floor = resolution_sim_seconds(speed, observe_interval_s) * SAMPLES_TO_RESOLVE
     planned_checks: list[dict] = []
     fault_checks: list[dict] = []
@@ -315,11 +325,361 @@ def score_run(
             ),
             "idle_stops_scripted": len(idle_checks),
             "idle_stops_scored": len(answered_idle),
+            **chain_metrics(chain_card),
         },
         "planned_stops": planned_checks,
         "idle_stops": idle_checks,
         "disconnects": disconnects,
         "faults": fault_checks,
         "late_faults": late_faults,
+        "chain": chain_card,
         "window": timeline.get("window"),
+    }
+
+
+# ------------------------------------------------------------------- chains
+#
+# A chain is several causes in a row, each of which lands in a DIFFERENT one
+# of the plant's record books: a changeover in the order book, an overdue job
+# on the maintenance list, two tags in the historian, low sample means on a
+# control chart. A line description may write the chain down - `_chain` in
+# `line.json`, read by `fsmes.sim.truth` - and this is what marks it.
+#
+# Why the key is data and this is only the marker: a chain hard-coded here
+# would grade one line and would drift from that line's own events the first
+# time somebody moved a window. The key names only what the events beside it
+# script, so the plant and its answer key cannot disagree without the JSON
+# saying so.
+#
+# The honesty rule is the one the stop sections already follow. Three answers,
+# never two: recorded, not recorded, and *not observed* - and the third is
+# `null` with the reason beside it, never a zero. A record the MES was not
+# asked for, a window it did not watch, a tag it holds nothing for and a
+# characteristic nobody sampled in the window are all "nobody looked", which
+# is a different statement from "the record is not there".
+
+#: What a link's record may be, and where this scorer looks for it. A kind
+#: that is not in here scores `null` rather than `false`: a key that names a
+#: record this scorer cannot read is this scorer's gap, not the plant's.
+CHAIN_RECORDS: dict[str, str] = {
+    "stop": "an interval on the state timeline, in a named MES state",
+    "tag": "a tag's own history, moved `by` in `direction` against the mean "
+           "over everything the MES holds before the window",
+    "maintenance": "a maintenance order against a named plan, at a named status",
+    "sample": "a point on a control chart, past a named bound",
+    "finding": "an open non-conformance against a named characteristic",
+}
+
+#: Said instead of a figure when nothing collected the evidence. A card scored
+#: without it is not a card that found nothing.
+NO_EVIDENCE = ("nobody asked the MES for this record: this run collected no "
+               "chain evidence")
+
+
+def _link_window(spec: dict, fallback: list | None = None) -> tuple[float, float] | None:
+    window = spec.get("window_s") or fallback
+    if not window or len(window) != 2:
+        return None
+    return float(window[0]), float(window[1])
+
+
+def _wall(window: tuple[float, float], t0: datetime, speed: float) -> tuple[datetime, datetime]:
+    return (t0 + timedelta(seconds=window[0] / speed),
+            t0 + timedelta(seconds=window[1] / speed))
+
+
+def _points_in(points: list[dict], start: datetime, end: datetime,
+               before: bool = False) -> list[dict]:
+    out = []
+    for point in points:
+        stamp = point.get("t") or point.get("ts")
+        if not stamp or (point.get("mean") is None and point.get("value") is None):
+            continue
+        when = _parse(stamp)
+        if (when < start) if before else (start <= when < end):
+            out.append(point)
+    return out
+
+
+def _mean_of(points: list[dict]) -> float | None:
+    values = [float(p["mean"] if p.get("mean") is not None else p["value"]) for p in points]
+    return sum(values) / len(values) if values else None
+
+
+def _score_stop(record: dict, start: datetime, end: datetime,
+                timeline: dict) -> dict:
+    equipment, state = record.get("equipment"), record.get("state")
+    if not _observed(timeline, start, end, equipment):
+        return {"recorded": None,
+                "why": f"the MES's timeline does not cover {equipment} over this window"}
+    seconds = 0.0
+    for interval in _intervals_for(timeline, equipment):
+        if interval["state"] != state:
+            continue
+        if record.get("reason") and interval.get("reason") not in (None, record["reason"]):
+            continue
+        seconds += _overlap_seconds(start, end, _parse(interval["start"]),
+                                    _parse(interval["end"]))
+    return {"recorded": seconds > 0, "seconds": round(seconds, 1),
+            "why": (f"{round(seconds, 1)} s of {state} on {equipment} inside the window"
+                    if seconds > 0 else
+                    f"the MES recorded no {state} interval on {equipment} in this window")}
+
+
+def _score_tag(record: dict, start: datetime, end: datetime,
+               evidence: dict) -> dict:
+    equipment, tag = record.get("equipment"), record.get("tag")
+    trend = (evidence.get("tags") or {}).get(f"{equipment}/{tag}")
+    if trend is None:
+        return {"recorded": None,
+                "why": f"nobody asked the MES for {equipment}.{tag}"}
+    points = trend.get("points") or []
+    inside = _points_in(points, start, end)
+    baseline = _points_in(points, start, end, before=True)
+    if not inside:
+        return {"recorded": None,
+                "why": f"the MES holds no {tag} readings for {equipment} in this window"}
+    if not baseline:
+        return {"recorded": None,
+                "why": f"the MES holds no {tag} readings for {equipment} BEFORE this "
+                       "window, so there is nothing to measure the move against"}
+    here, there = _mean_of(inside), _mean_of(baseline)
+    moved = here - there
+    want = float(record.get("by", 0.0))
+    down = str(record.get("direction", "up")) == "down"
+    recorded = (-moved >= want) if down else (moved >= want)
+    return {
+        "recorded": recorded,
+        "moved_by": round(moved, 3),
+        "asked_for": round(-want if down else want, 3),
+        "baseline": round(there, 3),
+        "in_window": round(here, 3),
+        "readings": sum(int(p.get("n") or 1) for p in inside),
+        "why": (f"{equipment}.{tag} averaged {round(here, 3)} in the window against "
+                f"{round(there, 3)} before it, a move of {round(moved, 3)}"),
+    }
+
+
+def _score_maintenance(record: dict, start: datetime, end: datetime,
+                       evidence: dict) -> dict:
+    orders = (evidence.get("maintenance") or {}).get("items")
+    if orders is None:
+        return {"recorded": None, "why": "nobody asked the MES for its maintenance orders"}
+    plan, status = record.get("plan"), record.get("status")
+    hits = [o for o in orders
+            if o.get("plan") == plan
+            and (record.get("equipment") in (None, o.get("equipment")))
+            and o.get("status") == status]
+    # Whether anybody started one, which is the point of this link on a plant
+    # whose floor raises its work and never goes. Reported beside the verdict
+    # rather than folded into it: "raised and still due" and "raised, started
+    # and finished" are both records, and only the key says which one the
+    # story wanted.
+    started = [o.get("code") for o in orders
+               if o.get("plan") == plan and o.get("started_at")]
+    if not hits and not (evidence.get("maintenance") or {}).get("complete"):
+        return {"recorded": None,
+                "why": "the MES's maintenance list came back in part, so an order "
+                       f"against {plan} may be on a page nobody fetched"}
+    return {
+        "recorded": bool(hits),
+        "orders": [o.get("code") for o in hits],
+        "ever_started": started,
+        "why": (f"{len(hits)} order(s) against {plan} at {status}"
+                + (f", and {len(started)} against {plan} were started at some point"
+                   if started else f", none against {plan} ever started")
+                if hits else
+                f"the MES holds no order against {plan} at {status}"),
+    }
+
+
+def _score_sample(record: dict, start: datetime, end: datetime,
+                  evidence: dict) -> dict:
+    material = record.get("material")
+    characteristic = record.get("characteristic")
+    chart = (evidence.get("charts") or {}).get(f"{material}/{characteristic}")
+    if chart is None:
+        return {"recorded": None,
+                "why": f"nobody asked the MES for the {material} {characteristic} chart"}
+    if chart.get("coverage") == "absent":
+        return {"recorded": None,
+                "why": chart.get("coverage_note")
+                       or f"the MES holds no {characteristic} readings for {material}"}
+    inside = _points_in(chart.get("points") or [], start, end)
+    if not inside:
+        return {"recorded": None,
+                "why": f"nobody measured {material} {characteristic} inside this window, "
+                       "so there is no point on the chart to be right or wrong about"}
+    values = [float(p["value"]) for p in inside]
+    if record.get("below") is not None:
+        bound = float(record["below"])
+        past = [v for v in values if v < bound]
+        where = f"below {bound}"
+    else:
+        bound = float(record.get("above", 0.0))
+        past = [v for v in values if v > bound]
+        where = f"above {bound}"
+    return {
+        "recorded": bool(past),
+        "points_in_window": len(values),
+        "points_past_the_bound": len(past),
+        "lowest": round(min(values), 3),
+        "highest": round(max(values), 3),
+        # Which chart this is, in the chart's own word: a sampled chart plots
+        # sample MEANS, and a reader told only "a point" will believe it is a
+        # bottle somebody measured.
+        "chart": chart.get("kind"),
+        "sample_size": chart.get("sample_size"),
+        "why": (f"{len(past)} of {len(values)} {chart.get('kind') or 'chart'} points in "
+                f"the window are {where}"),
+    }
+
+
+def _score_finding(record: dict, start: datetime, end: datetime,
+                   evidence: dict) -> dict:
+    """A finding opened on this characteristic inside the window.
+
+    Matched on the finding's own `evidence` - the material and the
+    characteristic the MES wrote down when it raised it - and not on the
+    words of its description. A plant with two specs on the same material
+    would otherwise credit one characteristic's chain to the other's finding.
+    A finding a person raised carries no evidence and is not matched: they
+    wrote the description, and reading a characteristic out of their prose
+    would be a guess.
+    """
+    findings = (evidence.get("findings") or {}).get("items")
+    if findings is None:
+        return {"recorded": None, "why": "nobody asked the MES for its non-conformances"}
+    material = record.get("material")
+    characteristic = record.get("characteristic")
+    hits, rules = [], []
+    for row in findings:
+        seen = row.get("evidence") or {}
+        if characteristic and seen.get("characteristic") != characteristic:
+            continue
+        if material and seen.get("material") != material:
+            continue
+        stamp = row.get("created_at")
+        if not stamp:
+            continue
+        if start <= _parse(stamp) < end:
+            hits.append(row.get("code"))
+            if seen.get("rule") is not None:
+                rules.append(seen["rule"])
+    if not hits and not (evidence.get("findings") or {}).get("complete"):
+        return {"recorded": None,
+                "why": "the MES's findings came back in part, so one on "
+                       f"{characteristic} may be on a page nobody fetched"}
+    return {
+        "recorded": bool(hits),
+        "findings": hits,
+        # Which rule actually fired, in the order they fired. The key says
+        # which one it expects to come first; this is what happened, and the
+        # two being different is worth seeing rather than hiding.
+        "rules_fired": rules or None,
+        "why": (f"{len(hits)} finding(s) on {material} {characteristic} opened inside "
+                f"the window" + (f", on SPC rule(s) {rules}" if rules else "")
+                if hits else
+                f"the MES opened no finding on {material} {characteristic} inside "
+                "this window"),
+    }
+
+
+_RECORD_SCORERS = {
+    "stop": lambda r, a, b, ev, tl: _score_stop(r, a, b, tl),
+    "tag": lambda r, a, b, ev, tl: _score_tag(r, a, b, ev),
+    "maintenance": lambda r, a, b, ev, tl: _score_maintenance(r, a, b, ev),
+    "sample": lambda r, a, b, ev, tl: _score_sample(r, a, b, ev),
+    "finding": lambda r, a, b, ev, tl: _score_finding(r, a, b, ev),
+}
+
+
+def score_chain(chain: dict | None, timeline: dict, t0: datetime, speed: float,
+                evidence: dict | None) -> dict:
+    """Mark a line's written-down chain against what the MES recorded.
+
+    One card per link, and one row inside it per record the link names. A
+    link is recorded when every record it names was found; not recorded when
+    any one of them is definitely absent; and `null` - not observed - when
+    the only thing standing between it and an answer is that nobody looked.
+    """
+    if not chain:
+        return {"key": "absent", "links": [], "name": None, "finding": None,
+                "why": "this line description has no `_chain` block, so there is "
+                       "no chain to mark"}
+    cards = []
+    for spec in chain.get("links") or []:
+        link_window = spec.get("window_s")
+        rows = []
+        for record in spec.get("records") or []:
+            kind = record.get("kind")
+            window = _link_window(record, link_window)
+            if kind not in CHAIN_RECORDS:
+                rows.append({"kind": kind, "recorded": None,
+                             "why": f"this scorer cannot read a {kind!r} record; it "
+                                    f"reads {', '.join(sorted(CHAIN_RECORDS))}"})
+                continue
+            if window is None:
+                rows.append({"kind": kind, "recorded": None,
+                             "why": "neither this record nor its link says which "
+                                    "window it happens in"})
+                continue
+            if evidence is None:
+                rows.append({"kind": kind, "window_sim_s": list(window),
+                             "recorded": None, "why": NO_EVIDENCE})
+                continue
+            start, end = _wall(window, t0, speed)
+            scored = _RECORD_SCORERS[kind](record, start, end, evidence, timeline)
+            rows.append({"kind": kind, "window_sim_s": list(window),
+                         "window_wall": [start.isoformat(), end.isoformat()],
+                         **scored})
+        verdicts = [row["recorded"] for row in rows]
+        if not verdicts:
+            recorded = None
+        elif False in verdicts:
+            recorded = False
+        elif None in verdicts:
+            recorded = None
+        else:
+            recorded = True
+        cards.append({
+            "link": spec.get("link"),
+            "what": spec.get("what"),
+            "window_sim_s": link_window,
+            "shows_as": spec.get("shows_as"),
+            "recorded": recorded,
+            "records": rows,
+        })
+    return {
+        "key": "present",
+        "name": chain.get("name"),
+        "finding": chain.get("finding"),
+        "links": cards,
+    }
+
+
+def chain_metrics(chain_card: dict) -> dict:
+    """Numbers off a chain card that can trend, with the same honesty.
+
+    `null` wherever nothing was scored: a chain nobody collected evidence for
+    has no coverage of nought, it has no coverage at all.
+    """
+    links = chain_card.get("links") or []
+    answered = [card for card in links if card["recorded"] is not None]
+    records = [row for card in links for row in card["records"]]
+    answered_records = [row for row in records if row["recorded"] is not None]
+    return {
+        "chain_links": len(links),
+        "chain_links_recorded": sum(1 for c in answered if c["recorded"]) if answered else None,
+        "chain_links_not_recorded": sum(1 for c in answered if not c["recorded"]) if answered else None,
+        # Links nobody could answer for - the coverage figure, and the reason
+        # a chain that scores 2 of 2 is not the same as one that scores 4 of 4.
+        "chain_links_not_observed": sum(1 for c in links if c["recorded"] is None),
+        "chain_links_scored": len(answered),
+        "chain_recorded": (round(sum(1 for c in answered if c["recorded"]) / len(answered), 3)
+                           if answered else None),
+        "chain_records": len(records),
+        "chain_records_recorded": (sum(1 for r in answered_records if r["recorded"])
+                                   if answered_records else None),
+        "chain_records_not_observed": sum(1 for r in records if r["recorded"] is None),
     }

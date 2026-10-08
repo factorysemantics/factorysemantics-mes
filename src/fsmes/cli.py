@@ -2253,6 +2253,30 @@ def score(
                f"{'unknown - not observed' if rec is None else f'{rec:.0%}'}"
                f"  ({m['faults_scored']}/{m['faults_scripted']} scored)")
 
+    # The chain, when this line wrote one down. One line per link, because
+    # the question a reader has is "which link did the MES lose", and three
+    # answers per link, because "not recorded" and "nobody looked" are
+    # different news. A plant without a chain prints nothing here.
+    chain = card.get("chain") or {}
+    if chain.get("key") == "present":
+        links = chain.get("links") or []
+        typer.echo("")
+        typer.echo(f"    chain: {chain.get('name')} ({len(links)} links)")
+        for link in links:
+            verdict = {True: "recorded", False: "NOT recorded",
+                       None: "unknown - nobody looked"}[link["recorded"]]
+            typer.echo(f"      {link['link']}. {link['what']}")
+            typer.echo(f"         {verdict}")
+            for row in link.get("records") or []:
+                mark = {True: "+", False: "-", None: "?"}[row["recorded"]]
+                typer.echo(f"         {mark} {row['kind']}: {row['why']}")
+        done = m["chain_links_recorded"]
+        typer.echo(f"      links the MES recorded                  : "
+                   f"{'unknown - not observed' if done is None else done}"
+                   f"/{m['chain_links_scored']} scored, "
+                   f"{m['chain_links_not_observed']} not observed, "
+                   f"{m['chain_links']} in the key")
+
     from fsmes.sim import store
 
     run_id = store.record(card)

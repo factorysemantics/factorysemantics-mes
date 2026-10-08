@@ -127,6 +127,17 @@ def load_truth(line_json: Path, tag_map: Path) -> dict:
             seeds.append(prefixed.get("seed"))
             stations.extend(s["name"] for s in prefixed.get("stations", []))
             events.extend(_scripted_event(raw, mapping) for raw in prefixed.get("events", []))
+            if entry.get("_chain"):
+                # A chain's answer key names stations and windows; inside a
+                # factory those stations have been prefixed with the line's
+                # name and the key has not. Rather than mark the wrong
+                # machine, or quietly drop a key somebody wrote, say so.
+                raise ValueError(
+                    f"{line_json}: line {entry.get('name')!r} carries a `_chain` "
+                    "answer key, and a factory's station names are prefixed with "
+                    "the line name while the key's are not. Put the chain in a "
+                    "single-line description, or teach this loader to prefix it."
+                )
         if len(durations) > 1:
             raise ValueError(
                 f"{line_json}: lines disagree on duration_s ({sorted(durations)}); "
@@ -139,6 +150,9 @@ def load_truth(line_json: Path, tag_map: Path) -> dict:
             "stations": stations,
             "equipment": [mapping.get(s) for s in stations],
             "events": events,
+            # A factory has no chain of its own yet: the key belongs to one
+            # line's records, and the loop above refuses a per-line one.
+            "chain": line.get("_chain"),
         }
 
     return {
@@ -148,4 +162,8 @@ def load_truth(line_json: Path, tag_map: Path) -> dict:
         "stations": [s["name"] for s in line.get("stations", [])],
         "equipment": [mapping.get(s["name"]) for s in line.get("stations", [])],
         "events": [_scripted_event(raw, mapping) for raw in line.get("events", [])],
+        # The written-down chain, straight through: `fsmes.sim.score` marks it,
+        # and nothing here interprets it, so a line can add a link without
+        # this loader changing.
+        "chain": line.get("_chain"),
     }
