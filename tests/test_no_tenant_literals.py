@@ -131,7 +131,7 @@ for _lot in ("LOT-PREFORM-001", "LOT-WATER-001", "LOT-CAP-001", "LOT-LABEL-001",
         "(src/fsmes/seed_kepsim.py); it is seeded by the product, not by a plant.")
 
 for _plan in ("PM-FILL-SEALS", "PM-LD-BELT", "PM-WASH-NOZZLE", "PM-PAL-GREASE",
-              "PM-RD-BEARING"):
+              "PM-RD-BEARING", "PM-FILL-CHILLER"):
     NOT_TENANT[_plan] = (
         "a maintenance plan on the demo plant's own reference line "
         "(src/fsmes/seed_kepsim.py); deliberately short intervals so a "
