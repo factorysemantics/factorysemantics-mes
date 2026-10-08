@@ -469,12 +469,14 @@ function words(data) {
   $("#point-hint").textContent = sampled
     ? `Click a sample to see the ${n} readings behind it — or tab to one and `
       + "press Enter. A dot on the lower chart is the same sample's spread and "
-      + "opens the same readings. The button opens the newest sample a rule "
-      + "fired on, and the newest sample when none did."
+      + "opens the same readings. The button opens the worst sample a rule "
+      + "fired on — rule 1 before rule 5 before the rest, the newest of those "
+      + "— and says which rule that is; the newest sample when none did."
     : "Click a reading to see the records behind it — or tab to one and press "
       + "Enter. A dot on the lower chart is the gap between two readings and "
-      + "opens the later of them. The button opens the newest reading a rule "
-      + "fired on, and the newest reading when none did.";
+      + "opens the later of them. The button opens the worst reading a rule "
+      + "fired on — rule 1 before rule 5 before the rest, the newest of those "
+      + "— and says which rule that is; the newest reading when none did.";
   $("#point-title").textContent = sampled
     ? "Why this sample is here" : "Why this reading is here";
   $("#point-idle").textContent = sampled

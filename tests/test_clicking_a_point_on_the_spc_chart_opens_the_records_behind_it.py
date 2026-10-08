@@ -517,6 +517,26 @@ def test_the_reading_that_is_open_is_marked_on_the_chart(page, plant):
     assert all(r["r"] > dot_r for r in rings), (rings, dot_r)
 
 
+def test_the_sentence_under_the_chart_says_what_the_button_actually_opens(
+        page, plant):
+    """Found in a live picture on 2026-10-08, not in a test: the button had
+    been taught to open the worst point while the paragraph under the chart
+    still told the reader it opened the newest one. A screen that explains
+    itself wrongly is worse than one that does not explain itself, so the
+    sentence is pinned to the behaviour here."""
+    _base, _check = plant
+    page.wait_for_function(
+        "() => (document.querySelector('#point-hint')?.textContent || '')"
+        ".includes('The button opens')", timeout=10000)
+    hint = page.locator("#point-hint").inner_text()
+    assert "worst" in hint, hint
+    assert "newest reading a rule fired on" not in hint
+    assert "newest sample a rule fired on" not in hint
+    # And it says the order, because "worst" is a judgement and the reader is
+    # owed the rule behind it.
+    assert "rule 1 before rule 5" in hint, hint
+
+
 # ------------------------------------------------------------ what is in it
 
 
