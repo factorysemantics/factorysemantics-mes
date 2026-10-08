@@ -133,11 +133,31 @@ function explainQuestion(data) {
 }
 
 /* `FS.tabs` reads the hash as the tab name, so the question cannot ride in the
-   hash: it travels as a query and the hash stays `#explore`. */
+   hash: it travels as a query and the hash stays `#explore`.
+
+   Three things travel beside the sentence, and all three are NAMES: which
+   characteristic's chart this is, and which sample or which reading had a
+   panel open beside it. No payload and no scrape of this page (#150): the AI
+   tab reads `/quality/spc/{material}/{characteristic}` itself, so the chart it
+   draws is the plant's answer and not this screen's copy of one, and a reader
+   who left this tab ten minutes ago gets the chart as it is now.
+
+   `spec` is the material and the characteristic with a slash between them,
+   split on the LAST one, because a characteristic is one word of the plant's
+   own and a material code is whatever a customer's ERP calls it. */
 function explainLink(data) {
   const link = $("#explain-chart");
   if (!link) return;
-  link.href = `/dashboard/ai?ask=${encodeURIComponent(explainQuestion(data))}#explore`;
+  const query = new URLSearchParams({ ask: explainQuestion(data) });
+  if (data.material && data.characteristic) {
+    query.set("spec", `${data.material}/${data.characteristic}`);
+  }
+  if (openSample !== null && openSample !== undefined) {
+    query.set("sample", String(openSample));
+  } else if (openCheck !== null && openCheck !== undefined) {
+    query.set("check", String(openCheck));
+  }
+  link.href = `/dashboard/ai?${query.toString()}#explore`;
 }
 
 function draw(data) {

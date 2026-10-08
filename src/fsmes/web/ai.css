@@ -137,6 +137,21 @@
    them: a graph 900 wide on a 600-wide panel must not make the panel scroll. */
 .explore-chart .chart-host { overflow-x: auto; }
 .explore-chart .chart-tools { display: flex; gap: 6px; margin-top: 6px; }
+/* The chart somebody arrived with, drawn before the first question. Marked
+   rather than moved: it is first in the conversation because it was there
+   first, so nothing has to pin it in place. */
+.explore-pinned { border-color: var(--accent); }
+
+/* The questions the answer opened, as buttons under it. Each one is a whole
+   question, so they wrap and sit left rather than stretching: a button the
+   width of the panel reads like a banner, and this is a thing to read before
+   it is a thing to press. */
+.explore-next { display: flex; flex-direction: column; gap: 4px; }
+.explore-next p { margin: 0; }
+.explore-next .next-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.explore-next .next-row button {
+  text-align: left; max-width: 100%; white-space: normal;
+}
 
 .explore-ask { margin-top: 8px; }
 .explore-ask input { flex: 1 1 320px; }

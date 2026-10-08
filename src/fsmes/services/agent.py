@@ -597,6 +597,39 @@ ANALYSIS_CHARTS = (
     "the readings on a plain axis with no control limits, no specification band and nothing "
     "marking the points that fired a rule, which is the whole of what that chart is for.")
 
+#: The questions an answer opened, asked for as the last thing the model writes.
+#:
+#: Scott, 2026-10-08, after using the chip the AI tab grew with #150: "could the
+#: agent extract potential new paths of research and make them buttons? … its
+#: flat now and its easier just to get that flat of an answer in the
+#: 'Assistant'." So the answer ends in two or three questions and the screen
+#: turns each into a button that asks it in the same conversation.
+#:
+#: A fenced block and not a tool call. A tool call would send the whole
+#: conversation through the model one more time for three sentences it already
+#: had in hand, and the round trip is most of what a turn costs - the thing this
+#: change came to cut. The block costs its own words and nothing else.
+#:
+#: The rule that matters is the last one: every line is a QUESTION. This agent
+#: holds no tool that changes anything, so a button that said "raise a finding"
+#: would be a button promising what the account behind it cannot do.
+ANALYSIS_NEXT = (
+    "End with the questions your answer opened. After your last sentence, write a fenced block "
+    "whose opening line is ```next and whose lines are two or three questions somebody could ask "
+    "you next, one per line and nothing else in the block. Draw each one out of what you just "
+    "read - the tag to look at in the window you named, the machine whose state you only "
+    "glanced at, the gauge that took the measurement, the sample beside the one that fired - and "
+    "write it as a whole question in plain words, naming the thing it is about, because the "
+    "screen turns each line into a button and the person reading it decides which to press. "
+    "\"Investigate further\" is not a question anybody can tell the answer of. "
+    "Every line is a question and never an instruction: you change nothing here, so never write "
+    "a line asking for something to be booked, adjusted, approved, raised or fixed. "
+    "A read of this plant nearly always leaves something unread beside what you read, so the "
+    "block is how an answer normally ends: if you read anything at all, two or three questions "
+    "are already in what you read. Leave it out only when the answer really closed its question "
+    "and there is honestly nothing next to it left to look at - no block at all is a better "
+    "answer than three questions made up to fill one.")
+
 ANALYSIS_SYSTEM = """You are the analysis agent inside FactorySemantics MES, a manufacturing \
 execution system, exploring plant "{plant}" for the person who asked.
 
@@ -666,6 +699,8 @@ person's signature.
 
 {charts}
 
+{next}
+
 Speak plainly, to somebody who has sat down with a question. State the numbers you found and the \
 share of the window behind them. If the plant cannot answer what was asked, say what it can \
 answer instead."""
@@ -679,7 +714,8 @@ KINDS: dict[str, Kind] = {
     ANALYSIS: Kind(
         name=ANALYSIS, title="the analysis agent", account="ANALYST", role="analyst",
         env="ANALYSIS", writes=False, walks=False, draws=True,
-        system=ANALYSIS_SYSTEM.replace("{charts}", ANALYSIS_CHARTS),
+        system=(ANALYSIS_SYSTEM.replace("{charts}", ANALYSIS_CHARTS)
+                               .replace("{next}", ANALYSIS_NEXT)),
         # A fortieth of the month's $10. One exploration that runs away is a
         # quarter, not the month - and this is a speed bump rather than a wall
         # on purpose: the wall is the month's cap, which no new conversation
@@ -1266,6 +1302,51 @@ def _anthropic_tools(sess: Session) -> list[dict]:
     return tools
 
 
+def _cached_history(sess: Session) -> list[dict]:
+    """This conversation's messages with one cache breakpoint at the end of them.
+
+    The system words and the catalogue are cached already, and between them
+    they are most of a request - but they are also the part that never grows.
+    The part that grows is the conversation: a round that has read a tool sends
+    that tool's answer again on every round after it, and a second question
+    sends the whole of the first one back as well. Measured on a lab-sized
+    plant on 2026-10-08, that was 25,400 uncached input tokens across the
+    manager question and one follow-up - half of what the pair cost - for
+    words the model had already been sent and paid for.
+
+    So one breakpoint goes on the tail of the conversation. Each round writes
+    what is new and reads everything the rounds before it wrote; the next
+    question reads the whole turn behind it. Nothing is dropped, nothing is
+    summarised and nothing is reordered - this changes what a request is
+    billed as, not what it says, and a breakpoint that misses costs exactly
+    what no breakpoint costs.
+
+    The last message of a request is always one this module built - the
+    person's words, or the tool results answering the round before - because
+    `_drive` appends the model's own reply and then the results before it asks
+    again. An assistant message is never last, and its blocks are the SDK's
+    own objects rather than ours, so a tail this function does not recognise
+    is left alone rather than rebuilt from something we do not own.
+
+    `anthropic` takes at most four breakpoints in a request and this is the
+    third (the system block and the catalogue hold the other two).
+    """
+    history = list(sess.history)
+    if not history:
+        return history
+    message = history[-1]
+    content = message.get("content")
+    if isinstance(content, str):
+        blocks: list = [{"type": "text", "text": content}]
+    elif isinstance(content, list) and content and isinstance(content[-1], dict):
+        blocks = list(content)
+    else:
+        return history
+    blocks[-1] = {**blocks[-1], "cache_control": {"type": "ephemeral"}}
+    history[-1] = {**message, "content": blocks}
+    return history
+
+
 def _call_model(sess: Session) -> Any:
     """One request to the model. Replaced in tests."""
     from fsmes import shadow
@@ -1280,7 +1361,7 @@ def _call_model(sess: Session) -> Any:
                   "text": system_for(sess.kind).format(plant=sess.plant) + sess.withheld,
                   "cache_control": {"type": "ephemeral"}}],
         tools=_anthropic_tools(sess),
-        messages=sess.history,
+        messages=_cached_history(sess),
         thinking={"type": "adaptive"},
         output_config={"effort": EFFORT},
     )

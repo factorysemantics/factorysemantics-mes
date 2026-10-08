@@ -65,6 +65,59 @@ def _without_trend_points(dossier: Any) -> Any:
     return {**dossier, "tags": {**tags, "trends": trimmed}}
 
 
+#: What the model is handed instead of every reading of every sample.
+#:
+#: An X-bar chart's payload carries two things: the points it is drawn from -
+#: each one a sample's own mean and range - and, beside them, the n readings
+#: behind every one of those points. On a lab-sized plant (30 samples of five
+#: bottles) the readings are half the answer; on the lab's own 147-sample
+#: chart they were 38,710 characters of 75,586, which is past
+#: `agent.RESULT_LIMIT` and so was cut by the character - and because
+#: `points` is first in key order, what the cut took away was the control
+#: limits, the signals and the verdict. The model paid for every bottle and
+#: was handed no limits to judge them against.
+#:
+#: So they are left out by default and `readings=True` asks for them. Nothing
+#: is summarised in their place and no figure is worked out from them: `n`,
+#: `readings` and every point's own mean and range are the plant's own and
+#: travel whole, and the note below says how many samples and readings were
+#: left out and how to get them - `spc_sample` for the five bottles behind one
+#: point, with each one's distance from its mean, or this tool again with
+#: `readings=true` for all of them. A list that quietly came back shorter
+#: would be the one kind of trim this product does not allow.
+READINGS_LEFT_OUT = (
+    "The {readings} readings behind these {samples} samples are not in this "
+    "answer - every point above already carries the sample's own mean and "
+    "range, which is what an X-bar and R chart is drawn from, and `n` and "
+    "`readings` above count both. Ask `spc_sample` with one point's `sample` "
+    "for the readings behind THAT point, each with its distance from the "
+    "sample's own mean, which is the question worth asking of a sample that "
+    "is out of place; or call this tool again with readings=true for all of "
+    "them."
+)
+
+
+def _without_sample_readings(chart: Any) -> Any:
+    """The control chart with the readings behind each sample left out, and
+    said to be left out.
+
+    Only the `samples` block goes. The points, the control limits, the
+    signals, the range chart, the capability and the verdict are the small
+    blocks that answer *how does this chart look*, and they travel whole.
+    """
+    if not isinstance(chart, dict) or not isinstance(chart.get("samples"), list):
+        return chart
+    samples = chart["samples"]
+    readings = sum(len(s.get("readings") or [])
+                   for s in samples if isinstance(s, dict))
+    kept = {k: v for k, v in chart.items() if k != "samples"}
+    kept["samples_left_out"] = len(samples)
+    kept["readings_left_out"] = readings
+    kept["samples_note"] = READINGS_LEFT_OUT.format(
+        readings=readings, samples=len(samples))
+    return kept
+
+
 def _dossier_query(before_minutes: float | None, after_minutes: float | None,
                    neighbour_hours: float | None) -> str:
     """Only the windows the caller actually named. An omitted minute is the
@@ -77,15 +130,26 @@ def _dossier_query(before_minutes: float | None, after_minutes: float | None,
 
 def register(mcp, call, write, identify) -> dict:
     @mcp.tool()
-    def spc_chart(plant: str, material: str, characteristic: str, limit: int = 200) -> dict:
+    def spc_chart(plant: str, material: str, characteristic: str, limit: int = 200,
+                  readings: bool = False) -> dict:
         """The control chart for one characteristic: control limits from the
         process's own variation, which Western Electric rules fired and where,
         capability (Cp, Cpk, Pp) - withheld while the process is out of control
         - and a one-sentence verdict. `kind` says which chart it is: `imr`,
         individuals and moving range, for a characteristic inspected one piece
         at a time, or `xbar_r` for one inspected n at a time, whose points are
-        the sample means and which also carries the samples behind them."""
-        return {"plant": plant, **call(plant, "GET", f"/quality/spc/{material}/{characteristic}?limit={limit}")}
+        the sample means, each carrying its own `range` and the `sample` id to
+        ask about.
+
+        On a sampled chart the n readings behind every point are left out by
+        default and `samples_note` says how many and how to ask: they are what
+        `spc_sample` answers one point at a time, and reading all of them to
+        describe a chart spends the conversation on bottles rather than on
+        limits. `readings=true` adds them back whole."""
+        answer = call(plant, "GET",
+                      f"/quality/spc/{material}/{characteristic}?limit={limit}")
+        return {"plant": plant,
+                **(answer if readings else _without_sample_readings(answer))}
 
     @mcp.tool()
     def spc_point(plant: str, material: str, characteristic: str, check_id: int,
