@@ -25,6 +25,7 @@ Marked `browser` as well as `slow`: `pytest -m browser` is the tier CI runs
 Chromium for, and a Playwright file marked only `slow` is a test nothing runs.
 """
 
+import re
 import socket
 import threading
 from datetime import timedelta
@@ -575,11 +576,13 @@ def test_a_keyboard_reaches_a_sample_and_opens_it(page, plant):
 
 def test_the_button_opens_the_sample_a_rule_fired_on(page, plant):
     """A keyboard's way in without hunting for a dot, and it says what it will
-    open: the flagged sample, and five bottles rather than one reading."""
+    open: the sample the worst rule fired on, named by that rule, and five
+    bottles rather than one reading."""
     _base, shifted = plant
     button = page.query_selector("#open-point")
     assert button.get_attribute("data-assist") == "spc-open-point"
-    assert button.inner_text().strip() == "Open the flagged sample"
+    assert re.fullmatch(r"Open the rule \d sample", button.inner_text().strip()), \
+        button.inner_text()
     assert "opens all 5 of them" in button.get_attribute("title")
     button.click()
     _await_panel(page, shifted)
