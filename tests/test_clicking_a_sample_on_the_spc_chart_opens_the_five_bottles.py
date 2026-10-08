@@ -381,7 +381,11 @@ def test_the_range_half_is_drawn_under_the_average_half_in_one_chart(page):
     assert [round(d["cx"]) for d in means] == [round(d["cx"]) for d in ranges]
     assert min(d["cy"] for d in ranges) > max(d["cy"] for d in means)
     assert page.eval_on_selector_all("#chart svg.fs-chart", "els => els.length") == 1
-    assert page.get_attribute("#chart svg.fs-chart", "data-kind") == "spc-xbar-r"
+    # One kit shape draws both kinds since 2026-10-07, so the <svg> says
+    # which SHAPE drew it and the plot group says which kind of chart it is
+    # — in the payload's own word.
+    assert page.get_attribute("#chart svg.fs-chart", "data-kind") == "spc"
+    assert page.get_attribute("#chart [data-spc-kind]", "data-spc-kind") == "xbar_r"
 
 
 def test_the_lower_half_has_the_three_lines_an_r_chart_has(page):

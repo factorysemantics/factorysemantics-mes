@@ -689,6 +689,19 @@ def _series_from_samples(samples: list[list[float]]) -> Series | None:
     return series
 
 
+#: What a chart that is a list of records says instead of a coverage figure.
+#: `kit.js` reads the word `absent` and prints this sentence rather than
+#: "watched -% of the window", which is the exact confusion it is there to
+#: stop. One sentence for the control chart and for every block of the dossier
+#: behind a point on it (`services.spc_point`, which imports it from here):
+#: two wordings of the same refusal is how a reader comes to think the two
+#: screens know different amounts about the same window.
+RECORDS_NOT_A_RATE = (
+    "a list of the records in this window, not a rate over a watched one \u2014 "
+    "so there is no coverage figure to give"
+)
+
+
 def chart(session: Session, material: str, characteristic: str,
           limit: int | None = None) -> dict:
     """A control chart with limits, capability, and what fired.
@@ -747,6 +760,19 @@ def chart(session: Session, material: str, characteristic: str,
         # The browser used to hold its own copy of the Cpk bar to pick the
         # verdict's colour, so a plant that moved the bar got a green figure
         # under a sentence calling it marginal.
+        # Rule 2 of the chart contract, answered with the third of its three
+        # facts and in so many words rather than by leaving the field off.
+        # A control chart is a list of the readings somebody actually took,
+        # not a rate over a window somebody was watching, so there is no
+        # share to give - and "there is no such figure here" is a different
+        # statement from "the figure could not be computed" and different
+        # again from a coverage of nought, which is what a chart drawn from
+        # this payload would otherwise have implied by printing nothing.
+        # A reading nobody took is not a gap in this picture; it is simply
+        # not in it. `services.spc_point` says the same of its record
+        # blocks, in the same way, for the same reason.
+        "coverage": "absent",
+        "coverage_note": RECORDS_NOT_A_RATE,
         "min_points": fewest,
         "history": len(values),
         "cpk_capable": capable,

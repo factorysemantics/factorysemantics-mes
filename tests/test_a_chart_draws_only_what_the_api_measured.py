@@ -237,7 +237,79 @@ GRAPH = {
     "total": {"nodes": 340, "edges": 20},
 }
 
-#: kind, envelope, options — the five shapes as a screen or the analysis agent
+#: A control chart as `/quality/spc/{material}/{characteristic}` returns one -
+#: the X-bar and R kind, the one a plant that inspects five bottles at a time
+#: gets (decision 0040). Four samples of five, one mean beyond the upper
+#: control limit and one sample spread wider than the range chart's limit, with
+#: a capability block the server itself has withheld because the process is not
+#: stable.
+#:
+#: Every number here is the server's. The shape is handed the limits, the
+#: centre, the two signals and the verdict, and works out none of them: a chart
+#: that computed its own control limits would be a second opinion about a
+#: process that already has one, in the most convincing medium this product
+#: has. That is the whole reason this envelope is a fixture rather than
+#: whatever a live plant happens to be doing.
+SPC = {
+    "material": "FG-COLA", "characteristic": "fill height", "unit": "mm",
+    "lower_spec": 59.0, "upper_spec": 63.0,
+    "kind": "xbar_r", "sample_size": 5,
+    # Both totals, because both are true and a reader told only one of them
+    # will believe the wrong thing about the other.
+    "n": 4, "readings": 20,
+    "points": [
+        {"value": 61.2, "ts": "2026-10-07T06:00:00", "check": 101, "sample": 11,
+         "range": 0.4},
+        {"value": 61.44, "ts": "2026-10-07T06:30:00", "check": 106, "sample": 12,
+         "range": 1.9},
+        {"value": 60.98, "ts": "2026-10-07T07:00:00", "check": 111, "sample": 13,
+         "range": 0.5},
+        {"value": 62.6, "ts": "2026-10-07T07:30:00", "check": 116, "sample": 14,
+         "range": 0.6},
+    ],
+    "control": {"centre": 61.555, "lower": 60.3, "upper": 62.5,
+                "sigma": 0.38, "sigma_within": 0.85,
+                "range_chart": {"centre": 0.85, "lower": 0.0, "upper": 1.797}},
+    "capability": {"cp": 0.78, "cpk": 0.55, "cpu": 0.55, "cpl": 1.0, "pp": 0.7,
+                   "sigma_overall": 0.95, "sigma": 0.85, "readings": 20},
+    "signals": [
+        {"rule": 1, "index": 3, "value": 62.6,
+         "what": "a point beyond three sigma", "nonconformance": "NC-0042",
+         "held": True},
+        {"rule": 5, "index": 1, "value": 1.9,
+         "what": "the spread inside one sample beyond the range limit",
+         "nonconformance": None, "held": False},
+    ],
+    "stable": False,
+    "range_chart": {
+        "points": [
+            {"range": 0.4, "ts": "2026-10-07T06:00:00", "sample": 11, "check": 101,
+             "n": 5},
+            {"range": 1.9, "ts": "2026-10-07T06:30:00", "sample": 12, "check": 106,
+             "n": 5},
+            {"range": 0.5, "ts": "2026-10-07T07:00:00", "sample": 13, "check": 111,
+             "n": 5},
+            {"range": 0.6, "ts": "2026-10-07T07:30:00", "sample": 14, "check": 116,
+             "n": 5},
+        ],
+        "n": 4, "readings": 20, "sample_size": 5,
+        "centre": 0.85, "upper": 1.797, "lower": 0.0, "note": None,
+        "stable": False,
+        "verdict": "out of control - rule 5 fired on 1 of 4 sample ranges.",
+    },
+    "verdict": ("out of control, not out of spec: rule 1 fired on 1 of 4 samples. "
+                "Cp and Cpk are withheld while the process is unstable."),
+    "rules": [1, 2, 3, 4, 5], "hold_rules": [1, 5], "major_rules": [1],
+    "min_points": 4, "history": 4,
+    "cpk_capable": 1.33, "cpk_marginal": 1.0,
+    # Rule 2's third fact, in the payload's own words: a list of readings is
+    # not a rate over a watched window, so there is no share to give.
+    "coverage": "absent",
+    "coverage_note": ("a list of the records in this window, not a rate over a "
+                      "watched one \u2014 so there is no coverage figure to give"),
+}
+
+#: kind, envelope, options — the six shapes as a screen or the analysis agent
 #: would ask for them.
 SHAPES = {
     "pareto": ("pareto", PARETO, {"labelWidth": 96, "noun": "reason"}),
@@ -246,6 +318,10 @@ SHAPES = {
                             "zero": False, "y": {"label": "temperature °C"}}),
     "histogram": ("histogram", HISTOGRAM, {}),
     "graph": ("graph", GRAPH, {"height": 300}),
+    # Drawn as the AI tab draws it: no `openable`, so the dots are marks with
+    # the frame's own hover rather than buttons that promise a panel the
+    # explore screen does not have.
+    "spc": ("spc", SPC, {}),
 }
 
 
@@ -520,6 +596,12 @@ def test_every_number_the_envelope_carried_is_on_the_chart_verbatim(page, name):
         "graph": ["41", "3", "22", "9", "1240", "900", "1180", "46",
                   "6", "41", "22", "1", "2420", "900", "2140", "1", "46",
                   "0", "0", "0"],
+        # The four sample means, then the four sample ranges under them. The
+        # limit lines carry no value and deliberately: a control limit and a
+        # specification are not readings, and making one a hover target would
+        # put a tolerance where the frame looks for the measurement under the
+        # pointer.
+        "spc": ["61.2", "61.44", "60.98", "62.6", "0.4", "1.9", "0.5", "0.6"],
     }[name]
     assert got["values"] == expected, (
         f"{name} drew {got['values']} — every plotted value must be the "
@@ -824,6 +906,245 @@ def test_what_a_screen_reader_is_told_is_what_the_screen_says(page, name):
         # Trailing punctuation is added for prose; the sentence itself must match.
         assert note["text"].rstrip(".") in got["desc"], (
             f"{name}: the footer says {note['text']!r} and the description does not")
+
+
+# --------------------------------------------- the control chart (the `spc` shape)
+
+#: Everything about a drawn control chart a test needs, read in ONE pass inside
+#: the page, for the same reason `DRAW` is: a handle taken and then read across
+#: two calls is a handle into a document that may have been redrawn between
+#: them.
+SPC_FACTS = """([envelope, options]) => {
+    const host = document.getElementById('fs-chart-probe') || (() => {
+        const box = document.createElement('div');
+        box.id = 'fs-chart-probe';
+        box.style.width = '760px';
+        document.body.appendChild(box);
+        return box;
+    })();
+    const node = FS.kit.draw(host, 'spc', envelope, {width: 760, ...options});
+    const guide = (cls) => [...node.querySelectorAll(`line.${cls}`)].map((l) => ({
+        y: Math.round(Number(l.getAttribute('y1'))),
+        label: ((t) => t ? t.textContent : null)(
+            [...node.querySelectorAll('text.axis')].find(
+                (x) => Math.abs(Number(x.getAttribute('y')) + 3
+                                - Number(l.getAttribute('y1'))) < 0.01)),
+    }));
+    const dots = (sel) => [...node.querySelectorAll(sel)].map((d) => ({
+        cls: d.getAttribute('class'), value: d.getAttribute('data-value'),
+        sample: d.getAttribute('data-sample'), check: d.getAttribute('data-check'),
+        series: d.getAttribute('data-series'), flagged: d.getAttribute('data-flagged'),
+        role: d.getAttribute('role'), tabindex: d.getAttribute('tabindex'),
+        aria: d.getAttribute('aria-label'),
+        cx: Math.round(Number(d.getAttribute('cx'))),
+        cy: Math.round(Number(d.getAttribute('cy'))),
+        r: Number(d.getAttribute('r')),
+    }));
+    return {
+        kind: node.getAttribute('data-kind'),
+        spcKind: ((g) => g ? g.getAttribute('data-spc-kind') : null)(
+            node.querySelector('[data-spc-kind]')),
+        svgs: document.querySelectorAll('#fs-chart-probe svg').length,
+        halves: [...node.querySelectorAll('[data-half]')]
+            .map((g) => g.getAttribute('data-half')),
+        total: node.getAttribute('data-total'),
+        coverage: node.getAttribute('data-coverage'),
+        footer: [...node.querySelectorAll('text[data-footer]')]
+            .map((x) => ({cls: x.getAttribute('class'), text: x.textContent})),
+        desc: node.querySelector('desc').textContent,
+        title: node.querySelector('title').textContent,
+        spec: guide('spec-line'), limit: guide('limit-line'),
+        centre: guide('centre-line'),
+        upperDots: dots('g.chart-plot > circle'),
+        lowerDots: dots('[data-half] circle'),
+        height: Number(node.getAttribute('height')),
+    };
+}"""
+
+
+def spc_facts(page, envelope=None, **options):
+    import copy
+    return page.evaluate(SPC_FACTS, [copy.deepcopy(envelope or SPC), options])
+
+
+def test_a_control_chart_draws_the_limits_it_was_given_and_works_out_none(page):
+    """Rule 1, where it matters most in this product. The centre line, both
+    control limits and both specification limits are the server's numbers, on
+    the chart, with the server's own labels beside them - and the shape has no
+    arithmetic for any of them. A browser that worked out its own control
+    limits would be a second opinion about a process that has one, drawn
+    convincingly enough that nobody would check."""
+    got = spc_facts(page)
+    assert [g["label"] for g in got["spec"]] == ["LSL 59", "USL 63"]
+    # Four limit lines: the two control limits above, and the range chart's
+    # upper and lower below.
+    assert [g["label"] for g in got["limit"]] == ["LCL 60.3", "UCL 62.5",
+                                                  "D4\u00b7R\u0304 1.797",
+                                                  "D3\u00b7R\u0304 0"]
+    # X-double-bar above, R-bar below. Not x-bar: the centre of a sampled
+    # chart is the mean of the sample means, and the label a process engineer
+    # would read as the wrong number is the one this chart must not use.
+    assert [g["label"] for g in got["centre"]] == ["X\u033f 61.555", "R\u0304 0.85"]
+    # The upper control limit is inside the picture and not off the top of it:
+    # a chart scaled to its dots alone hides the one line it exists to show.
+    assert 0 < got["limit"][1]["y"] < got["height"]
+
+
+def test_a_control_chart_states_the_plants_own_verdict_and_not_one_of_its_own(page):
+    """The sentence Scott puts on the slide, and it is the server's. `spc.py`
+    decides whether a process is out of control, out of spec, or both, and
+    whether capability may be printed at all; the chart repeats that and
+    concludes nothing. A picture that reached its own verdict from the numbers
+    beside it would eventually disagree with the screen it was drawn on."""
+    got = spc_facts(page)
+    said = [f["text"] for f in got["footer"] if f["cls"] == "chart-verdict"]
+    assert said == [SPC["verdict"]], f"the chart's verdict is {said!r}"
+    # And a screen reader is told it in the same words, in the same order.
+    assert SPC["verdict"].rstrip(".") in got["desc"]
+    # Withheld is said as withheld, with the reason, never as a missing figure.
+    withheld = [f["text"] for f in got["footer"] if f["cls"] == "chart-withheld"]
+    assert any("withheld while the process is out of control" in w for w in withheld)
+
+
+def test_a_wide_sample_rings_its_range_and_never_the_mean_above_it(page):
+    """Rule 5 judges the spread inside a sample, never where the sample's mean
+    sat - so a red ring round the mean because the five bottles were far apart
+    would be the chart answering a question nobody asked of it. The firing on
+    the mean is rule 1's, on sample 14; the firing on a range is rule 5's, on
+    sample 12, and the two marks are on different halves."""
+    got = spc_facts(page)
+    assert [d["flagged"] for d in got["upperDots"]] == [None, None, None, "true"]
+    assert [d["flagged"] for d in got["lowerDots"]] == [None, "true", None, None]
+    flagged_mean = next(d for d in got["upperDots"] if d["flagged"])
+    assert flagged_mean["sample"] == "14" and flagged_mean["value"] == "62.6"
+    flagged_range = next(d for d in got["lowerDots"] if d["flagged"])
+    assert flagged_range["sample"] == "12" and flagged_range["value"] == "1.9"
+    # And a flagged mark is bigger as well as differently painted: one of the
+    # four themes is always the one where a hue shift alone goes unnoticed.
+    assert flagged_mean["r"] > got["upperDots"][0]["r"]
+
+
+def test_both_halves_are_one_svg_on_one_x_scale(page):
+    """What makes a control chart one picture rather than two. One node, so
+    `FS.kit.export` carries both halves into one file; one x scale, so the
+    range under a mean is the same sample seen twice. Two charts that did not
+    line up would be read as two processes."""
+    got = spc_facts(page)
+    assert got["svgs"] == 1
+    assert got["halves"] == ["sample-range"]
+    assert [d["cx"] for d in got["upperDots"]] == [d["cx"] for d in got["lowerDots"]]
+    assert [d["sample"] for d in got["upperDots"]] == \
+           [d["sample"] for d in got["lowerDots"]]
+    # The ranges are drawn below the means, not over them.
+    assert min(d["cy"] for d in got["lowerDots"]) > max(d["cy"]
+                                                        for d in got["upperDots"])
+
+
+def test_a_control_chart_states_both_totals_and_what_neither_half_drew(page):
+    """Rule 5 twice over. Four samples is also twenty readings, and a reader
+    told only one of those figures believes the wrong thing about the other;
+    how many points a rule fired on is a total of its own, on each half."""
+    total = spc_facts(page)["total"]
+    assert "4 samples of 20 readings drawn" in total
+    assert "1 flagged by 1 firing of rules 1 to 4" in total
+    assert "4 sample ranges below, 1 flagged by 1 firing of rule 5" in total
+
+
+def test_a_chart_with_too_few_points_for_limits_draws_none_and_says_why(page):
+    """Unknown is not zero, in the one place on this screen where inventing it
+    would be easiest. Six readings do not make control limits worth having, and
+    `spc.py` returns `control: null` with the sentence that says so - so the
+    chart draws no centre line, no limits, and prints the reason rather than
+    leaving a reader to assume a settled process."""
+    thin = {
+        "material": "FG-COLA", "characteristic": "brix", "unit": "Bx",
+        "lower_spec": 9.8, "upper_spec": 10.6, "kind": "imr", "sample_size": 1,
+        "n": 3, "readings": 3,
+        "points": [
+            {"value": 10.1, "ts": "2026-10-07T06:00:00", "check": 1},
+            {"value": 10.3, "ts": "2026-10-07T06:20:00", "check": 2},
+            {"value": 10.2, "ts": "2026-10-07T06:40:00", "check": 3},
+        ],
+        "control": None, "capability": None, "signals": [],
+        "note": "3 readings; control limits need at least 10 to mean anything",
+        "moving_range": {"points": [], "n": 0, "readings": 3, "centre": None,
+                         "upper": None, "lower": None, "signals": [],
+                         "note": "3 readings; control limits need at least 10 "
+                                 "to mean anything",
+                         "verdict": "no moving ranges yet", "stable": None},
+        "coverage": "absent",
+    }
+    got = spc_facts(page, thin)
+    assert got["centre"] == [] and got["limit"] == []
+    assert [g["label"] for g in got["spec"]] == ["LSL 9.8", "USL 10.6"]
+    assert any("control limits need at least 10" in f["text"] for f in got["footer"])
+    assert "3 readings drawn" in got["total"]
+    assert "a moving range needs two readings" in got["total"]
+
+
+def test_a_control_chart_says_its_x_axis_is_order_and_not_a_clock(page):
+    """Rule 4, and the choice the whole picture rests on. Two dots side by side
+    on a control chart may be four seconds or four hours apart: a reader who
+    took the spacing for time would read a drift off it that is not there. The
+    first and last stamps are on the chart so that "oldest first" is a fact and
+    not a convention."""
+    got = spc_facts(page)
+    axes = [f["text"] for f in got["footer"] if f["cls"] == "chart-axis-note"]
+    assert any("sample order, oldest first" in a for a in axes)
+    assert any("not a clock axis" in a.lower() for a in axes)
+    # Rule 4's other half: an axis that does not start at nought says so.
+    assert any("not 0" in a for a in axes)
+
+
+def test_a_kind_this_shape_does_not_draw_is_refused_rather_than_plotted(page):
+    """Decision 0040's whole point, as a refusal. A plant that charts a
+    characteristic some third way is a newer plant than this shape, and drawing
+    its points as individuals or as sample means would be a true picture of an
+    arithmetic nobody asked for. It draws nothing and names the two it has."""
+    refused = page.evaluate(
+        """(envelope) => { try { FS.kit.chart('spc', envelope); return null; }
+                           catch (e) { return String(e); } }""",
+        dict(SPC, kind="p"))
+    assert refused and "does not draw" in refused
+    assert "imr" in refused and "xbar_r" in refused
+    # And a payload with no control-chart shape at all is refused too, rather
+    # than drawn as an empty chart that looks like a settled process.
+    bare = page.evaluate(
+        """() => { try { FS.kit.chart('spc', {points: [{value: 1}]}); return null; }
+                   catch (e) { return String(e); } }""")
+    assert bare and "needs a control-chart payload" in bare
+
+
+def test_a_dot_opens_a_point_only_where_the_screen_said_it_could(page):
+    """The division of labour this shape keeps, and the reason the AI tab can
+    draw the same chart. A dot is a button only when the page asked for one
+    (`openable`), and pressing it dispatches `fs-spc-open` for the page to act
+    on - the kit never fetches a dossier and never decides what opening a point
+    means. On the explore screen there is no panel, so the dots are marks with
+    the frame's own hover and nothing promises otherwise."""
+    plain = spc_facts(page)
+    assert [d["role"] for d in plain["upperDots"]] == [None] * 4
+    assert [d["tabindex"] for d in plain["upperDots"]] == [None] * 4
+
+    opened = spc_facts(page, openable=True, selected={"sample": 13})
+    assert [d["role"] for d in opened["upperDots"]] == ["button"] * 4
+    assert all("open the readings behind it" in d["aria"] for d in opened["upperDots"])
+    # The sample the panel is open on is ringed, on both halves, under a name
+    # of its own per half so that "the point that is open" stays countable.
+    assert "spc-selected" in opened["upperDots"][2]["cls"]
+    assert "spc-mr-selected" in opened["lowerDots"][2]["cls"]
+
+    fired = page.evaluate(
+        """() => new Promise((resolve) => {
+            const host = document.getElementById('fs-chart-probe');
+            host.addEventListener('fs-spc-open', (e) => resolve(e.detail), {once: true});
+            host.querySelector('circle[data-sample="14"]').dispatchEvent(
+                new MouseEvent('click', {bubbles: true}));
+            setTimeout(() => resolve(null), 2000);
+        })""")
+    assert fired == {"what": "sample", "id": 14, "series": "xbar",
+                     "label": fired and fired.get("label")}, fired
+    assert "open the readings behind it" in fired["label"]
 
 
 # ----------------------------------------- and a screen draws through the kit

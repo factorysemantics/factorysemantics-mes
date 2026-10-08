@@ -574,6 +574,13 @@
       const notes = [];
       const push = (cls, text) => { if (text) notes.push({ cls, text }); };
       push("chart-total", plan.total);
+      /* The ANSWER, where a shape's payload carries one the plant itself
+         wrote: "out of control, not out of spec". Second, under the total,
+         because a conclusion is read before the arithmetic behind it, and in
+         the footer rather than in the title so it travels into the `<desc>`
+         and into an export with everything else. A shape returns one only when
+         the envelope stated it — nothing here concludes anything. */
+      push("chart-verdict", plan.verdict);
       push("chart-axis-note", windowNote(envelope.window));
       for (const note of plan.axes || []) push("chart-axis-note", note);
       /* The reader's own choices, in the footer with everything else, because
@@ -2034,8 +2041,400 @@
     };
   }
 
+  /* ---------- a control chart: X-bar and R, or individuals and moving range --
+
+     Fed `/quality/spc/{material}/{characteristic}` whole — the payload the
+     Quality SPC screen draws and the one the `spc_chart` tool hands the
+     analysis agent, unaltered. `kind` says which chart it is and nothing here
+     infers it: `imr`, one piece at a time with the gap between consecutive
+     readings below it, or `xbar_r`, a sample of n pieces whose points are the
+     sample means with the spread inside each sample below (decision 0040). A
+     third word is a newer plant than this shape, and is refused by name rather
+     than drawn as one of the two.
+
+     It is a SHAPE and not a second chart engine, for the reason the state
+     timeline became one on 2026-09-28. Until 2026-10-07 this picture lived in
+     `spc.js` alone, so an exploration that asked to draw an `spc_chart` answer
+     got `line`: thirty sample means on a zero-based axis, no control limits, no
+     spec band, no flagged dots, under a title promising all three. Scott was
+     shown exactly that and could not have put it on a slide. One
+     implementation is the only thing that stops the screen and the exploration
+     coming to draw the same control chart differently.
+
+     Nothing is computed here. The centre, both sets of limits, which rules
+     fired, the capability and the verdict are `services.spc`'s; the arithmetic
+     below turns those numbers into pixels. A chart that worked out its own
+     control limits would be a second opinion about a process that has one
+     (house rule 6, contract rule 1).
+
+     `options.openable` makes each dot a button that dispatches `fs-spc-open`
+     and lets the PAGE decide what opening a point means — the division the
+     graph's `fs-chart-expand` already keeps. Off by default: a dot that looks
+     pressable and is not is worse than one that plainly is not, and on the AI
+     tab the dossier is a question to ask rather than a panel to open.
+     `options.selected` rings whichever point a panel is already open on, so a
+     refresh redraws the selection instead of losing it. */
+
+  const SPC_INDIVIDUALS = "imr";
+  const SPC_SAMPLED = "xbar_r";
+  /* Rule 5 of the Western Electric set is the RANGE rule, and the two kinds
+     carry it in two places. On an individuals chart it fires on the gap
+     between two readings — its own series with its own index space — and
+     arrives in `moving_range.signals`. On a sampled chart it fires on the
+     spread inside ONE sample, so both halves are indexed by the same samples
+     and it arrives in `signals` beside rules 1 to 4. Hence the upper half
+     filters it out and the lower half keeps only it: a red ring round a mean
+     because the spread beside it was wide would be the chart answering a
+     question nobody asked of it. */
+  const SPC_RANGE_RULE = 5;
+  /* The lower half answers a smaller question, so it gets about half the
+     height, and `options.height` sizes the upper half as on every other
+     shape. Nothing above it moves when it appears. */
+  const SPC_LOWER_HEIGHT = 128;
+  const SPC_LOWER_GAP = 18;
+
+  function spcShape(envelope, options, width) {
+    if (!("points" in envelope) || !("control" in envelope)) {
+      throw new TypeError(
+        "kit.chart('spc'): needs a control-chart payload — `points`, `control`, "
+        + "`signals` and `kind`, as /quality/spc/{material}/{characteristic} "
+        + "returns them. This shape draws limits and never works them out, so a "
+        + "payload without them is one it would have to invent a process for");
+    }
+    const kind = envelope.kind || SPC_INDIVIDUALS;
+    if (kind !== SPC_INDIVIDUALS && kind !== SPC_SAMPLED) {
+      throw new TypeError(
+        `kit.chart('spc'): this characteristic is charted as “${kind}”, which this `
+        + `shape does not draw: it draws ${SPC_INDIVIDUALS} (individuals and moving `
+        + `range) and ${SPC_SAMPLED} (X-bar and R). It draws nothing rather than `
+        + "plot these points as one of the two, which is the mistake decision 0040 "
+        + "exists to stop");
+    }
+    const sampled = kind === SPC_SAMPLED;
+    const points = envelope.points || [];
+    const control = envelope.control || null;
+    const signals = envelope.signals || [];
+    /* One key or the other is present and never both (`services.spc.chart`),
+       and the two blocks have the same shape: points, a centre, an upper
+       limit, a lower one and a sentence. Two readings make the first moving
+       range and n readings recorded together make the first sample range, so a
+       chart with neither has an upper half and nothing below it. */
+    const lower = (sampled ? envelope.range_chart : envelope.moving_range) || null;
+    const lowerPoints = (lower && lower.points) || [];
+    const noun = sampled ? "sample" : "reading";
+    const size = envelope.sample_size;
+    const unit = envelope.unit ? ` ${envelope.unit}` : "";
+    const named = `${envelope.material || ""} ${envelope.characteristic || ""}`.trim();
+    const label = named + (envelope.unit ? ` (${envelope.unit})` : "");
+
+    const left = 52, right = 14, top = 12, bottom = 26;
+    const upperH = options.height || 260;
+    const plot = width - left - right;
+    const plotH = upperH - top - bottom;
+    const lowerTop = upperH + SPC_LOWER_GAP;
+    const height = lowerPoints.length ? lowerTop + SPC_LOWER_HEIGHT : upperH;
+
+    /* Rule 4. The axis fits the readings AND the lines a reader judges them
+       against: a control chart scaled to its dots alone puts the limit that
+       matters off the top of the picture, which is the one place it is needed.
+       `yScale` says on the chart that the axis does not start at nought. */
+    const guides = [envelope.lower_spec, envelope.upper_spec,
+                    control && control.lower, control && control.upper].filter(isNum);
+    const scale = yScale(points.map((p) => p.value).concat(guides), { zero: false });
+    const x = (i) => left + (i / Math.max(points.length - 1, 1)) * plot;
+    const y = (v) => top + plotH - ((v - scale.lo) / (scale.hi - scale.lo)) * plotH;
+
+    const upper = signals.filter((s) => s.rule !== SPC_RANGE_RULE);
+    const flagged = new Set(upper.flatMap(
+      (s) => s.points || s.indexes || (s.index !== undefined ? [s.index] : [])));
+    /* Flagged below BY ID and never by counting along. A moving-range series
+       is one shorter than the readings it is the gaps between, and a sampled
+       chart's two halves are one series of samples seen twice — an off-by-one
+       either way rings the wrong dot. */
+    const lowerFired = new Set(sampled
+      ? signals.filter((s) => s.rule === SPC_RANGE_RULE)
+          .map((s) => (points[s.index] || {}).sample).filter((id) => id !== undefined)
+      : ((lower && lower.signals) || []).map((s) => s.check)
+          .filter((id) => id !== undefined));
+    const lowerFirings = sampled
+      ? signals.filter((s) => s.rule === SPC_RANGE_RULE).length
+      : ((lower && lower.signals) || []).length;
+
+    const open = options.selected || {};
+    const openable = options.openable === true;
+    const aside = envelope.set_aside || 0;
+
+    /* A dot the reader can open. There is no <button> inside an SVG, so it
+       carries what one would carry and answers a keyboard — the same way the
+       frame's own legend and threshold controls do (STYLE.md rule 6's intent).
+       What opening it MEANS is the page's business, so this dispatches and
+       stops. */
+    function openWith(dot, what, id, series, say) {
+      if (!openable || id === undefined || id === null) return;
+      dot.setAttribute("role", "button");
+      dot.setAttribute("tabindex", "0");
+      dot.setAttribute("aria-label", say);
+      const fire = (event) => {
+        event.stopPropagation();
+        dot.dispatchEvent(new CustomEvent("fs-spc-open", {
+          bubbles: true, detail: { what, id, series, label: say },
+        }));
+      };
+      dot.addEventListener("click", fire);
+      dot.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        fire(event);
+      });
+    }
+
+    /* A line a reader judges the dots against, with its own number on it. It
+       carries no `data-value`: a specification limit is not a reading, and
+       making one a hover target would put a tolerance where the frame looks
+       for the measurement under the pointer. */
+    function guideAt(g, at, v, cls, text) {
+      if (!isNum(v)) return;
+      add(g, "line", { x1: left, y1: at(v), x2: left + plot, y2: at(v), class: cls });
+      add(g, "text", { x: left + plot - 4, y: at(v) - 3, class: "axis",
+                       "text-anchor": "end" }, `${text} ${v}`);
+    }
+
+    /* The lower half of either kind, in the SAME node and against the same x
+       scale. One <svg> is what makes `FS.kit.export` carry both halves into
+       one file rather than half a chart, and a pair that did not line up would
+       be two charts rather than one. Nought is always on its axis: a range is
+       bounded below by zero, which is why its lower limit is a number and not
+       a line somebody could cross, and a scale that cropped the bottom off
+       would make a settled process look as if it were wandering. */
+    function paintLowerHalf(g) {
+      const lowTop = 14, lowBottom = 24;
+      const lowH = SPC_LOWER_HEIGHT - lowTop - lowBottom;
+      const ranges = lowerPoints.map((p) => p.range).filter(isNum);
+      let ceiling = Math.max(...ranges, lower.upper || 0, lower.centre || 0);
+      if (!(ceiling > 0)) ceiling = 1;
+      ceiling *= 1.1;
+      const ry = (v) => lowerTop + lowTop + lowH - (v / ceiling) * lowH;
+      /* A group of its own. The two halves share one node so they line up and
+         one export carries both; the group is how a reader of the markup — or
+         a test — can still say *the lower chart* without measuring pixels. */
+      const half = add(g, "g",
+                       { "data-half": sampled ? "sample-range" : "moving-range" });
+      for (let i = 0; i <= 2; i++) {
+        const v = (ceiling * i) / 2;
+        add(half, "line", { x1: left, y1: ry(v), x2: left + plot, y2: ry(v),
+                            class: "grid-line" });
+        add(half, "text", { x: left - 6, y: ry(v) + 3, class: "axis",
+                            "text-anchor": "end" },
+            v.toFixed(Math.abs(ceiling) < 10 ? 2 : 0));
+      }
+      guideAt(half, ry, lower.upper, "limit-line", sampled ? "D4·R̄" : "UCL");
+      /* Drawn when it is nought, not hidden. Below n = 7 the lower range limit
+         IS zero (D3 is zero there), and a reader who cannot see the line
+         cannot tell "there is no lower limit on this chart" from "this chart
+         forgot to draw one". */
+      if (sampled) guideAt(half, ry, lower.lower, "limit-line", "D3·R̄");
+      guideAt(half, ry, lower.centre, "centre-line", "R̄");
+      /* A moving range belongs over the LATER of the two readings it is the
+         gap between, so the individuals half's series is offset by one. A
+         sample range belongs under the mean of the same sample. */
+      const at = (i) => (sampled ? x(i) : x(i + 1));
+      add(half, "polyline", {
+        points: lowerPoints.map((p, i) => `${at(i)},${ry(p.range)}`).join(" "),
+        class: "trend-line" });
+      lowerPoints.forEach((point, i) => {
+        const id = sampled ? point.sample : point.check;
+        const hit = lowerFired.has(id);
+        const chosen = id !== undefined && id === (sampled ? open.sample : open.check);
+        const dot = add(half, "circle", {
+          cx: at(i), cy: ry(point.range), r: chosen ? 5.5 : hit ? 4.5 : 2.5,
+          /* The selected ring is a class of its own on this half: one point is
+             one point, and a chart that marked it twice under one name would
+             make "the point that is open" ambiguous to anybody — a reader or a
+             test — counting marks. */
+          class: (hit ? "spc-flag" : "spc-dot") + (chosen ? " spc-mr-selected" : ""),
+          "data-value": raw(point.range),
+          "data-label": (sampled ? "range within the sample" : "moving range")
+            + (envelope.unit ? ` (${envelope.unit})` : ""),
+          "data-series": sampled ? "sample-range" : "moving-range",
+          ...(hit ? { "data-flagged": "true" } : {}),
+          ...(id === undefined ? {} : { [sampled ? "data-sample" : "data-check"]: id }),
+        });
+        add(dot, "title", {}, sampled
+          ? `Range ${point.range}${unit} · ${FS.fmt.stamp(point.ts)} — how far apart `
+            + `the ${point.n || size} readings of this sample were`
+          : `Moving range ${point.range}${unit} · ${FS.fmt.stamp(point.ts)} — the gap `
+            + "from the reading before it");
+        openWith(dot, sampled ? "sample" : "check", id,
+                 sampled ? "sample-range" : "moving-range",
+                 sampled
+                   ? `Sample ${i + 1}, range ${point.range}${unit} across its `
+                     + `${point.n || size} readings — open the readings behind it`
+                   : `Moving range ${i + 1}, ${point.range}${unit}, the gap between `
+                     + `readings ${i + 1} and ${i + 2} — opens reading ${i + 2}, the `
+                     + "later of the two");
+      });
+      add(half, "text", { x: left + 4, y: lowerTop + 10, class: "axis" },
+          (sampled
+            ? `Range within each sample${envelope.unit ? ` (${envelope.unit})` : ""}`
+            : `Moving range${envelope.unit ? ` (${envelope.unit})` : ""}`)
+          + (lower.centre === null ? " — no limits yet" : ""));
+    }
+
+    return {
+      height,
+      title: `${label || "control chart"} — ${sampled
+        ? `X̄ and R, the mean of each sample of ${count(size)}`
+        : "individuals and moving range"}`,
+      /* The server's own conclusion, drawn with the picture so a chart that
+         leaves this page still carries what the plant made of it. Rule 1: it
+         is `verdict`, the sentence `services.spc` wrote, and never one
+         assembled here out of the numbers. Below the fewest points limits need
+         there is no verdict and `note` says why instead. */
+      verdict: envelope.verdict || envelope.note || null,
+      /* Rule 5, on both halves and on what neither half drew. */
+      total: [
+        sampled
+          ? `${things(points.length, "sample")} of ${count(envelope.readings)} readings drawn`
+          : `${things(points.length, "reading")} drawn`,
+        `${count(flagged.size)} flagged by ${things(upper.length, "firing")} `
+          + "of rules 1 to 4",
+        lowerPoints.length
+          ? `${things(lowerPoints.length, sampled ? "sample range" : "moving range")} `
+            + `below, ${count(lowerFired.size)} flagged by `
+            + `${things(lowerFirings, "firing")} of rule ${SPC_RANGE_RULE}`
+          : `nothing drawn below: ${sampled
+              ? `a sample range needs ${count(size)} readings recorded together`
+              : "a moving range needs two readings"}`,
+        aside
+          ? `${count(aside)} stored sample(s) left out — they hold a different `
+            + `number of readings than the ${count(size)} this specification now `
+            + "asks for"
+          : null,
+      ].filter(Boolean).join(" · "),
+      axes: [
+        scale.note,
+        label ? `y: ${label}` : null,
+        /* Rule 4, and the choice this whole picture rests on: a control
+           chart's x-axis is ORDER, not a clock. Two dots side by side may be
+           four seconds or four hours apart, and a reader who took the spacing
+           for time would read a drift off it that is not there. */
+        points.length
+          ? `x: ${noun} order, oldest first — ${FS.fmt.clock(points[0].ts)} to `
+            + `${FS.fmt.clock(points[points.length - 1].ts)}. Not a clock axis: the `
+            + "space between two dots is not the time between them"
+          : null,
+        sampled && isNum(size)
+          ? `each point is the mean of ${count(size)} readings; the chart under it is `
+            + `how far apart those ${count(size)} were, and it is read first — the `
+            + "limits above are computed from the mean of it"
+          : null,
+        control
+          ? `${sampled ? "X̿" : "x̄"} is the centre and UCL/LCL are this process's own `
+            + "variation; LSL/USL are the specification, which control limits are "
+            + "never drawn from"
+          : null,
+      ].filter(Boolean),
+      /* Rule 2's withheld half: a figure this payload refuses, with the reason
+         it gave. Never filled in, never averaged away. */
+      notes: [
+        control ? null : `no control limits: ${envelope.note || "this chart has none"}`,
+        control && envelope.stable === false && envelope.capability
+          ? "Cp and Cpk are withheld while the process is out of control — a "
+            + "capability figure describes a process that no longer exists"
+          : null,
+        control && envelope.capability === null
+          ? "no capability figure: this characteristic has no two-sided "
+            + "specification to judge the spread against"
+          : null,
+        lowerPoints.length && lower.centre === null
+          ? `${sampled ? "the sample range" : "the moving range"} below has no limits `
+            + `yet: ${lower.verdict || lower.note || "not enough of it recorded"}`
+          : null,
+      ].filter(Boolean),
+      paint(g) {
+        /* Which of the two kinds this is, in the server's own word, on the
+           shape's own group. `data-kind` on the <svg> is the kit's shape name
+           — `spc` — now that one shape draws both; a screen or a test that
+           needs to know whether it is looking at individual readings or at
+           sample means reads the word the payload used. */
+        g.setAttribute("data-spc-kind", kind);
+        for (let i = 0; i <= 3; i++) {
+          const v = scale.lo + ((scale.hi - scale.lo) * i) / 3;
+          add(g, "line", { x1: left, y1: y(v), x2: left + plot, y2: y(v),
+                           class: "grid-line" });
+          add(g, "text", { x: left - 6, y: y(v) + 3, class: "axis",
+                           "text-anchor": "end" },
+              v.toFixed(Math.abs(scale.hi - scale.lo) < 10 ? 2 : 0));
+        }
+        guideAt(g, y, envelope.lower_spec, "spec-line", "LSL");
+        guideAt(g, y, envelope.upper_spec, "spec-line", "USL");
+        if (control) {
+          guideAt(g, y, control.lower, "limit-line", "LCL");
+          guideAt(g, y, control.upper, "limit-line", "UCL");
+          /* X-double-bar on a sampled chart, and it is not a flourish: the
+             centre there is the mean of the sample means, and calling it x̄
+             under a chart whose points are already averages is the one label a
+             process engineer would read as the wrong number. */
+          guideAt(g, y, control.centre, "centre-line", sampled ? "X̿" : "x̄");
+        }
+        if (points.length) {
+          add(g, "polyline", {
+            points: points.map((p, i) => `${x(i)},${y(p.value)}`).join(" "),
+            class: "trend-line" });
+        }
+        points.forEach((point, i) => {
+          /* What this dot IS, by its own id: a sample on a sampled chart, a
+             reading on an individuals one — and never the nth dot, which is a
+             different point every time a check is recorded. */
+          const id = sampled ? point.sample : point.check;
+          const chosen = id !== undefined && id === (sampled ? open.sample : open.check);
+          const hit = flagged.has(i);
+          const dot = add(g, "circle", {
+            cx: x(i), cy: y(point.value), r: chosen ? 5.5 : hit ? 4.5 : 2.5,
+            class: (hit ? "spc-flag" : "spc-dot") + (chosen ? " spc-selected" : ""),
+            /* Rule 1: the envelope's own number, on the mark that drew it. */
+            "data-value": raw(point.value),
+            "data-label": (label || noun) + (sampled ? ` — mean of ${count(size)}` : ""),
+            "data-series": sampled ? "xbar" : "individuals",
+            ...(hit ? { "data-flagged": "true" } : {}),
+            ...(id === undefined ? {} : { [sampled ? "data-sample" : "data-check"]: id }),
+          });
+          add(dot, "title", {}, (sampled
+            ? `Mean ${point.value}${unit} of ${size} · `
+            : `${point.value}${unit} · `)
+            + FS.fmt.stamp(point.ts)
+            + (hit ? " — a rule fired here" : ""));
+          openWith(dot, sampled ? "sample" : "check", id,
+                   sampled ? "xbar" : "individuals",
+                   sampled
+                     ? `Sample ${i + 1}, mean ${point.value}${unit} of ${count(size)} `
+                       + `readings at ${FS.fmt.stamp(point.ts)} — open the readings `
+                       + "behind it"
+                     : `Reading ${i + 1}, ${point.value}${unit} at `
+                       + `${FS.fmt.stamp(point.ts)} — open the records behind it`);
+        });
+        /* What this picture is OF, on the picture. The frame's <title> is for a
+           screen reader; a chart pasted into a slide has to name itself. */
+        if (label) {
+          add(g, "text", { x: left + 4, y: top + 10, class: "axis" },
+              label + (sampled ? ` — mean of ${count(size)}` : ""));
+        }
+        /* The ends of the axis in the plant's own clock, so "oldest first" is
+           a fact on the chart and not only in the footer. */
+        if (points.length > 1) {
+          add(g, "text", { x: left, y: top + plotH + 14, class: "axis" },
+              FS.fmt.clock(points[0].ts));
+          add(g, "text", { x: left + plot, y: top + plotH + 14, class: "axis",
+                           "text-anchor": "end" },
+              FS.fmt.clock(points[points.length - 1].ts));
+        }
+        if (lowerPoints.length) paintLowerHalf(g);
+      },
+    };
+  }
+
   const SHAPES = { line: lineShape, bars: barsShape, states: statesShape,
-                   histogram: histogramShape, graph: graphShape };
+                   histogram: histogramShape, graph: graphShape, spc: spcShape };
 
   /* ================================================================
      EXPORT — the same picture, off the page
