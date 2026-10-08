@@ -2196,6 +2196,32 @@
       });
     }
 
+    /* The mark on the point being asked about: a RING around the dot, not a
+       bigger dot.
+
+       Scott, 2026-10-08, from the live pictures: the marked sample read as a
+       fatter dot, so on a chart where a flagged point is already fatter there
+       was no telling the two apart - and "the dot he is asking about" is the
+       one thing the sentence beside the chart is about. A ring says "this
+       one" without touching the reading: the dot keeps its own size and its
+       own colour, flagged or not, and the ring sits outside it.
+
+       Decoration, so it takes no pointer and no keyboard: the dot inside it is
+       the button, and a ring that swallowed the click would make the point
+       that is open the one point nobody can re-open. It carries no
+       `data-value` either - a ring is not a reading. */
+    function ringAround(host, cx, cy, r, what, id) {
+      const ring = add(host, "circle", {
+        cx, cy, r: r + 4, class: "spc-ring", "pointer-events": "none",
+        "aria-hidden": "true",
+      });
+      if (id !== undefined && id !== null) {
+        ring.setAttribute(what === "sample" ? "data-ring-sample" : "data-ring-check",
+                          String(id));
+      }
+      return ring;
+    }
+
     /* A line a reader judges the dots against, with its own number on it. It
        carries no `data-value`: a specification limit is not a reading, and
        making one a hover target would put a tolerance where the frame looks
@@ -2249,12 +2275,13 @@
       add(half, "polyline", {
         points: lowerPoints.map((p, i) => `${at(i)},${ry(p.range)}`).join(" "),
         class: "trend-line" });
+      const ringLater = [];
       lowerPoints.forEach((point, i) => {
         const id = sampled ? point.sample : point.check;
         const hit = lowerFired.has(id);
         const chosen = id !== undefined && id === (sampled ? open.sample : open.check);
         const dot = add(half, "circle", {
-          cx: at(i), cy: ry(point.range), r: chosen ? 5.5 : hit ? 4.5 : 2.5,
+          cx: at(i), cy: ry(point.range), r: hit ? 4.5 : 2.5,
           /* The selected ring is a class of its own on this half: one point is
              one point, and a chart that marked it twice under one name would
              make "the point that is open" ambiguous to anybody — a reader or a
@@ -2281,7 +2308,11 @@
                      + `readings ${i + 1} and ${i + 2} — opens reading ${i + 2}, the `
                      + "later of the two",
                  point.ts);
+        if (chosen) ringLater.push([at(i), ry(point.range), hit ? 4.5 : 2.5, id]);
       });
+      for (const [cx, cy, r, id] of ringLater) {
+        ringAround(half, cx, cy, r, sampled ? "sample" : "check", id);
+      }
       add(half, "text", { x: left + 4, y: lowerTop + 10, class: "axis" },
           (sampled
             ? `Range within each sample${envelope.unit ? ` (${envelope.unit})` : ""}`
@@ -2396,6 +2427,7 @@
             points: points.map((p, i) => `${x(i)},${y(p.value)}`).join(" "),
             class: "trend-line" });
         }
+        const ringLater = [];
         points.forEach((point, i) => {
           /* What this dot IS, by its own id: a sample on a sampled chart, a
              reading on an individuals one — and never the nth dot, which is a
@@ -2404,7 +2436,7 @@
           const chosen = id !== undefined && id === (sampled ? open.sample : open.check);
           const hit = flagged.has(i);
           const dot = add(g, "circle", {
-            cx: x(i), cy: y(point.value), r: chosen ? 5.5 : hit ? 4.5 : 2.5,
+            cx: x(i), cy: y(point.value), r: hit ? 4.5 : 2.5,
             class: (hit ? "spc-flag" : "spc-dot") + (chosen ? " spc-selected" : ""),
             /* Rule 1: the envelope's own number, on the mark that drew it. */
             "data-value": raw(point.value),
@@ -2427,7 +2459,14 @@
                      : `Reading ${i + 1}, ${point.value}${unit} at `
                        + `${FS.fmt.stamp(point.ts)} — open the records behind it`,
                    point.ts);
+          /* Drawn after the whole series rather than beside its own dot: a
+             ring the next dot painted over would be a mark the reader cannot
+             see on exactly the chart that needs it most, a crowded one. */
+          if (chosen) ringLater.push([x(i), y(point.value), hit ? 4.5 : 2.5, id]);
         });
+        for (const [cx, cy, r, id] of ringLater) {
+          ringAround(g, cx, cy, r, sampled ? "sample" : "check", id);
+        }
         /* What this picture is OF, on the picture. The frame's <title> is for a
            screen reader; a chart pasted into a slide has to name itself. */
         if (label) {
