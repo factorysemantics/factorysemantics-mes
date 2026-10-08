@@ -1142,7 +1142,12 @@ def test_a_dot_opens_a_point_only_where_the_screen_said_it_could(page):
                 new MouseEvent('click', {bubbles: true}));
             setTimeout(() => resolve(null), 2000);
         })""")
+    # `at` is the point's own stamp, carried in the event so that a page which
+    # wants to say WHEN the dot it was handed was does not have to find the
+    # point again by index in a payload whose two halves are indexed
+    # differently. The AI tab writes it into the question box.
     assert fired == {"what": "sample", "id": 14, "series": "xbar",
+                     "at": "2026-10-07T07:30:00",
                      "label": fired and fired.get("label")}, fired
     assert "open the readings behind it" in fired["label"]
 
