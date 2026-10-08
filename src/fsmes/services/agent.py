@@ -519,7 +519,16 @@ DRAW_TOOL = "draw"
 
 #: The shapes `kit.js` has. `pareto` is `bars` with the cumulative line on, and
 #: is named here because that is the word a person asking for one uses.
-CHART_SHAPES = ("line", "bars", "pareto", "states", "histogram", "graph")
+CHART_SHAPES = ("line", "bars", "pareto", "states", "histogram", "graph", "spc")
+
+#: The keys that say a payload is a control chart, and so the keys that say
+#: `line` is the wrong shape for it. Asked for the fill-height chart on
+#: 2026-10-07 the model drew `spc_chart` as a `line`: a true picture of the
+#: sample means, on a zero-based axis, with no control limits, no spec band and
+#: no flagged dots - the one chart in this product whose whole meaning is the
+#: limits, drawn without them. `kit.js` refuses it by name; so does this, a
+#: round trip earlier.
+CONTROL_CHART_KEYS = ("points", "control", "signals")
 
 #: What a spec may carry, and nothing else. A key outside this set is a spec
 #: carrying its own numbers, and it is refused by name rather than ignored:
@@ -537,6 +546,8 @@ def chart_tools() -> list[dict]:
              "`from` is the id of your own tool_use block for that call, or just the "
              "tool's name, which draws that tool's most recent answer - the plant's "
              "own payload is what gets drawn, with its total and its coverage on it. "
+             "Use `spc` for an `spc_chart` payload: it draws the control chart the SPC "
+             "screen draws, with the limits, the spec band and the dots a rule fired on. "
              "You pass no numbers: this tool has nowhere to put them, deliberately.",
          "input_schema": {
              "type": "object",
@@ -582,7 +593,9 @@ ANALYSIS_CHARTS = (
     "Otherwise draw when a shape is the answer - a series over time, a spread - and not to "
     "decorate a sentence; a reader asked you a question, not for a dashboard. A trace graph is "
     "`graph`, a downtime pareto is `bars`, a tag or MTTR series is `line`, a state history is "
-    "`states`.")
+    "`states`, and a control chart from `spc_chart` is `spc` - never `line`, which would draw "
+    "the readings on a plain axis with no control limits, no specification band and nothing "
+    "marking the points that fired a rule, which is the whole of what that chart is for.")
 
 ANALYSIS_SYSTEM = """You are the analysis agent inside FactorySemantics MES, a manufacturing \
 execution system, exploring plant "{plant}" for the person who asked.
@@ -612,6 +625,24 @@ were shown as all there is.
 
 Read before you deny. Never say this plant has no such machine, no such stop and no such record \
 until you have looked for it in this turn.
+
+A question about why a point on a control chart is where it is has a tool, and the answer is \
+never yours to reason out. `spc_chart` says that a rule fired and where; `spc_sample` (for a \
+point of an X-bar chart, named by the `sample` on that point) and `spc_point` (for a reading, \
+named by its `check`) open the same dossier the SPC screen opens when somebody clicks that \
+point - the instrument and its calibration, the same characteristic by every other gauge in the \
+hour either side, what the station was doing and what it had just come out of with the seconds \
+since, what the rest of the line was doing in the same window, the stops, the maintenance orders \
+and the findings. Asked why a reading is high, low, flagged or out of specification, read the \
+dossier before you answer, and answer out of its blocks, naming the block and its coverage. \
+Where a block is empty or nobody was watching, say which block and say so; a plausible cause \
+is the one answer here that is worse than none, because it is the answer somebody acts on.
+
+And a record in the same window is not a cause. A changeover that ended forty seconds before a \
+high sample is a changeover that ended forty seconds before a high sample: say both facts, say \
+how far apart they are, and never join them into a third. Nothing in this product records that \
+one thing caused another, and the sentence that says it did is indistinguishable, to the person \
+reading it, from one this plant measured.
 
 A question about the people here starts with what they asked. When somebody asks about \
 operators, about the people on this floor, about what is going wrong for them, about the \
@@ -1825,6 +1856,18 @@ def _draw(sess: Session, args: dict) -> tuple[dict, dict | None]:
                     f"{tools[0]}." if read
                     else "Read something first, then draw it.")}, None)
     tool, envelope = held["tool"], held["envelope"]
+    # A control chart asked for as something else. The refusal names the shape
+    # rather than drawing the series, because the picture it would have drawn is
+    # the failure Scott saw: right numbers, no limits, and no way to tell from
+    # looking at it that the chart had been stripped of its meaning.
+    if (shape != "spc" and isinstance(envelope, dict)
+            and all(k in envelope for k in CONTROL_CHART_KEYS)):
+        return ({"error":
+                 f"{tool} returned a control chart - it carries "
+                 f"{', '.join(CONTROL_CHART_KEYS)} and its own control limits - and "
+                 f"{shape!r} would draw the readings without the limits, the specification "
+                 f"band or the marks on the points that fired a rule. Draw it as `spc`."},
+                None)
     spec = {"id": f"c{len(sess.turn_charts) + 1}", "from": from_id, "tool": tool,
             "shape": shape, "title": str(args.get("title") or "").strip() or tool,
             "total": _total_of(envelope), "coverage": _coverage_word(envelope),

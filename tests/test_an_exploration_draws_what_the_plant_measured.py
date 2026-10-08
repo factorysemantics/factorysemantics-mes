@@ -57,6 +57,26 @@ A_PARETO = {"reasons": [{"reason": "mechanical", "seconds": 2140},
             "total_seconds": 3320, "unlabelled_share": 0.355,
             "unknown_seconds": 900, "unknown_share": 0.04}
 
+#: A control chart, shaped the way `/quality/spc/{material}/{characteristic}`
+#: serves one: the limits the plant worked out, the rules it found, and its own
+#: verdict. The only payload in this file whose whole meaning is in the lines
+#: and not in the points.
+A_CONTROL_CHART = {
+    "material": "FG-COLA", "characteristic": "fill height", "unit": "mm",
+    "kind": "xbar_r", "sample_size": 5, "n": 2, "readings": 10,
+    "lower_spec": 59.0, "upper_spec": 63.0,
+    "points": [{"value": 61.2, "ts": "2026-10-07T21:18:00", "sample": 11, "check": 101,
+                "range": 0.4},
+               {"value": 62.6, "ts": "2026-10-07T21:38:00", "sample": 12, "check": 106,
+                "range": 0.6}],
+    "control": {"centre": 61.555, "lower": 60.3, "upper": 62.5, "sigma": 0.38},
+    "signals": [{"rule": 1, "index": 1, "label": "beyond the upper control limit"}],
+    "verdict": "out of control, not out of spec",
+    "coverage": "absent",
+    "coverage_note": "a list of the records in this window, not a rate over a "
+                     "watched one - so there is no coverage figure to give",
+}
+
 
 def _usage():
     return SimpleNamespace(input_tokens=1000, output_tokens=50,
@@ -87,7 +107,8 @@ def exploring(monkeypatch, tmp_path):
     monkeypatch.setattr(agent, "USAGE_FILE", tmp_path / "usage.jsonl")
     monkeypatch.setattr(agent, "TURN_FILE", tmp_path / "turns.jsonl")
     script: list = []
-    served: dict = {"trace_graph": A_GRAPH, "downtime_pareto": A_PARETO}
+    served: dict = {"trace_graph": A_GRAPH, "downtime_pareto": A_PARETO,
+                    "spc_chart": A_CONTROL_CHART}
 
     def fake_model(sess):
         return script.pop(0)
@@ -266,6 +287,72 @@ def test_a_read_that_failed_is_not_something_a_chart_can_be_drawn_from(exploring
     assert sess.payloads == {}
 
 
+def test_a_control_chart_is_drawn_as_a_control_chart(exploring):
+    """The picture Scott asked for, end to end. He reads a control chart as a
+    control chart - limits, specification band, the dots that fired a rule -
+    and the shape that draws one is named on the tool, so the model asking for
+    his slide gets his chart and not a series."""
+    script, served = exploring
+    script += [_wants("tu_1", "spc_chart", material="FG-COLA",
+                      characteristic="fill height"),
+               _wants("tu_2", agent.DRAW_TOOL,
+                      **{"from": "spc_chart", "shape": "spc",
+                         "title": "Fill height, last 30 samples"}),
+               _said("Fill height is out of control, not out of spec.")]
+    sess = _open()
+    out = agent.message(sess, "how does the fill height chart look?")
+
+    chart = out["charts"][0]
+    assert chart["shape"] == "spc"
+    # The limits and the verdict travel whole: the browser draws the plant's
+    # own numbers, and nothing between here and the SVG works any of them out.
+    assert chart["envelope"] == served["spc_chart"]
+    assert chart["envelope"]["control"]["upper"] == 62.5
+    assert chart["envelope"]["verdict"] == "out of control, not out of spec"
+    assert chart["coverage"] == "absent"
+
+
+def test_a_control_chart_asked_for_as_a_line_is_refused_and_told_which_shape(exploring):
+    """The failure Scott saw on 2026-10-07, refused a round trip before the
+    browser. Asked for the fill-height chart the model drew `spc_chart` as a
+    `line`: every number right, on a zero-based axis, with no control limits,
+    no specification band and nothing marking the point that fired rule 1 - a
+    picture of a settled process, of a process that is not settled. `kit.js`
+    refuses it by name; so does this, and the refusal says `spc` rather than
+    only saying no."""
+    script, _served = exploring
+    script += [_wants("tu_1", "spc_chart", material="FG-COLA",
+                      characteristic="fill height"),
+               _wants("tu_2", agent.DRAW_TOOL, **{"from": "tu_1", "shape": "line"}),
+               _said("Drawn.")]
+    sess = _open()
+    out = agent.message(sess, "chart the fill height")
+
+    assert "charts" not in out
+    refusal = next(row for row in out["transcript"] if row["tool"] == agent.DRAW_TOOL)
+    assert refusal["ok"] is False
+    assert "`spc`" in refusal["summary"]
+    for missing in ("control limits", "specification", "fired a rule"):
+        assert missing in refusal["summary"]
+
+
+def test_a_payload_that_is_not_a_control_chart_is_still_drawn_as_it_was_asked(exploring):
+    """And the refusal is narrow. It fires on the three keys that make a
+    payload a control chart, so a tag trend asked for as a `line` is a tag
+    trend drawn as a line - a guard that caught everything with points in it
+    would be this file deciding what every reader is looking at."""
+    script, served = exploring
+    served["tag_trend"] = {"tag": "FillWeight", "points": [{"ts": "x", "mean": 61.0}],
+                           "total": 1, "coverage": 0.72}
+    script += [_wants("tu_1", "tag_trend", tag="FillWeight", hours=8),
+               _wants("tu_2", agent.DRAW_TOOL, **{"from": "tu_1", "shape": "line"}),
+               _said("Drawn.")]
+    sess = _open()
+    out = agent.message(sess, "trend it")
+
+    assert out["charts"][0]["shape"] == "line"
+
+
 def test_only_the_kind_that_explores_is_offered_the_draw_tool():
     """The floor assistant answers beside somebody standing at a machine, and a
     picture there is a dashboard nobody asked for (design page §2). It is a
@@ -396,6 +483,19 @@ def test_the_prompt_tells_the_model_how_to_ask_for_a_chart_and_that_it_passes_no
     assert "you never pass numbers" in prompt
     for shape in agent.CHART_SHAPES:
         assert shape in prompt
+
+
+def test_the_prompt_names_the_shape_a_control_chart_is_drawn_as():
+    """Naming the shape in the enum is not enough: `line` is the shape a model
+    reaches for when the answer is a series over time, and a control chart is
+    a series over time. So the prompt says which, and says what a `line` would
+    leave off."""
+    prompt = agent.system_for(agent.ANALYSIS)
+    assert "`spc_chart` is `spc`" in prompt
+    assert "never `line`" in prompt
+    # And the tool's own description says it too, for a model that reads the
+    # tool and not the prompt.
+    assert "`spc` for an `spc_chart` payload" in agent.chart_tools()[0]["description"]
 
 
 def test_the_prompt_says_a_graph_it_read_is_drawn_and_not_described():

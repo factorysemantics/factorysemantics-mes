@@ -340,7 +340,9 @@ def test_the_screen_draws_one_dot_per_sample_on_each_half_of_one_chart(sampled_c
     sixty bottles behind them. Both halves live in one <svg> - that is what
     makes one export carry both - and a dot on either half is the same sample,
     at the same place along the chart, opening the same five readings."""
-    assert sampled_chart.get_attribute("#chart svg", "data-kind") == "spc-xbar-r"
+    assert sampled_chart.get_attribute("#chart svg", "data-kind") == "spc"
+    assert sampled_chart.get_attribute(
+        "#chart [data-spc-kind]", "data-spc-kind") == "xbar_r"
     assert len(sampled_chart.query_selector_all("#chart svg")) == 1
     means, ranges = _dots(sampled_chart, "xbar"), _dots(sampled_chart, "sample-range")
     assert len(means) == len(ranges) == len(MEANS)
@@ -473,7 +475,9 @@ def test_a_characteristic_inspected_one_at_a_time_still_draws_its_chart(admin, p
             "() => document.querySelectorAll('#chart circle[data-check]').length > 10",
             timeout=30000)
         assert not page.query_selector("#chart .empty")
-        assert page.get_attribute("#chart svg", "data-kind") == "spc-imr"
+        assert page.get_attribute("#chart svg", "data-kind") == "spc"
+        assert page.get_attribute(
+            "#chart [data-spc-kind]", "data-spc-kind") == "imr"
         assert _as_written(page, "#chart-heading") == "Individuals and moving range"
         assert "reading" in page.inner_text("#chart-legend")
         assert "X̿" not in page.inner_text("#chart-legend")

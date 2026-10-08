@@ -133,13 +133,11 @@ MOST_BUCKETS = 240
 #: carry.
 MOST_LINE_STATIONS = 8
 
-#: What the blocks that are lists of records say instead of a coverage figure.
-#: `kit.js` reads the word `absent` and prints this sentence rather than
-#: "watched —% of the window", which is the exact confusion it is here to stop.
-RECORDS_NOT_A_RATE = (
-    "a list of the records in this window, not a rate over a watched one — "
-    "so there is no coverage figure to give"
-)
+#: What the blocks that are lists of records say instead of a coverage figure
+#: - the control chart's own sentence, from `services.spc`, because the chart
+#: and the dossier behind a point on it are lists of the same records and must
+#: not word the same refusal two ways.
+RECORDS_NOT_A_RATE = spc.RECORDS_NOT_A_RATE
 
 
 # ----------------------------------------------------------------- the reading

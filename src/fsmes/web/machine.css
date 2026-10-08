@@ -74,11 +74,11 @@
 .health-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--s3); }
 .health-tile .machine-meta { flex-direction: column; gap: 2px; margin-bottom: 0; }
 
-/* ---------- SPC ---------- */
-.spec-line { stroke: var(--down); stroke-width: 1; stroke-dasharray: 6 3; }
-.centre-line { stroke: var(--running); stroke-width: 1.2; }
-.spc-dot { fill: var(--accent); }
-.spc-flag { fill: var(--quality); stroke: var(--text); stroke-width: 0.8; }
+/* ---------- SPC ----------
+   The chart's own marks moved to styles.css on 2026-10-07, when the control
+   chart became a kit shape: they are the kit's classes now, and a page that
+   draws a chart without linking this sheet still has to get them. What stays
+   here is the HTML beside the chart. */
 .verdict { font-size: var(--fs-lg); font-weight: 600; margin: 0 0 var(--s2); }
 .verdict.bad { color: var(--down); }
 .verdict.good { color: var(--running); }

@@ -67,6 +67,14 @@
         <span id="chart-note" class="muted"></span>
         <span class="spacer"></span>
         <span id="chart-tools" class="chart-tools"></span>
+        <!-- The same chart, explained. A link rather than a button, so it can
+             be opened in a tab of its own and read beside this one; its href
+             is written from the characteristic on the screen, and the sample
+             open beside it if there is one. No payload travels: the question
+             carries the names and the chat reads the plant itself. -->
+        <a id="explain-chart" class="ghost small" data-assist="spc-explain-chart"
+           aria-describedby="explain-hint"
+           href="/dashboard/ai#explore">Explain this chart</a>
         <button id="open-point" class="ghost small" data-assist="spc-open-point"
                 aria-describedby="point-hint" disabled>Open a point</button></h2>
       <div id="chart" class="chart"></div>
@@ -79,6 +87,10 @@
         the gap between two readings and opens the later of them. The button
         opens the newest reading a rule fired on, and the newest reading when
         none did.</p>
+      <p id="explain-hint" class="muted small">Explain this chart opens the AI
+        tab with the question already typed — about this characteristic, and
+        about the point open beside it if one is. Read it, change it if it is
+        not quite your question, then ask it. It reads; it changes nothing.</p>
       <p class="legend" id="chart-legend"></p>
       <p id="chart-explainer" class="muted small"></p>
     </section>

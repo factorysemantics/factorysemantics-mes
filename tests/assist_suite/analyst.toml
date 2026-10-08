@@ -347,3 +347,48 @@ read = "audit"
 read = "oee_breakdown"
 [[case.plan]]
 say = "Answered from what I read: the shifts this person's rows fell in, and what those shifts made."
+
+# ----------------------------------------- why a point on a chart is where it is
+#
+# The pair added 2026-10-08 with the dossier tools. The chart says a rule fired;
+# `spc_sample` says what else was happening in that sample's own window, and this
+# is the only question in the suite whose answer is a *why* - which is also the
+# one question a model will answer out of its own head if nothing stops it.
+#
+# Two reads, in that order, because the sample id is on the chart and nowhere
+# else: a case that went straight to the dossier would be a case that already
+# knew the answer's address.
+
+[[case]]
+id = "analyst-asks-why-a-flagged-sample-is-high"
+request = "the fill height chart has a sample above its upper control limit — why is that sample high?"
+screen = "/dashboard/spc"
+expect = "read"
+reads = ["spc_chart", "spc_sample"]
+lookup = { material = "FG-COLA", characteristic = "fill_height", sample_id = 15 }
+requires = ["sampled_spec:FG-COLA/fill_height",
+            "flagged_sample:FG-COLA/fill_height/15"]
+contains_any = [["changeover", "setup", "product change", "size change"],
+                ["control limit", "rule 1", "beyond"]]
+never = ["caused the high reading", "because of the changeover",
+         "the changeover caused"]
+note = """The one question in this file whose answer is a cause, and the reason
+`never` is longer than `contains_any`. The dossier's `machine` block says the
+station came out of a changeover and how many seconds before the sample it
+ended, and its `line` block says what the rest of the line was doing - so the
+honest answer names the changeover, says how long before, and stops. "The
+changeover caused it" is a link nothing in this product records, exactly as with
+a question and a stop; a plant manager handed that sentence would act on a
+finding the records do not carry.
+
+The second half of `contains_any` is there so an answer cannot be about a
+changeover and silent about the chart: the point is high relative to limits this
+plant worked out, and the reply has to say which rule found it.
+
+Scored on a real sample id rather than on whatever is flagged today, because a
+case that asked "the flagged one" would pass on any dossier that came back. On a
+plant whose sample 15 is settled - or which has no sampled characteristic at all
+- this reports *not arranged* with that reason, which is the truth about that
+plant: `flagged_sample` is a declared requirement and not an arranged one,
+because recording readings until the rules fire would be writing a process upset
+into somebody's quality record to make a case pass."""

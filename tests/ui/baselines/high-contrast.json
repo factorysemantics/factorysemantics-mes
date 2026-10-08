@@ -806,6 +806,16 @@
   }
  },
  "/dashboard/spc": {
+  "chart": {
+   "background-color": "rgba(0, 0, 0, 0)",
+   "border": "0px none rgb(255, 255, 255)",
+   "border-radius": "0px",
+   "color": "rgb(255, 255, 255)",
+   "display": "block",
+   "font-size": "15px",
+   "font-weight": "400",
+   "padding": "0px"
+  },
   "header": {
    "background-color": "rgb(10, 10, 10)",
    "border": "",

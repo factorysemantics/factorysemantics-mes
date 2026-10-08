@@ -515,6 +515,17 @@ const PLOTS = {
     line: (e) => ({ series: [{ label: "good", points: e.points || [] }],
                     value: "good", title: "Good over the window" }),
   },
+  /* The control chart, and the one entry here that names no field. An
+     `spc_chart` payload already IS a control chart: the shape reads `points`,
+     `control`, `signals`, `kind` and both specification limits off it by name,
+     so there is nothing to choose and nothing this file could get wrong. The
+     entry exists for the title - a picture the model titled nothing should
+     still say which characteristic it is of - and because this map is the list
+     of what the explore screen can draw, and a control chart is now on it. */
+  spc_chart: {
+    spc: (e) => ({ title: `${e.material || ""} ${e.characteristic || ""}`.trim()
+                          || "Control chart" }),
+  },
 };
 
 /* The envelope a shape is handed, and the options beside it. The envelope is
@@ -535,8 +546,93 @@ function exploreLog() {
   return $("#explore-log");
 }
 
+/* ---------- the model's words, as markdown ----------
+
+   Claude answers in markdown whether or not anybody asked it to, so until
+   this the verdict arrived on the screen as `**out of control, not out of
+   spec**` - asterisks and all - and a list of three findings arrived as three
+   lines beginning with a hyphen. Two ways out: ask the model for plain text,
+   or render the little of markdown it uses. This is the second, because the
+   emphasis is doing work - it is on the verdict and on the rule that fired -
+   and because a prompt that forbids markdown is a prompt that has to keep
+   forbidding it.
+
+   Minimal, and built out of nodes rather than markup: bold, italics, inline
+   code, bullet and numbered lists, paragraphs, and a heading drawn as a bold
+   line. No links, no images, no HTML - nothing in here ever parses markup, so
+   a model that wrote `<script>` wrote nine characters of text and this screen
+   shows nine characters of text. Anything this does not understand stays
+   exactly the characters the model sent: unrendered is a cosmetic failure and
+   mangled is not. */
+
+/* One capture group holding every inline form, so `split` hands back the
+   pieces and the markers alternately. */
+const INLINE = /(\*\*[^*]+\*\*|__[^_]+__|\*[^*\n]+\*|_[^_\n]+_|`[^`\n]+`)/;
+const BULLET = /^\s*[-*\u2022]\s+(.*)$/;
+const NUMBERED = /^\s*\d+[.)]\s+(.*)$/;
+const HEADING = /^\s*#{1,6}\s+(.*)$/;
+
+function inlineInto(host, text) {
+  for (const piece of String(text).split(INLINE)) {
+    if (!piece) continue;
+    const marker = piece.slice(0, 2);
+    if (marker === "**" || marker === "__") {
+      host.appendChild(el("strong", null, piece.slice(2, -2)));
+    } else if (piece.startsWith("`") && piece.length > 2) {
+      host.appendChild(el("code", null, piece.slice(1, -1)));
+    } else if ((piece.startsWith("*") || piece.startsWith("_")) && piece.length > 2) {
+      host.appendChild(el("em", null, piece.slice(1, -1)));
+    } else {
+      host.appendChild(document.createTextNode(piece));
+    }
+  }
+}
+
+function markdownInto(host, text) {
+  /* The two things a line can be continuing: a list of the same sort, or a
+     paragraph soft-wrapped across lines. A blank line ends both. */
+  let list = null;
+  let para = null;
+  for (const raw of String(text).split("\n")) {
+    if (!raw.trim()) { list = null; para = null; continue; }
+    const bullet = BULLET.exec(raw);
+    const numbered = bullet ? null : NUMBERED.exec(raw);
+    if (bullet || numbered) {
+      para = null;
+      const tag = bullet ? "ul" : "ol";
+      if (!list || list.tagName.toLowerCase() !== tag) {
+        list = el(tag, "explore-list");
+        host.appendChild(list);
+      }
+      const item = el("li");
+      inlineInto(item, (bullet || numbered)[1]);
+      list.appendChild(item);
+      continue;
+    }
+    list = null;
+    const heading = HEADING.exec(raw);
+    if (heading) {
+      para = null;
+      const head = el("p", "explore-head");
+      inlineInto(head, heading[1]);
+      host.appendChild(head);
+      continue;
+    }
+    if (para) inlineInto(para, ` ${raw.trim()}`);
+    else {
+      para = el("p");
+      inlineInto(para, raw.trim());
+      host.appendChild(para);
+    }
+  }
+}
+
 function exploreSay(text, cls) {
-  const line = el("div", `explore-msg ${cls}`, text);
+  const line = el("div", `explore-msg ${cls}`);
+  /* The person's own question and "working…" are this screen's own words and
+     go in as they are. Only the model's reply is markdown. */
+  if (cls === "bot") markdownInto(line, text);
+  else line.textContent = text;
   exploreLog().appendChild(line);
   line.scrollIntoView({ block: "nearest" });
   return line;
@@ -893,9 +989,28 @@ function firstTab() {
     $("#explore-input").addEventListener("keydown", (event) => {
       if (event.key === "Enter") sendExplore();
     });
+    prefill();
   }
   FS.tabs.init(document, onTab);
 })().catch(fail);
+
+/* A question another screen handed over. The SPC tab's *Explain this chart*
+   lands here as `/dashboard/ai?ask=...#explore`: the hash is the tab, which
+   `FS.tabs` reads, and the query is the sentence.
+
+   It is TYPED, not sent. The person reads it, changes it if it is not quite
+   their question, and presses Ask. Sending it for them would spend a budget
+   somebody else's button had decided to spend, and the question is a guess at
+   what they wanted to know - the chart they were looking at, and the sample
+   they had open. The guess is worth making; acting on it is not. */
+function prefill() {
+  const asked = new URLSearchParams(window.location.search).get("ask");
+  const box = $("#explore-input");
+  if (!asked || !box) return;
+  box.value = asked;
+  box.focus();
+  box.setSelectionRange(box.value.length, box.value.length);
+}
 
 function sendExplore() {
   const box = $("#explore-input");

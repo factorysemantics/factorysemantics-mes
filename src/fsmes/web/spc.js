@@ -78,42 +78,74 @@ function fail(error) {
 
 const num = (v, d = 3) => (v === null || v === undefined ? "—" : Number(v).toFixed(d));
 
-/* The two halves, in one <svg>.
+/* The two halves, in one <svg>, drawn by the kit.
 
-   An IMR chart is a pair: the individuals half asks whether a reading is
-   where it should be, the moving-range half asks whether the gap between
-   consecutive readings is. They are read together, so they share one x scale
-   and one node - which is also what makes `FS.kit.export` carry both halves
-   into one file rather than half a chart.
+   The picture itself is `FS.kit`'s `spc` shape since 2026-10-07 and this
+   function is the twelve lines that hand it the payload. It was 250 lines of
+   geometry here until then, which meant the AI tab had no way to draw a
+   control chart at all: asked to put one in an answer it fell back on `line`
+   and produced thirty sample means on a zero-based axis with no limits, no
+   spec band and no flagged dots. One implementation, drawn two places.
 
-   The individuals half keeps the geometry it has had: the same height, the
-   same padding, the same scale. The moving-range half is added underneath at
-   about half the height, because it answers a smaller question. Nothing above
-   it moves. */
-const MR_HEIGHT = 128;
-const MR_GAP = 18;
+   What stayed on this page is what the page knows and the kit must not: that a
+   dot here opens the records behind it (`openable`), and which point the panel
+   beside the chart is already open on (`selected`). The kit dispatches
+   `fs-spc-open` and this file decides what opening means - the same division
+   the graph's expand event keeps. */
 
 /* Which chart this is, in one place and in the server's own word (`kind`,
    decision 0040). Two kinds are drawn: `imr`, one piece at a time with the
    gap between consecutive readings below it, and `xbar_r`, a sample of n
    pieces whose points are the sample means with the spread inside each sample
    below. Anything else is a newer plant than this page, and drawing its points
-   as one of these two is exactly the failure 0040 exists to stop. */
+   as one of these two is exactly the failure 0040 exists to stop.
+
+   The kit's shape refuses a third word too, in its own sentence. Both checks
+   are deliberate: the kit's is the contract, and this one is the SCREEN's, so
+   a reader gets the page's own words about the characteristic they picked
+   rather than a thrown error in a console they will never open. */
 const INDIVIDUALS = "imr";
 const SAMPLED = "xbar_r";
 const sampledChart = (data) => (data && data.kind) === SAMPLED;
 
-/* Rule 5 is the range rule, on either kind. On an individuals chart it fires
-   on the gap between two readings, which is its own series with its own index
-   space, so it arrives in `moving_range.signals`. On a sampled chart it fires
-   on the spread inside ONE sample, so both halves are indexed by the same
-   samples and it arrives in `signals` beside rules 1 to 4 - which is why the
-   upper half filters it out and the lower half keeps only it. */
-const RANGE_RULE = 5;
+/* The question this chart would be asked about, in the words Scott asked it in
+   (2026-10-07): a plant manager who wants two sentences and one picture. The
+   names travel in the sentence and nothing else travels at all - no payload,
+   no scrape of this page's DOM - so the chat reads the plant itself and the
+   answer is the plant's rather than this screen's copy of it.
+
+   The sample or the reading open beside the chart is added when there is one,
+   because *why is this point where it is* is the question somebody who has
+   already opened a panel is holding. */
+function explainQuestion(data) {
+  const chart = `${data.material || ""} ${data.characteristic || ""}`.trim();
+  const question =
+    "I'm the plant manager and I don't understand the SPC tab. How does the "
+    + `${chart} chart look? Two sentences for my boss and the one graph for a `
+    + "slide.";
+  if (openSample !== null && openSample !== undefined) {
+    return `${question} And why is sample ${openSample} where it is?`;
+  }
+  if (openCheck !== null && openCheck !== undefined) {
+    return `${question} And why is reading ${openCheck} where it is?`;
+  }
+  return question;
+}
+
+/* `FS.tabs` reads the hash as the tab name, so the question cannot ride in the
+   hash: it travels as a query and the hash stays `#explore`. */
+function explainLink(data) {
+  const link = $("#explain-chart");
+  if (!link) return;
+  link.href = `/dashboard/ai?ask=${encodeURIComponent(explainQuestion(data))}#explore`;
+}
 
 function draw(data) {
   const host = $("#chart");
-  host.replaceChildren();
+  /* Written before the early returns below: the link follows the chart on the
+     screen, and a characteristic with no samples yet is still a chart somebody
+     can ask about - the honest answer being that there are none. */
+  explainLink(data);
   const kind = data.kind || INDIVIDUALS;
   if (kind !== INDIVIDUALS && kind !== SAMPLED) {
     return kit.empty(host,
@@ -130,277 +162,36 @@ function draw(data) {
         + `${data.sample_size} readings are recorded together as one sample.`
       : "No readings for this characteristic yet.");
   }
-
-  const left = 52, right = 14, top = 12, bottom = 26;
-  const width = Math.max(host.clientWidth || 900, 620);
-  const height = 260;
-  const plot = width - left - right;
-  const plotH = height - top - bottom;
-  const values = data.points.map((p) => p.value);
-  const guides = [data.lower_spec, data.upper_spec,
-                  data.control && data.control.lower, data.control && data.control.upper]
-    .filter((v) => v !== null && v !== undefined);
-  let lo = Math.min(...values, ...guides), hi = Math.max(...values, ...guides);
-  if (hi === lo) { hi += 0.5; lo -= 0.5; }
-  const pad = (hi - lo) * 0.08;
-  lo -= pad; hi += pad;
-  const x = (i) => left + (i / Math.max(values.length - 1, 1)) * plot;
-  const y = (v) => top + plotH - ((v - lo) / (hi - lo)) * plotH;
-
-  /* The lower half, whichever it is. One key or the other is present and
-     never both (`services.spc.chart`), and both blocks have the same shape:
-     points, a centre, an upper limit, a lower one and a sentence. Two
-     readings make the first moving range, and n readings recorded together
-     make the first sample range, so a chart with neither has an upper half
-     and nothing below it. */
-  const lower = sampled ? data.range_chart : data.moving_range;
-  const lowerPoints = (lower && lower.points) || [];
-  const mrTop = height + MR_GAP;
-  const total = lowerPoints.length ? mrTop + MR_HEIGHT : height;
-
-  const chart = kit.svg(width, total);
-  /* `fs-chart` is what `FS.kit.export` asks of a node before it will take it
-     off the page, and what `ui-check` watches. One node for both halves, so
-     one export carries both - of either kind. */
-  chart.setAttribute("class", "fs-chart");
-  chart.setAttribute("data-kind", sampled ? "spc-xbar-r" : "spc-imr");
-  for (let i = 0; i <= 3; i++) {
-    const v = lo + ((hi - lo) * i) / 3;
-    kit.add(chart, "line", { x1: left, y1: y(v), x2: left + plot, y2: y(v), class: "grid-line" });
-    kit.add(chart, "text", { x: left - 6, y: y(v) + 3, class: "axis", "text-anchor": "end" }, v.toFixed(Math.abs(hi - lo) < 10 ? 2 : 0));
-  }
-  const guide = (v, cls, label) => {
-    if (v === null || v === undefined) return;
-    kit.add(chart, "line", { x1: left, y1: y(v), x2: left + plot, y2: y(v), class: cls });
-    kit.add(chart, "text", { x: left + plot - 4, y: y(v) - 3, class: "axis", "text-anchor": "end" }, `${label} ${v}`);
-  };
-  guide(data.lower_spec, "spec-line", "LSL");
-  guide(data.upper_spec, "spec-line", "USL");
-  if (data.control) {
-    guide(data.control.lower, "limit-line", "LCL");
-    guide(data.control.upper, "limit-line", "UCL");
-    /* X-double-bar on a sampled chart, and it is not a flourish: the centre
-       line there is the mean of the sample means, and calling it x̄ under a
-       chart whose points are already averages is the one label a process
-       engineer would read as the wrong number. */
-    guide(data.control.centre, "centre-line", sampled ? "X̿" : "x̄");
-  }
-  /* The upper half's firings only. Rule 5 judges the range beside the point,
-     never where the point sat, and a red ring round a mean because the spread
-     was wide would be the chart answering a question nobody asked of it. */
-  const flagged = new Set(data.signals
-    .filter((s) => s.rule !== RANGE_RULE)
-    .flatMap((s) => s.points || s.indexes || (s.index !== undefined ? [s.index] : [])));
-  kit.add(chart, "polyline", { points: values.map((v, i) => `${x(i)},${y(v)}`).join(" "), class: "trend-line" });
-  values.forEach((v, i) => {
-    const point = data.points[i];
-    /* What this dot IS, by its own id. A sample on a sampled chart, a reading
-       on an individuals one - and never the nth dot, which is a different
-       point every time a check is recorded. */
-    const id = sampled ? point.sample : point.check;
-    const selected = id !== undefined && id === (sampled ? openSample : openCheck);
-    const dot = kit.add(chart, "circle", { cx: x(i), cy: y(v),
-      r: selected ? 5.5 : flagged.has(i) ? 4.5 : 2.5,
-      class: (flagged.has(i) ? "spc-flag" : "spc-dot") + (selected ? " spc-selected" : "") });
-    const unit = data.unit ? " " + data.unit : "";
-    kit.add(dot, "title", {}, (sampled ? `Mean ${v}${unit} of ${point.n || data.sample_size} · `
-                                       : `${v}${unit} · `)
-      + `${kit.utc(point.ts).toLocaleString()}`
-      + (id === undefined ? "" : sampled
-        ? ` — open the ${data.sample_size} readings behind it`
-        : " — open the records behind it"));
-    /* A point you can open. There is no <button> inside an SVG, so it
-       carries what one would carry and answers a keyboard - the same way the
-       kit's own legend and threshold controls do (style rule 6's intent). */
-    if (id === undefined) return;
-    dot.setAttribute(sampled ? "data-sample" : "data-check", id);
-    dot.setAttribute("data-series", sampled ? "xbar" : "individuals");
-    dot.setAttribute("role", "button");
-    dot.setAttribute("tabindex", "0");
-    dot.setAttribute("aria-label", sampled
-      ? `Sample ${i + 1}, mean ${v}${unit} of ${data.sample_size} readings at `
-        + `${fmt.stamp(point.ts)} — open the readings behind it`
-      : `Reading ${i + 1}, ${v}${unit} at ${fmt.stamp(point.ts)} `
-        + "— open the records behind it");
-    const open = () => (sampled ? openSamplePanel(id) : openPoint(id));
-    dot.addEventListener("click", open);
-    dot.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      open();
-    });
+  const chart = kit.draw(host, "spc", data, {
+    width: Math.max(host.clientWidth || 900, 620),
+    /* The dots are buttons on this page and plain marks everywhere else. */
+    openable: true,
+    /* So a refresh every ten seconds redraws the selection rather than losing
+       it. Two keys and not one: a check id and a sample id are both small
+       integers, and one field holding either would ring the dot numbered 7 on
+       the wrong chart the first time a reader switched characteristic. */
+    selected: { sample: openSample, check: openCheck },
   });
-  kit.add(chart, "text", { x: left + 4, y: top + 10, class: "axis" },
-          `${data.material} ${data.characteristic}${data.unit ? ` (${data.unit})` : ""}`
-          + (sampled ? ` — mean of ${data.sample_size}` : ""));
-  if (lowerPoints.length) {
-    /* A group of its own. The two halves share one node so that they line up
-       and one export carries both; the group is how a reader of the markup -
-       or a test - can still say *the lower chart* without measuring pixels. */
-    const half = kit.add(chart, "g",
-                         { "data-half": sampled ? "sample-range" : "moving-range" });
-    if (sampled) drawSampleRange(half, data, lower, { left, plot, x, mrTop });
-    else drawMovingRange(half, data, lower, { left, plot, x, mrTop });
-  }
-  host.appendChild(chart);
   exportTools($("#chart-tools"), chart,
               `${data.material} ${data.characteristic} `
               + `${sampled ? "X-bar and R" : "IMR"} chart`);
 }
 
-/* The axis, the grid and the limit lines of a lower half - shared, because
-   the moving-range chart and the range chart are the same picture of
-   different arithmetic, and two copies of this is how they would come to be
-   drawn at two different scales. Nought is always on it: a range is bounded
-   below by zero, which is why its lower limit is a number and not a line
-   somebody could cross, and a scale that cropped the bottom off would make a
-   settled process look as if it were wandering. */
-function lowerAxis(chart, lower, geom, ceiling) {
-  const { left, plot, mrTop } = geom;
-  const top = 14, bottom = 24;
-  const plotH = MR_HEIGHT - top - bottom;
-  let hi = ceiling;
-  if (hi <= 0) hi = 1;
-  hi *= 1.1;
-  const y = (v) => mrTop + top + plotH - (v / hi) * plotH;
-  for (let i = 0; i <= 2; i++) {
-    const v = (hi * i) / 2;
-    kit.add(chart, "line", { x1: left, y1: y(v), x2: left + plot, y2: y(v), class: "grid-line" });
-    kit.add(chart, "text", { x: left - 6, y: y(v) + 3, class: "axis", "text-anchor": "end" },
-            v.toFixed(Math.abs(hi) < 10 ? 2 : 0));
-  }
-  const guide = (v, cls, label) => {
-    if (v === null || v === undefined) return;
-    kit.add(chart, "line", { x1: left, y1: y(v), x2: left + plot, y2: y(v), class: cls });
-    kit.add(chart, "text", { x: left + plot - 4, y: y(v) - 3, class: "axis", "text-anchor": "end" }, `${label} ${v}`);
-  };
-  return { y, guide };
-}
-
-/* The range half of a sampled chart: how far apart the n readings of each
-   sample were. One dot per sample, directly under the mean it belongs to -
-   they are the same sample seen two ways, so they share the x scale and a
-   click on either opens the same five bottles.
-
-   It is read FIRST, and the sentence under the chart says so. The limits on
-   the half above it are computed from the mean of this series, so a process
-   whose samples are spread wider every hour has an upper chart whose limits
-   widened with it and whose points therefore look settled. */
-function drawSampleRange(chart, data, lower, geom) {
-  const { left, plot, x, mrTop } = geom;
-  const ranges = lower.points.map((p) => p.range);
-  const { y, guide } = lowerAxis(chart, lower, geom,
-    Math.max(...ranges, lower.upper || 0, lower.centre || 0));
-  guide(lower.upper, "limit-line", "D4·R̄");
-  /* Drawn when it is nought, not hidden. Below n = 7 the lower range limit IS
-     zero (D3 is zero there), and a reader who cannot see the line cannot tell
-     "there is no lower limit on this chart" from "this chart forgot to draw
-     one". */
-  guide(lower.lower, "limit-line", "D3·R̄");
-  guide(lower.centre, "centre-line", "R̄");
-
-  /* Flagged by sample id, not by counting along: the ranges and the means are
-     one series of samples seen twice, and `index` is the same in both - but
-     the id is what the payload identifies a point by, and it is the id a
-     click opens. */
-  const fired = new Set(data.signals
-    .filter((s) => s.rule === RANGE_RULE)
-    .map((s) => (data.points[s.index] || {}).sample)
-    .filter((id) => id !== undefined));
-  kit.add(chart, "polyline", {
-    points: lower.points.map((p, i) => `${x(i)},${y(p.range)}`).join(" "),
-    class: "trend-line" });
-  lower.points.forEach((point, i) => {
-    const hit = fired.has(point.sample);
-    const selected = point.sample !== undefined && point.sample === openSample;
-    const dot = kit.add(chart, "circle", { cx: x(i), cy: y(point.range),
-      r: selected ? 5.5 : hit ? 4.5 : 2.5,
-      /* The selected ring is a class of its own, as on the moving-range half:
-         one sample is one sample, and a page that marked it twice under one
-         name would make "the point that is open" ambiguous to anybody - a
-         reader or a test - counting marks. */
-      class: (hit ? "spc-flag" : "spc-dot") + (selected ? " spc-mr-selected" : "") });
-    const unit = data.unit ? " " + data.unit : "";
-    kit.add(dot, "title", {}, `Range ${point.range}${unit} · `
-      + `${kit.utc(point.ts).toLocaleString()} — how far apart the `
-      + `${point.n || data.sample_size} readings of this sample were; opens the sample`);
-    if (point.sample === undefined) return;
-    dot.setAttribute("data-sample", point.sample);
-    dot.setAttribute("data-series", "sample-range");
-    dot.setAttribute("role", "button");
-    dot.setAttribute("tabindex", "0");
-    dot.setAttribute("aria-label",
-      `Sample ${i + 1}, range ${point.range}${unit} across its `
-      + `${point.n || data.sample_size} readings — open the readings behind it`);
-    const open = () => openSamplePanel(point.sample);
-    dot.addEventListener("click", open);
-    dot.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      open();
-    });
+/* A dot was pressed. Wired once, on the host rather than on the marks, because
+   the chart is replaced every ten seconds and a listener on a circle goes with
+   it. `what` is the kit's word for which id it is handing over - a sample or a
+   reading - so this never has to infer it from the number. */
+function openOnClick() {
+  const host = $("#chart");
+  if (!host) return;
+  host.addEventListener("fs-spc-open", (event) => {
+    const { what, id } = event.detail || {};
+    if (id === undefined || id === null) return;
+    if (what === "sample") openSamplePanel(id);
+    else openPoint(id);
   });
-  kit.add(chart, "text", { x: left + 4, y: mrTop + 10, class: "axis" },
-          `Range within each sample${data.unit ? ` (${data.unit})` : ""}`
-          + (lower.centre === null ? " — no limits yet" : ""));
 }
 
-/* The moving-range half. Drawn into the same node, under the individuals
-   half, against the same x scale: a gap belongs over the later of the two
-   readings it is the gap between, and an IMR pair that did not line up would
-   be two charts rather than one. */
-function drawMovingRange(chart, data, moving, geom) {
-  const { left, plot, x, mrTop } = geom;
-  const ranges = moving.points.map((p) => p.range);
-  const { y, guide } = lowerAxis(chart, moving, geom,
-    Math.max(...ranges, moving.upper || 0, moving.centre || 0));
-  guide(moving.upper, "limit-line", "UCL");
-  guide(moving.centre, "centre-line", "R̄");
-
-  /* Flagged by reading id, not by counting along. The moving-range series is
-     one shorter than the readings, and an off-by-one here would put a red
-     ring round the wrong gap. */
-  const fired = new Set(moving.signals.map((s) => s.check).filter((c) => c !== undefined));
-  kit.add(chart, "polyline", {
-    points: moving.points.map((p, i) => `${x(i + 1)},${y(p.range)}`).join(" "),
-    class: "trend-line" });
-  moving.points.forEach((point, i) => {
-    const hit = fired.has(point.check);
-    const selected = point.check !== undefined && point.check === openCheck;
-    const dot = kit.add(chart, "circle", { cx: x(i + 1), cy: y(point.range),
-      r: selected ? 5.5 : hit ? 4.5 : 2.5,
-      /* The selected ring is a class of its own. One reading is one reading,
-         and a page that marked it twice under one name would make "the
-         reading that is open" ambiguous to anybody - a reader or a test -
-         counting marks. */
-      class: (hit ? "spc-flag" : "spc-dot") + (selected ? " spc-mr-selected" : "") });
-    const unit = data.unit ? " " + data.unit : "";
-    kit.add(dot, "title", {}, `Moving range ${point.range}${unit} · `
-      + `${kit.utc(point.ts).toLocaleString()} — the gap from the reading `
-      + "before it; opens the later of the two readings");
-    if (point.check === undefined) return;
-    dot.setAttribute("data-check", point.check);
-    dot.setAttribute("data-series", "moving-range");
-    dot.setAttribute("role", "button");
-    dot.setAttribute("tabindex", "0");
-    dot.setAttribute("aria-label",
-      `Moving range ${i + 1}, ${point.range}${unit}, the gap between readings `
-      + `${i + 1} and ${i + 2} — opens reading ${i + 2}, the later of the two`);
-    dot.addEventListener("click", () => openPoint(point.check));
-    dot.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      openPoint(point.check);
-    });
-  });
-  kit.add(chart, "text", { x: left + 4, y: mrTop + 10, class: "axis" },
-          `Moving range${data.unit ? ` (${data.unit})` : ""}`
-          + (moving.centre === null ? " — no limits yet" : ""));
-}
-
-/* The two buttons that take the chart off the page, SVG and PNG, beside the
-   chart rather than inside it: the kit's own frame draws its controls into
-   the <svg> because they change what is drawn, and these do not. */
 function exportTools(host, node, name) {
   if (!host) return;
   host.replaceChildren();
@@ -1589,6 +1380,7 @@ async function openSamplePanel(sample) {
 
 (async function boot() {
   await FS.whoami().catch(() => {});
+  openOnClick();
   // Page by page, to a stated ceiling. The picker needs every
   // material/characteristic pair to group them, and a single response is no
   // longer the whole table - so it reads to the end and says whether it got

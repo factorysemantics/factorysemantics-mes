@@ -84,10 +84,17 @@ button:hover { filter: brightness(1.1); }
 button:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
 button.ghost { background: transparent; color: var(--muted); border-color: var(--line); font-weight: 500; }
 button.ghost:hover { color: var(--text); }
-/* The same chip as a link, for the 3D line view in the header. */
+/* The same chip as a link, for the 3D line view in the header and for
+   Explain this chart on the SPC tab. A chip inside a heading inherited the
+   heading - bold, uppercase, letter-spaced - and read as part of the title
+   rather than as something to press, so the type is stated here rather than
+   inherited. The button chip beside it says the same three things. */
 a.ghost {
   font: inherit;
   font-size: 14px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
   color: var(--muted);
   text-decoration: none;
   border: 1px solid var(--line);
@@ -95,7 +102,7 @@ a.ghost {
   padding: 7px 14px;
 }
 a.ghost:hover { color: var(--text); border-color: var(--accent); }
-button.small { padding: 5px 10px; font-size: 13px; }
+button.small, a.ghost.small { padding: 5px 10px; font-size: 13px; }
 
 /* ---------- Layout ---------- */
 header {
@@ -643,6 +650,11 @@ a.obj:hover { text-decoration: underline; }
    and how much of the window anybody watched (rule 2). The same sentences go
    into the <desc> a screen reader is given, so the two cannot disagree. */
 .chart-total { fill: var(--text); font-size: 11px; font-weight: 600; }
+/* The plant's own conclusion about what the chart shows, where the payload
+   carries one (`plan.verdict`). Not a colour-coded badge: a verdict that was
+   green or red would be a second judgement made in a stylesheet, and whether
+   "out of control, not out of spec" is good news is the reader's to decide. */
+.chart-verdict { fill: var(--text); font-size: 11px; }
 .chart-axis-note,
 .chart-unknown-note,
 .chart-coverage,
@@ -656,6 +668,40 @@ a.obj:hover { text-decoration: underline; }
    because a filtered chart whose footer did not say so is a picture claiming
    to be the whole of something. */
 .chart-filter-note { fill: var(--accent); font-size: 10px; }
+
+/* ---------- the control chart (the `spc` shape) ----------
+   Here and not in spc.css since 2026-10-07, for the reason `.grid-line` and
+   `.limit-line` moved here before them: the SPC chart is a kit shape now, so
+   the AI tab draws it too, and that page links neither spc.css nor
+   machine.css. A chart drawn on a third screen must not come out unstyled.
+
+   The spec band is dashed and in the `--down` hue because crossing it is a
+   part the customer rejects; the control limits are the quieter `--idle`
+   dashes `.limit-line` already gives every chart, because crossing one is a
+   process that has changed and not yet a part that is wrong. The two must
+   never look alike: a reader who confuses them has confused the two questions
+   this whole screen exists to keep apart. */
+.spec-line { stroke: var(--down); stroke-width: 1; stroke-dasharray: 6 3; }
+.centre-line { stroke: var(--running); stroke-width: 1.2; }
+.spc-dot { fill: var(--accent); }
+/* A dot a rule fired on. Bigger, in the quality hue, and RINGED - three
+   signals, because one of the four themes will always be the one where a hue
+   shift alone is the difference nobody notices on a phone in daylight. */
+.spc-flag { fill: var(--quality); stroke: var(--text); stroke-width: 0.8; }
+/* The point a panel is open on. Thicker and ringed in the accent, which is
+   this product's colour for "where the reader is" and never a state the plant
+   reported. Two class names for one idea, one per half, so that "the point
+   that is open" stays countable in the markup: a chart that marked the same
+   sample twice under one name could not be checked by a test or by a reader. */
+.spc-selected, .spc-mr-selected { stroke: var(--accent); stroke-width: 2.5; fill: var(--accent); }
+/* Pressable only where the page made it so (`options.openable`): on the AI tab
+   these dots open nothing, and a cursor that promised otherwise would be the
+   picture making an offer the screen cannot keep. */
+.spc-dot[role="button"], .spc-flag[role="button"] { cursor: pointer; }
+.spc-dot:focus-visible, .spc-flag:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
 
 /* ---------- the network graph (the `graph` shape) ----------
    Node kinds and edge kinds map to palette variables HERE and nowhere in
