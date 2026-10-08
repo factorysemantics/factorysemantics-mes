@@ -101,6 +101,19 @@
 .explore-msg.bot { background: var(--panel); }
 .explore-msg.thinking { background: transparent; border-style: dashed; color: var(--muted); }
 
+/* The model's reply is rendered markdown and so is blocks, not one run of
+   text: `pre-wrap` above is what keeps a plain answer's own line breaks, and
+   the reply does not want it on top of real paragraphs. The rest is margins -
+   no colour, because the palette is the only place colour is named. */
+.explore-msg.bot { white-space: normal; }
+.explore-msg p { margin: 0 0 6px; }
+.explore-msg p:last-child { margin-bottom: 0; }
+.explore-msg .explore-head { font-weight: 600; }
+.explore-msg .explore-list { margin: 0 0 6px; padding-left: 20px; }
+.explore-msg .explore-list:last-child { margin-bottom: 0; }
+.explore-msg li { margin: 2px 0; }
+.explore-msg code { font-family: var(--mono); font-size: 0.95em; }
+
 .explore-trace { font-family: var(--mono); font-size: 12px; }
 .explore-trace summary { color: var(--muted); cursor: pointer; }
 .explore-trace .trace-row {

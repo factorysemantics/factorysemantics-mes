@@ -108,8 +108,44 @@ const INDIVIDUALS = "imr";
 const SAMPLED = "xbar_r";
 const sampledChart = (data) => (data && data.kind) === SAMPLED;
 
+/* The question this chart would be asked about, in the words Scott asked it in
+   (2026-10-07): a plant manager who wants two sentences and one picture. The
+   names travel in the sentence and nothing else travels at all - no payload,
+   no scrape of this page's DOM - so the chat reads the plant itself and the
+   answer is the plant's rather than this screen's copy of it.
+
+   The sample or the reading open beside the chart is added when there is one,
+   because *why is this point where it is* is the question somebody who has
+   already opened a panel is holding. */
+function explainQuestion(data) {
+  const chart = `${data.material || ""} ${data.characteristic || ""}`.trim();
+  const question =
+    "I'm the plant manager and I don't understand the SPC tab. How does the "
+    + `${chart} chart look? Two sentences for my boss and the one graph for a `
+    + "slide.";
+  if (openSample !== null && openSample !== undefined) {
+    return `${question} And why is sample ${openSample} where it is?`;
+  }
+  if (openCheck !== null && openCheck !== undefined) {
+    return `${question} And why is reading ${openCheck} where it is?`;
+  }
+  return question;
+}
+
+/* `FS.tabs` reads the hash as the tab name, so the question cannot ride in the
+   hash: it travels as a query and the hash stays `#explore`. */
+function explainLink(data) {
+  const link = $("#explain-chart");
+  if (!link) return;
+  link.href = `/dashboard/ai?ask=${encodeURIComponent(explainQuestion(data))}#explore`;
+}
+
 function draw(data) {
   const host = $("#chart");
+  /* Written before the early returns below: the link follows the chart on the
+     screen, and a characteristic with no samples yet is still a chart somebody
+     can ask about - the honest answer being that there are none. */
+  explainLink(data);
   const kind = data.kind || INDIVIDUALS;
   if (kind !== INDIVIDUALS && kind !== SAMPLED) {
     return kit.empty(host,

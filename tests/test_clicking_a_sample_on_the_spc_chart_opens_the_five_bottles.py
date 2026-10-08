@@ -28,6 +28,7 @@ Chromium for, and a Playwright file marked only `slow` is a test nothing runs.
 import socket
 import threading
 from datetime import timedelta
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from sqlalchemy import select
@@ -821,3 +822,72 @@ def test_the_sample_panel_opens_with_its_three_longest_blocks_folded(page, plant
     assert folded < 0.7 * opened, (
         f"folded the panel is {folded}px of the {opened}px it is with every "
         f"block open, which is not the saving the fold claims")
+
+
+# ------------------------------- and the same chart, explained by the chat
+
+def _explain_question(page):
+    """The question the *Explain this chart* link is carrying, decoded.
+
+    Read off the href rather than out of a click, so a test can say what the
+    sentence is before anything navigates. The hash has to stay `#explore` -
+    `FS.tabs` reads the hash as the tab name - so the question travels as a
+    query, and that is asserted here too.
+    """
+    href = page.locator("#explain-chart").get_attribute("href")
+    parts = urlparse(href)
+    assert parts.path == "/dashboard/ai"
+    assert parts.fragment == "explore", (
+        "the hash is the tab the AI page opens on, so the question may not be "
+        f"in it: {href}")
+    return parse_qs(parts.query)["ask"][0]
+
+
+def test_explain_this_chart_asks_about_the_characteristic_on_the_screen(page):
+    """The names travel in the sentence and nothing else travels at all: no
+    payload, no scrape of this page's DOM. So the chat reads this plant itself
+    and the figures in its answer are the plant's, not this screen's copy of
+    them - which is the whole of why the question carries names and not data.
+
+    The names are the plant's own, `fill_height` and not a tidied *fill
+    height*: that is what the chart's tool takes, and a prettier sentence that
+    cost the model a round of guessing would be a worse question.
+    """
+    asked = _explain_question(page)
+    assert "FG-COLA" in asked and "fill_height" in asked
+    assert "plant manager" in asked
+    assert "Two sentences" in asked and "slide" in asked
+    assert "sample" not in asked, "no sample is open, so none is asked about"
+
+
+def test_with_a_sample_open_it_asks_why_that_sample_is_where_it_is(page, plant):
+    """Somebody with the panel open is already holding the second question.
+    The link picks it up - by the sample's own id, which is what `spc_sample`
+    takes - and drops it again when another characteristic is chosen."""
+    _base, sample = plant
+    _click_the_shifted_sample(page, sample)
+    _await_panel(page, sample)
+    asked = _explain_question(page)
+    assert f"why is sample {sample} where it is" in asked
+    assert "fill_height" in asked
+
+
+def test_explain_this_chart_lands_on_explore_with_the_question_typed(page):
+    """End to end, in the browser, as Scott would do it: press the link and
+    the Explore tab is in front of you with the sentence in the box.
+
+    Typed and NOT sent. The budget is spent by the person whose question it is:
+    this is a guess at what they wanted to know - the chart they were looking
+    at - and the guess is worth making where acting on it is not. So the log is
+    empty and nothing has been asked.
+    """
+    page.click("#explain-chart")
+    page.wait_for_function(
+        """() => document.querySelector('#explore-input')
+             && document.querySelector('#explore-input').value.includes('fill_height')""",
+        timeout=30000)
+    assert page.locator("[data-panel='explore']").is_visible()
+    typed = page.input_value("#explore-input")
+    assert "FG-COLA" in typed and "plant manager" in typed
+    assert page.locator("#explore-log .explore-msg").count() == 0, (
+        "the question was sent for the person rather than handed to them")

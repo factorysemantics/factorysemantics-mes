@@ -37,6 +37,7 @@ import socket
 import threading
 import time
 from types import SimpleNamespace
+from urllib.parse import quote
 
 import pytest
 from sqlalchemy.orm import Session
@@ -309,12 +310,16 @@ def operator(playwright, plant):
     context.close()
 
 
-def _explore(context, plant, *, delay_reply=False):
+def _explore(context, plant, *, delay_reply=False, handed=None):
     page = context.new_page()
     if delay_reply:
         page.route("**/assist/agent",
                    lambda route: (time.sleep(DELAY_SECONDS), route.continue_()))
-    page.goto(f"{plant.base}/dashboard/ai#explore", wait_until="load", timeout=30000)
+    # `handed` is a question another screen passed over - what the SPC tab's
+    # *Explain this chart* does. The hash is the tab; the question is a query.
+    query = f"?ask={quote(handed)}" if handed else ""
+    page.goto(f"{plant.base}/dashboard/ai{query}#explore", wait_until="load",
+              timeout=30000)
     page.wait_for_selector("#explore-input", state="visible", timeout=20000)
     return page
 
@@ -715,5 +720,132 @@ def test_a_supervisor_sees_their_own_record_and_only_their_own(supervisor, plant
         assert mine["person"] == "ADMIN", (
             "the route answered about the account the query string named, which "
             "would make a personal record a way of reading somebody else's")
+    finally:
+        page.close()
+
+
+# --------------------------- the model writes markdown; the screen reads it
+
+#: The answer the live run gave on bottling on 2026-10-07, in the shape it gave
+#: it: a bold verdict, a list of what to put on the slide, and the tool it read
+#: named in backticks. Until the renderer, every one of those markers arrived on
+#: the screen as itself - `**Fill height is out of control**`, asterisks and all.
+A_MARKDOWN_ANSWER = (
+    "**Fill height is out of control, not out of spec.** Rule 1 fired on the "
+    "latest sample and rule 2 before it.\n"
+    "The limits are the process's own.\n"
+    "\n"
+    "For the slide:\n"
+    "- the X\u0304 chart, with the control limits and the flagged points\n"
+    "- *not* Cpk \u2014 it is withheld while the process is out of control\n"
+    "\n"
+    "1. first the chart\n"
+    "2. then the two sentences\n"
+    "\n"
+    "I read `spc_chart`. 2 * 3 is still 6 and <b>this</b> is not bold."
+)
+
+MARKDOWN_TURN = [_turn(_text(A_MARKDOWN_ANSWER))]
+
+
+def _bot(page):
+    return page.locator("#explore-log .explore-msg.bot").last
+
+
+def test_the_replys_bold_arrives_bold_rather_than_as_asterisks(supervisor, plant):
+    """The verdict is the thing the emphasis is on, and it is the thing a
+    manager reads first. Rendered, not stripped: the characters go, the
+    emphasis stays."""
+    plant.script[:] = list(MARKDOWN_TURN)
+    page = _explore(supervisor, plant)
+    try:
+        _ask(page, "how does the fill height chart look?")
+        page.wait_for_function(
+            "() => document.querySelectorAll('#explore-log .explore-msg.bot').length",
+            timeout=25000)
+        said = _bot(page)
+        assert said.locator("strong").first.inner_text() == \
+            "Fill height is out of control, not out of spec."
+        assert said.locator("em").first.inner_text() == "not"
+        assert said.locator("code").first.inner_text() == "spc_chart"
+        shown = said.inner_text()
+        assert "**" not in shown and "`" not in shown
+        # And what is not markdown is left exactly as the model wrote it: an
+        # asterisk doing arithmetic is an asterisk.
+        assert "2 * 3 is still 6" in shown
+    finally:
+        page.close()
+
+
+def test_a_list_in_the_reply_is_a_list_on_the_screen(supervisor, plant):
+    """Three findings as three lines beginning with a hyphen is a paragraph
+    pretending. Bullets and numbers both, because the model uses both."""
+    plant.script[:] = list(MARKDOWN_TURN)
+    page = _explore(supervisor, plant)
+    try:
+        _ask(page, "how does the fill height chart look?")
+        page.wait_for_function(
+            "() => document.querySelectorAll('#explore-log .explore-msg.bot ul li')"
+            ".length === 2", timeout=25000)
+        said = _bot(page)
+        assert said.locator("ol li").count() == 2
+        assert "then the two sentences" in said.locator("ol li").last.inner_text()
+        # Two lines of one paragraph are one paragraph, not two.
+        first = said.locator("p").first.inner_text()
+        assert "The limits are the process's own." in first
+    finally:
+        page.close()
+
+
+def test_nothing_in_a_reply_is_ever_parsed_as_markup(supervisor, plant):
+    """The renderer builds nodes; it never parses markup. So a model that
+    wrote a tag wrote characters, and the screen shows characters. This is
+    cheap to keep true and expensive to get wrong, so it has its own test."""
+    plant.script[:] = list(MARKDOWN_TURN)
+    page = _explore(supervisor, plant)
+    try:
+        _ask(page, "how does the fill height chart look?")
+        page.wait_for_function(
+            "() => document.querySelectorAll('#explore-log .explore-msg.bot').length",
+            timeout=25000)
+        said = _bot(page)
+        assert said.locator("b").count() == 0
+        assert "<b>this</b> is not bold" in said.inner_text()
+    finally:
+        page.close()
+
+
+# --------------------------- a question another screen handed over
+
+HANDED = ("I'm the plant manager and I don't understand the SPC tab. How does "
+          "the FG-COLA fill_height chart look? Two sentences for my boss and "
+          "the one graph for a slide. And why is sample 15 where it is?")
+
+
+def test_a_question_handed_over_by_another_screen_is_typed_and_not_sent(
+        supervisor, plant):
+    """What the SPC tab's *Explain this chart* lands on. The sentence is in the
+    box, word for word, and nothing has been asked: the person reads it,
+    changes it if it is not quite their question, and spends their own budget
+    on it. The cursor sits at the end so the next thing they type continues
+    the sentence rather than replacing it."""
+    plant.script[:] = list(MARKDOWN_TURN)
+    page = _explore(supervisor, plant, handed=HANDED)
+    try:
+        page.wait_for_function(
+            "() => document.querySelector('#explore-input').value.length > 0",
+            timeout=20000)
+        assert page.input_value("#explore-input") == HANDED
+        assert page.locator("#explore-log .explore-msg").count() == 0
+        assert page.evaluate(
+            "() => document.querySelector('#explore-input').selectionStart") == len(HANDED)
+        # And the tab the hash named is the one in front.
+        assert page.locator("[data-panel='explore']").is_visible()
+        # Pressing Ask then asks exactly that question and nothing else.
+        page.click("#explore-send")
+        page.wait_for_function(
+            "() => document.querySelectorAll('#explore-log .explore-msg.bot').length",
+            timeout=25000)
+        assert page.locator("#explore-log .explore-msg.me").first.inner_text() == HANDED
     finally:
         page.close()
