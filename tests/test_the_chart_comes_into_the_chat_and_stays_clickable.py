@@ -130,6 +130,19 @@ def _reads_the_chart_then_answers(words):
     ]
 
 
+def _says_the_good_part_then_reads_once_more(first, second):
+    """Text, then a tool call, then text - the shape that used to lose its
+    best line. The model answers, decides to check one more record, and
+    answers again; before 2026-10-08 only the last round reached the screen.
+    """
+    return [
+        _turn(_text(first),
+              _use("tu_9", "nonconformances", material="FG-COLA"),
+              stop="tool_use"),
+        _turn(_text(second)),
+    ]
+
+
 def _opens_the_sample_then_answers(words):
     return [
         _turn(_use("tu_3", "tag_history", equipment="MIX01",
@@ -168,8 +181,11 @@ def plant(tmp_path_factory):
     def served(name, args, *, plant, on_behalf_of=None, dry_run=None,
                client_ref=None):
         if name == "spc_chart":
+            # The model's own `limit`, honoured: a narrower window is a
+            # different picture and one test here asks for one.
+            limit = int(args.get("limit") or 200)
             with Session(db.get_engine(), expire_on_commit=False) as session:
-                chart = spc_service.chart(session, "FG-COLA", "fill_height", 200)
+                chart = spc_service.chart(session, "FG-COLA", "fill_height", limit)
             return {"plant": plant, **_without_sample_readings(chart)}
         return {"plant": plant, "total": 0, "showing": 0,
                 "note": f"{name} is not what this file is about"}
@@ -384,29 +400,86 @@ def test_the_chat_opens_with_the_chart_drawn_that_dot_ringed_and_nothing_spent(
         page.close()
 
 
-def test_the_chart_in_the_chat_draws_from_the_payload_the_model_was_handed(
+def test_the_chart_the_agent_drew_marks_the_pinned_one_instead_of_a_second_copy(
         admin, plant):
-    """The pinned chart and the one the model drew are the same picture from
-    the same arithmetic - and the model's copy has had the readings behind
-    every sample trimmed out of it, so this is also the proof that the trim did
-    not take the chart with it."""
+    """One chart on the screen for one picture.
+
+    Scott, 2026-10-08, of the live run: the manager question drew the same
+    control chart twice - once because he pressed the chip, once again because
+    the agent drew it as part of its answer - and two identical pictures is a
+    reader asking what the difference between them is. The pinned one is now
+    marked as the answer's chart and re-drawn from the envelope the agent was
+    handed, in the place it already had.
+
+    So this is still the proof that the model's copy draws: that copy has had
+    the five readings behind every sample trimmed out of it by
+    `mcp/quality.py`, and what is on the screen at the end of this test is
+    that copy - the same means, and its control limits.
+    """
     plant.script[:] = _reads_the_chart_then_answers(THE_ANSWER)
     href = _chip_from_an_open_sample(admin, plant, plant.shifted)
     page = _explore(admin, plant, href[href.index("/dashboard/ai"):])
     try:
         _wait_for_the_chart(page, 1)
         _ask(page)
+        # Wait on the mark, which the page writes when it stands the answer's
+        # chart in the pinned one's place - not on a count that is already 1.
+        page.wait_for_function(
+            "() => document.querySelector('#explore-log [data-answer-chart]')",
+            timeout=25000)
+        assert page.locator("#explore-log svg.fs-chart").count() == 1, (
+            "the same picture is on the screen twice")
+        figure = page.locator("#explore-log figure.explore-chart")
+        assert figure.count() == 1
+        assert "explore-pinned" in (figure.get_attribute("class") or ""), (
+            "the marked chart moved out of the place it was pinned in")
+        assert "not drawn twice" in figure.locator("figcaption").inner_text()
+
+        chart = page.locator("#explore-log svg.fs-chart")
+        means = chart.locator('circle[data-series="xbar"]').evaluate_all(
+            "dots => dots.map(d => d.getAttribute('data-value'))")
+        assert len(means) == DRAWN
+        assert "145.2" in means, (
+            "the shifted sample's own mean is not on the picture")
+        assert chart.locator("line.limit-line").count() >= 2, (
+            "a control chart with no control limits is the #150 failure")
+        # The dot he arrived on is still the one ringed.
+        assert page.locator(
+            f'#explore-log circle[data-sample="{plant.shifted}"].spc-selected'
+        ).count() == 1
+    finally:
+        page.close()
+
+
+def test_a_chart_of_something_else_is_drawn_beside_the_pinned_one(admin, plant):
+    """The other half of the same rule, and the reason it is narrow. A payload
+    that is not the pinned picture is a different picture, and a reader whose
+    question sent the agent to read something else needs to see that it did."""
+    plant.script[:] = [
+        _turn(_use("tu_1", "spc_chart", material="FG-COLA",
+                   characteristic="fill_height"), stop="tool_use"),
+        # The same read, trimmed to the newest six samples by the model's own
+        # `limit`, which is a different window and so a different picture.
+        _turn(_use("tu_2", "spc_chart", material="FG-COLA",
+                   characteristic="fill_height", limit=6), stop="tool_use"),
+        _turn(_use("tu_3", agent.DRAW_TOOL,
+                   **{"from": "tu_2", "shape": "spc",
+                      "title": "FG-COLA fill height, the last six samples"}),
+              stop="tool_use"),
+        _turn(_text(A_CLOSED_ANSWER)),
+    ]
+    href = _chip_from_an_open_sample(admin, plant, plant.shifted)
+    page = _explore(admin, plant, href[href.index("/dashboard/ai"):])
+    try:
+        _wait_for_the_chart(page, 1)
+        _ask(page)
         _wait_for_the_chart(page, 2)
-        pinned, drawn = (page.locator("#explore-log svg.fs-chart").nth(i)
-                         for i in (0, 1))
-        for chart in (pinned, drawn):
-            means = chart.locator('circle[data-series="xbar"]').evaluate_all(
-                "dots => dots.map(d => d.getAttribute('data-value'))")
-            assert len(means) == DRAWN
-            assert "145.2" in means, (
-                "the shifted sample's own mean is not on the picture")
-            assert chart.locator("line.limit-line").count() >= 2, (
-                "a control chart with no control limits is the #150 failure")
+        assert page.locator("#explore-log [data-answer-chart]").count() == 0, (
+            "a different window was marked as the chart he came from")
+        drew = page.locator("#explore-log svg.fs-chart").nth(1)
+        drawn = drew.locator('circle[data-series="xbar"]').evaluate_all(
+            "dots => dots.map(d => d.getAttribute('data-value'))")
+        assert len(drawn) == 6, drawn
     finally:
         page.close()
 
@@ -502,6 +575,31 @@ def test_the_answer_ends_in_the_questions_the_model_wrote_as_buttons(admin, plan
         assert buttons.evaluate_all("all => all.map(b => b.textContent)") \
             == NEXT_QUESTIONS
 
+        # Scott, 2026-10-08, of the live pictures: *"I didn't see the
+        # buttons."* They were grey outlines at the foot of a long answer. The
+        # row now says its own name, and the buttons are drawn with the weight
+        # of the Ask button beside the box rather than as ghosts of it.
+        row = page.locator("#explore-log .explore-next").last
+        assert row.locator(".next-head").inner_text() == "Ask this next"
+        assert buttons.evaluate_all(
+            "all => all.every(b => !b.classList.contains('ghost'))"), (
+            "the next questions are still drawn as ghost buttons")
+        ask_weight, next_weight = page.evaluate(
+            """() => [getComputedStyle(document.querySelector('#explore-send'))
+                        .fontWeight,
+                      getComputedStyle(document.querySelector(
+                        '#explore-log .explore-next .next-row button')).fontWeight]""")
+        assert next_weight == ask_weight, (ask_weight, next_weight)
+        # And it is in view when the answer ends, which is the whole point of
+        # a next step: the row the page scrolled to, not one below the fold.
+        page.wait_for_function(
+            """() => {
+                 const row = document.querySelector('#explore-log .explore-next');
+                 if (!row) return false;
+                 const box = row.getBoundingClientRect();
+                 return box.top >= 0 && box.bottom <= window.innerHeight + 1;
+               }""", timeout=10000)
+
         said = page.locator("#explore-log .explore-msg.bot").last.inner_text()
         assert "out of control" in said, "the answer itself is still there"
         assert "```" not in said, "the fence reached the screen as words"
@@ -509,6 +607,49 @@ def test_the_answer_ends_in_the_questions_the_model_wrote_as_buttons(admin, plan
         for question in NEXT_QUESTIONS:
             assert question not in said, (
                 "the questions are on the screen twice - as words and as buttons")
+    finally:
+        page.close()
+
+
+def test_a_round_that_ended_in_a_tool_call_keeps_its_words_and_their_order(
+        admin, plant):
+    """The biggest cause of a *flat* answer, and it was never on the screen to
+    see. `_drive` returned only the model's last text block, so a model that
+    said the good part, checked one more record and then added a line lost the
+    good part on the way out - and the manager question is exactly the shape
+    that happens on: two sentences for a manager, a last look at the open
+    nonconformances, then the *why*.
+
+    Both rounds' words are on the screen now, in the order they were written,
+    and the questions the model fenced in its last round are still the buttons.
+    """
+    first = ("Sample 17 is above the upper control limit at 145.2 mm, and two "
+             "of its five bottles are outside specification. The sixteen "
+             "samples before it sit either side of the centre line.")
+    second = ("The why: nothing on this characteristic was flagged before "
+              "today, so this is a step and not a drift.\n\n"
+              "```next\n" + "\n".join(NEXT_QUESTIONS[:2]) + "\n```")
+    plant.script[:] = _says_the_good_part_then_reads_once_more(first, second)
+    page = _explore(admin, plant, "/dashboard/ai#explore")
+    try:
+        page.fill("#explore-input", "what do I tell my boss about sample 17?")
+        _ask(page)
+        # Wait on the SECOND round's words, which arrive last.
+        page.wait_for_function(
+            """want => [...document.querySelectorAll('#explore-log .explore-msg.bot')]
+                     .some(line => line.textContent.includes(want))""",
+            arg="this is a step and not a drift", timeout=25000)
+        said = page.locator("#explore-log .explore-msg.bot").evaluate_all(
+            "all => all.map(line => line.textContent)")
+        joined = "\n".join(said)
+        assert "above the upper control limit" in joined, (
+            "the round that ended in a tool call lost its words")
+        assert joined.index("above the upper control limit") \
+            < joined.index("this is a step and not a drift"), (
+            "the answer reached the screen out of the order it was written")
+        assert "```" not in joined, "the fence reached the screen as words"
+        assert _next_buttons(page).evaluate_all(
+            "all => all.map(b => b.textContent)") == NEXT_QUESTIONS[:2]
     finally:
         page.close()
 

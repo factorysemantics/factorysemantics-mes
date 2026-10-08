@@ -146,8 +146,17 @@
    question, so they wrap and sit left rather than stretching: a button the
    width of the panel reads like a banner, and this is a thing to read before
    it is a thing to press. */
-.explore-next { display: flex; flex-direction: column; gap: 4px; }
+.explore-next {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-top: 10px; padding: 10px 12px;
+  border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  border-radius: var(--radius); background: var(--panel);
+}
 .explore-next p { margin: 0; }
+/* Scott, 2026-10-08, of the live pictures: "I didn't see the buttons." They
+   were grey outlines at the foot of a long answer. The row now says its own
+   name and the buttons carry the weight of the Ask button beside the box. */
+.explore-next .next-head { font-weight: 600; }
 .explore-next .next-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .explore-next .next-row button {
   text-align: left; max-width: 100%; white-space: normal;
