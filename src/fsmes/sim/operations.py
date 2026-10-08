@@ -33,6 +33,12 @@ in as themselves, completes the order through the API and releases the next
 one in the book. The audit row carries their name. Nothing here invents an
 order: when the book is empty the floor says so, once, and the line's counts
 become unassigned production, which is the true answer (decision 0019).
+
+The supervisor also raises the maintenance work that has come due, if the
+floor script asks. What he does NOT do is start it: a plant whose shift raises
+its own preventive work and then runs to the end of the order leaves that work
+sitting at `due`, and that is a record rather than a gap - see
+`raise_what_is_due` and the `maintenance` block of a pack's `floor.json`.
 """
 
 from __future__ import annotations
@@ -571,6 +577,52 @@ class Floor:
         if done:
             await self.read_the_register()
         return done
+
+    async def raise_what_is_due(self, by: str = "FLOOR-SUP") -> list[str]:
+        """Raise a preventive order for every plan this plant says is due.
+
+        What a shift supervisor does on his first pass: looks at what has
+        come due and puts work on the list. The product decides WHAT is due
+        (`services/maintenance.raise_due`, idempotent, one order per plan);
+        this only decides that somebody looked, which is the part that
+        belongs to the floor and not to the MES.
+
+        It does not start anything, and there is deliberately no step here
+        that could. This shift raises its work and runs to the end of the
+        order, so the orders it raises sit at `due` until somebody with a
+        spanner gets to them - which is the commonest thing in a bottling
+        plant and, on this pack, link 2 of the chain in `line.json`. The
+        absence is the record: this product has no `deferred` status, so an
+        order still at `due` eight hours later with no `maintenance.started`
+        audit row beside it is the only true way to write down that nobody
+        went. `floor.json` says all of this in its `maintenance` block,
+        including what would change if a floor ever learned to perform it.
+
+        Off unless the script asks, like everything else here: a pack with no
+        `maintenance` block gets a plant whose plans come due with no orders
+        against them, which is a real plant with no planner.
+        """
+        wanted = self.script.get("maintenance") or {}
+        if not wanted.get("raise_due"):
+            return []
+        try:
+            response = await self.post("/maintenance/raise")
+            response.raise_for_status()
+            raised = response.json()
+        except (httpx.HTTPError, ValueError) as exc:
+            log.warning("could not raise the maintenance work that is due",
+                        error=str(exc)[:160])
+            return []
+        codes = [str(row.get("code")) for row in raised.get("raised") or []]
+        if codes:
+            # Said out loud with the plans beside the orders, because the
+            # chain's answer key names its link by PLAN code and a reader of
+            # this log has to be able to join the two without the database.
+            log.info("raised the maintenance work that was due", by=by,
+                     orders=codes,
+                     plans=[row.get("plan") for row in raised.get("raised") or []],
+                     started="none - this shift runs to the end of the order")
+        return codes
 
     async def current_shift(self) -> str | None:
         """Which shift the plant says is running, cached for a minute.
@@ -1600,11 +1652,12 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
 
         async def do_supervise(summary, orders):
             # The supervisor's client, not the operator's: what this does -
-            # finishing an order, releasing the next, calibrating a gauge
-            # that has fallen due - is a supervisor's act, and the audit row
-            # has to say so.
+            # finishing an order, releasing the next, raising the maintenance
+            # work that has come due, calibrating a gauge that has fallen due
+            # - is a supervisor's act, and the audit row has to say so.
             if shift is not None:
                 await shift.work_the_book(orders, finish=finish_orders)
+                await shift.raise_what_is_due()
                 if await shift.calibrate_what_is_due():
                     # The operator measures with whatever the register now
                     # says. A bench still holding the old calibration date
