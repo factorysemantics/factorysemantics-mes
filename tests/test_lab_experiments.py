@@ -667,3 +667,27 @@ def test_the_over_run_experiment_turns_the_planner_off_as_well():
     plan = read_plan(Path(__file__).resolve().parents[1]
                      / "labs" / "experiments" / "over-run.toml")
     assert plan.floor_plans_orders is False
+
+
+def test_a_plan_that_plays_the_reference_hour_plays_the_hour_the_reference_line_scripts():
+    """Two shipped plans state the reference hour's script themselves.
+
+    They used to inherit it: a plan that names no events plays the pack's, and
+    the bottling pack's line *was* the reference hour. The pack's line is an
+    eight-hour shift now, so the hour had to be written where it is played -
+    and an hour copied into three files is an hour that drifts in two of
+    them. This is the check that it has not. Compared on the keys the generator
+    reads; the `_why` prose stays in `labs/kepsim/line.json`, which is where
+    the hour is maintained.
+    """
+    repo = Path(__file__).resolve().parents[1]
+    hour = json.loads((repo / "labs" / "kepsim" / "line.json").read_text(encoding="utf-8"))
+    scripted = [{k: v for k, v in event.items() if not k.startswith("_")}
+                for event in hour["events"]]
+    plans = ["one-line-bad-hour.toml", "two-plants-two-zones.toml"]
+    for name in plans:
+        plan = read_plan(repo / "labs" / "experiments" / name)
+        assert plan.scenario["bottling"] == scripted, (
+            f"{name} no longer plays the reference hour's script. Either bring it back into "
+            f"line with labs/kepsim/line.json or stop calling it the hour.")
+    assert len(plans) == 2, "every plan that states the hour is checked here, and there are 2."

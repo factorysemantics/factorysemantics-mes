@@ -54,6 +54,12 @@ tag_map    = "tag_map.json"
 # finds a plant's ground truth as `line.json` in the replay directory's parent
 # (`fsmes score`, `fsmes sweep`, `fsmes lab`), so this is also what keeps this
 # plant scoreable. `out/` is generated and never committed.
+#
+# `fsmes lab` reads the same description, which is why the two experiment
+# plans that used to inherit this pack's hour - `one-line-bad-hour.toml` and
+# `two-plants-two-zones.toml` - now carry the hour's script themselves. A plan
+# asking for 3600 seconds of an eight-hour script is refused rather than half
+# played, and a test keeps their copy in step with `labs/kepsim/line.json`.
 replay_dir = "out"
 masterdata = "masterdata"
 # What this plant's simulated floor does that no PLC reports: which scale

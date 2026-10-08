@@ -41,7 +41,9 @@ packs = ["../multiplant/bottling", "../multiplant/machining"]
 # was enough until 2026-10-05, when the bottling line's script grew a tag that
 # goes quiet from 2700 s to the end of the hour - so fifty minutes now cuts a
 # scripted event in half, and the builder says so rather than playing part of
-# it. Past Northgate's breakdown at 2700-2880 s either way.
+# it. Past Northgate's breakdown at 2700-2880 s either way. Kansas City's hour
+# is stated in `[scenario.bottling]` below; Northgate still plays its pack's
+# own line, which is an hour long.
 duration = 3600
 seed     = 11
 speed    = 30
@@ -62,3 +64,46 @@ coa = false
 
 [overlay.machining.words]
 lot = "batch"
+
+[scenario.bottling]
+# The reference hour's own script, stated here rather than inherited.
+#
+# Until 2026-10-08 this plan named no events, and a plan that names none plays
+# the pack's - which was the reference hour, because the bottling pack's line
+# *was* the reference hour. The pack's line is an eight-hour shift now: a plant
+# whose data wraps every hour puts the same changeover at the same minute of
+# every hour, and every chart longer than the file is a stencil. A plan asking
+# for 3600 seconds of that shift is refused rather than half played, which is
+# this builder's own rule working.
+#
+# So the hour is written where it is played. What each of these ten faults is
+# for, and what an MES is expected to say about it, is in
+# `labs/kepsim/line.json` and `labs/kepsim/scenario.md` - that file is where
+# the hour is maintained, and
+# `test_a_plan_that_plays_the_reference_hour_plays_the_hour_the_reference_line_scripts`
+# fails if this list and that one drift apart.
+events = [
+  # the filler's supply pressure falls away for six minutes; every bottle in
+  # the window is four grams light and nothing alarms
+  { type = "offset", station = "Refill", analog = "NozzlePressure", offset = -0.26, start = 120, end = 480, effects = [ { station = "Refill", analog = "FillWeight", offset = -4.0 } ] },
+  # a stop too short to ripple through buffers of 20
+  { type = "down", station = "LD", start = 600, end = 612 },
+  # the precursor: the motor heats for ten minutes before it fails
+  { type = "drift", station = "RD", analog = "MotorTemp", to = 88.0, start = 900, end = 1500 },
+  # and then it fails
+  { type = "down", station = "RD", start = 1500, end = 1620 },
+  # the washer story: scrap climbs while the wash runs three degrees hot, and
+  # the filler underweights every bottle downstream with no alarm of its own
+  { type = "scrap_burst", station = "Washer", scrap_pct = 10.0, analog_offset = 3.0, start = 1800, end = 2100, effects = [ { station = "Refill", analog = "FillWeight", offset = -9.0 } ] },
+  # a PLANNED stop, whole line: booked as downtime, every availability figure
+  # the MES reports is a lie
+  { type = "changeover", start = 2400, end = 2640 },
+  # the first bottles after the restart run heavy
+  { type = "offset", station = "Refill", analog = "FillWeight", offset = 5.0, start = 2640, end = 2670 },
+  # the counter snaps to zero mid-run, as a PLC does after a power blip
+  { type = "counter_reset", station = "RD", at = 3000 },
+  # the palletiser's micro-stops, all hour: the OEE-performance lesson
+  { type = "micro_stops", station = "Palletiser", every_s = [110, 130], duration_s = [8, 18] },
+  # a tag that goes quiet to the end of the hour while everything else reports
+  { type = "quiet", station = "Refill", analog = "FillWeight", start = 2700, end = 3600 },
+]
