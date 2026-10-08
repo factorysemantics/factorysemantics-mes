@@ -452,6 +452,46 @@ def test_a_link_with_one_record_missing_is_not_recorded_whatever_else_it_has():
     assert [row["recorded"] for row in link["records"]] == [True, False]
 
 
+STOP_LINK = {
+    "links": [{
+        "link": 1, "what": "the line changed over", "shows_as": "a setup interval",
+        "window_s": [0, 300],
+        "records": [{"kind": "stop", "equipment": "FILL01", "state": "setup",
+                     "reason": "changeover", "window_s": [0, 300]}],
+    }],
+}
+
+
+def _timeline(intervals: list[dict]) -> dict:
+    return {"window": {"start": _at(-10), "end": _at(600)},
+            "machines": [{"code": "FILL01", "intervals": intervals}]}
+
+
+def test_a_setup_interval_the_floor_labelled_differently_is_still_the_record():
+    """The state is the MES's own observation; the label is somebody's word for
+    it. A plant that calls its changeovers something else has not lost the
+    record, so the verdict is on the state and the label is reported beside
+    it - otherwise this scorer would mark a plant down for its vocabulary."""
+    card = score_chain(STOP_LINK, _timeline([
+        {"state": "setup", "reason": "Product change", "start": _at(10), "end": _at(250)},
+    ]), T0, 1.0, {})
+    row = card["links"][0]["records"][0]
+    assert row["recorded"] is True
+    assert row["reason_matched"] is False
+    assert row["seconds"] == pytest.approx(240.0)
+
+
+def test_a_machine_the_timeline_never_carried_is_unknown_not_missing():
+    """The timeline is scoped to a screenful of machines. A link on a machine
+    it left out was never asked about, and calling that a miss is the mistake
+    this scorer was already caught making once with a factory's faults."""
+    card = score_chain(STOP_LINK, {"window": {"start": _at(-10), "end": _at(600)},
+                                   "machines": []}, T0, 1.0, {})
+    row = card["links"][0]["records"][0]
+    assert row["recorded"] is None
+    assert "does not cover FILL01" in row["why"]
+
+
 def test_a_line_with_no_chain_written_down_scores_an_absent_key_and_no_links():
     """Most lines have no chain, and the hour CI runs is one of them. The
     section says the key is absent rather than reporting a perfect score over

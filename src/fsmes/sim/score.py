@@ -408,22 +408,48 @@ def _mean_of(points: list[dict]) -> float | None:
 
 def _score_stop(record: dict, start: datetime, end: datetime,
                 timeline: dict) -> dict:
+    """An interval on the state timeline, in the state the key names.
+
+    The verdict is on the **state**, and the reason it was given is reported
+    beside it rather than folded in. The state is the MES's own observation -
+    the machine said it was in setup and the MES wrote that down - while the
+    label is a person's, or a simulated floor's, and a plant that labels its
+    changeovers "Product change" has not lost the record. A key that names a
+    reason gets told whether it matched; it does not get a `false` for the
+    label alone.
+    """
     equipment, state = record.get("equipment"), record.get("state")
     if not _observed(timeline, start, end, equipment):
         return {"recorded": None,
                 "why": f"the MES's timeline does not cover {equipment} over this window"}
     seconds = 0.0
+    reasons: set[str] = set()
     for interval in _intervals_for(timeline, equipment):
-        if interval["state"] != state:
+        if interval.get("state") != state:
             continue
-        if record.get("reason") and interval.get("reason") not in (None, record["reason"]):
+        overlap = _overlap_seconds(start, end, _parse(interval["start"]),
+                                   _parse(interval["end"]))
+        if overlap <= 0:
             continue
-        seconds += _overlap_seconds(start, end, _parse(interval["start"]),
-                                    _parse(interval["end"]))
-    return {"recorded": seconds > 0, "seconds": round(seconds, 1),
-            "why": (f"{round(seconds, 1)} s of {state} on {equipment} inside the window"
-                    if seconds > 0 else
-                    f"the MES recorded no {state} interval on {equipment} in this window")}
+        seconds += overlap
+        for field in ("reason", "reason_code"):
+            if interval.get(field):
+                reasons.add(str(interval[field]))
+    wanted = record.get("reason")
+    matched = None
+    if wanted is not None:
+        matched = any(r.lower() == str(wanted).lower() for r in reasons)
+    return {
+        "recorded": seconds > 0,
+        "seconds": round(seconds, 1),
+        "reasons": sorted(reasons) or None,
+        "reason_matched": matched,
+        "why": (f"{round(seconds, 1)} s of {state} on {equipment} inside the window"
+                + (f", labelled {sorted(reasons)}" if reasons
+                   else ", with no reason on it")
+                if seconds > 0 else
+                f"the MES recorded no {state} interval on {equipment} in this window"),
+    }
 
 
 def _score_tag(record: dict, start: datetime, end: datetime,
