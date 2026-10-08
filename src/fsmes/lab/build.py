@@ -87,6 +87,11 @@ def script(plan: Plan, pack: fmt.Pack, into: Path) -> tuple[Path, int, int | Non
         source["seed"] = plan.seed
     if pack.name in plan.scenario:
         source["events"] = plan.scenario[pack.name]
+        # A chain's answer key names windows in the pack's own events. Replace
+        # the events and the key is about a line that is no longer being
+        # played, so it goes with them - an inherited key would have the
+        # scorer mark a story this run never told, and score it missing.
+        source.pop("_chain", None)
 
     duration = int(source.get("duration_s") or 0)
     if duration <= 0:

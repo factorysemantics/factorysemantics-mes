@@ -231,6 +231,83 @@ def _timeline_for(base: str, token: str, hours: float, codes: list[str]) -> dict
     return merged
 
 
+# ------------------------------------------------ the chain's other record books
+#
+# A chain's links live in different tables from the state timeline, so the
+# scorer needs more than a timeline to mark them. What is fetched here is
+# decided by the line's own answer key: one request per tag it names, the
+# maintenance list if a link names a plan, the control chart if a link names a
+# characteristic, the findings if a link names one. A key with no maintenance
+# link makes no maintenance request.
+
+#: The finest bucketing the trend endpoint allows. A bucket is placed by its
+#: midpoint, so one straddling the edge of a link's window lands on whichever
+#: side holds most of it - at this resolution a fraction of a second either
+#: way on a shift, and the alternative is fetching a shift of 1 Hz readings
+#: row by row to answer a question about a mean.
+CHAIN_TAG_BUCKETS = 2000
+
+#: One page of a list the chain needs whole, and how many of them at most. The
+#: judgement is "is this record there", so a list fetched in part cannot answer
+#: it in the negative; `complete` says which happened and the scorer reads it.
+CHAIN_PAGE = 200
+CHAIN_PAGES_MAX = 25
+
+
+def _whole_list(base: str, token: str, path: str) -> dict:
+    """Every page of a list endpoint, with the plant's own total beside it."""
+    items: list[dict] = []
+    total = None
+    joiner = "&" if "?" in path else "?"
+    for page in range(CHAIN_PAGES_MAX):
+        part = _get(base, f"{path}{joiner}limit={CHAIN_PAGE}&offset={page * CHAIN_PAGE}", token)
+        got = part.get("items") or []
+        items.extend(got)
+        total = part.get("total")
+        if not got or (total is not None and len(items) >= total):
+            break
+    return {"items": items, "total": total, "fetched": len(items),
+            "complete": total is not None and len(items) >= total}
+
+
+def chain_evidence(base: str, token: str, chain: dict | None, hours: float) -> dict | None:
+    """What the MES holds about the records a written-down chain names.
+
+    `None` when this line has no chain, which is not the same as a chain whose
+    records came back empty: the scorer says "nobody looked" for the first and
+    "not recorded" for the second.
+    """
+    if not chain:
+        return None
+    evidence: dict = {"tags": {}, "charts": {}}
+    for link in chain.get("links") or []:
+        for record in link.get("records") or []:
+            kind = record.get("kind")
+            if kind == "tag":
+                equipment, tag = record.get("equipment"), record.get("tag")
+                key = f"{equipment}/{tag}"
+                if equipment and tag and key not in evidence["tags"]:
+                    evidence["tags"][key] = _get(
+                        base, f"/analysis/tag/{equipment}?tag={tag}&hours={hours:.4f}"
+                              f"&buckets={CHAIN_TAG_BUCKETS}", token)
+            elif kind == "maintenance" and "maintenance" not in evidence:
+                # The whole backlog and history, not the plan the key names:
+                # a link that says "still due" is only true if nothing else
+                # on that plan was started, and a filtered request cannot see
+                # the order that was.
+                evidence["maintenance"] = _whole_list(base, token, "/maintenance/orders")
+            elif kind == "sample":
+                material = record.get("material")
+                characteristic = record.get("characteristic")
+                key = f"{material}/{characteristic}"
+                if material and characteristic and key not in evidence["charts"]:
+                    evidence["charts"][key] = _get(
+                        base, f"/quality/spc/{material}/{characteristic}", token)
+            elif kind == "finding" and "findings" not in evidence:
+                evidence["findings"] = _whole_list(base, token, "/quality/nonconformances")
+    return evidence
+
+
 def log_files(path: Path) -> list[Path]:
     """A component's structured log and the rotated files before it, oldest
     first: component.jsonl.5 ... component.jsonl.1, component.jsonl. A busy
@@ -609,7 +686,9 @@ def scored_run(
         oee = _get(base, f"/analysis/oee?hours={hours:.4f}", token)
 
         card = score_run(truth, timeline, t0, speed,
-                         observe_interval_s=publish_ms / 1000.0)
+                         observe_interval_s=publish_ms / 1000.0,
+                         chain_evidence=chain_evidence(
+                             base, token, truth.get("chain"), hours))
         # How often the agent in this run asked its server whether the session
         # was alive. It is the resolution of a scripted outage the same way the
         # publish interval is the resolution of a scripted stop: an outage
