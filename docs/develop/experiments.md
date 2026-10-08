@@ -39,7 +39,12 @@ measure  = ["booking", "downtime", "oee"]
 serialization = false
 
 # A plant named here plays this script instead of its pack's own. The
-# vocabulary is closed — see below.
+# vocabulary is closed — see below. A plan that wants the bottling line's
+# reference *hour* states it: that pack's own line is an eight-hour shift, so
+# that the plant it builds does not play the same hour over and over, and a
+# plan asking for 3600 seconds of a shift is refused rather than cutting a
+# scripted event in half. `one-line-bad-hour.toml` and
+# `two-plants-two-zones.toml` therefore carry the hour's script themselves.
 [scenario.machining]
 events = [ { type = "down", station = "Mill", start = 600, end = 720 } ]
 

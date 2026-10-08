@@ -294,6 +294,27 @@ def simulate(config: dict) -> dict[str, list[list]]:
     capacity = int(config.get("buffers", {}).get("capacity", 20))
     initial = int(config.get("buffers", {}).get("initial", capacity // 2))
     orders = list(config.get("orders") or [1])
+    # How long an *emergent* starve or block has to hold before the machine
+    # publishes it. Zero - the default, and what every line written before
+    # this existed gets - publishes every one, which is what a one-second
+    # tick produces when a buffer sits pinned at its capacity: a bottleneck
+    # downstream makes the station above it block for two seconds, run for
+    # three, block for one, all shift. Those are not stops anybody can
+    # explain, and they are not how a machine reports itself either - a state
+    # tag has a filter timer on it, because a drive waiting a moment for the
+    # conveyor ahead to move has not stopped.
+    #
+    # Scripted events are never filtered. A `down`, `starve`, `block`,
+    # `micro_stops` or `changeover` is the story the scenario is for, and a
+    # story that asked for twelve seconds gets twelve seconds.
+    #
+    # What it costs, said out loud: an emergent idle *longer* than the filter
+    # is published from the filter's end rather than its start, so for those
+    # first seconds the machine reports itself running while its counter
+    # stands still. That is the filter's price, it is paid in performance
+    # rather than availability, and a full buffer is a performance loss
+    # anyway - which is the OEE lesson this line exists to teach.
+    state_filter_s = int(config.get("state_filter_s", 0) or 0)
 
     # --- unpack the event script into per-tick lookups -------------------
     downs: dict[str, list[tuple[int, int]]] = {}      # station -> windows of DOWN
@@ -353,6 +374,8 @@ def simulate(config: dict) -> dict[str, list[list]]:
     run_seconds = [0] * n              # what each machine reports as its runtime
     accum = [0.0] * n                  # fractional-parts accumulator
     order_index = 0
+    shown = [RUNNING] * n              # what each machine publishes on its State tag
+    idle_held = [0] * n                # seconds it has been emergently idle
 
     rows: dict[str, list[list]] = {s["name"]: [] for s in stations}
     rows["Line"] = []
@@ -430,6 +453,25 @@ def simulate(config: dict) -> dict[str, list[list]]:
                 good[i] = 0
                 scrap[i] = 0
 
+        # --- what each machine publishes --------------------------------
+        # The physics above is untouched by the state filter: `states` drives
+        # the buffers and the counters, `shown` is only what goes on the tag.
+        for i, station in enumerate(stations):
+            name = station["name"]
+            emergent = states[i] in (STARVED, BLOCKED) and not (
+                any(in_win(t, a, b) for a, b in blocked.get(name, []))
+                or any(in_win(t, a, b) for a, b in starved.get(name, [])))
+            if state_filter_s and emergent:
+                idle_held[i] += 1
+                if idle_held[i] > state_filter_s:
+                    shown[i] = states[i]
+                # Otherwise the machine goes on publishing what it was
+                # publishing: the filter has not expired, so as far as
+                # anything reading the tag is concerned nothing happened.
+            else:
+                idle_held[i] = 0
+                shown[i] = states[i]
+
         # --- analogs and rows -------------------------------------------
         for i, station in enumerate(stations):
             name = station["name"]
@@ -465,7 +507,7 @@ def simulate(config: dict) -> dict[str, list[list]]:
                 for effect in effects.get(name, []):
                     if effect["analog"] == signal and in_win(t, effect["start"], effect["end"]):
                         value += effect["offset"]
-                if analog.get("running_only") and states[i] != RUNNING:
+                if analog.get("running_only") and shown[i] != RUNNING:
                     value = 0.0
                 else:
                     value += rng.gauss(0.0, float(analog.get("noise", 0.0)))
@@ -483,14 +525,14 @@ def simulate(config: dict) -> dict[str, list[list]]:
 
             cycle_ms = (
                 round(60000.0 / float(station["rate_per_min"]) + rng.gauss(0, 15))
-                if states[i] == RUNNING
+                if shown[i] == RUNNING
                 else 0
             )
-            if states[i] == RUNNING:
+            if shown[i] == RUNNING:
                 run_seconds[i] += 1
             rows[name].append([
-                t, states[i], good[i], scrap[i], good[i] + scrap[i],
-                alarm_word(states[i], name, t, drifts, bursts),
+                t, shown[i], good[i], scrap[i], good[i] + scrap[i],
+                alarm_word(shown[i], name, t, drifts, bursts),
                 cycle_ms,
                 # Runtime the machine reports itself. The maintenance module
                 # already computes this from state history; a plant whose
@@ -498,7 +540,7 @@ def simulate(config: dict) -> dict[str, list[list]]:
                 # and the two disagreeing is a finding worth having.
                 round(run_seconds[i] / 60.0, 2),
                 # Ready is not running: a machine can be willing and starved.
-                0 if states[i] in (DOWN, CHANGEOVER) else 1,
+                0 if shown[i] in (DOWN, CHANGEOVER) else 1,
                 *values,
             ])
 
@@ -670,7 +712,16 @@ def _scenario_rows(config: dict) -> list[tuple[str, str]]:
     """The `(when, event)` pairs for one line's scripted events, in file
     order. Shared by `write_scenario` (one line) and `write_factory_scenario`
     (several), so the formatting can't drift between them."""
+    # An hour's line reads in mm:ss, which is how every scenario was written
+    # until a shift-long one arrived. A shift in mm:ss reads "420:00" for
+    # seven o'clock, so a line longer than an hour gets the hour column it
+    # needs. Which form is chosen is a fact about the line's own duration,
+    # so the hour's timeline is exactly what it always was.
+    long_run = int(config.get("duration_s", 3600)) > 3600
+
     def mmss(seconds: int) -> str:
+        if long_run:
+            return f"{seconds // 3600:d}:{seconds // 60 % 60:02d}:{seconds % 60:02d}"
         return f"{seconds // 60:02d}:{seconds % 60:02d}"
 
     out: list[tuple[str, str]] = []
@@ -729,6 +780,16 @@ def write_scenario(config: dict, out_dir: Path) -> None:
     lines.append("")
     lines.append("Every loop the file wraps and all counters snap back to zero — "
                  "a free counter-reset drill each pass.")
+    filter_s = int(config.get("state_filter_s", 0) or 0)
+    if filter_s:
+        lines.append("")
+        lines.append(
+            f"**State filter: {filter_s}s.** A starve or a block the buffers "
+            "produced on their own is published only once it has held that "
+            f"long, so the one- and two-second flickers a bottleneck makes "
+            "are not on the tag at all; a longer one is published from the "
+            f"filter's end, which costs it its first {filter_s}s. Nothing in "
+            "the table above is filtered — a scripted stop is the story.")
     lines.append("")
     lines.append("States: 0 stopped · 1 running · 2 starved · 3 blocked · 4 down · 5 changeover")
     (out_dir / "scenario.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
