@@ -207,7 +207,8 @@ a reason:
 > backlog that nobody starts** → the chilled water leaving it **climbs** from
 > 6:20, the chiller's control overshoots, and the product **ramps two degrees
 > cold** over twenty minutes → the bottles filled in that half hour come out
-> **a millimetre and a half low**, a control rule fires and a finding opens.
+> **a millimetre and a half low**, a control rule fires and the hold on the
+> quality list is a non-conformance against FG-BOTTLE fill height.
 
 Each link is a real record in a different one of this plant's books, which is
 the point: a person walking it back changes screens three times, and so will an
@@ -221,17 +222,27 @@ bottling` prints the result as its *chain* section.
 
 | # | link | line time | the record | where to look |
 |---|------|-----------|------------|---------------|
-| 1 | production — the changeover brings order 4712 and the filler runs it faster | 4:40 → end of shift | a labelled `setup` interval on FILL01, then a cycle time ~35 ms shorter for the rest of the shift | State Timeline; `/analysis/timeline?equipment=FILL01`; trend `FILL01.CycleTimeMs` |
+| 1 | production — the changeover brings order 4712 and the filler runs it faster | 4:40 → end of shift | a `setup` interval on FILL01, four minutes, labelled *Changeover* by the floor, then a cycle time ~33 ms shorter for the rest of the shift | State Timeline; `/analysis/timeline?equipment=FILL01`; trend `FILL01.CycleTimeMs` |
 | 2 | maintenance — the chiller condenser clean is overdue and nobody starts it | all shift (raised in the first minutes) | a preventive order against `PM-FILL-CHILLER`, still at `due` eight hours later, with no start on it | Maintenance page; `/maintenance/orders?equipment=FILL01&status=due` |
 | 3 | tags — the chiller outlet climbs, its control overshoots, the product ramps cold | 6:20 → end (outlet); 6:40 → 7:00 ramp, cold to 7:30 (product) | `FILL01.ChillerOutletTemp` leaving 3.2 °C and climbing; `FILL01.ProductTemp` walking 8.4 → 6.4 °C; AlarmWord bit 1 set on FILL01 while either drifts | trend graph for FILL01; `/analysis/tag/FILL01?tag=ChillerOutletTemp` and `?tag=ProductTemp` |
-| 4 | quality — the fill-height means run low, a rule fires, a finding opens | 7:00 → 7:30 | two or three X̄ points near 140.5 mm, below the lower two-sigma line at 140.84, range chart flat; one non-conformance | SPC panel; `/quality/spc/FG-BOTTLE/fill_height`; `/quality/nonconformances` |
+| 4 | quality — the fill-height means run low, a rule fires, the hold is a finding | 7:00 → 7:30 (the finding itself up to the end of the shift) | the 7:15 X̄ point at 140.16 mm — 1.7 mm under the 141.84 mm centre line, past the 141.01 mm lower three-sigma limit — with the range chart flat; the 7:30 point still low at 140.76; one open non-conformance on FG-BOTTLE fill height | SPC panel; `/quality/spc/FG-BOTTLE/fill_height`; `/quality/nonconformances` |
 
-**Rule 2 fires first, not rule 1.** A millimetre and a half is 2.9 sigma of a
-sample mean on this chart, which is inside the three-sigma line by a whisker,
-so the rule that catches the dip reliably is *two of three points beyond two
-sigma*; rule 1 catches only the lowest point, and only on a replay slow enough
-to put several samples in the window. The key says so in `_first_rule`, because
-a reader — and an agent — assumes a low mean must be rule 1.
+**Rule 1 fires first — measured, not guessed.** The first draft of this key
+said rule 2, reasoning from a sigma nobody had looked up. On the replayed shift
+the chart's centre line is 141.84 mm and its sigma 0.277 mm, so the lower
+three-sigma line is at 141.01 mm and the 140.16 mm sample mean at 7:15 is six
+sigma low: *a point beyond three sigma*, on its own, no second point needed.
+The key says which and says it was measured, in `_first_rule`.
+
+**The finding is stamped later than the firing, and that is the product being
+careful.** A firing joins a hold already open on the same characteristic rather
+than opening a second one (`services/spc.py`, `_hold_for`), and the inspector's
+plan samples fill height every fifteen line minutes. On the replayed shift the
+7:15 firing went onto a hold raised at 4:45 and still open; the 7:30 sample
+opened the one the key names. So the key gives the *sample* the cold half hour
+and the *finding* the rest of the shift, and says why in
+`_when_the_finding_is_stamped`. Anyone scoring this would otherwise read a
+correct record as a bug.
 
 **What the key deliberately does not claim** is in `_chain`
 `_what_this_key_does_not_claim`, and the honest one to know is link 1: the
@@ -247,6 +258,16 @@ one that matters: a tag the MES holds nothing for, a window with no sample in
 it, and a list that came back one page of are all "no answer", never a zero.
 `src/fsmes/sim/score.py` and
 `tests/test_the_bottling_shift_leaves_a_chain_a_person_can_walk_back.py`.
+
+**A short record carries its own slack.** The scorer finds each record by
+multiplying wall time by the replay speed, so at 30x the four-minute changeover
+is eight wall seconds and one second of lag in the replay moves it thirty line
+seconds — on the first scored run, with a test suite sharing the processor, it
+moved a correctly recorded setup clean out of the window and scored it missing.
+That record now asks for `slack_s: 300` in the key, with its reason beside it,
+and the card prints the window it was actually judged on next to the one the
+key wrote down. Nothing is widened quietly, and the three long records ask for
+no slack at all.
 
 ### What an eight-hour shift actually looked like
 
@@ -308,9 +329,12 @@ touched the breakdown, the changeover, the micro-stops or the state filter.
   trend graph for that tag shows the dip lining up with the dip in height. The
   arithmetic is in `bottling/line.json` (`_how_low_is_low`), re-measured
   against the generated CSVs after the chain went in: 500.04 g → 494.25 g is
-  −1.51 mm (142.01 mm settled against 140.50 mm cold), which is 2.9 sigma of a
-  sample mean, so rule 2 fires and rule 1 catches the lowest point. Where the
-  cold came from is the chain — see *The chain* above.
+  −1.51 mm (142.01 mm settled against 140.50 mm cold). Single bottles scatter
+  about 0.62 mm, so a mean of five scatters 0.28 mm, and a drop of a millimetre
+  and a half is five to six sigma of a sample mean — rule 1 on its own, no
+  second point needed. (An earlier draft of this paragraph said 2.9 sigma and
+  rule 2, from a sigma nobody had measured.) Where the cold came from is the
+  chain — see *The chain* above.
 - **A precursor before the failure.** Both drift an analog upward before the
   stop — the mill's spindle to 74 °C, the RD's motor to 88 °C. This is what a
   predictive agent would be watching.

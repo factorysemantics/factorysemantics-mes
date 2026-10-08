@@ -393,22 +393,30 @@
     "_why": "Because a root cause nobody wrote down cannot be marked. Scott's question on 2026-10-08 was how a complex reasoning problem could be simulated and then TESTED, and the second half is this file: without it, an assistant that walks a chain back can only be judged by somebody who already knows the answer, which is the thing nobody in this market ships. The same argument as every `_why` in this file, one level up - the cause is data, and so is the mark scheme.",
     "_why_not_in_python": "A chain hard-coded in the scorer would grade this line and no other, and it would drift from the events above the first time somebody moved a window by a minute. The links below name only what the events in this same file script, so the key and the plant cannot disagree without the JSON saying so.",
     "name": "cold product, back to the changeover that loaded the chiller",
-    "finding": "fill-height sample means on FG-BOTTLE run about 1.5 mm low for half an hour; control-chart rule 2 fires first, and the finding that opens is an out-of-specification reading on a single bottle",
+    "finding": "fill-height sample means on FG-BOTTLE run low for half an hour - one of them 1.7 mm under the chart's centre line; control-chart rule 1 fires first, and the hold that carries it is an open non-conformance on FG-BOTTLE fill height",
     "_how_a_tag_record_is_judged": "`by` is how far the mean over the record's own window has to sit from the mean over everything the MES holds BEFORE that window, in the named `direction`, in the tag's own units. Mean against baseline rather than first bucket against last, because two of these three records are steps and one is a ramp, and that one rule reads both: a cycle time that drops at 4:40 and holds has no slope inside its window at all. A record whose window starts at the beginning of the run has no baseline and is scored `null` with that as the reason rather than guessed at.",
-    "_first_rule": "Rule 2 - two of three points beyond two sigma on one side - and not rule 1. The dip is 2.9 sigma of a sample mean, which is inside the three-sigma line by a whisker, so a single low mean on its own fires nothing; the second one in the window fires rule 2. Stated because `which rule fires first` is the kind of thing a reader assumes is rule 1 and an agent will claim is rule 1.",
+    "_first_rule": "Rule 1 - a single point beyond three sigma - and not rule 2. Measured on the replayed shift of 2026-10-08: the chart is an X-bar and R of five bottles a sample, its centre line is 141.84 mm and its sigma 0.277 mm, so the lower three-sigma line sits at 141.01 mm. The first sample mean taken inside the cold half hour is 140.16 mm, which is six sigma low, and rule 1 fires on it on its own. Stated because the first guess at this key said rule 2, reasoning from a sigma nobody had measured - the drop is far bigger than the process's own spread, and that is what makes it a single-point firing.",
     "links": [
       {
         "link": 1,
         "what": "production: the changeover brings order 4712 and the filler runs it faster",
-        "window_s": [16800, 28800],
+        "window_s": [
+          16800,
+          28800
+        ],
         "records": [
           {
             "kind": "stop",
             "equipment": "FILL01",
             "state": "setup",
             "reason": "changeover",
-            "window_s": [16800, 17040],
-            "endpoint": "/analysis/timeline?equipment=FILL01"
+            "window_s": [
+              16800,
+              17040
+            ],
+            "endpoint": "/analysis/timeline?equipment=FILL01",
+            "slack_s": 300,
+            "_why_slack": "A replayed shift's clock is the wall clock multiplied by the speed, so the scorer finds this interval by arithmetic on when the replay started. At 30x the four minutes are eight wall seconds, and a second of lag in the replay process moves them thirty line seconds - on the first scored run, with a test suite sharing the CPU, it moved them clean out of the window and a correctly recorded setup scored missing. Five minutes of slack either side is the honest width of 'in this window' for a stop judged through a compressed clock, and the nearest other stop on this machine is an hour and a half away, so it cannot credit the wrong one."
           },
           {
             "kind": "tag",
@@ -416,16 +424,22 @@
             "tag": "CycleTimeMs",
             "direction": "down",
             "by": 20.0,
-            "window_s": [17040, 28800],
+            "window_s": [
+              17040,
+              28800
+            ],
             "endpoint": "/analysis/tag/FILL01?tag=CycleTimeMs"
           }
         ],
-        "shows_as": "On the order book and the state timeline: a four-minute labelled setup at 4:40, and from the moment it ends the filler's cycle time sits about 35 ms shorter than it did all morning - the same machine, a faster product."
+        "shows_as": "On the order book and the state timeline: a four-minute setup at 4:40, labelled Changeover by the floor, and from the moment it ends the filler's cycle time sits about 33 ms shorter than it did all morning - the same machine, a faster product."
       },
       {
         "link": 2,
         "what": "maintenance: the filler's chiller condenser clean is overdue and nobody starts it",
-        "window_s": [0, 28800],
+        "window_s": [
+          0,
+          28800
+        ],
         "records": [
           {
             "kind": "maintenance",
@@ -440,7 +454,10 @@
       {
         "link": 3,
         "what": "tags: the chiller outlet climbs under the extra load, its control overshoots, and the product ramps cold",
-        "window_s": [22800, 27000],
+        "window_s": [
+          22800,
+          27000
+        ],
         "records": [
           {
             "kind": "tag",
@@ -448,7 +465,10 @@
             "tag": "ChillerOutletTemp",
             "direction": "up",
             "by": 1.0,
-            "window_s": [22800, 28800],
+            "window_s": [
+              22800,
+              28800
+            ],
             "endpoint": "/analysis/tag/FILL01?tag=ChillerOutletTemp"
           },
           {
@@ -457,7 +477,10 @@
             "tag": "ProductTemp",
             "direction": "down",
             "by": 1.0,
-            "window_s": [24000, 27000],
+            "window_s": [
+              24000,
+              27000
+            ],
             "endpoint": "/analysis/tag/FILL01?tag=ProductTemp"
           }
         ],
@@ -466,30 +489,41 @@
       {
         "link": 4,
         "what": "quality: the fill-height sample means run low, a control rule fires, and a finding opens",
-        "window_s": [25200, 27000],
+        "window_s": [
+          25200,
+          27000
+        ],
         "records": [
           {
             "kind": "sample",
             "material": "FG-BOTTLE",
             "characteristic": "fill_height",
-            "below": 140.84,
-            "endpoint": "/quality/spc/FG-BOTTLE/fill_height"
+            "below": 141.0,
+            "endpoint": "/quality/spc/FG-BOTTLE/fill_height",
+            "_why_bound": "The chart's own lower three-sigma line on the replayed shift, 141.01 mm, rounded down so that a tenth of a millimetre of re-estimation - the limits are computed from the shift's own samples every time the chart is drawn - cannot flip the answer. The 139 mm lower specification limit is a different and much lower bar: the process is out of control here long before a bottle is out of specification, which is the whole point of a control chart."
           },
           {
             "kind": "finding",
             "material": "FG-BOTTLE",
             "characteristic": "fill_height",
-            "endpoint": "/quality/nonconformances"
+            "endpoint": "/quality/nonconformances",
+            "window_s": [
+              25200,
+              28800
+            ],
+            "_why_window": "See `_when_the_finding_is_stamped` above."
           }
         ],
-        "shows_as": "On the control chart for FG-BOTTLE fill height: two or three sample means between 7:00 and 7:30 sitting around 140.5 mm, below the lower two-sigma line at 140.84, with the range chart beside them flat - the process moved and its spread did not. Rule 2 fires, and a handful of single bottles fall past the 139 mm lower specification limit, which is the finding on the quality list."
+        "shows_as": "On the control chart for FG-BOTTLE fill height: of the two sample means taken inside the cold half hour, the one at 7:15 is 140.16 mm - 1.7 mm under the centre line and past the lower three-sigma limit - while the range chart beside it stays put, so the process moved and its spread did not. Rule 1 fires on that single point, the sample at 7:30 is still low at 140.76 mm, and the hold on the quality list is a non-conformance against FG-BOTTLE fill height. No bottle in this window is outside the 139 mm specification: the chart catches it first."
       }
     ],
     "_what_this_key_does_not_claim": [
       "That the MES joins the links. It does not: today a person walks this chain by opening four screens, and the first two steps of that walk - clicking a trend point and clicking a state interval - are being built beside this file. The key is what makes that walk markable, not what makes it short.",
       "That link 1 is the whole production record. The second ORDER's own release and start are the simulated floor's doing and happen on the floor's clock, not on the line's, so what is keyed here is what the line itself provably leaves at 4:40 - a labelled setup interval and a faster cycle time on the filler.",
-      "That the chain is the only story in the window. The palletiser's micro-stops run through all of it, FillWeight goes quiet at 5:45, and the counter resets at 6:30. That is deliberate: a chain that is the only thing happening is not a chain anybody had to find."
-    ]
+      "That the chain is the only story in the window. The palletiser's micro-stops run through all of it, FillWeight goes quiet at 5:45, and the counter resets at 6:30. That is deliberate: a chain that is the only thing happening is not a chain anybody had to find.",
+      "That a scorer reading this key is measuring only the MES. Three of the records are judged against windows the scorer computes from the replay's start time and the speed, so at high speed the clock itself is part of what is being tested. The short record says so and carries its slack; the long ones do not need to."
+    ],
+    "_when_the_finding_is_stamped": "A firing joins a hold already open on the same characteristic rather than opening a second one (`services/spc.py`, `_hold_for`), and the inspector's plan samples fill height every fifteen line minutes. So the finding that carries the cold window can be stamped a good deal later than the firing that belongs to it: on the replayed shift the 7:15 sample fired rule 1 onto a hold raised at 4:45 and still open, and the next sample, at 7:30, opened the one that is keyed below. That is why the finding's window runs to the end of the shift and the sample's does not."
   },
   "_how_low_is_low": "The cold window, checked the way floor.json checks the changeover, and then measured on the generated shift rather than left as arithmetic. The pack's own straight line is height_mm = 12.0 + 0.26 x fill_weight_g, so a millimetre and a half of height is 1.5 / 0.26 = 5.77 g of weight; the effect is -5.8 g. Measured in out/Refill.csv: ProductTemp 8.40 -> 6.40 degC and FillWeight 500.04 -> 494.25 g across the window, which is -5.79 g and converts to a height step of -1.51 mm - 142.01 mm settled against 140.50 mm cold. (The product reaches 6.40 degC by a twenty-minute ramp from 6:40 rather than a step, since the chain was planted; the settled half-hour below it is unchanged, and so is every number here.) On this plant's measured chart X-doublebar is 141.88 mm and R-bar 2.69 mm, so within-sample sigma is R-bar / d2 = 1.16 mm, a sample mean's own sigma is 1.16 / sqrt(5) = 0.52 mm, and the X-bar limits are 141.88 +/- A2 x R-bar = 140.33 to 143.43. So -1.48 mm is 2.9 sigma of a sample mean: it puts the means at about 140.5, below the lower two-sigma line at 140.84 and a whisker above the lower control limit at 140.33. Rule 2 - two of three beyond two sigma on one side - is what fires reliably, and rule 1 catches only the lowest of them. The sample RANGES do not move, because nothing here widens the bottle-to-bottle spread: the process moved and its spread did not, which is the whole point of an X-bar and R chart and the exact mirror of the changeover story above it.",
   "_why_half_an_hour_and_not_twenty_minutes": "Scott's words were 'runs 2 degC cold for 20 min'. This floor samples fill height every 900 line seconds (floor.json `sampling.fill_height.every_line_s`), so a twenty-minute window catches one sample mean and sometimes two - and one low point on its own fires no control rule unless it clears the three-sigma line, which at 2.9 sigma it does not. Thirty minutes catches two or three whatever the replay's phase, which is what rule 2 needs to fire and what makes the dip read as a dip rather than a stray point. Same reasoning, and the same note, as floor.json's `_why_not_half_a_millimetre`: the smallest version of the story that actually shows up where somebody is looking.",
