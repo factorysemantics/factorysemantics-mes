@@ -1266,6 +1266,51 @@ def _anthropic_tools(sess: Session) -> list[dict]:
     return tools
 
 
+def _cached_history(sess: Session) -> list[dict]:
+    """This conversation's messages with one cache breakpoint at the end of them.
+
+    The system words and the catalogue are cached already, and between them
+    they are most of a request - but they are also the part that never grows.
+    The part that grows is the conversation: a round that has read a tool sends
+    that tool's answer again on every round after it, and a second question
+    sends the whole of the first one back as well. Measured on a lab-sized
+    plant on 2026-10-08, that was 25,400 uncached input tokens across the
+    manager question and one follow-up - half of what the pair cost - for
+    words the model had already been sent and paid for.
+
+    So one breakpoint goes on the tail of the conversation. Each round writes
+    what is new and reads everything the rounds before it wrote; the next
+    question reads the whole turn behind it. Nothing is dropped, nothing is
+    summarised and nothing is reordered - this changes what a request is
+    billed as, not what it says, and a breakpoint that misses costs exactly
+    what no breakpoint costs.
+
+    The last message of a request is always one this module built - the
+    person's words, or the tool results answering the round before - because
+    `_drive` appends the model's own reply and then the results before it asks
+    again. An assistant message is never last, and its blocks are the SDK's
+    own objects rather than ours, so a tail this function does not recognise
+    is left alone rather than rebuilt from something we do not own.
+
+    `anthropic` takes at most four breakpoints in a request and this is the
+    third (the system block and the catalogue hold the other two).
+    """
+    history = list(sess.history)
+    if not history:
+        return history
+    message = history[-1]
+    content = message.get("content")
+    if isinstance(content, str):
+        blocks: list = [{"type": "text", "text": content}]
+    elif isinstance(content, list) and content and isinstance(content[-1], dict):
+        blocks = list(content)
+    else:
+        return history
+    blocks[-1] = {**blocks[-1], "cache_control": {"type": "ephemeral"}}
+    history[-1] = {**message, "content": blocks}
+    return history
+
+
 def _call_model(sess: Session) -> Any:
     """One request to the model. Replaced in tests."""
     from fsmes import shadow
@@ -1280,7 +1325,7 @@ def _call_model(sess: Session) -> Any:
                   "text": system_for(sess.kind).format(plant=sess.plant) + sess.withheld,
                   "cache_control": {"type": "ephemeral"}}],
         tools=_anthropic_tools(sess),
-        messages=sess.history,
+        messages=_cached_history(sess),
         thinking={"type": "adaptive"},
         output_config={"effort": EFFORT},
     )
