@@ -165,6 +165,16 @@ def seed_kepsim_line(session: Session, tag_map: Path | None = None) -> bool:
          TriggerKind.CALENDAR_DAYS, 7.0, 30.0),
         ("PM-RD-BEARING", "Check denester bearing play", "RD01",
          TriggerKind.RUNTIME_HOURS, 8.0, 90.0),
+        # The only one on a calendar that has never been done. A condenser
+        # fouls with the weeks it has been running in a warm room, not with
+        # the bottles it has filled, so a calendar is its honest trigger -
+        # and a plant built this minute has no record of anybody cleaning it,
+        # which `maintenance.status_of` reports as due, "days (never
+        # serviced)". It is what the bottling shift's planted chain hangs its
+        # maintenance link on (`labs/multiplant/bottling/line.json`): the job
+        # is in the backlog from the first minute and nobody goes.
+        ("PM-FILL-CHILLER", "Clean filler chiller condenser", "FILL01",
+         TriggerKind.CALENDAR_DAYS, 30.0, 90.0),
     ]
     session.add_all([
         # By relationship rather than id: these stations may not be flushed

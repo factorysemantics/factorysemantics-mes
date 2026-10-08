@@ -129,8 +129,9 @@ like a shift.
 reference**: it is what CI replays, what `fsmes score` is measured against and
 what the published honesty numbers are quoted from. Bottling's shift is the
 same six stations, rates, buffers and physics with a different duration, a
-different seed, the events placed once each, one extra story and one extra
-switch. Machining keeps its hour because nothing about it needs a shift yet.
+different seed, the events placed once each, the four-link chain below, and
+one extra switch. Machining keeps its hour because nothing about it needs a
+shift yet.
 
 Regenerate either after editing its config:
 
@@ -194,6 +195,59 @@ fleet runs this file at 1x**, which is the speed it is written for; a replay
 compressed for a quick look wants 12x or less if the fill-height chart is the
 thing being looked at.
 
+### The chain — four links, four record books, and the answer key
+
+The cold-product story used to start in the middle: the fill height ran low
+and the only thing behind it was a tag that stepped down. Since 2026-10-08 the
+shift plants the whole chain, so the low chart has a reason, and the reason has
+a reason:
+
+> The 4:40 changeover brings the second order and the filler is run **faster**
+> for it → the chiller it loads has a **condenser clean overdue in the
+> backlog that nobody starts** → the chilled water leaving it **climbs** from
+> 6:20, the chiller's control overshoots, and the product **ramps two degrees
+> cold** over twenty minutes → the bottles filled in that half hour come out
+> **a millimetre and a half low**, a control rule fires and a finding opens.
+
+Each link is a real record in a different one of this plant's books, which is
+the point: a person walking it back changes screens three times, and so will an
+assistant. And beside the shift there is an **answer key** — `_chain` in
+`bottling/line.json` — naming the four links, their windows in line seconds and
+the record each one leaves. It is read by a person and by
+`fsmes.sim.score.score_chain`, which marks a replay against it; `fsmes score
+bottling` prints the result as its *chain* section.
+
+**Where each link shows up in the records**
+
+| # | link | line time | the record | where to look |
+|---|------|-----------|------------|---------------|
+| 1 | production — the changeover brings order 4712 and the filler runs it faster | 4:40 → end of shift | a labelled `setup` interval on FILL01, then a cycle time ~35 ms shorter for the rest of the shift | State Timeline; `/analysis/timeline?equipment=FILL01`; trend `FILL01.CycleTimeMs` |
+| 2 | maintenance — the chiller condenser clean is overdue and nobody starts it | all shift (raised in the first minutes) | a preventive order against `PM-FILL-CHILLER`, still at `due` eight hours later, with no start on it | Maintenance page; `/maintenance/orders?equipment=FILL01&status=due` |
+| 3 | tags — the chiller outlet climbs, its control overshoots, the product ramps cold | 6:20 → end (outlet); 6:40 → 7:00 ramp, cold to 7:30 (product) | `FILL01.ChillerOutletTemp` leaving 3.2 °C and climbing; `FILL01.ProductTemp` walking 8.4 → 6.4 °C; AlarmWord bit 1 set on FILL01 while either drifts | trend graph for FILL01; `/analysis/tag/FILL01?tag=ChillerOutletTemp` and `?tag=ProductTemp` |
+| 4 | quality — the fill-height means run low, a rule fires, a finding opens | 7:00 → 7:30 | two or three X̄ points near 140.5 mm, below the lower two-sigma line at 140.84, range chart flat; one non-conformance | SPC panel; `/quality/spc/FG-BOTTLE/fill_height`; `/quality/nonconformances` |
+
+**Rule 2 fires first, not rule 1.** A millimetre and a half is 2.9 sigma of a
+sample mean on this chart, which is inside the three-sigma line by a whisker,
+so the rule that catches the dip reliably is *two of three points beyond two
+sigma*; rule 1 catches only the lowest point, and only on a replay slow enough
+to put several samples in the window. The key says so in `_first_rule`, because
+a reader — and an agent — assumes a low mean must be rule 1.
+
+**What the key deliberately does not claim** is in `_chain`
+`_what_this_key_does_not_claim`, and the honest one to know is link 1: the
+order *number* changing at 4:40 is not provable from the replay. The MES's
+order book advances on the simulated floor's own clock (the planner releases,
+the supervisor books), while the CSV's `OrderId` column is written *to* the
+machine, so the key credits link 1 only with the labelled setup interval and
+the faster cycle time — both of which are the line's own records.
+
+**The marking is honest in three directions, not two.** Each link scores
+*recorded*, *not recorded*, or `null` — nobody looked — and the third is the
+one that matters: a tag the MES holds nothing for, a window with no sample in
+it, and a list that came back one page of are all "no answer", never a zero.
+`src/fsmes/sim/score.py` and
+`tests/test_the_bottling_shift_leaves_a_chain_a_person_can_walk_back.py`.
+
 ### What an eight-hour shift actually looked like
 
 One pass at 12x, 2026-10-08, read in a browser rather than out of the database:
@@ -218,6 +272,13 @@ One pass at 12x, 2026-10-08, read in a browser rather than out of the database:
 - **FILL01's ProductTemp trend over the shift:** flat at 8.4 degC with one
   clean step down to 6.4 degC and back, thirty line minutes wide.
 
+That pass was read **before the chain was planted later the same day**, and two
+of its lines have moved since: ProductTemp now *ramps* down over the twenty
+minutes before that window instead of stepping, and FILL01 publishes a
+process-drift alarm (AlarmWord bit 1) through the ramp and through the
+chiller's own climb. The rest of the pass still holds; nothing in the chain
+touched the breakdown, the changeover, the micro-stops or the state filter.
+
 ## What to look for once the two are running
 
 - **A planned stop must not count as downtime.** Both plants change over
@@ -238,13 +299,18 @@ One pass at 12x, 2026-10-08, read in a browser rather than out of the database:
 - **A tag moves a quality measurement.** Bottling's product runs 2 °C cold
   from t+25200s to t+27000s and the fill-height sample means in that window
   sit about 1.5 mm *low*, while the sample ranges stay flat — the process
-  moved, its spread did not. Nothing on the filler alarms; the only trace is
-  on the quality side. Click one of those low samples and `FILL01.ProductTemp`
-  is down at 6.4 °C in the station's tags block; the trend graph for that tag
-  shows the dip lining up with the dip in height. The arithmetic is in
-  `bottling/line.json` (`_how_low_is_low`), checked against the generated
-  CSVs: 499.94 g → 494.24 g is −1.48 mm, which is 2.9 sigma of a sample mean,
-  so rule 2 fires and rule 1 catches the lowest point.
+  moved, its spread did not. The filler is not silent about it any more:
+  since the chain was planted, the twenty-minute ramp into that window and the
+  chiller's own climb both set AlarmWord bit 1 on FILL01 — "a process value is
+  drifting" — and nothing is published for the settled half hour itself, which
+  is what a drift alarm does. Click one of those low samples and
+  `FILL01.ProductTemp` is down at 6.4 °C in the station's tags block; the
+  trend graph for that tag shows the dip lining up with the dip in height. The
+  arithmetic is in `bottling/line.json` (`_how_low_is_low`), re-measured
+  against the generated CSVs after the chain went in: 500.04 g → 494.25 g is
+  −1.51 mm (142.01 mm settled against 140.50 mm cold), which is 2.9 sigma of a
+  sample mean, so rule 2 fires and rule 1 catches the lowest point. Where the
+  cold came from is the chain — see *The chain* above.
 - **A precursor before the failure.** Both drift an analog upward before the
   stop — the mill's spindle to 74 °C, the RD's motor to 88 °C. This is what a
   predictive agent would be watching.
@@ -298,7 +364,7 @@ plant the same way.
 
 Carrying the whole of that line needed three more kinds in the master-data
 format — `bom`, `maintenance_plans` and `shifts` — because `seed_kepsim`
-builds a bill of materials, five maintenance plans and two shift patterns as
+builds a bill of materials, six maintenance plans and two shift patterns as
 well as the equipment and the routing. Extending the format was the honest
 half of the trade; the alternative was a bottling plant that quietly lost its
 BOM and its calendar the day it moved into a pack.

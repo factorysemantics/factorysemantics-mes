@@ -25,7 +25,7 @@ written by `fsmes pack apply`:
 
 The last three arrived on 2026-09-14, when the bottling lab plant's line
 moved into a pack. It had been seeded by `fsmes seed-kepsim`, which builds a
-bill of materials, five maintenance plans and two shift patterns as well as
+bill of materials, six maintenance plans and two shift patterns as well as
 the equipment and the routing - and a format that could not carry them would
 have made "the same line, seeded the same way" a quieter plant than the one
 it replaced. Extending the format was the honest half of that trade; the
