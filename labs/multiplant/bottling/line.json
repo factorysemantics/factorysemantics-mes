@@ -1,7 +1,7 @@
 {
   "_what": "ACME Beverages, Kansas City - the same six-station bottling line as labs/kepsim/line.json, played as an eight-hour shift instead of an hour. This is the file the fleet's bottling plant replays. The hour next door is unchanged and still the reference: it is what CI replays, what the scorer is measured against, and what the honesty numbers are quoted from.",
   "_why_a_shift": "Because the hour repeats. A CSV replay wraps at the end of the file, so a plant replaying a 3,600-second line puts the same changeover at :18 of every hour, the same stops at the same second, and fill-height sample means that cycle 141.2 / 143.4 / 143.8 / 142.4 for ever. Every chart longer than an hour is then a stencil - a perfectly periodic plant, which is the one thing no real one is - and a window of a plant is what the analysis screens, the control chart and the state timeline all show. Eight hours with each story once, at a time that does not divide the hour, is the smallest thing that makes those screens worth looking at. The line, the stations, the rates, the buffers and the physics are the hour's: only the duration, the seed, the event times and the state filter are different.",
-  "_what_is_new_here": "Two things the hour does not have. (1) The cold-product story: FILL01's ProductTemp runs two degrees cold for half an hour and the fill-height samples taken in that window read low - a tag moving a quality measurement, the mirror of the changeover story in floor.json, and the first cause on this line that is findable from the *height* chart rather than the weight one. (2) `state_filter_s`, which keeps the one- and two-second blocks a bottleneck makes off the machines' state tags.",
+  "_what_is_new_here": "Three things the hour does not have. (1) The cold-product story: FILL01's ProductTemp runs two degrees cold for half an hour and the fill-height samples taken in that window read low - a tag moving a quality measurement, the mirror of the changeover story in floor.json, and the first cause on this line that is findable from the *height* chart rather than the weight one. (2) `state_filter_s`, which keeps the one- and two-second blocks a bottleneck makes off the machines' state tags. (3) Since 2026-10-08, the FOUR-LINK CHAIN and its answer key: production -> maintenance -> tag -> quality, ending in the cold-product story above, with `_chain` below naming each link, its window and the record it leaves. Three events were added for it (a `rate` on the filler after the changeover, a `ChillerOutletTemp` climb, a `ProductTemp` ramp into the existing cold window), one analog (`ChillerOutletTemp`), and one maintenance plan in this pack's masterdata (`PM-FILL-CHILLER`). The seed did NOT change - it is still 20261107 - but the shift is not byte-identical to the one #151 generated and was never going to be: a new analog draws its own noise from the same stream every tick, so every random number after it has moved. The scripted windows, the micro-stop roll (pre-rolled before the tick loop) and all the measured figures in the notes below were re-measured on the new output rather than carried over. The reference hour next door (`labs/kepsim/line.json`) and the experiment plans are untouched, so what CI replays is byte-identical.",
   "_states": "State column values: 0 stopped, 1 running, 2 starved, 3 blocked, 4 down, 5 changeover. Stations sit behind finite buffers, so a 'down' event genuinely starves everything downstream and blocks everything upstream.",
   "channel": "BottlingShift",
   "dsn": "BottlingShiftCSV",
@@ -200,6 +200,14 @@
           "decimals": 2,
           "unit": "degC",
           "_why": "The product's own temperature at the filler. Flat and uninteresting on the reference hour, and the tag Scott asked to see move a quality measurement: cold cola is denser and the filler is volumetric, so a bottle filled cold leaves the valve light and stands short in the glass. The cold window is in `events`."
+        },
+        {
+          "name": "ChillerOutletTemp",
+          "base": 3.2,
+          "noise": 0.12,
+          "decimals": 2,
+          "unit": "degC",
+          "_why": "The chilled water leaving the filler's own chiller - the machine that makes ProductTemp what it is. Flat at 3.2 degC while the condenser is clean, and the tag that carries link 3 of the chain in `_chain` below: it climbs all afternoon because nobody cleaned the condenser. It is one step UPSTREAM of the symptom and on the same machine, which is the whole reason a station is allowed more than one signal - an agent reading ProductTemp alone can say the product is cold and nothing at all about why."
         }
       ]
     },
@@ -311,6 +319,14 @@
       "end": 17070
     },
     {
+      "_why": "LINK 1 of the chain (`_chain` below). The changeover above brought order 4712, which is the lighter product, and the filler runs it faster: 112 bottles a minute against its own 105, from the end of the setup to the end of the shift. Nothing else on the line changes - the palletiser at 102/min is still the bottleneck, so the line's OUTPUT is the same and what moves is the filler's own records: CycleTime drops from about 571 ms to about 536 ms, and the machine blocks a little more often behind a buffer that is already full. That extra load is what the dirty condenser cannot carry, which is why this is the first link and not the third. The RATED cycle in this pack's tag map stays at 0.571 s, because that is the machine's nameplate and OEE performance is measured against it: a filler running above its rating is a real thing on a real line and this MES says the two numbers disagree rather than printing a figure (`services/oee.py`). Measured on this shift, and the better lesson: the state filter absorbs every one of the extra blocks, so FILL01 publishes RUNNING for all 11,760 seconds after the setup and makes 91.8 bottles a minute - exactly what it made before, because the palletiser is still the bottleneck. Its OEE performance is 0.875 on both sides of the changeover. A machine was sped up by 7%, its published cycle time says so, and the plant made not one more bottle: that is what a bottleneck is, and it is visible here as a performance figure that refuses to move.",
+      "type": "rate",
+      "station": "Refill",
+      "rate_per_min": 112,
+      "start": 17040,
+      "end": 28800
+    },
+    {
       "_why": "the coverage story, as one tag rather than the whole endpoint: FillWeight stops arriving for fifteen minutes while the filler runs on and every other signal on it reports. The MES's last sample keeps the moment it really arrived, so anything reading it can tell a stale value from a steady one - and the simulated floor, which can, records a plausible value with no gauge and no station on it for as long as it lasts. A disconnect event would have taken the whole line, which is a different fault",
       "type": "quiet",
       "station": "Refill",
@@ -319,13 +335,31 @@
       "end": 21600
     },
     {
+      "_why": "LINK 3 of the chain, first half. The condenser nobody cleaned (link 2) cannot reject the heat the faster filler is making (link 1), so the chiller's own outlet temperature climbs away from 3.2 degC at 6:20 and reaches about 6.1 by the end of the shift - against a noise of 0.12, which is a trend nobody can mistake for scatter. It never comes back, because nobody ever started the job: that is the honest shape of this story and the reason the ramp has no end before the shift does. AlarmWord bit 1 - `process value drifting` - is set on FILL01 for the whole climb, because the generator raises it for every `drift` and a filler's own PLC would. Same precursor shape as the RD motor heating before it fails, one machine along.",
+      "type": "drift",
+      "station": "Refill",
+      "analog": "ChillerOutletTemp",
+      "to": 6.1,
+      "start": 22800,
+      "end": 28800
+    },
+    {
       "_why": "the counter snaps to zero mid-run, as a PLC does after a power blip. Never invent production: a reset must re-baseline and book nothing",
       "type": "counter_reset",
       "station": "RD",
       "at": 23400
     },
     {
-      "_why": "cold product pours short. The chiller overshoots and for half an hour the cola reaching the filler is two degrees below where it should be; the filler is volumetric, so a denser, colder product leaves the valve light and the bottle stands low in the glass. Nothing on the filler alarms - ProductTemp at 6.4 degC is a perfectly ordinary number for a cold drink - and the only trace is on the quality side: the fill-height sample means taken in this window sit about a millimetre and a half LOW, which is the mirror image of the changeover's millimetre and a half high. Arithmetic in the _how_low_is_low note below",
+      "_why": "LINK 3 of the chain, second half, and the piece Scott asked for by name. The chiller's control sees its outlet climbing, winds the compressor and the glycol flow up hard, and overshoots - so what reaches the filler is not warm product, it is COLD product, and it gets there over twenty minutes rather than in a step: 8.4 degC at 6:40 down to 6.4 at 7:00, where the cold window below takes over and holds it. A ramp is what a thermal loop hunting actually looks like, and it is the difference between a reader who can date the CAUSE and one who can only date the symptom. One simplification, said out loud rather than hidden: the weight effect is declared on the settled window only (-5.8 g, below), so the bottles filled during these twenty minutes carry no weight loss in the data even though a real one would lose a little as it cooled. The quality link has to land in one window a sampling plan can see, and a second stair would have put low samples either side of it.",
+      "type": "drift",
+      "station": "Refill",
+      "analog": "ProductTemp",
+      "to": 6.4,
+      "start": 24000,
+      "end": 25200
+    },
+    {
+      "_why": "cold product pours short, and LINK 4 of the chain lands here. The ramp above has already brought the cola reaching the filler two degrees below where it should be, and for half an hour it stays there; the filler is volumetric, so a denser, colder product leaves the valve light and the bottle stands low in the glass. ProductTemp at 6.4 degC is a perfectly ordinary number for a cold drink and no limit on the filler is broken - what the filler's PLC does publish is AlarmWord bit 1 for the ramp that got here (`process value drifting`, 6:40-7:00), which is a precursor and not a fault, and nothing at all for this half hour of settled cold. So the trace a quality person sees is still on the quality side: the fill-height sample means taken in this window sit about a millimetre and a half LOW, which is the mirror image of the changeover's millimetre and a half high, and rule 2 of the control chart - two of three points beyond two sigma - is the first one that fires. Arithmetic in the _how_low_is_low note below",
       "type": "offset",
       "station": "Refill",
       "analog": "ProductTemp",
@@ -354,13 +388,117 @@
       ]
     }
   ],
-  "_how_low_is_low": "The cold window, checked the way floor.json checks the changeover, and then measured on the generated shift rather than left as arithmetic. The pack's own straight line is height_mm = 12.0 + 0.26 x fill_weight_g, so a millimetre and a half of height is 1.5 / 0.26 = 5.77 g of weight; the effect is -5.8 g. Measured in out/Refill.csv: ProductTemp 8.40 -> 6.40 degC and FillWeight 499.94 -> 494.24 g across the window, which is -5.70 g and converts to a height step of -1.48 mm - 141.99 mm settled against 140.50 mm cold. On this plant's measured chart X-doublebar is 141.88 mm and R-bar 2.69 mm, so within-sample sigma is R-bar / d2 = 1.16 mm, a sample mean's own sigma is 1.16 / sqrt(5) = 0.52 mm, and the X-bar limits are 141.88 +/- A2 x R-bar = 140.33 to 143.43. So -1.48 mm is 2.9 sigma of a sample mean: it puts the means at about 140.5, below the lower two-sigma line at 140.84 and a whisker above the lower control limit at 140.33. Rule 2 - two of three beyond two sigma on one side - is what fires reliably, and rule 1 catches only the lowest of them. The sample RANGES do not move, because nothing here widens the bottle-to-bottle spread: the process moved and its spread did not, which is the whole point of an X-bar and R chart and the exact mirror of the changeover story above it.",
+  "_chain": {
+    "_what": "The answer key for the one story on this line that runs through four of the plant's record books: production -> maintenance -> tag -> quality. Four links, in the order the causes happened, each with the window it happened in, the record it is supposed to have left, and one plain sentence saying what a person looking at that record would see. Readable by a person and by a scorer: `fsmes.sim.truth` hands this block to `fsmes.sim.score`, which marks each link recorded, not recorded, or not observed, and `fsmes score` prints the section.",
+    "_why": "Because a root cause nobody wrote down cannot be marked. Scott's question on 2026-10-08 was how a complex reasoning problem could be simulated and then TESTED, and the second half is this file: without it, an assistant that walks a chain back can only be judged by somebody who already knows the answer, which is the thing nobody in this market ships. The same argument as every `_why` in this file, one level up - the cause is data, and so is the mark scheme.",
+    "_why_not_in_python": "A chain hard-coded in the scorer would grade this line and no other, and it would drift from the events above the first time somebody moved a window by a minute. The links below name only what the events in this same file script, so the key and the plant cannot disagree without the JSON saying so.",
+    "name": "cold product, back to the changeover that loaded the chiller",
+    "finding": "fill-height sample means on FG-BOTTLE run about 1.5 mm low for half an hour; control-chart rule 2 fires first, and the finding that opens is an out-of-specification reading on a single bottle",
+    "_how_a_tag_record_is_judged": "`by` is how far the mean over the record's own window has to sit from the mean over everything the MES holds BEFORE that window, in the named `direction`, in the tag's own units. Mean against baseline rather than first bucket against last, because two of these three records are steps and one is a ramp, and that one rule reads both: a cycle time that drops at 4:40 and holds has no slope inside its window at all. A record whose window starts at the beginning of the run has no baseline and is scored `null` with that as the reason rather than guessed at.",
+    "_first_rule": "Rule 2 - two of three points beyond two sigma on one side - and not rule 1. The dip is 2.9 sigma of a sample mean, which is inside the three-sigma line by a whisker, so a single low mean on its own fires nothing; the second one in the window fires rule 2. Stated because `which rule fires first` is the kind of thing a reader assumes is rule 1 and an agent will claim is rule 1.",
+    "links": [
+      {
+        "link": 1,
+        "what": "production: the changeover brings order 4712 and the filler runs it faster",
+        "window_s": [16800, 28800],
+        "records": [
+          {
+            "kind": "stop",
+            "equipment": "FILL01",
+            "state": "setup",
+            "reason": "changeover",
+            "window_s": [16800, 17040],
+            "endpoint": "/analysis/timeline?equipment=FILL01"
+          },
+          {
+            "kind": "tag",
+            "equipment": "FILL01",
+            "tag": "CycleTimeMs",
+            "direction": "down",
+            "by": 20.0,
+            "window_s": [17040, 28800],
+            "endpoint": "/analysis/tag/FILL01?tag=CycleTimeMs"
+          }
+        ],
+        "shows_as": "On the order book and the state timeline: a four-minute labelled setup at 4:40, and from the moment it ends the filler's cycle time sits about 35 ms shorter than it did all morning - the same machine, a faster product."
+      },
+      {
+        "link": 2,
+        "what": "maintenance: the filler's chiller condenser clean is overdue and nobody starts it",
+        "window_s": [0, 28800],
+        "records": [
+          {
+            "kind": "maintenance",
+            "equipment": "FILL01",
+            "plan": "PM-FILL-CHILLER",
+            "status": "due",
+            "endpoint": "/maintenance/orders?equipment=FILL01&status=due"
+          }
+        ],
+        "shows_as": "On the Maintenance page: a preventive order against PM-FILL-CHILLER on FILL01, raised in the first minutes of the shift because the plan has never been serviced, still at `due` when the shift ends. Not started, not deferred - this product has no deferral and the records must not pretend otherwise. `floor.json` says why nobody went: the shift runs to the end of the order."
+      },
+      {
+        "link": 3,
+        "what": "tags: the chiller outlet climbs under the extra load, its control overshoots, and the product ramps cold",
+        "window_s": [22800, 27000],
+        "records": [
+          {
+            "kind": "tag",
+            "equipment": "FILL01",
+            "tag": "ChillerOutletTemp",
+            "direction": "up",
+            "by": 1.0,
+            "window_s": [22800, 28800],
+            "endpoint": "/analysis/tag/FILL01?tag=ChillerOutletTemp"
+          },
+          {
+            "kind": "tag",
+            "equipment": "FILL01",
+            "tag": "ProductTemp",
+            "direction": "down",
+            "by": 1.0,
+            "window_s": [24000, 27000],
+            "endpoint": "/analysis/tag/FILL01?tag=ProductTemp"
+          }
+        ],
+        "shows_as": "On the trend graph for FILL01: ChillerOutletTemp leaves 3.2 degC at 6:20 and keeps climbing to the end of the shift, and ProductTemp - flat all morning - walks down from 8.4 to 6.4 degC between 6:40 and 7:00 and stays there for half an hour. Two tags on one machine, the second one twenty minutes behind the first."
+      },
+      {
+        "link": 4,
+        "what": "quality: the fill-height sample means run low, a control rule fires, and a finding opens",
+        "window_s": [25200, 27000],
+        "records": [
+          {
+            "kind": "sample",
+            "material": "FG-BOTTLE",
+            "characteristic": "fill_height",
+            "below": 140.84,
+            "endpoint": "/quality/spc/FG-BOTTLE/fill_height"
+          },
+          {
+            "kind": "finding",
+            "material": "FG-BOTTLE",
+            "characteristic": "fill_height",
+            "endpoint": "/quality/nonconformances"
+          }
+        ],
+        "shows_as": "On the control chart for FG-BOTTLE fill height: two or three sample means between 7:00 and 7:30 sitting around 140.5 mm, below the lower two-sigma line at 140.84, with the range chart beside them flat - the process moved and its spread did not. Rule 2 fires, and a handful of single bottles fall past the 139 mm lower specification limit, which is the finding on the quality list."
+      }
+    ],
+    "_what_this_key_does_not_claim": [
+      "That the MES joins the links. It does not: today a person walks this chain by opening four screens, and the first two steps of that walk - clicking a trend point and clicking a state interval - are being built beside this file. The key is what makes that walk markable, not what makes it short.",
+      "That link 1 is the whole production record. The second ORDER's own release and start are the simulated floor's doing and happen on the floor's clock, not on the line's, so what is keyed here is what the line itself provably leaves at 4:40 - a labelled setup interval and a faster cycle time on the filler.",
+      "That the chain is the only story in the window. The palletiser's micro-stops run through all of it, FillWeight goes quiet at 5:45, and the counter resets at 6:30. That is deliberate: a chain that is the only thing happening is not a chain anybody had to find."
+    ]
+  },
+  "_how_low_is_low": "The cold window, checked the way floor.json checks the changeover, and then measured on the generated shift rather than left as arithmetic. The pack's own straight line is height_mm = 12.0 + 0.26 x fill_weight_g, so a millimetre and a half of height is 1.5 / 0.26 = 5.77 g of weight; the effect is -5.8 g. Measured in out/Refill.csv: ProductTemp 8.40 -> 6.40 degC and FillWeight 500.04 -> 494.25 g across the window, which is -5.79 g and converts to a height step of -1.51 mm - 142.01 mm settled against 140.50 mm cold. (The product reaches 6.40 degC by a twenty-minute ramp from 6:40 rather than a step, since the chain was planted; the settled half-hour below it is unchanged, and so is every number here.) On this plant's measured chart X-doublebar is 141.88 mm and R-bar 2.69 mm, so within-sample sigma is R-bar / d2 = 1.16 mm, a sample mean's own sigma is 1.16 / sqrt(5) = 0.52 mm, and the X-bar limits are 141.88 +/- A2 x R-bar = 140.33 to 143.43. So -1.48 mm is 2.9 sigma of a sample mean: it puts the means at about 140.5, below the lower two-sigma line at 140.84 and a whisker above the lower control limit at 140.33. Rule 2 - two of three beyond two sigma on one side - is what fires reliably, and rule 1 catches only the lowest of them. The sample RANGES do not move, because nothing here widens the bottle-to-bottle spread: the process moved and its spread did not, which is the whole point of an X-bar and R chart and the exact mirror of the changeover story above it.",
   "_why_half_an_hour_and_not_twenty_minutes": "Scott's words were 'runs 2 degC cold for 20 min'. This floor samples fill height every 900 line seconds (floor.json `sampling.fill_height.every_line_s`), so a twenty-minute window catches one sample mean and sometimes two - and one low point on its own fires no control rule unless it clears the three-sigma line, which at 2.9 sigma it does not. Thirty minutes catches two or three whatever the replay's phase, which is what rule 2 needs to fire and what makes the dip read as a dip rather than a stray point. Same reasoning, and the same note, as floor.json's `_why_not_half_a_millimetre`: the smallest version of the story that actually shows up where somebody is looking.",
   "_at_what_speed_this_window_reads_true": "At the lab's 1x, and at any replay speed up to about 12x. A sample of five pieces is five STORED readings, and this product stores an analog every `opc_history_ratio` publish intervals with `opc_min_history_ms` as the floor under it - here 500 ms x 10, one reading every five seconds of wall clock, whatever the replay speed (`integrations/opc/agent.py` `history_interval_ms`). So five bottles span 25 seconds of wall clock, which is 25 x speed line-seconds: 25 line-seconds at 1x, five line-minutes at 12x, twenty-five line-minutes at 60x. And the floor will not post a sample until it has five readings it has not measured before, so above about 36x the 900-line-second due time arrives with only three and the sample slips to the next one - 1,800 line seconds apart instead of 900. Measured both ways on a scratch plant on 2026-10-08: at 60x the half-hour cold window held ONE sample mean, drawn from bottles spread across 25 line minutes, and it read 141.18 mm against neighbours near 142 - low, but diluted, and no rule fired. At 12x the same window held two, each drawn from five line minutes, and the dip read at its full depth. Nothing here is wrong with the plant or the floor: a historian samples on its own clock and a floor refuses to invent a bottle it did not measure, which are both correct. It is a fact about looking at a compressed replay, and it is why the fleet runs this file at 1x.",
   "_the_stories_planted_here": [
     "Each of the hour's stories happens ONCE in this shift, at a time that does not divide the hour, with ordinary running in between: the nozzle-pressure dip (0:40-0:46), the loader's 12-second jam (1:10), the RD motor heating (2:05-2:17) and failing (2:17-2:20), the washer three degrees hot (3:30-3:35), the changeover (4:40-4:44) and the heavy first fills after it (4:44-4:44:30), FillWeight going quiet (5:45-6:00), the counter reset (6:30), and the product running cold (7:00-7:30). The palletiser's micro-stops run throughout, because that is the story.",
     "Every event carries its own `_why`, because a scorer and a person both have to be able to read what was *meant* to happen. The hour's four fill-weight stories are all here; the cold-product story is the fifth and the first that lands on fill HEIGHT.",
-    "The stories that belong to the people are still in this pack's own floor.json: the drifting scale, the night shift's wider spread, the nozzle the changeover left behind, and the supervisor's paperwork."
+    "The stories that belong to the people are still in this pack's own floor.json: the drifting scale, the night shift's wider spread, the nozzle the changeover left behind, the supervisor's paperwork, and - since 2026-10-08 - the maintenance order nobody starts, which is link 2 of the chain.",
+    "Four of those stories are also one story. The changeover at 4:40 leaves the filler running faster (link 1); the chiller condenser clean on FILL01 is overdue from the first minute of the shift and nobody starts it (link 2); so ChillerOutletTemp climbs from 6:20 and the control overshoots and ProductTemp ramps cold by 7:00 (link 3); and the cold product pours short, so the fill-height means run low and a rule fires (link 4). `_chain` below is the answer key: the four links, their windows, and the record each one leaves. It is the only block in this file written to be read by a scorer as well as by a person."
   ],
   "_do_single_bottles_stay_in_spec": "Mostly, and the arithmetic says how often not. A single reading's own sigma is the tag's noise through the conversion (2.0 g x 0.26 = 0.52 mm), the glass (`piece_to_piece` 0.35 mm) and the bench gauge (`spread` 0.1 mm) together: sqrt(0.52^2 + 0.35^2 + 0.1^2) = 0.63 mm. The lower spec limit is 139 mm, so from a mean of 140.5 that is 2.4 sigma away and about one reading in a hundred falls past it - a handful of out-of-specification findings over the half hour, against none at all in a settled window. That is the same shape as the changeover story's 'a few percent past 145 mm' and it is deliberate: the story has to be legible on the CONTROL chart, where the means walk below the two-sigma line for half an hour, rather than drowned in non-conformances. If a run shows many more than that, this note is wrong and the offset is too big."
 }

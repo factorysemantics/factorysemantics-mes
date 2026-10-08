@@ -782,6 +782,9 @@ def _scenario_rows(config: dict) -> list[tuple[str, str]]:
                               "arriving - the machine runs on and every other "
                               "signal reports"),
                     "scrap_burst": f"scrap burst {event.get('scrap_pct')}%",
+                    "rate": (f"runs at {event.get('rate_per_min')}/min instead of "
+                             "its own rate - the counters and the published cycle "
+                             "time both move; the rated cycle does not"),
                     "starve": "STARVED — nothing arriving, nothing wrong with it",
                     "block": "BLOCKED — nowhere to put it, nothing wrong with it"}[kind]
             for effect in event.get("effects", []):
