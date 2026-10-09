@@ -435,7 +435,7 @@
       },
       {
         "link": 2,
-        "what": "maintenance: the filler's chiller condenser clean is overdue and nobody starts it",
+        "what": "maintenance: the filler's chiller condenser clean is overdue, an electrician is given it, and nobody starts it",
         "window_s": [
           0,
           28800
@@ -445,11 +445,11 @@
             "kind": "maintenance",
             "equipment": "FILL01",
             "plan": "PM-FILL-CHILLER",
-            "status": "due",
-            "endpoint": "/maintenance/orders?equipment=FILL01&status=due"
+            "status": "assigned",
+            "endpoint": "/maintenance/orders?equipment=FILL01&status=assigned"
           }
         ],
-        "shows_as": "On the Maintenance page: a preventive order against PM-FILL-CHILLER on FILL01, raised in the first minutes of the shift because the plan has never been serviced, still at `due` when the shift ends. Not started, not deferred - this product has no deferral and the records must not pretend otherwise. `floor.json` says why nobody went: the shift runs to the end of the order."
+        "shows_as": "On the Maintenance page: a preventive order against PM-FILL-CHILLER on FILL01, raised in the first minutes of the shift because the plan has never been serviced, handed to an electrician in the same pass by the supervisor's FILL-ELEC rule, still at `assigned` when the shift ends. Not started, not deferred - this product has no deferral and the records must not pretend otherwise. `floor.json` says why nobody went: the shift gives its work out and runs to the end of the order. It read `due` until 2026-10-09, when this plant gained a crew to give it to; the link is the same fact either way, which is that the job waited."
       },
       {
         "link": 3,
