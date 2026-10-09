@@ -1386,6 +1386,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#the-crew-and-who-gets-the-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The crew, and who gets the work
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#what-the-simulated-floor-does" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4208,6 +4219,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#the-crew-and-who-gets-the-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The crew, and who gets the work
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#what-the-simulated-floor-does" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4442,7 +4464,7 @@ Usable, as far as a file can say: 9 file(s) read, nothing refused, 4 thing(s) on
 </ol>
 <p>Never this process's own default. Until 2026-09-14 that is exactly what a pack naming no database got, which is how <code>fsmes fleet create</code> came to migrate and seed a stray <code>./fsmes.db</code> and then record ownership of a plant that had never been created. A database nobody named is not this plant's.</p>
 <p><strong>Pack before database.</strong> A schema migration may need a value the pack now carries, so the pack is applied first — and <code>fsmes pack apply</code> runs the migrations itself, in that order.</p>
-<p>Master data is seeded from <code>masterdata/</code>, one file per kind: <code>equipment.json</code>, <code>materials.json</code>, <code>bom.json</code>, <code>routings.json</code>, <code>quality_specs.json</code>, <code>gauges.json</code>, <code>lots.json</code>, <code>work_orders.json</code>, <code>maintenance_plans.json</code>, <code>shifts.json</code>, <code>downtime_reasons.json</code>, <code>nc_severities.json</code>. An entry whose code already exists is counted as present and <strong>left alone, never updated</strong> — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which <code>fsmes fleet list</code> and the console now show as <em>answered, but empty</em>.</p>
+<p>Master data is seeded from <code>masterdata/</code>, one file per kind: <code>equipment.json</code>, <code>materials.json</code>, <code>bom.json</code>, <code>routings.json</code>, <code>quality_specs.json</code>, <code>gauges.json</code>, <code>lots.json</code>, <code>work_orders.json</code>, <code>maintenance_plans.json</code>, <code>shifts.json</code>, <code>downtime_reasons.json</code>, <code>nc_severities.json</code>, <code>personnel.json</code>, <code>skills.json</code>, <code>personnel_skills.json</code>, <code>roster.json</code>, <code>dispatch_rules.json</code>. An entry whose code already exists is counted as present and <strong>left alone, never updated</strong> — a pack that rewrote a routing an order has already run against would be rewriting history. There is exactly one exception, and it is a column that has never held a value: a maintenance plan written before 2026-10-09 has no trade on it and no priority, because there was nowhere to put them, and a plant has no other way to answer that about a plan it already has. Applying a pack that states them fills those two in — only when <em>both</em> are empty, never over a value — and the receipt says so on its own line: <code>maintenance_plans: 0 made, 6 already there, 6 given the trade and priority they never had</code>. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which <code>fsmes fleet list</code> and the console now show as <em>answered, but empty</em>.</p>
 <h3 id="the-words-an-operator-picks-from">The words an operator picks from<a class="headerlink" href="#the-words-an-operator-picks-from" title="Permanent link">&para;</a></h3>
 <p><code>downtime_reasons.json</code> is the list the station screen offers when a machine goes down. Each entry is a <code>code</code>, a <code>name</code> and an optional <code>description</code> — the sentence the screen shows beside the choice, and the one an agent reads to tell two reasons apart.</p>
 <div class="highlight"><pre><span></span><code><span class="p">[</span>
@@ -4485,6 +4507,30 @@ Usable, as far as a file can say: 9 file(s) read, nothing refused, 4 thing(s) on
 <p><strong>Size it against the line.</strong> The slowest station in the pack's own <code>tag_map.json</code> sets the rate: 3,600 ÷ its <code>cycle_seconds</code> is units an hour. The three lab packs hold more than twenty-four hours of their own line's rated output, and each says its arithmetic in its <code>masterdata/README.md</code>. A book of one order is how a lab plant came to report an order 70× over on 2026-09-18 — correctly, and uselessly.</p>
 <p>Nothing in the MES releases the next order. On a plant that simulates, <code>fsmes run-operations</code> does it as the shift supervisor would; on a real plant it is a person or the ERP.</p>
 <p><strong>And nothing in the MES plans one either.</strong> A pack's book is finite, so a simulated plant left up for a week finishes it: bottling's lab plant finished the last of its ten orders at 04:21 UTC on 2026-10-07, forty-three hours after it was built, and measured into no order at all from then on — no queue on the station page, an empty characteristic dropdown, every quality check with no order against it. A pack that wants to go on having work says so with <code>planning.keep_planned</code> in its floor script, and a simulated production planner (<code>FLOOR-PLAN</code>, which holds <code>orders.create</code> and <code>plant.read</code> and nothing else) keeps the book that deep by copying what the plant already makes. <strong>The default is 0, which is no planner</strong>: a pack that says nothing behaves exactly as it did before this existed, which is what the scripted over-run experiment depends on. The planner never releases what it plans — that stays the supervisor's — so the sequence is a real plant's: planner, then supervisor, then floor.</p>
+<h3 id="the-crew-and-who-gets-the-work">The crew, and who gets the work<a class="headerlink" href="#the-crew-and-who-gets-the-work" title="Permanent link">&para;</a></h3>
+<p>Five files, and together they are the answer to "the filler's chiller just came due at two in the morning — who goes?". A plant that seeds none of them still dispatches: it falls back to one house rule, <em>any due order to a free person with the skill on this shift, least loaded first</em>. A plant that seeds them gets its own sentences instead.</p>
+<p><code>personnel.json</code> is the register: a <code>code</code> and a <code>name</code>, optionally a <code>role</code> and a <code>home_equipment</code>. <strong>Nobody here gets a password.</strong> The register is who the plant may name as having done something; <code>[[accounts]]</code> is who can sign in, and a millwright who never opens the MES needs the first and not the second. <code>home_equipment</code> is where somebody normally works — it grants nothing and restricts nothing, and is read only to work out who is nearest a machine.</p>
+<p><code>skills.json</code> is the trades this plant employs — a <code>code</code>, a <code>name</code>, an optional <code>description</code>. The product ships none: a plant that keeps pipefitters apart from mechanics writes four rows, and one that calls them all <em>maintenance</em> writes one.</p>
+<div class="highlight"><pre><span></span><code><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ELEC"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Electrician"</span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MECH"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Mechanic"</span><span class="p">,</span><span class="w"> </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Mechanical fitting, pipework and welding."</span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"GEN"</span><span class="p">,</span><span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"General maintenance"</span><span class="p">}</span>
+<span class="p">]</span>
+</code></pre></div>
+<p><code>personnel_skills.json</code> is who holds what, and at what level: <code>person</code>, <code>skill</code>, and <code>level</code> 1, 2 or 3 — <strong>trainee, competent, expert</strong>. The line between 1 and 2 is the only one the dispatcher reads: a trainee is never sent to a job alone. Somebody with two trades has two rows.</p>
+<p><code>roster.json</code> is who is on which shift. A row with no <code>day</code> is <strong>standing</strong> — this person is on this shift whenever it runs — and that is what a pack almost always means, because a pack is seeded on a date nobody can predict and a dated roster would be a week of history. A row with a <code>day</code> (<code>YYYY-MM-DD</code>) is that day only and wins over the standing row, which is how an absence or a cover shift is written down without rewriting the roster. <code>available: false</code> with a <code>reason</code> is somebody on shift and not available, which the roster page says out loud rather than leaving them off.</p>
+<p><code>dispatch_rules.json</code> is the supervisor's own sentences, and <strong>one row is one sentence</strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"SAFETY-NOW"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Safety work goes out first, to whoever has least on"</span><span class="p">,</span>
+<span class="w">   </span><span class="nt">"priority_at_least"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">"strategy"</span><span class="p">:</span><span class="w"> </span><span class="s2">"least_loaded"</span><span class="p">,</span><span class="w"> </span><span class="nt">"sequence"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FILL-ELEC"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Electrical work on the filler goes to the nearest electrician"</span><span class="p">,</span>
+<span class="w">   </span><span class="nt">"equipment"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FILL01"</span><span class="p">,</span><span class="w"> </span><span class="nt">"skill"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ELEC"</span><span class="p">,</span><span class="w"> </span><span class="nt">"strategy"</span><span class="p">:</span><span class="w"> </span><span class="s2">"nearest"</span><span class="p">,</span><span class="w"> </span><span class="nt">"sequence"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">}</span>
+<span class="p">]</span>
+</code></pre></div>
+<p>Rules are tried in <code>sequence</code> order, and <strong>the first one that matches the order and finds somebody free wins</strong>. A rule matches on up to three things, any of which it may leave out: <code>equipment</code> (that node or anything under it), <code>skill</code>, and <code>priority_at_least</code> (1 safety, 2 production-critical, 3 routine). <code>strategy</code> is <code>least_loaded</code>, <code>nearest</code> or <code>round_robin</code>.</p>
+<p><strong>A rule's <code>skill</code> narrows the work, not the people.</strong> Eligibility always comes from the trade <em>the order</em> needs, so a rule with no <code>skill</code> on it — like <code>SAFETY-NOW</code> above — still never sends a mechanic to an electrical fault.</p>
+<p><strong>A plant that has written even one rule gets no house default.</strong> It has said what it wants, and an order none of its rules covers is reported <code>no_rule</code> rather than quietly swept up by a sentence the supervisor never wrote. That is the difference between a dispatcher a supervisor can reason about and one that surprises them.</p>
+<p>Finally, <code>maintenance_plans.json</code> gains two optional fields of its own, <code>skill</code> and <code>priority</code>, which each order copies when the plan raises it. Leave them out and the plan means what it says: work anybody on shift can take, treated as routine.</p>
 <h3 id="what-the-simulated-floor-does">What the simulated floor does<a class="headerlink" href="#what-the-simulated-floor-does" title="Permanent link">&para;</a></h3>
 <p><code>[files] floor</code> names a <strong>floor script</strong>: which gauge takes a reading, which of them is drifting between calibrations, which of the plant's approved words a stop is named with, and what happens to the material behind a finding. It is read only by <code>fsmes run-operations</code>, and a real plant leaves it out and has people instead. The bottling lab pack is the worked example — see <a href="../the-simulated-floor/">what the simulated floor does</a>.</p>
 <p><strong>It refuses to seed into a database that is not at head.</strong> The migration above normally leaves nothing to say, and this is the assertion that it did. Rows written through the ORM into a half-migrated file leave a database with some of this product's tables and no Alembic stamp — which the migrator then disowns outright, because a schema it cannot identify is one it will not guess at. That happened once, on 2026-09-14, and left a plant no command could take forward.</p>
