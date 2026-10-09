@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from fsmes.db import utcnow
 from fsmes.domain import (
+    OPEN_STATUSES,
     EquipmentState,
     MaintenanceKind,
     MaintenanceOrder,
@@ -23,7 +24,15 @@ from fsmes.domain import (
     TriggerKind,
 )
 from fsmes.domain.equipment import EquipmentStateName
-from fsmes.services import Conflict, Invalid, NotFound, audit, masterdata, plant_settings
+from fsmes.services import (
+    Conflict,
+    Forbidden,
+    Invalid,
+    NotFound,
+    audit,
+    masterdata,
+    plant_settings,
+)
 
 # What this plant assumes when nothing has told it otherwise. These stay as
 # the literals the product ships, and every one of them is still a judgment
@@ -178,8 +187,7 @@ def raise_due(session: Session, actor: str = "system") -> list[MaintenanceOrder]
         open_already = session.scalar(
             select(MaintenanceOrder).where(
                 MaintenanceOrder.plan_id == plan.id,
-                MaintenanceOrder.status.in_(
-                    (MaintenanceStatus.DUE, MaintenanceStatus.IN_PROGRESS))))
+                MaintenanceOrder.status.in_(OPEN_STATUSES)))
         if open_already is not None:
             continue
 
@@ -191,6 +199,12 @@ def raise_due(session: Session, actor: str = "system") -> list[MaintenanceOrder]
             summary=plan.name,
             reason=f"{row['used']} {row['unit']} against a {plan.interval} "
                    f"{row['unit']} plan",
+            # Copied, not read through the relationship: the plan may be
+            # re-written tomorrow and this order is a record of what was asked
+            # for today. A plan that never said which trade leaves both null,
+            # which is work anybody on shift can take.
+            skill_code=plan.skill_code,
+            priority=plan.priority,
         )
         session.add(order)
         session.flush()
@@ -228,10 +242,28 @@ def get(session: Session, code: str) -> MaintenanceOrder:
     return order
 
 
-def start(session: Session, code: str, actor: str = "system") -> MaintenanceOrder:
+def start(session: Session, code: str, actor: str = "system",
+          capabilities: set[str] | None = None) -> MaintenanceOrder:
+    """Somebody picks up the spanner.
+
+    An order that has been given to somebody is started by *them*. Anyone else
+    is refused, and told who can - because an order worked by somebody it was
+    not given to is an order the supervisor's board is lying about, and the
+    board is the whole reason the dispatcher exists. Somebody who holds
+    `maintenance.plan` is not refused: a supervisor can reassign it and then
+    start it, and making them do that in two steps for no reason is how a plant
+    ends up with a supervisor account that nobody uses.
+    """
     order = get(session, code)
-    if order.status is not MaintenanceStatus.DUE:
+    if order.status not in (MaintenanceStatus.DUE, MaintenanceStatus.ASSIGNED):
         raise Conflict(f"{code} is {order.status.value}")
+    if (order.assigned_to
+            and str(actor).upper() != order.assigned_to.upper()
+            and "maintenance.plan" not in (capabilities or set())):
+        raise Forbidden(
+            f"{code} is assigned to {order.assigned_to}. {order.assigned_to} "
+            "can start it, or somebody who holds 'maintenance.plan' can "
+            "reassign it first.")
     order.status = MaintenanceStatus.IN_PROGRESS
     order.started_at = utcnow()
     order.performed_by = actor
@@ -281,6 +313,7 @@ def complete(session: Session, code: str, *, findings: str | None = None,
 def create_plan(session: Session, *, code: str, name: str, equipment_code: str,
                 trigger: str, interval: float, expected_minutes: float | None = None,
                 instructions: str | None = None, document_code: str | None = None,
+                skill_code: str | None = None, priority: int | None = None,
                 actor: str = "system") -> MaintenancePlan:
     if session.scalar(select(MaintenancePlan).where(MaintenancePlan.code == code)):
         raise Conflict(f"plan {code} already exists")
@@ -299,15 +332,23 @@ def create_plan(session: Session, *, code: str, name: str, equipment_code: str,
     # plant is running on now, not the one the module was imported with.
     if expected_minutes is None:
         expected_minutes = plan_default_minutes(session)
+    if skill_code:
+        from fsmes.services import dispatch
+        dispatch.get_skill(session, skill_code)   # 404 rather than a plan nobody can take
+    if priority is not None and not 1 <= int(priority) <= 3:
+        raise Invalid("priority is 1 (safety), 2 (production-critical) or 3 (routine)")
     plan = MaintenancePlan(
         code=code, name=name, equipment_id=equipment.id, trigger=kind,
         interval=interval, expected_minutes=expected_minutes,
-        instructions=instructions, document_code=document_code)
+        instructions=instructions, document_code=document_code,
+        skill_code=skill_code,
+        priority=int(priority) if priority is not None else None)
     session.add(plan)
     session.flush()
     audit.record(session, actor=actor, action="maintenance.plan_created",
                  entity_type="equipment", entity_id=equipment_code,
-                 after={"plan": code, "trigger": kind.value, "interval": interval})
+                 after={"plan": code, "trigger": kind.value, "interval": interval,
+                        "skill": skill_code, "priority": plan.priority})
     return plan
 
 
@@ -338,8 +379,7 @@ def backlog(session: Session) -> dict:
     and a supervisor deciding whether tonight is the night needs the minutes.
     """
     open_orders = list(session.scalars(select(MaintenanceOrder).where(
-        MaintenanceOrder.status.in_(
-            (MaintenanceStatus.DUE, MaintenanceStatus.IN_PROGRESS)))))
+        MaintenanceOrder.status.in_(OPEN_STATUSES))))
     assumed = default_job_minutes(session)
     minutes = sum(
         (o.plan.expected_minutes if o.plan else assumed) for o in open_orders)
