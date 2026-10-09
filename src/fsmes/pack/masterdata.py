@@ -55,6 +55,13 @@ already present. It never updates: a pack that changed a routing an order has
 already run against would rewrite history, and a pack has no business doing
 that. `fsmes pack status` reports the drift instead.
 
+**A key beginning with an underscore is a note, not a field.** `_why_needs_stop`
+beside the column it explains, on the row it explains, in the plant's own file -
+checked by nothing and applied by nothing. `line.json` and `floor.json` have
+carried their reasons this way since they existed; master data is where the
+reasons are most wanted and were hardest to put, because the alternative was
+the sentence living in a different file from the value it is about.
+
 **One named exception: a column that has never held a value.** A maintenance
 plan that was written before 2026-10-09 has no trade on it and no priority,
 because there was nowhere to put them - and the same is true of what the job
@@ -229,7 +236,17 @@ def problems(directory: Path) -> list[str]:
                 continue
             for missing in (k for k in REQUIRED[kind] if row.get(k) in (None, "")):
                 out.append(f"{where} has no {missing}.")
-            for unknown in sorted(set(row) - allowed):
+            # A key beginning with an underscore is a note to whoever reads
+            # the pack next, not a field: `_why_needs_stop` beside the column
+            # it explains. `line.json` and `floor.json` have carried their
+            # reasons this way since they existed, and master data is where
+            # the reasons are most wanted and were hardest to put - a plant's
+            # own file is the only place a sentence about *this* plan can
+            # live, and the alternative was the reason sitting in a different
+            # file from the value, where nobody editing the value sees it.
+            # `apply` reads named fields only, so a note can never change a plant.
+            for unknown in sorted(k for k in set(row) - allowed
+                                  if not k.startswith("_")):
                 out.append(f"{where} carries {unknown!r}, which is not a field "
                            f"{kind} has. It takes {', '.join(sorted(allowed))}.")
 

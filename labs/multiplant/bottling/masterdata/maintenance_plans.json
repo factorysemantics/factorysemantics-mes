@@ -8,7 +8,11 @@
     "expected_minutes": 90.0,
     "instructions": "Isolate the chiller, brush and wash the condenser coil, check the fan and the refrigerant pressures, log the outlet temperature before and after.",
     "skill": "ELEC",
-    "priority": 2
+    "priority": 2,
+    "needs_stop": true,
+    "window": "between_orders",
+    "_why_needs_stop": "The coil is inside the filler's guarding and the chiller has to be isolated to be opened. Nobody brushes a condenser on a machine that is filling bottles.",
+    "_why_window": "Ninety minutes with the filler isolated is the whole line stopped, and a supervisor will not take that out of the middle of an order he has promised. It waits for the gap between one order and the next - which on this plant, where the next order is released as the last one finishes, is a gap that does not come in an eight-hour shift. That is link 2 of the chain in line.json: the order is raised in the first minutes, given to an electrician by rule, and still waiting at the end of the shift, and the reason is this field and not a mechanic ignoring his list."
   },
   {
     "code": "PM-FILL-SEALS",
@@ -18,7 +22,11 @@
     "interval": 4.0,
     "expected_minutes": 45.0,
     "skill": "MECH",
-    "priority": 2
+    "priority": 2,
+    "needs_stop": true,
+    "window": "anytime",
+    "_why_needs_stop": "A valve seal is changed with the filler open and empty. Same as the condenser: not on a running machine.",
+    "_why_window": "Anytime, because the job is three quarters of an hour rather than an hour and a half and does not have to wait for the end of an order - but it still needs the machine stopped, so the mechanic goes when the filler stops. On this shift that is the changeover at 16800 s, where the line is in setup for four minutes and the filler is not making anything: the seals are changed across it. Anytime and needs-a-stop together are the commonest shape of maintenance work in a bottling plant, and the pair of fields is what lets the plant say it."
   },
   {
     "code": "PM-LD-BELT",
@@ -28,7 +36,10 @@
     "interval": 6.0,
     "expected_minutes": 20.0,
     "skill": "MECH",
-    "priority": 3
+    "priority": 3,
+    "needs_stop": false,
+    "window": "anytime",
+    "_why_needs_stop": "Belt tension is checked with a gauge against the running belt and corrected on the tensioner. The loader keeps loading."
   },
   {
     "code": "PM-PAL-GREASE",
@@ -38,7 +49,10 @@
     "interval": 7.0,
     "expected_minutes": 30.0,
     "skill": "GEN",
-    "priority": 3
+    "priority": 3,
+    "needs_stop": false,
+    "window": "anytime",
+    "_why_needs_stop": "Greasing is done at the nipples on the outside of the arm, between cycles, while the palletiser works. Booking half an hour of line downtime against this job would invent downtime the plant never had - which is why `downtime_minutes` is measured rather than assumed from `expected_minutes`."
   },
   {
     "code": "PM-RD-BEARING",
@@ -48,7 +62,10 @@
     "interval": 8.0,
     "expected_minutes": 90.0,
     "skill": "MECH",
-    "priority": 2
+    "priority": 2,
+    "needs_stop": false,
+    "window": "anytime",
+    "_why_needs_stop": "Play is felt at the shaft with the guard off and the machine on its slow jog, which this plant counts as running. A bearing that has to be changed is a different job and a corrective order, and that one stops the machine."
   },
   {
     "code": "PM-WASH-NOZZLE",
@@ -58,6 +75,10 @@
     "interval": 20000.0,
     "expected_minutes": 60.0,
     "skill": "GEN",
-    "priority": 3
+    "priority": 3,
+    "needs_stop": true,
+    "window": "end_of_shift",
+    "_why_needs_stop": "The nozzles come out and the manifold is flushed with acid. The washer is empty, locked off and not washing bottles.",
+    "_why_window": "An hour of acid in the manifold is an hour the washer cannot wash, so it goes at the end of the shift, when the line is coming down anyway and the next shift inherits a clean washer. On a shift that runs to the end of its order the window opens in the last hour and the washer is still washing, so this order waits too - the same true record as the condenser clean, for a different reason."
   }
 ]

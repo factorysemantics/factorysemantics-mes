@@ -10,6 +10,11 @@
     "description": "The line was changing over from one product to the next. A planned stop: nothing is wrong and nobody is being called out."
   },
   {
+    "code": "planned_maintenance",
+    "name": "Planned maintenance",
+    "description": "The machine was stopped on purpose so a maintenance job could be done on it. A planned stop, like a changeover: nothing is broken and nobody is being called out. The maintenance order's code is on the interval, so the stop and the job are one event in the records rather than two."
+  },
+  {
     "code": "micro_stop",
     "name": "Micro stop",
     "description": "A short stop of the kind that happens many times an hour - a jam, a misfeed, a reset - cleared in seconds by whoever was standing there. Nothing is broken and nothing needs reporting."

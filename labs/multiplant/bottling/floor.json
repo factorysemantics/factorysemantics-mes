@@ -99,10 +99,48 @@
     "_raise_due": "The shift supervisor calls `POST /maintenance/raise` on his own pass, which raises one preventive order for every plan this plant says has come due and nothing for the plans that have not. Idempotent in the product, so a supervisor who looks every few minutes does not bury the floor in duplicates. `FLOOR-SUP` and not `FLOOR-SIM`: raising work is a supervisor's act and the audit row has to say so. False - the default, and what every pack that leaves this block out gets - means nobody raises anything and the Maintenance page shows plans coming due with no orders against them, which is a real plant with no planner and not an interesting one.",
     "dispatch": true,
     "_dispatch": "The same supervisor, on the same pass, calls `POST /maintenance/dispatch` after raising - and the order matters: work nobody has been given is the state an order spends its first seconds in, not its shift. The product's own rules decide who gets what (`dispatch_rules.json` in this pack's masterdata: safety first, filler electrical work to the nearest electrician, the rest spread by turns), and each assignment leaves an audit row naming the rule that made it. Idempotent, like raising, so a supervisor who looks every twenty seconds hands nothing out twice. False - the default, and what every pack written before the maintenance crew existed gets - means the work is raised and sits with nobody's name on it, which is a real plant that has not written its rules down.",
-    "_why_nobody_starts_it": "There is deliberately no key here that starts or completes an order, and no step in `fsmes.sim.operations` that could: this shift gives its work out and runs to the end of the order. That is the honest version of the commonest thing in a bottling plant - the job that is due during a run, is handed to somebody, and waits for the gap between orders - and it is link 2 of the chain in line.json. It matters that it is an ABSENCE rather than a flag: this product has no `deferred` status, so an order sitting at `assigned` all shift with no `maintenance.started` audit row beside it is the only true record of nobody having gone, and inventing a deferral the Maintenance page cannot show would have made the chain unreadable on the screen it is meant to be read on. What the records therefore say, exactly: PM-FILL-CHILLER raised in the first minutes, given to an electrician by the FILL-ELEC rule in the same pass, still `assigned` eight hours later, never started. Until 2026-10-09 it said `due` with nobody's name on it, because this plant had no crew to give it to. If a future floor learns to perform maintenance, the knob goes here beside `raise_due` and `dispatch`, and this note says what changed.",
+    "crew": true,
+    "_crew": "The crew does the work it was given. On each pass, for every person on this shift's roster holding an `assigned` order, the floor asks the two questions a mechanic asks: is my window open, and can I get at the machine. The window is the order's own (`anytime` always; `between_orders` only when no order is on the line; `end_of_shift` only inside the last `expected_minutes` of the shift), and getting at the machine means `needs_stop` is false or the machine is already not running. Both true: he walks over (`walk_s` below), starts it, and when the job's time is up completes it with what he found, how long the machine was down and his own name on it. One person, one job at a time - the product's dispatcher already refuses a busy person a second. False, and the default, is every pack written before 2026-10-09: the work is raised, handed out, and waits. Those packs score exactly as they did.",
+    "walk_s": 180,
+    "_walk_s": "How long it takes to get to the machine with the tools after being given the job, in line seconds. Without it an order is assigned and started in the same second, and the Maintenance page shows a plant where nobody walks anywhere - which reads as a simulation rather than a shift. Three minutes is the bottling line end to end plus the stores. It is line time, so a replay at 30x waits six real seconds.",
+    "findings": {
+      "PM-PAL-GREASE": [
+        "All eight points taken grease, arm movement free.",
+        "Greased; number three nipple weeping slightly, watch it next week."
+      ],
+      "PM-LD-BELT": [
+        "Belt within tension spec, no edge wear.",
+        "Tension low by 4 N, adjusted on the tensioner."
+      ],
+      "PM-RD-BEARING": [
+        "Play within limits on both shafts.",
+        "Lower shaft at the limit of play; recommend a bearing at the next stop."
+      ],
+      "PM-FILL-SEALS": [
+        "Six valve seals replaced, two were hardened.",
+        "All twelve seals replaced, filler run up and leak-checked clean."
+      ],
+      "PM-FILL-CHILLER": [
+        "Condenser 40% blocked, cleaned; outlet temperature 8.4 to 6.1 C.",
+        "Coil washed, fan bearing noisy, refrigerant pressures normal."
+      ],
+      "PM-WASH-NOZZLE": [
+        "Nozzles descaled, manifold flushed, spray pattern even.",
+        "Four nozzles replaced rather than descaled, scale too far gone."
+      ]
+    },
+    "_findings": "What the mechanic writes in the box, one list per plan, picked from the plan's own list by the run's seeded random stream. It is here and not in masterdata because this floor reads the plant only through the HTTP API, exactly as a browser does, and a note on a masterdata row never reaches the database - the `_why_needs_stop` sentences beside the plans do explain themselves there, which is where somebody editing a plan will look. A plan with no list here is completed with no findings, which is honest: a job somebody did and wrote nothing about.",
+    "expected_done": [
+      "PM-PAL-GREASE",
+      "PM-LD-BELT",
+      "PM-FILL-SEALS"
+    ],
+    "_expected_done": "Which orders this shift is meant to get through, written down so a reader can tell a broken replay from a true one. It drives nothing: the floor starts whatever the windows and the machine states allow, and this list is the answer key for the three that should come out `done` in eight hours. The palletiser grease is due in the first pass and needs no stop, so it is finished inside the first hour. The loader belt falls due on runtime about six hours in and needs no stop either. The filler seals fall due about four hours in, need the filler stopped, and are done across the changeover at 16800 s - which is the pair of fields earning its keep: the same job on a machine that never stopped would have waited all shift, and the records would say why.",
+    "_what_waits_and_why": "PM-FILL-CHILLER and PM-WASH-NOZZLE, both honestly. The condenser clean needs the line stopped and its window is `between_orders`, and this plant releases the next order as the last one finishes, so that window never opens in an eight-hour shift: the order is raised in the first minutes, given to an electrician by the FILL-ELEC rule in the same pass, and is still `assigned` with no `maintenance.started` audit row against it at the end. That is link 2 of the chain in line.json, and it is now a recorded reason rather than an absence - `needs_stop` true, `window` between_orders, and a line that ran all shift. The washer descale waits for the same kind of reason at the other end: its window is the last hour and the washer is still washing bottles in it. Neither is a mechanic ignoring his list, and the difference between those two is the whole point of the two columns.",
     "_what_else_lands_in_the_backlog": "More than the chain's one order, on purpose. PM-PAL-GREASE is a seven-day calendar plan on the palletiser that has also never been serviced, so it comes due in the same first pass, and the runtime plans on the filler, the loader and the denester fall due as the shift wears on. A backlog with one item in it is a backlog nobody had to search, so the chain's answer key names its link by PLAN code (`PM-FILL-CHILLER`) rather than by 'the overdue order'.",
     "when": "overdue",
-    "_when": "`overdue` raises only what is genuinely due; `due_soon` would also raise what this plant's own warning fraction has flagged. Overdue is what the product's own `POST /maintenance/raise` does and the only value this floor implements today - it is written down so a pack can see which of the two it is getting rather than having to read the source."
+    "_when": "`overdue` raises only what is genuinely due; `due_soon` would also raise what this plant's own warning fraction has flagged. Overdue is what the product's own `POST /maintenance/raise` does and the only value this floor implements today - it is written down so a pack can see which of the two it is getting rather than having to read the source.",
+    "_was_why_nobody_starts_it": "Kept, because it was true until 2026-10-09 and the chain's second link was built on it: There is deliberately no key here that starts or completes an order, and no step in `fsmes.sim.operations` that could: this shift gives its work out and runs to the end of the order. That is the honest version of the commonest thing in a bottling plant - the job that is due during a run, is handed to somebody, and waits for the gap between orders - and it is link 2 of the chain in line.json. It matters that it is an ABSENCE rather than a flag: this product has no `deferred` status, so an order sitting at `assigned` all shift with no `maintenance.started` audit row beside it is the only true record of nobody having gone, and inventing a deferral the Maintenance page cannot show would have made the chain unreadable on the screen it is meant to be read on. What the records therefore say, exactly: PM-FILL-CHILLER raised in the first minutes, given to an electrician by the FILL-ELEC rule in the same pass, still `assigned` eight hours later, never started. Until 2026-10-09 it said `due` with nobody's name on it, because this plant had no crew to give it to. If a future floor learns to perform maintenance, the knob goes here beside `raise_due` and `dispatch`, and this note says what changed."
   },
 
   "calibration": {
@@ -124,6 +162,7 @@
     "changeover": "changeover",
     "_changeover": "A machine in setup on this line is the whole line changing over between orders. Labelling it is what makes it findable later - a planned stop that ended three minutes before a point on the fill-weight chart is the explanation for that point, and an unnamed setup interval explains nothing."
   },
+
   "nonconformances": {
     "_what": "What the shift supervisor does with a finding, by rule, so the quality screen shows a plant working through its paperwork rather than a list that only grows.",
     "per_pass": 6,
