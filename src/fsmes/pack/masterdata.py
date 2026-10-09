@@ -543,8 +543,11 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
 
     data = read(directory)
     cycles = cycles or {}
-    receipt: dict[str, dict] = {kind: {"made": 0, "present": 0, "classified": 0}
-                                for kind in data.kinds}
+    receipt: dict[str, dict] = {kind: {"made": 0, "present": 0} for kind in data.kinds}
+    # Only the one kind that has a third outcome carries a third counter, so
+    # every other kind's receipt reads exactly as it always has.
+    if "maintenance_plans" in receipt:
+        receipt["maintenance_plans"]["classified"] = 0
 
     def count(kind: str, made: bool) -> None:
         receipt[kind]["made" if made else "present"] += 1
