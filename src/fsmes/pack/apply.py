@@ -297,7 +297,13 @@ def apply(directory: Path, *, into: Path | None = None, echo=print) -> dict:
         with session_scope() as session:
             seeded = data.seed(session, pack.path(masterdata), cycles)
         for kind, counts in sorted(seeded.items()):
-            echo(f"      {kind}: {counts['made']} made, {counts['present']} already there")
+            line = f"      {kind}: {counts['made']} made, {counts['present']} already there"
+            # Said out loud and only when it happened: this is the one thing
+            # applying a pack changes about a row somebody else made.
+            if counts.get("classified"):
+                line += (f", {counts['classified']} given the trade and priority "
+                         "they never had")
+            echo(line)
     else:
         echo("      master data: this pack carries none, so nothing was seeded")
 

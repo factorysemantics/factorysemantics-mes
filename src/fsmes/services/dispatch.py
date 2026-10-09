@@ -145,17 +145,25 @@ def rule_as_json(rule: DispatchRule) -> dict:
 
 def says(rule: DispatchRule) -> str:
     """The rule as a supervisor would say it out loud."""
-    where = f"on {rule.equipment_code}" if rule.equipment_code else "anywhere in the plant"
-    what = f"needing {rule.skill_code}" if rule.skill_code else "whatever the skill"
     how = {
         DispatchStrategy.LEAST_LOADED: "whoever has least on",
         DispatchStrategy.NEAREST: "whoever is nearest the machine",
         DispatchStrategy.ROUND_ROBIN: "taking turns",
     }[rule.strategy]
-    floor = ""
+    said = f"Work on {rule.equipment_code}" if rule.equipment_code else "Work anywhere in the plant"
+    # A trade reads as part of the work - "work on the filler needing ELEC".
+    # Everything else is an aside, and asides are closed on both sides, or the
+    # sentence turns into "work on SIMLINE whatever the skill, goes to ...".
+    asides = []
+    if rule.skill_code:
+        said += f" needing {rule.skill_code}"
+    else:
+        asides.append("whatever the skill")
     if rule.priority_at_least is not None:
-        floor = f", priority {rule.priority_at_least} or worse"
-    return f"Work {where} {what}{floor}, goes to somebody on this shift, {how}."
+        asides.append(f"priority {rule.priority_at_least} or worse")
+    if asides:
+        said += ", " + ", ".join(asides) + ","
+    return f"{said} goes to somebody on this shift, {how}."
 
 
 # -------------------------------------------------------------------- skills
@@ -754,6 +762,11 @@ def explain(session: Session, order_code: str, now: datetime | None = None) -> d
     out["held_by_rule"] = order.assigned_by
     out["held_since"] = order.assigned_at
     out["recorded_unassigned_reason"] = order.unassigned_reason
+    # Whether the number beside "priority" is the plant's or this product's
+    # reading of a plan nobody classified. A supervisor who is told "priority
+    # 3" about an order that says nothing has been told something the plant
+    # never said (house rule 3).
+    out["priority_is_stated"] = order.priority is not None
     out["would_now"] = (f"go to {decision.assigned_to}" if decision.assigned_to
                         else f"go to nobody - {decision.unassigned_reason}")
     return out

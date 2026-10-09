@@ -324,11 +324,13 @@ def test_applying_a_pack_seeds_the_master_data_it_carries(applied):
     directory, into = applied
     said: list[str] = []
     receipt = applier.apply(directory, into=into, echo=said.append)
-    assert receipt["seeded"]["equipment"] == {"made": 7, "present": 0}
+    assert receipt["seeded"]["equipment"] == {"made": 7, "present": 0,
+                                             "classified": 0}
     # The machining pack's order book: nine orders, one released and the rest
     # planned behind it (2026-09-18). It was one order until then, which is
     # what let a lab plant run seventy times past it.
-    assert receipt["seeded"]["work_orders"] == {"made": 9, "present": 0}
+    assert receipt["seeded"]["work_orders"] == {"made": 9, "present": 0,
+                                               "classified": 0}
     assert receipt["revision"], "the schema was brought to head before anything was written"
 
 
@@ -339,6 +341,64 @@ def test_applying_a_pack_twice_makes_nothing_twice(applied):
     for kind, counts in again["seeded"].items():
         assert counts["made"] == 0, kind
         assert counts["present"] > 0, kind
+
+
+def test_a_plan_written_before_the_trades_existed_is_given_one(applied):
+    """The one column a pack writes that it did not make.
+
+    A plant that had maintenance plans before 2026-10-09 has plans with no
+    trade on them, because there was nowhere to put one, and no other way to
+    answer that about a plan it already has. Filling an empty column is the
+    plant answering a question it was never asked; the pack still never
+    touches a column that holds a value.
+    """
+    from sqlalchemy import select
+
+    from fsmes.db import session_scope
+    from fsmes.domain import MaintenancePlan
+
+    directory, into = applied
+    # Two plans as a release before the trades would have carried them: a
+    # machine, a trigger and an interval, and nothing about who does the job.
+    plans = directory / "masterdata" / "maintenance_plans.json"
+    rows = [{"code": "PM-SAW-BLADE", "name": "Change the blade",
+             "equipment": "SAW01", "trigger": "runtime_hours", "interval": 40},
+            {"code": "PM-MILL-COOLANT", "name": "Top the coolant up",
+             "equipment": "MILL01", "trigger": "calendar_days", "interval": 7}]
+    plans.write_text(json.dumps(rows), encoding="utf-8")
+    applier.apply(directory, into=into, echo=lambda _: None)
+
+    # The plans are in, unclassified, as an older release would have left them.
+    with session_scope() as session:
+        standing = session.scalars(select(MaintenancePlan)).all()
+        assert [p.skill_code for p in standing] == [None] * len(standing)
+        # One of them the plant has since classified itself.
+        mine = standing[0]
+        mine.skill_code, mine.priority, mine_code = "MECH", 1, mine.code
+        session.flush()
+
+    # Now the plant writes its trades down and says which one each plan needs.
+    (directory / "masterdata" / "skills.json").write_text(
+        json.dumps([{"code": "ELEC", "name": "Electrician"},
+                    {"code": "MECH", "name": "Mechanic"}]), encoding="utf-8")
+    for row in rows:
+        row["skill"] = "ELEC"
+        row["priority"] = 3
+    plans.write_text(json.dumps(rows), encoding="utf-8")
+
+    said: list[str] = []
+    receipt = applier.apply(directory, into=into, echo=said.append)
+
+    counts = receipt["seeded"]["maintenance_plans"]
+    assert counts["made"] == 0 and counts["present"] == len(rows)
+    assert counts["classified"] == len(rows) - 1
+    assert any("the trade and priority they never had" in line for line in said)
+    with session_scope() as session:
+        for plan in session.scalars(select(MaintenancePlan)):
+            if plan.code == mine_code:
+                assert (plan.skill_code, plan.priority) == ("MECH", 1)
+            else:
+                assert (plan.skill_code, plan.priority) == ("ELEC", 3)
 
 
 def test_a_rated_cycle_time_is_read_from_the_tag_map_and_not_repeated(applied):

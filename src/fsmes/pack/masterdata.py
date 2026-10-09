@@ -54,6 +54,16 @@ it is, and the receipt says how many of each kind were made and how many were
 already present. It never updates: a pack that changed a routing an order has
 already run against would rewrite history, and a pack has no business doing
 that. `fsmes pack status` reports the drift instead.
+
+**One named exception: a column that has never held a value.** A maintenance
+plan that was written before 2026-10-09 has no trade on it and no priority,
+because there was nowhere to put them. The pack fills those two in - only
+when *both* are empty, only from a pack that states them, and reported
+separately in the receipt as "classified" so nobody has to guess what moved.
+That is not the pack overruling the plant; it is the plant answering a
+question it was never asked. The alternative is every plant that existed
+before the dispatcher upgrading into a dispatcher that knows no trades, and a
+plant has no other way to classify a plan it already has.
 """
 
 from __future__ import annotations
@@ -533,7 +543,8 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
 
     data = read(directory)
     cycles = cycles or {}
-    receipt: dict[str, dict] = {kind: {"made": 0, "present": 0} for kind in data.kinds}
+    receipt: dict[str, dict] = {kind: {"made": 0, "present": 0, "classified": 0}
+                                for kind in data.kinds}
 
     def count(kind: str, made: bool) -> None:
         receipt[kind]["made" if made else "present"] += 1
@@ -707,8 +718,22 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
 
     for row in data.rows("maintenance_plans"):
         code = row["code"]
-        if session.scalar(select(MaintenancePlan.id).where(MaintenancePlan.code == code)):
+        standing = session.scalar(
+            select(MaintenancePlan).where(MaintenancePlan.code == code))
+        if standing is not None:
             count("maintenance_plans", made=False)
+            # The one place a pack writes to a row it did not make, and only
+            # into two columns that have never held anything: a plan written
+            # before the trades existed says nothing about which trade it
+            # needs, and a plant has no other way to answer that about a plan
+            # it already has. If either column has a value, the plant has had
+            # its say and the pack keeps out of it.
+            if (standing.skill_code is None and standing.priority is None
+                    and (row.get("skill") is not None
+                         or row.get("priority") is not None)):
+                standing.skill_code = row.get("skill")
+                standing.priority = row.get("priority")
+                receipt["maintenance_plans"]["classified"] += 1
             continue
         # A plan that says nothing about how long it takes gets this plant's
         # own house default rather than the product's thirty - the same

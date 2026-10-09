@@ -1779,13 +1779,20 @@ def _level_word(level: int) -> str:
             LEVEL_EXPERT: "expert"}.get(level, str(level))
 
 
+def _people(count: int) -> str:
+    """"1 person", "4 people". Not "1 person/people", which nobody says."""
+    return "1 person" if count == 1 else f"{count} people"
+
+
 def _explain_one(session, order: str) -> None:
     """Print one order's decision in the words of the rule that made it."""
     from fsmes.services import dispatch as dispatch_svc
 
     out = dispatch_svc.explain(session, order)
     typer.echo(f"{out['order']} on {out['equipment']} — {out['summary']}")
-    typer.echo(f"  {out['status']}, priority {out['priority']}, "
+    priority = (f"priority {out['priority']}" if out["priority_is_stated"]
+                else f"no priority set, read as {out['priority']}")
+    typer.echo(f"  {out['status']}, {priority}, "
                f"needs {out['skill'] or 'no particular trade'}; "
                f"shift {out['shift'] or 'none — no pattern covers this moment'}")
     if out["held_by"]:
@@ -1811,7 +1818,7 @@ def _explain_one(session, order: str) -> None:
     if out["rule_says"]:
         typer.echo(f"  {out['rule']} says: {out['rule_says']}")
 
-    typer.echo(f"  {len(out['considered'])} person/people considered:")
+    typer.echo(f"  {_people(len(out['considered']))} considered:")
     if not out["considered"]:
         typer.echo("    nobody — no rule got as far as looking at the roster")
     for row in out["considered"]:
@@ -1854,7 +1861,7 @@ def maintenance_dispatch(
         out = dispatch_svc.dispatch(session)
 
     typer.echo(f"{out['assigned']} of {out['considered']} due order(s) assigned "
-               f"— {out['rules']} rule(s) over {out['people']} person/people.")
+               f"— {out['rules']} rule(s) over {_people(out['people'])}.")
     if not out["considered"]:
         typer.echo("Nothing was due. A plant with no due work dispatches nothing, "
                    "which is not the same as a dispatcher that found nobody — "
@@ -1883,11 +1890,11 @@ def maintenance_roster(
             raise typer.Exit(2) from None
 
     if out["shift"] is None:
-        typer.echo("0 person/people on shift — there is no shift.")
+        typer.echo("Nobody on shift — there is no shift.")
         typer.echo(f"  {out['why_empty']}")
         return
     key = out["shift"]["key"]
-    typer.echo(f"{out['available']} of {out['total']} person/people available on {key}.")
+    typer.echo(f"{out['available']} of {_people(out['total'])} available on {key}.")
     if not out["people"]:
         typer.echo("Nobody is rostered on this shift. A roster nobody has filled in "
                    "is empty, which is not the same as a crew that is all out — "
@@ -1941,7 +1948,7 @@ def maintenance_rules() -> None:
                    "`fsmes pack apply` seeds them from masterdata.")
     for trade in trades:
         typer.echo(f"  {trade['code']:<8} {trade['name']:<28} "
-                   f"{trade['people']} person/people")
+                   f"{_people(trade['people'])}")
 
 
 pack_app = typer.Typer(
