@@ -344,3 +344,136 @@ def test_an_order_raised_from_a_plan_carries_the_plans_trade_and_priority(plant)
 
     assert [o.skill_code for o in raised] == ["ELEC"]
     assert [o.priority for o in raised] == [2]
+
+
+# ------------------------------------------------------------- over HTTP
+#
+# The same five acts through the routes a screen and the MCP tools actually
+# call, because a dispatcher that works in the service layer and 403s the
+# supervisor who asks for it is a dispatcher nobody can run.
+
+
+@pytest.fixture()
+def at_noon(monkeypatch):
+    """Pin the plant's clock to NOON for the routes, which take no `now`.
+
+    A route decides at the instant the plant is at, which is right. A test
+    that let the build server's own clock pick the shift would be a different
+    test at two in the morning and would pass or fail by the hour.
+    """
+    monkeypatch.setattr(dispatch, "utcnow", lambda: NOON)
+    return NOON
+
+
+def test_a_supervisor_hands_the_backlog_out_over_the_api(plant, at_noon, supervisor):
+    order = _order(plant, skill="ELEC")
+
+    response = supervisor.post("/maintenance/dispatch")
+
+    assert response.status_code == 200, response.text
+    assert response.json()["assigned"] == 1
+    assert order.status is MaintenanceStatus.ASSIGNED
+    assert order.assigned_at == NOON
+
+
+def test_nobody_hands_work_out_without_signing_in(plant, anon):
+    assert anon.post("/maintenance/dispatch").status_code == 401
+
+
+def test_the_order_list_carries_the_trade_the_name_and_the_reason(plant, at_noon,
+                                                                  supervisor):
+    taken = _order(plant, skill="ELEC", priority=1, code="CM-TAKEN")
+    _order(plant, skill="GEN", code="CM-WAITING", raised_at=NOON - timedelta(hours=2))
+    # Jo Hands is the only general hand and is given the older job first, so
+    # the second general job is the one left waiting with a reason on it.
+    _order(plant, skill="GEN", code="CM-ALSO-WAITING")
+    supervisor.post("/maintenance/dispatch")
+
+    rows = {row["code"]: row
+            for row in supervisor.get("/maintenance/orders").json()["items"]}
+
+    assert rows["CM-TAKEN"]["skill"] == "ELEC"
+    assert rows["CM-TAKEN"]["priority"] == 1
+    assert rows["CM-TAKEN"]["assigned_to"] == taken.assigned_to
+    assert rows["CM-TAKEN"]["assigned_by"] == dispatch.DEFAULT_RULE_CODE
+    assert rows["CM-TAKEN"]["unassigned_reason"] is None
+    waiting = rows["CM-ALSO-WAITING"]
+    assert waiting["assigned_to"] is None
+    assert waiting["status"] == MaintenanceStatus.DUE.value
+    assert waiting["unassigned_reason"] == UnassignedReason.ALL_BUSY.value
+
+
+def test_the_explain_route_reads_like_a_sentence(plant, at_noon, supervisor):
+    dispatch.create_rule(plant, code="MIX-ELEC", name="Mixer electrical work",
+                         equipment_code="MIX01", skill_code="ELEC", sequence=10)
+    order = _order(plant, "MIX01", skill="ELEC")
+    supervisor.post("/maintenance/dispatch")
+
+    explained = supervisor.get(f"/maintenance/dispatch/{order.code}/explain").json()
+
+    assert explained["rule"] == "MIX-ELEC"
+    assert explained["rule_says"].startswith("Work on MIX01 needing ELEC")
+    assert explained["held_by"] == "SPARKY"
+    # And the walk is made *now*, with SPARKY already holding that very job:
+    # least-loaded would send it to the other electrician this minute. Both
+    # answers are true, and the route keeps them apart on purpose.
+    assert explained["would_now"] == "go to SPARKY2"
+
+
+def test_handing_an_order_to_a_named_person_is_planning_the_work(plant, admin):
+    """Gated on maintenance.plan, not on doing maintenance: a hand assignment
+    overrules the rules, and that is a planning act."""
+    order = _order(plant, skill="ELEC")
+
+    response = admin.post(f"/maintenance/orders/{order.code}/assign",
+                          json={"person": "SPANNER"})
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["assigned_to"] == "SPANNER"
+    assert body["status"] == MaintenanceStatus.ASSIGNED.value
+    assert order.assigned_by == "ADMIN"
+
+
+def test_an_operator_may_do_maintenance_and_may_not_hand_it_out(plant, client):
+    order = _order(plant, skill="ELEC")
+    assert client.post(f"/maintenance/orders/{order.code}/assign",
+                       json={"person": "SPANNER"}).status_code == 403
+
+
+def test_the_roster_route_says_who_is_on_and_states_its_total(plant, at_noon,
+                                                              supervisor):
+    on_shift = supervisor.get("/maintenance/roster").json()
+
+    assert on_shift["shift"]["code"] == "DAY"
+    assert on_shift["total"] == 4          # NIGHTY is on the other shift
+    assert on_shift["available"] == 4
+    sparky = next(p for p in on_shift["people"] if p["person"] == "SPARKY")
+    assert sparky["skills"] == [{"skill": "ELEC", "level": 2}]
+    assert sparky["open_orders"] == 0
+
+
+def test_a_shift_can_be_asked_for_by_name(plant, supervisor):
+    on_shift = supervisor.get("/maintenance/roster",
+                              params={"shift": "2026-10-08/NIGHT"}).json()
+    assert [p["person"] for p in on_shift["people"]] == ["NIGHTY"]
+
+
+def test_the_rules_route_owns_up_to_running_on_the_house_default(plant, supervisor):
+    answer = supervisor.get("/maintenance/rules").json()
+
+    assert answer["rules"] == [] and answer["total"] == 0
+    assert answer["tried_in_order"] == [dispatch.DEFAULT_RULE_CODE]
+    assert answer["house_default"]["code"] == dispatch.DEFAULT_RULE_CODE
+    assert [s["code"] for s in answer["skills"]] == ["ELEC", "GEN", "MECH"]
+
+
+def test_a_plant_that_has_written_one_rule_is_shown_only_its_own(plant, supervisor):
+    dispatch.create_rule(plant, code="MIX-ELEC", name="Mixer electrical work",
+                         equipment_code="MIX01", skill_code="ELEC", sequence=10)
+
+    answer = supervisor.get("/maintenance/rules").json()
+
+    assert answer["total"] == 1
+    assert answer["house_default"] is None
+    assert answer["rules"][0]["says"].startswith("Work on MIX01 needing ELEC")
