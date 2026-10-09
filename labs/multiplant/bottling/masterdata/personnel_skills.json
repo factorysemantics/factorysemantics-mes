@@ -1,0 +1,47 @@
+[
+  {
+    "person": "MT-01",
+    "skill": "ELEC",
+    "level": 2
+  },
+  {
+    "person": "MT-02",
+    "skill": "ELEC",
+    "level": 2
+  },
+  {
+    "person": "MT-03",
+    "skill": "MECH",
+    "level": 3
+  },
+  {
+    "person": "MT-04",
+    "skill": "MECH",
+    "level": 2
+  },
+  {
+    "person": "MT-05",
+    "skill": "MECH",
+    "level": 2
+  },
+  {
+    "person": "MT-05",
+    "skill": "ELEC",
+    "level": 1
+  },
+  {
+    "person": "MT-06",
+    "skill": "GEN",
+    "level": 2
+  },
+  {
+    "person": "MT-06",
+    "skill": "MECH",
+    "level": 1
+  },
+  {
+    "person": "MT-07",
+    "skill": "GEN",
+    "level": 2
+  }
+]

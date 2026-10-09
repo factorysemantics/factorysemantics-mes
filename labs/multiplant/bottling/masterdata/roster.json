@@ -1,0 +1,30 @@
+[
+  {
+    "person": "MT-01",
+    "shift": "DAY"
+  },
+  {
+    "person": "MT-03",
+    "shift": "DAY"
+  },
+  {
+    "person": "MT-05",
+    "shift": "DAY"
+  },
+  {
+    "person": "MT-06",
+    "shift": "DAY"
+  },
+  {
+    "person": "MT-02",
+    "shift": "NIGHT"
+  },
+  {
+    "person": "MT-04",
+    "shift": "NIGHT"
+  },
+  {
+    "person": "MT-07",
+    "shift": "NIGHT"
+  }
+]

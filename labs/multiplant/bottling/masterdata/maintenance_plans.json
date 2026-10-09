@@ -6,7 +6,9 @@
     "trigger": "calendar_days",
     "interval": 30.0,
     "expected_minutes": 90.0,
-    "instructions": "Isolate the chiller, brush and wash the condenser coil, check the fan and the refrigerant pressures, log the outlet temperature before and after."
+    "instructions": "Isolate the chiller, brush and wash the condenser coil, check the fan and the refrigerant pressures, log the outlet temperature before and after.",
+    "skill": "ELEC",
+    "priority": 2
   },
   {
     "code": "PM-FILL-SEALS",
@@ -14,7 +16,9 @@
     "equipment": "FILL01",
     "trigger": "runtime_hours",
     "interval": 4.0,
-    "expected_minutes": 45.0
+    "expected_minutes": 45.0,
+    "skill": "MECH",
+    "priority": 2
   },
   {
     "code": "PM-LD-BELT",
@@ -22,7 +26,9 @@
     "equipment": "LD01",
     "trigger": "runtime_hours",
     "interval": 6.0,
-    "expected_minutes": 20.0
+    "expected_minutes": 20.0,
+    "skill": "MECH",
+    "priority": 3
   },
   {
     "code": "PM-PAL-GREASE",
@@ -30,7 +36,9 @@
     "equipment": "PAL01",
     "trigger": "calendar_days",
     "interval": 7.0,
-    "expected_minutes": 30.0
+    "expected_minutes": 30.0,
+    "skill": "GEN",
+    "priority": 3
   },
   {
     "code": "PM-RD-BEARING",
@@ -38,7 +46,9 @@
     "equipment": "RD01",
     "trigger": "runtime_hours",
     "interval": 8.0,
-    "expected_minutes": 90.0
+    "expected_minutes": 90.0,
+    "skill": "MECH",
+    "priority": 2
   },
   {
     "code": "PM-WASH-NOZZLE",
@@ -46,6 +56,8 @@
     "equipment": "WASH01",
     "trigger": "produced_qty",
     "interval": 20000.0,
-    "expected_minutes": 60.0
+    "expected_minutes": 60.0,
+    "skill": "GEN",
+    "priority": 3
   }
 ]

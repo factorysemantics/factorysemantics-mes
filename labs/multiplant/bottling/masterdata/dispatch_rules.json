@@ -1,0 +1,27 @@
+[
+  {
+    "code": "SAFETY-NOW",
+    "name": "Safety work goes to whoever is free, anywhere on the line",
+    "supervisor": "FLOOR-SUP",
+    "priority_at_least": 1,
+    "strategy": "least_loaded",
+    "sequence": 10
+  },
+  {
+    "code": "FILL-ELEC",
+    "name": "Filler electrical work goes to the nearest electrician",
+    "supervisor": "FLOOR-SUP",
+    "equipment": "FILL01",
+    "skill": "ELEC",
+    "strategy": "nearest",
+    "sequence": 20
+  },
+  {
+    "code": "LINE-REST",
+    "name": "Everything else on the line is spread by turns",
+    "supervisor": "FLOOR-SUP",
+    "equipment": "SIMLINE",
+    "strategy": "round_robin",
+    "sequence": 90
+  }
+]
