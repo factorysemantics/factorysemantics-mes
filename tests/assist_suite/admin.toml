@@ -348,6 +348,24 @@ fills = { name = "Mixer belt check", trigger = "calendar", expected_minutes = 45
 requires = ["machine:MIX01"]
 
 [[case]]
+id = "admin-gives-a-maintenance-order-to-somebody-by-hand"
+request = "give CM-00001 to SCOTT, I don't care what the rules say"
+screen = "/dashboard/maintenance"
+expect = "propose"
+tool = "assign_maintenance_order"
+args = { order = "CM-00001", person = "SCOTT" }
+requires = ["maintenance:CM-00001", "person:SCOTT"]
+note = """A hand assignment is gated on maintenance.plan and not on
+maintenance.perform, which is why this is an administrator's file: handing work
+out against the rules is planning the work, not doing it. The plant may well
+refuse this one - SCOTT holds no trade on the fixture plant and is not on the
+roster - and that refusal is the plant's answer to give. What is scored here is
+that the request reaches the tool with the order and the person in it, rather
+than being answered with "the rules decide that", which is what an assistant
+with no such tool has to say. Once it is assigned by hand the rules leave it
+alone; that is the point of the sentence's second half."""
+
+[[case]]
 id = "admin-schedules-one-order"
 request = "schedule WO-EVAL-1"
 screen = "/dashboard/schedule"

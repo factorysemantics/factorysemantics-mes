@@ -360,7 +360,12 @@ def test_no_tool_anywhere_signs_a_vocabulary_off():
     """Decision 0035, and the `agent` role's own description: it never
     approves - not a reason code and not a severity."""
     names = {t.name for t in agent.registry_tools()}
-    assert {n for n in names if "approve" in n or "sign" in n} == {"assign_role"}
+    # `assign_role` and `assign_maintenance_order` are caught by the substring
+    # and neither signs anything off: one grants a role, the other gives a job
+    # to a tradesperson. Named here rather than narrowing the match, because a
+    # cleverer pattern is a pattern that stops catching `approve_vocabulary`.
+    assert ({n for n in names if "approve" in n or "sign" in n}
+            == {"assign_role", "assign_maintenance_order"})
     assert "process.approve" not in caps.BUILTIN_ROLES["agent"]["capabilities"]
     assert "quality.approve" not in caps.BUILTIN_ROLES["agent"]["capabilities"]
     assert "process.define" in caps.BUILTIN_ROLES["agent"]["capabilities"]

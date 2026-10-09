@@ -217,21 +217,41 @@ def raise_due(session: Session, actor: str = "system") -> list[MaintenanceOrder]
 
 
 def raise_corrective(session: Session, *, equipment_code: str, summary: str,
-                     reason: str | None = None, actor: str = "system") -> MaintenanceOrder:
-    """Work raised because something broke, not because a plan came due."""
+                     reason: str | None = None, skill_code: str | None = None,
+                     priority: int | None = None,
+                     actor: str = "system") -> MaintenanceOrder:
+    """Work raised because something broke, not because a plan came due.
+
+    It says its own trade and its own priority, because there is no plan behind
+    it to copy from: the thing that broke is what says which trade and how
+    badly it matters. Saying neither is allowed and means what it says - work
+    anybody on shift can take, treated as routine.
+    """
     equipment = masterdata.get_equipment(session, equipment_code)
+    if skill_code:
+        # Imported here and not at the top: `dispatch` reads this module for
+        # how long a job takes, so one of the two has to ask for the other
+        # late. A 404 rather than an order naming a trade this plant has never
+        # heard of, which would then dispatch to nobody for ever.
+        from fsmes.services import dispatch
+        dispatch.get_skill(session, skill_code)
+    if priority is not None and not 1 <= int(priority) <= 3:
+        raise Invalid("priority is 1 (safety), 2 (production-critical) or 3 (routine)")
     order = MaintenanceOrder(
         code=_next_code(session, "CM"),
         equipment_id=equipment.id,
         kind=MaintenanceKind.CORRECTIVE,
         summary=summary,
         reason=reason,
+        skill_code=skill_code,
+        priority=int(priority) if priority is not None else None,
     )
     session.add(order)
     session.flush()
     audit.record(session, actor=actor, action="maintenance.raised",
                  entity_type="equipment", entity_id=equipment_code,
-                 after={"order": order.code, "kind": "corrective", "summary": summary})
+                 after={"order": order.code, "kind": "corrective", "summary": summary,
+                        "skill": skill_code, "priority": order.priority})
     return order
 
 
