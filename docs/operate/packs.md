@@ -92,7 +92,7 @@ Never this process's own default. Until 2026-09-14 that is exactly what a pack n
 
 **Pack before database.** A schema migration may need a value the pack now carries, so the pack is applied first — and `fsmes pack apply` runs the migrations itself, in that order.
 
-Master data is seeded from `masterdata/`, one file per kind: `equipment.json`, `materials.json`, `bom.json`, `routings.json`, `quality_specs.json`, `gauges.json`, `lots.json`, `work_orders.json`, `maintenance_plans.json`, `shifts.json`, `downtime_reasons.json`, `nc_severities.json`. An entry whose code already exists is counted as present and **left alone, never updated** — a pack that rewrote a routing an order has already run against would be rewriting history. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which `fsmes fleet list` and the console now show as *answered, but empty*.
+Master data is seeded from `masterdata/`, one file per kind: `equipment.json`, `materials.json`, `bom.json`, `routings.json`, `quality_specs.json`, `gauges.json`, `lots.json`, `work_orders.json`, `maintenance_plans.json`, `shifts.json`, `downtime_reasons.json`, `nc_severities.json`, `personnel.json`, `skills.json`, `personnel_skills.json`, `roster.json`, `dispatch_rules.json`. An entry whose code already exists is counted as present and **left alone, never updated** — a pack that rewrote a routing an order has already run against would be rewriting history. There is exactly one exception, and it is a column that has never held a value: a maintenance plan written before 2026-10-09 has no trade on it and no priority, because there was nowhere to put them, and a plant has no other way to answer that about a plan it already has. Applying a pack that states them fills those two in — only when *both* are empty, never over a value — and the receipt says so on its own line: `maintenance_plans: 0 made, 6 already there, 6 given the trade and priority they never had`. A pack that carries no master data says so rather than reporting that it seeded nothing; it builds a plant with no machines on it, which is allowed, and which `fsmes fleet list` and the console now show as *answered, but empty*.
 
 ### The words an operator picks from
 
@@ -163,6 +163,45 @@ A severity code is two to **twenty** characters — it is stored on every non-co
 Nothing in the MES releases the next order. On a plant that simulates, `fsmes run-operations` does it as the shift supervisor would; on a real plant it is a person or the ERP.
 
 **And nothing in the MES plans one either.** A pack's book is finite, so a simulated plant left up for a week finishes it: bottling's lab plant finished the last of its ten orders at 04:21 UTC on 2026-10-07, forty-three hours after it was built, and measured into no order at all from then on — no queue on the station page, an empty characteristic dropdown, every quality check with no order against it. A pack that wants to go on having work says so with `planning.keep_planned` in its floor script, and a simulated production planner (`FLOOR-PLAN`, which holds `orders.create` and `plant.read` and nothing else) keeps the book that deep by copying what the plant already makes. **The default is 0, which is no planner**: a pack that says nothing behaves exactly as it did before this existed, which is what the scripted over-run experiment depends on. The planner never releases what it plans — that stays the supervisor's — so the sequence is a real plant's: planner, then supervisor, then floor.
+
+### The crew, and who gets the work
+
+Five files, and together they are the answer to "the filler's chiller just came due at two in the morning — who goes?". A plant that seeds none of them still dispatches: it falls back to one house rule, *any due order to a free person with the skill on this shift, least loaded first*. A plant that seeds them gets its own sentences instead.
+
+`personnel.json` is the register: a `code` and a `name`, optionally a `role` and a `home_equipment`. **Nobody here gets a password.** The register is who the plant may name as having done something; `[[accounts]]` is who can sign in, and a millwright who never opens the MES needs the first and not the second. `home_equipment` is where somebody normally works — it grants nothing and restricts nothing, and is read only to work out who is nearest a machine.
+
+`skills.json` is the trades this plant employs — a `code`, a `name`, an optional `description`. The product ships none: a plant that keeps pipefitters apart from mechanics writes four rows, and one that calls them all *maintenance* writes one.
+
+```json
+[
+  {"code": "ELEC", "name": "Electrician"},
+  {"code": "MECH", "name": "Mechanic", "description": "Mechanical fitting, pipework and welding."},
+  {"code": "GEN",  "name": "General maintenance"}
+]
+```
+
+`personnel_skills.json` is who holds what, and at what level: `person`, `skill`, and `level` 1, 2 or 3 — **trainee, competent, expert**. The line between 1 and 2 is the only one the dispatcher reads: a trainee is never sent to a job alone. Somebody with two trades has two rows.
+
+`roster.json` is who is on which shift. A row with no `day` is **standing** — this person is on this shift whenever it runs — and that is what a pack almost always means, because a pack is seeded on a date nobody can predict and a dated roster would be a week of history. A row with a `day` (`YYYY-MM-DD`) is that day only and wins over the standing row, which is how an absence or a cover shift is written down without rewriting the roster. `available: false` with a `reason` is somebody on shift and not available, which the roster page says out loud rather than leaving them off.
+
+`dispatch_rules.json` is the supervisor's own sentences, and **one row is one sentence**:
+
+```json
+[
+  {"code": "SAFETY-NOW", "name": "Safety work goes out first, to whoever has least on",
+   "priority_at_least": 1, "strategy": "least_loaded", "sequence": 10},
+  {"code": "FILL-ELEC", "name": "Electrical work on the filler goes to the nearest electrician",
+   "equipment": "FILL01", "skill": "ELEC", "strategy": "nearest", "sequence": 20}
+]
+```
+
+Rules are tried in `sequence` order, and **the first one that matches the order and finds somebody free wins**. A rule matches on up to three things, any of which it may leave out: `equipment` (that node or anything under it), `skill`, and `priority_at_least` (1 safety, 2 production-critical, 3 routine). `strategy` is `least_loaded`, `nearest` or `round_robin`.
+
+**A rule's `skill` narrows the work, not the people.** Eligibility always comes from the trade *the order* needs, so a rule with no `skill` on it — like `SAFETY-NOW` above — still never sends a mechanic to an electrical fault.
+
+**A plant that has written even one rule gets no house default.** It has said what it wants, and an order none of its rules covers is reported `no_rule` rather than quietly swept up by a sentence the supervisor never wrote. That is the difference between a dispatcher a supervisor can reason about and one that surprises them.
+
+Finally, `maintenance_plans.json` gains two optional fields of its own, `skill` and `priority`, which each order copies when the plan raises it. Leave them out and the plan means what it says: work anybody on shift can take, treated as routine.
 
 ### What the simulated floor does
 

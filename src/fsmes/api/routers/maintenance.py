@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
+from sqlalchemy import select
 
 from fsmes.api import paging
-from fsmes.api.deps import ActorDep, DbDep, require
-from fsmes.services import maintenance
+from fsmes.api.deps import ActorDep, DbDep, UserDep, require
+from fsmes.domain import DispatchRule
+from fsmes.services import auth, dispatch, maintenance
 
 router = APIRouter()
 
@@ -26,16 +30,33 @@ class PlanIn(BaseModel):
     expected_minutes: float | None = None
     instructions: str | None = None
     document_code: str | None = None
+    # Which trade the job needs and what it is worth interrupting the day for
+    # (1 safety, 2 production-critical, 3 routine). Both optional: a plan that
+    # says neither is work anybody on shift can take, at routine, which is the
+    # honest reading of a plan nobody has classified rather than an invented
+    # trade on a job somebody would then be sent to wrongly.
+    skill: str | None = None
+    priority: int | None = None
 
 
 class CorrectiveIn(BaseModel):
     equipment: str
     summary: str
     reason: str | None = None
+    # A corrective order says its own, because the thing that broke says which
+    # trade and how badly it matters - there is no plan behind it to copy from.
+    skill: str | None = None
+    priority: int | None = None
 
 
 class CompleteIn(BaseModel):
     findings: str | None = None
+
+
+class AssignIn(BaseModel):
+    person: str
+    # When it should happen. Now, unless the supervisor is planning ahead.
+    scheduled_for: str | None = None
 
 
 def _order_out(o) -> dict:
@@ -47,6 +68,12 @@ def _order_out(o) -> dict:
         "completed_at": o.completed_at, "performed_by": o.performed_by,
         "findings": o.findings, "downtime_minutes": o.downtime_minutes,
         "document": o.plan.document_code if o.plan else None,
+        "skill": o.skill_code, "priority": o.priority,
+        "assigned_to": o.assigned_to, "assigned_at": o.assigned_at,
+        "assigned_by": o.assigned_by, "scheduled_for": o.scheduled_for,
+        # Null means it has not been through dispatch - a different fact from
+        # "nobody could take it", and a screen shows them differently.
+        "unassigned_reason": o.unassigned_reason,
     }
 
 
@@ -97,7 +124,8 @@ def create_plan(body: PlanIn, db: DbDep, actor: ActorDep) -> dict:
         db, code=body.code, name=body.name, equipment_code=body.equipment,
         trigger=body.trigger, interval=body.interval,
         expected_minutes=body.expected_minutes, instructions=body.instructions,
-        document_code=body.document_code, actor=actor)
+        document_code=body.document_code, skill_code=body.skill,
+        priority=body.priority, actor=actor)
     return maintenance.status_of(db, plan)
 
 
@@ -105,7 +133,8 @@ def create_plan(body: PlanIn, db: DbDep, actor: ActorDep) -> dict:
 def orders(
     db: DbDep,
     equipment: str | None = None,
-    status: list[str] | None = Query(None, description="due, in_progress or done; repeatable."),
+    status: list[str] | None = Query(
+        None, description="due, assigned, in_progress, done or skipped; repeatable."),
     kind: str | None = Query(None, description="preventive or corrective."),
     q: str | None = Query(None, description="Match an order code, its summary or findings."),
     limit: int = paging.LimitQuery,
@@ -137,15 +166,102 @@ def raise_due(db: DbDep, actor: ActorDep) -> dict:
 def corrective(body: CorrectiveIn, db: DbDep, actor: ActorDep) -> dict:
     return _order_out(maintenance.raise_corrective(
         db, equipment_code=body.equipment, summary=body.summary,
-        reason=body.reason, actor=actor))
+        reason=body.reason, skill_code=body.skill, priority=body.priority,
+        actor=actor))
 
 
 @router.post("/orders/{code}/start", dependencies=[require("maintenance.perform")])
-def start(code: str, db: DbDep, actor: ActorDep) -> dict:
-    return _order_out(maintenance.start(db, code, actor=actor))
+def start(code: str, db: DbDep, actor: ActorDep, user: UserDep) -> dict:
+    """Pick up the spanner.
+
+    An order that was given to somebody is started by them. Anyone else is
+    refused 403 with a sentence naming who can - unless they hold
+    `maintenance.plan`, which is a supervisor, who may reassign it and then
+    start it anyway.
+    """
+    held = auth.capabilities_for(db, user["role"])
+    return _order_out(maintenance.start(db, code, actor=actor, capabilities=held))
 
 
 @router.post("/orders/{code}/complete", dependencies=[require("maintenance.perform")])
 def complete(code: str, body: CompleteIn, db: DbDep, actor: ActorDep) -> dict:
     """Close the job and re-baseline its plan from the work actually done."""
     return _order_out(maintenance.complete(db, code, findings=body.findings, actor=actor))
+
+
+# ------------------------------------------------- the crew, and who gets what
+
+
+@router.post("/dispatch", dependencies=[require("maintenance.perform")])
+def dispatch_due(db: DbDep, actor: ActorDep) -> dict:
+    """Hand every due order to a free person who holds the trade.
+
+    Runs on the plant's own tick as well, so this is the same pass a
+    supervisor can ask for by hand. Idempotent: it looks only at orders at
+    `due`, and never takes back one a person assigned.
+    """
+    return dispatch.dispatch(db, actor=actor)
+
+
+@router.get("/dispatch/{code}/explain")
+def explain(code: str, db: DbDep) -> dict:
+    """Why this order went where it went, rule by rule and person by person.
+
+    Written as the walk the dispatcher would make *now*, with what was actually
+    recorded beside it - because what was decided an hour ago and what the same
+    rules would decide this minute are two different answers, and conflating
+    them is how a supervisor ends up mistrusting both.
+    """
+    return dispatch.explain(db, code)
+
+
+@router.post("/orders/{code}/assign", dependencies=[require("maintenance.plan")])
+def assign(code: str, body: AssignIn, db: DbDep, actor: ActorDep) -> dict:
+    """Give the work to a named person, by hand.
+
+    The rules never undo this: a supervisor who reaches in and is overruled by
+    the machine stops reaching in, and then the plant has a dispatcher nobody
+    corrects. A person who does not hold the order's trade is allowed and the
+    audit row says so - a supervisor on the floor at two in the morning knows
+    something the skills table does not.
+    """
+    when = datetime.fromisoformat(body.scheduled_for) if body.scheduled_for else None
+    return _order_out(dispatch.assign(db, code, body.person, actor=actor,
+                                      scheduled_for=when))
+
+
+@router.get("/roster")
+def roster(
+    db: DbDep,
+    shift: str | None = Query(
+        None, description="A shift key (2026-10-09/DAY), `current` or `previous`. "
+                          "Left out: the shift running now."),
+) -> dict:
+    """Who is on shift, what they can do, and what they already have on.
+
+    The total is always stated, and so is the fact that there is no shift at
+    all: a plant that has not told this MES its shift patterns has nobody
+    rostered, which is a finding about the calendar and not an empty crew.
+    """
+    return dispatch.roster(db, shift)
+
+
+@router.get("/rules")
+def rules(db: DbDep) -> dict:
+    """The supervisor's dispatch rules, in the order they are tried.
+
+    A plant with none is answered with the one house default it is actually
+    running on, marked as not being a row of its own - which is the difference
+    between "nobody has configured this" and "this plant dispatches nothing".
+    """
+    written = list(db.scalars(select(DispatchRule).order_by(
+        DispatchRule.sequence, DispatchRule.code)))
+    running = dispatch.rules(db)
+    return {
+        "rules": [dispatch.rule_as_json(r) for r in written],
+        "total": len(written),
+        "tried_in_order": [r.code for r in running],
+        "house_default": (dispatch.rule_as_json(dispatch.default_rule())
+                          if not written else None),
+        "skills": dispatch.skills(db),
+    }

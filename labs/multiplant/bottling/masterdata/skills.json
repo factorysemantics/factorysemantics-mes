@@ -1,0 +1,17 @@
+[
+  {
+    "code": "ELEC",
+    "name": "Electrician",
+    "description": "Motors, drives, sensors, control panels and anything that needs isolating before it is opened."
+  },
+  {
+    "code": "MECH",
+    "name": "Mechanic",
+    "description": "Bearings, belts, chains, seals and valves. Covers pipefitting and welding on this plant; a plant that keeps those apart adds the rows."
+  },
+  {
+    "code": "GEN",
+    "name": "General maintenance",
+    "description": "Greasing, descaling, cleaning and the jobs that need a pair of hands rather than a trade."
+  }
+]

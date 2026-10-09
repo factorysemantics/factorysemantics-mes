@@ -1,7 +1,9 @@
 # ACME bottling — master data, as data
 
-The six-station reference line, as the ten files `fsmes pack apply` reads
-and `fsmes pack check` validates offline.
+The six-station reference line, as the files `fsmes pack apply` reads and
+`fsmes pack check` validates offline. One file per kind, each a flat list of
+entries; a file this product does not read is a problem, because master data
+nobody reads is master data somebody thinks is loaded.
 
 ## Why this exists now, when it deliberately did not before
 
@@ -54,6 +56,80 @@ looks like.
 Which gauge takes which reading, and which of them is drifting, is **not**
 here: it is in this pack's [`floor.json`](../floor.json), because it is a fact
 about the simulated people rather than master data the MES owns.
+
+## The maintenance crew, and who gets the work
+
+Added 2026-10-09, with the dispatcher. A plant that knows its machines and not
+its electricians cannot send a filler's electrical fault to an electrician,
+and that is the whole job: handed to a mechanic it is a shift lost and a
+supervisor who stops trusting the list.
+
+**Seven people** in `personnel.json`, `MT-01` to `MT-07`. None of them has a
+password, and that is deliberate rather than unfinished: `Person.password_hash`
+null means *cannot sign in*, and a tradesperson who never opens the MES should
+be on its books without an account somebody has to manage. The accounts this
+plant does sign in with are `[[accounts]]` in `plant.toml`, which read their
+passwords from the environment. `role` is `operator` for all seven because
+this product's role list has no maintenance role yet; it grants them nothing,
+because an account with no password cannot use it.
+
+Five of the seven are based at a machine (`home_equipment`), which is what the
+`nearest` strategy walks — same work centre first, then the same line. It
+grants nothing: it is where somebody usually is, not what they are allowed to
+touch.
+
+**Three trades** in `skills.json`: `ELEC`, `MECH`, `GEN`. `MECH` covers
+pipefitting and welding on this plant, said out loud in its own description; a
+plant that keeps those apart adds the rows and changes nothing else.
+
+**Nine entries** in `personnel_skills.json`, because people hold more than
+one. Levels are 1 trainee, 2 competent, 3 expert, and the dispatcher will not
+send a trainee on their own — `MT-05` holds `ELEC` at 1 and `MT-06` holds
+`MECH` at 1, so both appear in `--explain` as considered and skipped, which is
+the output a supervisor checks the rules against.
+
+**The roster** is seven standing rows: four on `DAY` (`MT-01`, `MT-03`,
+`MT-05`, `MT-06`) and three on `NIGHT` (`MT-02`, `MT-04`, `MT-07`). No `day`
+on any of them, and that is the point — a row with no day is a *standing*
+assignment, on that shift whenever it runs, and a pack is applied whenever
+somebody builds the plant, so a dated row in one is about a day in the past
+the week after it was written. A dated row still works and overrides the
+standing one, which is how an absence or a training day is written down
+without rewriting the roster.
+
+Nights hold one electrician, one mechanic and one general hand, so a night
+with two electrical jobs at once produces a real `all_busy`, and a night with
+a job needing a trade nobody on shift holds produces a real
+`nobody_on_shift_with_skill`. Both are states worth being able to see.
+
+**Three rules** in `dispatch_rules.json`, tried in `sequence` order, first one
+that finds a free person wins. Each row is one sentence the shift supervisor
+would say out loud:
+
+| seq | code | what it says |
+| --- | --- | --- |
+| 10 | `SAFETY-NOW` | Safety work (priority 1) anywhere on the plant goes to whoever has least on. |
+| 20 | `FILL-ELEC` | Filler electrical work goes to the nearest electrician. |
+| 90 | `LINE-REST` | Everything else on `SIMLINE` is spread by turns. |
+
+A rule with no `skill` still only reaches people who hold *the order's* trade
+— the rule's `skill` narrows which work it catches, not which people it may
+choose from. That is why `SAFETY-NOW` can be written without a trade on it and
+still never send a mechanic to an electrical fault.
+
+**The six plans gained `skill` and `priority`.** The chiller condenser is
+`ELEC` (the fan and the pressures), seals, belt and bearing are `MECH`, the
+grease and the descale are `GEN`; the three filler and denester jobs are
+priority 2 (production-critical) and the rest 3 (routine). Nothing here is
+priority 1: this plant has no safety plan, and inventing one to exercise a
+rule would be inventing production. `SAFETY-NOW` is still the right first
+rule to have written, and corrective work raised at priority 1 is what will
+hit it.
+
+**Nobody starts the work.** The simulated floor raises what is due and now
+dispatches it; it does not start or complete it. The chain an auditor walks
+back ends at an order somebody has been given, which is further than it
+reached before and still short of a finished job.
 
 ## What is not here
 

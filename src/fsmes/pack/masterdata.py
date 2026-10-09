@@ -22,8 +22,20 @@ written by `fsmes pack apply`:
       shifts.json              the patterns this plant works
       downtime_reasons.json    the reasons an operator picks from when it stops
       nc_severities.json       the plant's own words for how bad a finding is
+      personnel.json           the people on the books, and where each is based
+      skills.json              the trades this plant recognises
+      personnel_skills.json    who holds which trade, and how well
+      roster.json              who is on which shift, and who is away
+      dispatch_rules.json      how maintenance work is handed out, in order
 
-The last three arrived on 2026-09-14, when the bottling lab plant's line
+The last five arrived on 2026-10-09, with the maintenance crew. A plant that
+knows its machines and not its electricians cannot hand a filler's electrical
+fault to an electrician, and which trades a plant employs, who holds them and
+what the supervisor's rules are is exactly the kind of thing that must be
+config and not code (house rule 4) - a plant that separates pipefitters from
+mechanics adds a row and changes nothing else.
+
+Three before them arrived on 2026-09-14, when the bottling lab plant's line
 moved into a pack. It had been seeded by `fsmes seed-kepsim`, which builds a
 bill of materials, six maintenance plans and two shift patterns as well as
 the equipment and the routing - and a format that could not carry them would
@@ -42,6 +54,16 @@ it is, and the receipt says how many of each kind were made and how many were
 already present. It never updates: a pack that changed a routing an order has
 already run against would rewrite history, and a pack has no business doing
 that. `fsmes pack status` reports the drift instead.
+
+**One named exception: a column that has never held a value.** A maintenance
+plan that was written before 2026-10-09 has no trade on it and no priority,
+because there was nowhere to put them. The pack fills those two in - only
+when *both* are empty, only from a pack that states them, and reported
+separately in the receipt as "classified" so nobody has to guess what moved.
+That is not the pack overruling the plant; it is the plant answering a
+question it was never asked. The alternative is every plant that existed
+before the dispatcher upgrading into a dispatcher that knows no trades, and a
+plant has no other way to classify a plan it already has.
 """
 
 from __future__ import annotations
@@ -67,6 +89,11 @@ KINDS: dict[str, str] = {
     "shifts": "the shift patterns this plant works",
     "downtime_reasons": "the reasons an operator may choose from when a machine stops",
     "nc_severities": "the severities a non-conformance may be raised at",
+    "personnel": "the people on this plant's books, and where each is based",
+    "skills": "the trades this plant recognises",
+    "personnel_skills": "who holds which trade, and how well",
+    "roster": "who is on which shift, and who is away",
+    "dispatch_rules": "how maintenance work is handed out, tried in order",
 }
 
 REQUIRED: dict[str, tuple[str, ...]] = {
@@ -82,6 +109,11 @@ REQUIRED: dict[str, tuple[str, ...]] = {
     "shifts": ("code", "name", "starts", "ends"),
     "downtime_reasons": ("code", "name"),
     "nc_severities": ("code", "name"),
+    "personnel": ("code", "name"),
+    "skills": ("code", "name"),
+    "personnel_skills": ("person", "skill"),
+    "roster": ("person", "shift"),
+    "dispatch_rules": ("code", "name"),
 }
 
 OPTIONAL: dict[str, tuple[str, ...]] = {
@@ -98,10 +130,21 @@ OPTIONAL: dict[str, tuple[str, ...]] = {
                "calibrated_days_ago"),
     "lots": (),
     "work_orders": ("priority", "release", "due_in_hours"),
-    "maintenance_plans": ("instructions", "document_code", "expected_minutes"),
+    # `skill` and `priority` arrived with the maintenance crew. A plan that
+    # says neither is work anybody on shift can take, at routine - which is
+    # the honest reading of a plan nobody has classified, and why every pack
+    # written before the crew existed still applies unchanged.
+    "maintenance_plans": ("instructions", "document_code", "expected_minutes",
+                          "skill", "priority"),
     "shifts": ("days", "equipment"),
     "downtime_reasons": ("description",),
     "nc_severities": ("description",),
+    "personnel": ("role", "home_equipment"),
+    "skills": ("description",),
+    "personnel_skills": ("level",),
+    "roster": ("day", "available", "reason"),
+    "dispatch_rules": ("supervisor", "equipment", "skill", "priority_at_least",
+                       "strategy", "sequence", "active"),
 }
 
 #: What `[[maintenance_plans]] trigger` may say, and what each counts. Spelt
@@ -329,12 +372,116 @@ def problems(directory: Path) -> list[str]:
                            "hold. Seed it - the name and the sentence beside it are "
                            "yours to write.")
 
+    # The crew, offline. Every one of these is a claim about a person, and a
+    # roster row naming somebody the pack never declares would seed a shift
+    # with a hole in it that nothing later tells anybody about.
+    from fsmes.domain import LEVEL_EXPERT, LEVEL_TRAINEE, DispatchStrategy
+
+    known_people = {row.get("code") for row in data.rows("personnel")}
+    known_skills = {row.get("code") for row in data.rows("skills")}
+    known_shifts = {row.get("code") for row in data.rows("shifts")}
+
+    for index, row in enumerate(data.rows("personnel"), start=1):
+        home = row.get("home_equipment")
+        if home and home not in known_equipment:
+            out.append(f"personnel.json #{index} is based at {home!r}, which "
+                       "equipment.json does not declare.")
+    for index, row in enumerate(data.rows("personnel_skills"), start=1):
+        where = f"personnel_skills.json #{index}"
+        person, skill = row.get("person"), row.get("skill")
+        if person and person not in known_people:
+            out.append(f"{where} gives a trade to {person!r}, which personnel.json "
+                       "does not declare.")
+        if skill and skill not in known_skills:
+            out.append(f"{where} names trade {skill!r}, which skills.json does not "
+                       "declare.")
+        level = row.get("level")
+        if level is not None and (isinstance(level, bool) or not isinstance(level, int)
+                                  or not LEVEL_TRAINEE <= level <= LEVEL_EXPERT):
+            out.append(f"{where} has level {level!r}; a level is "
+                       f"{LEVEL_TRAINEE} (trainee, works watched), 2 (competent, works "
+                       f"alone - the default, and what dispatch sends) or "
+                       f"{LEVEL_EXPERT} (expert, signs it off).")
+    for index, row in enumerate(data.rows("roster"), start=1):
+        where = f"roster.json #{index}"
+        person, shift = row.get("person"), row.get("shift")
+        if person and person not in known_people:
+            out.append(f"{where} rosters {person!r}, which personnel.json does not "
+                       "declare.")
+        if shift and shift not in known_shifts:
+            out.append(f"{where} puts somebody on shift {shift!r}, which shifts.json "
+                       "does not declare.")
+        day = row.get("day")
+        if day is not None and not _is_day(day):
+            out.append(f"{where} is for day {day!r}; that is a date written "
+                       "YYYY-MM-DD. Leave it out for a standing assignment - on this "
+                       "shift whenever it runs - which is what a pack usually means, "
+                       "because a pack is applied whenever somebody builds the plant "
+                       "and a date written into one is in the past the week after.")
+        if row.get("available") is not None and not isinstance(row["available"], bool):
+            out.append(f"{where} has available {row['available']!r}; that is true or "
+                       "false.")
+    for index, row in enumerate(data.rows("dispatch_rules"), start=1):
+        where = f"dispatch_rules.json #{index}"
+        node = row.get("equipment")
+        if node and node not in known_equipment:
+            out.append(f"{where} is about {node!r}, which equipment.json does not "
+                       "declare.")
+        skill = row.get("skill")
+        if skill and skill not in known_skills:
+            out.append(f"{where} wants trade {skill!r}, which skills.json does not "
+                       "declare.")
+        strategy = row.get("strategy")
+        if strategy and strategy not in {s.value for s in DispatchStrategy}:
+            out.append(f"{where} chooses by {strategy!r}, which is not a way this "
+                       "product chooses. It chooses by "
+                       f"{', '.join(sorted(s.value for s in DispatchStrategy))}.")
+        least = row.get("priority_at_least")
+        if least is not None and (isinstance(least, bool) or not isinstance(least, int)
+                                  or not 1 <= least <= 3):
+            out.append(f"{where} catches priority {least!r} or worse; a priority is "
+                       "1 (safety), 2 (production-critical) or 3 (routine).")
+        sequence = row.get("sequence")
+        if sequence is not None and (isinstance(sequence, bool)
+                                     or not isinstance(sequence, int)):
+            out.append(f"{where} has sequence {sequence!r}; that is a whole number, "
+                       "and the rules are tried lowest first.")
+        if row.get("active") is not None and not isinstance(row["active"], bool):
+            out.append(f"{where} has active {row['active']!r}; that is true or false.")
+    for index, row in enumerate(data.rows("maintenance_plans"), start=1):
+        where = f"maintenance_plans.json #{index}"
+        skill = row.get("skill")
+        if skill and skill not in known_skills:
+            out.append(f"{where} needs trade {skill!r}, which skills.json does not "
+                       "declare.")
+        priority = row.get("priority")
+        if priority is not None and (isinstance(priority, bool)
+                                     or not isinstance(priority, int)
+                                     or not 1 <= priority <= 3):
+            out.append(f"{where} is priority {priority!r}; a priority is 1 (safety), "
+                       "2 (production-critical) or 3 (routine). Leave it out for work "
+                       "nobody has classified, which is read as routine.")
+
     # A component that is its own parent is a bill of materials that never
     # terminates, and the explosion would recurse until something gave way.
     for index, row in enumerate(data.rows("bom"), start=1):
         if row.get("parent") and row.get("parent") == row.get("component"):
             out.append(f"bom.json #{index} makes {row['parent']!r} a component of itself.")
     return out
+
+
+def _is_day(value) -> bool:
+    """`YYYY-MM-DD`, and nothing else. A roster row for "next Tuesday" is a
+    row this product cannot place on a calendar."""
+    from datetime import date as _date
+
+    if not isinstance(value, str):
+        return False
+    try:
+        _date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
 
 
 def _is_clock(value) -> bool:
@@ -358,14 +505,17 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
     Idempotent by code: an entry whose code already exists is counted as
     present and left alone, never updated.
     """
-    from datetime import timedelta
+    from datetime import date, timedelta
 
     from sqlalchemy import select
 
     from fsmes import identity
     from fsmes.db import utcnow
     from fsmes.domain import (
+        LEVEL_COMPETENT,
         BomItem,
+        DispatchRule,
+        DispatchStrategy,
         DowntimeReason,
         DowntimeReasonStatus,
         Equipment,
@@ -376,20 +526,28 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
         MaterialLot,
         MaterialType,
         NcSeverity,
+        Person,
+        PersonnelSkill,
         QualitySpec,
+        RosterEntry,
         Routing,
         RoutingOperation,
         ShiftPattern,
+        Skill,
         TriggerKind,
         WorkOrder,
     )
     from fsmes.domain.common import VocabularyStatus
     from fsmes.services import calendar as calendar_service
-    from fsmes.services import maintenance, workorders
+    from fsmes.services import maintenance, masterdata, workorders
 
     data = read(directory)
     cycles = cycles or {}
     receipt: dict[str, dict] = {kind: {"made": 0, "present": 0} for kind in data.kinds}
+    # Only the one kind that has a third outcome carries a third counter, so
+    # every other kind's receipt reads exactly as it always has.
+    if "maintenance_plans" in receipt:
+        receipt["maintenance_plans"]["classified"] = 0
 
     def count(kind: str, made: bool) -> None:
         receipt[kind]["made" if made else "present"] += 1
@@ -412,6 +570,34 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
         session.add(made)
         equipment[code] = made
         count("equipment", made=True)
+
+    # The people, before anything that gives them a trade or a shift. A
+    # tradesperson seeded from a pack gets no password, which is deliberate:
+    # `Person.password_hash` null means "cannot sign in", and an electrician
+    # who never opens the MES should be on its books without an account
+    # somebody has to manage. Accounts are `[[accounts]]` in plant.toml and
+    # want a password from the environment; this is the other half.
+    people: dict[str, object] = {}
+    for row in data.rows("personnel"):
+        code = row["code"]
+        existing = session.scalar(select(Person).where(Person.code == code))
+        if existing is not None:
+            people[code] = existing
+            count("personnel", made=False)
+            continue
+        people[code] = masterdata.create_person(
+            session, code=code, name=row["name"], role=row.get("role", "operator"),
+            home_equipment=row.get("home_equipment"), actor="pack-apply")
+        count("personnel", made=True)
+
+    for row in data.rows("skills"):
+        code = row["code"]
+        if session.scalar(select(Skill.id).where(Skill.code == code)):
+            count("skills", made=False)
+            continue
+        session.add(Skill(code=code, name=row["name"],
+                          description=row.get("description")))
+        count("skills", made=True)
 
     materials: dict[str, Material] = {}
     for row in data.rows("materials"):
@@ -535,8 +721,22 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
 
     for row in data.rows("maintenance_plans"):
         code = row["code"]
-        if session.scalar(select(MaintenancePlan.id).where(MaintenancePlan.code == code)):
+        standing = session.scalar(
+            select(MaintenancePlan).where(MaintenancePlan.code == code))
+        if standing is not None:
             count("maintenance_plans", made=False)
+            # The one place a pack writes to a row it did not make, and only
+            # into two columns that have never held anything: a plan written
+            # before the trades existed says nothing about which trade it
+            # needs, and a plant has no other way to answer that about a plan
+            # it already has. If either column has a value, the plant has had
+            # its say and the pack keeps out of it.
+            if (standing.skill_code is None and standing.priority is None
+                    and (row.get("skill") is not None
+                         or row.get("priority") is not None)):
+                standing.skill_code = row.get("skill")
+                standing.priority = row.get("priority")
+                receipt["maintenance_plans"]["classified"] += 1
             continue
         # A plan that says nothing about how long it takes gets this plant's
         # own house default rather than the product's thirty - the same
@@ -549,7 +749,13 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
             trigger=TriggerKind(row["trigger"]), interval=float(row["interval"]),
             instructions=row.get("instructions"), document_code=row.get("document_code"),
             expected_minutes=(float(stated) if stated is not None
-                              else maintenance.plan_default_minutes(session))))
+                              else maintenance.plan_default_minutes(session)),
+            # Both left null when the pack says nothing. A plan with no trade
+            # on it is work anybody on shift can take and a plan with no
+            # priority is read as routine, which is the honest reading of a
+            # plan nobody has classified - an invented priority is worse than
+            # none, because it sorts.
+            skill_code=row.get("skill"), priority=row.get("priority")))
         count("maintenance_plans", made=True)
 
     # The vocabulary a plant starts with. It arrives **in force**, not as a
@@ -612,4 +818,54 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
         # A session that has already asked which shifts exist must not keep
         # the answer it got before this pack was loaded.
         session.info.pop(calendar_service._PATTERN_CACHE, None)
+
+    # Who holds which trade, who is on which shift, and the supervisor's
+    # rules - last, because each of the three points at a person, a trade or
+    # a shift the lines above have just made.
+    session.flush()
+    for row in data.rows("personnel_skills"):
+        person = people.get(row["person"]) or masterdata.get_person(session, row["person"])
+        held = session.scalar(select(PersonnelSkill.id).where(
+            PersonnelSkill.personnel_id == person.id,
+            PersonnelSkill.skill_code == row["skill"]))
+        if held:
+            count("personnel_skills", made=False)
+            continue
+        session.add(PersonnelSkill(personnel_id=person.id, skill_code=row["skill"],
+                                   level=int(row.get("level", LEVEL_COMPETENT))))
+        count("personnel_skills", made=True)
+
+    for row in data.rows("roster"):
+        person = people.get(row["person"]) or masterdata.get_person(session, row["person"])
+        # A row with no day is a **standing** assignment: on this shift
+        # whenever it runs. That is what a pack almost always means - a pack
+        # is applied whenever somebody builds the plant, so a dated row in one
+        # is about a day in the past the week after it was written. A dated
+        # row still works, and overrides the standing one for that day, which
+        # is how an absence is written down.
+        day = date.fromisoformat(row["day"]) if row.get("day") else None
+        on = session.scalar(select(RosterEntry.id).where(
+            RosterEntry.personnel_id == person.id,
+            RosterEntry.shift_code == row["shift"],
+            RosterEntry.shift_day == day))
+        if on:
+            count("roster", made=False)
+            continue
+        session.add(RosterEntry(personnel_id=person.id, shift_code=row["shift"],
+                                shift_day=day, available=row.get("available", True),
+                                reason=row.get("reason")))
+        count("roster", made=True)
+
+    for row in data.rows("dispatch_rules"):
+        code = row["code"]
+        if session.scalar(select(DispatchRule.id).where(DispatchRule.code == code)):
+            count("dispatch_rules", made=False)
+            continue
+        session.add(DispatchRule(
+            code=code, name=row["name"], supervisor_code=row.get("supervisor"),
+            equipment_code=row.get("equipment"), skill_code=row.get("skill"),
+            priority_at_least=row.get("priority_at_least"),
+            strategy=DispatchStrategy(row.get("strategy", DispatchStrategy.LEAST_LOADED)),
+            active=row.get("active", True), sequence=int(row.get("sequence", 100))))
+        count("dispatch_rules", made=True)
     return receipt

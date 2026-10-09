@@ -2404,6 +2404,19 @@ WITHOUT_A_WALK: dict[str, str] = {
         "point, are the follow-up (spc-xbar-chart-and-panel). What posts a "
         "sample today is the simulated floor, over HTTP."
     ),
+    "dispatch_maintenance": (
+        "no control on any screen, and honestly so: what runs the rules today "
+        "is the plant's own tick, every supervise pass, and `fsmes maintenance "
+        "dispatch` by hand. The supervisor's screen that offers the button - "
+        "with the rules, what they assigned, and what nobody could take - is "
+        "the follow-up handoff."
+    ),
+    "assign_maintenance_order": (
+        "no control on any screen yet: the assign control belongs beside the "
+        "order on the supervisor's maintenance screen, which is the follow-up "
+        "handoff. Until it is there, a hand assignment is a POST or `fsmes "
+        "maintenance dispatch --explain ORDER` first to see who is free."
+    ),
     "erp_retry": (
         "the Retry button on a dead message in the ERP panel of /dashboard/ops "
         "(ops-erp), which the page already shows only to orders.close."

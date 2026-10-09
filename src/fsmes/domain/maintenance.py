@@ -40,9 +40,36 @@ class MaintenanceKind(enum.StrEnum):
 
 class MaintenanceStatus(enum.StrEnum):
     DUE = "due"
+    # Somebody has it. Between `due` and `in_progress` on purpose: a plant whose
+    # only two states were those could not tell "nobody has this" from "somebody
+    # has it and has not walked over yet", and those are the two facts a
+    # maintenance supervisor spends the shift on.
+    ASSIGNED = "assigned"
     IN_PROGRESS = "in_progress"
     DONE = "done"
     SKIPPED = "skipped"
+
+
+#: What a maintenance order is worth interrupting the day for. A number so it
+#: sorts, and names beside it so a rule row and a screen read the same way.
+PRIORITY_SAFETY = 1
+PRIORITY_PRODUCTION_CRITICAL = 2
+PRIORITY_ROUTINE = 3
+
+#: What an order with no priority is *treated* as. Routine, because a plant
+#: upgrading an old database has plans that never said, and quietly promoting
+#: them to safety work would push the real safety work down the list. The column
+#: stays null: the assumption is read here, never written into the row.
+DEFAULT_PRIORITY = PRIORITY_ROUTINE
+
+#: The statuses that mean somebody is holding this order and has not finished.
+#: One list, read by the dispatcher (who is busy), by `raise_due` (don't raise a
+#: second one) and by the backlog, so the three cannot drift apart.
+OPEN_STATUSES = (
+    MaintenanceStatus.DUE,
+    MaintenanceStatus.ASSIGNED,
+    MaintenanceStatus.IN_PROGRESS,
+)
 
 
 class MaintenancePlan(Base):
@@ -66,6 +93,15 @@ class MaintenancePlan(Base):
     # the cost of the plan and not only its benefit.
     expected_minutes: Mapped[float] = mapped_column(default=30.0)
     active: Mapped[bool] = mapped_column(default=True)
+
+    # Which trade this job needs, and what it is worth interrupting the day
+    # for. Both nullable, because a plant that upgraded from a release before
+    # this has plans that never said - and a plan with no skill on it is work
+    # anybody on shift can take, which is the honest reading rather than an
+    # invented trade. Copied onto each order at raise, so changing the plan
+    # never rewrites history.
+    skill_code: Mapped[str | None] = mapped_column(String(40))
+    priority: Mapped[int | None] = mapped_column()
 
     # Where the counter stood when this plan was last satisfied. Nullable
     # until the first service: a plan on a machine nobody has serviced yet is
@@ -94,6 +130,28 @@ class MaintenanceOrder(Base):
     # Why it came due, in the plant's own terms: "ran 212.4 h against a 200 h
     # plan". A due date with no reason is a due date nobody trusts.
     reason: Mapped[str | None] = mapped_column(String(200))
+
+    # What this job needs and what it is worth, copied from the plan at raise.
+    # A corrective order says its own: the thing broke, and what broke says
+    # which trade and how badly it matters.
+    skill_code: Mapped[str | None] = mapped_column(String(40))
+    priority: Mapped[int | None] = mapped_column(index=True)
+
+    # Who it was given to, when, and by what. `assigned_by` is a rule's code
+    # when the rules gave it out and a person's code when a person did - and
+    # the difference is load-bearing: a hand assignment is never overwritten by
+    # the rules, because a supervisor who reaches in and is overruled by the
+    # machine stops reaching in.
+    assigned_to: Mapped[str | None] = mapped_column(String(40), index=True)
+    assigned_at: Mapped[datetime | None] = mapped_column()
+    assigned_by: Mapped[str | None] = mapped_column(String(40))
+    # When it is meant to happen. Now, for work handed out as it comes due; the
+    # start of a shift, for a plan that asks for a window.
+    scheduled_for: Mapped[datetime | None] = mapped_column()
+    # Why nobody has it, as of the last time dispatch looked. Null means it has
+    # not been through dispatch - a different fact from "nobody could take it",
+    # and the supervisor's page shows them differently.
+    unassigned_reason: Mapped[str | None] = mapped_column(String(40))
 
     raised_at: Mapped[datetime] = mapped_column(default=utcnow)
     started_at: Mapped[datetime | None] = mapped_column()

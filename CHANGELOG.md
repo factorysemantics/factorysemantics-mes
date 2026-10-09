@@ -12,6 +12,67 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **Maintenance work goes to the right trade by itself.** The filler's chiller
+  comes due at two in the morning; until now the order sat at `due` with
+  nobody's name on it until a person read the backlog. The plant now hands it
+  to a free electrician on the night shift in the same pass it raises it, by
+  **rules a supervisor wrote down** — and says, afterwards, exactly why it went
+  where it went.
+
+  - **The crew is data.** Four new tables: `skills` (the trades this plant
+    employs), `personnel_skills` (who holds what, at **trainee, competent or
+    expert** — a trainee is never sent to a job alone), `roster` (who is on
+    which shift; no day means *standing*, a day means that day and wins over
+    the standing row), and `dispatch_rules`. A maintenance plan now says which
+    trade it needs and what it is worth interrupting the day for — **1 safety,
+    2 production-critical, 3 routine** — and each order it raises copies both.
+  - **One rule row is one sentence a supervisor would say.** *Electrical work
+    on the filler goes to the nearest electrician.* *Safety work goes out
+    first, to whoever has least on.* Rules are tried in order and the first
+    that matches the order **and finds somebody free** wins; `strategy` is
+    `least_loaded`, `nearest` or `round_robin`. Rules, not a solver, and on
+    purpose: a supervisor who cannot read why the work went where it went will
+    not trust the dispatcher, and a dispatcher nobody trusts gets switched off.
+  - **A plant with no rules still dispatches**, on one house default — *any due
+    order to a free person with the skill on this shift, least loaded first*.
+    A plant that has written even one rule gets no default: it has said what it
+    wants, so an order none of its rules covers is reported `no_rule` rather
+    than quietly swept up by a sentence nobody wrote.
+  - **An order nobody could take says which of three things went wrong**, in
+    `unassigned_reason`: `no_rule`, `nobody_on_shift_with_skill`, `all_busy`.
+    They are three different mornings — one is a sentence to write, one is a
+    phone call, one is nothing to worry about — and "six unassigned" is a
+    number a supervisor can do nothing with.
+  - **A new status, `assigned`, between `due` and `in progress`.** Somebody
+    having the job and the job having started are two different facts, and a
+    plant that conflated them would report downtime that never happened. The
+    dispatcher never starts work, and **never touches an order a person
+    assigned by hand**: a supervisor who reaches in and is overruled by the
+    machine stops reaching in.
+  - **Where it runs.** On the plant's own tick, every supervise pass, right
+    after the work is raised; on `POST /maintenance/dispatch`; and by hand with
+    `fsmes maintenance dispatch`. `fsmes maintenance dispatch --explain ORDER`
+    prints the whole decision as a sentence — the rules tried and why each
+    missed, everybody considered, and the one who got it. `fsmes maintenance
+    roster` and `fsmes maintenance rules` print the other two halves.
+  - **Read it from anywhere.** `GET /maintenance/roster?shift=` is who is on,
+    with their trades and what they already hold; `GET /maintenance/rules` is
+    the sentences; `GET /maintenance/orders` carries the new columns. The
+    analysis agent gets all three as **read** tools, so the AI tab can answer
+    "who is free with the electrical skill right now"; it is offered nothing
+    that writes.
+  - **Proved at scale, in the test suite.** 300 tradespeople across three
+    trades on three shifts, 40 machines on four lines, 12 rules, and a week's
+    backlog of 2,000 due orders handed out in **one call in 0.088 s** on
+    SQLite — 92 assigned (every single person the shift had who could take a
+    job, and none of them twice), 1,908 left with a reason. The figures print.
+  - **Upgrading loses nothing and guesses nothing.** Every new column is
+    nullable and nothing is backfilled: a plan that never said which trade it
+    needs is work anybody on shift can take, and an order with no priority is
+    *read* as routine without the column being written. A backfill would have
+    to invent a priority, and an invented priority is worse than none, because
+    it sorts.
+
 - **A simulated plant no longer runs out of work orders.** A pack's book is
   finite: bottling's ten orders were all finished forty-three hours after the
   plant was built, and from then on it measured fill weight, fill height and

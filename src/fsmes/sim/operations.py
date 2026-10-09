@@ -624,6 +624,49 @@ class Floor:
                      started="none - this shift runs to the end of the order")
         return codes
 
+    async def dispatch_the_backlog(self, by: str = "FLOOR-SUP") -> dict | None:
+        """Hand the orders that are due to the people who are on shift.
+
+        The second half of the supervisor's pass, and a different act from
+        raising: raising says work exists, dispatching says who has it. The
+        product decides WHO (`services/dispatch.dispatch`, idempotent, one
+        audit row per assignment naming the rule that assigned); this only
+        decides that somebody ran the rules, which is the part that belongs to
+        the floor.
+
+        It still does not start anything. An order at `assigned` is an order
+        somebody has been given and not yet walked over to, which is a real
+        and common state in a bottling plant and the one this pack's chain
+        reads: given to an electrician in the first minutes, never started,
+        eight hours later.
+
+        Off unless the script asks. A pack with no `dispatch` key gets a plant
+        whose due work sits at `due` with nobody's name on it - which is a real
+        plant that has not written its rules down, and is what every pack
+        written before the crew existed means.
+        """
+        wanted = self.script.get("maintenance") or {}
+        if not wanted.get("dispatch"):
+            return None
+        try:
+            response = await self.post("/maintenance/dispatch")
+            response.raise_for_status()
+            out = response.json()
+        except (httpx.HTTPError, ValueError) as exc:
+            log.warning("could not dispatch the maintenance work that is due",
+                        error=str(exc)[:160])
+            return None
+        if out.get("considered"):
+            # The reasons named rather than totalled, because "four left" is a
+            # number a supervisor can do nothing with and "four nobody on
+            # shift with the skill" is a morning.
+            log.info("dispatched the maintenance work that was due", by=by,
+                     considered=out["considered"], assigned=out["assigned"],
+                     unassigned=out["unassigned"],
+                     because=out.get("unassigned_by_reason") or {},
+                     started="none - this shift gives work out, it does not do it")
+        return out
+
     async def current_shift(self) -> str | None:
         """Which shift the plant says is running, cached for a minute.
 
@@ -1658,6 +1701,10 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
             if shift is not None:
                 await shift.work_the_book(orders, finish=finish_orders)
                 await shift.raise_what_is_due()
+                # Raised, then handed out, in that order and on the same pass:
+                # work nobody has been given is the state an order spends its
+                # first seconds in, not its shift.
+                await shift.dispatch_the_backlog()
                 if await shift.calibrate_what_is_due():
                     # The operator measures with whatever the register now
                     # says. A bench still holding the old calibration date

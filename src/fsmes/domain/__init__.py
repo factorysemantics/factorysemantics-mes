@@ -8,6 +8,18 @@ from fsmes.domain.calendar import (
     ExceptionKind,
     ShiftPattern,
 )
+from fsmes.domain.crew import (
+    DISPATCHABLE_LEVEL,
+    LEVEL_COMPETENT,
+    LEVEL_EXPERT,
+    LEVEL_TRAINEE,
+    DispatchRule,
+    DispatchStrategy,
+    PersonnelSkill,
+    RosterEntry,
+    Skill,
+    UnassignedReason,
+)
 from fsmes.domain.documents import Document, DocumentStatus
 from fsmes.domain.equipment import (
     ConnectionStateName,
@@ -32,6 +44,11 @@ from fsmes.domain.idempotency import IdempotencyKey
 from fsmes.domain.inbound import InboundEvent, InboundKind, InboundWatermark
 from fsmes.domain.integration import ErpMessage, MessageDirection, MessageStatus
 from fsmes.domain.maintenance import (
+    DEFAULT_PRIORITY,
+    OPEN_STATUSES,
+    PRIORITY_PRODUCTION_CRITICAL,
+    PRIORITY_ROUTINE,
+    PRIORITY_SAFETY,
     MaintenanceKind,
     MaintenanceOrder,
     MaintenancePlan,
@@ -77,6 +94,15 @@ from fsmes.domain.workorders import OperationStatus, OrderStatus, WorkOrder, Wor
 
 __all__ = [
     "BRAINS",
+    "DEFAULT_PRIORITY",
+    "DISPATCHABLE_LEVEL",
+    "LEVEL_COMPETENT",
+    "LEVEL_EXPERT",
+    "LEVEL_TRAINEE",
+    "OPEN_STATUSES",
+    "PRIORITY_PRODUCTION_CRITICAL",
+    "PRIORITY_ROUTINE",
+    "PRIORITY_SAFETY",
     "AdjustmentStatus",
     "AiTurn",
     "AuditLog",
@@ -86,6 +112,8 @@ __all__ = [
     "CalibrationResult",
     "CheckResult",
     "ConnectionStateName",
+    "DispatchRule",
+    "DispatchStrategy",
     "Document",
     "DocumentStatus",
     "DowntimeReason",
@@ -122,6 +150,7 @@ __all__ = [
     "OperationStatus",
     "OrderStatus",
     "Person",
+    "PersonnelSkill",
     "PlantSetting",
     "ProductionLog",
     "ProductionSource",
@@ -130,12 +159,14 @@ __all__ = [
     "QualitySpec",
     "RecommendedAdjustment",
     "Role",
+    "RosterEntry",
     "Routing",
     "RoutingOperation",
     "ScheduledSlot",
     "SerialSequence",
     "SerialUnit",
     "ShiftPattern",
+    "Skill",
     "SlotKind",
     "SpcSignal",
     "TagValue",
@@ -144,6 +175,7 @@ __all__ = [
     "TriggerFiring",
     "TriggerKind",
     "TriggerStatus",
+    "UnassignedReason",
     "UnitComponent",
     "UnitInspection",
     "UnitStatus",

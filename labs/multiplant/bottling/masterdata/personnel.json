@@ -1,0 +1,43 @@
+[
+  {
+    "code": "MT-01",
+    "name": "Dana Ruiz",
+    "role": "operator",
+    "home_equipment": "FILL01"
+  },
+  {
+    "code": "MT-02",
+    "name": "Nils Berger",
+    "role": "operator",
+    "home_equipment": "PAL01"
+  },
+  {
+    "code": "MT-03",
+    "name": "Hana Oyelaran",
+    "role": "operator",
+    "home_equipment": "FILL01"
+  },
+  {
+    "code": "MT-04",
+    "name": "Marco Silva",
+    "role": "operator",
+    "home_equipment": "RD01"
+  },
+  {
+    "code": "MT-05",
+    "name": "Ewa Nowak",
+    "role": "operator",
+    "home_equipment": "WASH01"
+  },
+  {
+    "code": "MT-06",
+    "name": "Terry Boyd",
+    "role": "operator"
+  },
+  {
+    "code": "MT-07",
+    "name": "Amira Haddad",
+    "role": "operator",
+    "home_equipment": "LD01"
+  }
+]

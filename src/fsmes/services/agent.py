@@ -138,6 +138,8 @@ NEEDS: dict[str, str] = {
     "raise_corrective_maintenance": "maintenance.perform",
     "raise_due_maintenance": "maintenance.perform",
     "create_maintenance_plan": "maintenance.plan",
+    "dispatch_maintenance": "maintenance.perform",
+    "assign_maintenance_order": "maintenance.plan",
     "create_material": "masterdata.write",
     "create_equipment": "masterdata.write",
     "register_gauge": "masterdata.write",

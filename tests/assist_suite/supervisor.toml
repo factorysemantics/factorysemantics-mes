@@ -310,3 +310,35 @@ requires = ["unit:SN-EVAL-CASE-1"]
 note = """Cascade is the whole point: holding a pallet without holding its cases
 holds nothing. The tool defaults it to true and the sentence says it out loud, so
 it is scored."""
+
+# --------------------------------------------- the work that is due and nobody's
+#
+# Handing maintenance out is a supervisor's act, and from 2026-10-09 the plant
+# does it by rule rather than by memory. The two cases are the same act asked
+# twice: once as "hand it out", which is the rules over the whole backlog, and
+# once as "who is free", which is a question and must be read before it is
+# answered.
+
+[[case]]
+id = "supervisor-hands-out-the-maintenance-that-is-due"
+request = "the maintenance that's due hasn't gone to anybody - hand it out"
+screen = "/dashboard/maintenance"
+expect = "propose"
+tool = "dispatch_maintenance"
+args = {}
+note = """No arguments: the rules are already written down and they decide who
+gets what, so the whole of this request is "run them". What comes back names
+the rule that assigned each order and the reason nobody could take the rest,
+which is the part a supervisor reads - and the screen that shows it beside the
+orders is the follow-up handoff, which is why this tool has no walk."""
+
+[[case]]
+id = "supervisor-asks-who-is-free-with-the-electrical-skill"
+request = "who's on shift right now with the electrical skill, and what have they got on?"
+screen = "/dashboard/maintenance"
+expect = "answer"
+reads = ["maintenance_roster"]
+note = """A question, not a change: read the roster and say what came back. The
+answer has to carry the load as well as the names, because "free" is not "on
+shift" - a plant with three electricians all holding a job has nobody free, and
+an assistant that reads the roster and stops there says the opposite."""

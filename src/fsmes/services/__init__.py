@@ -3,7 +3,7 @@ integrations (OPC agent, ERP sync) are thin callers of this layer.
 
 Error contract, mapped to HTTP by the API:
     NotFound -> 404, Conflict -> 409, Invalid -> 400,
-    WrongSampleSize -> 422
+    WrongSampleSize -> 422, Forbidden -> 403
 """
 
 
@@ -21,6 +21,19 @@ class Conflict(MesError):
 
 class Invalid(MesError):
     """Bad input."""
+
+
+class Forbidden(MesError):
+    """Signed in, allowed to use this route, and not allowed to do *this*.
+
+    Not the same as the capability check in `api.deps.require`, which answers
+    403 before a service is ever called: that one says "your account does not
+    do this kind of thing at all". This one says "your account does this kind
+    of thing, but not to this row" - the maintenance order that is assigned to
+    somebody else is the first case. The sentence always names who *can*, so
+    the person reading it knows what to do next rather than only that they
+    were refused.
+    """
 
 
 class WrongSampleSize(Invalid):

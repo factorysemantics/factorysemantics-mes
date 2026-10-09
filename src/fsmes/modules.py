@@ -822,7 +822,11 @@ REGISTRY: tuple[Module, ...] = (
                 pack_keys=("[process] maintenance_plan_default_minutes",)),
         ),
         tools=("fsmes.mcp.maintenance",),
-        tables=("maintenance_plans", "maintenance_orders"),
+        # The crew and the supervisor's rules belong to maintenance: a plant
+        # that turns this module off keeps its skills register and its roster,
+        # which is the point of the wall - the rows survive the switch.
+        tables=("maintenance_plans", "maintenance_orders",
+                "skills", "personnel_skills", "roster", "dispatch_rules"),
     ),
     Module(
         name="scheduling",

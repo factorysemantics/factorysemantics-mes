@@ -1764,6 +1764,193 @@ def ai_show(
                 typer.echo(f"    < {line}")
 
 
+# ------------------------------------------- maintenance: the crew, and who gets what
+
+maintenance_app = typer.Typer(
+    help="The maintenance crew: who is on shift, the rules that hand work out, "
+         "and why a job went where it went.")
+app.add_typer(maintenance_app, name="maintenance")
+
+
+def _level_word(level: int) -> str:
+    from fsmes.domain import LEVEL_COMPETENT, LEVEL_EXPERT, LEVEL_TRAINEE
+
+    return {LEVEL_TRAINEE: "trainee", LEVEL_COMPETENT: "competent",
+            LEVEL_EXPERT: "expert"}.get(level, str(level))
+
+
+def _people(count: int) -> str:
+    """"1 person", "4 people". Not "1 person/people", which nobody says."""
+    return "1 person" if count == 1 else f"{count} people"
+
+
+def _explain_one(session, order: str) -> None:
+    """Print one order's decision in the words of the rule that made it."""
+    from fsmes.services import dispatch as dispatch_svc
+
+    out = dispatch_svc.explain(session, order)
+    typer.echo(f"{out['order']} on {out['equipment']} — {out['summary']}")
+    priority = (f"priority {out['priority']}" if out["priority_is_stated"]
+                else f"no priority set, read as {out['priority']}")
+    typer.echo(f"  {out['status']}, {priority}, "
+               f"needs {out['skill'] or 'no particular trade'}; "
+               f"shift {out['shift'] or 'none — no pattern covers this moment'}")
+    if out["held_by"]:
+        held = f"  {out['held_by']} has it"
+        if out["held_by_rule"]:
+            held += f", given by {out['held_by_rule']}"
+        if out["held_since"]:
+            held += f" at {out['held_since']:%Y-%m-%d %H:%M}"
+        typer.echo(held)
+    elif out["recorded_unassigned_reason"]:
+        typer.echo(f"  nobody has it: {out['recorded_unassigned_reason']}")
+    else:
+        typer.echo("  nobody has it, and it has not been through dispatch yet")
+
+    typer.echo(f"  {len(out['rules_tried'])} rule(s) tried, in order:")
+    for tried in out["rules_tried"]:
+        if tried["matched"] and tried["because"] is None:
+            typer.echo(f"    {tried['rule']}: matched, and found somebody")
+        elif tried["matched"]:
+            typer.echo(f"    {tried['rule']}: matched, but {tried['because']}")
+        else:
+            typer.echo(f"    {tried['rule']}: {tried['because']}")
+    if out["rule_says"]:
+        typer.echo(f"  {out['rule']} says: {out['rule_says']}")
+
+    typer.echo(f"  {_people(len(out['considered']))} considered:")
+    if not out["considered"]:
+        typer.echo("    nobody — no rule got as far as looking at the roster")
+    for row in out["considered"]:
+        mark = "→" if row["chosen"] else " "
+        typer.echo(f"    {mark} {row['person']} ({row['name']}): {row['verdict']}")
+    typer.echo(f"  as things stand it would {out['would_now']}.")
+
+
+@maintenance_app.command("dispatch")
+def maintenance_dispatch(
+    explain: str = typer.Option(
+        None, "--explain", metavar="ORDER",
+        help="Print the decision for one order and change nothing — which rules "
+             "were tried, who was considered, who was skipped and why."),
+) -> None:
+    """Hand every due maintenance order to a free person who holds the trade.
+
+    Highest priority first, oldest first within a priority. An order nobody can
+    take keeps its reason, named rather than totalled, because "four nobody on
+    shift with the skill, two all busy" is two different mornings and "six
+    unassigned" is a number a supervisor can do nothing with.
+
+        fsmes maintenance dispatch
+        fsmes maintenance dispatch --explain PM-00001
+    """
+    from fsmes.db import session_scope
+    from fsmes.services import NotFound
+    from fsmes.services import dispatch as dispatch_svc
+
+    if explain:
+        with session_scope() as session:
+            try:
+                _explain_one(session, explain)
+            except NotFound as refused:
+                typer.echo(str(refused))
+                raise typer.Exit(1) from None
+        return
+
+    with session_scope() as session:
+        out = dispatch_svc.dispatch(session)
+
+    typer.echo(f"{out['assigned']} of {out['considered']} due order(s) assigned "
+               f"— {out['rules']} rule(s) over {_people(out['people'])}.")
+    if not out["considered"]:
+        typer.echo("Nothing was due. A plant with no due work dispatches nothing, "
+                   "which is not the same as a dispatcher that found nobody — "
+                   "`fsmes maintenance dispatch --explain ORDER` says which.")
+        return
+    for reason, count in sorted(out["unassigned_by_reason"].items()):
+        typer.echo(f"  {count} left: {reason}")
+
+
+@maintenance_app.command("roster")
+def maintenance_roster(
+    shift: str = typer.Option(
+        None, "--shift", help="A shift key (2026-10-09/DAY), `current` or `previous`. "
+                              "Left out: the shift running now."),
+) -> None:
+    """Who is on shift, what they can do, and what they already have on."""
+    from fsmes.db import session_scope
+    from fsmes.services import Invalid
+    from fsmes.services import dispatch as dispatch_svc
+
+    with session_scope() as session:
+        try:
+            out = dispatch_svc.roster(session, shift)
+        except Invalid as refused:
+            typer.echo(str(refused))
+            raise typer.Exit(2) from None
+
+    if out["shift"] is None:
+        typer.echo("Nobody on shift — there is no shift.")
+        typer.echo(f"  {out['why_empty']}")
+        return
+    key = out["shift"]["key"]
+    typer.echo(f"{out['available']} of {_people(out['total'])} available on {key}.")
+    if not out["people"]:
+        typer.echo("Nobody is rostered on this shift. A roster nobody has filled in "
+                   "is empty, which is not the same as a crew that is all out — "
+                   "`fsmes pack apply` seeds one from the plant's own masterdata.")
+        return
+    for row in out["people"]:
+        trades = ", ".join(f"{s['skill']} ({_level_word(s['level'])})"
+                           for s in row["skills"]) or "no trade recorded"
+        line = (f"  {row['person']:<10} {row['name']:<22} {trades}"
+                f"  {row['open_orders']} open order(s)")
+        if row["home"]:
+            line += f", home {row['home']}"
+        if not row["available"]:
+            line += f"  — NOT AVAILABLE: {row['reason'] or 'no reason given'}"
+        if not row["standing"]:
+            line += "  (this day only)"
+        typer.echo(line)
+
+
+@maintenance_app.command("rules")
+def maintenance_rules() -> None:
+    """The supervisor's dispatch rules, in the order they are tried."""
+    from sqlalchemy import select
+
+    from fsmes.db import session_scope
+    from fsmes.domain import DispatchRule
+    from fsmes.services import dispatch as dispatch_svc
+
+    with session_scope() as session:
+        written = list(session.scalars(select(DispatchRule).order_by(
+            DispatchRule.sequence, DispatchRule.code)))
+        lines = [(r.code, r.active, r.sequence, r.supervisor_code, dispatch_svc.says(r))
+                 for r in written]
+        default = dispatch_svc.says(dispatch_svc.default_rule()) if not written else None
+        trades = dispatch_svc.skills(session)
+
+    typer.echo(f"{sum(1 for _c, active, *_ in lines if active)} of {len(lines)} "
+               "rule(s) active.")
+    if default is not None:
+        typer.echo("This plant has written no rules, so it runs on the one house "
+                   "default:")
+        typer.echo(f"  DEFAULT  {default}")
+    for code, active, sequence, supervisor, sentence in lines:
+        typer.echo(f"  {sequence:>4} {code:<12} {sentence}"
+                   + ("" if active else "   [off]")
+                   + (f"   — {supervisor}'s rule" if supervisor else ""))
+    typer.echo("")
+    typer.echo(f"{len(trades)} trade(s) on this plant:")
+    if not trades:
+        typer.echo("  none. A plant with no skills dispatches on availability alone; "
+                   "`fsmes pack apply` seeds them from masterdata.")
+    for trade in trades:
+        typer.echo(f"  {trade['code']:<8} {trade['name']:<28} "
+                   f"{_people(trade['people'])}")
+
+
 pack_app = typer.Typer(
     help="Plant packs: the one directory that says which plant this is.")
 app.add_typer(pack_app, name="pack")
