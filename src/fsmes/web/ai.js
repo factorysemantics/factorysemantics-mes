@@ -1027,30 +1027,51 @@ async function loadExplore() {
 let pinnedChart = false;
 
 /* The pinned chart's handle - the figure it was drawn into, the point ringed on
-   it, and what picture it IS, so the answer that draws the same one again can
-   mark this one instead of stacking a second copy beside it (`samePicture`).
+   it, what picture it IS and how far back its window reaches, so the answer
+   that draws the same one again can mark this one instead of stacking a second
+   copy beside it (`samePicture`).
    Null until something is pinned, which is most conversations. */
 let pinned = null;
 
 /* What makes two control charts the same picture: the same tool, the same
-   specification, and the same window - stated by the ids at both ends of it
-   and how many points lie between, which is the plant's own account of the
-   window and not a clock time this file worked out.
-   Deliberately narrow: a different payload is a different picture and is drawn
-   as one, which is what a reader needs when the agent went and read something
-   else. */
+   specification - the material and the characteristic - and the same chart
+   kind. The window is matched by its RULE, not by the readings that happen to
+   be in it.
+
+   Both windows are *the last N of that characteristic, ending at the newest
+   one*: the chip's chart asks this plant for its own `[quality] spc_history`
+   and the agent's `spc_chart` asks for its own `limit`. So a window holding at
+   least as many points as the pinned one reaches back at least as far and ends
+   at the same end - it IS the pinned window, slid forward by the readings that
+   arrived while the model was thinking, or grown by them. A window holding
+   FEWER points is a shorter stretch somebody asked for on purpose, and that is
+   a different picture, drawn where the answer wrote it.
+
+   The reading ids at both ends used to be in this key (#155), and that is the
+   bug this replaces. Seen on the lab 2026-10-08 18:52: the filler makes a
+   reading every eight seconds and the model takes about twenty to answer, so
+   the agent's window was always a reading later at each end than the pinned
+   one (6:24:55-6:51:57 against 6:25:03-6:52:05) and the match never fired on
+   any plant that was running. #155's proof had been taken on a plant that had
+   stopped producing, where those ids stand still. */
 function samePicture(was, chart) {
   if (!was || !chart || was.tool !== chart.tool) return false;
-  return was.key === pictureKey(chart.envelope);
+  const key = pictureKey(chart.envelope);
+  return key !== null && key === was.key && pointCount(chart.envelope) >= was.points;
 }
 
+/* Which picture this is: the characteristic, and which of the two charts of it.
+   No reading id and no point count - both move on a plant that is running. */
 function pictureKey(envelope) {
-  if (!envelope || !Array.isArray(envelope.points) || !envelope.points.length) return null;
-  const first = envelope.points[0];
-  const last = envelope.points[envelope.points.length - 1];
-  const at = (point) => (point.sample !== undefined ? `s${point.sample}` : `c${point.check}`);
-  return [envelope.material, envelope.characteristic, envelope.kind,
-          envelope.points.length, at(first), at(last)].join("|");
+  if (!pointCount(envelope)) return null;
+  return [envelope.material, envelope.characteristic, envelope.kind].join("|");
+}
+
+/* How far back a window reaches, in its own points, which is the only account
+   of the window either envelope carries. An envelope with no points is not a
+   picture and matches nothing, including another envelope with no points. */
+function pointCount(envelope) {
+  return envelope && Array.isArray(envelope.points) ? envelope.points.length : 0;
 }
 
 /* One chart on the screen for one picture.
@@ -1069,9 +1090,11 @@ function showChart(chart) {
   if (pinned && samePicture(pinned, chart)) {
     const figure = drawChart(
       { ...chart,
-        note: " — the chart you came from, read from this plant just now, and the "
-              + "one this answer is about. The agent drew the same picture, so it "
-              + "is not drawn twice. Press a dot to ask about that point." },
+        note: " — the chart you came from, and the one this answer is about, "
+              + "drawn from the readings the agent itself was handed, so any "
+              + "that arrived since you pressed the chip are on it. The agent "
+              + "drew the same picture, so it is not drawn twice. Press a dot "
+              + "to ask about that point." },
       pinned);
     /* Which of the answer's charts this figure stands in for, so the screen
        says in its own markup what the note says in words. */
@@ -1099,7 +1122,11 @@ async function pinChart() {
   };
   try {
     const data = await api(`/quality/spc/${encodeURIComponent(material)}/${encodeURIComponent(characteristic)}`);
-    pinned = { tool: "spc_chart", key: pictureKey(data), figure: null, selected: null };
+    /* `points` is how far this window reaches back, kept beside the key so the
+       answer's own window can be compared against it rather than against the
+       ids of the readings that were in it at this moment. */
+    pinned = { tool: "spc_chart", key: pictureKey(data), points: pointCount(data),
+               figure: null, selected: null };
     const figure = drawChart({
       tool: "spc_chart", shape: "spc", envelope: data,
       title: `${data.material || material} ${data.characteristic || characteristic}`.trim(),

@@ -23,6 +23,13 @@ Four facts, and all four only exist in a browser:
   and a press asks that question in the SAME conversation. The fence the model
   wrote them in never reaches the screen as words.
 
+And one more since 2026-10-08: the agent that draws the chart the person came
+in with marks that one instead of stacking a second copy of it a screen lower
+- **including on a plant that is still making readings**, where the window has
+slid by one at each end by the time the model has answered. That slide is what
+#155's match on the reading ids could not see, and it is the whole of the
+2026-10-08 18:52 live failure.
+
 The model is scripted in this process - the server runs on a thread of it - so
 no key is used and nothing leaves the box. What the model's tool calls return
 is the plant's OWN `spc_chart` payload, trimmed exactly as `mcp/quality.py`
@@ -60,6 +67,16 @@ STEADY_LOW = [140.5, 141.0, 141.5, 142.0, 142.5]
 STEADY_HIGH = [141.5, 142.0, 142.5, 143.0, 143.5]
 SAMPLES = 16
 SHIFTED = [144.0, 144.5, 145.0, 145.5, 147.0]
+
+#: A second characteristic of the same material, charted the same way, so that
+#: a chart of it differs from the fill-height chart in the characteristic and
+#: in nothing else. Fourteen settled samples, which is past `spc_min_points`,
+#: so it draws with its own control limits rather than a sentence about why it
+#: has none.
+OTHER_CHARACTERISTIC = "cap_torque"
+OTHER_SAMPLES = 14
+TORQUE_LOW = [1.42, 1.45, 1.48, 1.51, 1.54]
+TORQUE_HIGH = [1.46, 1.49, 1.52, 1.55, 1.58]
 
 #: The questions the model proposes, word for word. Written as whole questions
 #: naming the thing they are about, which is what `ANALYSIS_NEXT` asks for.
@@ -143,6 +160,40 @@ def _says_the_good_part_then_reads_once_more(first, second):
     ]
 
 
+def _eight_seconds_on(ts):
+    """One filler cycle later, whichever way the stamp arrived."""
+    from datetime import datetime, timedelta
+    moment = ts if isinstance(ts, datetime) else datetime.fromisoformat(str(ts))
+    later = moment + timedelta(seconds=8)
+    return later if isinstance(ts, datetime) else later.isoformat()
+
+
+def _slid_by_one(answer):
+    """The plant's own chart, one reading later at each end.
+
+    What a running filler does between the chip being pressed and the model
+    finishing its sentence: the oldest point falls off the back of the window
+    and a new one arrives at the front, so the window holds the same number of
+    points and not one id at either end is the same. On the lab's bottling
+    line at 18:52 on 2026-10-08 that was eight seconds at each end, and it is
+    why #155's match on those ids never fired on a plant that was running.
+
+    A fixture cannot make this happen by waiting: these seventeen samples are
+    all there are and the window is wider than they are. So the slide is made
+    here, out of the chart the plant did compute - the newest point carried
+    forward with the next sample id and one filler cycle on its clock - and
+    every other figure in the envelope is the plant's own. The counts stay
+    true: the window still holds the same number of points, which is what
+    `n`, `history` and `readings` already say of it.
+    """
+    points = list(answer["points"])
+    arrived = {**points[-1],
+               "sample": points[-1]["sample"] + 1,
+               "check": points[-1]["check"] + 1,
+               "ts": _eight_seconds_on(points[-1]["ts"])}
+    return {**answer, "points": [*points[1:], arrived]}
+
+
 def _opens_the_sample_then_answers(words):
     return [
         _turn(_use("tu_3", "tag_history", equipment="MIX01",
@@ -174,6 +225,10 @@ def plant(tmp_path_factory):
     path = tmp_path_factory.mktemp("chatchart") / "plant.db"
     url = f"sqlite:///{path}"
     script: list = []
+    #: What the tests hold of this plant. Built before the reads are served
+    #: because `served` reads `shape_chart` off it: a test that needs the
+    #: window to move puts a function there and takes it off again.
+    handle = SimpleNamespace(script=script, shape_chart=None)
 
     def scripted(sess):
         return script.pop(0)
@@ -182,11 +237,18 @@ def plant(tmp_path_factory):
                client_ref=None):
         if name == "spc_chart":
             # The model's own `limit`, honoured: a narrower window is a
-            # different picture and one test here asks for one.
+            # different picture and one test here asks for one. And its own
+            # characteristic, because one test asks for the other one.
             limit = int(args.get("limit") or 200)
             with Session(db.get_engine(), expire_on_commit=False) as session:
-                chart = spc_service.chart(session, "FG-COLA", "fill_height", limit)
-            return {"plant": plant, **_without_sample_readings(chart)}
+                chart = spc_service.chart(
+                    session, str(args.get("material") or "FG-COLA"),
+                    str(args.get("characteristic") or "fill_height"), limit)
+            answer = {"plant": plant, **_without_sample_readings(chart)}
+            # A test may stand between the plant's answer and the model to
+            # make the window slide, which is what a running filler does to
+            # it and a fixture's seventeen settled samples never will.
+            return handle.shape_chart(answer) if handle.shape_chart else answer
         return {"plant": plant, "total": 0, "showing": 0,
                 "note": f"{name} is not what this file is about"}
 
@@ -220,10 +282,17 @@ def plant(tmp_path_factory):
                                 characteristic="fill_height", unit="mm",
                                 min_value=139.0, max_value=145.0, sample_size=5,
                                 actor="test")
+            # The second characteristic of the same material, charted the same
+            # way - a sample of five - so that the only thing telling its
+            # chart apart from the fill-height one is the characteristic.
+            quality.create_spec(session, material_code="FG-COLA",
+                                characteristic=OTHER_CHARACTERISTIC, unit="Nm",
+                                min_value=1.0, max_value=2.0, sample_size=5,
+                                actor="test")
 
-            def sample(values):
+            def sample(values, characteristic="fill_height"):
                 row, _checks, _nc, _signals = quality.record_sample(
-                    session, material_code="FG-COLA", characteristic="fill_height",
+                    session, material_code="FG-COLA", characteristic=characteristic,
                     values=values, gauge_code="HEIGHT-01", equipment_code="MIX01",
                     actor="OP-NIGHT")
                 session.flush()
@@ -232,6 +301,9 @@ def plant(tmp_path_factory):
             settled = [sample(STEADY_LOW if turn % 2 else STEADY_HIGH)
                        for turn in range(SAMPLES)]
             shifted = sample(SHIFTED)
+            for turn in range(OTHER_SAMPLES):
+                sample(TORQUE_LOW if turn % 2 else TORQUE_HIGH,
+                       characteristic=OTHER_CHARACTERISTIC)
             session.commit()
 
         sock = socket.socket()
@@ -244,8 +316,10 @@ def plant(tmp_path_factory):
         try:
             base = f"http://127.0.0.1:{sock.getsockname()[1]}"
             _wait_until_answering(base)
-            yield SimpleNamespace(base=base, script=script, shifted=shifted,
-                                  settled=settled)
+            handle.base = base
+            handle.shifted = shifted
+            handle.settled = settled
+            yield handle
         finally:
             server.should_exit = True
             thread.join(timeout=10)
@@ -451,15 +525,102 @@ def test_the_chart_the_agent_drew_marks_the_pinned_one_instead_of_a_second_copy(
         page.close()
 
 
+def test_the_same_chart_a_few_readings_later_is_still_one_chart(admin, plant):
+    """The 2026-10-08 live failure, on a plant that is moving.
+
+    Scott's run on the lab's bottling line at 18:52 drew the chart twice even
+    though #155 had been merged, because the filler makes a reading every
+    eight seconds and the model takes about twenty to answer: the agent's
+    window was 6:25:03-6:52:05 where the pinned one had been 6:24:55-6:51:57,
+    so the reading ids in #155's match key were all different and the match
+    never fired. #155's own proof had run on a private plant that had stopped
+    producing, where those ids stand still - which is why it passed there.
+
+    Here the window is slid by exactly that much, one reading off the back and
+    one arrived at the front, and the screen must still show ONE chart: the
+    pinned one, in the place it was pinned, re-drawn from what the agent was
+    handed so the newest reading is on it, with the ring still on the dot he
+    came in on.
+    """
+    plant.script[:] = _reads_the_chart_then_answers(THE_ANSWER)
+    plant.shape_chart = _slid_by_one
+    href = _chip_from_an_open_sample(admin, plant, plant.shifted)
+    page = _explore(admin, plant, href[href.index("/dashboard/ai"):])
+    try:
+        _wait_for_the_chart(page, 1)
+        _ask(page)
+        page.wait_for_function(
+            "() => document.querySelector('#explore-log [data-answer-chart]')",
+            timeout=25000)
+        assert page.locator("#explore-log svg.fs-chart").count() == 1, (
+            "the same picture, a few readings later, is on the screen twice")
+        figure = page.locator("#explore-log figure.explore-chart")
+        assert figure.count() == 1
+        assert "explore-pinned" in (figure.get_attribute("class") or ""), (
+            "the marked chart moved out of the place it was pinned in")
+
+        # Re-drawn from the agent's own envelope: the sample that arrived
+        # while the model was thinking is on the picture, the one that fell
+        # off the back of the window is not, and the window is the same width.
+        drawn = page.locator(
+            '#explore-log svg.fs-chart circle[data-series="xbar"]').evaluate_all(
+            "dots => dots.map(d => d.getAttribute('data-sample'))")
+        assert len(drawn) == DRAWN, drawn
+        assert str(plant.shifted + 1) in drawn, (
+            "the reading that arrived while the model was thinking is not on it")
+        assert str(plant.settled[0]) not in drawn, (
+            "the chart still holds the reading that fell out of the window")
+
+        # And the dot he arrived on is still the one ringed.
+        assert page.locator(
+            f'#explore-log circle[data-sample="{plant.shifted}"].spc-selected'
+        ).count() == 1
+    finally:
+        plant.shape_chart = None
+        page.close()
+
+
+def test_a_chart_of_another_characteristic_is_drawn_beside_the_pinned_one(
+        admin, plant):
+    """The other half of the rule. A chart of a different characteristic is a
+    different picture however much the window has in common with the pinned
+    one, and a reader whose question sent the agent to read something else
+    needs to see that it did."""
+    plant.script[:] = [
+        _turn(_use("tu_1", "spc_chart", material="FG-COLA",
+                   characteristic=OTHER_CHARACTERISTIC), stop="tool_use"),
+        _turn(_use("tu_2", agent.DRAW_TOOL,
+                   **{"from": "tu_1", "shape": "spc",
+                      "title": f"FG-COLA {OTHER_CHARACTERISTIC}"}),
+              stop="tool_use"),
+        _turn(_text(A_CLOSED_ANSWER)),
+    ]
+    href = _chip_from_an_open_sample(admin, plant, plant.shifted)
+    page = _explore(admin, plant, href[href.index("/dashboard/ai"):])
+    try:
+        _wait_for_the_chart(page, 1)
+        _ask(page)
+        _wait_for_the_chart(page, 2)
+        assert page.locator("#explore-log [data-answer-chart]").count() == 0, (
+            "another characteristic was marked as the chart he came from")
+        drew = page.locator("#explore-log svg.fs-chart").nth(1)
+        drawn = drew.locator('circle[data-series="xbar"]').evaluate_all(
+            "dots => dots.map(d => d.getAttribute('data-value'))")
+        assert len(drawn) == OTHER_SAMPLES, drawn
+    finally:
+        page.close()
+
+
 def test_a_chart_of_something_else_is_drawn_beside_the_pinned_one(admin, plant):
-    """The other half of the same rule, and the reason it is narrow. A payload
-    that is not the pinned picture is a different picture, and a reader whose
-    question sent the agent to read something else needs to see that it did."""
+    """A window the agent narrowed on purpose is a different picture too. It
+    reaches back less far than the one he came in with, so it is a shorter
+    stretch of the same chart and not the same stretch a few readings later -
+    and it is drawn where the answer wrote it."""
     plant.script[:] = [
         _turn(_use("tu_1", "spc_chart", material="FG-COLA",
                    characteristic="fill_height"), stop="tool_use"),
         # The same read, trimmed to the newest six samples by the model's own
-        # `limit`, which is a different window and so a different picture.
+        # `limit`, which is a window reaching back eleven samples less far.
         _turn(_use("tu_2", "spc_chart", material="FG-COLA",
                    characteristic="fill_height", limit=6), stop="tool_use"),
         _turn(_use("tu_3", agent.DRAW_TOOL,
