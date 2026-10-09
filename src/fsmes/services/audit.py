@@ -19,14 +19,18 @@ def record(
     entity_id: str,
     before: dict | None = None,
     after: dict | None = None,
+    on_behalf_of: str | None = None,
 ) -> None:
     moment = utcnow()
     row = AuditLog(
         ts=moment,
         actor=actor,
         # An agent's actor carries who it acts for (api.deps.Actor); a
-        # plain string is a person acting as themselves.
-        on_behalf_of=getattr(actor, "on_behalf_of", None),
+        # plain string is a person acting as themselves. A caller may also
+        # say it outright - a shop-floor terminal recording the mechanic
+        # whose job it was, which is the same fact arriving by a different
+        # route - and what it says wins, because it knows and this does not.
+        on_behalf_of=on_behalf_of or getattr(actor, "on_behalf_of", None),
         action=action,
         entity_type=entity_type,
         entity_id=entity_id,

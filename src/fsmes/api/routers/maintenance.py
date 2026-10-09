@@ -37,6 +37,12 @@ class PlanIn(BaseModel):
     # trade on a job somebody would then be sent to wrongly.
     skill: str | None = None
     priority: int | None = None
+    # What the job needs of the *line*, as against of a person. A plan that
+    # says neither leaves both unsaid, which the floor reads as "can be done
+    # while the machine runs, whenever" - the behaviour of every plan written
+    # before these two fields existed.
+    needs_stop: bool = False
+    window: str | None = None
 
 
 class CorrectiveIn(BaseModel):
@@ -47,10 +53,28 @@ class CorrectiveIn(BaseModel):
     # trade and how badly it matters - there is no plan behind it to copy from.
     skill: str | None = None
     priority: int | None = None
+    needs_stop: bool = False
+    window: str | None = None
+
+
+class StartIn(BaseModel):
+    # Whose job this is, when the account making the request is not that
+    # person: a shop-floor terminal beside the machine, or a supervisor
+    # booking his crew's work. The order has to have been given to them -
+    # `services.maintenance.whose_work` says exactly what is and is not
+    # allowed, and why.
+    performed_by: str | None = None
 
 
 class CompleteIn(BaseModel):
     findings: str | None = None
+    # How long the *machine* was down for the job, which is not how long the
+    # job took: greasing a bearing on a running palletiser stops nothing, and
+    # booking the job's twenty minutes against the line would invent downtime
+    # the plant never had. A caller that measured it says so; one that does
+    # not gets the elapsed time of the job, as every release before this.
+    downtime_minutes: float | None = None
+    performed_by: str | None = None
 
 
 class AssignIn(BaseModel):
@@ -69,6 +93,12 @@ def _order_out(o) -> dict:
         "findings": o.findings, "downtime_minutes": o.downtime_minutes,
         "document": o.plan.document_code if o.plan else None,
         "skill": o.skill_code, "priority": o.priority,
+        # What the job needs of the line. `needs_stop` is why an order can sit
+        # at `assigned` for a whole shift without anybody having ignored it,
+        # and a reader with only the status cannot tell that from a list
+        # nobody worked. `window` is null when nobody has said when.
+        "needs_stop": bool(o.needs_stop),
+        "window": o.window.value if o.window else None,
         "assigned_to": o.assigned_to, "assigned_at": o.assigned_at,
         "assigned_by": o.assigned_by, "scheduled_for": o.scheduled_for,
         # Null means it has not been through dispatch - a different fact from
@@ -125,7 +155,8 @@ def create_plan(body: PlanIn, db: DbDep, actor: ActorDep) -> dict:
         trigger=body.trigger, interval=body.interval,
         expected_minutes=body.expected_minutes, instructions=body.instructions,
         document_code=body.document_code, skill_code=body.skill,
-        priority=body.priority, actor=actor)
+        priority=body.priority, needs_stop=body.needs_stop, window=body.window,
+        actor=actor)
     return maintenance.status_of(db, plan)
 
 
@@ -167,26 +198,36 @@ def corrective(body: CorrectiveIn, db: DbDep, actor: ActorDep) -> dict:
     return _order_out(maintenance.raise_corrective(
         db, equipment_code=body.equipment, summary=body.summary,
         reason=body.reason, skill_code=body.skill, priority=body.priority,
+        needs_stop=body.needs_stop, window=body.window,
         actor=actor))
 
 
 @router.post("/orders/{code}/start", dependencies=[require("maintenance.perform")])
-def start(code: str, db: DbDep, actor: ActorDep, user: UserDep) -> dict:
+def start(code: str, db: DbDep, actor: ActorDep, user: UserDep,
+          body: StartIn | None = None) -> dict:
     """Pick up the spanner.
 
-    An order that was given to somebody is started by them. Anyone else is
-    refused 403 with a sentence naming who can - unless they hold
-    `maintenance.plan`, which is a supervisor, who may reassign it and then
-    start it anyway.
+    An order that was given to somebody is started by them, or recorded as
+    *their* work by naming them in `performed_by` - the terminal beside the
+    machine, or the supervisor booking the shift. Taking somebody else's work
+    for yourself is refused 403 with a sentence naming who can, unless you
+    hold `maintenance.plan`, which is a supervisor, who may reassign it and
+    then start it anyway.
     """
     held = auth.capabilities_for(db, user["role"])
-    return _order_out(maintenance.start(db, code, actor=actor, capabilities=held))
+    return _order_out(maintenance.start(
+        db, code, actor=actor, capabilities=held,
+        performed_by=body.performed_by if body else None))
 
 
 @router.post("/orders/{code}/complete", dependencies=[require("maintenance.perform")])
-def complete(code: str, body: CompleteIn, db: DbDep, actor: ActorDep) -> dict:
+def complete(code: str, body: CompleteIn, db: DbDep, actor: ActorDep,
+             user: UserDep) -> dict:
     """Close the job and re-baseline its plan from the work actually done."""
-    return _order_out(maintenance.complete(db, code, findings=body.findings, actor=actor))
+    held = auth.capabilities_for(db, user["role"])
+    return _order_out(maintenance.complete(
+        db, code, findings=body.findings, downtime_minutes=body.downtime_minutes,
+        performed_by=body.performed_by, capabilities=held, actor=actor))
 
 
 # ------------------------------------------------- the crew, and who gets what

@@ -302,11 +302,33 @@ class _Crew:
     #: Used only by a dispatch pass. `explain` walks every time, because the
     #: walk is the entire reason anybody calls `explain`.
     nobody_free: dict[tuple, bool] = field(default_factory=dict)
+    #: What each person is holding right now, for a page that has to show a
+    #: crew rather than a count: the order they are on, or the next one they
+    #: have been given. Only one, because a person works one job at a time and
+    #: a supervisor's page asks "what is Mary doing", not "what is on Mary's
+    #: list" - the count beside it answers the second question.
+    on_now: dict[int, MaintenanceOrder] = field(default_factory=dict)
+    #: Each plan's expected minutes, so a page can say how long the job on
+    #: somebody's hands was meant to take beside how long it has taken.
+    plan_minutes: dict[int | None, float] = field(default_factory=dict)
     #: (shift code, day) -> who is on it, with their person, sorted by code.
     #: Worked out the first time a shift is asked for and kept: one pass asks
     #: for the same three shifts once per order per rule.
     on_shift: dict[tuple[str, object], list[tuple[RosterEntry, Person]]] = field(
         default_factory=dict)
+
+
+def _comes_first(order: MaintenanceOrder, against: MaintenanceOrder) -> bool:
+    """Is `order` more the job somebody is on than `against` is?"""
+    rank = {MaintenanceStatus.IN_PROGRESS: 0, MaintenanceStatus.ASSIGNED: 1}
+    mine, theirs = rank.get(order.status, 2), rank.get(against.status, 2)
+    if mine != theirs:
+        return mine < theirs
+    # `or utcnow()` rather than None-last sorting: an order with no times on it
+    # at all is the newest thing that could have happened to this person, which
+    # is the honest reading and keeps the comparison total.
+    return (order.started_at or order.assigned_at or utcnow()) < (
+        against.started_at or against.assigned_at or utcnow())
 
 
 def _read_crew(session: Session) -> _Crew:
@@ -330,11 +352,19 @@ def _read_crew(session: Session) -> _Crew:
     codes = {p.code: p.id for p in people.values()}
     plan_minutes = dict(session.execute(
         select(MaintenancePlan.id, MaintenancePlan.expected_minutes)).all())
+    crew.plan_minutes = dict(plan_minutes)
     for order in held:
         person_id = codes.get(order.assigned_to or "")
         if person_id is None:
             continue
         crew.load[person_id] += 1
+        # Which of this person's open orders is *the* one they are on. In
+        # progress beats assigned, because that is the job in their hands; two
+        # at the same status are ordered by when they were given out, because
+        # a crew works its list in the order it arrived. One person, one job.
+        standing = crew.on_now.get(person_id)
+        if standing is None or _comes_first(order, standing):
+            crew.on_now[person_id] = order
         minutes = plan_minutes.get(order.plan_id, assumed)
         if order.status is MaintenanceStatus.IN_PROGRESS:
             # On it now, and for as long as the job is expected to take from
@@ -819,6 +849,44 @@ def assign(session: Session, order_code: str, person_code: str, *,
     return order
 
 
+def _on_now(crew: _Crew, person_id: int, now: datetime) -> dict | None:
+    """The one job this person is on, with how long it has been theirs.
+
+    `minutes` means two different things and the status beside it says which:
+    for an order in progress it is how long they have been working on it, and
+    for one merely assigned it is how long it has been waiting. Keeping them
+    in one field with the status beside it rather than in two is deliberate -
+    a page that showed "waiting 190 minutes" in a column headed *worked* would
+    be the screen lying, and a reader who has the status cannot be misled.
+
+    `needs_stop` travels with it because it is the answer to the question a
+    waiting order provokes. An electrician with a condenser clean assigned at
+    06:03 and still waiting at 14:00 is not idle: the job needs the line
+    stopped, and the line has been making bottles all shift.
+    """
+    order = crew.on_now.get(person_id)
+    if order is None:
+        return None
+    since = (order.started_at if order.status is MaintenanceStatus.IN_PROGRESS
+             else order.assigned_at) or order.assigned_at or order.raised_at
+    return {
+        "order": order.code,
+        "equipment": order.equipment.code,
+        "summary": order.summary,
+        "status": order.status.value,
+        "since": since,
+        # `now` arrived through `_at`, and every stored timestamp is naive UTC
+        # (`fsmes.db.utcnow`), so the subtraction needs no conversion here.
+        "minutes": (round(max(0.0, (now - since).total_seconds() / 60.0), 1)
+                    if since else None),
+        "expected_minutes": crew.plan_minutes.get(order.plan_id),
+        "needs_stop": bool(order.needs_stop),
+        "window": order.window.value if order.window else None,
+        "priority": order.priority,
+        "skill": order.skill_code,
+    }
+
+
 def roster(session: Session, shift: str | None = None, now: datetime | None = None,
            equipment_id: int | None = None) -> dict:
     """Who is on shift, what they can do, and what they already have on.
@@ -851,6 +919,11 @@ def roster(session: Session, shift: str | None = None, now: datetime | None = No
             "standing": row.standing,
             "open_orders": crew.load.get(person.id, 0),
             "home": person.home_equipment.code if person.home_equipment else None,
+            # What they are doing, not just how much of it there is. A
+            # supervisor's page needs the job in somebody's hands and how long
+            # it has been there; a count of three tells them nothing they can
+            # act on.
+            "on_now": _on_now(crew, person.id, now),
         })
     return {"shift": found.as_json(), "people": people, "total": len(people),
             "available": sum(1 for p in people if p["available"])}

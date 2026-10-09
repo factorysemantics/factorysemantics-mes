@@ -20,6 +20,7 @@ from fsmes.domain import (
     MaintenanceOrder,
     MaintenancePlan,
     MaintenanceStatus,
+    MaintenanceWindow,
     ProductionLog,
     TriggerKind,
 )
@@ -155,6 +156,11 @@ def status_of(session: Session, plan: MaintenancePlan) -> dict:
         "due_soon": soon <= fraction < 1.0,
         "due_soon_fraction": soon,
         "expected_minutes": plan.expected_minutes,
+        # What the job needs of the line. A planner reading a due list wants
+        # both halves of the cost: how long the job takes, and whether the
+        # line has to stand still for it.
+        "needs_stop": bool(plan.needs_stop),
+        "window": plan.window.value if plan.window else None,
         "document": plan.document_code,
         "last_done_at": plan.last_done_at,
     }
@@ -171,6 +177,24 @@ def due(session: Session, include_soon: bool = True) -> list[dict]:
 def _next_code(session: Session, prefix: str) -> str:
     count = session.scalar(select(func.count()).select_from(MaintenanceOrder)) or 0
     return f"{prefix}-{count + 1:05d}"
+
+
+def _window(given: str | None) -> MaintenanceWindow | None:
+    """The window a caller asked for, or nothing if they did not say.
+
+    An empty string is treated as not said rather than as a bad value: the
+    pack reader and a form both hand over "" for a field nobody filled in, and
+    refusing that would make "I have no opinion about when" impossible to
+    express through either.
+    """
+    if given in (None, ""):
+        return None
+    try:
+        return MaintenanceWindow(str(given).strip().lower())
+    except ValueError as exc:
+        raise Invalid(
+            f"unknown window {given!r}. Expected one of "
+            f"{', '.join(w.value for w in MaintenanceWindow)}") from exc
 
 
 def raise_due(session: Session, actor: str = "system") -> list[MaintenanceOrder]:
@@ -205,6 +229,13 @@ def raise_due(session: Session, actor: str = "system") -> list[MaintenanceOrder]
             # which is work anybody on shift can take.
             skill_code=plan.skill_code,
             priority=plan.priority,
+            # And what the job needs of the line, for the same reason: an
+            # order is judged on what was asked for when it was raised. A
+            # plan that never said when its job may be done leaves `window`
+            # null on the order too, which the floor reads as open - the
+            # behaviour every plant had before the column existed.
+            needs_stop=bool(plan.needs_stop),
+            window=plan.window,
         )
         session.add(order)
         session.flush()
@@ -218,7 +249,8 @@ def raise_due(session: Session, actor: str = "system") -> list[MaintenanceOrder]
 
 def raise_corrective(session: Session, *, equipment_code: str, summary: str,
                      reason: str | None = None, skill_code: str | None = None,
-                     priority: int | None = None,
+                     priority: int | None = None, needs_stop: bool = False,
+                     window: str | None = None,
                      actor: str = "system") -> MaintenanceOrder:
     """Work raised because something broke, not because a plan came due.
 
@@ -245,13 +277,17 @@ def raise_corrective(session: Session, *, equipment_code: str, summary: str,
         reason=reason,
         skill_code=skill_code,
         priority=int(priority) if priority is not None else None,
+        needs_stop=bool(needs_stop),
+        window=_window(window),
     )
     session.add(order)
     session.flush()
     audit.record(session, actor=actor, action="maintenance.raised",
                  entity_type="equipment", entity_id=equipment_code,
                  after={"order": order.code, "kind": "corrective", "summary": summary,
-                        "skill": skill_code, "priority": order.priority})
+                        "skill": skill_code, "priority": order.priority,
+                        "needs_stop": order.needs_stop,
+                        "window": order.window.value if order.window else None})
     return order
 
 
@@ -262,39 +298,80 @@ def get(session: Session, code: str) -> MaintenanceOrder:
     return order
 
 
+def whose_work(session: Session, order: MaintenanceOrder, actor: str,
+               performed_by: str | None,
+               capabilities: set[str] | None = None) -> str:
+    """Whose work this is, and whether this caller may record it.
+
+    An order that has been given to somebody is *their* work. Anyone else is
+    refused, and told who can - because an order worked by somebody it was not
+    given to is an order the supervisor's board is lying about, and the board
+    is the whole reason the dispatcher exists.
+
+    There are two honest ways past that, and they are different from each
+    other. Somebody who holds `maintenance.plan` is not refused at all: a
+    supervisor can reassign the order and then start it, and making them do it
+    in two steps for no reason is how a plant ends up with a supervisor account
+    nobody uses. And *anybody* who holds `maintenance.perform` may record the
+    work **against the person it was given to**, by naming them in
+    `performed_by` - which is the shop-floor terminal beside the machine, the
+    supervisor booking his crew's jobs at the end of the shift, and the only
+    way a plant whose mechanics do not each have a login can have its records
+    name the mechanic. What is still refused is taking somebody else's work
+    *for yourself*: naming a third person, or naming nobody while not being the
+    assignee. You may book Mary's job as Mary's; you may not book it as yours.
+
+    Returns the person's code. The caller keeps its own identity for the audit
+    row: `MT-05 started PM-…` is the record of the work, and who typed it in
+    is a separate fact that the audit trail keeps separately.
+    """
+    whose = str(performed_by or actor).strip().upper()
+    if performed_by:
+        # 404 rather than a board showing a name that is nobody. A person
+        # handed somebody else's plant's code would otherwise sit on the
+        # supervisor's page for ever with no way to reach them.
+        whose = masterdata.get_person(session, whose).code
+    if (order.assigned_to
+            and whose.upper() != order.assigned_to.upper()
+            and "maintenance.plan" not in (capabilities or set())):
+        raise Forbidden(
+            f"{order.code} is assigned to {order.assigned_to}. "
+            f"{order.assigned_to} can start it, anybody can record it as "
+            f"{order.assigned_to}'s work with performed_by, or somebody who "
+            "holds 'maintenance.plan' can reassign it first.")
+    return whose
+
+
 def start(session: Session, code: str, actor: str = "system",
-          capabilities: set[str] | None = None) -> MaintenanceOrder:
+          capabilities: set[str] | None = None,
+          performed_by: str | None = None) -> MaintenanceOrder:
     """Somebody picks up the spanner.
 
-    An order that has been given to somebody is started by *them*. Anyone else
-    is refused, and told who can - because an order worked by somebody it was
-    not given to is an order the supervisor's board is lying about, and the
-    board is the whole reason the dispatcher exists. Somebody who holds
-    `maintenance.plan` is not refused: a supervisor can reassign it and then
-    start it, and making them do that in two steps for no reason is how a plant
-    ends up with a supervisor account that nobody uses.
+    Whose spanner it is, and who may say so, is `whose_work` above.
     """
     order = get(session, code)
     if order.status not in (MaintenanceStatus.DUE, MaintenanceStatus.ASSIGNED):
         raise Conflict(f"{code} is {order.status.value}")
-    if (order.assigned_to
-            and str(actor).upper() != order.assigned_to.upper()
-            and "maintenance.plan" not in (capabilities or set())):
-        raise Forbidden(
-            f"{code} is assigned to {order.assigned_to}. {order.assigned_to} "
-            "can start it, or somebody who holds 'maintenance.plan' can "
-            "reassign it first.")
+    whose = whose_work(session, order, actor, performed_by, capabilities)
     order.status = MaintenanceStatus.IN_PROGRESS
     order.started_at = utcnow()
-    order.performed_by = actor
+    order.performed_by = whose
     session.flush()
     audit.record(session, actor=actor, action="maintenance.started",
                  entity_type="equipment", entity_id=order.equipment.code,
-                 after={"order": code})
+                 # Who the work belongs to, when that is not the account that
+                 # typed it. The same column an agent's row uses for the person
+                 # it acts for, and the same meaning: this request was made for
+                 # somebody, and both of them are on the row.
+                 on_behalf_of=None if whose == str(actor).upper() else whose,
+                 after={"order": code, "performed_by": whose})
     return order
 
 
 def complete(session: Session, code: str, *, findings: str | None = None,
+             downtime_minutes: float | None = None,
+             performed_by: str | None = None,
+             capabilities: set[str] | None = None,
              actor: str = "system") -> MaintenanceOrder:
     """Close the job and re-baseline its plan.
 
@@ -302,17 +379,31 @@ def complete(session: Session, code: str, *, findings: str | None = None,
     was actually done, not from when it was scheduled. A plan that keeps
     counting from its original date drifts a little further out of step every
     cycle.
+
+    `downtime_minutes` is how long the *machine* was down for the job, which
+    is not how long the job took. Greasing a palletiser bearing takes twenty
+    minutes and stops nothing; booking twenty minutes of downtime against the
+    line for it would invent downtime the plant never had, and the
+    availability figure is built out of these numbers. So a caller that
+    measured it says so, and the elapsed time of the job is the fallback for a
+    caller that did not - which is what every release before this recorded,
+    and is right for the jobs that do stop the machine.
     """
     order = get(session, code)
     if order.status is MaintenanceStatus.DONE:
         raise Conflict(f"{code} is already done")
+    whose = whose_work(session, order, actor, performed_by, capabilities)
 
     now = utcnow()
     order.status = MaintenanceStatus.DONE
     order.completed_at = now
-    order.performed_by = actor
+    order.performed_by = whose
     order.findings = findings
-    if order.started_at:
+    if downtime_minutes is not None:
+        if float(downtime_minutes) < 0:
+            raise Invalid("downtime_minutes cannot be negative")
+        order.downtime_minutes = round(float(downtime_minutes), 1)
+    elif order.started_at:
         order.downtime_minutes = round(
             (now - order.started_at).total_seconds() / 60.0, 1)
 
@@ -325,7 +416,9 @@ def complete(session: Session, code: str, *, findings: str | None = None,
     session.flush()
     audit.record(session, actor=actor, action="maintenance.completed",
                  entity_type="equipment", entity_id=order.equipment.code,
+                 on_behalf_of=None if whose == str(actor).upper() else whose,
                  after={"order": code, "findings": findings,
+                        "performed_by": whose,
                         "downtime_minutes": order.downtime_minutes})
     return order
 
@@ -334,6 +427,7 @@ def create_plan(session: Session, *, code: str, name: str, equipment_code: str,
                 trigger: str, interval: float, expected_minutes: float | None = None,
                 instructions: str | None = None, document_code: str | None = None,
                 skill_code: str | None = None, priority: int | None = None,
+                needs_stop: bool = False, window: str | None = None,
                 actor: str = "system") -> MaintenancePlan:
     if session.scalar(select(MaintenancePlan).where(MaintenancePlan.code == code)):
         raise Conflict(f"plan {code} already exists")
@@ -362,13 +456,17 @@ def create_plan(session: Session, *, code: str, name: str, equipment_code: str,
         interval=interval, expected_minutes=expected_minutes,
         instructions=instructions, document_code=document_code,
         skill_code=skill_code,
-        priority=int(priority) if priority is not None else None)
+        priority=int(priority) if priority is not None else None,
+        needs_stop=bool(needs_stop),
+        window=_window(window))
     session.add(plan)
     session.flush()
     audit.record(session, actor=actor, action="maintenance.plan_created",
                  entity_type="equipment", entity_id=equipment_code,
                  after={"plan": code, "trigger": kind.value, "interval": interval,
-                        "skill": skill_code, "priority": plan.priority})
+                        "skill": skill_code, "priority": plan.priority,
+                        "needs_stop": plan.needs_stop,
+                        "window": plan.window.value if plan.window else None})
     return plan
 
 

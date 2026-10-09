@@ -53,6 +53,7 @@ from fsmes.domain.maintenance import (
     MaintenanceOrder,
     MaintenancePlan,
     MaintenanceStatus,
+    MaintenanceWindow,
     TriggerKind,
 )
 from fsmes.domain.masterdata import (
@@ -137,6 +138,7 @@ __all__ = [
     "MaintenanceOrder",
     "MaintenancePlan",
     "MaintenanceStatus",
+    "MaintenanceWindow",
     "Material",
     "MaterialLot",
     "MaterialType",
