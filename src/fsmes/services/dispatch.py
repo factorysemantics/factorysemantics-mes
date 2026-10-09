@@ -32,7 +32,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -267,6 +267,9 @@ class _Crew:
     """The plant's people, read once, in the shapes the picking needs."""
 
     by_id: dict[int, Person]
+    #: The same people by code, because an assignment names a code and walking
+    #: three hundred people to find one, two thousand times, is a walk.
+    by_code: dict[str, Person] = field(default_factory=dict)
     skills: dict[int, dict[str, int]] = field(default_factory=dict)
     #: shift code -> standing roster rows; and (shift code, day) -> that day's.
     standing: dict[str, list[RosterEntry]] = field(default_factory=dict)
@@ -279,11 +282,28 @@ class _Crew:
     turns: dict[tuple[str, int], int] = field(default_factory=lambda: defaultdict(int))
     #: Every machine's chain of ancestors, nearest first, for `nearest`.
     chain: dict[int, list[int]] = field(default_factory=dict)
+    #: (shift code, day, skill, window) -> was anybody on that shift holding
+    #: the skill, remembered **only when nobody was free**. Negative only, and
+    #: that is the whole of the safety argument: inside one pass nobody ever
+    #: becomes *less* busy, so "no electrician is free between nine and ten"
+    #: cannot stop being true before the pass ends - while "MT-017 is free"
+    #: stops being true the second MT-017 is handed the job. A plant whose
+    #: electricians are all out would otherwise walk the same hundred people
+    #: again for every one of nine hundred waiting orders.
+    #:
+    #: Used only by a dispatch pass. `explain` walks every time, because the
+    #: walk is the entire reason anybody calls `explain`.
+    nobody_free: dict[tuple, bool] = field(default_factory=dict)
+    #: (shift code, day) -> who is on it, with their person, sorted by code.
+    #: Worked out the first time a shift is asked for and kept: one pass asks
+    #: for the same three shifts once per order per rule.
+    on_shift: dict[tuple[str, object], list[tuple[RosterEntry, Person]]] = field(
+        default_factory=dict)
 
 
 def _read_crew(session: Session) -> _Crew:
     people = {p.id: p for p in session.scalars(select(Person))}
-    crew = _Crew(by_id=people)
+    crew = _Crew(by_id=people, by_code={p.code: p for p in people.values()})
 
     for row in session.scalars(select(PersonnelSkill)):
         crew.skills.setdefault(row.personnel_id, {})[row.skill_code] = row.level
@@ -367,13 +387,26 @@ def _matches(rule: DispatchRule, order: MaintenanceOrder, scope: set[int] | None
     return None
 
 
-def _rostered(crew: _Crew, shift_code: str, day) -> list[RosterEntry]:
-    """Who is on this shift: the standing roster, with the day's rows winning."""
-    dated = {row.personnel_id: row for row in crew.dated.get((shift_code, day), ())}
-    out = list(dated.values())
-    out += [row for row in crew.standing.get(shift_code, ())
-            if row.personnel_id not in dated]
-    return out
+def _rostered(crew: _Crew, shift_code: str, day) -> list[tuple[RosterEntry, Person]]:
+    """Who is on this shift: the standing roster, with the day's rows winning.
+
+    Each row comes back beside the person it is about, sorted by person code,
+    and the answer is kept on the crew. A roster row whose person is not on the
+    register is dropped here rather than skipped in the picking, so the picking
+    reads as the decision it is.
+    """
+    key = (shift_code, day)
+    found = crew.on_shift.get(key)
+    if found is None:
+        dated = {row.personnel_id: row for row in crew.dated.get(key, ())}
+        rows = [*dated.values(),
+                *(row for row in crew.standing.get(shift_code, ())
+                  if row.personnel_id not in dated)]
+        found = sorted(((row, crew.by_id[row.personnel_id]) for row in rows
+                        if row.personnel_id in crew.by_id),
+                       key=lambda pair: pair[1].code)
+        crew.on_shift[key] = found
+    return found
 
 
 def _free_at(crew: _Crew, person_id: int, window: tuple[datetime, datetime]) -> str | None:
@@ -418,7 +451,8 @@ class _Considered:
 
 
 def _choose(crew: _Crew, rule: DispatchRule, order: MaintenanceOrder,
-            rostered: list[RosterEntry], window: tuple[datetime, datetime],
+            rostered: list[tuple[RosterEntry, Person]],
+            window: tuple[datetime, datetime], *, collect: bool = True,
             ) -> tuple[Person | None, str, list[_Considered], bool]:
     """Who gets it, why, and everybody who was looked at on the way.
 
@@ -426,39 +460,49 @@ def _choose(crew: _Crew, rule: DispatchRule, order: MaintenanceOrder,
     there *anybody* on shift who held the skill? Nobody on shift with the
     skill and everybody on shift already busy are two different facts, and a
     supervisor acts on them differently.
+
+    `collect` is off for a dispatch pass and on for `explain`. The walk - a
+    sentence per person per rule - is what a supervisor reads afterwards about
+    *one* order; building it for two thousand orders against three hundred
+    people is half a million sentences nobody asked for, and it is the
+    difference between a pass that takes a quarter of a second and one that
+    takes four.
     """
     looked: list[_Considered] = []
     eligible: list[Person] = []
     any_with_skill = False
     needed = order.skill_code or None
 
-    for row in sorted(rostered, key=lambda r: crew.by_id[r.personnel_id].code
-                      if r.personnel_id in crew.by_id else ""):
-        person = crew.by_id.get(row.personnel_id)
-        if person is None:
-            continue
+    for row, person in rostered:
         if not row.available:
-            looked.append(_Considered(person.code, person.name,
-                                      f"not available{f' ({row.reason})' if row.reason else ''}"))
+            if collect:
+                looked.append(_Considered(
+                    person.code, person.name,
+                    f"not available{f' ({row.reason})' if row.reason else ''}"))
             continue
         if needed:
             level = crew.skills.get(person.id, {}).get(needed)
             if level is None:
-                looked.append(_Considered(person.code, person.name,
-                                          f"does not hold {needed}"))
+                if collect:
+                    looked.append(_Considered(person.code, person.name,
+                                              f"does not hold {needed}"))
                 continue
             if level < DISPATCHABLE_LEVEL:
-                looked.append(_Considered(
-                    person.code, person.name,
-                    f"holds {needed} at level {level} - a trainee, not sent alone"))
+                if collect:
+                    looked.append(_Considered(
+                        person.code, person.name,
+                        f"holds {needed} at level {level} - a trainee, not sent alone"))
                 continue
         any_with_skill = True
         occupied = _free_at(crew, person.id, window)
         if occupied:
-            looked.append(_Considered(person.code, person.name, occupied))
+            if collect:
+                looked.append(_Considered(person.code, person.name, occupied))
             continue
         eligible.append(person)
-        looked.append(_Considered(person.code, person.name, "free, and holds the skill"))
+        if collect:
+            looked.append(_Considered(person.code, person.name,
+                                      "free, and holds the skill"))
 
     if not eligible:
         return None, "", looked, any_with_skill
@@ -481,6 +525,21 @@ def _choose(crew: _Crew, rule: DispatchRule, order: MaintenanceOrder,
             row.chosen = True
             row.verdict = why
     return best, why, looked, any_with_skill
+
+
+def _at(now: datetime | None) -> datetime:
+    """The instant to decide at, on the plant's own clock.
+
+    Every timestamp this product stores is naive UTC (`fsmes.db.utcnow`), and
+    so are the windows read back out of `maintenance_orders` to work out who is
+    already out on a job. A caller handing in an *aware* datetime - a route
+    parsing an ISO string with a `Z` on the end of it - would get away with it
+    on a plant with nothing assigned and then fail on the second pass, when the
+    first pass's windows come back from the database naive. That is the worst
+    possible day to find out, so it is settled here, once, at the door.
+    """
+    now = now or utcnow()
+    return now.astimezone(UTC).replace(tzinfo=None) if now.tzinfo else now
 
 
 def _window(session: Session, order: MaintenanceOrder, now: datetime,
@@ -519,12 +578,23 @@ class _Decision:
 
 def _decide(session: Session, order: MaintenanceOrder, now: datetime, crew: _Crew,
             prepared: list[tuple[DispatchRule, set[int] | None]],
-            plan_minutes: dict, assumed: float) -> _Decision:
-    """Walk the rules for one order and say what should happen to it."""
+            plan_minutes: dict, assumed: float, *, collect: bool = True,
+            shifts: dict[int, object] | None = None) -> _Decision:
+    """Walk the rules for one order and say what should happen to it.
+
+    `shifts` is the shift each machine is on at `now`, worked out once and
+    shared across the pass: the answer depends on the machine and the instant,
+    and a dispatch pass has one instant. `collect` is handed straight to
+    `_choose` - see there for why a pass does not build the walk.
+    """
     decision = _Decision(order=order.code, skill=order.skill_code,
                          priority=order.priority or DEFAULT_PRIORITY)
     window = _window(session, order, now, plan_minutes, assumed)
-    shift = calendar.shift_for(session, now, order.equipment_id)
+    if shifts is None:
+        shifts = {}
+    if order.equipment_id not in shifts:
+        shifts[order.equipment_id] = calendar.shift_for(session, now, order.equipment_id)
+    shift = shifts[order.equipment_id]
     decision.shift = shift.key() if shift else None
 
     nobody_on_shift = True
@@ -539,11 +609,28 @@ def _decide(session: Session, order: MaintenanceOrder, now: datetime, crew: _Cre
                 "rule": rule.code, "matched": True,
                 "because": "no shift pattern covers this moment, so nobody is rostered"})
             continue
+        # Who could take it does not depend on which rule is asking - only the
+        # shift, the trade and the window - so a pass that has already found
+        # nobody free for this exact three does not look again.
+        seen = (crew.nobody_free.get((shift.code, shift.day, order.skill_code or None,
+                                      window)) if not collect else None)
+        if seen is not None:
+            if seen:
+                nobody_on_shift = False
+            decision.rules_tried.append({
+                "rule": rule.code, "matched": True,
+                "because": ("nobody on shift holds the skill" if not seen
+                            else "everybody who holds it is on another job")})
+            continue
+
         rostered = _rostered(crew, shift.code, shift.day)
-        chosen, why, looked, any_with_skill = _choose(crew, rule, order, rostered, window)
+        chosen, why, looked, any_with_skill = _choose(
+            crew, rule, order, rostered, window, collect=collect)
         if any_with_skill:
             nobody_on_shift = False
         if chosen is None:
+            crew.nobody_free[(shift.code, shift.day, order.skill_code or None,
+                              window)] = any_with_skill
             decision.rules_tried.append({
                 "rule": rule.code, "matched": True,
                 "because": ("nobody on shift holds the skill" if not any_with_skill
@@ -580,7 +667,7 @@ def dispatch(session: Session, now: datetime | None = None, actor: str = "rules"
     same second changes nothing the second time, and an order a person assigned
     by hand is already past `due` and is never touched.
     """
-    now = now or utcnow()
+    now = _at(now)
     crew = _read_crew(session)
     prepared = [(rule, _scope_of(session, rule)) for rule in rules(session)]
     assumed = _maintenance.default_job_minutes(session)
@@ -593,15 +680,22 @@ def dispatch(session: Session, now: datetime | None = None, actor: str = "rules"
         .order_by(func.coalesce(MaintenanceOrder.priority, DEFAULT_PRIORITY),
                   MaintenanceOrder.raised_at, MaintenanceOrder.id)))
 
+    # The shift each machine is on at `now`, read once. `now` is one instant
+    # for the whole pass by design - two thousand orders handed out "as of"
+    # two thousand slightly different moments is not a pass a supervisor could
+    # reason about - so one answer per machine is the whole answer.
+    shifts: dict[int, object] = {}
+
     assigned, unassigned = 0, defaultdict(int)
     for order in due_orders:
-        decision = _decide(session, order, now, crew, prepared, plan_minutes, assumed)
+        decision = _decide(session, order, now, crew, prepared, plan_minutes, assumed,
+                           collect=False, shifts=shifts)
         if decision.assigned_to is None:
             order.unassigned_reason = decision.unassigned_reason
             unassigned[decision.unassigned_reason] += 1
             continue
 
-        person = next(p for p in crew.by_id.values() if p.code == decision.assigned_to)
+        person = crew.by_code[decision.assigned_to]
         order.status = MaintenanceStatus.ASSIGNED
         order.assigned_to = person.code
         order.assigned_at = now
@@ -643,7 +737,7 @@ def explain(session: Session, order_code: str, now: datetime | None = None) -> d
     would decide now are two different answers and conflating them is how a
     supervisor ends up mistrusting both.
     """
-    now = now or utcnow()
+    now = _at(now)
     order = _maintenance.get(session, order_code)
     crew = _read_crew(session)
     prepared = [(rule, _scope_of(session, rule)) for rule in rules(session)]
@@ -722,7 +816,7 @@ def roster(session: Session, shift: str | None = None, now: datetime | None = No
     has nobody rostered, which is a finding about the calendar and not an empty
     crew (house rule 2).
     """
-    now = now or utcnow()
+    now = _at(now)
     found = (calendar.resolve_shift(session, shift, equipment_id) if shift
              else calendar.shift_for(session, now, equipment_id))
     if found is None:
@@ -730,13 +824,11 @@ def roster(session: Session, shift: str | None = None, now: datetime | None = No
                 "why_empty": calendar.nothing_to_window(session, equipment_id)}
 
     crew = _read_crew(session)
-    rows = _rostered(crew, found.code, found.day)
     people = []
-    for row in sorted(rows, key=lambda r: crew.by_id[r.personnel_id].code
-                      if r.personnel_id in crew.by_id else ""):
-        person = crew.by_id.get(row.personnel_id)
-        if person is None:
-            continue
+    # Already in person-code order: `_rostered` sorts it, and the dispatcher
+    # reads the same list in the same order, so the page and the decision
+    # cannot disagree about who was looked at first.
+    for row, person in _rostered(crew, found.code, found.day):
         held = crew.skills.get(person.id, {})
         people.append({
             "person": person.code, "name": person.name,

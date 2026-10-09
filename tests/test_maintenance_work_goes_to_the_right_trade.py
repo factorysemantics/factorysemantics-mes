@@ -6,7 +6,7 @@ skill, everybody busy, no rule covers it - because an MES that silently leaves
 an order at `due` with no reason on it is an MES whose backlog nobody reads.
 """
 
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime, time, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -21,9 +21,11 @@ from fsmes.domain import (
 )
 from fsmes.services import Forbidden, calendar, dispatch, maintenance, masterdata
 
-#: A Thursday inside the day shift, on the plant's own clock (the suite pins
-#: the plant to UTC), so every test here agrees about which shift is running.
-NOON = datetime(2026, 10, 8, 12, 0, tzinfo=timezone.utc)
+#: A Thursday inside the day shift, on the plant's own clock: naive UTC, which
+#: is the one timestamp convention this product has (`fsmes.db.utcnow`) and so
+#: the only kind of instant a plant ever hands the dispatcher. Every test here
+#: agrees about which shift is running because of it.
+NOON = datetime(2026, 10, 8, 12, 0)
 
 
 @pytest.fixture()
