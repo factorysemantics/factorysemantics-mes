@@ -28,7 +28,9 @@ def register(mcp, call, write, identify) -> dict:
 
     @mcp.tool()
     def maintenance_plans(plant: str, machine: str | None = None) -> dict:
-        """Every preventive plan with how far through its interval it is."""
+        """Every preventive plan with how far through its interval it is, how
+        long the job takes, and what it needs of the line - `needs_stop` and
+        `window` - which is the other half of the cost of doing it now."""
         out = call(plant, "GET", "/maintenance/plans")
         if isinstance(out, dict) and "error" in out:
             return out
@@ -38,11 +40,28 @@ def register(mcp, call, write, identify) -> dict:
     @mcp.tool()
     def maintenance_work(plant: str, machine: str | None = None, open_only: bool = True,
                          limit: int = 50) -> dict:
-        """Maintenance orders, newest first: due, in progress, or done, with
-        who did them, what they found, and the downtime they cost."""
+        """Maintenance orders, newest first: due, given to somebody, in
+        progress, or done - with who did them, what they found, and the
+        downtime they cost.
+
+        Every row says what the job needs of the line: `needs_stop` and
+        `window` (anytime, between_orders, end_of_shift). They are the answer
+        to "why is this order still at `assigned` eight hours after it was
+        raised" - a condenser clean that needs the line stopped on a line that
+        ran to the end of its order was not ignored, it never had its chance -
+        so read them before offering a reason of your own. `started_at` null
+        with a named `assigned_to` is a job nobody has walked over to yet.
+
+        open_only leaves out the finished work; pass it false to see what this
+        shift actually got done, each with `performed_by`, `findings` and
+        `downtime_minutes` (0 for a job the machine ran through)."""
         path = f"/maintenance/orders?limit={limit}" + (f"&equipment={machine}" if machine else "")
         if open_only:
-            path += "&status=due&status=in_progress"
+            # Open means "not finished", and an order somebody has been given
+            # is open work. Leaving `assigned` out of this filter hid the one
+            # row a maintenance question most often turns on: the job that was
+            # handed out and has not been started.
+            path += "&status=due&status=assigned&status=in_progress"
         out = call(plant, "GET", path)
         if isinstance(out, dict) and "error" in out:
             return out
