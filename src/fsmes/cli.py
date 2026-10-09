@@ -2439,6 +2439,12 @@ def score(
     typer.echo(f"    scripted breakdowns detected            : "
                f"{'unknown - not observed' if rec is None else f'{rec:.0%}'}"
                f"  ({m['faults_scored']}/{m['faults_scripted']} scored)")
+    # Only when somebody asked the MES about maintenance. A plant whose key
+    # names no maintenance link gets no line here rather than a zero, which
+    # would read as a shift in which nobody did any work.
+    done_jobs = m.get("maintenance_done")
+    if done_jobs is not None:
+        typer.echo(f"    maintenance orders finished             : {done_jobs}")
 
     # The chain, when this line wrote one down. One line per link, because
     # the question a reader has is "which link did the MES lose", and three
@@ -2697,6 +2703,12 @@ def run_operations(
                                           "book (MES_OPS_PLAN_EVERY). How deep it keeps the "
                                           "book is the pack's `planning.keep_planned`, which "
                                           "is 0 - no planner - unless a pack says otherwise."),
+    crew_every: float = typer.Option(float(os.environ.get("MES_OPS_CREW_EVERY", "20")),
+                                     help="Seconds between the maintenance crew's looks at "
+                                          "the work it has been given (MES_OPS_CREW_EVERY). "
+                                          "Whether anybody looks at all is the pack's "
+                                          "`maintenance.crew`, which is off unless a pack "
+                                          "says otherwise."),
     inspect_all: bool = typer.Option(os.environ.get("MES_OPS_INSPECT_ALL", "false").lower() == "true",
                                      help="Record every specification each pass, not one (MES_OPS_INSPECT_ALL)."),
     finish_orders: bool = typer.Option(
@@ -2736,6 +2748,14 @@ def run_operations(
     already makes. That is not the floor inventing production either - it is
     the person a plant with no ERP does not have, and the order it writes is
     planned, never released: the supervisor still puts it on the line.
+
+    A pack that asks for one also gets a maintenance crew: the people the
+    supervisor's rules handed the work to walk over, start the order, and
+    finish it with what they found and how long the machine was down. They do
+    not decide when - the order says whether the job needs the line stopped
+    and which window it can be done in, so a job that waits for a stop waits,
+    and a Maintenance tab with an order still at `assigned` at the end of a
+    shift is a record of the shift rather than a step nobody wrote.
     """
     import asyncio as _asyncio
 
@@ -2756,13 +2776,19 @@ def run_operations(
         # The planner's look too: a plant replaying a day in an hour burns
         # through its book twenty-four times as fast.
         plan_every = plan_every / speed
+        # The crew's look too, and for the reason the stop watch has: a job
+        # that takes twenty line minutes is over in forty seconds at 30x, and
+        # a crew looking every twenty real seconds would be walking to the
+        # machine for most of it.
+        crew_every = crew_every / speed
     _asyncio.run(run_floor(settings, inspect_every=inspect_every,
                            issue_every=issue_every, watch_every=watch_every,
-                           plan_every=plan_every,
+                           plan_every=plan_every, crew_every=crew_every,
                            speed=speed, seed=seed, inspect_all=inspect_all,
                            finish_orders=finish_orders,
                            plan_orders=plan_orders,
-                           password=settings.operator_password))
+                           password=settings.operator_password,
+                           crew_password=settings.operator_password))
 
 
 @app.command("draft-instructions")

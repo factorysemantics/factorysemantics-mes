@@ -872,6 +872,10 @@ def _on_now(crew: _Crew, person_id: int, now: datetime) -> dict | None:
     return {
         "order": order.code,
         "equipment": order.equipment.code,
+        # The plan, because the job is the plan's and a reader who wants to
+        # know what the mechanic is actually doing to the machine has to be
+        # able to get from the person to it in one step.
+        "plan": order.plan.code if order.plan else None,
         "summary": order.summary,
         "status": order.status.value,
         "since": since,

@@ -34,11 +34,16 @@ one in the book. The audit row carries their name. Nothing here invents an
 order: when the book is empty the floor says so, once, and the line's counts
 become unassigned production, which is the true answer (decision 0019).
 
-The supervisor also raises the maintenance work that has come due, if the
-floor script asks. What he does NOT do is start it: a plant whose shift raises
-its own preventive work and then runs to the end of the order leaves that work
-sitting at `due`, and that is a record rather than a gap - see
-`raise_what_is_due` and the `maintenance` block of a pack's `floor.json`.
+The supervisor also raises the maintenance work that has come due and runs the
+rules that hand it out, if the floor script asks. Who does it is the simulated
+crew, if the script asks for one: each mechanic on this shift's roster walks to
+his machine, starts the order the rules gave him, and finishes it with what he
+found and how long the machine was down. He asks two questions first, and they
+are the plant's own data rather than this module's opinion - is my window open,
+and can I get at the machine - so the job that needs the line stopped waits for
+the line to be stopped, all shift if that is how the shift went. An order still
+at `assigned` at the end of it is a record and not a gap: see `work_the_list`
+and the `maintenance` block of a pack's `floor.json`.
 """
 
 from __future__ import annotations
@@ -73,6 +78,69 @@ ACTIVE_STATUSES = ("released", "running")
 #: Far enough away that an order with no due date sorts after every order that
 #: has one, rather than ahead of all of them the way an empty string would.
 _NO_DUE_DATE = "9999-12-31T23:59:59"
+
+#: How long a mechanic takes to get to the machine with his tools, in line
+#: seconds, when a pack's floor script does not say. Without it an order is
+#: assigned and started in the same second, and the Maintenance page shows a
+#: plant where nobody walks anywhere.
+_WALK_S = 180.0
+
+#: How long a machine must have been standing before somebody opens it for a
+#: job that needs it stopped, in line seconds, when a pack does not say.
+#: A mechanic does not take the filler apart because the conveyor starved it
+#: for forty seconds: a job that needs the line stopped waits for the line to
+#: be stopped, and ten minutes is the difference between a hiccup and a stop.
+#: It is also what keeps this floor from writing a stop of its own across a
+#: changeover the line was already having - two stops in the records for one
+#: machine that stopped once, and a planned stop read as downtime.
+_STANDING_S = 600.0
+
+#: How long a job takes when no plan says so. A corrective order raised
+#: against a machine has no plan behind it and therefore no expected time; the
+#: product's dispatcher assumes one the same way, for the same reason.
+_ASSUMED_JOB_MINUTES = 30.0
+
+#: The windows this floor knows how to read. An order whose window is a word
+#: that is not here waits, and says so once: guessing at it would be this
+#: floor deciding when a plant may stop its line.
+_WINDOWS = ("anytime", "between_orders", "end_of_shift")
+
+
+@dataclass
+class _Job:
+    """One maintenance order in one person's hands, as this floor sees it.
+
+    Two of these facts are the floor's own and the MES has no column for
+    either: the instant somebody set off for the machine, and the instant the
+    machine actually went down for the job. Everything else here - the order,
+    the person, the plan - is the plant's, and is read back from the roster
+    every pass rather than remembered.
+    """
+
+    order: str
+    person: str
+    equipment: str
+    plan: str | None
+    needs_stop: bool
+    #: How long this job takes, in line minutes: the plan's expected time give
+    #: or take a tenth, from this run's own seeded stream.
+    minutes: float
+    #: This floor's own monotonic clock, in its own seconds - so a replay at
+    #: 30x walks and works thirty times as fast as the plant it is replaying.
+    at_the_machine: float
+    #: When the job will be finished. None until it has been started: a job
+    #: nobody has started has no end, which is not the same as one ending now.
+    finished_at: float | None = None
+    #: When the machine went down for this job, and when it came back up. Both
+    #: None when the job needs no stop - which is nought minutes of downtime
+    #: against the order and not an unknown number of them.
+    stopped_at: float | None = None
+    came_back_at: float | None = None
+    #: What the machine was doing when the mechanic got there, so it can be
+    #: handed back the way it was found.
+    found_state: str | None = None
+    #: Said once per job, not once a pass.
+    said_the_line_took_it_back: bool = False
 
 
 def _book_position(order: dict) -> tuple:
@@ -371,6 +439,20 @@ class Floor:
         # One re-sign-in at a time. Six loops share this client, and six
         # tasks noticing the same expiry would otherwise sign in six times.
         self._signing_in = asyncio.Lock()
+        # The maintenance jobs this floor's crew has in hand: person code ->
+        # the one job that person is on. One person, one job at a time - the
+        # same rule the product's dispatcher keeps on its side of the API.
+        self._jobs: dict[str, _Job] = {}
+        # Why each job that has been given out and not started is waiting, as
+        # last said. A shift's worth of "still waiting" every twenty seconds
+        # is noise; the moment the reason CHANGES is the record. On this pack
+        # the reason never changes, which is chain link 2 saying itself.
+        self._waiting: dict[str, str] = {}
+        # Said once each, not once a pass: a plan nobody wrote findings for,
+        # an order somebody else started, and a shift nobody is rostered on.
+        self._said_no_findings: set[str] = set()
+        self._said_somebody_else_started_it: set[str] = set()
+        self._said_nobody_is_rostered = False
         # That this plant's book holds no pattern to continue is said once.
         # A planner on a plant whose book has never had an order in it has
         # nothing to plan from, and saying so every minute would bury it.
@@ -587,16 +669,13 @@ class Floor:
         this only decides that somebody looked, which is the part that
         belongs to the floor and not to the MES.
 
-        It does not start anything, and there is deliberately no step here
-        that could. This shift raises its work and runs to the end of the
-        order, so the orders it raises sit at `due` until somebody with a
-        spanner gets to them - which is the commonest thing in a bottling
-        plant and, on this pack, link 2 of the chain in `line.json`. The
-        absence is the record: this product has no `deferred` status, so an
-        order still at `due` eight hours later with no `maintenance.started`
-        audit row beside it is the only true way to write down that nobody
-        went. `floor.json` says all of this in its `maintenance` block,
-        including what would change if a floor ever learned to perform it.
+        It does not start anything. Raising work is one act, handing it out
+        is another and doing it is a third, and they belong to three different
+        people on a real shift - `dispatch_the_backlog` and `work_the_list`
+        are the other two, each with its own key in the script. A plant whose
+        pack asks for this one alone gets its plans coming due as orders with
+        nobody's name on them, which is a real plant with no rules written
+        down.
 
         Off unless the script asks, like everything else here: a pack with no
         `maintenance` block gets a plant whose plans come due with no orders
@@ -634,11 +713,13 @@ class Floor:
         decides that somebody ran the rules, which is the part that belongs to
         the floor.
 
-        It still does not start anything. An order at `assigned` is an order
-        somebody has been given and not yet walked over to, which is a real
-        and common state in a bottling plant and the one this pack's chain
-        reads: given to an electrician in the first minutes, never started,
-        eight hours later.
+        It still does not start anything: an order at `assigned` is an order
+        somebody has been given and not yet walked over to. Whether anybody
+        ever does is `work_the_list`, and a plant that asks for this key and
+        not that one is a plant whose work is given out and waits - which is
+        exactly the state this pack's chain reads at its second link: given to
+        an electrician in the first minutes, still his eight hours later,
+        because the job needs the line stopped and the line ran all shift.
 
         Off unless the script asks. A pack with no `dispatch` key gets a plant
         whose due work sits at `due` with nobody's name on it - which is a real
@@ -666,6 +747,409 @@ class Floor:
                      because=out.get("unassigned_by_reason") or {},
                      started="none - this shift gives work out, it does not do it")
         return out
+
+    # ---------------------------------------------------------------- the crew
+
+    async def work_the_list(self) -> list[str]:
+        """The crew does the work it was given: walks over, starts, finishes.
+
+        What #157 left out. The rules hand an order to a named person and the
+        Maintenance page shows their name against it; until something does the
+        job, that page is a list rather than a plant.
+
+        One pass, for each person on this shift's roster who has been given a
+        job: ask the two questions a mechanic asks, and if both answer yes,
+        set off. **Is my window open** - the order's own, copied from the plan
+        when it was raised: `anytime` always, `between_orders` only while
+        nothing is on the line, `end_of_shift` only inside the last of it.
+        **Can I get at the machine** - either the job needs no stop, or the
+        machine has been standing long enough that the stop is the line's and
+        not a hiccup. Neither question is answered here: both are read off the
+        order and the machine, and what counts as long enough is the pack's.
+
+        Then the walk (`walk_s`), then `start` as that person, then the job's
+        expected time give or take a tenth, then `complete` with what he found
+        and how long the machine was down. A job that needs a stop books one -
+        `down`, named with the plant's own word for planned maintenance and
+        the order's code in the sentence - so the stop and the job are one
+        event in the records rather than two. A job that needs none books
+        nought minutes of downtime, because the machine never stopped.
+
+        What it does NOT do is matter as much: it never stops a machine that
+        is making something, it never finishes an order it did not watch
+        start, and it never invents a reason for a job that waits. The orders
+        that wait say why, once each, in the log - and on this pack the answer
+        is the same all shift, which is what makes chain link 2 a record.
+
+        Off unless the script asks. Every pack written before 2026-10-09
+        behaves exactly as it did: the work is raised, handed out, and waits.
+        """
+        wanted = self.script.get("maintenance") or {}
+        if not wanted.get("crew"):
+            return []
+        try:
+            # Three reads, once a pass, and each of them answers a question
+            # the others cannot: who is on shift and what they hold, what the
+            # machines are doing, and whether the line is between orders.
+            roster = await self.get("/maintenance/roster")
+            states = {row.get("equipment"): row
+                      for row in await self.get("/equipment/states")}
+            book = await self.get("/workorders", status=["released", "running"], limit=1)
+        except httpx.HTTPError as exc:
+            log.warning("the crew could not read what it had been given",
+                        error=str(exc)[:160])
+            return []
+
+        if not roster.get("shift"):
+            # Nobody is rostered, which is a fact about the calendar and not
+            # an empty crew. Said once: a plant with no shift patterns would
+            # otherwise say it every twenty seconds for ever.
+            if not self._said_nobody_is_rostered:
+                self._said_nobody_is_rostered = True
+                log.info("nobody is rostered at the moment, so nobody is doing the "
+                         "maintenance work this plant has given out",
+                         why=roster.get("why_empty"))
+            return []
+        self._said_nobody_is_rostered = False
+
+        between_orders = not book.get("items")
+        ends = _as_moment((roster.get("shift") or {}).get("ends"))
+        now = time.monotonic()
+        finished: list[str] = []
+        # The jobs already in somebody's hands first, and from this floor's
+        # own list rather than from the roster: a mechanic whose shift ended
+        # while he was inside a machine still has to put the cover back on and
+        # hand it over, and a job dropped here would leave an order in
+        # progress and a machine down for the rest of the run.
+        for job in list(self._jobs.values()):
+            if await self._get_on_with_it(job, states, now):
+                finished.append(job.order)
+        for person in roster.get("people") or []:
+            code = str(person.get("person") or "")
+            if code in self._jobs:
+                continue
+            on_now = person.get("on_now")
+            if not on_now or not person.get("available"):
+                # Nothing in their hands, or they are not on the floor at all
+                # - off sick, on a course. The roster row says which, and the
+                # dispatcher has already read the same row.
+                continue
+            if on_now.get("status") != "assigned":
+                self._leave_it_to_whoever_started_it(code, on_now)
+                continue
+            await self._set_off(code, on_now, states, between_orders, ends, now)
+        return finished
+
+    def _window_is_open(self, window, minutes: float, between_orders: bool,
+                        ends: datetime | None) -> tuple[bool, str]:
+        """Whether a job may be done at this moment, and the sentence why.
+
+        The reason comes back whichever way the answer goes, because a job
+        that waits all shift has to be able to say why on a screen and in a
+        log. `end_of_shift` is read against the plant's own calendar on the
+        plant's own clock, not against line time: a shift is eight hours
+        wherever it is replayed, so an eight-hour shift played in sixteen
+        minutes never reaches its own last hour, and a job that waits for the
+        end of the shift honestly waits.
+        """
+        if window in (None, "anytime"):
+            return True, "the job can be done at any time"
+        if window not in _WINDOWS:
+            return False, (f"the order's window is {window}, which this floor does not "
+                           "know how to read, so nobody goes")
+        if window == "between_orders":
+            if between_orders:
+                return True, "the line is between orders"
+            return False, ("the job can only be done between orders and the line is "
+                           "running one")
+        if ends is None:
+            return False, ("the job can only be done at the end of the shift and "
+                           "nothing says when this shift ends")
+        left = (ends - _utcnow()).total_seconds() / 60.0
+        if 0.0 <= left <= minutes:
+            return True, f"the shift ends in {left:.0f} minutes and the job takes {minutes:.0f}"
+        return False, (f"the job can only be done in the last {minutes:.0f} minutes of the "
+                       f"shift, and there are {left:.0f} to go")
+
+    def _can_get_at_it(self, equipment: str, states: dict) -> tuple[bool, str]:
+        """Whether a job that needs the machine stopped can have it.
+
+        Stopped is not the same as momentarily idle. A machine that has been
+        standing for `standing_s` line seconds is a machine the line has
+        stopped; one that went quiet thirty seconds ago is starved, and a
+        mechanic who took it apart would be the reason the line could not
+        restart. The figure is the pack's, and `_standing_s` beside it says
+        what it is for.
+
+        A machine this MES holds no state for answers no, not yes: nothing
+        here can say that a machine nobody has ever reported on is stopped
+        (unknown is not zero), and the order waits with that written down.
+        """
+        row = states.get(equipment) or {}
+        state = str(row.get("state") or "")
+        if not state:
+            return False, (f"the job needs {equipment} stopped and this MES holds no "
+                           "state for it at all, so nothing here can say that it is")
+        if state == "running":
+            return False, f"the job needs {equipment} stopped and it is running"
+        since = _as_moment(row.get("since"))
+        if since is None:
+            return False, (f"{equipment} is {state} and nothing says since when, so "
+                           "nothing here can say the line has stopped it")
+        wanted = float((self.script.get("maintenance") or {}).get("standing_s", _STANDING_S))
+        # In line seconds: an interval that lasted ten line minutes is over in
+        # twenty of this floor's seconds on a replay at 30x, and a floor
+        # reading the wall clock here would call every hiccup a stop.
+        standing = max((_utcnow() - since).total_seconds(), 0.0) * self.speed
+        if standing < wanted:
+            return False, (f"{equipment} has been {state} for {standing:.0f} line seconds "
+                           f"and a job that needs it stopped waits for {wanted:.0f}, "
+                           "because a machine that has just gone quiet is starved and "
+                           "not stopped")
+        return True, (f"{equipment} has been {state} for {standing / 60.0:.0f} line "
+                      "minutes, so the line has stopped it")
+
+    def _say_once_why_it_waits(self, order: str, because: str) -> None:
+        """Why a job that was given out has not been started, once per reason.
+
+        The reason changing is the event, not the waiting: an order whose
+        answer is the same at eight in the morning and at two in the afternoon
+        has one line in the log, and an order that was waiting for the line
+        and is now waiting for a person has two.
+        """
+        if self._waiting.get(order) == because:
+            return
+        self._waiting[order] = because
+        log.info("a job that was handed out is waiting", order=order, because=because)
+
+    def _leave_it_to_whoever_started_it(self, person: str, on_now: dict) -> None:
+        """An order in progress that nobody on this floor started.
+
+        A restart of this floor mid-job, or a person on the screen. It is left
+        alone: nobody here watched it begin, so nobody here knows when it is
+        finished, and completing it with findings this floor made up would put
+        fiction in the records under a real person's name.
+        """
+        order = str(on_now.get("order") or "")
+        if not order or order in self._said_somebody_else_started_it:
+            return
+        self._said_somebody_else_started_it.add(order)
+        log.info("an order is in progress that this floor did not start, so it is left "
+                 "to whoever did", order=order, person=person,
+                 since=on_now.get("since"), minutes=on_now.get("minutes"))
+
+    async def _set_off(self, person: str, on_now: dict, states: dict,
+                       between_orders: bool, ends: datetime | None, now: float) -> None:
+        """Send one person to one machine, if the job can be done now."""
+        order = str(on_now.get("order") or "")
+        if not order:
+            return
+        minutes = float(on_now.get("expected_minutes") or _ASSUMED_JOB_MINUTES)
+        open_now, because = self._window_is_open(
+            on_now.get("window"), minutes, between_orders, ends)
+        if not open_now:
+            self._say_once_why_it_waits(order, because)
+            return
+        equipment = str(on_now.get("equipment") or "")
+        if on_now.get("needs_stop"):
+            can, why_not = self._can_get_at_it(equipment, states)
+            if not can:
+                self._say_once_why_it_waits(order, why_not)
+                return
+        wanted = self.script.get("maintenance") or {}
+        walk = float(wanted.get("walk_s", _WALK_S))
+        self._jobs[person] = _Job(
+            order=order, person=person, equipment=equipment,
+            plan=on_now.get("plan"), needs_stop=bool(on_now.get("needs_stop")),
+            # Give or take a tenth, from this run's own stream: six identical
+            # jobs taking exactly their planned minutes is a spreadsheet, and
+            # the downtime figures off it would all be the same number.
+            minutes=minutes * (1.0 + self.rng.uniform(-0.1, 0.1)),
+            at_the_machine=now + walk / self.speed)
+        self._waiting.pop(order, None)
+        log.info("a mechanic is on his way", person=person, order=order,
+                 equipment=equipment, because=because, walk_line_s=walk,
+                 job_line_minutes=round(self._jobs[person].minutes, 1))
+
+    async def _get_on_with_it(self, job: _Job, states: dict, now: float) -> bool:
+        """Move one job in somebody's hands along. True when it is finished."""
+        if now < job.at_the_machine:
+            return False
+        if job.finished_at is None:
+            await self._start_it(job, states, now)
+            return False
+        if job.needs_stop and job.stopped_at is not None and job.came_back_at is None:
+            row = states.get(job.equipment) or {}
+            if str(row.get("state")) != "down" or job.order not in str(row.get("reason") or ""):
+                # The line took the machine back while the job was still
+                # going: the tags are the authority on what a machine is
+                # doing, and this floor is not going to argue with them. The
+                # downtime the order gets is what was measured, not what was
+                # planned.
+                job.came_back_at = now
+                if not job.said_the_line_took_it_back:
+                    job.said_the_line_took_it_back = True
+                    log.info("the line took the machine back before the job was finished, "
+                             "so the stop against the order is the part that was measured",
+                             order=job.order, equipment=job.equipment,
+                             state=row.get("state"))
+        if now < job.finished_at:
+            return False
+        return await self._finish_it(job, now)
+
+    async def _start_it(self, job: _Job, states: dict, now: float) -> None:
+        """He is at the machine. Start the order, and stop the machine if the
+        job needs it stopped.
+
+        `performed_by` is how the audit trail names the mechanic without
+        inventing a login for him. The simulated floor signs in as itself, as
+        it always has, and the row says whose work it was - which is what a
+        plant with seven trades and one terminal in the workshop actually
+        records.
+        """
+        try:
+            response = await self.post(f"/maintenance/orders/{job.order}/start",
+                                       json={"performed_by": job.person})
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            # Reassigned, started, or cancelled while he walked over. Dropped
+            # rather than retried: the next pass reads the roster again and
+            # finds whatever he actually has.
+            log.warning("the order could not be started", order=job.order,
+                        person=job.person, error=str(exc)[:160])
+            self._jobs.pop(job.person, None)
+            return
+        job.finished_at = now + job.minutes * 60.0 / self.speed
+        if job.needs_stop:
+            job.found_state = str((states.get(job.equipment) or {}).get("state") or "") or None
+            if await self._stop_the_machine(job):
+                job.stopped_at = now
+        log.info("a mechanic started a job", person=job.person, order=job.order,
+                 equipment=job.equipment, needs_stop=job.needs_stop,
+                 machine_was=job.found_state,
+                 stopped_for_it=job.stopped_at is not None,
+                 job_line_minutes=round(job.minutes, 1))
+
+    async def _stop_the_machine(self, job: _Job) -> bool:
+        """Book the machine down for the job, named with the plant's own word.
+
+        The order's code goes in the sentence, so the stop and the job are one
+        event in the records rather than two things a reader has to join by
+        eye. The word is the plant's - `stop_reason` in the script, a code
+        from its approved downtime vocabulary - because which of its words a
+        stop gets named with is a site decision, and this floor never chooses
+        one of its own.
+
+        A refused write is said out loud and the job goes on: the mechanic is
+        at the machine either way, and an order completed with no stop against
+        it is a smaller lie than one that claims a stop the records do not
+        have.
+        """
+        body = {"state": "down", "reason": f"planned maintenance {job.order}"}
+        code = (self.script.get("maintenance") or {}).get("stop_reason")
+        if code:
+            body["reason_code"] = str(code)
+        try:
+            response = await self.post(f"/equipment/{job.equipment}/state", json=body)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            log.warning("the machine could not be booked down for the job, so the job "
+                        "goes on the records with no stop against it",
+                        order=job.order, equipment=job.equipment,
+                        reason_code=code, error=str(exc)[:160])
+            return False
+        return True
+
+    async def _hand_it_back(self, job: _Job) -> None:
+        """Give the machine back the way it was found, if it is still his.
+
+        The line's own tags are the authority on what a machine is doing. One
+        that the replay or the OPC agent has already moved on is not written
+        over from here: the mechanic standing in front of it is not who
+        decided that, and two writers arguing over one machine is how a
+        timeline stops being readable.
+        """
+        if job.stopped_at is None or job.came_back_at is not None:
+            return
+        try:
+            rows = await self.get("/equipment/states")
+        except httpx.HTTPError as exc:
+            log.warning("could not read the machine back before handing it over",
+                        equipment=job.equipment, error=str(exc)[:160])
+            return
+        row = next((r for r in rows if r.get("equipment") == job.equipment), None) or {}
+        if str(row.get("state")) != "down" or job.order not in str(row.get("reason") or ""):
+            job.came_back_at = time.monotonic()
+            return
+        if not job.found_state or job.found_state == "down":
+            # It was already down when he got there - a breakdown somebody
+            # else is working on, or a machine the plant had stopped. There is
+            # nothing to give back and nothing honest to say it was.
+            return
+        try:
+            response = await self.post(f"/equipment/{job.equipment}/state",
+                                       json={"state": job.found_state})
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            log.warning("the machine could not be handed back after the job",
+                        equipment=job.equipment, state=job.found_state,
+                        error=str(exc)[:160])
+            return
+        job.came_back_at = time.monotonic()
+
+    def _what_he_found(self, job: _Job) -> str | None:
+        """What the mechanic writes in the box, from the plan's own list.
+
+        One list per plan in the script, because what a greaser finds on a
+        palletiser arm and what an electrician finds in a condenser are
+        different sentences and neither of them belongs in Python. A plan with
+        no list is completed with nothing written against it, which is honest:
+        a job somebody did and wrote nothing about.
+        """
+        lists = (self.script.get("maintenance") or {}).get("findings") or {}
+        said = lists.get(job.plan or "") or []
+        if not said:
+            if job.plan and job.plan not in self._said_no_findings:
+                self._said_no_findings.add(job.plan)
+                log.info("this plan has no findings written down, so its jobs are "
+                         "completed with none", plan=job.plan)
+            return None
+        return str(self.rng.choice(list(said)))
+
+    async def _finish_it(self, job: _Job, now: float) -> bool:
+        """The job is done: hand the machine back and close the order.
+
+        `downtime_minutes` is measured rather than planned - from the instant
+        the machine went down for this job to the instant it came back - and
+        a job that needed no stop books nought, because the machine never
+        stopped. A plant whose preventive orders all booked their planned
+        minutes as downtime would have a pareto made of the plan rather than
+        of the shift.
+        """
+        await self._hand_it_back(job)
+        minutes = 0.0
+        if job.stopped_at is not None:
+            held = max((job.came_back_at or now) - job.stopped_at, 0.0)
+            minutes = round(held * self.speed / 60.0, 1)
+        findings = self._what_he_found(job)
+        try:
+            response = await self.post(
+                f"/maintenance/orders/{job.order}/complete",
+                json={"findings": findings, "downtime_minutes": minutes,
+                      "performed_by": job.person})
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            log.warning("the order could not be completed", order=job.order,
+                        person=job.person, error=str(exc)[:160])
+            self._jobs.pop(job.person, None)
+            return False
+        self._jobs.pop(job.person, None)
+        log.info("a mechanic finished a job", person=job.person, order=job.order,
+                 equipment=job.equipment, downtime_minutes=minutes,
+                 needs_stop=job.needs_stop, findings=findings,
+                 took_line_minutes=round(
+                     max(now - job.at_the_machine, 0.0) * self.speed / 60.0, 1))
+        return True
 
     async def current_shift(self) -> str | None:
         """Which shift the plant says is running, cached for a minute.
@@ -1478,16 +1962,17 @@ class Floor:
 async def run(settings: Settings, *, inspect_every: float = 8.0,
               issue_every: float = 25.0, review_every: float = 90.0,
               supervise_every: float = 20.0, watch_every: float = 15.0,
-              plan_every: float = 60.0,
+              plan_every: float = 60.0, crew_every: float = 20.0,
               speed: float = 1.0,
               seed: int = 0, user: str = "FLOOR-SIM", password: str = "operator",
               supervisor: str = "FLOOR-SUP", supervisor_password: str = "supervisor",
               planner: str = "FLOOR-PLAN", planner_password: str = "planner",
+              crew_user: str = "FLOOR-CREW", crew_password: str = "operator",
               inspect_all: bool = False, finish_orders: bool = True,
               plan_orders: bool = True) -> None:
     """Generate shop-floor activity until stopped.
 
-    Three identities, because the plant has three: the floor (an operator)
+    Four identities, because the plant has four: the floor (an operator)
     records checks and issues material; the shift supervisor closes
     non-conformances, finishes an order the line has made the number for and
     releases the next one in the book; the production planner puts the next
@@ -1505,6 +1990,14 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
     pack's `planning.keep_planned`, and **zero - no planner at all - is the
     default**, so a pack that says nothing behaves exactly as it did before
     this existed.
+
+    The maintenance crew is the fourth, and it is one account rather than
+    seven: a workshop has a terminal, and a mechanic's name reaches the audit
+    trail as `performed_by` on the work he did rather than as a login nobody
+    issued. `crew_every` is how often the crew looks at what it has been
+    given; whether anybody looks at all is the pack's `maintenance.crew`, and
+    **off is the default**, so a pack that says nothing has its work raised
+    and handed out and waiting, exactly as before.
 
     `finish_orders` is False for a scripted over-run, where nobody stopping
     the line is the whole point. `plan_orders` is False for the same reason
@@ -1536,12 +2029,16 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
                  "topped up", keep_planned=keep, plan_orders=False)
         keep = 0
 
+    does_the_work = bool((script.get("maintenance") or {}).get("crew"))
+
     async with httpx.AsyncClient(base_url=base, timeout=20.0) as client, \
             httpx.AsyncClient(base_url=base, timeout=20.0) as sup_client, \
-            httpx.AsyncClient(base_url=base, timeout=20.0) as plan_client:
+            httpx.AsyncClient(base_url=base, timeout=20.0) as plan_client, \
+            httpx.AsyncClient(base_url=base, timeout=20.0) as crew_client:
         floor = Floor(settings, client, rng, script, speed)
         shift = Floor(settings, sup_client, rng, script, speed)
         plans_the_book = Floor(settings, plan_client, rng, script, speed)
+        crew = Floor(settings, crew_client, rng, script, speed)
 
         # The API comes up alongside us; keep trying rather than dying first.
         for _attempt in range(60):
@@ -1579,6 +2076,22 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
         else:
             plans_the_book = None
 
+        if does_the_work:
+            try:
+                await crew.sign_in(crew_user, crew_password)
+            except (httpx.HTTPError, KeyError) as exc:
+                # A plant initialised before the crew account existed - every
+                # lab plant built before 2026-10-09. Say so once, and run
+                # exactly as this did before there was a crew: the work is
+                # raised, handed out, and waits. `fsmes plant <name> migrate`
+                # adds the account.
+                log.warning("no maintenance crew account; the work that is raised will "
+                            "be handed out and nobody will start it",
+                            user=crew_user, error=str(exc)[:120])
+                crew = None
+        else:
+            crew = None
+
         gauges_known = await floor.read_the_register()
         if shift is not None and script:
             await shift.read_the_register()
@@ -1591,6 +2104,11 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
                  # quiet after its book runs out should say on startup that
                  # nobody was ever going to plan another.
                  keeps_planned=keep if plans_the_book is not None else None,
+                 # Whether anybody walks over to the machines this run. A
+                 # Maintenance tab that fills up with assigned orders and
+                 # never moves should say on startup that nobody was ever
+                 # going to touch one.
+                 crew_does_the_work=crew is not None,
                  floor_script=str(settings.floor_script_file) if script else None,
                  gauges_on_the_register=gauges_known,
                  # Which characteristics this floor inspects several pieces at
@@ -1713,6 +2231,23 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
                     # and never came back.
                     await floor.read_the_register()
 
+        async def do_the_work() -> None:
+            """Its own loop, because the crew reads its own three things.
+
+            The supervisor's pass raises work and hands it out; this one is
+            the people who were given it, and it runs on its own clock because
+            a mechanic halfway through a job has to be looked in on whether or
+            not anything new has come due.
+            """
+            if crew is None:
+                return
+            while True:
+                await asyncio.sleep(crew_every)
+                try:
+                    await crew.work_the_list()
+                except httpx.HTTPError as exc:
+                    log.warning("the maintenance crew step failed", error=str(exc)[:160])
+
         await asyncio.gather(
             every(inspect_every, do_inspect),
             every(issue_every, do_issue),
@@ -1721,4 +2256,5 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
             watch_the_stops(),
             sample_the_bench(),
             plan_ahead(),
+            do_the_work(),
         )
