@@ -39,7 +39,12 @@ from pathlib import Path
 import pytest
 
 from fsmes.sim import generate
-from fsmes.sim.score import CHAIN_RECORDS, chain_metrics, score_chain
+from fsmes.sim.score import (
+    CHAIN_RECORDS,
+    chain_metrics,
+    maintenance_done,
+    score_chain,
+)
 from fsmes.sim.truth import load_truth, station_to_equipment
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -621,3 +626,98 @@ def test_the_shift_carries_its_key_through_to_ground_truth():
     truth = load_truth(LINE, TAG_MAP)
     assert truth["chain"]["links"][0]["link"] == 1
     assert len(truth["chain"]["links"]) == 4
+
+
+# ------------------------------- the job that waited, and the ones that did not
+
+#: The replay's own clock: naive UTC, the way `score_run` is handed it, and
+#: the way every timestamp the MES answers with is stored.
+SHIFT_START = datetime(2026, 10, 8, 6, 0)
+
+WAITING_LINK = {
+    "links": [{"link": 2, "what": "nobody could get at the condenser",
+               "shows_as": "an order still waiting at assigned", "window_s": [0, 300],
+               "records": [{"kind": "maintenance", "equipment": "FILL01",
+                            "plan": "PM-FILL-CHILLER", "status": "assigned",
+                            "needs_stop": True, "never_started": True}]}],
+}
+
+
+def _order(**over) -> dict:
+    row = {"code": "PM-1", "plan": "PM-FILL-CHILLER", "equipment": "FILL01",
+           "status": "assigned", "needs_stop": True, "started_at": None,
+           "completed_at": None}
+    return {**row, **over}
+
+
+def _maintenance(*orders, complete=True) -> dict:
+    return {"maintenance": {"complete": complete, "total": len(orders),
+                            "items": list(orders)}}
+
+
+def test_an_order_that_waits_because_the_line_never_stopped_is_recorded_as_that():
+    """Link 2 as it reads after the crew exists. The order is at `assigned`
+    and nobody started it, and the record says the reason out of the MES's own
+    column rather than out of the reader's good faith: this job needs the line
+    stopped."""
+    row = score_chain(WAITING_LINK, {"machines": []}, SHIFT_START, 1.0,
+                      _maintenance(_order()))["links"][0]["records"][0]
+
+    assert row["recorded"] is True
+    assert row["needs_stop"] is True
+    assert row["orders"] == ["PM-1"] and row["ever_started"] == []
+    assert "needing the line stopped" in row["why"]
+
+
+def test_an_order_waiting_with_nothing_to_wait_for_is_a_list_nobody_worked():
+    """The same status, a different plant. An order at `assigned` on a job
+    that can be done while the machine runs is not evidence of a line that
+    never stopped - it is a crew that never went, which is a real finding and
+    a different one. The key asked for `needs_stop`, so this is not recorded
+    and the card says what the order actually says."""
+    row = score_chain(WAITING_LINK, {"machines": []}, SHIFT_START, 1.0,
+                      _maintenance(_order(needs_stop=False)))["links"][0]["records"][0]
+
+    assert row["recorded"] is False
+    assert "no order against PM-FILL-CHILLER at assigned and needing the line stopped" \
+        in row["why"]
+
+
+def test_an_order_the_key_says_nobody_started_is_not_recorded_once_somebody_did():
+    """The absence the key asks for, checked as an absence. An order started
+    and put back to `assigned` by hand satisfies the status and falsifies the
+    story; before `never_started` the scorer marked the link recorded and
+    printed the contradiction beside it."""
+    row = score_chain(WAITING_LINK, {"machines": []}, SHIFT_START, 1.0,
+                      _maintenance(_order(started_at=_at(400))))["links"][0]["records"][0]
+
+    assert row["recorded"] is False
+    assert "this link is the job nobody got to" in row["why"]
+    assert row["ever_started"] == ["PM-1"]
+
+
+def test_the_orders_this_run_finished_are_counted_and_last_weeks_are_not():
+    """`maintenance_done` is a number about this run. A plant that has been up
+    for a week has last week's finished orders in the same list, and counting
+    them would credit this replay with somebody else's shift."""
+    evidence = _maintenance(
+        _order(code="PM-OLD", status="done",
+               completed_at=(SHIFT_START - timedelta(days=3)).isoformat()),
+        _order(code="PM-GREASE", plan="PM-PAL-GREASE", status="done",
+               completed_at=(SHIFT_START + timedelta(minutes=40)).isoformat()),
+        _order(code="PM-BEARING", plan="PM-RD-BEARING", status="done",
+               completed_at=(SHIFT_START + timedelta(hours=3)).isoformat() + "Z"),
+        _order(code="PM-CHILLER"))
+
+    assert maintenance_done(evidence, SHIFT_START) == 2
+
+
+def test_a_run_that_asked_the_mes_nothing_about_maintenance_counts_no_work_done():
+    """Not zero. A replay whose key names no maintenance link never fetches
+    the list, and a zero there would read as a shift in which the crew did
+    nothing - which is house rule 2 in one number."""
+    assert maintenance_done({}, SHIFT_START) is None
+    assert maintenance_done(None, SHIFT_START) is None
+    assert maintenance_done({"maintenance": {"complete": False, "total": 9}},
+                            SHIFT_START) is None
+    assert maintenance_done(_maintenance(), SHIFT_START) == 0

@@ -93,6 +93,47 @@ def resolution_sim_seconds(speed: float, observe_interval_s: float) -> float:
     return observe_interval_s * speed
 
 
+def _naive(value) -> datetime | None:
+    """An instant out of a JSON body, comparable with this run's own clock.
+
+    The MES stores naive UTC and answers in ISO 8601, with a zone or without
+    depending on the endpoint; the replay's `t0` is naive. One of each on
+    either side of a comparison is a TypeError, which is how a metric becomes
+    a crash in a scorer three weeks after it was written.
+    """
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value))
+    except (TypeError, ValueError):
+        return None
+    return parsed.replace(tzinfo=None) if parsed.tzinfo else parsed
+
+
+def maintenance_done(evidence: dict | None, t0: datetime) -> int | None:
+    """How many maintenance orders were finished during this run.
+
+    A count and not a column (#154's reason): it is one number about one run
+    of one plant, and the scorecard's `metrics` is where a number that can
+    trend lives. `None` when nobody fetched the maintenance list - a run whose
+    key names no maintenance link asks the MES nothing about maintenance, and
+    a zero there would read as a shift in which nobody did any work.
+
+    Scoped to this run by `completed_at`: a plant that has been up for a week
+    has last week's finished orders in the same list, and counting them would
+    credit this replay with somebody else's shift.
+    """
+    orders = (evidence or {}).get("maintenance")
+    if not isinstance(orders, dict) or orders.get("items") is None:
+        return None
+    done = 0
+    for order in orders["items"]:
+        at = _naive(order.get("completed_at"))
+        if at is not None and at >= t0:
+            done += 1
+    return done
+
+
 def score_run(
     truth: dict,
     timeline: dict,
@@ -325,6 +366,13 @@ def score_run(
             ),
             "idle_stops_scripted": len(idle_checks),
             "idle_stops_scored": len(answered_idle),
+            # How much of its own maintenance backlog this shift got through.
+            # Not a judgement: two done and three waiting is a good shift on a
+            # line that ran all day, and the chain card is where the waiting
+            # is marked. What it catches is a floor that stopped doing the
+            # work at all - which, before this, every replay reported as
+            # silence.
+            "maintenance_done": maintenance_done(chain_evidence, t0),
             **chain_metrics(chain_card),
         },
         "planned_stops": planned_checks,
@@ -492,30 +540,56 @@ def _score_maintenance(record: dict, start: datetime, end: datetime,
     if orders is None:
         return {"recorded": None, "why": "nobody asked the MES for its maintenance orders"}
     plan, status = record.get("plan"), record.get("status")
+    # What the job needs of the line, when the key says. A link whose whole
+    # subject is a job that waited is only recorded if the records say WHY it
+    # waited: an order at `assigned` with `needs_stop` false is a list nobody
+    # worked, which is a different plant and a different conversation. The key
+    # says `needs_stop` and the evidence carries it, so the test is on the
+    # record rather than on a reader's good faith.
+    wants_stop = record.get("needs_stop")
     hits = [o for o in orders
             if o.get("plan") == plan
             and (record.get("equipment") in (None, o.get("equipment")))
-            and o.get("status") == status]
+            and o.get("status") == status
+            and (wants_stop is None or bool(o.get("needs_stop")) is bool(wants_stop))]
     # Whether anybody started one, which is the point of this link on a plant
-    # whose floor raises its work and never goes. Reported beside the verdict
-    # rather than folded into it: "raised and still due" and "raised, started
-    # and finished" are both records, and only the key says which one the
-    # story wanted.
+    # whose floor raises its work and cannot get at the machine. Reported
+    # beside the verdict rather than folded into it: "raised and still
+    # waiting" and "raised, started and finished" are both records, and only
+    # the key says which one the story wanted.
     started = [o.get("code") for o in orders
                if o.get("plan") == plan and o.get("started_at")]
     if not hits and not (evidence.get("maintenance") or {}).get("complete"):
         return {"recorded": None,
                 "why": "the MES's maintenance list came back in part, so an order "
                        f"against {plan} may be on a page nobody fetched"}
+    # `never_started`: the key asking for an absence, which is the only true
+    # record of nobody having gone - this product has no `deferred` status. An
+    # order that was started and put back to `assigned` by hand would satisfy
+    # the status and falsify the story, and before this the scorer would have
+    # marked the link recorded and printed the contradiction beside it.
+    never = bool(record.get("never_started"))
+    recorded = bool(hits) and not (never and started)
+    stop_says = ("" if wants_stop is None else
+                 " and needing the line stopped" if wants_stop else
+                 " and needing no stop")
+    if not hits:
+        why = f"the MES holds no order against {plan} at {status}{stop_says}"
+    elif never and started:
+        why = (f"{len(hits)} order(s) against {plan} at {status}{stop_says}, but "
+               f"{len(started)} against {plan} was started at some point "
+               f"({', '.join(sorted(c for c in started if c))}), and this link is "
+               "the job nobody got to")
+    else:
+        why = (f"{len(hits)} order(s) against {plan} at {status}{stop_says}"
+               + (f", and {len(started)} against {plan} were started at some point"
+                  if started else f", none against {plan} ever started"))
     return {
-        "recorded": bool(hits),
+        "recorded": recorded,
         "orders": [o.get("code") for o in hits],
         "ever_started": started,
-        "why": (f"{len(hits)} order(s) against {plan} at {status}"
-                + (f", and {len(started)} against {plan} were started at some point"
-                   if started else f", none against {plan} ever started")
-                if hits else
-                f"the MES holds no order against {plan} at {status}"),
+        **({"needs_stop": bool(wants_stop)} if wants_stop is not None else {}),
+        "why": why,
     }
 
 

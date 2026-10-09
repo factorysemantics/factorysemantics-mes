@@ -303,6 +303,12 @@ def apply(directory: Path, *, into: Path | None = None, echo=print) -> dict:
             if counts.get("classified"):
                 line += (f", {counts['classified']} given the trade and priority "
                          "they never had")
+            # The other half of the same exception, said the same way: what
+            # the job needs of the line arrived a day after the trade did, and
+            # a plan that has never answered either question is answered here.
+            if counts.get("scheduled"):
+                line += (f", {counts['scheduled']} given the stop and window "
+                         "they never had")
             echo(line)
     else:
         echo("      master data: this pack carries none, so nothing was seeded")

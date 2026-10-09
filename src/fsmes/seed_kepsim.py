@@ -163,8 +163,17 @@ def seed_kepsim_line(session: Session, tag_map: Path | None = None) -> bool:
          TriggerKind.PRODUCED_QTY, 20000.0, 60.0),
         ("PM-PAL-GREASE", "Grease palletiser arm", "PAL01",
          TriggerKind.CALENDAR_DAYS, 7.0, 30.0),
+        # A fortnight rather than running hours, changed 2026-10-09 with the
+        # pack's `_why_trigger` beside it: a bearing's play is felt by hand on
+        # a round, and a round is a date in the diary. The lab half of the
+        # reason is said there too - running hours on this MES are real hours
+        # out of the machine's own state history, so a replay that plays a
+        # shift in sixteen minutes never reaches a runtime plan, and a pack
+        # that means to show maintenance work needs at least one plan besides
+        # the palletiser grease that a replay can reach. The three runtime
+        # plans above stay runtime.
         ("PM-RD-BEARING", "Check denester bearing play", "RD01",
-         TriggerKind.RUNTIME_HOURS, 8.0, 90.0),
+         TriggerKind.CALENDAR_DAYS, 14.0, 90.0),
         # The only one on a calendar that has never been done. A condenser
         # fouls with the weeks it has been running in a warm room, not with
         # the bottles it has filled, so a calendar is its honest trigger -

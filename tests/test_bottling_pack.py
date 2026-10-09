@@ -282,3 +282,100 @@ def test_one_of_the_fillers_scales_is_nearly_due_for_calibration():
     assert register["SCALE-FILL-01"]["due_soon"] is False
     assert register["SCALE-FILL-02"]["due_soon"] is True, register["SCALE-FILL-02"]
     assert register["SCALE-FILL-02"]["overdue"] is False, "a gauge on the floor is in calibration"
+
+
+# ------------------------------------------- what the jobs need of the line
+
+def plan_rows() -> list[dict]:
+    return json.loads((DATA / "maintenance_plans.json").read_text(encoding="utf-8"))
+
+
+def floor() -> dict:
+    return json.loads((PACK / "floor.json").read_text(encoding="utf-8"))
+
+
+def test_every_plan_on_this_plant_says_whether_the_line_must_stop_and_why():
+    """A plan that does not say is a plan the crew reads as "work while it
+    runs", and on a filler that would be a mechanic with his hands inside a
+    machine making bottles. Six plans, each with the field and each with the
+    sentence beside it - the sentence because the field is a judgment about
+    this plant's guarding and this plant's job, and a reader who disagrees
+    with it has to be able to see what it was."""
+    rows = plan_rows()
+    assert len(rows) == 6, "six plans on this line; a seventh needs its own two fields"
+    for row in rows:
+        assert isinstance(row.get("needs_stop"), bool), (
+            f"{row['code']} does not say whether the machine has to be stopped")
+        assert row.get("_why_needs_stop"), f"{row['code']} says it without saying why"
+        assert row.get("window") in ("anytime", "between_orders", "end_of_shift"), (
+            f"{row['code']} names no window the product knows")
+        assert row.get("_why_window"), f"{row['code']} names a window without saying why"
+
+
+def test_the_crew_has_something_to_write_down_for_every_job_it_could_finish():
+    """`findings` is what the mechanic wrote on the job, and an order closed
+    with nothing on it is the row a maintenance report cannot use. The crew
+    reads the list from `floor.json`, so the list has to name plans this
+    plant actually has, and has to cover every one of them: a plan whose
+    findings were forgotten would be the one job that closes blank."""
+    codes = {row["code"] for row in plan_rows()}
+    findings = floor()["maintenance"]["findings"]
+
+    assert set(findings) == codes, (
+        f"findings cover {sorted(set(findings))} and the plant has {sorted(codes)}")
+    for code, lines in findings.items():
+        assert len(lines) >= 2, f"{code} has one finding, so every replay writes the same one"
+        for line in lines:
+            assert line.strip() and not line.startswith("_"), code
+
+
+def test_the_two_jobs_this_shift_is_expected_to_finish_are_jobs_a_replay_can_reach():
+    """The pack states which plans a replayed shift should get through, and
+    the statement is checkable rather than hopeful. Both halves of reachable:
+    the trigger has to be one a compressed replay accrues - running hours are
+    real hours out of the machine's own state history, so a 30x replay of a
+    shift accrues sixteen minutes of them and no runtime plan ever comes due -
+    and the job must not need the line stopped, because this shift's line
+    never stands still long enough for the crew to touch it.
+    """
+    by_code = {row["code"]: row for row in plan_rows()}
+    expected = floor()["maintenance"]["expected_done"]
+
+    assert len(expected) >= 2, "the definition of done asks for two finished orders"
+    for code in expected:
+        plan = by_code[code]
+        assert plan["trigger"] != "runtime_hours", (
+            f"{code} is triggered on running hours, which a replay never accrues")
+        assert plan["needs_stop"] is False, (
+            f"{code} needs the line stopped, and this shift's line does not stop")
+        assert plan["window"] == "anytime", f"{code} would have to wait for its window"
+
+
+def test_the_order_the_chain_hangs_on_is_the_one_job_that_cannot_be_got_at():
+    """Link 2 of the planted chain, as data. The condenser clean needs the
+    filler isolated and waits for the gap between orders, and on this shift
+    the next order is released as the last one finishes - so the order is
+    raised in the first minutes and is still at `assigned` at the end. If
+    this plan were ever made doable the chain would quietly lose a link, and
+    the scorer would say 3/4 with nothing to point at."""
+    chiller = {row["code"]: row for row in plan_rows()}["PM-FILL-CHILLER"]
+
+    assert chiller["needs_stop"] is True
+    assert chiller["window"] == "between_orders"
+    assert chiller["trigger"] == "calendar_days", "it has to be due in the first pass"
+    assert "PM-FILL-CHILLER" not in floor()["maintenance"]["expected_done"]
+
+
+def test_the_pack_sends_a_crew_and_says_what_it_assumes_about_them():
+    """Off by default in the product, on in this pack, and every number the
+    crew reads stated here rather than defaulted in Python - the walk to the
+    machine, how long a machine has to have been standing before a job that
+    needs it stopped may start, and the reason code the stop is booked
+    under. A pack that turned the crew on and left the rest to the code
+    would be a plant whose behaviour is in the product again."""
+    block = floor()["maintenance"]
+
+    assert block["crew"] is True and block["_crew"]
+    assert block["walk_s"] > 0 and block["_walk_s"]
+    assert block["standing_s"] > 0 and block["_standing_s"]
+    assert block["stop_reason"] and block["_stop_reason"]
