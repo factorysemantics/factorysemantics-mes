@@ -55,11 +55,20 @@ already present. It never updates: a pack that changed a routing an order has
 already run against would rewrite history, and a pack has no business doing
 that. `fsmes pack status` reports the drift instead.
 
+**A key beginning with an underscore is a note, not a field.** `_why_needs_stop`
+beside the column it explains, on the row it explains, in the plant's own file -
+checked by nothing and applied by nothing. `line.json` and `floor.json` have
+carried their reasons this way since they existed; master data is where the
+reasons are most wanted and were hardest to put, because the alternative was
+the sentence living in a different file from the value it is about.
+
 **One named exception: a column that has never held a value.** A maintenance
 plan that was written before 2026-10-09 has no trade on it and no priority,
-because there was nowhere to put them. The pack fills those two in - only
-when *both* are empty, only from a pack that states them, and reported
-separately in the receipt as "classified" so nobody has to guess what moved.
+because there was nowhere to put them - and the same is true of what the job
+needs of the line, `needs_stop` and `window`, which arrived a day later. The
+pack fills each pair in - only when *both* columns of that pair are empty,
+only from a pack that states them, and reported separately in the receipt as
+"classified" and "scheduled" so nobody has to guess what moved.
 That is not the pack overruling the plant; it is the plant answering a
 question it was never asked. The alternative is every plant that existed
 before the dispatcher upgrading into a dispatcher that knows no trades, and a
@@ -134,8 +143,12 @@ OPTIONAL: dict[str, tuple[str, ...]] = {
     # says neither is work anybody on shift can take, at routine - which is
     # the honest reading of a plan nobody has classified, and why every pack
     # written before the crew existed still applies unchanged.
+    # `needs_stop` and `window` arrived with the crew that does the work. A
+    # plan that says neither can be done while the machine runs, whenever -
+    # which is what every plan written before these two fields existed says,
+    # and why every pack written before them still applies unchanged.
     "maintenance_plans": ("instructions", "document_code", "expected_minutes",
-                          "skill", "priority"),
+                          "skill", "priority", "needs_stop", "window"),
     "shifts": ("days", "equipment"),
     "downtime_reasons": ("description",),
     "nc_severities": ("description",),
@@ -154,6 +167,15 @@ TRIGGERS: dict[str, str] = {
     "runtime_hours": "hours the machine actually ran",
     "calendar_days": "elapsed days, use or no use",
     "produced_qty": "units it has made",
+}
+
+#: What `[[maintenance_plans]] window` may say, and what each means on the
+#: floor. Spelt out here for the same reason as the triggers: a pack is checked
+#: offline and the person fixing it is reading this file's sentences.
+WINDOWS: dict[str, str] = {
+    "anytime": "whenever somebody is free; the machine can keep running",
+    "between_orders": "only when the line is between orders",
+    "end_of_shift": "only in the last stretch of the shift",
 }
 
 
@@ -214,7 +236,17 @@ def problems(directory: Path) -> list[str]:
                 continue
             for missing in (k for k in REQUIRED[kind] if row.get(k) in (None, "")):
                 out.append(f"{where} has no {missing}.")
-            for unknown in sorted(set(row) - allowed):
+            # A key beginning with an underscore is a note to whoever reads
+            # the pack next, not a field: `_why_needs_stop` beside the column
+            # it explains. `line.json` and `floor.json` have carried their
+            # reasons this way since they existed, and master data is where
+            # the reasons are most wanted and were hardest to put - a plant's
+            # own file is the only place a sentence about *this* plan can
+            # live, and the alternative was the reason sitting in a different
+            # file from the value, where nobody editing the value sees it.
+            # `apply` reads named fields only, so a note can never change a plant.
+            for unknown in sorted(k for k in set(row) - allowed
+                                  if not k.startswith("_")):
                 out.append(f"{where} carries {unknown!r}, which is not a field "
                            f"{kind} has. It takes {', '.join(sorted(allowed))}.")
 
@@ -461,6 +493,16 @@ def problems(directory: Path) -> list[str]:
             out.append(f"{where} is priority {priority!r}; a priority is 1 (safety), "
                        "2 (production-critical) or 3 (routine). Leave it out for work "
                        "nobody has classified, which is read as routine.")
+        stops = row.get("needs_stop")
+        if stops is not None and not isinstance(stops, bool):
+            out.append(f"{where} has needs_stop {stops!r}; that is true or false - "
+                       "true when the machine has to be stopped for the job.")
+        window = row.get("window")
+        if window is not None and window not in WINDOWS:
+            out.append(f"{where} may be done {window!r}, which is not a window this "
+                       f"product knows. It knows "
+                       f"{', '.join(f'{k} ({v})' for k, v in WINDOWS.items())}. "
+                       "Leave it out when nobody has said when.")
 
     # A component that is its own parent is a bill of materials that never
     # terminates, and the explosion would recurse until something gave way.
@@ -522,6 +564,7 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
         EquipmentLevel,
         Gauge,
         MaintenancePlan,
+        MaintenanceWindow,
         Material,
         MaterialLot,
         MaterialType,
@@ -548,6 +591,7 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
     # every other kind's receipt reads exactly as it always has.
     if "maintenance_plans" in receipt:
         receipt["maintenance_plans"]["classified"] = 0
+        receipt["maintenance_plans"]["scheduled"] = 0
 
     def count(kind: str, made: bool) -> None:
         receipt[kind]["made" if made else "present"] += 1
@@ -737,6 +781,20 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
                 standing.skill_code = row.get("skill")
                 standing.priority = row.get("priority")
                 receipt["maintenance_plans"]["classified"] += 1
+            # The same exception, the same rule, for what the job needs of the
+            # line. `window` is the column that can say "nobody has answered",
+            # because it is the nullable one, and `needs_stop` false is read
+            # alongside it as not-yet-answered rather than as an answer - a
+            # known limit of a boolean, and the reason both have to be untouched
+            # before the pack says anything. A plant that has answered either
+            # question on the screen keeps its answer.
+            if (standing.window is None and standing.needs_stop is False
+                    and (row.get("window") is not None
+                         or row.get("needs_stop") is not None)):
+                standing.needs_stop = bool(row.get("needs_stop", False))
+                standing.window = (MaintenanceWindow(row["window"])
+                                   if row.get("window") else None)
+                receipt["maintenance_plans"]["scheduled"] += 1
             continue
         # A plan that says nothing about how long it takes gets this plant's
         # own house default rather than the product's thirty - the same
@@ -755,7 +813,13 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
             # priority is read as routine, which is the honest reading of a
             # plan nobody has classified - an invented priority is worse than
             # none, because it sorts.
-            skill_code=row.get("skill"), priority=row.get("priority")))
+            skill_code=row.get("skill"), priority=row.get("priority"),
+            # And what it needs of the line. False and null when the pack says
+            # nothing: a job that has not said it needs the machine stopped
+            # does not get to stop it, and a window nobody has stated is read
+            # as open rather than invented.
+            needs_stop=bool(row.get("needs_stop", False)),
+            window=MaintenanceWindow(row["window"]) if row.get("window") else None))
         count("maintenance_plans", made=True)
 
     # The vocabulary a plant starts with. It arrives **in force**, not as a

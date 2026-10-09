@@ -9,7 +9,10 @@ two thousand due orders - and hands the whole backlog out in one call.
 What it holds the dispatcher to:
 
 * every order that *could* have gone to somebody did, in that one call;
-* the call finishes in under a second on SQLite, which is what CI runs on;
+* the call costs a bounded number of reads of that backlog on SQLite, which
+  is what CI runs on - a figure in the machine's own speed rather than in
+  seconds, because a shared runner is twenty times slower than a desk and a
+  gate written in seconds fails there for the runner's reasons;
 * nobody is given two jobs at the same time;
 * each of the three reasons an order stays at `due` happens, and each one is
   the true reason for the orders carrying it.
@@ -185,9 +188,26 @@ def test_a_weeks_backlog_is_handed_out_in_one_pass_and_says_what_nobody_could_ta
     dispatcher that takes four seconds cannot run every supervise pass, and one
     that cannot run every pass is one somebody runs by hand, which is where we
     started."""
+    # What one read of the whole backlog costs on THIS machine, averaged over
+    # ten, before anything is dispatched. A shared CI runner is ten and twenty
+    # times slower than a desk, and a gate written in seconds fails there for
+    # the runner's reasons rather than the dispatcher's: this test asked for
+    # under a second and got 1.47 s and 1.50 s on 2026-10-09 against 0.09 s on
+    # the desk, on `main` as well as on the branch. So the figure the gate is
+    # written in is the machine's own speed, and the seconds stay on stdout
+    # where a person reading "will this hold on my plant?" can see them.
+    rounds = 10
+    started = clock.perf_counter()
+    for _ in range(rounds):
+        big_plant.execute(select(
+            MaintenanceOrder.id, MaintenanceOrder.skill_code,
+            MaintenanceOrder.priority, MaintenanceOrder.equipment_id)).all()
+    one_read = (clock.perf_counter() - started) / rounds
+
     started = clock.perf_counter()
     report = dispatch.dispatch(big_plant, MORNING)
     seconds = clock.perf_counter() - started
+    reads = seconds / one_read if one_read else float("inf")
 
     orders = list(big_plant.scalars(select(MaintenanceOrder)))
     assigned = [o for o in orders if o.status is MaintenanceStatus.ASSIGNED]
@@ -211,6 +231,8 @@ def test_a_weeks_backlog_is_handed_out_in_one_pass_and_says_what_nobody_could_ta
     for reason, count in sorted(by_reason.items()):
         print(f"    {reason:<32} {count}")
     print(f"  seconds         {seconds:.3f}")
+    print(f"  one read of the backlog {one_read * 1000:.2f} ms, "
+          f"so the pass cost {reads:.0f} of them")
 
     assert crew == 300
     assert report["rules"] == 12
@@ -218,9 +240,16 @@ def test_a_weeks_backlog_is_handed_out_in_one_pass_and_says_what_nobody_could_ta
     assert report["assigned"] == len(assigned)
     assert report["unassigned"] == len(unassigned)
     assert report["assigned"] + report["unassigned"] == ORDERS
-    assert seconds < 1.0, (
-        f"one pass over {ORDERS} orders took {seconds:.2f}s; the plant's tick "
-        "cannot carry that")
+    # The gate: the pass costs a bounded number of reads of the same backlog.
+    # It is a loose bound on purpose - it is here to catch a dispatcher that
+    # has gone quadratic, which at two thousand orders is not a few per cent
+    # but orders of magnitude - and it cannot fail because the runner was
+    # busy. Measured at 81 to 86 reads on 2026-10-09.
+    assert reads < 400, (
+        f"one pass over {ORDERS} orders cost {reads:.0f} reads of the backlog "
+        f"({seconds:.2f}s against {one_read * 1000:.2f} ms a read); the plant's "
+        "tick cannot carry that, and a pass that grows faster than the backlog "
+        "is one somebody ends up running by hand")
 
 
 def test_everybody_the_early_shift_could_send_was_sent_and_nobody_twice(big_plant):

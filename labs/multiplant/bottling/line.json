@@ -446,10 +446,14 @@
             "equipment": "FILL01",
             "plan": "PM-FILL-CHILLER",
             "status": "assigned",
+            "needs_stop": true,
+            "_why_needs_stop": "The reason the order waited, as a field the scorer can read rather than a sentence only a person can. An order at `assigned` all shift with `needs_stop` false would be a list nobody worked, which is a different plant and a worse one; this link is only recorded if the records say both - that the job was never started AND that it needed the line stopped. `/maintenance/orders` carries the field, so the evidence already in hand answers it and nothing had to be widened to ask.",
+            "never_started": true,
+            "_why_never_started": "This product has no `deferred` status, so the only true record of nobody having gone is an absence: no start, and therefore no `maintenance.started` audit row. The key asks for it explicitly because the status on its own cannot - an order started and put back to `assigned` by hand would read as this story and be the opposite of it, and until 2026-10-09 the scorer would have marked the link recorded and printed the contradiction beside it.",
             "endpoint": "/maintenance/orders?equipment=FILL01&status=assigned"
           }
         ],
-        "shows_as": "On the Maintenance page: a preventive order against PM-FILL-CHILLER on FILL01, raised in the first minutes of the shift because the plan has never been serviced, handed to an electrician in the same pass by the supervisor's FILL-ELEC rule, still at `assigned` when the shift ends. Not started, not deferred - this product has no deferral and the records must not pretend otherwise. `floor.json` says why nobody went: the shift gives its work out and runs to the end of the order. It read `due` until 2026-10-09, when this plant gained a crew to give it to; the link is the same fact either way, which is that the job waited."
+        "shows_as": "On the Maintenance page: a preventive order against PM-FILL-CHILLER on FILL01, raised in the first minutes of the shift because the plan has never been serviced, given to an electrician by rule in the same pass, still waiting at `assigned` eight hours later because the condenser clean needs the line stopped and the shift ran to the end of the order. Not started, not deferred - this product has no deferral and the records must not pretend otherwise. What makes that readable rather than merely true is the rest of the page around it: this shift's crew did go to the palletiser and the denester and finished both jobs with findings and a name, so the one order that did not move is the exception on its own page and not the whole page. Nobody is idle and nobody is ignoring his list: `needs_stop` is true, the window is `between_orders`, and this plant releases the next order as the last one finishes. It read `due` with nobody's name on it until 2026-10-09, when this plant gained rules to hand it out and a crew to hand it to; the link is the same fact through all three, which is that the job waited and the records say why."
       },
       {
         "link": 3,

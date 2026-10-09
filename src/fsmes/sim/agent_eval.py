@@ -125,6 +125,130 @@ def _fill_weight_cause(api: Api) -> set[str]:
     return causes or {"NONE"}
 
 
+def _moment(value) -> datetime:
+    """A time from the API as a naive UTC instant, however it was spelled."""
+    t = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    return t.astimezone(UTC).replace(tzinfo=None) if t.tzinfo else t
+
+
+def _shift_started(api: Api) -> datetime:
+    """When this shift began, by the plant's own roster.
+
+    A plant that has told this MES no shift patterns has no shift to ask
+    about, and the question still has to mean something, so the window falls
+    back to the last eight hours - the length of the shift this lab plays.
+    The fallback is said out loud here rather than hidden in a constant,
+    because "this shift" and "the last eight hours" are the same sentence
+    only by coincidence.
+    """
+    shift = (api.get("/maintenance/roster") or {}).get("shift")
+    if shift and shift.get("starts"):
+        return _moment(shift["starts"])
+    return datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=8)
+
+
+def _maintenance_orders(api: Api, status: str | None = None) -> list[dict]:
+    """The maintenance order list, all of it, with the done work left in.
+
+    The list is paged, so a reader that takes the first page of a plant with
+    a year of history behind it sees none of this shift. The truth walks the
+    pages until the total is in hand.
+    """
+    rows: list[dict] = []
+    while True:
+        q = f"/maintenance/orders?limit=200&offset={len(rows)}"
+        page = api.get(q + (f"&status={status}" if status else ""))
+        rows += page["items"]
+        if not page["has_more"] or not page["items"]:
+            return rows
+
+
+def _maintenance_this_shift(api: Api) -> set[str]:
+    """What maintenance finished this shift: each order, and who did it.
+
+    `performed_by` is the name that goes with the work - the mechanic who
+    was at the machine, not the account that posted the record - and it is
+    the whole point of asking: an order that closed with nobody's name on it
+    is a record of a job, not of a person doing it. The findings and the
+    downtime are prose and a number; the token rule below cannot score them
+    without pretending that one wording is the right one, so the question
+    asks for them, the judgment model beside it reads them, and what is
+    scored here is the codes.
+    """
+    since = _shift_started(api)
+    found: set[str] = set()
+    for o in _maintenance_orders(api):
+        if not o.get("completed_at") or _moment(o["completed_at"]) < since:
+            continue
+        found.add(o["code"])
+        if o.get("performed_by"):
+            found.add(o["performed_by"])
+    return found or {"NONE"}
+
+
+def _nothing_happened_to_them(api: Api) -> set[str]:
+    """Orders this shift neither started nor finished.
+
+    They are the wrong answer to "what did maintenance do this shift", and
+    naming one is the mistake worth catching: an agent that reads the order
+    list and reports all of it has described the backlog, not the shift.
+    Only orders are distractors here. A person is not, because the honest
+    answer to this question often names somebody who is still at a machine
+    or still waiting to get at one, and that is not a wrong answer.
+    """
+    since = _shift_started(api)
+    idle = set()
+    for o in _maintenance_orders(api):
+        touched = [o.get("started_at"), o.get("completed_at")]
+        if any(t and _moment(t) >= since for t in touched):
+            continue
+        idle.add(o["code"])
+    return idle
+
+
+#: The three values a plan or an order can carry for when the job may be
+#: done. The two the records do not give are distractors: an order waiting
+#: for the gap between orders is not waiting for the end of the shift, and
+#: an agent that says so has invented a reason.
+_WINDOWS = ("anytime", "between_orders", "end_of_shift")
+
+
+def _maintenance_waiting(api: Api) -> set[str]:
+    """The orders somebody has been given and nobody has started, and what
+    each one is waiting for, quoted from the record.
+
+    This is the chain's link 2 asked as a question. The chiller condenser
+    clean needs the line stopped and can only be done between orders; the
+    line ran to the end of its order, so the job never had its chance. The
+    truth is `needs_stop` and `window` on the order, which is why they are
+    on it: a reader with only the status sees a job somebody ignored.
+    """
+    waiting: set[str] = set()
+    for o in _maintenance_orders(api, status="assigned"):
+        if o.get("started_at"):
+            continue
+        waiting.add(o["code"])
+        waiting.add(o["equipment"])
+        if o.get("needs_stop"):
+            waiting.add("needs_stop")
+        if o.get("window"):
+            waiting.add(str(o["window"]))
+    return waiting or {"NONE"}
+
+
+def _invented_reasons(api: Api) -> set[str]:
+    """What the waiting orders are *not* waiting for, plus the machines with
+    nothing waiting on them."""
+    truth = _maintenance_waiting(api)
+    wrong = {w for w in _WINDOWS if w not in truth}
+    if "needs_stop" not in truth:
+        # Said only where no waiting job needs a stop, so that "the line
+        # never stopped" cannot be offered as the reason for a job that
+        # could have been done on a running machine.
+        wrong.add("needs_stop")
+    return wrong | (set(_machines(api)) - truth)
+
+
 def _others(truth: Callable[[Api], set[str]]) -> Callable[[Api], set[str]]:
     def distractors(api: Api) -> set[str]:
         return set(_machines(api)) - truth(api)
@@ -157,6 +281,29 @@ SCENARIOS: list[Scenario] = [
              "machine's process excursion caused them? The machine where the checks were taken may be the "
              "symptom rather than the cause. Answer with the machine code only, or NONE.",
              _fill_weight_cause, distractors=_others(_fill_weight_cause)),
+    # The pair that asks what the crew did with the work it was given. One
+    # question for the jobs that moved, one for the job that honestly did
+    # not: a plant where every assigned order is still assigned and a plant
+    # where one is are the same list, and only the second pair of fields
+    # tells them apart.
+    Scenario("maintenance_this_shift",
+             "On plant {plant}, what did maintenance do this shift? For every maintenance order "
+             "finished since the shift began, answer with the order's code, the code of the person "
+             "who did it, what they found, and how many minutes the machine was down for it. NONE "
+             "if nothing was finished this shift.",
+             _maintenance_this_shift,
+             answer_shape="one line per finished order: order code, person code, findings, "
+                          "downtime in minutes",
+             distractors=_nothing_happened_to_them),
+    Scenario("maintenance_waiting",
+             "On plant {plant}, which maintenance orders have been given to a person and still not "
+             "started, and what is each one waiting for? Answer with the order's code, the machine's "
+             "code, and the order's own `needs_stop` and `window` values as the records give them - "
+             "quote the record rather than offering a reason of your own. NONE if every order that "
+             "has been handed out has been started.",
+             _maintenance_waiting,
+             answer_shape="one line per waiting order: order code, machine code, needs_stop, window",
+             distractors=_invented_reasons),
 ]
 
 

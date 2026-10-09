@@ -92,6 +92,15 @@ LAB_USERS = [
     # supervisor's - so the sequence planner -> supervisor -> floor is the
     # real plant's and the audit trail names whichever of the three acted.
     ("FLOOR-PLAN", "Simulated production planner", "planner", "planner"),
+    # The simulated maintenance crew. One account for the trades rather than
+    # one per mechanic, because that is how a workshop with seven people and
+    # one terminal actually signs in: the work is done under this account and
+    # the row says whose work it was (`performed_by`), so the audit trail
+    # names the mechanic without this lab inventing seven logins nobody
+    # issued. An operator, because starting and completing a maintenance
+    # order and stopping a machine for it are an operator's acts; planning the
+    # work is not, and this account cannot.
+    ("FLOOR-CREW", "Simulated maintenance crew", "operator", "operator"),
     ("ADMIN", "Lab Admin", "admin", "admin"),
     # The MCP server's own sign-in. Admin because master data (routings)
     # requires it; everything it does is audited under this name, so "what did

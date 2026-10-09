@@ -112,3 +112,89 @@ def test_none_is_the_answer_vocabulary_and_is_read_in_any_case():
     assert agent_eval.score("none", {"NONE"}, {"MIX01"})["pass"] is True
     assert agent_eval.score("None of the machines are alarming.",
                             {"NONE"}, {"MIX01"})["pass"] is True
+
+
+# --------------------------------------- what maintenance did, and what waits
+
+@pytest.fixture()
+def shift(api, session):
+    """A shift with one job finished and one job still waiting to be got at.
+
+    The two halves of the pair: an order a mechanic took, did and wrote up,
+    and an order he was given and could not start because the job needs the
+    line stopped. Both are real rows in the same list, which is the whole
+    difficulty of the question.
+    """
+    from fsmes.services import dispatch, maintenance, masterdata
+
+    masterdata.create_person(session, code="MT-05", name="Mo Spanner", role="operator")
+    done = maintenance.raise_corrective(session, equipment_code="MIX01",
+                                        summary="grease the arm")
+    dispatch.assign(session, done.code, "MT-05", actor="SUP")
+    maintenance.start(session, done.code, actor="MT-05")
+    maintenance.complete(session, done.code, actor="MT-05",
+                         findings="all eight points took grease",
+                         downtime_minutes=0.0)
+    waiting = maintenance.raise_corrective(
+        session, equipment_code="PACK01", summary="clean the condenser",
+        needs_stop=True, window="between_orders")
+    dispatch.assign(session, waiting.code, "MT-05", actor="SUP")
+    session.flush()
+    return {"done": done.code, "waiting": waiting.code}
+
+
+def test_what_maintenance_did_this_shift_is_the_orders_that_closed_and_who_closed_them(
+        api, shift):
+    truth = agent_eval.scenario("maintenance_this_shift").truth(api)
+
+    assert truth == {shift["done"], "MT-05"}
+    # The order nobody could get at is the wrong answer, and the one worth
+    # catching: an agent that reads the list and reports all of it has
+    # described the backlog rather than the shift.
+    assert agent_eval.scenario("maintenance_this_shift").distractors(api) == {shift["waiting"]}
+
+
+def test_a_shift_in_which_nothing_was_finished_says_so_rather_than_nothing(api):
+    assert agent_eval.scenario("maintenance_this_shift").truth(api) == {"NONE"}
+
+
+def test_the_job_that_waits_is_answered_with_the_records_own_reason(api, shift):
+    """Link 2 asked as a question. `needs_stop` and `window` are quoted from
+    the order, because a reader with only the status sees a job somebody
+    ignored."""
+    truth = agent_eval.scenario("maintenance_waiting").truth(api)
+
+    assert truth == {shift["waiting"], "PACK01", "needs_stop", "between_orders"}
+    assert shift["done"] not in truth
+
+
+def test_a_reason_the_records_do_not_give_is_a_wrong_answer(api, shift):
+    """The failure this pair exists to catch: an agent that knows the order is
+    waiting and invents why. The two windows this order does not name, and the
+    machines with nothing waiting on them, are scored against it."""
+    wrong = agent_eval.scenario("maintenance_waiting").distractors(api)
+
+    assert {"anytime", "end_of_shift"} <= wrong
+    assert "between_orders" not in wrong and "needs_stop" not in wrong
+    assert "MIX01" in wrong, "the machine whose job was done is not what waits"
+
+
+def test_a_waiting_job_that_needs_no_stop_cannot_be_blamed_on_the_line(api, session):
+    """`needs_stop` is a distractor whenever no waiting job carries it, so
+    "the line never stopped" cannot be offered as the reason for a job that
+    could have been done on a running machine."""
+    from fsmes.services import dispatch, maintenance, masterdata
+
+    masterdata.create_person(session, code="MT-06", name="Jo Hands", role="operator")
+    order = maintenance.raise_corrective(session, equipment_code="MIX01",
+                                         summary="check the belt", window="anytime")
+    dispatch.assign(session, order.code, "MT-06", actor="SUP")
+    session.flush()
+
+    scenario = agent_eval.scenario("maintenance_waiting")
+    assert scenario.truth(api) == {order.code, "MIX01", "anytime"}
+    assert "needs_stop" in scenario.distractors(api)
+
+
+def test_a_plant_where_every_job_handed_out_has_been_started_says_none(api, session):
+    assert agent_eval.scenario("maintenance_waiting").truth(api) == {"NONE"}

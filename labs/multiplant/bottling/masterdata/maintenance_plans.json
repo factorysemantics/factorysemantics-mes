@@ -8,7 +8,11 @@
     "expected_minutes": 90.0,
     "instructions": "Isolate the chiller, brush and wash the condenser coil, check the fan and the refrigerant pressures, log the outlet temperature before and after.",
     "skill": "ELEC",
-    "priority": 2
+    "priority": 2,
+    "needs_stop": true,
+    "window": "between_orders",
+    "_why_needs_stop": "The coil is inside the filler's guarding and the chiller has to be isolated to be opened. Nobody brushes a condenser on a machine that is filling bottles.",
+    "_why_window": "Ninety minutes with the filler isolated is the whole line stopped, and a supervisor will not take that out of the middle of an order he has promised. It waits for the gap between one order and the next - which on this plant, where the next order is released as the last one finishes, is a gap that does not come in an eight-hour shift. The four-minute changeover at 16800 s is not that gap, and is not read as one: the simulated crew will not touch a machine that needs stopping until it has been standing for `maintenance.standing_s` of the pack's `floor.json`, because a machine that has just gone quiet is starved and not stopped, and a mechanic who took it apart would be the reason the line could not restart. That is link 2 of the chain in line.json: the order is raised in the first minutes, given to an electrician by rule, and still waiting at the end of the shift, and the reason is this field and not a mechanic ignoring his list."
   },
   {
     "code": "PM-FILL-SEALS",
@@ -18,7 +22,11 @@
     "interval": 4.0,
     "expected_minutes": 45.0,
     "skill": "MECH",
-    "priority": 2
+    "priority": 2,
+    "needs_stop": true,
+    "window": "anytime",
+    "_why_needs_stop": "A valve seal is changed with the filler open and empty. Same as the condenser: not on a running machine.",
+    "_why_window": "Anytime, because the job is three quarters of an hour rather than an hour and a half and does not have to wait for the end of an order - but it still needs the machine stopped, so the mechanic goes when the filler stops. On this shift the filler never does: the longest it stands still is the four-minute changeover at 16800 s, and a mechanic does not start a forty-five-minute strip-down because the line paused for four minutes. So this job waits too, for a reason one field away from the chiller's: not *which* gap it needs, but that the gap is long enough. Anytime and needs-a-stop together are the commonest shape of maintenance work in a bottling plant, and the pair of fields is what lets the plant say it."
   },
   {
     "code": "PM-LD-BELT",
@@ -28,7 +36,11 @@
     "interval": 6.0,
     "expected_minutes": 20.0,
     "skill": "MECH",
-    "priority": 3
+    "priority": 3,
+    "needs_stop": false,
+    "window": "anytime",
+    "_why_needs_stop": "Belt tension is checked with a gauge against the running belt and corrected on the tensioner. The loader keeps loading.",
+    "_why_window": "Anytime, because nothing about this job waits for the line. A belt's tension is checked with a gauge against the guard and tensioned a quarter turn at a time on the running machine; the fitter chooses when by what else he has on, not by what the loader is doing."
   },
   {
     "code": "PM-PAL-GREASE",
@@ -38,17 +50,26 @@
     "interval": 7.0,
     "expected_minutes": 30.0,
     "skill": "GEN",
-    "priority": 3
+    "priority": 3,
+    "needs_stop": false,
+    "window": "anytime",
+    "_why_needs_stop": "Greasing is done at the nipples on the outside of the arm, between cycles, while the palletiser works. Booking half an hour of line downtime against this job would invent downtime the plant never had - which is why `downtime_minutes` is measured rather than assumed from `expected_minutes`.",
+    "_why_window": "Anytime, for the same reason as the belt: the grease points are on the outside of the arm's guarding and take eight shots from a gun. The job is thirty minutes and the palletiser keeps stacking through it, so there is nothing for it to wait for - which is what makes it the first job this plant's crew actually finishes on a replayed shift."
   },
   {
     "code": "PM-RD-BEARING",
     "name": "Check denester bearing play",
     "equipment": "RD01",
-    "trigger": "runtime_hours",
-    "interval": 8.0,
+    "trigger": "calendar_days",
+    "interval": 14.0,
     "expected_minutes": 90.0,
     "skill": "MECH",
-    "priority": 2
+    "priority": 2,
+    "needs_stop": false,
+    "window": "anytime",
+    "_why_needs_stop": "Play is felt at the shaft with the guard off and the machine on its slow jog, which this plant counts as running. A bearing that has to be changed is a different job and a corrective order, and that one stops the machine.",
+    "_why_window": "Anytime. The bearing is felt by hand through the inspection hatch with the denester running, which is how play is felt at all - a stopped shaft tells you nothing. So the round does not wait for a gap, and this is the second job the crew gets through.",
+    "_why_trigger": "A fortnight, not running hours, and changed from running hours on 2026-10-09 for two reasons that happen to agree. The plant reason: a denester bearing is felt by hand on a round, and a round is a date in the diary - the fitter walks the line every other Tuesday whether it has run two thousand hours or two hundred. The lab reason: running hours on this MES are real hours, counted from the machine's own state history (`maintenance.runtime_hours`), and a replay that plays eight shift hours in sixteen real minutes accrues sixteen minutes of them. Nothing inflates them for a replay and nothing should - the records would then say the machine had run a day when it had not. So a pack whose purpose is to show a shift of maintenance work needs at least two plans whose trigger a replay can actually reach, and the two are this one and the palletiser grease. The three runtime plans here stay runtime and stay honest: on the lab plant, which runs for days at its own speed, they come due in the hours the plan says."
   },
   {
     "code": "PM-WASH-NOZZLE",
@@ -58,6 +79,10 @@
     "interval": 20000.0,
     "expected_minutes": 60.0,
     "skill": "GEN",
-    "priority": 3
+    "priority": 3,
+    "needs_stop": true,
+    "window": "end_of_shift",
+    "_why_needs_stop": "The nozzles come out and the manifold is flushed with acid. The washer is empty, locked off and not washing bottles.",
+    "_why_window": "An hour of acid in the manifold is an hour the washer cannot wash, so it goes at the end of the shift, when the line is coming down anyway and the next shift inherits a clean washer. On a shift that runs to the end of its order the window opens in the last hour and the washer is still washing, so this order waits too - the same true record as the condenser clean, for a different reason."
   }
 ]

@@ -38,6 +38,28 @@ class MaintenanceKind(enum.StrEnum):
     CORRECTIVE = "corrective"         # raised after it broke
 
 
+class MaintenanceWindow(enum.StrEnum):
+    """When a job may be done, as the plant means it.
+
+    Not a schedule. A plan says what the *job* needs - "the line has to be
+    between orders for this one" - and the plant works out when that is true.
+    A window and a due date are different facts: a condenser clean can be
+    overdue for a shift and still not be startable, and a maintenance screen
+    that cannot say which of the two it is sends a supervisor to argue with a
+    mechanic who was right.
+
+    `ANYTIME` is the honest default for a job that needs nothing: greasing a
+    palletiser bearing happens while the machine runs. The column stays
+    nullable, because a plan written before this release never said, and
+    "never said" is not "anytime" - the dispatcher treats an unsaid window as
+    open, says so, and the plan stays unanswered until somebody answers it.
+    """
+
+    ANYTIME = "anytime"
+    BETWEEN_ORDERS = "between_orders"
+    END_OF_SHIFT = "end_of_shift"
+
+
 class MaintenanceStatus(enum.StrEnum):
     DUE = "due"
     # Somebody has it. Between `due` and `in_progress` on purpose: a plant whose
@@ -94,6 +116,20 @@ class MaintenancePlan(Base):
     expected_minutes: Mapped[float] = mapped_column(default=30.0)
     active: Mapped[bool] = mapped_column(default=True)
 
+    # What the job needs of the line, as against what it needs of a person.
+    # `needs_stop` is the fact a maintenance screen cannot do without: an
+    # order sitting at `assigned` all shift is a mechanic ignoring his list if
+    # the job could have been done while the machine ran, and a plant running
+    # to the end of its order if it could not. The two look identical without
+    # this column, and the second one is not a problem to fix.
+    #
+    # Default false rather than nullable: a job that does not say it needs the
+    # line stopped does not get to stop it. `window` *is* nullable, because
+    # "nobody has said when" is a real state of a plan and is not the same
+    # answer as "anytime".
+    needs_stop: Mapped[bool] = mapped_column(default=False)
+    window: Mapped[MaintenanceWindow | None] = mapped_column(str_enum(MaintenanceWindow))
+
     # Which trade this job needs, and what it is worth interrupting the day
     # for. Both nullable, because a plant that upgraded from a release before
     # this has plans that never said - and a plan with no skill on it is work
@@ -136,6 +172,14 @@ class MaintenanceOrder(Base):
     # which trade and how badly it matters.
     skill_code: Mapped[str | None] = mapped_column(String(40))
     priority: Mapped[int | None] = mapped_column(index=True)
+
+    # What the job needs of the line, copied from the plan at raise for the
+    # reason the trade and the priority are copied: an order has to be judged
+    # on what it said when it was raised, not on what the plan says now. A
+    # corrective order says its own - a seized bearing needs the machine
+    # stopped whatever any plan says.
+    needs_stop: Mapped[bool] = mapped_column(default=False)
+    window: Mapped[MaintenanceWindow | None] = mapped_column(str_enum(MaintenanceWindow))
 
     # Who it was given to, when, and by what. `assigned_by` is a rule's code
     # when the rules gave it out and a person's code when a person did - and

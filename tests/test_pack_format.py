@@ -712,3 +712,80 @@ def test_the_three_shipped_packs_set_a_floor_so_the_behaviour_is_visible():
         pack = fmt.read(root / "multiplant" / name)
         assert pack.table("oee").get("coverage_floor") == 0.8, name
     assert "coverage_floor" not in fmt.read(root / "cutlery").table("oee")
+
+
+def test_a_plan_written_before_the_line_was_asked_what_it_needs_is_asked_now(applied):
+    """The same named exception, for the pair that arrived a day later.
+
+    `needs_stop` and `window` are what the job needs of the line, and a plan
+    written before 2026-10-09 says nothing about either - so the pack answers
+    for a plan that has never answered, and keeps out of the way of one that
+    has. `window` is the column that can hold "nobody has said"; `needs_stop`
+    false is read beside it as not-yet-answered rather than as an answer,
+    which is a known limit of a boolean and the reason both have to be
+    untouched before the pack says anything.
+    """
+    from sqlalchemy import select
+
+    from fsmes.db import session_scope
+    from fsmes.domain import MaintenancePlan, MaintenanceWindow
+
+    directory, into = applied
+    plans = directory / "masterdata" / "maintenance_plans.json"
+    rows = [{"code": "PM-SAW-BLADE", "name": "Change the blade", "equipment": "SAW01",
+             "trigger": "runtime_hours", "interval": 40},
+            {"code": "PM-MILL-COOLANT", "name": "Top the coolant up", "equipment": "MILL01",
+             "trigger": "calendar_days", "interval": 7}]
+    plans.write_text(json.dumps(rows), encoding="utf-8")
+    applier.apply(directory, into=into, echo=lambda _: None)
+
+    with session_scope() as session:
+        standing = session.scalars(select(MaintenancePlan)).all()
+        assert [p.needs_stop for p in standing] == [False] * len(standing)
+        assert [p.window for p in standing] == [None] * len(standing)
+        # One of them the plant has since answered on its own screen: a blade
+        # change stops the saw, and it goes between orders.
+        mine = standing[0]
+        mine.needs_stop, mine.window = True, MaintenanceWindow.BETWEEN_ORDERS
+        mine_code = mine.code
+        session.flush()
+
+    # Now the pack says it for every plan in it, and disagrees about that one.
+    for row in rows:
+        row["needs_stop"] = False
+        row["window"] = "anytime"
+    plans.write_text(json.dumps(rows), encoding="utf-8")
+
+    said: list[str] = []
+    receipt = applier.apply(directory, into=into, echo=said.append)
+
+    counts = receipt["seeded"]["maintenance_plans"]
+    assert counts["made"] == 0 and counts["present"] == len(rows)
+    assert counts["scheduled"] == len(rows) - 1
+    assert any("the stop and window they never had" in line for line in said)
+    with session_scope() as session:
+        for plan in session.scalars(select(MaintenancePlan)):
+            if plan.code == mine_code:
+                assert plan.needs_stop is True
+                assert plan.window is MaintenanceWindow.BETWEEN_ORDERS
+            else:
+                assert plan.needs_stop is False
+                assert plan.window is MaintenanceWindow.ANYTIME
+
+
+def test_a_pack_that_says_when_a_job_may_be_done_and_names_no_such_time_is_refused(tmp_path):
+    """Offline, before anything is written: the windows this product knows
+    are named back, because a pack that invented one would apply and then
+    schedule nothing."""
+    (tmp_path / "equipment.json").write_text(
+        '[{"code": "SAW01", "name": "Saw", "level": "equipment"}]', encoding="utf-8")
+    (tmp_path / "maintenance_plans.json").write_text(json.dumps(
+        [{"code": "PM-1", "name": "A job", "equipment": "SAW01",
+          "trigger": "calendar_days", "interval": 7,
+          "needs_stop": "yes please", "window": "when-the-boss-says"}]),
+        encoding="utf-8")
+
+    found = masterdata.problems(tmp_path)
+
+    assert any("when-the-boss-says" in line and "anytime" in line for line in found), found
+    assert any("needs_stop 'yes please'" in line for line in found), found
