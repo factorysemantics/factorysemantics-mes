@@ -57,6 +57,7 @@ import time
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from itertools import pairwise
+from typing import NamedTuple
 
 import httpx
 import structlog
@@ -104,6 +105,22 @@ _ASSUMED_JOB_MINUTES = 30.0
 #: that is not here waits, and says so once: guessing at it would be this
 #: floor deciding when a plant may stop its line.
 _WINDOWS = ("anytime", "between_orders", "end_of_shift")
+
+
+class _Answer(NamedTuple):
+    """Yes or no, the sentence why, and the name of the reason.
+
+    The sentence is for a person reading the log and carries this moment's
+    figures - how long the machine has been standing, how many minutes of the
+    shift are left. The key is the reason itself with no figures in it, so
+    that a job which has been waiting on the same reason for eight hours says
+    so once instead of once every twenty seconds with a different number in
+    it. Counting down in the log is not an event.
+    """
+
+    ok: bool
+    because: str
+    key: str
 
 
 @dataclass
@@ -443,10 +460,11 @@ class Floor:
         # the one job that person is on. One person, one job at a time - the
         # same rule the product's dispatcher keeps on its side of the API.
         self._jobs: dict[str, _Job] = {}
-        # Why each job that has been given out and not started is waiting, as
-        # last said. A shift's worth of "still waiting" every twenty seconds
-        # is noise; the moment the reason CHANGES is the record. On this pack
-        # the reason never changes, which is chain link 2 saying itself.
+        # The NAME of the reason each job that has been given out and not
+        # started is waiting on, as last said - not the sentence, which counts
+        # down. A shift's worth of "still waiting" every twenty seconds is
+        # noise; the moment the reason CHANGES is the record. On this pack the
+        # reason never changes, which is chain link 2 saying itself.
         self._waiting: dict[str, str] = {}
         # Said once each, not once a pass: a plan nobody wrote findings for,
         # an order somebody else started, and a shift nobody is rostered on.
@@ -841,7 +859,7 @@ class Floor:
         return finished
 
     def _window_is_open(self, window, minutes: float, between_orders: bool,
-                        ends: datetime | None) -> tuple[bool, str]:
+                        ends: datetime | None) -> _Answer:
         """Whether a job may be done at this moment, and the sentence why.
 
         The reason comes back whichever way the answer goes, because a job
@@ -853,25 +871,29 @@ class Floor:
         end of the shift honestly waits.
         """
         if window in (None, "anytime"):
-            return True, "the job can be done at any time"
+            return _Answer(True, "the job can be done at any time", "anytime")
         if window not in _WINDOWS:
-            return False, (f"the order's window is {window}, which this floor does not "
-                           "know how to read, so nobody goes")
+            return _Answer(False, f"the order's window is {window}, which this floor "
+                           "does not know how to read, so nobody goes",
+                           f"window-not-understood:{window}")
         if window == "between_orders":
             if between_orders:
-                return True, "the line is between orders"
-            return False, ("the job can only be done between orders and the line is "
-                           "running one")
+                return _Answer(True, "the line is between orders", "between-orders")
+            return _Answer(False, "the job can only be done between orders and the "
+                           "line is running one", "the-line-is-running-an-order")
         if ends is None:
-            return False, ("the job can only be done at the end of the shift and "
-                           "nothing says when this shift ends")
+            return _Answer(False, "the job can only be done at the end of the shift "
+                           "and nothing says when this shift ends",
+                           "no-shift-end-to-wait-for")
         left = (ends - _utcnow()).total_seconds() / 60.0
         if 0.0 <= left <= minutes:
-            return True, f"the shift ends in {left:.0f} minutes and the job takes {minutes:.0f}"
-        return False, (f"the job can only be done in the last {minutes:.0f} minutes of the "
-                       f"shift, and there are {left:.0f} to go")
+            return _Answer(True, f"the shift ends in {left:.0f} minutes and the job "
+                           f"takes {minutes:.0f}", "the-shift-is-ending")
+        return _Answer(False, f"the job can only be done in the last {minutes:.0f} "
+                       f"minutes of the shift, and there are {left:.0f} to go",
+                       "the-shift-is-not-ending-yet")
 
-    def _can_get_at_it(self, equipment: str, states: dict) -> tuple[bool, str]:
+    def _can_get_at_it(self, equipment: str, states: dict) -> _Answer:
         """Whether a job that needs the machine stopped can have it.
 
         Stopped is not the same as momentarily idle. A machine that has been
@@ -888,39 +910,48 @@ class Floor:
         row = states.get(equipment) or {}
         state = str(row.get("state") or "")
         if not state:
-            return False, (f"the job needs {equipment} stopped and this MES holds no "
-                           "state for it at all, so nothing here can say that it is")
+            return _Answer(False, f"the job needs {equipment} stopped and this MES "
+                           "holds no state for it at all, so nothing here can say "
+                           "that it is", f"no-state-at-all:{equipment}")
         if state == "running":
-            return False, f"the job needs {equipment} stopped and it is running"
+            return _Answer(False, f"the job needs {equipment} stopped and it is "
+                           "running", f"the-machine-is-running:{equipment}")
         since = _as_moment(row.get("since"))
         if since is None:
-            return False, (f"{equipment} is {state} and nothing says since when, so "
-                           "nothing here can say the line has stopped it")
+            return _Answer(False, f"{equipment} is {state} and nothing says since "
+                           "when, so nothing here can say the line has stopped it",
+                           f"no-since:{equipment}")
         wanted = float((self.script.get("maintenance") or {}).get("standing_s", _STANDING_S))
         # In line seconds: an interval that lasted ten line minutes is over in
         # twenty of this floor's seconds on a replay at 30x, and a floor
         # reading the wall clock here would call every hiccup a stop.
         standing = max((_utcnow() - since).total_seconds(), 0.0) * self.speed
         if standing < wanted:
-            return False, (f"{equipment} has been {state} for {standing:.0f} line seconds "
-                           f"and a job that needs it stopped waits for {wanted:.0f}, "
-                           "because a machine that has just gone quiet is starved and "
-                           "not stopped")
-        return True, (f"{equipment} has been {state} for {standing / 60.0:.0f} line "
-                      "minutes, so the line has stopped it")
+            return _Answer(False, f"{equipment} has been {state} for {standing:.0f} "
+                           f"line seconds and a job that needs it stopped waits for "
+                           f"{wanted:.0f}, because a machine that has just gone quiet "
+                           "is starved and not stopped",
+                           f"not-standing-long-enough:{equipment}:{state}")
+        return _Answer(True, f"{equipment} has been {state} for {standing / 60.0:.0f} "
+                       "line minutes, so the line has stopped it",
+                       f"the-line-has-stopped-it:{equipment}")
 
-    def _say_once_why_it_waits(self, order: str, because: str) -> None:
+    def _say_once_why_it_waits(self, order: str, answer: _Answer) -> None:
         """Why a job that was given out has not been started, once per reason.
 
         The reason changing is the event, not the waiting: an order whose
         answer is the same at eight in the morning and at two in the afternoon
         has one line in the log, and an order that was waiting for the line
-        and is now waiting for a person has two.
+        and is now waiting for a person has two. What counts as the same
+        reason is the answer's key and not its sentence - the sentence counts
+        down ("there are 141 to go") and a log that repeats it every pass is
+        the floor talking to itself.
         """
-        if self._waiting.get(order) == because:
+        if self._waiting.get(order) == answer.key:
             return
-        self._waiting[order] = because
-        log.info("a job that was handed out is waiting", order=order, because=because)
+        self._waiting[order] = answer.key
+        log.info("a job that was handed out is waiting", order=order,
+                 because=answer.because, reason=answer.key)
 
     def _leave_it_to_whoever_started_it(self, person: str, on_now: dict) -> None:
         """An order in progress that nobody on this floor started.
@@ -945,16 +976,16 @@ class Floor:
         if not order:
             return
         minutes = float(on_now.get("expected_minutes") or _ASSUMED_JOB_MINUTES)
-        open_now, because = self._window_is_open(
+        window = self._window_is_open(
             on_now.get("window"), minutes, between_orders, ends)
-        if not open_now:
-            self._say_once_why_it_waits(order, because)
+        if not window.ok:
+            self._say_once_why_it_waits(order, window)
             return
         equipment = str(on_now.get("equipment") or "")
         if on_now.get("needs_stop"):
-            can, why_not = self._can_get_at_it(equipment, states)
-            if not can:
-                self._say_once_why_it_waits(order, why_not)
+            at_it = self._can_get_at_it(equipment, states)
+            if not at_it.ok:
+                self._say_once_why_it_waits(order, at_it)
                 return
         wanted = self.script.get("maintenance") or {}
         walk = float(wanted.get("walk_s", _WALK_S))
@@ -968,7 +999,7 @@ class Floor:
             at_the_machine=now + walk / self.speed)
         self._waiting.pop(order, None)
         log.info("a mechanic is on his way", person=person, order=order,
-                 equipment=equipment, because=because, walk_line_s=walk,
+                 equipment=equipment, because=window.because, walk_line_s=walk,
                  job_line_minutes=round(self._jobs[person].minutes, 1))
 
     async def _get_on_with_it(self, job: _Job, states: dict, now: float) -> bool:

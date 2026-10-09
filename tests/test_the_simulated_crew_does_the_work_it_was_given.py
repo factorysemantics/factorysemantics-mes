@@ -257,21 +257,21 @@ def crew_alone(plant) -> Floor:
 
 
 def test_a_job_that_can_be_done_at_any_time_has_an_open_window_and_says_so(crew_alone):
-    open_now, because = crew_alone._window_is_open("anytime", 30.0, False, None)
-    assert open_now is True and "any time" in because
+    answer = crew_alone._window_is_open("anytime", 30.0, False, None)
+    assert answer.ok is True and "any time" in answer.because
     #: A plan that never said when is read as open, which is what every plant
     #: had before the column existed.
-    assert crew_alone._window_is_open(None, 30.0, False, None)[0] is True
+    assert crew_alone._window_is_open(None, 30.0, False, None).ok is True
 
 
 def test_the_window_between_orders_is_shut_while_the_line_is_running_one(crew_alone):
     """Chain link 2, as a function. The chiller clean can only be done in the
     gap between orders, and this plant releases the next order as the last one
     finishes, so the gap never comes."""
-    shut, because = crew_alone._window_is_open("between_orders", 90.0, False, None)
-    assert shut is False
-    assert "only be done between orders" in because
-    assert crew_alone._window_is_open("between_orders", 90.0, True, None)[0] is True
+    answer = crew_alone._window_is_open("between_orders", 90.0, False, None)
+    assert answer.ok is False
+    assert "only be done between orders" in answer.because
+    assert crew_alone._window_is_open("between_orders", 90.0, True, None).ok is True
 
 
 def test_an_eight_hour_shift_replayed_in_sixteen_minutes_never_reaches_its_own_last_hour(crew_alone):
@@ -281,15 +281,15 @@ def test_an_eight_hour_shift_replayed_in_sixteen_minutes_never_reaches_its_own_l
     lab plant that runs at the speed of a day."""
     now = datetime.now(UTC).replace(tzinfo=None)
     assert crew_alone._window_is_open("end_of_shift", 60.0, True,
-                                      now + timedelta(hours=7))[0] is False
+                                      now + timedelta(hours=7)).ok is False
     assert crew_alone._window_is_open("end_of_shift", 60.0, True,
-                                      now + timedelta(minutes=20))[0] is True
+                                      now + timedelta(minutes=20)).ok is True
 
 
 def test_a_window_this_floor_cannot_read_leaves_the_job_where_it_is(crew_alone):
     """Guessing would be this floor deciding when a plant may stop its line."""
-    open_now, because = crew_alone._window_is_open("when_the_boss_says", 30.0, True, None)
-    assert open_now is False and "does not know how to read" in because
+    answer = crew_alone._window_is_open("when_the_boss_says", 30.0, True, None)
+    assert answer.ok is False and "does not know how to read" in answer.because
 
 
 def test_a_machine_that_has_only_just_gone_quiet_is_starved_and_not_stopped(crew_alone):
@@ -301,20 +301,20 @@ def test_a_machine_that_has_only_just_gone_quiet_is_starved_and_not_stopped(crew
     now = datetime.now(UTC).replace(tzinfo=None)
     just_quiet = {PALLETISER: {"equipment": PALLETISER, "state": "idle",
                                "since": (now - timedelta(seconds=40)).isoformat()}}
-    can, why_not = crew_alone._can_get_at_it(PALLETISER, just_quiet)
-    assert can is False and "starved and" in why_not
+    answer = crew_alone._can_get_at_it(PALLETISER, just_quiet)
+    assert answer.ok is False and "starved and" in answer.because
 
     stopped = {PALLETISER: {"equipment": PALLETISER, "state": "idle",
                             "since": (now - timedelta(minutes=30)).isoformat()}}
-    assert crew_alone._can_get_at_it(PALLETISER, stopped)[0] is True
+    assert crew_alone._can_get_at_it(PALLETISER, stopped).ok is True
 
 
 def test_a_machine_that_is_making_something_is_not_opened_for_a_job(crew_alone):
     now = datetime.now(UTC).replace(tzinfo=None)
     running = {PALLETISER: {"equipment": PALLETISER, "state": "running",
                             "since": (now - timedelta(hours=3)).isoformat()}}
-    can, why_not = crew_alone._can_get_at_it(PALLETISER, running)
-    assert can is False and "it is running" in why_not
+    answer = crew_alone._can_get_at_it(PALLETISER, running)
+    assert answer.ok is False and "it is running" in answer.because
 
 
 def test_a_machine_this_mes_holds_no_state_for_cannot_be_called_stopped(crew_alone):
@@ -322,8 +322,44 @@ def test_a_machine_this_mes_holds_no_state_for_cannot_be_called_stopped(crew_alo
     nobody has ever reported on is standing still, so the order waits with
     that written down rather than being started on a machine that may be
     running."""
-    can, why_not = crew_alone._can_get_at_it(PALLETISER, {})
-    assert can is False and "holds no state for it at all" in why_not
+    answer = crew_alone._can_get_at_it(PALLETISER, {})
+    assert answer.ok is False and "holds no state for it at all" in answer.because
+
+
+def test_a_job_that_waits_all_shift_on_the_same_reason_says_so_once_not_every_pass(
+        crew_alone, caplog):
+    """The sentence a waiting job says carries this moment's figures - how
+    long the machine has been standing, how many minutes of the shift are
+    left - and those change every pass. Dedup is on the reason's name, so an
+    eight-hour wait is one line in the log and not fourteen hundred of them
+    counting down."""
+    now = datetime.now(UTC).replace(tzinfo=None)
+    order = "PM-00001"
+    for seconds in (40, 60, 80, 100):
+        quiet = {PALLETISER: {"equipment": PALLETISER, "state": "idle",
+                              "since": (now - timedelta(seconds=seconds)).isoformat()}}
+        answer = crew_alone._can_get_at_it(PALLETISER, quiet)
+        assert answer.ok is False
+        crew_alone._say_once_why_it_waits(order, answer)
+    assert crew_alone._waiting[order] == f"not-standing-long-enough:{PALLETISER}:idle"
+
+    #: And the reason CHANGING is still the event: the same order now waiting
+    #: because the machine is running is a second line, not a repeat.
+    running = {PALLETISER: {"equipment": PALLETISER, "state": "running",
+                            "since": (now - timedelta(hours=1)).isoformat()}}
+    crew_alone._say_once_why_it_waits(order, crew_alone._can_get_at_it(PALLETISER, running))
+    assert crew_alone._waiting[order] == f"the-machine-is-running:{PALLETISER}"
+
+
+def test_the_sentence_a_waiting_job_says_counts_down_even_though_the_reason_does_not(
+        crew_alone):
+    """Both halves are wanted: a person reading the log needs the figures, and
+    the log needs one line. So the sentences differ where the keys match."""
+    now = datetime.now(UTC).replace(tzinfo=None)
+    first = crew_alone._window_is_open("end_of_shift", 60.0, True, now + timedelta(hours=7))
+    later = crew_alone._window_is_open("end_of_shift", 60.0, True, now + timedelta(hours=6))
+    assert first.because != later.because
+    assert first.key == later.key == "the-shift-is-not-ending-yet"
 
 
 # --------------------------------------------------------- the pass, on a plant
