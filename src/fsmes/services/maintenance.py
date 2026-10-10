@@ -129,11 +129,12 @@ def status_of(session: Session, plan: MaintenancePlan) -> dict:
         # than inventing a start date the plant never recorded. Reported as
         # exactly the interval so the reason reads honestly rather than as
         # some fabricated elapsed time.
+        unit = "days"
         if plan.last_done_at is None:
-            used, unit = plan.interval, "days (never serviced)"
+            used = plan.interval
         else:
             elapsed = (utcnow() - plan.last_done_at).total_seconds() / 86400.0
-            used, unit = round(elapsed, 2), "days"
+            used = round(elapsed, 2)
 
     fraction = used / plan.interval if plan.interval else 1.0
     soon = due_soon_fraction(session)
@@ -145,6 +146,15 @@ def status_of(session: Session, plan: MaintenancePlan) -> dict:
         "interval": plan.interval,
         "used": round(used, 2),
         "unit": unit,
+        # Whether `used` is something the plant measured or the honest reading
+        # of a plan nobody has ever serviced. It used to be folded into the
+        # unit itself - "14.0 days (never serviced)" - and the due sentence,
+        # which says the unit twice, then read "14.0 days (never serviced)
+        # against a 14.0 days (never serviced) plan". Seen on the lab,
+        # 2026-10-09: the same clause twice, and a supervisor reading it twice
+        # to check it was not two different numbers.
+        "never_serviced": plan.trigger is TriggerKind.CALENDAR_DAYS
+                          and plan.last_done_at is None,
         "remaining": round(max(0.0, plan.interval - used), 2),
         "fraction": round(fraction, 3),
         "due": fraction >= 1.0,
@@ -221,8 +231,9 @@ def raise_due(session: Session, actor: str = "system") -> list[MaintenanceOrder]
             plan_id=plan.id,
             kind=MaintenanceKind.PREVENTIVE,
             summary=plan.name,
-            reason=f"{row['used']} {row['unit']} against a {plan.interval} "
-                   f"{row['unit']} plan",
+            reason=(f"{row['used']} {row['unit']} against a {plan.interval} "
+                    f"{row['unit']} plan"
+                    + (" — never serviced" if row["never_serviced"] else "")),
             # Copied, not read through the relationship: the plan may be
             # re-written tomorrow and this order is a record of what was asked
             # for today. A plan that never said which trade leaves both null,

@@ -319,7 +319,9 @@ def test_every_pager_is_the_shared_one_and_every_count_says_what_it_covers():
     for name in ("admin", "instructions"):
         assert "window.FS.pager(" in _read(f"{name}.js"), name
     # Server-paged screens read the envelope; none slices a bare list any more.
-    assert "status=due&status=in_progress" in _read("maintenance.js")
+    # Three statuses: `assigned` is open work too, and leaving it out is what
+    # made the Due now tile disagree with the list under it.
+    assert "status=due&status=assigned&status=in_progress" in _read("maintenance.js")
     assert 'params.set("q"' in _read("maintenance.js")
     assert "page.items" in _read("adjustments.js") and "page.items" in _read("coa.js")
     assert "/triggers/firings?${params}" in _read("triggers.js")

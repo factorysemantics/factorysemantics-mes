@@ -166,6 +166,80 @@ def register(mcp, call, write, identify) -> dict:
                      dry_run, f"assign maintenance order {order} to {person}")
 
     @mcp.tool()
+    def maintenance_shift(plant: str, shift: str | None = None) -> dict:
+        """This shift in one read: one line a supervisor could say out loud -
+        how many orders came due, how many the rules handed out, how many are
+        waiting - then the shift's orders with the person's name and which rule
+        sent each, then what is waiting grouped by reason. The reasons are the
+        dispatcher's own three plus one that is not a dispatch failure: an order
+        somebody already has that needs the machine stopped, on a machine that
+        is still running. shift is a key like 2026-10-09/DAY, `current` or
+        `previous`; left out it is the shift running now."""
+        path = "/maintenance/shift" + (f"?shift={shift}" if shift else "")
+        return {"plant": plant, **call(plant, "GET", path)}
+
+    @mcp.tool()
+    def write_dispatch_rule(plant: str, machine: str | None = None,
+                            trade: str | None = None,
+                            priority_at_least: int | None = None,
+                            strategy: str = "least_loaded",
+                            dry_run: bool = False, on_behalf_of: str | None = None,
+                            client_ref: str | None = None) -> dict:
+        """Write one of the supervisor's dispatch rules as the sentence it is:
+        *work on [machine] [needing TRADE] [at priority n or worse] goes to
+        somebody on this shift, [how]*. Every blank may be left out and left out
+        means anything. strategy is least_loaded, nearest or round_robin. The
+        code and the name are made from the blanks, so there is nothing to
+        invent, and the answer carries the rule's sentence as the dispatcher
+        itself renders it. Needs the maintenance.plan capability, which the
+        agent role does not hold by default - an admin grants it per plant."""
+        identify(on_behalf_of, client_ref)
+        body = {"equipment": machine, "skill": trade,
+                "priority_at_least": priority_at_least, "strategy": strategy}
+        said = (f"work on {machine or 'anywhere'}"
+                + (f" needing {trade}" if trade else "")
+                + (f" at priority {priority_at_least} or worse"
+                   if priority_at_least is not None else ""))
+        return write(plant, "/maintenance/rules", body, dry_run,
+                     f"write a dispatch rule: {said}, {strategy}")
+
+    @mcp.tool()
+    def change_dispatch_rule(plant: str, rule: str, active: bool | None = None,
+                             machine: str | None = None, trade: str | None = None,
+                             priority_at_least: int | None = None,
+                             strategy: str | None = None, move: str | None = None,
+                             dry_run: bool = False, on_behalf_of: str | None = None,
+                             client_ref: str | None = None) -> dict:
+        """Change one blank on a written dispatch rule, switch it on or off, or
+        move it `up` or `down` the order the rules are tried in. Only what is
+        named here is changed. A rule that has handed work out is switched off
+        rather than removed, because every order it sent still names it. Needs
+        the maintenance.plan capability."""
+        identify(on_behalf_of, client_ref)
+        body = {k: v for k, v in (("active", active), ("equipment", machine),
+                                  ("skill", trade),
+                                  ("priority_at_least", priority_at_least),
+                                  ("strategy", strategy), ("move", move))
+                if v is not None}
+        if not body:
+            return {"error": "name something to change: active, machine, trade, "
+                             "priority_at_least, strategy, or move"}
+        return write(plant, f"/maintenance/rules/{rule}", body, dry_run,
+                     f"change dispatch rule {rule}: {body}", method="PATCH")
+
+    @mcp.tool()
+    def remove_dispatch_rule(plant: str, rule: str, dry_run: bool = False,
+                             on_behalf_of: str | None = None,
+                             client_ref: str | None = None) -> dict:
+        """Remove a dispatch rule that never handed any work out. One that has
+        is refused with the count: switch it off instead, so the orders it sent
+        keep pointing at a rule somebody can look up. Needs the
+        maintenance.plan capability."""
+        identify(on_behalf_of, client_ref)
+        return write(plant, f"/maintenance/rules/{rule}", {}, dry_run,
+                     f"remove dispatch rule {rule}", method="DELETE")
+
+    @mcp.tool()
     def perform_maintenance(plant: str, order: str, action: str, findings: str | None = None,
                             dry_run: bool = False, on_behalf_of: str | None = None,
                             client_ref: str | None = None) -> dict:
@@ -180,7 +254,9 @@ def register(mcp, call, write, identify) -> dict:
 
     return {f.__name__: f for f in (maintenance_due, maintenance_plans, maintenance_work,
                                     maintenance_roster, maintenance_rules,
-                                    maintenance_explain,
+                                    maintenance_explain, maintenance_shift,
                                     create_maintenance_plan, raise_due_maintenance,
                                     raise_corrective_maintenance, dispatch_maintenance,
-                                    assign_maintenance_order, perform_maintenance)}
+                                    assign_maintenance_order, perform_maintenance,
+                                    write_dispatch_rule, change_dispatch_rule,
+                                    remove_dispatch_rule)}

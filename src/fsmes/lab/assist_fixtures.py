@@ -129,6 +129,16 @@ MAINTENANCE_SUMMARY = "Infeed belt slipping (assist eval fixture)"
 UNIT = "SN-EVAL-1"
 CONTAINER = "SN-EVAL-CASE-1"
 
+#: The dispatch rule the two editing cases point at, and the code a plant makes
+#: out of its blanks: work on the mixer, any trade, priority 1 or worse, to
+#: whoever has least on. `dispatch.code_for` builds that code from the sentence,
+#: so this is a fact about the product read back rather than a code a run chose.
+#:
+#: Nothing here writes it. Changing or taking away a rule needs one to point at,
+#: and writing one needs `maintenance.plan` - see `_RULE` below.
+RULE_PRIORITY = 1
+RULE = f"{MACHINE}-ANY-P{RULE_PRIORITY}-LEAST"
+
 
 class Unarrangeable(Exception):
     """A fixture this run may not, or cannot, put on the plant."""
@@ -432,6 +442,14 @@ def _make_maintenance(plant: str, code: str, actor: str) -> None:
         on_behalf_of=actor))
 
 
+def _rules_on(plant: str) -> list[dict]:
+    return _rows(_tools().maintenance_rules(plant), "rules")
+
+
+def _has_rule(plant: str, code: str) -> bool:
+    return any(r.get("code") == code for r in _rules_on(plant))
+
+
 def _value_now(plant: str, domain: str, key: str) -> Any:
     return (_ok(_tools().plant_settings(plant, domain=domain, key=key))
             .get("setting") or {}).get("value")
@@ -609,6 +627,17 @@ def _has_person(plant: str, code: str) -> bool:
                for p in _rows(_tools().people(plant, q=code), "people"))
 
 
+_RULE = ("a dispatch rule is the supervisor's own sentence about who gets what work, "
+         "and writing one needs maintenance.plan - which the agent role does not hold "
+         "unless an admin has granted it on this plant, the same gate a maintenance "
+         "plan sits behind. A run that wrote one would be deciding where somebody "
+         "else's work goes")
+
+_WRITE_A_RULE = ("write the rule on the Maintenance tab, under Your rules, as somebody "
+                 "who holds maintenance.plan - press New rule, fill the blanks in the "
+                 "sentence and press Add - or grant the agent maintenance.plan on this "
+                 "plant and let a run write it")
+
 _GAUGE = ("the gauge register is master data, and the AGENT account does not hold "
           "masterdata.write unless an admin has granted it (decision 0035) - so a run "
           "cannot put a gauge on a plant, and only asks in the negative: \"register "
@@ -682,6 +711,7 @@ KINDS: dict[str, Kind] = {k.name: k for k in (
          fix="ask this case on a plant that has not got this gauge, or put the gauge "
              "on this one as a person who holds masterdata.write"),
     Kind("unit", _has_unit, _make_unit),
+    Kind("rule", _has_rule, cannot=_RULE, fix=_WRITE_A_RULE),
 )}
 
 

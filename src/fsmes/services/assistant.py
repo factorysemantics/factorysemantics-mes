@@ -2405,17 +2405,43 @@ WITHOUT_A_WALK: dict[str, str] = {
         "sample today is the simulated floor, over HTTP."
     ),
     "dispatch_maintenance": (
-        "no control on any screen, and honestly so: what runs the rules today "
-        "is the plant's own tick, every supervise pass, and `fsmes maintenance "
-        "dispatch` by hand. The supervisor's screen that offers the button - "
-        "with the rules, what they assigned, and what nobody could take - is "
-        "the follow-up handoff."
+        "the *Hand out what the rules cover* button in *Waiting, and why* on "
+        "/dashboard/maintenance (maintenance-dispatch). The plant's own tick "
+        "runs the same pass every supervise cycle, and `fsmes maintenance "
+        "dispatch` runs it from a terminal; the button is for a supervisor who "
+        "has just written a rule and wants to see it take."
     ),
     "assign_maintenance_order": (
-        "no control on any screen yet: the assign control belongs beside the "
-        "order on the supervisor's maintenance screen, which is the follow-up "
-        "handoff. Until it is there, a hand assignment is a POST or `fsmes "
-        "maintenance dispatch --explain ORDER` first to see who is free."
+        "the *Give to…* button on any waiting order in *Waiting, and why* on "
+        "/dashboard/maintenance (maintenance-give), which opens a person "
+        "picker already narrowed to this shift and the trade the job needs "
+        "(maintenance-give-person, maintenance-give-confirm)."
+    ),
+    # The supervisor's rules, written as a sentence with blanks in it. The
+    # control is on the screen and named here rather than walked onto: a walk
+    # fills a form from the proposed arguments, and three of these four blanks
+    # are `<select>`s whose options are this plant's own machines, trades and
+    # strategy words. A walk would have to be authored against a plant that
+    # has a trade in it, and the demo plant deliberately has none - so the
+    # card carries *Do it* and this sentence, which is where a person presses
+    # for themselves.
+    "write_dispatch_rule": (
+        "the *New rule* button in *Your rules* on /dashboard/maintenance "
+        "(maintenance-rule-new), which opens the sentence with blanks in it - "
+        "machine, trade, priority, how to choose - with the dispatcher's own "
+        "rendering of it previewed underneath as the blanks change."
+    ),
+    "change_dispatch_rule": (
+        "the arrows and the *Switch off* button on each rule in *Your rules* "
+        "on /dashboard/maintenance (maintenance-rules): the arrows move a rule "
+        "up or down the order the rules are tried in, and switching one off "
+        "stops it being tried while the work it gave out keeps naming it."
+    ),
+    "remove_dispatch_rule": (
+        "the *Remove* button on a rule in *Your rules* on "
+        "/dashboard/maintenance (maintenance-rules), which the screen offers "
+        "only on a rule that has handed nothing out - one that has is switched "
+        "off instead, so every order it sent still points somewhere."
     ),
     "erp_retry": (
         "the Retry button on a dead message in the ERP panel of /dashboard/ops "

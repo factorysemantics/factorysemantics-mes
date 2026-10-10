@@ -140,6 +140,12 @@ NEEDS: dict[str, str] = {
     "create_maintenance_plan": "maintenance.plan",
     "dispatch_maintenance": "maintenance.perform",
     "assign_maintenance_order": "maintenance.plan",
+    # Writing, changing and removing one of the supervisor's dispatch rules is
+    # the same act as defining a plan - saying how this plant means to work -
+    # so it sits behind the same gate the routes demand.
+    "write_dispatch_rule": "maintenance.plan",
+    "change_dispatch_rule": "maintenance.plan",
+    "remove_dispatch_rule": "maintenance.plan",
     "create_material": "masterdata.write",
     "create_equipment": "masterdata.write",
     "register_gauge": "masterdata.write",

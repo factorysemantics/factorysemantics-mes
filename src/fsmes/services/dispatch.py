@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from fsmes.db import utcnow
 from fsmes.domain import (
@@ -44,6 +44,8 @@ from fsmes.domain import (
     DispatchRule,
     DispatchStrategy,
     Equipment,
+    EquipmentState,
+    EquipmentStateName,
     MaintenanceOrder,
     MaintenancePlan,
     MaintenanceStatus,
@@ -68,6 +70,16 @@ from fsmes.services import maintenance as _maintenance
 #: reason about and one that surprises them.
 DEFAULT_RULE_CODE = "DEFAULT"
 DEFAULT_RULE_NAME = "any due order to a free person with the skill on this shift"
+
+#: How each strategy reads in the sentence. Hoisted out of `says` because a
+#: screen offering the blanks has to offer these exact words: a page with its
+#: own copy is a page whose dropdown and whose preview drift apart, and the
+#: whole point of the sentence is that everything says it the same way.
+STRATEGY_SAID = {
+    DispatchStrategy.LEAST_LOADED: "whoever has least on",
+    DispatchStrategy.NEAREST: "whoever is nearest the machine",
+    DispatchStrategy.ROUND_ROBIN: "taking turns",
+}
 
 # --------------------------------------------------------------------- rules
 
@@ -145,11 +157,7 @@ def rule_as_json(rule: DispatchRule) -> dict:
 
 def says(rule: DispatchRule) -> str:
     """The rule as a supervisor would say it out loud."""
-    how = {
-        DispatchStrategy.LEAST_LOADED: "whoever has least on",
-        DispatchStrategy.NEAREST: "whoever is nearest the machine",
-        DispatchStrategy.ROUND_ROBIN: "taking turns",
-    }[rule.strategy]
+    how = STRATEGY_SAID[rule.strategy]
     said = f"Work on {rule.equipment_code}" if rule.equipment_code else "Work anywhere in the plant"
     # A trade reads as part of the work - "work on the filler needing ELEC".
     # Everything else is an aside, and asides are closed on both sides, or the
@@ -165,6 +173,280 @@ def says(rule: DispatchRule) -> str:
         said += ", " + ", ".join(asides) + ","
     return f"{said} goes to somebody on this shift, {how}."
 
+
+# ------------------------------------------- the sentence, written and edited
+#
+# A supervisor does not name a rule. They say a sentence with four blanks in
+# it - the machine, the trade, the priority, how to choose - and the code, the
+# name and the row are made from what they said. Everything in this section
+# exists so that the words on the screen, the words in `says`, the words the
+# CLI prints and the words in the audit row are one set of words.
+
+
+#: The blanks, as the vocabulary a screen fills its `<select>`s from. Published
+#: by `GET /maintenance/rules` so the page offers exactly the words this module
+#: understands and no screen has to keep a second copy of them.
+def vocabulary(session: Session) -> dict:
+    """The words the blanks may be filled with, from the plant that has them."""
+    return {
+        "equipment": [{"code": e.code, "name": e.name}
+                      for e in session.scalars(select(Equipment).order_by(Equipment.code))],
+        "skills": [{"code": s.code, "name": s.name} for s in
+                   session.scalars(select(Skill).order_by(Skill.code))],
+        # 1 safety, 2 production-critical, 3 routine. Said as the words a
+        # supervisor uses, because "priority 2 or worse" is the sentence and
+        # "2" on its own is a number off a form.
+        "priorities": [{"value": 1, "name": "safety"},
+                       {"value": 2, "name": "production-critical"},
+                       {"value": 3, "name": "routine"}],
+        "strategies": [{"value": s.value, "says": STRATEGY_SAID[s]}
+                       for s in DispatchStrategy],
+    }
+
+
+#: The JSON names of the blanks, against the column each one sets. A PATCH body
+#: is checked against this rather than against a second list of strings, so a
+#: blank nobody can edit cannot be edited by naming its column.
+RULE_FIELDS = {
+    "equipment": "equipment_code",
+    "skill": "skill_code",
+    "priority_at_least": "priority_at_least",
+    "strategy": "strategy",
+    "sequence": "sequence",
+    "active": "active",
+    "name": "name",
+    "supervisor": "supervisor_code",
+}
+
+
+def get_rule(session: Session, code: str) -> DispatchRule:
+    """One written rule, or a 404 that says what this plant does have."""
+    rule = session.scalar(select(DispatchRule).where(DispatchRule.code == code))
+    if rule is None:
+        known = [r.code for r in session.scalars(select(DispatchRule).order_by(DispatchRule.code))]
+        if code == DEFAULT_RULE_CODE:
+            raise NotFound(
+                f"{DEFAULT_RULE_CODE!r} is the house rule a plant with no rules "
+                "falls back to, not a row, so there is nothing to edit or remove.")
+        raise NotFound(
+            f"no dispatch rule {code!r} on this plant. It has {len(known)}: "
+            f"{', '.join(known) or 'none at all'}.")
+    return rule
+
+
+def next_sequence(session: Session) -> int:
+    """Where a rule nobody has placed goes: last, out of the way of the ones
+    already working. Tens, so there is always room to put one between two."""
+    last = session.scalar(select(func.max(DispatchRule.sequence)))
+    return int(last or 0) + 10
+
+
+def code_for(session: Session, *, equipment_code: str | None, skill_code: str | None,
+             priority_at_least: int | None, strategy: DispatchStrategy) -> str:
+    """A code made out of the sentence, so there is nothing to name.
+
+    Readable in a list and in an audit row - `FILL01-ELEC-NEAR` is the rule
+    about electrical work on the filler going to whoever is nearest - and
+    unique, with a number on the end when a plant writes the same sentence
+    twice. The column is forty characters, and the stem is cut to leave room.
+    """
+    short = {DispatchStrategy.LEAST_LOADED: "LEAST",
+             DispatchStrategy.NEAREST: "NEAR",
+             DispatchStrategy.ROUND_ROBIN: "TURNS"}[strategy]
+    parts = [equipment_code or "ANY", skill_code or "ANY"]
+    if priority_at_least is not None:
+        parts.append(f"P{priority_at_least}")
+    parts.append(short)
+    stem = "-".join(parts)[:36].rstrip("-")
+    taken = {c for c in session.scalars(select(DispatchRule.code))}
+    if stem not in taken and stem != DEFAULT_RULE_CODE:
+        return stem
+    for n in range(2, 100):
+        candidate = f"{stem}-{n}"
+        if candidate not in taken:
+            return candidate
+    raise Conflict(f"a hundred rules already read {stem}; give this one a code of its own")
+
+
+def write_rule(session: Session, *, equipment_code: str | None = None,
+               skill_code: str | None = None, priority_at_least: int | None = None,
+               strategy: str = DispatchStrategy.LEAST_LOADED.value,
+               code: str | None = None, name: str | None = None,
+               supervisor_code: str | None = None, sequence: int | None = None,
+               active: bool = True, actor: str = "system",
+               dry_run: bool = False) -> dict:
+    """The blanks in, a rule out - or, with `dry_run`, only the sentence.
+
+    `dry_run` is how a screen shows the finished sentence while a supervisor is
+    still choosing: the preview is the server's own `says` of the rule it would
+    write, not a second rendering kept in a page script that could drift from
+    this one word by word.
+    """
+    try:
+        how = DispatchStrategy(strategy)
+    except ValueError as exc:
+        raise Invalid(
+            f"unknown strategy {strategy!r}. Expected one of "
+            f"{', '.join(s.value for s in DispatchStrategy)}") from exc
+    if priority_at_least is not None and not 1 <= int(priority_at_least) <= 3:
+        raise Invalid("priority is 1 (safety), 2 (production-critical) or 3 (routine)")
+    if equipment_code:
+        masterdata.get_equipment(session, equipment_code)
+    if skill_code:
+        get_skill(session, skill_code)
+
+    sequence = sequence if sequence is not None else next_sequence(session)
+    code = code or code_for(session, equipment_code=equipment_code,
+                            skill_code=skill_code,
+                            priority_at_least=priority_at_least, strategy=how)
+    # Built before anything is written, because the name *is* the sentence and
+    # `create_rule` needs it at the moment it audits the row. A rule nobody
+    # named is not nameless: it is called what it does, cut to the column, so a
+    # supervisor reading a list of names is reading a list of sentences.
+    draft = DispatchRule(
+        code=code, name="", supervisor_code=supervisor_code,
+        equipment_code=equipment_code, skill_code=skill_code,
+        priority_at_least=priority_at_least, strategy=how,
+        active=active, sequence=sequence)
+    draft.name = name or says(draft)[:160]
+
+    if dry_run:
+        # Nothing is written and no code is reserved, so this is the rule this
+        # sentence would become if it were saved this second. Said as such.
+        out = rule_as_json(draft)
+        out["dry_run"] = True
+        return out
+
+    rule = create_rule(
+        session, code=code, name=draft.name, supervisor_code=supervisor_code,
+        equipment_code=equipment_code, skill_code=skill_code,
+        priority_at_least=priority_at_least, strategy=how.value,
+        sequence=sequence, active=active, actor=actor)
+    return rule_as_json(rule)
+
+
+def update_rule(session: Session, code: str, changes: dict, *,
+                actor: str = "system") -> dict:
+    """Change a blank, switch a rule off, or move it in the order.
+
+    Only the blanks named in `RULE_FIELDS`, and a blank set to null is cleared -
+    which is how "needing ELEC" becomes "whatever the skill" without deleting
+    and rewriting the rule and losing what it has already handed out.
+
+    The audit row carries the sentence before and the sentence after, because
+    that is what a supervisor would want to read six weeks later: not that
+    `skill_code` went from `ELEC` to null, but that the rule stopped being
+    about electricians.
+    """
+    rule = get_rule(session, code)
+    before = rule_as_json(rule)
+    unknown = sorted(set(changes) - set(RULE_FIELDS))
+    if unknown:
+        raise Invalid(
+            f"nothing on a rule is called {', '.join(unknown)}. The blanks are "
+            f"{', '.join(sorted(RULE_FIELDS))}.")
+    if not changes:
+        raise Invalid(
+            "nothing to change. Name one of "
+            f"{', '.join(sorted(RULE_FIELDS))} - a blank sent as null is "
+            "cleared - or `move` to reorder it.")
+
+    if "strategy" in changes:
+        try:
+            changes["strategy"] = DispatchStrategy(changes["strategy"])
+        except ValueError as exc:
+            raise Invalid(
+                f"unknown strategy {changes['strategy']!r}. Expected one of "
+                f"{', '.join(s.value for s in DispatchStrategy)}") from exc
+    if (changes.get("priority_at_least") is not None
+            and not 1 <= int(changes["priority_at_least"]) <= 3):
+        raise Invalid("priority is 1 (safety), 2 (production-critical) or 3 (routine)")
+    if changes.get("equipment"):
+        masterdata.get_equipment(session, changes["equipment"])
+    if changes.get("skill"):
+        get_skill(session, changes["skill"])
+    if "active" in changes and changes["active"] is None:
+        raise Invalid("a rule is on or off; `active` cannot be nothing")
+    if "name" in changes and not changes["name"]:
+        raise Invalid("a rule reads as its sentence; clear a blank, not the name")
+
+    named = "name" in changes
+    for field_name, column in RULE_FIELDS.items():
+        if field_name in changes:
+            setattr(rule, column, changes[field_name])
+    if not named:
+        # The name follows the sentence unless somebody wrote their own, so a
+        # rule edited through the blanks never reads as the rule it used to be.
+        rule.name = says(rule)[:160]
+    session.flush()
+    audit.record(session, actor=actor, action="maintenance.rule_changed",
+                 entity_type="dispatch_rule", entity_id=rule.code,
+                 before=before, after=rule_as_json(rule))
+    return rule_as_json(rule)
+
+
+def move_rule(session: Session, code: str, direction: str, *,
+              actor: str = "system") -> dict:
+    """Up or down one place in the order the rules are tried.
+
+    One call, not two sequence writes, because the order is the thing the
+    supervisor is changing and a page that sent two numbers could leave two
+    rules on the same one. Every rule is renumbered in tens afterwards, so the
+    arrows keep working however the sequences started.
+    """
+    if direction not in ("up", "down"):
+        raise Invalid("a rule moves `up` or `down`")
+    rule = get_rule(session, code)
+    order = list(session.scalars(select(DispatchRule).order_by(
+        DispatchRule.sequence, DispatchRule.code)))
+    was = [r.code for r in order]
+    at = was.index(rule.code)
+    to = at - 1 if direction == "up" else at + 1
+    if not 0 <= to < len(order):
+        edge = "first" if direction == "up" else "last"
+        raise Conflict(f"{rule.code} is already tried {edge}")
+    order[at], order[to] = order[to], order[at]
+    for place, row in enumerate(order, start=1):
+        row.sequence = place * 10
+    session.flush()
+    now = [r.code for r in order]
+    audit.record(session, actor=actor, action="maintenance.rules_reordered",
+                 entity_type="dispatch_rule", entity_id=rule.code,
+                 before={"tried_in_order": was},
+                 after={"tried_in_order": now, "moved": rule.code,
+                        "says": says(rule), "sequence": rule.sequence})
+    return rule_as_json(rule)
+
+
+def handed_out_by(session: Session, code: str) -> int:
+    """How many orders this rule has handed out, ever."""
+    return int(session.scalar(
+        select(func.count()).select_from(MaintenanceOrder)
+        .where(MaintenanceOrder.assigned_by == code)) or 0)
+
+
+def delete_rule(session: Session, code: str, *, actor: str = "system") -> dict:
+    """Remove a rule that never did anything.
+
+    A rule that has handed work out is refused, with the count and the way to
+    do what was meant: switch it off. Every one of those orders says
+    `assigned_by = <this code>`, and an audit trail that points at a rule
+    nobody can look up is an audit trail that has stopped being one.
+    """
+    rule = get_rule(session, code)
+    handed = handed_out_by(session, code)
+    if handed:
+        raise Conflict(
+            f"{code} has handed out {handed} order"
+            f"{'' if handed == 1 else 's'}, and each of them still names it as "
+            "what sent it. Switch the rule off instead - it stops being tried "
+            "and the trail keeps pointing somewhere.")
+    before = rule_as_json(rule)
+    session.delete(rule)
+    session.flush()
+    audit.record(session, actor=actor, action="maintenance.rule_removed",
+                 entity_type="dispatch_rule", entity_id=code, before=before)
+    return {"removed": code, "was": before}
 
 # -------------------------------------------------------------------- skills
 
@@ -332,7 +614,11 @@ def _comes_first(order: MaintenanceOrder, against: MaintenanceOrder) -> bool:
 
 
 def _read_crew(session: Session) -> _Crew:
-    people = {p.id: p for p in session.scalars(select(Person))}
+    # Where each person is based comes back with them: the roster says
+    # "nearest the machine" and the screen prints their home line, and asking
+    # the equipment table per person is a query per head.
+    people = {p.id: p for p in session.scalars(
+        select(Person).options(joinedload(Person.home_equipment)))}
     crew = _Crew(by_id=people, by_code={p.code: p for p in people.values()})
 
     for row in session.scalars(select(PersonnelSkill)):
@@ -345,10 +631,16 @@ def _read_crew(session: Session) -> _Crew:
             crew.dated.setdefault((row.shift_code, row.shift_day), []).append(row)
 
     assumed = _maintenance.default_job_minutes(session)
+    # The machine and the plan come back with the order, because the roster
+    # says what each person is on - "MT-04 on PM-00031 at M1-04 - change the
+    # filter" - and reaching for them row by row is a query per busy person.
+    # At a hundred on shift that was forty-eight queries for one roster read
+    # (measured 2026-10-09); it is one.
     held = session.scalars(
         select(MaintenanceOrder)
+        .options(joinedload(MaintenanceOrder.equipment), joinedload(MaintenanceOrder.plan))
         .where(MaintenanceOrder.status.in_(
-            (MaintenanceStatus.ASSIGNED, MaintenanceStatus.IN_PROGRESS)))).all()
+            (MaintenanceStatus.ASSIGNED, MaintenanceStatus.IN_PROGRESS)))).unique().all()
     codes = {p.code: p.id for p in people.values()}
     plan_minutes = dict(session.execute(
         select(MaintenancePlan.id, MaintenancePlan.expected_minutes)).all())
@@ -799,6 +1091,19 @@ def explain(session: Session, order_code: str, now: datetime | None = None) -> d
     out["priority_is_stated"] = order.priority is not None
     out["would_now"] = (f"go to {decision.assigned_to}" if decision.assigned_to
                         else f"go to nobody - {decision.unassigned_reason}")
+    # What the order is actually waiting for, if it is waiting - the same
+    # clause the shift read groups it under. The walk below it is a
+    # hypothetical: who the rules *would* pick this minute. For a job
+    # somebody already has, that hypothetical is not the question a
+    # supervisor is asking, and a chiller clean whose walk ended "would go to
+    # nobody - all_busy" under a heading that said *needs the line stopped*
+    # answered a question nobody asked.
+    state = session.scalar(select(EquipmentState.state).where(
+        EquipmentState.equipment_id == order.equipment_id,
+        EquipmentState.ended_at.is_(None)))
+    bucket = _waiting_bucket(order, state.value if state else None)
+    out["waiting_clause"] = (WAITING_REASONS[bucket]["clause"]
+                             if bucket in WAITING_REASONS else None)
     return out
 
 
@@ -922,6 +1227,13 @@ def roster(session: Session, shift: str | None = None, now: datetime | None = No
             "available": row.available, "reason": row.reason,
             "standing": row.standing,
             "open_orders": crew.load.get(person.id, 0),
+            # How loaded they are, in minutes of work they are holding: the
+            # expected minutes of every open job, which is exactly what the
+            # dispatcher refuses to double-book. A plan's own number, or this
+            # plant's default for a job with no plan - never a guess.
+            "minutes_loaded": round(sum(
+                (end - start).total_seconds() / 60.0
+                for start, end in crew.busy.get(person.id, [])), 1),
             "home": person.home_equipment.code if person.home_equipment else None,
             # What they are doing, not just how much of it there is. A
             # supervisor's page needs the job in somebody's hands and how long
@@ -931,3 +1243,233 @@ def roster(session: Session, shift: str | None = None, now: datetime | None = No
         })
     return {"shift": found.as_json(), "people": people, "total": len(people),
             "available": sum(1 for p in people if p["available"])}
+
+
+# ------------------------------------------------------------ one shift, read
+#
+# The supervisor's screen asks one question - "what happened on my shift, and
+# what is stuck" - and this answers it in one read. Four queries, whatever the
+# plant's size: the orders, the register of people, every machine's current
+# state, and the rules. Never one query per order; the 300-person fixture has
+# two thousand of them.
+
+
+#: Why an order is sitting there, grouped the way a supervisor would ask.
+#:
+#: The first is not an `UnassignedReason` at all and that is the point: an
+#: order given to somebody that needs the machine stopped on a machine that is
+#: running has nothing wrong with its dispatch. Nils Berger has the chiller
+#: clean; the line has been making bottles all shift. A screen that only read
+#: `unassigned_reason` would show that order as handed out and fine, and the
+#: supervisor would find out at the end of the shift.
+WAITING_REASONS: dict[str, dict[str, str]] = {
+    "needs_a_stop": {
+        "label": "needs the line stopped",
+        "why": "Somebody has it, but the job needs the machine stopped and it "
+               "is still running.",
+        "clause": "needs a stop and the line has not stopped",
+    },
+    UnassignedReason.NO_RULE.value: {
+        "label": "no rule covers it",
+        "why": "None of your rules matched this work, so the dispatcher had "
+               "nothing to go on. Write a rule for it.",
+        "clause": "no rule covers it",
+    },
+    UnassignedReason.NOBODY_ON_SHIFT_WITH_SKILL.value: {
+        "label": "nobody on shift holds the trade",
+        "why": "A rule matched, but nobody rostered on this shift holds the "
+               "trade the job needs.",
+        "clause": "nobody on shift holds the trade",
+    },
+    UnassignedReason.ALL_BUSY.value: {
+        "label": "everybody with the trade is out on a job",
+        "why": "A rule matched and the trade is on shift, but all of them are "
+               "already out on something else.",
+        "clause": "everybody with the trade is out",
+    },
+    "not_dispatched_yet": {
+        "label": "the dispatcher has not seen it",
+        "why": "Raised, and no dispatch pass has run since. Run the "
+               "dispatcher, or give it to somebody.",
+        "clause": "has not been through the dispatcher",
+    },
+}
+
+#: The machine states in which a job that needs the line stopped cannot start.
+#: `setup` counts: a changeover is the line in somebody else's hands.
+_RUNNING = (EquipmentStateName.RUNNING, EquipmentStateName.SETUP)
+
+
+#: How many order rows travel in one shift read, per list. The read is one
+#: screen, and a supervisor reads the newest few plus the totals - on the
+#: three-hundred-person plant the uncapped read was 1.7 MB of JSON and four
+#: thousand list rows, which is a download, not a screen. The counts and
+#: every group total are still taken over the whole backlog (house rule: a
+#: list states its total), and each list says how many of its total it shows.
+MOST_SHOWN = 50
+
+
+def _waiting_bucket(order: MaintenanceOrder, machine_state: str | None) -> str | None:
+    """Which bucket this order is waiting in, or None if it is not waiting."""
+    if order.status is MaintenanceStatus.ASSIGNED and order.needs_stop:
+        return "needs_a_stop" if machine_state in {s.value for s in _RUNNING} else None
+    if order.status is not MaintenanceStatus.DUE:
+        return None
+    if order.unassigned_reason in WAITING_REASONS:
+        return order.unassigned_reason
+    return "not_dispatched_yet"
+
+
+def _shift_sentence(shift, *, came_due: int, by_rules: int, by_hand: int,
+                    waiting: list[dict]) -> str:
+    """The one line at the top of the screen, in a supervisor's own words.
+
+    Counts only what this shift raised, because "six came due" and "the rules
+    handed out five" have to be about the same six or the line is arithmetic
+    nobody can check. What is waiting is counted whenever it is waiting, shift
+    or no shift - a job stuck since yesterday is stuck now.
+    """
+    said = [f"{shift.code}, {shift.day}:"]
+    if came_due:
+        said.append(f"{came_due} order{'' if came_due == 1 else 's'} came due;")
+    else:
+        said.append("no orders came due;")
+    if by_rules:
+        said.append(f"the rules handed out {by_rules}")
+    else:
+        said.append("the rules handed out none")
+    if by_hand:
+        said.append(f"and you gave out {by_hand} by hand")
+    said[-1] += ";"
+
+    stuck = sum(group["total"] for group in waiting)
+    if not stuck:
+        said.append("nothing is waiting.")
+        return " ".join(said)
+    said.append(f"{stuck} {'is' if stuck == 1 else 'are'} waiting")
+    if stuck == 1:
+        only = waiting[0]["orders"][0]
+        clause = WAITING_REASONS[waiting[0]["reason"]]["clause"]
+        said.append(f"- the {only['equipment']} {only['summary'][:60].lower()} {clause}.")
+    else:
+        said.append("- " + ", ".join(
+            f"{group['total']} {WAITING_REASONS[group['reason']]['clause']}"
+            for group in waiting) + ".")
+    return " ".join(said)
+
+
+def shift_view(session: Session, shift: str | None = None,
+               now: datetime | None = None) -> dict:
+    """This shift, in one read: the line at the top, the work, and what is stuck.
+
+    `shift` is a shift key (`2026-10-09/DAY`), `current`, `previous`, or left
+    out for the shift this moment falls in. A plant with no shift pattern is
+    answered with no shift and the reason - not an empty shift, which would
+    read as a quiet night (house rule 3).
+    """
+    now = _at(now)
+    found = (calendar.resolve_shift(session, shift) if shift
+             else calendar.shift_for(session, now))
+    if found is None:
+        return {"shift": None, "sentence": None,
+                "why_empty": calendar.nothing_to_window(session, None),
+                "counts": {}, "orders": [], "shown": 0, "total": 0,
+                "waiting": [], "waiting_total": 0}
+
+    start, end = found.starts_at, found.ends_at
+    # One query, and it has to answer two questions: what this shift raised -
+    # which is what the line at the top counts - and what is open right now,
+    # which is what is stuck whether this shift raised it or not.
+    rows = list(session.scalars(
+        select(MaintenanceOrder)
+        .options(joinedload(MaintenanceOrder.equipment), joinedload(MaintenanceOrder.plan))
+        .where((MaintenanceOrder.raised_at >= start) & (MaintenanceOrder.raised_at < end)
+               | MaintenanceOrder.status.in_((MaintenanceStatus.DUE,
+                                              MaintenanceStatus.ASSIGNED,
+                                              MaintenanceStatus.IN_PROGRESS)))
+        .order_by(MaintenanceOrder.raised_at.desc(), MaintenanceOrder.id.desc())))
+
+    # The register, once. A supervisor reads names; the code is what the plant
+    # stores. Both travel, and the screen decides which is big.
+    names = dict(session.execute(select(Person.code, Person.name)).all())
+    state_of = {
+        equipment_id: state.value for equipment_id, state in session.execute(
+            select(EquipmentState.equipment_id, EquipmentState.state)
+            .where(EquipmentState.ended_at.is_(None))).all()}
+    rule_says = {r.code: says(r) for r in session.scalars(select(DispatchRule))}
+    rule_says.setdefault(DEFAULT_RULE_CODE, says(default_rule()))
+
+    out: list[dict] = []
+    waiting_by: dict[str, list[dict]] = defaultdict(list)
+    came_due = by_rules = by_hand = done = running = 0
+    for order in rows:
+        machine_state = state_of.get(order.equipment_id)
+        said = {
+            "code": order.code,
+            "equipment": order.equipment.code,
+            "equipment_name": order.equipment.name,
+            "machine_state": machine_state,
+            "summary": order.summary,
+            "reason": order.reason,
+            "plan": order.plan.code if order.plan else None,
+            "skill": order.skill_code,
+            "priority": order.priority,
+            "status": order.status.value,
+            "needs_stop": bool(order.needs_stop),
+            "window": order.window.value if order.window else None,
+            "assigned_to": order.assigned_to,
+            # Null when nobody has it; the code itself when the plant holds no
+            # person by that code, which is a finding and not a blank.
+            "assigned_to_name": names.get(order.assigned_to) if order.assigned_to else None,
+            "by_rule": order.assigned_by,
+            # The sentence the rule says, so a row can be read without
+            # looking the rule up. Null when a person gave the work out: a
+            # supervisor's name in `assigned_by` is not a rule.
+            "by_rule_says": rule_says.get(order.assigned_by or ""),
+            "raised_at": order.raised_at,
+            "assigned_at": order.assigned_at,
+            "started_at": order.started_at,
+            "completed_at": order.completed_at,
+            "this_shift": bool(start <= order.raised_at < end),
+        }
+        bucket = _waiting_bucket(order, machine_state)
+        said["waiting_for"] = bucket
+        out.append(said)
+        if said["this_shift"]:
+            came_due += 1
+            if order.assigned_by and order.assigned_by in rule_says:
+                by_rules += 1
+            elif order.assigned_by:
+                by_hand += 1
+            if order.status is MaintenanceStatus.DONE:
+                done += 1
+            elif order.status is MaintenanceStatus.IN_PROGRESS:
+                running += 1
+        if bucket:
+            waiting_by[bucket].append(said)
+
+    waiting = [{"reason": reason, **{k: v for k, v in WAITING_REASONS[reason].items()
+                                     if k != "clause"},
+                "total": len(waiting_by[reason]),
+                "shown": min(len(waiting_by[reason]), MOST_SHOWN),
+                "orders": waiting_by[reason][:MOST_SHOWN]}
+               for reason in WAITING_REASONS if waiting_by.get(reason)]
+
+    return {
+        "shift": found.as_json(),
+        "sentence": _shift_sentence(found, came_due=came_due, by_rules=by_rules,
+                                    by_hand=by_hand, waiting=waiting),
+        # Over the whole backlog, not over the rows that travel: the heading
+        # counts and the list have to agree about the plant, and on the lab
+        # on 2026-10-09 a KPI that counted three beside a list that showed
+        # two is exactly what this read exists to stop.
+        "counts": {"came_due": came_due, "by_rules": by_rules, "by_hand": by_hand,
+                   "in_progress": running, "done": done,
+                   "carried": len(out) - came_due,
+                   "waiting": sum(g["total"] for g in waiting)},
+        "orders": out[:MOST_SHOWN],
+        "shown": min(len(out), MOST_SHOWN),
+        "total": len(out),
+        "waiting": waiting,
+        "waiting_total": sum(group["total"] for group in waiting),
+    }

@@ -1824,7 +1824,11 @@ def _explain_one(session, order: str) -> None:
     for row in out["considered"]:
         mark = "→" if row["chosen"] else " "
         typer.echo(f"    {mark} {row['person']} ({row['name']}): {row['verdict']}")
-    typer.echo(f"  as things stand it would {out['would_now']}.")
+    # What it is waiting for first, then the hypothetical: for a job somebody
+    # already has, "who would get it now" is not the question being asked.
+    if out.get("waiting_clause"):
+        typer.echo(f"  it is waiting: {out['waiting_clause']}")
+    typer.echo(f"  were it handed out now it would {out['would_now']}.")
 
 
 @maintenance_app.command("dispatch")

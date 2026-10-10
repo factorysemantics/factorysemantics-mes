@@ -1,0 +1,117 @@
+/* The maintenance supervisor's screen.
+
+   Everything here serves one idea: a rule is a sentence, and the screen says
+   it in the words the dispatcher uses. So the sentence is the biggest thing
+   on the panel, the form that writes one is the same sentence with the nouns
+   turned into dropdowns, and the preview under it is the server's own
+   rendering rather than a second copy of the wording. Colour, spacing and
+   type come from the kit's tokens; nothing is invented here. */
+
+/* A sentence the plant said - the shift's line, a rule, the preview under
+   the blanks. Read at arm's length from a wall panel, so it is a step up
+   from body copy and never grey. */
+.said {
+  margin: var(--s2) 0 var(--s3);
+  font-size: var(--fs-lg);
+  line-height: 1.45;
+  color: var(--text);
+}
+
+/* The sentence with blanks. Not a form with nine columns: one line of
+   English with four dropdowns in it, wrapping on a phone rather than
+   scrolling sideways. */
+.blanks {
+  display: grid;
+  gap: var(--s2);
+  margin: var(--s3) 0;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: var(--s3);
+}
+.blanks-line {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--fs-base);
+  line-height: 2.1;
+}
+.blanks-line select { flex: 0 1 auto; max-width: 100%; }
+.blanks .said { margin: 0; font-size: var(--fs-base); color: var(--accent); }
+
+/* A rule that is switched off is still read - the orders it handed out name
+   it - so it is dimmed, not hidden, and says so in words. */
+.queue li.switched-off { border-style: dashed; }
+.queue li.switched-off .what { opacity: 0.62; }
+
+/* The order the rules are tried in, in front of each sentence. */
+.seq {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  min-width: 2.2em;
+  text-align: right;
+}
+
+/* Who is on, by trade. Counts on the summary, names when it is opened: at
+   three hundred people the counts are the answer and the names are the
+   follow-up question. */
+.trade { border-bottom: 1px solid var(--line); }
+.trade:last-of-type { border-bottom: 0; }
+.trade > summary {
+  cursor: pointer;
+  padding: var(--s2) 0;
+  font-weight: 600;
+  display: flex;
+  gap: var(--s2);
+  align-items: baseline;
+}
+.trade > summary::marker { color: var(--muted); }
+.trade > summary .muted { font-weight: 400; }
+.trade-people {
+  list-style: none;
+  margin: 0 0 var(--s3);
+  padding: 0;
+  display: grid;
+  gap: var(--s1);
+}
+.trade-people li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  align-items: baseline;
+  padding: var(--s1) 0;
+  font-size: var(--fs-sm);
+}
+.trade-people .who { font-weight: 600; }
+
+/* A person's code beside their name. The plant stores the code and a
+   supervisor reads the name, so both travel and the name is the big one. */
+.beside {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+/* Why this order went where it went, printed as the command line prints it:
+   lines, not a table. A walk is a sequence and a table would lose the order
+   it happened in. */
+.walk {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  color: var(--text);
+}
+
+/* Each reason work is waiting, with its own heading and its own total. */
+.waiting-group { margin-bottom: var(--s4); }
+.waiting-group:last-child { margin-bottom: 0; }
+.waiting-group > h3 {
+  margin: 0 0 var(--s1);
+  font-size: var(--fs-base);
+}
+.waiting-group > p { margin: 0 0 var(--s2); }

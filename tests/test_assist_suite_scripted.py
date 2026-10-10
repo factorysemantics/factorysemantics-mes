@@ -1282,15 +1282,29 @@ def test_the_scripted_run_arranges_every_fixture_the_suite_asks_for(scored):
     SPC tab's own chip asks it: the plant manager's two sentences, the graph
     and the why, in one reply. It needs the same flagged sample for the same
     reason, so it is reported not arranged here and proved on the lab.
+
+    Seven as of 2026-10-09, and the two new ones are a gate rather than a gap.
+    Switching off a dispatch rule and taking one away both need a written rule
+    to point at, and writing one needs `maintenance.plan` - which the agent
+    account a run arranges as does not hold unless an admin has granted it on
+    that plant, the same gate a maintenance plan sits behind. A run that wrote
+    one would be deciding where somebody else's work goes. So both are reported
+    not arranged, with the sentence that says who can write it and where; the
+    rule itself is proved by `tests/test_the_supervisor_writes_a_rule_as_a_
+    sentence.py` and on the lab's own Maintenance tab.
     """
     unmade = {o.case.id: o.missing for o in scored if not o.arranged}
     assert set(unmade) == {
         "admin-approves-an-adjustment",
+        "admin-switches-off-a-dispatch-rule",
+        "admin-takes-away-a-rule-that-never-handed-anything-out",
         "analyst-answers-the-managers-two-sentences-and-why-the-sample-is-high",
         "analyst-asks-which-workcenters-are-asking-what",
         "analyst-asks-why-a-flagged-sample-is-high",
         "operator-records-a-sample-of-five"}, unmade
     assert unmade["admin-approves-an-adjustment"] == ("adjustment:MIX01",)
+    assert unmade["admin-switches-off-a-dispatch-rule"] == \
+        (f"rule:{assist_fixtures.RULE}",)
     assert unmade["analyst-asks-which-workcenters-are-asking-what"] == ("home:SCOTT",)
     assert unmade["operator-records-a-sample-of-five"] == \
         ("sampled_spec:FG-COLA/fill_height",)

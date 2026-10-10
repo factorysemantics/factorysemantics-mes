@@ -67,7 +67,14 @@ def test_a_never_serviced_calendar_plan_is_due_and_says_why(session):
                             trigger="calendar_days", interval=7.0)
     row = maintenance.due(session, include_soon=False)[0]
     assert row["due"] is True
-    assert "never serviced" in row["unit"]
+    # The unit is the unit; the fact that nobody has ever serviced it is a
+    # fact of its own. Folded together, the raised order's reason - which says
+    # the unit twice - read "7.0 days (never serviced) against a 7.0 days
+    # (never serviced) plan".
+    assert row["unit"] == "days"
+    assert row["never_serviced"] is True
+    order = maintenance.raise_due(session)[0]
+    assert order.reason == "7.0 days against a 7.0 days plan — never serviced"
 
 
 def test_an_unknown_trigger_is_refused(session):

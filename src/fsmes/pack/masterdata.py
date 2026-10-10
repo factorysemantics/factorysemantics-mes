@@ -69,6 +69,12 @@ needs of the line, `needs_stop` and `window`, which arrived a day later. The
 pack fills each pair in - only when *both* columns of that pair are empty,
 only from a pack that states them, and reported separately in the receipt as
 "classified" and "scheduled" so nobody has to guess what moved.
+And one named table the pack only ever starts a plant off with: the
+supervisor's dispatch rules. They are the one piece of master data a person
+edits on a screen, so a pack applied to a plant that has any rule of its own
+writes none - reported as "left_alone" - rather than putting back, code by
+code, a rule somebody had removed on purpose.
+
 That is not the pack overruling the plant; it is the plant answering a
 question it was never asked. The alternative is every plant that existed
 before the dispatcher upgrading into a dispatcher that knows no trades, and a
@@ -592,6 +598,11 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
     if "maintenance_plans" in receipt:
         receipt["maintenance_plans"]["classified"] = 0
         receipt["maintenance_plans"]["scheduled"] = 0
+    if "dispatch_rules" in receipt:
+        # A rule the pack did not write because this plant writes its own.
+        # Not "present": it is not there, and saying it was would be the
+        # receipt telling a reader their rule had arrived.
+        receipt["dispatch_rules"]["left_alone"] = 0
 
     def count(kind: str, made: bool) -> None:
         receipt[kind]["made" if made else "present"] += 1
@@ -920,10 +931,21 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
                                 reason=row.get("reason")))
         count("roster", made=True)
 
+    # A rule is the supervisor's own sentence about where work goes, and the
+    # one table here a person edits on a screen rather than in a file. So a
+    # pack starts a plant off and then keeps out of it: if this plant has any
+    # rule at all, the pack's rules are counted as present and nothing is
+    # written. Matching code by code would quietly put back a rule a
+    # supervisor had switched off and removed, the next time anybody applied
+    # the pack - which is a plant's own decision overruled by a file.
+    has_its_own = session.scalar(select(DispatchRule.id).limit(1)) is not None
     for row in data.rows("dispatch_rules"):
         code = row["code"]
         if session.scalar(select(DispatchRule.id).where(DispatchRule.code == code)):
             count("dispatch_rules", made=False)
+            continue
+        if has_its_own:
+            receipt["dispatch_rules"]["left_alone"] += 1
             continue
         session.add(DispatchRule(
             code=code, name=row["name"], supervisor_code=row.get("supervisor"),
