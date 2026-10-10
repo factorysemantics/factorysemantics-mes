@@ -351,7 +351,14 @@ def test_what_is_waiting_is_grouped_by_the_dispatchers_reason_and_why_prints_the
         arg=first["orders"][0]["code"], timeout=20000)
     walk = screen.inner_text("#why-lines")
     assert "rule(s) tried, in order:" in walk, walk
-    assert "as things stand it would" in walk, walk
+    assert "were it handed out now it would" in walk, walk
+    # And what the order is waiting for, in the server's own clause - the walk
+    # on a job somebody already holds used to end "would go to nobody", which
+    # is the answer to a question nobody asked about it.
+    said = _said(browser, plant,
+                 f"/maintenance/dispatch/{first['orders'][0]['code']}/explain")
+    if said["waiting_clause"]:
+        assert f"it is waiting: {said['waiting_clause']}" in walk, walk
     # *Give to…* offers the people who could actually take it, by name.
     screen.click("#waiting-groups .waiting-group li button[data-assist='maintenance-give']")
     screen.wait_for_function(

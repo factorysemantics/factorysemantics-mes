@@ -170,6 +170,18 @@ function shiftRow(o) {
   what.append(by);
 
   li.append(what);
+  /* *Why?* on a job somebody already has, not only on one nobody got: the
+     question a supervisor asks about an order that landed is the same
+     question - which rule, which people, why that one. The walk opens in the
+     panel below, which is the supervisor's own, so the button is offered to
+     whoever that panel is offered to. */
+  if (FS.can("maintenance.plan")) {
+    const why = el("button", "ghost", "Why?");
+    why.type = "button";
+    why.setAttribute("data-assist", "maintenance-why");
+    why.addEventListener("click", () => showWhy(o.code).catch((err) => toast(err.message, "bad")));
+    li.append(why);
+  }
   return li;
 }
 
@@ -291,7 +303,10 @@ function whyLines(out) {
   for (const row of out.considered) {
     lines.push(`    ${row.chosen ? "→" : " "} ${row.person} (${row.name}): ${row.verdict}`);
   }
-  lines.push(`  as things stand it would ${out.would_now}.`);
+  /* What it is waiting for comes before the hypothetical, because for a job
+     somebody already has it is the answer and the line under it is not. */
+  if (out.waiting_clause) lines.push(`  it is waiting: ${out.waiting_clause}`);
+  lines.push(`  were it handed out now it would ${out.would_now}.`);
   return lines.join("\n");
 }
 

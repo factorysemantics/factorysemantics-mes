@@ -489,6 +489,41 @@ def test_the_chiller_clean_reads_as_waiting_for_a_stop_while_the_line_runs(
     assert "needs a stop and the line has not stopped" in out["sentence"]
 
 
+def test_the_walk_on_a_job_somebody_has_says_what_it_is_waiting_for(plant, admin):
+    """*Why?* on a stop job read wrongly until the live proof on 2026-10-09.
+
+    The walk is a hypothetical - which rule would match and who would be
+    picked if the job were handed out this minute - so under a heading that
+    said *needs the line stopped* the chiller clean ended "would go to nobody
+    - all_busy", the answer to a question nobody asked. The walk now says
+    what the order is waiting for first, in the same clause the group
+    heading uses, and keeps the hypothetical underneath it.
+    """
+    equipment.set_state(plant, equipment_code="MIX01",
+                        state=EquipmentStateName.RUNNING)
+    order = _order(plant, skill="ELEC", code="CM-CHILL", needs_stop=True,
+                   summary="Clean the chiller condenser")
+    dispatch.dispatch(plant, NOON)
+
+    walk = admin.get(f"/maintenance/dispatch/{order.code}/explain").json()
+
+    assert walk["held_by"], "the dispatcher did hand it out; it is the stop it waits for"
+    assert walk["waiting_clause"] == "needs a stop and the line has not stopped"
+    assert walk["would_now"], "and the hypothetical is still there, underneath"
+
+
+def test_the_walk_on_work_in_hand_says_it_is_waiting_for_nothing(plant, admin):
+    """The other half: a stop job on a stopped machine is simply being done,
+    and a walk that named something it was waiting for would be inventing it."""
+    equipment.set_state(plant, equipment_code="MIX01", state=EquipmentStateName.DOWN)
+    order = _order(plant, skill="ELEC", code="CM-CHILL", needs_stop=True)
+    dispatch.dispatch(plant, NOON)
+
+    walk = admin.get(f"/maintenance/dispatch/{order.code}/explain").json()
+
+    assert walk["waiting_clause"] is None
+
+
 def test_the_same_job_is_not_waiting_once_the_machine_is_down(plant, admin):
     """The other half. A stop job on a stopped machine is work in hand."""
     equipment.set_state(plant, equipment_code="MIX01", state=EquipmentStateName.DOWN)

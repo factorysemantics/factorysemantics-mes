@@ -1091,6 +1091,19 @@ def explain(session: Session, order_code: str, now: datetime | None = None) -> d
     out["priority_is_stated"] = order.priority is not None
     out["would_now"] = (f"go to {decision.assigned_to}" if decision.assigned_to
                         else f"go to nobody - {decision.unassigned_reason}")
+    # What the order is actually waiting for, if it is waiting - the same
+    # clause the shift read groups it under. The walk below it is a
+    # hypothetical: who the rules *would* pick this minute. For a job
+    # somebody already has, that hypothetical is not the question a
+    # supervisor is asking, and a chiller clean whose walk ended "would go to
+    # nobody - all_busy" under a heading that said *needs the line stopped*
+    # answered a question nobody asked.
+    state = session.scalar(select(EquipmentState.state).where(
+        EquipmentState.equipment_id == order.equipment_id,
+        EquipmentState.ended_at.is_(None)))
+    bucket = _waiting_bucket(order, state.value if state else None)
+    out["waiting_clause"] = (WAITING_REASONS[bucket]["clause"]
+                             if bucket in WAITING_REASONS else None)
     return out
 
 
