@@ -6,11 +6,11 @@ from datetime import datetime
 
 from fastapi import APIRouter, Query, Response
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from fsmes.api import paging
 from fsmes.api.deps import ActorDep, DbDep, UserDep, require
-from fsmes.domain import DispatchRule
+from fsmes.domain import DispatchRule, MaintenanceOrder, Person
 from fsmes.services import auth, dispatch, maintenance
 
 router = APIRouter()
@@ -131,13 +131,27 @@ class RuleChange(BaseModel):
     move: str | None = None
 
 
-def _order_out(o) -> dict:
+def _names(db) -> dict[str, str]:
+    """The register of people, code to name, read once for a whole response.
+
+    A supervisor reads names; the plant stores codes. Both travel on every
+    order so a screen can show the name and keep the code beside it, and so
+    that no screen has to fetch the register per row.
+    """
+    return dict(db.execute(select(Person.code, Person.name)).all())
+
+
+def _order_out(o, names: dict[str, str] | None = None) -> dict:
+    names = names if names is not None else {}
     return {
         "code": o.code, "equipment": o.equipment.code, "kind": o.kind.value,
         "status": o.status.value, "summary": o.summary, "reason": o.reason,
         "plan": o.plan.code if o.plan else None,
         "raised_at": o.raised_at, "started_at": o.started_at,
         "completed_at": o.completed_at, "performed_by": o.performed_by,
+        # The name beside the code, null when the plant holds nobody by that
+        # code - which is a finding and not a blank.
+        "performed_by_name": names.get(o.performed_by) if o.performed_by else None,
         "findings": o.findings, "downtime_minutes": o.downtime_minutes,
         "document": o.plan.document_code if o.plan else None,
         "skill": o.skill_code, "priority": o.priority,
@@ -148,6 +162,7 @@ def _order_out(o) -> dict:
         "needs_stop": bool(o.needs_stop),
         "window": o.window.value if o.window else None,
         "assigned_to": o.assigned_to, "assigned_at": o.assigned_at,
+        "assigned_to_name": names.get(o.assigned_to) if o.assigned_to else None,
         "assigned_by": o.assigned_by, "scheduled_for": o.scheduled_for,
         # Null means it has not been through dispatch - a different fact from
         # "nobody could take it", and a screen shows them differently.
@@ -227,7 +242,8 @@ def orders(
     open work the day the two hundred were all done.
     """
     rows, total = maintenance.history(db, equipment, limit, status=status, kind=kind, q=q, offset=offset)
-    return paging.page([_order_out(o) for o in rows], total, limit, offset)
+    names = _names(db)
+    return paging.page([_order_out(o, names) for o in rows], total, limit, offset)
 
 
 @router.post("/raise", dependencies=[require("maintenance.perform")])
@@ -238,7 +254,8 @@ def raise_due(db: DbDep, actor: ActorDep) -> dict:
     because a list full of duplicates is a list people learn to ignore.
     """
     raised = maintenance.raise_due(db, actor=actor)
-    return {"raised": [_order_out(o) for o in raised], "count": len(raised)}
+    names = _names(db)
+    return {"raised": [_order_out(o, names) for o in raised], "count": len(raised)}
 
 
 @router.post("/corrective", status_code=201, dependencies=[require("maintenance.perform")])
@@ -265,7 +282,7 @@ def start(code: str, db: DbDep, actor: ActorDep, user: UserDep,
     held = auth.capabilities_for(db, user["role"])
     return _order_out(maintenance.start(
         db, code, actor=actor, capabilities=held,
-        performed_by=body.performed_by if body else None))
+        performed_by=body.performed_by if body else None), _names(db))
 
 
 @router.post("/orders/{code}/complete", dependencies=[require("maintenance.perform")])
@@ -275,7 +292,7 @@ def complete(code: str, body: CompleteIn, db: DbDep, actor: ActorDep,
     held = auth.capabilities_for(db, user["role"])
     return _order_out(maintenance.complete(
         db, code, findings=body.findings, downtime_minutes=body.downtime_minutes,
-        performed_by=body.performed_by, capabilities=held, actor=actor))
+        performed_by=body.performed_by, capabilities=held, actor=actor), _names(db))
 
 
 # ------------------------------------------------- the crew, and who gets what
@@ -316,7 +333,7 @@ def assign(code: str, body: AssignIn, db: DbDep, actor: ActorDep) -> dict:
     """
     when = datetime.fromisoformat(body.scheduled_for) if body.scheduled_for else None
     return _order_out(dispatch.assign(db, code, body.person, actor=actor,
-                                      scheduled_for=when))
+                                      scheduled_for=when), _names(db))
 
 
 @router.get("/roster")
@@ -346,8 +363,18 @@ def rules(db: DbDep) -> dict:
     written = list(db.scalars(select(DispatchRule).order_by(
         DispatchRule.sequence, DispatchRule.code)))
     running = dispatch.rules(db)
+    # How much work each rule has actually handed out, in one grouped query.
+    # It is the difference between a rule that can be removed and one that can
+    # only be switched off - every order a rule sent still names it - so the
+    # screen can offer the right control instead of offering Remove and
+    # letting the server refuse it.
+    handed = dict(db.execute(
+        select(MaintenanceOrder.assigned_by, func.count())
+        .where(MaintenanceOrder.assigned_by.is_not(None))
+        .group_by(MaintenanceOrder.assigned_by)).all())
     return {
-        "rules": [dispatch.rule_as_json(r) for r in written],
+        "rules": [dispatch.rule_as_json(r) | {"handed_out": handed.get(r.code, 0)}
+                  for r in written],
         "total": len(written),
         "tried_in_order": [r.code for r in running],
         "house_default": (dispatch.rule_as_json(dispatch.default_rule())

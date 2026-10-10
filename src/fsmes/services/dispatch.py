@@ -1204,6 +1204,13 @@ def roster(session: Session, shift: str | None = None, now: datetime | None = No
             "available": row.available, "reason": row.reason,
             "standing": row.standing,
             "open_orders": crew.load.get(person.id, 0),
+            # How loaded they are, in minutes of work they are holding: the
+            # expected minutes of every open job, which is exactly what the
+            # dispatcher refuses to double-book. A plan's own number, or this
+            # plant's default for a job with no plan - never a guess.
+            "minutes_loaded": round(sum(
+                (end - start).total_seconds() / 60.0
+                for start, end in crew.busy.get(person.id, [])), 1),
             "home": person.home_equipment.code if person.home_equipment else None,
             # What they are doing, not just how much of it there is. A
             # supervisor's page needs the job in somebody's hands and how long
