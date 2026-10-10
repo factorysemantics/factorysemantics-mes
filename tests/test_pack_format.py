@@ -399,6 +399,49 @@ def test_a_plan_written_before_the_trades_existed_is_given_one(applied):
                 assert (plan.skill_code, plan.priority) == ("ELEC", 3)
 
 
+def test_a_pack_writes_its_dispatch_rules_only_onto_a_plant_that_has_none(applied):
+    """The one table a pack starts a plant off with and then keeps out of.
+
+    A dispatch rule is the supervisor's own sentence about where work goes, and
+    the Maintenance tab is where they write it. Matching code by code would be
+    enough to stop a duplicate and not enough to stop a pack putting back, on
+    the next apply, a rule somebody had read and deliberately taken away. So a
+    plant that has written any rule of its own keeps the rules it has, and the
+    receipt says the pack's were left alone rather than claiming they are
+    there.
+    """
+    from sqlalchemy import select
+
+    from fsmes.db import session_scope
+    from fsmes.domain import DispatchRule, DispatchStrategy
+
+    directory, into = applied
+    (directory / "masterdata" / "dispatch_rules.json").write_text(
+        json.dumps([{"code": "SAW-FIRST", "name": "The saw first, by turns",
+                     "equipment": "SAW01", "strategy": "round_robin",
+                     "sequence": 10}]), encoding="utf-8")
+
+    first = applier.apply(directory, into=into, echo=lambda _: None)
+    assert first["seeded"]["dispatch_rules"] == {"made": 1, "present": 0,
+                                                 "left_alone": 0}
+
+    # The supervisor reads it, takes it away and writes their own.
+    with session_scope() as session:
+        session.delete(session.scalar(select(DispatchRule)))
+        session.add(DispatchRule(code="MILL01-ANY-LEAST",
+                                 name="Work on MILL01 to whoever has least on",
+                                 equipment_code="MILL01",
+                                 strategy=DispatchStrategy.LEAST_LOADED,
+                                 sequence=10))
+
+    again = applier.apply(directory, into=into, echo=lambda _: None)
+    assert again["seeded"]["dispatch_rules"] == {"made": 0, "present": 0,
+                                                 "left_alone": 1}
+    with session_scope() as session:
+        assert [r.code for r in session.scalars(select(DispatchRule))] == \
+            ["MILL01-ANY-LEAST"]
+
+
 def test_a_rated_cycle_time_is_read_from_the_tag_map_and_not_repeated(applied):
     """OEE performance is ideal cycle x count / runtime, so a rate the master
     data repeated and let drift would produce a number that means nothing."""
