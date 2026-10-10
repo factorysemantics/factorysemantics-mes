@@ -127,8 +127,8 @@ let giving = null;
 let previewTimer = null;
 
 /* A person as a supervisor reads them: the name, with the code the plant
-   stores beside it in small type. A screen that says "MT-04" is asking its
-   reader to keep a staff list in their head. */
+   stores beside it in small type. A screen that shows only a staff code is
+   asking its reader to keep the staff list in their head. */
 function who(code, name) {
   const span = el("span");
   if (!code) return el("span", "muted", "nobody");
