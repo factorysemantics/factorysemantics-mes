@@ -510,6 +510,11 @@ def test_the_shift_read_is_a_screenful_and_says_how_much_of_the_plant_it_is(
     assert screen["counts"]["waiting"] == screen["waiting_total"] > dispatch.MOST_SHOWN
     for group in screen["waiting"]:
         assert len(group["orders"]) == group["shown"] <= group["total"]
+    # The heading on the tab is built from these, so they have to add up to
+    # the plant rather than to the page: "50 still open from before this
+    # shift" beside two thousand open orders is the lab's KPI bug again.
+    counts = screen["counts"]
+    assert counts["came_due"] + counts["carried"] == screen["total"]
     assert size < 400_000, (
         f"one shift read sends {size / 1024:.0f} KiB; the tab refreshes itself "
         "every few seconds and a supervisor on a phone pays for all of it")

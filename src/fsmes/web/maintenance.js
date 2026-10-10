@@ -192,8 +192,12 @@ async function loadShift() {
   $("#shift-sentence").textContent = s.sentence
     || (s.why_empty || "No shift pattern covers this moment, so there is no shift to read.");
 
+  const counts = s.counts || {};
+  /* The rows that came with the read, in reading order; the numbers in the
+     heading come from the counts, which are taken over the whole backlog.
+     Counting the rows on screen would make the heading shrink to whatever
+     fits on it. */
   const mine = s.orders.filter((o) => o.this_shift);
-  const carried = s.orders.length - mine.length;
   const list = $("#shift-list");
   list.replaceChildren();
   if (!s.orders.length) {
@@ -212,9 +216,10 @@ async function loadShift() {
       `Showing the newest ${s.shown} of ${s.total} open orders. `
       + "The counts beside the heading, and in Waiting below, count them all."));
   }
-  const counts = s.counts || {};
-  $("#shift-key").textContent += mine.length
-    ? ` · ${mine.length} this shift (${counts.by_rules || 0} by the rules, ${counts.by_hand || 0} by hand)`
+  const came = counts.came_due || 0;
+  const carried = counts.carried || 0;
+  $("#shift-key").textContent += came
+    ? ` · ${came} this shift (${counts.by_rules || 0} by the rules, ${counts.by_hand || 0} by hand)`
       + (carried ? ` · ${carried} still open from before` : "")
     : carried ? ` · ${carried} still open from before this shift` : "";
 

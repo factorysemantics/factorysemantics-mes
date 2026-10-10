@@ -359,7 +359,8 @@ def test_the_shift_reads_as_one_line_a_supervisor_could_say_out_loud(plant, admi
     assert "1 is waiting" in out["sentence"]
     assert "everybody with the trade is out" in out["sentence"]
     assert out["counts"] == {"came_due": 3, "by_rules": 2, "by_hand": 0,
-                             "in_progress": 0, "done": 0, "waiting": 1}
+                             "in_progress": 0, "done": 0, "carried": 0,
+                             "waiting": 1}
 
 
 def test_a_shift_that_raised_nothing_says_so_rather_than_reading_as_empty(

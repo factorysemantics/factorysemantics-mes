@@ -1459,8 +1459,13 @@ def shift_view(session: Session, shift: str | None = None,
         "shift": found.as_json(),
         "sentence": _shift_sentence(found, came_due=came_due, by_rules=by_rules,
                                     by_hand=by_hand, waiting=waiting),
+        # Over the whole backlog, not over the rows that travel: the heading
+        # counts and the list have to agree about the plant, and on the lab
+        # on 2026-10-09 a KPI that counted three beside a list that showed
+        # two is exactly what this read exists to stop.
         "counts": {"came_due": came_due, "by_rules": by_rules, "by_hand": by_hand,
                    "in_progress": running, "done": done,
+                   "carried": len(out) - came_due,
                    "waiting": sum(g["total"] for g in waiting)},
         "orders": out[:MOST_SHOWN],
         "shown": min(len(out), MOST_SHOWN),
