@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Response
 from pydantic import BaseModel
 from sqlalchemy import select
 
@@ -81,6 +81,54 @@ class AssignIn(BaseModel):
     person: str
     # When it should happen. Now, unless the supervisor is planning ahead.
     scheduled_for: str | None = None
+
+
+class RuleIn(BaseModel):
+    """The blanks in the supervisor's sentence, and nothing else.
+
+    *Work on [machine] [needing TRADE] at priority [n] goes to [how].* Every
+    blank may be left out, and left out means "anything" - a body with nothing
+    in it at all is the sentence *work anywhere in the plant, whatever the
+    skill, goes to somebody on this shift, whoever has least on*, which is a
+    rule a plant might really want and the one it falls back to anyway.
+
+    `code` and `name` are here for a pack or a script that has its own naming.
+    A screen sends neither: both are made from the sentence, because a
+    supervisor filling in blanks has not been asked to invent an identifier.
+    """
+
+    equipment: str | None = None
+    skill: str | None = None
+    priority_at_least: int | None = None
+    strategy: str = "least_loaded"
+    sequence: int | None = None
+    active: bool = True
+    code: str | None = None
+    name: str | None = None
+    supervisor: str | None = None
+
+
+class RuleChange(BaseModel):
+    """One change to a written rule: a blank, its order, or its on/off.
+
+    Only what is sent is changed - `exclude_unset` - and a blank sent as JSON
+    `null` is cleared, which is how *needing ELEC* becomes *whatever the skill*
+    without deleting a rule and losing what it has handed out.
+
+    `move` is the up and down arrows: one call, because the order is the thing
+    being changed and a page that sent two sequence numbers could leave two
+    rules on the same one.
+    """
+
+    equipment: str | None = None
+    skill: str | None = None
+    priority_at_least: int | None = None
+    strategy: str | None = None
+    sequence: int | None = None
+    active: bool | None = None
+    name: str | None = None
+    supervisor: str | None = None
+    move: str | None = None
 
 
 def _order_out(o) -> dict:
@@ -305,4 +353,86 @@ def rules(db: DbDep) -> dict:
         "house_default": (dispatch.rule_as_json(dispatch.default_rule())
                           if not written else None),
         "skills": dispatch.skills(db),
+        # The words the blanks may be filled with, from this plant. Sent with
+        # the rules so a screen offering the sentence offers exactly the
+        # vocabulary the dispatcher understands and keeps no copy of its own.
+        "vocabulary": dispatch.vocabulary(db),
     }
+
+
+@router.post("/rules", dependencies=[require("maintenance.plan")])
+def write_rule(body: RuleIn, db: DbDep, actor: ActorDep, response: Response,
+               dry_run: bool = Query(
+                   False, description="Say what the sentence would read as and "
+                                      "write nothing. For the preview line on a "
+                                      "screen while the blanks are being chosen.")) -> dict:
+    """Write one of the supervisor's sentences down, and read it back.
+
+    The response always carries `says` - the rule as the dispatcher itself
+    renders it, which is the same string `fsmes` prints and the same string the
+    audit row keeps. A screen shows that and never its own rendering, so the
+    words on the page and the words in the decision cannot drift apart.
+
+    With `dry_run` nothing is written and no code is taken: the answer is the
+    rule this sentence *would* become, for the preview under the blanks.
+    """
+    out = dispatch.write_rule(
+        db, equipment_code=body.equipment, skill_code=body.skill,
+        priority_at_least=body.priority_at_least, strategy=body.strategy,
+        code=body.code, name=body.name, supervisor_code=body.supervisor,
+        sequence=body.sequence, active=body.active, actor=actor, dry_run=dry_run)
+    response.status_code = 200 if dry_run else 201
+    return out
+
+
+@router.patch("/rules/{code}", dependencies=[require("maintenance.plan")])
+def change_rule(code: str, body: RuleChange, db: DbDep, actor: ActorDep) -> dict:
+    """Change a blank, switch a rule off, or move it up or down the order.
+
+    Only what the body names is touched; a blank sent as null is cleared. The
+    audit row carries the sentence before and the sentence after, because six
+    weeks later what a supervisor wants to read is not that `skill_code` went
+    to null but that the rule stopped being about electricians.
+    """
+    changes = body.model_dump(exclude_unset=True)
+    move = changes.pop("move", None)
+    if not move:
+        # An empty body reaches `update_rule` on purpose: it is the one place
+        # that says what a rule's blanks are called, and a screen that sent
+        # nothing should be told that rather than answered 200 with no change.
+        return dispatch.update_rule(db, code, changes, actor=actor)
+    if changes:
+        dispatch.update_rule(db, code, changes, actor=actor)
+    return dispatch.move_rule(db, code, move, actor=actor)
+
+
+@router.delete("/rules/{code}", dependencies=[require("maintenance.plan")])
+def remove_rule(code: str, db: DbDep, actor: ActorDep) -> dict:
+    """Remove a rule that never handed anything out.
+
+    One that has is refused with the count and with what was meant instead:
+    switch it off. Every order it sent still names it in `assigned_by`, and an
+    audit trail pointing at a rule nobody can look up has stopped being one.
+    """
+    return dispatch.delete_rule(db, code, actor=actor)
+
+
+@router.get("/shift")
+def shift(
+    db: DbDep,
+    shift: str | None = Query(
+        None, description="A shift key (2026-10-09/DAY), `current` or `previous`. "
+                          "Left out: the shift running now."),
+) -> dict:
+    """This shift in one read: the line at the top, the work, and what is stuck.
+
+    One line a supervisor can say out loud - how many orders came due, how many
+    the rules handed out, how many are waiting and why the first one is - then
+    the shift's orders with who has each and which rule sent it, then what is
+    waiting grouped by the dispatcher's own reasons.
+
+    Four queries whatever the plant's size, never one per order. A plant with
+    no shift pattern is answered with no shift and the reason, because an empty
+    shift would read as a quiet night.
+    """
+    return dispatch.shift_view(db, shift)
