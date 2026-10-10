@@ -28,6 +28,7 @@ hundred jobs, and the other nineteen hundred are tomorrow's and the day
 after's. An MES that pretended otherwise would be inventing capacity.
 """
 
+import json
 import time as clock
 from collections import Counter
 from contextlib import contextmanager
@@ -478,3 +479,37 @@ def test_the_supervisors_screen_reads_this_shift_in_a_handful_of_queries(big_pla
         f"one roster read ran {roster_queries} queries over {crew['total']} "
         "people; the counts have to come out of the database, not out of a "
         "loop\n  " + "\n  ".join(roster_read))
+
+
+def test_the_shift_read_is_a_screenful_and_says_how_much_of_the_plant_it_is(
+        big_plant):
+    """Few queries is not the same as little to send.
+
+    Opened on this plant on 2026-10-09, the shift read was 1.7 MB of JSON -
+    two thousand open orders and nineteen hundred waiting ones, every one of
+    them a row the tab would build. That is a download, not a screen, and on
+    a phone over a tunnel it is seconds of nothing. So each list carries its
+    newest `MOST_SHOWN` rows and says how many of its total that is, while
+    the totals and the sentence are still taken over the whole backlog.
+    """
+    dispatch.dispatch(big_plant, MORNING)
+
+    screen = dispatch.shift_view(big_plant, shift="2026-10-08/EARLY")
+    size = len(json.dumps(screen, default=str))
+
+    print(f"\n  shift read        {size / 1024:.0f} KiB of JSON")
+    print(f"  orders            {screen['shown']} shown of {screen['total']}")
+    for group in screen["waiting"]:
+        print(f"  {group['reason']:<24} {group['shown']} shown of {group['total']}")
+
+    assert screen["total"] > dispatch.MOST_SHOWN, "too small a plant to be the test"
+    assert screen["shown"] == dispatch.MOST_SHOWN
+    assert len(screen["orders"]) == dispatch.MOST_SHOWN
+    # The totals are the plant's, not the page's: a screen that showed fifty
+    # and counted fifty would be telling a supervisor their backlog is clear.
+    assert screen["counts"]["waiting"] == screen["waiting_total"] > dispatch.MOST_SHOWN
+    for group in screen["waiting"]:
+        assert len(group["orders"]) == group["shown"] <= group["total"]
+    assert size < 400_000, (
+        f"one shift read sends {size / 1024:.0f} KiB; the tab refreshes itself "
+        "every few seconds and a supervisor on a phone pays for all of it")

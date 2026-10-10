@@ -458,8 +458,11 @@ def shift(
     the shift's orders with who has each and which rule sent it, then what is
     waiting grouped by the dispatcher's own reasons.
 
-    Four queries whatever the plant's size, never one per order. A plant with
-    no shift pattern is answered with no shift and the reason, because an empty
-    shift would read as a quiet night.
+    Four queries whatever the plant's size, never one per order, and a
+    screenful rather than a backlog: each list carries its newest fifty rows
+    and says how many of its total that is, while the counts, the groups'
+    totals and the sentence are taken over all of it. A plant with no shift
+    pattern is answered with no shift and the reason, because an empty shift
+    would read as a quiet night.
     """
     return dispatch.shift_view(db, shift)

@@ -1300,6 +1300,15 @@ WAITING_REASONS: dict[str, dict[str, str]] = {
 _RUNNING = (EquipmentStateName.RUNNING, EquipmentStateName.SETUP)
 
 
+#: How many order rows travel in one shift read, per list. The read is one
+#: screen, and a supervisor reads the newest few plus the totals - on the
+#: three-hundred-person plant the uncapped read was 1.7 MB of JSON and four
+#: thousand list rows, which is a download, not a screen. The counts and
+#: every group total are still taken over the whole backlog (house rule: a
+#: list states its total), and each list says how many of its total it shows.
+MOST_SHOWN = 50
+
+
 def _waiting_bucket(order: MaintenanceOrder, machine_state: str | None) -> str | None:
     """Which bucket this order is waiting in, or None if it is not waiting."""
     if order.status is MaintenanceStatus.ASSIGNED and order.needs_stop:
@@ -1364,7 +1373,7 @@ def shift_view(session: Session, shift: str | None = None,
     if found is None:
         return {"shift": None, "sentence": None,
                 "why_empty": calendar.nothing_to_window(session, None),
-                "counts": {}, "orders": [], "total": 0,
+                "counts": {}, "orders": [], "shown": 0, "total": 0,
                 "waiting": [], "waiting_total": 0}
 
     start, end = found.starts_at, found.ends_at
@@ -1441,7 +1450,9 @@ def shift_view(session: Session, shift: str | None = None,
 
     waiting = [{"reason": reason, **{k: v for k, v in WAITING_REASONS[reason].items()
                                      if k != "clause"},
-                "total": len(waiting_by[reason]), "orders": waiting_by[reason]}
+                "total": len(waiting_by[reason]),
+                "shown": min(len(waiting_by[reason]), MOST_SHOWN),
+                "orders": waiting_by[reason][:MOST_SHOWN]}
                for reason in WAITING_REASONS if waiting_by.get(reason)]
 
     return {
@@ -1451,7 +1462,8 @@ def shift_view(session: Session, shift: str | None = None,
         "counts": {"came_due": came_due, "by_rules": by_rules, "by_hand": by_hand,
                    "in_progress": running, "done": done,
                    "waiting": sum(g["total"] for g in waiting)},
-        "orders": out,
+        "orders": out[:MOST_SHOWN],
+        "shown": min(len(out), MOST_SHOWN),
         "total": len(out),
         "waiting": waiting,
         "waiting_total": sum(group["total"] for group in waiting),

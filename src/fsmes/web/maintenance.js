@@ -204,6 +204,14 @@ async function loadShift() {
   for (const o of [...mine, ...s.orders.filter((o2) => !o2.this_shift)]) {
     list.append(shiftRow(o));
   }
+  /* The read carries the newest rows, not the whole backlog; the counts
+     beside the heading are taken over all of it. Say so rather than let a
+     supervisor read fifty rows as the whole of the plant's open work. */
+  if (s.total > s.shown) {
+    list.append(el("li", "muted small",
+      `Showing the newest ${s.shown} of ${s.total} open orders. `
+      + "The counts beside the heading, and in Waiting below, count them all."));
+  }
   const counts = s.counts || {};
   $("#shift-key").textContent += mine.length
     ? ` · ${mine.length} this shift (${counts.by_rules || 0} by the rules, ${counts.by_hand || 0} by hand)`
@@ -266,6 +274,10 @@ function drawWaiting(s) {
     const ul = el("ul", "queue");
     for (const o of group.orders) ul.append(waitingRow(o));
     section.append(ul);
+    if (group.total > group.shown) {
+      section.append(el("p", "muted small",
+        `Showing the newest ${group.shown} of ${group.total}.`));
+    }
     box.append(section);
   }
 }
