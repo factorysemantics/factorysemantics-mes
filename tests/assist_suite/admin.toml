@@ -653,3 +653,49 @@ requires = ["no gauge:GA-BRIX01"]
 note = """Master data, gated on masterdata.write, which the agent role holds only
 if an admin has granted it. The fixture gauge a run puts up is `GA-EVAL-1`; this
 case keeps the code a person would type, and needs the plant not to have it."""
+
+# -------------------------------------------- the supervisor's dispatch rules
+
+[[case]]
+id = "admin-writes-a-dispatch-rule-as-a-sentence"
+request = "work on the mixer should go to whoever is nearest"
+screen = "/dashboard/maintenance"
+expect = "propose"
+tool = "write_dispatch_rule"
+args = { machine = "MIX01", strategy = "nearest" }
+requires = ["machine:MIX01"]
+note = """A dispatch rule is a sentence with four blanks in it - the machine,
+the trade, the priority, how to choose - and a supervisor says as many of them
+as they mean. This one says two, and the rest mean anything: no trade, any
+priority. The code and the name are made from the blanks by the server, so
+there is nothing here for a model to invent and nothing for it to get wrong.
+
+Gated on maintenance.plan, like `create_maintenance_plan` beside it, which is
+why this is an administrator's file: the built-in supervisor role does not hold
+it. The demo plant has no trades at all, so a case naming one would be a case
+that never arranges."""
+
+[[case]]
+id = "admin-switches-off-a-dispatch-rule"
+request = "switch off the MIX01-ANY-P1-LEAST rule for now, it is sending safety work to the wrong people"
+screen = "/dashboard/maintenance"
+expect = "propose"
+tool = "change_dispatch_rule"
+args = { rule = "MIX01-ANY-P1-LEAST", active = false }
+requires = ["rule:MIX01-ANY-P1-LEAST"]
+note = """Switched off rather than removed is the usual answer, because every
+order a rule handed out still names it. Only what the sentence named is
+changed: the blanks nobody mentioned keep what they had."""
+
+[[case]]
+id = "admin-takes-away-a-rule-that-never-handed-anything-out"
+request = "delete the MIX01-ANY-P1-LEAST rule, I wrote it by mistake"
+screen = "/dashboard/maintenance"
+expect = "propose"
+tool = "remove_dispatch_rule"
+args = { rule = "MIX01-ANY-P1-LEAST" }
+requires = ["rule:MIX01-ANY-P1-LEAST"]
+note = """A rule that never dispatched anything can go; one that has is refused
+with the count and told to switch it off instead. Proposed and not done, like
+every other write - and the preview is the plant's own answer to whether this
+rule is one of the removable ones."""
