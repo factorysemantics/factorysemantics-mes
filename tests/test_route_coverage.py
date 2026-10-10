@@ -75,25 +75,11 @@ EXCLUDED = {
     # kpis router: superseded by /dashboard/summary and /analysis; candidate for removal
     "GET /kpis/oee/{equipment_code}": "the `fsmes demo` walkthrough reads it; screens use /equipment/{code}/oee",
     "GET /kpis/orders": "the `fsmes demo` walkthrough reads it; screens use /workorders/summary",
-    # the maintenance crew and the supervisor's rules. The screen that shows
-    # the rules, what they assigned and what they could not is the follow-up
-    # handoff; what calls these today is the plant's own tick, `fsmes
-    # maintenance dispatch` on the command line, and the analysis agent's read
-    # tools - so a supervisor can already ask who is free with the electrical
-    # skill right now and read the rule that gave a job away.
-    "POST /maintenance/dispatch":
-        "the plant's tick calls it every pass and `fsmes maintenance dispatch` calls "
-        "it by hand; the supervisor's screen that offers the button is the follow-up",
-    "GET /maintenance/dispatch/{code}/explain":
-        "`fsmes maintenance dispatch --explain ORDER` prints it and the agent's "
-        "maintenance_explain tool answers from it; the panel that shows the walk "
-        "beside the order is the supervisor's screen, the follow-up",
-    "GET /maintenance/roster":
-        "the agent's maintenance_roster tool answers 'who is free with the electrical "
-        "skill right now' from it; the roster panel is the supervisor's screen",
-    "GET /maintenance/rules":
-        "the agent's maintenance_rules tool reads it and `fsmes maintenance rules` "
-        "prints it; the editor for the rows is the supervisor's screen",
+    # The maintenance crew and the supervisor's rules were the four routes
+    # listed here until the Maintenance tab grew the supervisor's screen: the
+    # shift, the rules as sentences, who is on, and what is waiting with the
+    # walk beside it. All four are now called by maintenance.js, which is why
+    # they are no longer on this list.
     # maintenance workspace: surfaces, phase 3
     # scheduling workspace: surfaces, phase 4
     # quality depth: surfaces, phase 5

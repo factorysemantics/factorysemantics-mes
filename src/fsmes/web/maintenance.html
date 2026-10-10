@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="/static/styles.css">
 <link rel="stylesheet" href="/static/station.css">
 <link rel="stylesheet" href="/static/machine.css">
+<link rel="stylesheet" href="/static/maintenance.css">
 <link rel="stylesheet" href="/static/assist.css">
 <script>
   /* Before first paint: a daylight user must never see a flash of the
@@ -47,6 +48,72 @@
 
   <main class="object-main">
     <section class="tab-panel" data-panel="due">
+      <!-- The maintenance supervisor's screen, read top to bottom: what this
+           shift did, the rules that did it, who is on, and what nobody has.
+           An operator sees the shift and the crew; writing a rule and giving
+           work out by hand are gated on maintenance.plan, the capability the
+           routes themselves demand. -->
+      <div class="panel">
+        <h2>This shift <span id="shift-key" class="muted"></span></h2>
+        <p id="shift-sentence" class="said">Reading this shift…</p>
+        <ul id="shift-list" class="queue" data-assist="maintenance-shift"></ul>
+      </div>
+
+      <div class="panel" data-needs-cap="maintenance.plan">
+        <h2>Your rules <span id="rules-count" class="muted"></span></h2>
+        <p class="muted small">Tried from the top: the first rule that matches a job hands it out.
+          Switching a rule off stops it being tried and keeps every order it gave out
+          pointing at it, which is why there is no Remove on a rule that has handed work out.</p>
+        <div class="row">
+          <button id="rule-new" type="button" data-assist="maintenance-rule-new">New rule</button>
+        </div>
+        <form id="rule-form" class="blanks hidden" data-assist="maintenance-rule-form">
+          <p class="blanks-line">
+            Work on <select id="rule-equipment" aria-label="Machine" data-assist="maintenance-rule-equipment"></select>
+            <select id="rule-skill" aria-label="Trade" data-assist="maintenance-rule-skill"></select>
+            at priority <select id="rule-priority" aria-label="Priority" data-assist="maintenance-rule-priority"></select>
+            goes to <select id="rule-strategy" aria-label="How to choose" data-assist="maintenance-rule-strategy"></select>
+          </p>
+          <p id="rule-preview" class="said">…</p>
+          <div class="row">
+            <button id="rule-cancel" class="ghost" type="button">Back</button>
+            <button id="rule-add" data-assist="maintenance-rule-add">Add</button>
+          </div>
+        </form>
+        <ul id="rules-list" class="queue" data-assist="maintenance-rules"></ul>
+      </div>
+
+      <div class="panel">
+        <h2>Who is on <span id="roster-count" class="muted"></span></h2>
+        <p id="roster-shift" class="muted small"></p>
+        <div id="roster-trades" data-assist="maintenance-roster"></div>
+      </div>
+
+      <div class="panel" data-needs-cap="maintenance.plan">
+        <h2>Waiting, and why <span id="waiting-count" class="muted"></span></h2>
+        <div class="row">
+          <button id="run-dispatch" class="ghost" type="button" data-assist="maintenance-dispatch">Hand out what the rules cover</button>
+        </div>
+        <div id="waiting-groups"></div>
+        <div id="give-box" class="reason hidden">
+          <div class="field">
+            <label for="give-person">Who takes <span id="give-order" class="mono"></span>?</label>
+            <select id="give-person" data-assist="maintenance-give-person"></select>
+          </div>
+          <div class="row">
+            <button id="give-cancel" class="ghost" type="button">Back</button>
+            <button id="give-confirm" type="button" data-assist="maintenance-give-confirm">Give it to them</button>
+          </div>
+        </div>
+        <div id="why-box" class="reason hidden">
+          <div class="row">
+            <strong id="why-order" class="mono"></strong>
+            <button id="why-close" class="ghost" type="button">Close</button>
+          </div>
+          <pre id="why-lines" class="walk"></pre>
+        </div>
+      </div>
+
       <div class="panel">
         <h2>Plans that have come due <span class="muted">— on use, not on a date</span></h2>
         <p class="muted small">A plan counts what its machine actually did: hours it ran, units it made,
@@ -153,7 +220,10 @@
     </section>
   </main>
 
-  <p class="screen-source">due /maintenance/due · plans /maintenance/plans · work /maintenance/orders ·
+  <p class="screen-source">this shift /maintenance/shift · rules /maintenance/rules ·
+    who is on /maintenance/roster · why /maintenance/dispatch/{code}/explain ·
+    hand out /maintenance/dispatch, /maintenance/orders/{code}/assign ·
+    due /maintenance/due · plans /maintenance/plans · work /maintenance/orders ·
     raise /maintenance/raise, /maintenance/corrective · start/complete /maintenance/orders/{code}/start|complete</p>
 </div>
 <div id="toast" class="toast hidden"></div>
