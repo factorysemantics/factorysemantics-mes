@@ -30,6 +30,7 @@ after's. An MES that pretended otherwise would be inventing capacity.
 
 import time as clock
 from collections import Counter
+from contextlib import contextmanager
 from datetime import datetime, time, timedelta
 
 import pytest
@@ -404,3 +405,76 @@ def test_one_order_out_of_two_thousand_still_explains_itself_in_a_sentence(big_p
     assert walk["rule_says"].startswith("Work on SIMLINE")
     assert len(walk["considered"]) == 100, "the walk should show the whole shift"
     assert sum(1 for row in walk["considered"] if row["chosen"]) == 1
+
+
+# --------------------------------------------- the supervisor's screen, at scale
+
+@contextmanager
+def _selects(session):
+    """Every SELECT the session's engine runs inside the block, in order."""
+    from sqlalchemy import event
+
+    seen: list[str] = []
+    bind = session.get_bind()
+
+    def record(conn, cursor, statement, parameters, context, executemany):
+        if statement.lstrip().upper().startswith("SELECT"):
+            seen.append(" ".join(statement.split()))
+
+    event.listen(bind, "before_cursor_execute", record)
+    try:
+        yield seen
+    finally:
+        event.remove(bind, "before_cursor_execute", record)
+
+
+def test_the_supervisors_screen_reads_this_shift_in_a_handful_of_queries(big_plant):
+    """The page the supervisor opens is two reads, and each one is a query per
+    table rather than a query per row.
+
+    Three hundred people and two thousand orders is exactly where a screen
+    built the obvious way dies: a roster that asks each person what they have
+    on is three hundred queries, and a shift list that asks each order which
+    machine and which rule is two thousand more. The counts are printed
+    because "will this open on my plant?" is answered by a number.
+    """
+    dispatch.dispatch(big_plant, MORNING)
+
+    with _selects(big_plant) as statements:
+        started = clock.perf_counter()
+        screen = dispatch.shift_view(big_plant, shift="2026-10-08/EARLY")
+        shift_seconds = clock.perf_counter() - started
+        shift_read = list(statements)
+
+    with _selects(big_plant) as statements:
+        started = clock.perf_counter()
+        crew = dispatch.roster(big_plant, shift="2026-10-08/EARLY")
+        roster_seconds = clock.perf_counter() - started
+        roster_read = list(statements)
+
+    shift_queries, roster_queries = len(shift_read), len(roster_read)
+
+    print(f"\n  on shift          {crew['total']} ({crew['available']} available)")
+    print(f"  orders this shift {screen['total']}, waiting {screen['waiting_total']}")
+    print(f"  shift read        {shift_queries} queries, {shift_seconds * 1000:.0f} ms")
+    print(f"  roster read       {roster_queries} queries, {roster_seconds * 1000:.0f} ms")
+    print(f"  sentence          {screen['sentence']}")
+
+    assert crew["total"] == 100, "the early shift is a hundred people"
+    assert screen["waiting_total"] > 0, "nothing is waiting, so nothing is being counted"
+    # The gate is on queries, not seconds: a shared runner is twenty times
+    # slower than a desk and a gate in seconds fails there for the runner's
+    # reasons. A query per table is a handful; a query per row would be
+    # hundreds. Measured on 2026-10-09: the shift read 4 queries and 26 ms
+    # over two thousand orders, the roster 8 queries and 6 ms over a hundred
+    # people. Both started higher - the roster was 48 queries, one per busy
+    # person for the machine they were at and one per head for where they are
+    # based - and this test is what found that.
+    assert shift_queries < 20, (
+        f"one shift read ran {shift_queries} queries over {screen['total']} "
+        "orders; a screen that asks the database once per row does not open "
+        "on a plant this size\n  " + "\n  ".join(shift_read))
+    assert roster_queries < 20, (
+        f"one roster read ran {roster_queries} queries over {crew['total']} "
+        "people; the counts have to come out of the database, not out of a "
+        "loop\n  " + "\n  ".join(roster_read))

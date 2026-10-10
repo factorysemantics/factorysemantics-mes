@@ -614,7 +614,11 @@ def _comes_first(order: MaintenanceOrder, against: MaintenanceOrder) -> bool:
 
 
 def _read_crew(session: Session) -> _Crew:
-    people = {p.id: p for p in session.scalars(select(Person))}
+    # Where each person is based comes back with them: the roster says
+    # "nearest the machine" and the screen prints their home line, and asking
+    # the equipment table per person is a query per head.
+    people = {p.id: p for p in session.scalars(
+        select(Person).options(joinedload(Person.home_equipment)))}
     crew = _Crew(by_id=people, by_code={p.code: p for p in people.values()})
 
     for row in session.scalars(select(PersonnelSkill)):
@@ -627,10 +631,16 @@ def _read_crew(session: Session) -> _Crew:
             crew.dated.setdefault((row.shift_code, row.shift_day), []).append(row)
 
     assumed = _maintenance.default_job_minutes(session)
+    # The machine and the plan come back with the order, because the roster
+    # says what each person is on - "MT-04 on PM-00031 at M1-04 - change the
+    # filter" - and reaching for them row by row is a query per busy person.
+    # At a hundred on shift that was forty-eight queries for one roster read
+    # (measured 2026-10-09); it is one.
     held = session.scalars(
         select(MaintenanceOrder)
+        .options(joinedload(MaintenanceOrder.equipment), joinedload(MaintenanceOrder.plan))
         .where(MaintenanceOrder.status.in_(
-            (MaintenanceStatus.ASSIGNED, MaintenanceStatus.IN_PROGRESS)))).all()
+            (MaintenanceStatus.ASSIGNED, MaintenanceStatus.IN_PROGRESS)))).unique().all()
     codes = {p.code: p.id for p in people.values()}
     plan_minutes = dict(session.execute(
         select(MaintenancePlan.id, MaintenancePlan.expected_minutes)).all())
