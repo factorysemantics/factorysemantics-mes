@@ -351,6 +351,26 @@ agent is a fifth thing and supplies no reason at all: every stop a machine
 reports by itself lands unlabelled. That is the cold start, and it is why the
 vocabulary has to come from somewhere other than the machines.)
 
+### Naming a stop after it is over, from the timeline
+
+The station screen names a stop as it happens. A stop nobody was at is named
+afterwards, from the machine page's **Timeline** tab: click the block — or tab
+to it and press Enter — and a panel opens beside the bar with the records
+behind it. Where the reason is missing it says so in those words, *nobody has
+said why yet*, and offers the same approved list the station screen offers,
+over the block's own window.
+
+It is the same write (`POST /equipment/{code}/stops/label`), so the same two
+rules hold: the code has to be on the approved list, and **a label never
+overwrites a reason somebody already gave**. The panel says how many records
+it named, because one drawn block can be several intervals folded together.
+
+Naming a stop needs `equipment.state`. A reader without it is told that, and
+told which roles hold it, rather than shown a control that will refuse —
+the panel also names the person who labelled a stop and when, read out of the
+audit log by time, and says *labelled here, by whom is not recorded* where
+that record does not exist.
+
 ## What the pareto says afterwards
 
 `GET /analysis/downtime` groups by code where there is one and by text where
