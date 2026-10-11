@@ -1204,7 +1204,7 @@
       total: [`${things(readings, "reading")} drawn`,
               blind ? `${count(blind)} with no reading` : null,
               outside ? `${count(outside)} outside the brushed range` : null,
-              `${things(drawn, "series")} of ${count(carriedAll.length)}`,
+              `${things(drawn, "series", "series")} of ${count(carriedAll.length)}`,
               switchedOff ? `${count(switchedOff)} switched off in the legend` : null,
               withheld.length ? `${count(withheld.length)} withheld below the coverage floor` : null,
              ].filter(Boolean).join(" · "),
@@ -1248,7 +1248,7 @@
           + `${clockAt(whole.start)}–${clockAt(whole.end)}`
         : null,
         switchedOff
-          ? `${things(switchedOff, "series")} switched off — every figure above `
+          ? `${things(switchedOff, "series", "series")} switched off — every figure above `
             + `is of what is drawn`
           : null].filter(Boolean),
       brushable: timed
@@ -1379,7 +1379,7 @@
             /* Rule 1: the envelope's own number, on the mark that drew it. */
             const say = `${s.label} ${raw(value)}${s.unit ? ` ${s.unit}` : ""}`
               + `${p.t ? ` at ${FS.fmt.clock(p.t)}` : ""}`;
-            if (ringed(s, p)) ringAroundDot(g, x, yOf(value), 1.8);
+            if (ringed(s, p)) ringAroundDot(g, x, yOf(value), 1.8, s.label, p.t);
             const dot = add(g, "circle", {
               cx: x, cy: yOf(value), r: 1.8, class: `series-count ${mark}`,
               "data-value": raw(value), "data-t": raw(p.t), "data-series": s.label,
@@ -1398,10 +1398,14 @@
   /* The ring on the point a panel is open on. Shared with the control chart's
      own in spirit and drawn the same way: decoration, no pointer, no
      keyboard, and no `data-value` - a ring is not a reading. */
-  function ringAroundDot(host, cx, cy, r) {
+  function ringAroundDot(host, cx, cy, r, series, at) {
     return add(host, "circle", {
       cx, cy, r: r + 4, class: "spc-ring", "pointer-events": "none",
       "aria-hidden": "true",
+      /* Named by the reading it rings, so that "the point that is open" is
+         countable from the markup rather than inferred from a coordinate. */
+      "data-ring-series": series === undefined ? null : series,
+      "data-ring-at": at === undefined ? null : raw(at),
     });
   }
 

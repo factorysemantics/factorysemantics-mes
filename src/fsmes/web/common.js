@@ -749,7 +749,16 @@
       const zone = FS.fmt.zone();
       const inZone = zone ? `, ${zone} time` : "";
       if (named === "shift" || window.shift) {
-        return `${window.shift || "the shift"}, ${from} to ${to}${inZone}`;
+        /* A shift in an envelope is a RECORD - code, name, day, the two
+           instants - and not a string. Printing it straight put "[object
+           Object]" under the chart (2026-10-11). Its name is what a person
+           on the floor calls it; its code is the fallback, and "the shift" is
+           what is left when the read named none. */
+        const shift = window.shift;
+        const named_shift = (shift && typeof shift === "object")
+          ? (shift.name || shift.code || null)
+          : (shift || null);
+        return `${named_shift || "the shift"}, ${from} to ${to}${inZone}`;
       }
       if (named === "between") return `${from} to ${to}${inZone}`;
       const width = (new Date(window.end) - new Date(window.start)) / 3600000;
