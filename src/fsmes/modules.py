@@ -1059,8 +1059,8 @@ REGISTRY: tuple[Module, ...] = (
         ),
         tools=("fsmes.mcp.quality", "fsmes.mcp.severities"),
         tables=("quality_specs", "quality_checks", "quality_samples",
-                "non_conformances", "spc_signals", "gauges", "calibrations",
-                "nc_severities"),
+                "quality_counts", "non_conformances", "spc_signals", "gauges",
+                "calibrations", "nc_severities"),
     ),
     Module(
         name="kpis",

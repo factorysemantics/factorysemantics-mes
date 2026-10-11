@@ -536,6 +536,39 @@ def record_sample(plant: str, material: str, characteristic: str, values: list[f
 
 
 @mcp.tool()
+def record_count(plant: str, material: str, characteristic: str, inspected: int,
+                 rejected: int, lot_ref: str,
+                 defects: list[dict] | None = None, order: str | None = None,
+                 equipment: str | None = None, lot: str | None = None,
+                 started_at: str | None = None, ended_at: str | None = None,
+                 dry_run: bool = False, on_behalf_of: str | None = None,
+                 client_ref: str | None = None) -> dict:
+    """Record one inspection count for a characteristic whose specification says
+    it is counted rather than measured - how many units were looked at in a
+    stretch and how many of them were sent back. One record however many were
+    inspected: ten thousand bottles looked at is two whole numbers, not ten
+    thousand readings. The chart's point is the share, judged against that
+    lot's own control limits, so the rules run once and at most one
+    non-conformance comes out of a count. `lot_ref` is what the plant calls the
+    stretch, and it is required: a count nobody can tie back to product is a
+    number with no subject. `defects` is `[{"code": ..., "count": ...}]` and is
+    the answer to *which ones*; leaving it out records that nobody broke them
+    down, which is not the same as nothing having been found. Decision 0041."""
+    _identity.set((on_behalf_of.upper() if on_behalf_of else None, client_ref))
+    body: dict = {"material": material, "characteristic": characteristic,
+                  "inspected": inspected, "rejected": rejected, "lot_ref": lot_ref}
+    if defects is not None:
+        body["defects"] = list(defects)
+    for name, value in (("order", order), ("equipment", equipment), ("lot", lot),
+                        ("started_at", started_at), ("ended_at", ended_at)):
+        if value:
+            body[name] = value
+    return _write(plant, "/quality/counts", body, dry_run,
+                  f"record {rejected} of {inspected} {characteristic} sent back "
+                  f"on {material}, lot {lot_ref}")
+
+
+@mcp.tool()
 def nonconformance(plant: str, code: str) -> dict:
     """One non-conformance with every step it has been through: who raised it,
     who reviewed it, what was decided about the material and why, who closed it."""
