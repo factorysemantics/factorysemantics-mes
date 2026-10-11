@@ -956,17 +956,28 @@ function tagsBlock(d, station, noun = "reading") {
         : `No station is recorded against this ${noun}, so there are no tags to draw.`));
     return section;
   }
-  /* What the window is, which is not the same question on the two panels. A
-     reading is an instant and the window is ten minutes before it; a sample of
-     n pieces is a stretch, and the window runs from the minutes before the
-     FIRST of them to the last plus the tail. Every reading is marked. */
-  const spans = d.window.spanned_seconds !== undefined
-    ? `the ${kit.duration(d.window.spanned_seconds)} this sample spans, the `
-      + `${d.window.before_minutes} minutes before the first reading and the `
-      + `${d.window.after_minutes} after the last. All ${tags.marks || d.readings.total} `
-      + "readings are marked on each."
-    : `the ${d.window.before_minutes} minutes before the reading and the `
-      + `${d.window.after_minutes} after. The reading is marked on each.`;
+  /* What the window is, which is not the same question on the three panels.
+     A reading is an instant and the window is ten minutes before it; a sample
+     of n pieces is a stretch, and the window runs from the minutes before the
+     FIRST of them to the last plus the tail; a counted lot is a stretch too,
+     and what is marked on it is its two ends - there are no readings behind a
+     count to mark, which is the whole difference between that chart and the
+     other two. A count recorded without its stretch has neither, and says so
+     rather than printing a duration nobody claimed. */
+  const spanned = d.window.spanned_seconds;
+  const marked = noun === "lot"
+    ? "Both ends of the stretch are marked on each."
+    : `All ${tags.marks || (d.readings || {}).total || 0} readings are marked on each.`;
+  const spans = spanned
+    ? `the ${kit.duration(spanned)} this ${noun} spans, the `
+      + `${d.window.before_minutes} minutes before the first of it and the `
+      + `${d.window.after_minutes} after the last. ${marked}`
+    : `the ${d.window.before_minutes} minutes before the ${noun} and the `
+      + `${d.window.after_minutes} after. `
+      + (noun === "lot"
+          ? "This count was recorded without the stretch it covers, so what is "
+            + "marked on each is when it was written down."
+          : "The reading is marked on each.");
   section.append(el("p", "muted small",
     `${tags.shown} of ${tags.total} signal${tags.total === 1 ? "" : "s"} this station `
     + `published in this window, over ${spans}`));
