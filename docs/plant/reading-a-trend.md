@@ -25,7 +25,9 @@ pressure on one scale draws the pressure as a flat line along the bottom,
 which is a picture of the units and not of the plant. The footer says which
 side is which — *left axis: degC · right axis: bar*. Two tags whose unit the
 plant never recorded share a side rather than being split on a guess, and the
-footer says that is what happened.
+footer says that is what happened — *2 signals on one scale* — because on one
+scale the tag with the smaller range draws flat against the other, and two
+flat lines read like two steady signals when they are nothing of the kind.
 
 A link the plant declared on a tag — an alarm limit — is drawn only when the
 readings reach it. The axis is never stretched out to a limit nobody came

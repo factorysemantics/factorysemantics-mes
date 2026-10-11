@@ -1218,6 +1218,18 @@
             .concat(scales.length > 1 && scales.some((s) => !s.unit)
               ? ["no unit is recorded for one of these scales, so what is on it "
                  + "shares a side rather than being split on a guess"] : [])
+            /* Rule 4 again, for the case a real plant lands on. Where the tag
+               manifest names no unit the series are not split onto a guess -
+               so several of them end up on ONE scale, and the one with the
+               smaller range draws flat against the other. A reader who is not
+               told that reads two flat lines as two steady signals. Found by
+               looking at the lab's own filler, whose manifest names no units
+               at all: fill weight around 500 and product temperature around 6
+               sat at the top and the bottom of the frame. */
+            .concat(scales.length === 1 && drawn > 1 && !scales[0].unit
+              ? [`${count(drawn)} signals on one scale — no unit is recorded `
+                 + `for them, so they are not split onto a guess; where their `
+                 + `ranges are far apart the smaller one draws flat`] : [])
             /* Rule 4: a bucketed shape states its bucket width. With one
                scale the width is in the axis label, as it always was; with
                two the label makes way for the two units, so the width is said

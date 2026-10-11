@@ -812,6 +812,54 @@ def test_a_tag_a_link_named_is_drawn_even_where_the_plant_publishes_few_of_them(
         page.close()
 
 
+def test_two_tags_a_plant_records_no_unit_for_say_they_share_one_scale(
+        admin, plant):
+    """Also found by looking, and not in a test. Every fixture in this file
+    names its units, so every run drew two sides; the lab's own filler names
+    none, and there the two tags land on ONE scale - fill weight around 500 at
+    the top of the frame and product temperature around 6 along the bottom,
+    both of them flat. Splitting them would be inventing a unit, so the chart
+    keeps one scale and says so instead: a reader who is not told reads two
+    flat lines as two steady signals."""
+    base, start, end = plant
+    page = admin.new_page()
+
+    def unitless(route):
+        """The same readings, with the units taken out of the envelope - which
+        is what a tag manifest that names none produces."""
+        answer = route.fetch()
+        body = answer.json()
+        for one in body.get("series", []):
+            one["unit"] = None
+            one["axis"] = 0
+        body["axes"] = [{"key": None, "unit": None, "side": 0,
+                         "tags": [s["label"] for s in body.get("series", [])],
+                         "note": None}]
+        route.fulfill(response=answer, body=json.dumps(body),
+                      headers={**answer.headers, "content-type": "application/json"})
+
+    page.route("**/analysis/trend/*", unitless)
+    try:
+        page.goto(f"{base}/dashboard/machine/MIX01"
+                  f"?tag=Temperature&tag2=Pressure&start={start.isoformat()}Z"
+                  f"&end={end.isoformat()}Z#trend",
+                  wait_until="load", timeout=30000)
+        page.wait_for_function(
+            """() => document.querySelectorAll(
+                 '#trend circle[data-series="Pressure"]').length > 5""",
+            timeout=30000)
+        footer = _footer(page)
+        # Both lines are still drawn, and the chart still states its total.
+        assert "2 series of 2" in footer, footer
+        # One scale, named as one - not two sides with a unit guessed onto them.
+        assert "left axis:" not in footer, footer
+        assert "2 signals on one scale" in footer, footer
+        assert "the smaller one draws flat" in footer, footer
+    finally:
+        page.unroute_all(behavior="ignoreErrors")
+        page.close()
+
+
 # ------------------------------------------------------------ in all four themes
 
 

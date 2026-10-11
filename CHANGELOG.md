@@ -69,7 +69,10 @@ goes under Honesty with a migration line, so plant people can find it.
     as a flat line along the bottom, which is a picture of the units and not
     of the plant — so the units decide the sides, the footer says *left axis:
     degC · right axis: bar*, and two series with no unit recorded share a side
-    rather than being split on a guess, which the footer also says.
+    rather than being split on a guess — *2 signals on one scale*, with the
+    warning that the smaller range draws flat against the larger, which is
+    exactly what the lab's own filler does because its manifest names no
+    units at all.
   - **A window with two ends.** *This shift*, *last shift*, the trailing hours
     as before, or a start and an end somebody typed. `start=` and `end=` now
     exist on the single-tag `GET /analysis/tag/{code}`, and the several-tag
