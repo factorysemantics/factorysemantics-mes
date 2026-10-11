@@ -38,7 +38,16 @@ from fsmes.domain import (
     MaintenanceStatus,
     TagValue,
 )
-from fsmes.services import NotFound, analysis, gauges, masterdata, quality, spc, spc_point
+from fsmes.services import (
+    NotFound,
+    analysis,
+    gauges,
+    masterdata,
+    moment,
+    quality,
+    spc,
+    spc_point,
+)
 
 #: Readings that sit still, so the one wild value below is the only thing the
 #: rules can be firing on. Twelve of them, which is this plant's
@@ -420,7 +429,7 @@ def test_the_tag_list_states_how_many_of_the_stations_signals_it_drew(session, p
                                                                      monkeypatch):
     """A panel showing one of a station's two signals must not look like a
     picture of the station (style rule 4)."""
-    monkeypatch.setattr(spc_point, "MOST_TAGS", 1)
+    monkeypatch.setattr(moment, "MOST_TAGS", 1)
     out = spc_point.dossier(session, "FG-COLA", "brix", point.id)
     assert out["tags"]["shown"] == 1
     assert out["tags"]["total"] == 2
@@ -558,7 +567,7 @@ def test_a_plant_with_no_configured_cadence_falls_back_and_says_it_did(session, 
                         lambda: (None, None))
     out = spc_point.dossier(session, "FG-COLA", "brix", point.id)
     trend = out["tags"]["trends"][0]
-    assert trend["buckets"] == spc_point.TAG_BUCKETS
+    assert trend["buckets"] == moment.TAG_BUCKETS
     assert trend["sample_interval_seconds"] is None
     assert "no configured cadence" in trend["coverage_note"]
 
