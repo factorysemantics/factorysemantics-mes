@@ -403,6 +403,13 @@ def _why_says(block: dict, reason: str | None, label: str | None, code: str | No
     if gap:
         return ("this MES lost sight of the machine across this stretch, so there is "
                 "no stop here to have a reason: nobody was looking")
+    # Nothing recorded here at all is not a machine that was running. The two
+    # read identically on a bar with a hole in it, and only one of them is a
+    # statement about the machine.
+    if block["state"] is None:
+        return ("this MES holds no state record across this stretch, so there is no "
+                "stop here to explain. What the machine was doing is not known, and "
+                "the coverage line says as much")
     if not stop:
         return "the machine was running across this block, so there is no stop to explain"
     words = label or reason or code
@@ -430,6 +437,9 @@ def _labelling_note(block: dict, unlabelled: list[dict], stop: bool,
     if gap:
         return ("a disconnection is not a stop anybody can name: it is this MES's own "
                 "record of not being able to see the machine")
+    if block["state"] is None:
+        return ("there is no stop here to name: this MES holds no state record across "
+                "this stretch at all")
     if not stop:
         return "the machine was running, and a running observation is never labelled"
     if not unlabelled:
@@ -621,6 +631,9 @@ def _maintenance(session: Session, unit: Equipment, block: dict, why: dict,
 
 def _planned_says(block: dict, orders: list[dict], in_progress: list[dict],
                   waiting: list[dict], named: list[str], stop: bool) -> str:
+    if block["state"] is None:
+        return ("this MES holds no state record across this stretch, so there is no "
+                "stop here to place against a maintenance order")
     if not stop:
         return "the machine was running across this block, so there is no stop to place"
     if named and in_progress:
