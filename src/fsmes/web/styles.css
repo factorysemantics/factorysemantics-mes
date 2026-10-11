@@ -711,6 +711,20 @@ a.obj:hover { text-decoration: underline; }
   outline-offset: 1px;
 }
 
+/* ---------- a block of the state timeline the reader can open ----------
+   Pressable only where the page made it so (`options.openable`), like the dots
+   above: on the Analysis tab, the Line page and the schedule these blocks open
+   nothing, and a cursor that promised otherwise would be the picture making an
+   offer the screen cannot keep. */
+.state-mark[role="button"], .chart-unknown[role="button"] { cursor: pointer; }
+.state-mark:focus-visible, .chart-unknown:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+/* The block the panel beside the bar is open on. Hollow, so the block keeps
+   its own colour: the state is the thing the bar is for. */
+.state-open { fill: none; stroke: var(--accent); stroke-width: 2; }
+
 /* ---------- the network graph (the `graph` shape) ----------
    Node kinds and edge kinds map to palette variables HERE and nowhere in
    kit.js (rule 6), so a plant on the night-shift palette gets a readable
