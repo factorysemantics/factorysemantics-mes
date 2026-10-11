@@ -34,12 +34,14 @@ when a limit is off the picture.
 
 ## Set the window to the shift that already finished
 
-The picker at the top of the page is a *trailing* window: the last eight
-hours, ending at this second. That is the right question for *how is it
-going*, and the wrong one for *what happened at twenty past six*.
+The picker at the top of the page used to be a *trailing* window and nothing
+else: the last eight hours, ending at this second. That is the right question
+for *how is it going*, and the wrong one for *what happened at twenty past
+six*.
 
-Under the Trend heading there is a second control, and it belongs to this
-chart:
+It is now one control for the whole machine page — the trend, the state
+timeline, the OEE figures and the alarm list are all drawn over whatever it
+says, so a window set once is set for the screen:
 
 | Choose | You get |
 |---|---|

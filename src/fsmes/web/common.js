@@ -629,11 +629,12 @@
   };
 
   /* ---------- a window that is not "now" ----------
-     `FS.window` above is the page head's trailing span: 8 hours back from
-     this second, and every report route on the product takes it. It is the
-     right control for "how is the line doing", and the wrong one for "what
-     happened at twenty past six", because a shift that finished at 2 p.m.
-     cannot be reached from it at all.
+     `FS.window` above is the trailing span in the other pages' heads: 8
+     hours back from this second, and every report route on the product takes
+     it. It is the right control for "how is the line doing", and the wrong
+     one for "what happened at twenty past six", because a shift that
+     finished at 2 p.m. cannot be reached from it at all. The machine page
+     head holds an `FS.span` control instead, for that reason.
 
      `FS.span` is the richer window, and it is deliberately ONE object rather
      than one per chart: the trend graph and the state timeline sit on the

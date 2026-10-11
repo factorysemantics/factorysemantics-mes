@@ -491,14 +491,14 @@ def test_this_shift_and_last_shift_are_offered_and_named_in_words(page):
     is chosen the chart says the shift's own name, from the plant's calendar,
     not a span of hours that happens to be the same length."""
     options = page.eval_on_selector_all(
-        '#trend-span select[data-span="kind"] option',
+        '#machine-span select[data-span="kind"] option',
         "els => els.map((e) => e.textContent)")
     assert "This shift" in options, options
     assert "Last shift" in options, options
     assert "A start and an end…" in options, options
 
     before = page.inner_text("#trend-window")
-    page.select_option('#trend-span select[data-span="kind"]', "shift:previous")
+    page.select_option('#machine-span select[data-span="kind"]', "shift:previous")
     page.wait_for_function(
         "(was) => document.querySelector('#trend-window').textContent !== was",
         arg=before, timeout=30000)
@@ -514,7 +514,7 @@ def test_a_start_and_an_end_typed_in_redraws_the_chart_on_that_stretch(page, pla
     _base, start, _end = plant
     narrow_start = start + timedelta(minutes=10)
     narrow_end = start + timedelta(minutes=70)
-    page.select_option('#trend-span select[data-span="kind"]', "between")
+    page.select_option('#machine-span select[data-span="kind"]', "between")
     local = page.evaluate(
         """(isos) => isos.map((iso) => {
              const at = new Date(iso + 'Z');
@@ -523,10 +523,10 @@ def test_a_start_and_an_end_typed_in_redraws_the_chart_on_that_stretch(page, pla
                   + `-${pad(at.getDate())}T${pad(at.getHours())}`
                   + `:${pad(at.getMinutes())}`;
            })""", [narrow_start.isoformat(), narrow_end.isoformat()])
-    page.fill('#trend-span input[data-span="start"]', local[0])
-    page.fill('#trend-span input[data-span="end"]', local[1])
+    page.fill('#machine-span input[data-span="start"]', local[0])
+    page.fill('#machine-span input[data-span="end"]', local[1])
     before = page.inner_text("#trend-window")
-    page.click('#trend-span button[data-span="apply"]')
+    page.click('#machine-span button[data-span="apply"]')
     page.wait_for_function(
         "(was) => document.querySelector('#trend-window').textContent !== was",
         arg=before, timeout=30000)
@@ -539,10 +539,10 @@ def test_a_start_and_an_end_typed_in_redraws_the_chart_on_that_stretch(page, pla
 def test_a_window_with_its_ends_the_wrong_way_round_is_refused_in_words(page):
     """And refused by the control, before anything is asked of the plant: an
     end before its start is not a window somebody mistyped the length of."""
-    page.select_option('#trend-span select[data-span="kind"]', "between")
-    was = page.input_value('#trend-span input[data-span="start"]')
-    page.fill('#trend-span input[data-span="end"]', was)
-    page.click('#trend-span button[data-span="apply"]')
+    page.select_option('#machine-span select[data-span="kind"]', "between")
+    was = page.input_value('#machine-span input[data-span="start"]')
+    page.fill('#machine-span input[data-span="end"]', was)
+    page.click('#machine-span button[data-span="apply"]')
     page.wait_for_function(
         "() => document.querySelector('[data-span=\"says\"]')"
         ".textContent.includes('swap them')", timeout=10000)
@@ -723,7 +723,7 @@ def test_changing_the_window_shuts_a_panel_that_is_no_longer_about_it(page, plan
     is for, rather than sitting there looking current."""
     at = _reading_during_the_changeover(page, plant)
     _click(page, "Temperature", at)
-    page.select_option('#trend-span select[data-span="kind"]', "shift:previous")
+    page.select_option('#machine-span select[data-span="kind"]', "shift:previous")
     page.wait_for_function(
         "() => document.querySelector('#trend-point').getAttribute('data-point')"
         " === ''", timeout=30000)

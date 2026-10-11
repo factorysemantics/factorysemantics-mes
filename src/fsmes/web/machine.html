@@ -30,7 +30,12 @@
       <span id="m-state" class="pill unknown">—</span>
       <span id="m-since" class="muted small"></span>
       <span class="spacer"></span>
-      <label class="pick">Window <select id="hours"></select></label>
+      <!-- ONE window control for the whole page (`FS.span`): the trailing
+           spans this chip always had, this shift, last shift, or a start and
+           an end somebody typed. Every tab on this page is drawn over it —
+           the trend, the state timeline, the OEE figures and the alarm list
+           — so a reader who sets a window once sets it for the screen. -->
+      <div id="machine-span"></div>
     </div>
     <div class="object-facts">
       <span>Order <strong id="m-order">—</strong></span>
@@ -81,11 +86,6 @@
           <label class="pick inline">of <select id="trend-tag"></select></label>
           <label class="pick inline">and <select id="trend-tag-2"></select></label>
         </h2>
-        <!-- The window, drawn by FS.span. It is NOT the window picker in the
-             page head: that one is a trailing span and every report route on
-             this page takes it. This one can be a start and an end, and the
-             state timeline next door reads the same one. -->
-        <div id="trend-span"></div>
         <div id="trend" class="chart"></div>
         <p id="trend-window" class="muted small"></p>
         <p id="trend-hint" class="muted small">Two tags on one chart, each on

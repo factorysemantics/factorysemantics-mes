@@ -100,6 +100,13 @@ goes under Honesty with a migration line, so plant people can find it.
     hover frame, the keyboard and the data attributes every other chart has;
     the legacy single-series `kit.trend()` helper still serves the analysis
     screen's tag panel, which has no panel beside it to open.
+  - **One window control for the machine page.** The trailing-hours chip in
+    the page head is now that richer control, and the trend, the state
+    timeline, the OEE figures and the alarm list are all drawn over whatever
+    it says: a window set once is set for the screen. Two controls on one page
+    that disagreed would be the page telling two stories about the same shift.
+    The two panels on that page — a stop's and a reading's — share one set of
+    parts for the same reason.
 
 - **Maintenance work goes to the right trade by itself.** The filler's chiller
   comes due at two in the morning; until now the order sat at `due` with
