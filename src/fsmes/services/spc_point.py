@@ -1198,7 +1198,7 @@ def lot_dossier(session: Session, material: str, characteristic: str,
 
     unit = None if not count.equipment_id else session.get(Equipment, count.equipment_id)
     order = (None if not count.work_order_id else
-             _order_code_of(session, count.work_order_id))
+             moment.order_code_of(session, count.work_order_id))
 
     # The stretch itself when the count recorded one, and the moment it was
     # written down when it did not. A count with no window is still a count,
@@ -1220,10 +1220,10 @@ def lot_dossier(session: Session, material: str, characteristic: str,
     timeline: dict | None = None
     machine: dict | None = None
     if unit is not None:
-        analogs = analog_trends(session, unit, start, end, marks)
+        analogs = moment.analog_trends(session, unit, start, end, marks)
         tags, tags_total = analogs["trends"], analogs["total"]
-        timeline = _timeline_block(session, unit, start, end)
-        machine = _state_at(session, unit, last)
+        timeline = moment.timeline_block(session, unit, start, end)
+        machine = moment.state_at(session, unit, last)
 
     return {
         "material": material,
@@ -1272,7 +1272,7 @@ def lot_dossier(session: Session, material: str, characteristic: str,
         "recorded": _recorded_for_count(session, count),
         "machine": machine,
         "timeline": timeline,
-        "stops": None if timeline is None else _stops(timeline),
+        "stops": None if timeline is None else moment.stops(timeline),
         "line": _line_block(session, unit, start, end, at=last,
                             material_id=spec.material_id, noun="lot"),
         "tags": {
@@ -1284,8 +1284,8 @@ def lot_dossier(session: Session, material: str, characteristic: str,
                 f"{len(tags)} of the {tags_total} signals this station published in "
                 f"this window are drawn")),
         },
-        "maintenance": maintenance_orders(session, unit, start, end),
-        "findings": _findings(session, order, start, end),
+        "maintenance": moment.maintenance_orders(session, unit, start, end),
+        "findings": moment.findings(session, order, start, end),
         "coverage": None if timeline is None else timeline.get("coverage"),
         "coverage_note": (
             None if timeline is not None else

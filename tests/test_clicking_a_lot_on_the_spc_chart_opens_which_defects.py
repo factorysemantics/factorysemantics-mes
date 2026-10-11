@@ -24,11 +24,12 @@ rather than on an element that exists before the answer does. That is the
 The plant underneath is the bottling floor's own shape, counted rather than
 measured: ten stretches of a quarter of an hour each, inspected at QI01, most
 of them sending back a tenth of what they looked at and most of those sent
-back for skewed caps. One stretch - a hundred units, twenty sent back, sixteen
-of them short-filled - sits past its OWN upper limit while the product
-temperature under it is below the band. Whether a reader who opens that dot
-learns it was the fill and not the caps is asserted by identity: the lot is
-`4711-Q06` and no other, and the defect at the top of its list is `low_fill`.
+back for skewed caps. The last stretch - a hundred units, twenty sent
+back, sixteen of them short-filled - sits past its OWN upper limit while the
+product temperature under it is below the band. Whether a reader who opens
+that dot learns it was the fill and not the caps is asserted by identity: the
+lot is `4711-Q10` and no other, and the defect at the top of its list is
+`low_fill`.
 
 Marked `browser` as well as `slow`: `pytest -m browser` is the tier CI runs
 Chromium for, and a Playwright file marked only `slow` is a test nothing runs.
