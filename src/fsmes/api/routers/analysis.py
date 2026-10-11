@@ -270,8 +270,12 @@ def tag(
 # machine and a window are the same code the control-chart panel reads
 # (`services.moment`).
 
-_TAGS = Query(None, description="Tag names, repeatable. Omitted means the "
-                                "machine's own process value.")
+# `tag`, repeated, and not `tags`: the single-tag read next door is
+# `?tag=Temperature`, and one screen asking for two of them should not have to
+# spell the parameter differently to do it.
+_TAGS = Query(None, alias="tag",
+              description="Tag names, repeatable. Omitted means the machine's "
+                          "own process value.")
 
 
 @router.get("/trend/{equipment_code}")

@@ -628,6 +628,362 @@
     },
   };
 
+  /* ---------- a window that is not "now" ----------
+     `FS.window` above is the page head's trailing span: 8 hours back from
+     this second, and every report route on the product takes it. It is the
+     right control for "how is the line doing", and the wrong one for "what
+     happened at twenty past six", because a shift that finished at 2 p.m.
+     cannot be reached from it at all.
+
+     `FS.span` is the richer window, and it is deliberately ONE object rather
+     than one per chart: the trend graph and the state timeline sit on the
+     same machine page, a reader who sets "last shift" on one means it on the
+     other, and two controls that disagree would be the page telling two
+     stories about the same shift. Any number of controls may be bound; they
+     all read and write this state and all of them redraw.
+
+     It only ever produces a QUERY STRING, never a start and an end of its
+     own: which seconds "this shift" means is the plant's answer, from its own
+     shift calendar, and a browser that worked it out locally would be a
+     second definition of a shift living on a screen. */
+
+  const SPAN_SHIFTS = [
+    { value: "shift:current", label: "This shift", words: "this shift" },
+    { value: "shift:previous", label: "Last shift", words: "last shift" },
+  ];
+  let span = null;                 /* {kind, hours, shift, start, end} */
+  const spanBound = [];            /* every control drawn, so all redraw */
+
+  /* The inputs are `datetime-local`, so what a person types is their own
+     device's clock. It goes to the API as the instant that was, and comes
+     back worded in the plant's zone, which is the zone every other time on
+     these screens is in. */
+  const spanLocalToIso = (local) => (local ? new Date(local).toISOString() : null);
+  const spanIsoToLocal = (iso) => {
+    if (!iso) return "";
+    const at = new Date(iso.endsWith("Z") || /[+-]\d\d:?\d\d$/.test(iso) ? iso : iso + "Z");
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`
+      + `T${pad(at.getHours())}:${pad(at.getMinutes())}`;
+  };
+
+  function spanState() {
+    if (span) return span;
+    const asked = new URL(window.location).searchParams;
+    const start = asked.get("start");
+    const end = asked.get("end");
+    const shift = asked.get("shift");
+    if (start && end) span = { kind: "between", start, end, shift: null, hours: null };
+    else if (shift === "current" || shift === "previous") {
+      span = { kind: "shift", shift, start: null, end: null, hours: null };
+    } else span = { kind: "hours", hours: FS.window.hours(), shift: null, start: null, end: null };
+    return span;
+  }
+
+  /* The URL carries the window, so a link to "what happened at 6:20" opens on
+     the window it was read in. Replaced, not pushed: back is for tabs. */
+  function spanToUrl() {
+    const state = spanState();
+    const url = new URL(window.location);
+    for (const key of ["start", "end", "shift"]) url.searchParams.delete(key);
+    if (state.kind === "between") {
+      url.searchParams.set("start", state.start);
+      url.searchParams.set("end", state.end);
+    } else if (state.kind === "shift") url.searchParams.set("shift", state.shift);
+    history.replaceState(null, "", url);
+  }
+
+  FS.span = {
+    /* What this window is, for a caller that needs to branch on it. */
+    kind: () => spanState().kind,
+    /* The query string the analysis routes read. One place, so the two charts
+       on the machine page cannot drift into asking for different windows. */
+    query() {
+      const state = spanState();
+      if (state.kind === "between") {
+        return `start=${encodeURIComponent(state.start)}&end=${encodeURIComponent(state.end)}`;
+      }
+      if (state.kind === "shift") return `shift=${encodeURIComponent(state.shift)}`;
+      return `hours=${state.hours}`;
+    },
+    /* For the routes that take only `hours=` — the OEE read and the alarm
+       list. A window with two ends still has a width, and a shift's width is
+       the plant's shift length, so the figure beside a chosen window is of
+       about the right amount of time even where the route cannot be told
+       which stretch of the clock it was. */
+    hours() {
+      const state = spanState();
+      if (state.kind === "between") {
+        const width = (new Date(state.end) - new Date(state.start)) / 3600000;
+        return width > 0 ? Math.round(width * 100) / 100 : FS.window.hours();
+      }
+      return state.kind === "hours" ? state.hours : FS.window.hours();
+    },
+    /* The window in words, from what the reader chose. `said()` below is the
+       better sentence wherever an envelope is to hand, because the envelope
+       knows the seconds the plant settled on and this does not. */
+    words() {
+      const state = spanState();
+      if (state.kind === "between") {
+        return `from ${FS.fmt.stamp(state.start)} to ${FS.fmt.stamp(state.end)}`;
+      }
+      if (state.kind === "shift") {
+        return (SPAN_SHIFTS.find((s) => s.value === `shift:${state.shift}`) || {}).words
+          || state.shift;
+      }
+      return `the last ${windowLabel(state.hours)}`;
+    },
+    /* THE WINDOW A CHART IS ACTUALLY DRAWN ON, worded from the chart's own
+       envelope. The envelope says what KIND of window the plant settled on
+       (`named`: a shift, a trailing span, a start and an end) and the two
+       instants it came out as; this turns that into the sentence the chart
+       and its panel both print, so one window is described one way in both
+       places. Anything a read narrowed — a window clamped forward to the
+       first reading there has ever been — is in these instants and therefore
+       in this sentence. */
+    said(window) {
+      if (!window || !window.start || !window.end) return "a window nobody recorded";
+      const from = FS.fmt.stamp(window.start);
+      const to = FS.fmt.stamp(window.end);
+      const named = window.named || null;
+      const zone = FS.fmt.zone();
+      const inZone = zone ? `, ${zone} time` : "";
+      if (named === "shift" || window.shift) {
+        return `${window.shift || "the shift"}, ${from} to ${to}${inZone}`;
+      }
+      if (named === "between") return `${from} to ${to}${inZone}`;
+      const width = (new Date(window.end) - new Date(window.start)) / 3600000;
+      return `the last ${windowLabel(Math.round(width * 100) / 100)}, `
+        + `${from} to ${to}${inZone}`;
+    },
+    set(next) {
+      span = { kind: "hours", hours: FS.window.hours(), shift: null, start: null, end: null, ...next };
+      spanToUrl();
+      for (const control of spanBound) control.redraw();
+    },
+    /* Draw the control into `host`. Callable from more than one place on one
+       page: every control drawn shows the same window, and a change to any of
+       them redraws all of them and tells every caller. */
+    async bind(host, onChange) {
+      await FS.window.ready();
+      const state = spanState();
+      host.replaceChildren();
+      host.classList.add("span");
+
+      const pick = FS.el("label", "pick");
+      pick.append(document.createTextNode("Window "));
+      const select = FS.el("select");
+      select.dataset.span = "kind";
+      pick.append(select);
+
+      const between = FS.el("span", "span-between");
+      const from = Object.assign(document.createElement("input"),
+                                 { type: "datetime-local" });
+      from.dataset.span = "start";
+      const to = Object.assign(document.createElement("input"),
+                               { type: "datetime-local" });
+      to.dataset.span = "end";
+      const apply = FS.el("button", "small", "Apply");
+      apply.type = "button";
+      apply.dataset.span = "apply";
+      const fromLabel = FS.el("label", "pick");
+      fromLabel.append(document.createTextNode("From "), from);
+      const toLabel = FS.el("label", "pick");
+      toLabel.append(document.createTextNode("to "), to);
+      between.append(fromLabel, toLabel, apply);
+
+      const says = FS.el("p", "span-says muted");
+      says.dataset.span = "says";
+      host.append(pick, between, says);
+
+      const redraw = () => {
+        const now = spanState();
+        const value = now.kind === "between" ? "between"
+          : (now.kind === "shift" ? `shift:${now.shift}` : `h:${now.hours}`);
+        select.replaceChildren(
+          ...windows.map((h) => new Option(windowLabel(h), `h:${h}`)),
+          ...SPAN_SHIFTS.map((s) => new Option(s.label, s.value)),
+          new Option("A start and an end…", "between"));
+        if (![...select.options].some((o) => o.value === value)) {
+          select.append(new Option(FS.span.words(), value));
+        }
+        select.value = value;
+        between.hidden = now.kind !== "between";
+        if (now.kind === "between") {
+          from.value = spanIsoToLocal(now.start);
+          to.value = spanIsoToLocal(now.end);
+        }
+        says.textContent = `Showing ${FS.span.words()}.`;
+      };
+
+      const changed = () => { redraw(); onChange(); };
+      select.addEventListener("change", () => {
+        const value = select.value;
+        if (value === "between") {
+          /* Opening the two boxes is not a window yet: nothing is reloaded
+             until Apply, because a half-typed start is not a question. */
+          const state2 = spanState();
+          const end = state2.end || new Date().toISOString();
+          const start = state2.start
+            || new Date(new Date(end) - FS.span.hours() * 3600000).toISOString();
+          span = { kind: "between", start, end, shift: null, hours: null };
+          redraw();
+          from.focus();
+          return;
+        }
+        if (value.startsWith("shift:")) FS.span.set({ kind: "shift", shift: value.slice(6) });
+        else {
+          const hours = parseFloat(value.slice(2));
+          FS.window.set(hours);
+          FS.span.set({ kind: "hours", hours });
+        }
+        onChange();
+      });
+      apply.addEventListener("click", () => {
+        const start = spanLocalToIso(from.value);
+        const end = spanLocalToIso(to.value);
+        if (!start || !end) {
+          says.textContent = "A window has two ends: give a start and an end.";
+          return;
+        }
+        if (new Date(end) <= new Date(start)) {
+          says.textContent = "The end is before the start — swap them.";
+          return;
+        }
+        FS.span.set({ kind: "between", start, end });
+        changed();
+      });
+
+      const control = { host, redraw };
+      spanBound.push(control);
+      redraw();
+      return control;
+    },
+  };
+
+
+  /* ---------- the panel beside a chart ----------
+     Click a point, and a column beside the chart fills with every record this
+     MES holds about that moment. #143 built the first one on the control
+     chart; the trend graph and the state timeline are the second and third,
+     and they sit on ONE page, so the primitives live here rather than three
+     times over. A block, a heading, two columns of facts, a table that states
+     its own total, a fold that remembers itself, and the line that says how
+     much of the block's own window anybody watched.
+
+     Nothing here knows what a reading is. What goes in the blocks is each
+     screen's own business; that these panels look and behave like one panel
+     is this file's. */
+
+  FS.panel = {
+    /* Rule 2, per block. Four different sentences for four different facts:
+       a share, a share nobody could compute, a block that is a list of
+       records and has no rate to state, and a block carrying no coverage
+       field at all. A reader is entitled to tell them apart. */
+    watched(block) {
+      if (!block) return null;
+      if (block.coverage === "absent") {
+        return block.coverage_note || "No coverage figure: this is a list of records.";
+      }
+      if (!("coverage" in block)) return null;
+      if (block.coverage === null || block.coverage === undefined) {
+        return block.coverage_note || "How much of this window was watched is unknown.";
+      }
+      return `Watched ${FS.fmt.pct(block.coverage)} of this window`
+           + (block.coverage_note ? ` — ${block.coverage_note}` : "");
+    },
+    /* One block: a heading, then whatever the screen puts in it. The watched
+       line is added by `closeWith` at the end so it is always last, whatever
+       went in between. */
+    block(title) {
+      const section = FS.el("section", "point-block");
+      section.append(FS.el("h3", null, title));
+      return section;
+    },
+    closeWith(section, block) {
+      const said = FS.panel.watched(block);
+      if (said) section.append(FS.el("p", "point-watched", said));
+      return section;
+    },
+    /* Label and value in two columns. A value nobody recorded prints "—" and
+       its label stays: a row that vanished would read as a question nobody
+       asked (unknown is never 0 and never absent). */
+    facts(rows) {
+      const list = FS.el("dl", "point-facts");
+      for (const [label, value, mono] of rows) {
+        list.append(FS.el("dt", null, label));
+        const dd = FS.el("dd", mono ? "mono" : null);
+        if (value instanceof Node) dd.append(value);
+        else {
+          dd.textContent = value === null || value === undefined || value === ""
+            ? "—" : String(value);
+        }
+        list.append(dd);
+      }
+      return list;
+    },
+    /* A table, stating its own total the way every list in this product does
+       — or the sentence that says there was nothing, which is a different
+       fact from a table with no rows in it. */
+    table(headings, rows, empty) {
+      if (!rows.length) return FS.el("p", "muted small", empty);
+      const wrap = FS.el("div", "table-wrap");
+      const table = FS.el("table");
+      const head = FS.el("thead");
+      const hr = FS.el("tr");
+      for (const h of headings) hr.append(FS.el("th", null, h));
+      head.append(hr);
+      table.append(head);
+      const body = FS.el("tbody");
+      for (const row of rows) {
+        const tr = FS.el("tr");
+        for (const cell of row) {
+          const td = FS.el("td");
+          if (cell instanceof Node) td.append(cell);
+          else td.textContent = cell === null || cell === undefined ? "—" : String(cell);
+          tr.append(td);
+        }
+        body.append(tr);
+      }
+      table.append(body);
+      wrap.append(table);
+      return wrap;
+    },
+    /* A built block behind a summary that states what is inside it: the
+       block's own heading becomes the label and the caller's sentence sits
+       beside it, so nothing is hidden without saying so.
+
+       The open/closed state is per block and per reader, in `localStorage`:
+       somebody who opens the tags on every point should not have to open them
+       again on the next one. Wrapped, because a browser with storage switched
+       off is a browser this panel still has to work in. `store` namespaces
+       the key, so the control chart's folds and the trend graph's are not one
+       set of folds wearing two hats. */
+    foldable(section, key, summary, { open, store = "panel" } = {}) {
+      const name = `fsmes-${store}-fold-${key}`;
+      let stored = null;
+      try {
+        const said = localStorage.getItem(name);
+        if (said === "open") stored = false;
+        if (said === "closed") stored = true;
+      } catch (e) { /* storage off: the caller's default stands */ }
+      const box = FS.el("details", "point-block point-fold");
+      box.dataset.fold = key;
+      box.open = stored === null ? Boolean(open) : !stored;
+      const head = FS.el("summary");
+      const title = section.querySelector("h3");
+      head.append(FS.el("span", "point-fold-title", title ? title.textContent : key));
+      head.append(FS.el("span", "point-fold-says", summary));
+      if (title) title.remove();
+      box.append(head, ...[...section.childNodes]);
+      box.addEventListener("toggle", () => {
+        try { localStorage.setItem(name, box.open ? "open" : "closed"); }
+        catch (e) { /* nothing to remember it in, which breaks nothing */ }
+      });
+      return box;
+    },
+  };
+
   /* ---------- tabs ----------
      <div class="tabs"><button class="tab" data-tab="x"> ... and
      <section class="tab-panel" data-panel="x">. The hash is the tab, so a

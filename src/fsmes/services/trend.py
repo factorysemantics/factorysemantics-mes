@@ -259,6 +259,25 @@ def series(db: Session, equipment_code: str, tags: list[str] | None = None,
         block["axis"] = existing["side"]
 
     watched = moment.timeline_block(db, unit, start, end)
+    # WHAT A WIDE WINDOW COST. A chart cannot draw eight hours of a tag that
+    # arrives every second, so `tag_block` buckets it - and a reader who is
+    # not told that is reading a mean as though it were a reading. The
+    # sentence says how many readings went into how many points, and how wide
+    # a point is, in the words the rest of the product uses for it.
+    bucket = blocks[0]["bucket_seconds"] if blocks else None
+    readings = sum(b.get("samples") or 0 for b in blocks)
+    points = sum(len(b.get("points") or []) for b in blocks)
+    if not blocks:
+        drawn_note = None
+    elif bucket and bucket > (cadence or 0) * 1.5:
+        drawn_note = (
+            f"{readings:,} readings are drawn as {points:,} points: each point "
+            f"is {round(bucket)} s of readings, its mean with the highest and "
+            f"the lowest behind it, so a one-second excursion is in the spread "
+            f"and not lost")
+    else:
+        drawn_note = (f"{readings:,} readings are drawn as {points:,} points - "
+                      f"nothing is thinned at this width")
     return {
         "equipment": unit.code,
         "name": unit.name,
@@ -268,6 +287,11 @@ def series(db: Session, equipment_code: str, tags: list[str] | None = None,
         "window": window_json,
         "series": blocks,
         "axes": axes,
+        # One grid for every series, because the window was settled once: the
+        # chart states the width (rule 4) and a reader can lay one line over
+        # the other and read the lag between them off the x-axis.
+        "bucket_seconds": bucket,
+        "drawn_note": drawn_note,
         # Every list states its total: what was asked for, what is on the
         # chart, what this machine has to offer, and what was asked for and is
         # not there - which is a different fact from a tag that went quiet.

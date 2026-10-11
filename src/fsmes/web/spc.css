@@ -21,83 +21,17 @@
   .spc-split { grid-template-columns: 1fr; }
 }
 
-/* The dossier is long - six blocks and up to six small charts - so it scrolls
-   in its own box rather than making the page as tall as the deepest block.
-   The chart beside it stays on screen while the reader goes down it. */
-.point-panel {
-  position: sticky;
-  top: var(--s3);
-  max-height: calc(100vh - 7rem);
-  overflow-y: auto;
-}
-@media (max-width: 1200px) {
-  .point-panel { position: static; max-height: none; }
-}
-
-/* A block inside the dossier: a heading, then its records, then the one line
-   saying how much of its own window was watched. */
-.point-block { border-top: 1px solid var(--line); padding-top: var(--s3); margin-top: var(--s3); }
-.point-block:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
-.point-block h3 { margin: 0 0 var(--s2); font-size: 13px; color: var(--muted); font-weight: 600; }
-
-/* A block that opens folded. The panel was four thousand pixels on a point and
-   a reader scrolled past the gauge and the three trends to reach the stops
-   every time, so the lower blocks are one click each - and the summary states
-   what is inside and how many of it, because a closed box that says nothing is
-   a list that reads complete (style rule 4).
-
-   `<details>` and `<summary>`, which are a button and a disclosure to a
-   keyboard and a screen reader without a line of script (style rule 6). The
-   marker is the browser's own. */
-.point-fold > summary {
-  cursor: pointer;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px var(--s2);
-  align-items: baseline;
-}
-.point-fold > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.point-fold-title { font-size: 13px; color: var(--muted); font-weight: 600; }
-.point-fold-says { font-size: 11px; color: var(--muted); }
-.point-fold[open] > summary { margin-bottom: var(--s2); }
-.point-fold[open] .point-fold-title { color: var(--text); }
+/* The panel's own shapes - `.point-panel`, `.point-block`, the folds, the
+   facts list, the watched line - are in styles.css, because the trend graph
+   and the state timeline open the same panel on the machine page and one
+   panel that looks like three would be three panels. What is left here is
+   what belongs to this screen alone. */
 
 /* One other station of the line, inside the block about the rest of it. Its
    own name, its rows, and its own watched share: a stop list with no watched
    share beside it is a list that reads complete. */
 .line-station { margin-top: var(--s2); }
 .line-station h4 { margin: 0 0 2px; font-size: 12px; font-weight: 600; color: var(--text); }
-
-/* The reading itself, at the top, big enough to be the answer to "which point
-   did I click". */
-.point-value { font-family: var(--mono); font-size: 22px; color: var(--text); }
-.point-value .unit { font-size: 13px; color: var(--muted); margin-left: 4px; }
-
-/* Label and value, in two columns. A value nobody recorded is "—" and the
-   label stays, because a row that disappeared would read as a question nobody
-   asked (style rule 8). */
-.point-facts { display: grid; grid-template-columns: auto 1fr; gap: 3px var(--s3); margin: 0; }
-.point-facts dt { color: var(--muted); font-size: 12px; }
-.point-facts dd { margin: 0; font-size: 12px; color: var(--text); }
-.point-facts dd.mono { font-family: var(--mono); }
-
-/* One small chart, with the buttons that take it off the page under it. The
-   same shape the AI tab's charts use, for the same reason: an export is the
-   chart node's own markup and the footer goes with it. */
-.point-chart { margin-top: var(--s3); }
-.point-chart h4 {
-  margin: 0 0 2px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
-}
-.point-chart .chart-host { overflow-x: auto; }
-.point-chart .chart-host svg { display: block; max-width: 100%; }
-.point-chart .chart-tools { display: flex; gap: 6px; margin-top: 4px; }
-
-/* What a block says about its own window. Every block has one, including the
-   three that say they have no such figure to give. */
-.point-watched { margin: var(--s2) 0 0; font-size: 11px; color: var(--muted); }
 
 /* The two buttons that take the whole chart - both halves - off the page.
    In the heading beside the chart rather than under it, so the chart itself

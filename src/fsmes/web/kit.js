@@ -996,15 +996,22 @@
      exists rather than a polyline: joining two readings across an hour nobody
      watched draws a measurement of that hour, and there wasn't one. */
   function lineShape(envelope, options, width) {
-    const carried = envelope.series
+    const carriedAll = envelope.series
       || [{ label: options.label || envelope.tag || envelope.equipment || "series",
             points: envelope.points || [],
+            unit: envelope.unit,
             coverage_note: envelope.coverage_note, coverage_floor: envelope.coverage_floor }];
+    /* A series the reader switched off in the legend. It leaves the picture
+       and it leaves the total with it (rule 5), the same way a bar does. */
+    const hidden = hiddenIn(options);
+    const keyFor = (s, i) => `series:${s.label || i}`;
+    const carried = carriedAll.filter((s, i) => !hidden.has(keyFor(s, i)));
+    const switchedOff = carriedAll.length - carried.length;
     const valueKey = options.value
-      || keyOf((carried[0].points || [])[0], ["value", "mean", "count"])
+      || keyOf((carriedAll[0].points || [])[0], ["value", "mean", "count"])
       /* Nothing to inspect and nothing to draw: an empty series still has to
          state its total, so it gets a name for a field that is not there. */
-      || ((carried[0].points || []).length ? null : "value");
+      || ((carriedAll[0].points || []).length ? null : "value");
     if (!valueKey) {
       throw new TypeError(
         "kit.chart('line'): options.value must name the field to plot — a chart "
@@ -1012,7 +1019,39 @@
     }
     const band = options.band || null;
 
-    const left = 52, right = 14, top = 14, bottom = 26;
+    /* ---- the scales, which are the envelope's own grouping ----
+       A chart has two sides, so it draws at most two. Which series belong to
+       which is not this shape's decision: the read that measured them says
+       so, by unit, because "are these two numbers comparable" is a question
+       about the plant and not about the drawing. One scale across a
+       temperature and a pressure draws the pressure as a flat line along the
+       bottom, which is a picture of the units.
+
+       Series the envelope gives no unit for share one scale rather than being
+       split onto a guess, and the footer says that is what happened. */
+    const sideOf = (s, i) => (has(s.axis) ? Number(s.axis)
+      : (s.unit ? -1 : 0));
+    const scales = [];
+    const sideIndex = carried.map((s, i) => {
+      const asked = sideOf(s, i);
+      const key = asked >= 0 ? `side:${asked}` : `unit:${s.unit}`;
+      let at = scales.findIndex((x) => x.key === key);
+      if (at < 0) {
+        if (scales.length >= 2) at = scales.length - 1;   /* a chart has two sides */
+        else { scales.push({ key, unit: s.unit || null, values: [] }); at = scales.length - 1; }
+      }
+      return at;
+    });
+    if (!scales.length) scales.push({ key: "side:0", unit: null, values: [] });
+    carried.forEach((s, i) => {
+      for (const p of s.points || []) {
+        if (isNum(p[valueKey])) scales[sideIndex[i]].values.push(p[valueKey]);
+        if (band) { if (isNum(p[band.low])) scales[sideIndex[i]].values.push(p[band.low]);
+                    if (isNum(p[band.high])) scales[sideIndex[i]].values.push(p[band.high]); }
+      }
+    });
+
+    const left = 52, right = scales.length > 1 ? 52 : 14, top = 14, bottom = 26;
     const height = (options.height || 200);
     const plot = width - left - right;
     const plotH = height - top - bottom;
@@ -1037,23 +1076,51 @@
       ? carried.reduce((n, s) => n + (s.points || []).filter((p) => !inside(p)).length, 0)
       : 0;
 
-    const all = [];
-    for (const s of series) {
-      for (const p of s.points || []) {
-        if (isNum(p[valueKey])) all.push(p[valueKey]);
-        if (band) { if (isNum(p[band.low])) all.push(p[band.low]);
-                    if (isNum(p[band.high])) all.push(p[band.high]); }
-      }
-    }
-    const scale = yScale(all, options);
+    /* Only the first scale takes the caller's own bounds. A `min` meant for
+       degrees applied to the bar axis beside it would be a limit on somebody
+       else's numbers. */
+    const bounds = scales.map((s, i) => (i === 0 ? options
+      : { zero: options.zero, y: options.y }));
+    scales.forEach((s, i) => { s.scale = yScale(s.values, bounds[i]); });
     const label = axisLabel(envelope, options);
+    /* A limit the plant declared on a tag, drawn on that tag's own scale -
+       and only when the readings already reach it. Stretching an axis out to
+       an alarm limit nobody came near draws a one-degree ramp as a flat line,
+       which is the thing the reader opened the chart to see; so the line goes
+       on when it is in the picture, and the footer says when a limit is off
+       it. Either way the number is not invented and not hidden. */
+    const limitRows = [];
+    if (options.limits !== false) {
+      carried.forEach((s, i) => {
+        for (const key of ["min", "max"]) {
+          const value = (s.limits || {})[key];
+          if (!isNum(value)) continue;
+          const sc = scales[sideIndex[i]].scale;
+          limitRows.push({
+            series: s.label, key, value, side: sideIndex[i],
+            inside: value >= sc.lo && value <= sc.hi,
+          });
+        }
+      });
+    }
+    /* One colour per series, settled against the full list so that brushing
+       the clock - which hands `paint` copies of the series - cannot change
+       which line is which colour. */
+    const markOf = carried.map((s) => {
+      const at = carriedAll.indexOf(s);
+      return `series-${((at >= 0 ? at : 0) % 3) + 1}`;
+    });
     const markers = markersIn(options, timed);
     /* One x per point, worked out once: a lookup by object identity was
        O(n squared) and wrong the moment two buckets were equal. */
     const xsOf = (points) => points.map((p, index) => (timed
       ? left + ((utc(p.t).getTime() - start) / span) * plot
       : left + (points.length > 1 ? (index / (points.length - 1)) * plot : plot / 2)));
-    const yAt = (v) => top + plotH - ((v - scale.lo) / (scale.hi - scale.lo)) * plotH;
+    const yOn = (side) => {
+      const sc = scales[side].scale;
+      return (v) => top + plotH - ((v - sc.lo) / (sc.hi - sc.lo)) * plotH;
+    };
+    const yAt = yOn(0);
 
     /* Every stretch the chart will hatch: a run of null readings, plus the
        spans the envelope itself declares unwatched. */
@@ -1091,6 +1158,44 @@
     const blind = series.reduce((n, s) => n + (s.points || [])
       .filter((p) => !isNum(p[valueKey])).length, 0);
 
+    /* ---- a dot a reader can open, when the screen said it could ----
+       The same opt-in and the same division as the control chart's
+       (`openWith`, below): the kit says a point was clicked and what it was,
+       and decides nothing about what opens. Inert unless `openable` is true,
+       which is what `tests/test_a_chart_draws_only_what_the_api_measured.py`
+       pins - a mark that fires an event nobody asked for is a mark that
+       cannot be drawn on a page with no panel on it. */
+    const openable = options.openable === true;
+    function openWithPoint(dot, s, value, at, say) {
+      if (!openable) return;
+      dot.setAttribute("role", "button");
+      dot.setAttribute("tabindex", "0");
+      dot.setAttribute("aria-label", say);
+      const fire = (event) => {
+        event.stopPropagation();
+        dot.dispatchEvent(new CustomEvent("fs-line-open", {
+          bubbles: true,
+          detail: { equipment: envelope.equipment || null, series: s.label,
+                    tag: s.tag || s.label, value, at, label: say,
+                    bucket_seconds: has(envelope.bucket_seconds) ? envelope.bucket_seconds
+                      : (has(s.bucket_seconds) ? s.bucket_seconds : null) },
+        }));
+      };
+      dot.addEventListener("click", fire);
+      dot.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        fire(event);
+      });
+    }
+    /* The point the panel beside the chart is open on: a RING, not a bigger
+       dot, for the reason the control chart gives - the dot keeps its own
+       size and colour and the ring sits outside it. Decoration, so it takes
+       no pointer and no keyboard; the dot inside it is still the button. */
+    const openOn = options.ringAt || null;
+    const ringed = (s, p) => openOn && String(openOn.series) === String(s.label)
+      && raw(p.t) === raw(openOn.at);
+
     return {
       height,
       title: `${label.text || "series"} over the window`,
@@ -1099,17 +1204,53 @@
       total: [`${things(readings, "reading")} drawn`,
               blind ? `${count(blind)} with no reading` : null,
               outside ? `${count(outside)} outside the brushed range` : null,
-              `${things(drawn, "series")} of ${count(series.length)}`,
+              `${things(drawn, "series")} of ${count(carriedAll.length)}`,
+              switchedOff ? `${count(switchedOff)} switched off in the legend` : null,
               withheld.length ? `${count(withheld.length)} withheld below the coverage floor` : null,
              ].filter(Boolean).join(" · "),
-      axes: [scale.note, label.text ? `y: ${label.text}` : null,
-             markerNote(markers, start, end)].filter(Boolean),
+      axes: scales.map((s, i) => [
+              s.scale.note,
+              scales.length > 1
+                ? `${i === 0 ? "left" : "right"} axis: ${s.unit || "unit not recorded"}`
+                : (label.text ? `y: ${label.text}` : null),
+            ].filter(Boolean).join(" — "))
+            .filter(Boolean)
+            .concat(scales.length > 1 && scales.some((s) => !s.unit)
+              ? ["no unit is recorded for one of these scales, so what is on it "
+                 + "shares a side rather than being split on a guess"] : [])
+            /* Rule 4: a bucketed shape states its bucket width. With one
+               scale the width is in the axis label, as it always was; with
+               two the label makes way for the two units, so the width is said
+               here instead of being lost. */
+            .concat(scales.length > 1 && label.per
+              ? [`each point is one ${label.per} of readings — its mean, with `
+                 + `the highest and the lowest of the bucket behind it`] : [])
+            .concat([markerNote(markers, start, end)].filter(Boolean)),
+      /* One toggle per series, named and coloured the way the lines are. The
+         figure beside each is its own coverage, because "which of these two
+         lines has the hole in it" is the question a reader of a two-tag chart
+         actually has. */
+      legend: carriedAll.length > 1
+        ? carriedAll.map((s, i) => ({
+            key: keyFor(s, i),
+            label: s.label,
+            note: [s.unit || null,
+                   isWithheld(s) ? "withheld"
+                     : (s.coverage === null || s.coverage === undefined ? null
+                        : FS.fmt.pct(s.coverage))].filter(Boolean).join(", ") || null,
+            cls: `series-${(i % 3) + 1}`,
+          }))
+        : [],
       /* Rule 4: the axis the reader is looking at is a choice they made, so
          the chart says which stretch of the clock it is showing. */
-      filters: brush
-        ? [`brushed to ${clockAt(start)}–${clockAt(end)} of `
-           + `${clockAt(whole.start)}–${clockAt(whole.end)}`]
-        : [],
+      filters: [brush
+        ? `brushed to ${clockAt(start)}–${clockAt(end)} of `
+          + `${clockAt(whole.start)}–${clockAt(whole.end)}`
+        : null,
+        switchedOff
+          ? `${things(switchedOff, "series")} switched off — every figure above `
+            + `is of what is drawn`
+          : null].filter(Boolean),
       brushable: timed
         ? { x: left, width: plot, y: top, height: plotH,
             domain: [whole.start, whole.end], say: clockAt }
@@ -1118,15 +1259,52 @@
         ? `${things(gaps.length, "stretch", "stretches")} hatched: the line is broken there `
           + `because there was no reading, not because the value was zero`
         : null,
-      notes: withheld.flatMap((s) => withheldNotes(s, s.label)),
+      notes: withheld.flatMap((s) => withheldNotes(s, s.label)).concat(
+        limitRows.filter((l) => !l.inside).map((l) =>
+          `${l.series}'s ${l.key} limit of ${raw(l.value)} is off this picture `
+          + `— the readings drawn never came near it, and the axis was left on `
+          + `the readings`)),
       paint(g, ctx) {
         for (let i = 0; i <= 3; i++) {
-          const value = scale.lo + ((scale.hi - scale.lo) * i) / 3;
+          const sc = scales[0].scale;
+          const value = sc.lo + ((sc.hi - sc.lo) * i) / 3;
           add(g, "line", { x1: left, y1: yAt(value), x2: left + plot, y2: yAt(value), class: "grid-line" });
           add(g, "text", { x: left - 6, y: yAt(value) + 3, class: "axis", "text-anchor": "end" },
-              value.toFixed(Math.abs(scale.hi - scale.lo) < 10 ? 1 : 0));
+              value.toFixed(Math.abs(sc.hi - sc.lo) < 10 ? 1 : 0));
+        }
+        /* The second side, when there is one. Its own ticks, on the right, and
+           no grid lines of its own: two grids across one plot is a picture
+           nobody can read a value off. */
+        if (scales.length > 1) {
+          const sc = scales[1].scale;
+          const right2 = yOn(1);
+          add(g, "line", { x1: left + plot, y1: top, x2: left + plot, y2: top + plotH,
+                           class: "grid-line" });
+          for (let i = 0; i <= 3; i++) {
+            const value = sc.lo + ((sc.hi - sc.lo) * i) / 3;
+            add(g, "text", { x: left + plot + 6, y: right2(value) + 3, class: "axis",
+                             "text-anchor": "start" },
+                value.toFixed(Math.abs(sc.hi - sc.lo) < 10 ? 1 : 0));
+          }
         }
         if (timed) timeTicks(g, start, end, plot, top + plotH, left);
+
+        /* The declared limits, each on the scale of the tag that declares it,
+           named with its tag when there is more than one line - a limit line
+           on a two-scale chart that did not say whose it was would be a
+           number floating over somebody else's readings. */
+        for (const limit of limitRows) {
+          if (!limit.inside) continue;
+          const ly = yOn(limit.side)(limit.value);
+          const line = add(g, "line", { x1: left, y1: ly, x2: left + plot, y2: ly,
+                                        class: "limit-line" });
+          const said = carriedAll.length > 1
+            ? `${limit.series} ${limit.key} ${raw(limit.value)}`
+            : `${limit.key} ${raw(limit.value)}`;
+          add(line, "title", {}, said);
+          add(g, "text", { x: left + plot - 4, y: ly - 3, class: "axis",
+                           "text-anchor": "end" }, said);
+        }
 
         /* The hatched stretches go down first, so the marks on either side
            sit over them rather than under. */
@@ -1139,7 +1317,13 @@
           add(rect, "title", {}, `unknown — ${gap.cause}`);
         }
 
-        for (const s of series) {
+        series.forEach((s, index) => {
+          const side = sideIndex[index] || 0;
+          const yOf = yOn(side);
+          /* Rule 6: the palette, and nothing outside it. One class per
+             series, so a reader can tell two lines apart and the legend's
+             swatch is the same colour as the line it names. */
+          const mark = markOf[index] || "series-1";
           if (isWithheld(s)) {
             /* Withheld is not a smaller line. Full width, hatched, and the
                ledger prints under the chart (rule 2, decision 0033). */
@@ -1148,7 +1332,7 @@
               "data-withheld": "true", "data-unknown": "true", class: "chart-unknown",
             });
             add(rect, "title", {}, s.coverage_note);
-            continue;
+            return;
           }
           const points = s.points || [];
           const xs = xsOf(points);
@@ -1159,17 +1343,17 @@
                polygon across a gap it was a spread for half an hour nobody
                measured, painted over the hatch that said so; on a light theme
                that was the most visible thing on the chart. */
-            let span = [];
+            let run = [];
             const flushBand = () => {
-              if (span.length > 1) {
-                const outline = span.map(([x, , hi]) => `${x},${yAt(hi)}`)
-                  .concat(span.slice().reverse().map(([x, lo]) => `${x},${yAt(lo)}`));
-                add(g, "polygon", { points: outline.join(" "), class: "trend-band" });
+              if (run.length > 1) {
+                const outline = run.map(([x, , hi]) => `${x},${yOf(hi)}`)
+                  .concat(run.slice().reverse().map(([x, lo]) => `${x},${yOf(lo)}`));
+                add(g, "polygon", { points: outline.join(" "), class: `trend-band ${mark}` });
               }
-              span = [];
+              run = [];
             };
             points.forEach((p, i) => {
-              if (isNum(p[band.low]) && isNum(p[band.high])) span.push([xs[i], p[band.low], p[band.high]]);
+              if (isNum(p[band.low]) && isNum(p[band.high])) run.push([xs[i], p[band.low], p[band.high]]);
               else flushBand();
             });
             flushBand();
@@ -1177,34 +1361,48 @@
           /* One polyline per run of readings — never one through the gaps. */
           let run = [];
           const flush = () => {
-            if (run.length > 1) add(g, "polyline", { points: run.join(" "), class: "trend-line" });
+            if (run.length > 1) add(g, "polyline", { points: run.join(" "), class: `trend-line ${mark}` });
             else if (run.length === 1) {
               const [x, y] = run[0].split(",");
-              add(g, "circle", { cx: x, cy: y, r: 2, class: "series-count" });
+              add(g, "circle", { cx: x, cy: y, r: 2, class: `series-count ${mark}` });
             }
             run = [];
           };
-          points.forEach((p, index) => {
+          points.forEach((p, i) => {
             const value = p[valueKey];
-            const x = xs[index];
-            if (!isNum(value)) { flush(); 
+            const x = xs[i];
+            if (!isNum(value)) { flush();
               add(g, "line", { x1: x, y1: top, x2: x, y2: top + plotH, class: "chart-break",
                                "data-unknown": "true", "data-t": raw(p.t) });
               return; }
-            run.push(`${x},${yAt(value)}`);
+            run.push(`${x},${yOf(value)}`);
             /* Rule 1: the envelope's own number, on the mark that drew it. */
+            const say = `${s.label} ${raw(value)}${s.unit ? ` ${s.unit}` : ""}`
+              + `${p.t ? ` at ${FS.fmt.clock(p.t)}` : ""}`;
+            if (ringed(s, p)) ringAroundDot(g, x, yOf(value), 1.8);
             const dot = add(g, "circle", {
-              cx: x, cy: yAt(value), r: 1.8, class: "series-count",
+              cx: x, cy: yOf(value), r: 1.8, class: `series-count ${mark}`,
               "data-value": raw(value), "data-t": raw(p.t), "data-series": s.label,
             });
-            add(dot, "title", {}, `${s.label} ${raw(value)}${p.t ? ` at ${FS.fmt.clock(p.t)}` : ""}`);
+            add(dot, "title", {}, say);
+            openWithPoint(dot, s, value, p.t, say);
           });
           flush();
-        }
+        });
         /* Last, over the series: the moment the reader came here about. */
         paintMarkers(g, markers, { left, plot, top, height: plotH, start, end });
       },
     };
+  }
+
+  /* The ring on the point a panel is open on. Shared with the control chart's
+     own in spirit and drawn the same way: decoration, no pointer, no
+     keyboard, and no `data-value` - a ring is not a reading. */
+  function ringAroundDot(host, cx, cy, r) {
+    return add(host, "circle", {
+      cx, cy, r: r + 4, class: "spc-ring", "pointer-events": "none",
+      "aria-hidden": "true",
+    });
   }
 
   /* ---------- bars, and the pareto that is bars plus a cumulative line ------

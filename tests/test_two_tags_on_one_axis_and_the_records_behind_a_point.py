@@ -77,7 +77,7 @@ UNITS = {"MIX01": {"meta": {
     "OutletTemp": {"unit": "degC"},
     "Pressure": {"unit": "bar", "min": 2.0, "max": 3.0},
     "Level": {"unit": "%"},
-}, "analog": "Temperature", "tags": []}}
+}, "analog": "Temperature", "tag": []}}
 
 
 @pytest.fixture(autouse=True)
@@ -471,7 +471,7 @@ def test_the_panel_recomputes_none_of_the_machines_blocks(session, shift, panel)
 
 def test_the_route_draws_two_tags_over_a_window_that_has_finished(client, shift):
     r = client.get("/analysis/trend/MIX01", params={
-        "tags": ["Temperature", "Pressure"],
+        "tag": ["Temperature", "Pressure"],
         "start": shift["start"].isoformat(), "end": shift["end"].isoformat()})
     assert r.status_code == 200, r.text
     body = r.json()
@@ -500,10 +500,10 @@ def test_a_timestamp_with_an_offset_is_converted_and_one_without_is_read_as_utc(
     sends whatever its own clock says. Both ends of the same window, one
     written as UTC and one as an offset from it, have to name one window."""
     plain = client.get("/analysis/trend/MIX01", params={
-        "tags": ["Temperature"], "start": shift["start"].isoformat(),
+        "tag": ["Temperature"], "start": shift["start"].isoformat(),
         "end": shift["end"].isoformat()}).json()
     offset = client.get("/analysis/trend/MIX01", params={
-        "tags": ["Temperature"],
+        "tag": ["Temperature"],
         "start": shift["start"].isoformat() + "+00:00",
         "end": shift["end"].isoformat() + "+00:00"}).json()
     assert plain["window"]["start"] == offset["window"]["start"]

@@ -534,73 +534,21 @@ const FINDINGS_SHOWN = 6;
    and three different sentences. `coverage: "absent"` is the third: this block
    is a list of the records in a window, not a rate over a watched one, and
    printing "watched —%" about it is the confusion the word exists to stop. */
-function watchedLine(block) {
-  if (!block) return null;
-  if (block.coverage === "absent") {
-    return block.coverage_note || "No coverage figure: this is a list of records.";
-  }
-  if (!("coverage" in block)) return null;
-  if (block.coverage === null || block.coverage === undefined) {
-    return block.coverage_note || "How much of this window was watched is unknown.";
-  }
-  return `Watched ${fmt.pct(block.coverage)} of this window`
-       + (block.coverage_note ? ` — ${block.coverage_note}` : "");
-}
+const watchedLine = (block) => FS.panel.watched(block);
 
 /* One block of the dossier: a heading, its records, and the line saying how
-   much of its own window was watched. The line is added by the caller at the
-   end so it is always last, whatever the block put in between. */
-function pointBlock(title) {
-  const section = el("section", "point-block");
-  section.append(el("h3", null, title));
-  return section;
-}
+   much of its own window was watched. The four below are FS.panel's, shared
+   with the two panels on the machine page - this panel was the first of them
+   and its shapes are the pattern, which is a reason for one implementation
+   and not three. */
+function pointBlock(title) { return FS.panel.block(title); }
 
-function closeWith(section, block) {
-  const said = watchedLine(block);
-  if (said) section.append(el("p", "point-watched", said));
-  return section;
-}
+function closeWith(section, block) { return FS.panel.closeWith(section, block); }
 
-/* Label and value in two columns. A value nobody recorded prints "—" and its
-   label stays: a row that vanished would read as a question nobody asked
-   (style rule 8 — unknown is never 0 and never absent). */
-function facts(rows) {
-  const list = el("dl", "point-facts");
-  for (const [label, value, mono] of rows) {
-    list.append(el("dt", null, label));
-    const dd = el("dd", mono ? "mono" : null);
-    if (value instanceof Node) dd.append(value);
-    else dd.textContent = value === null || value === undefined || value === "" ? "—" : String(value);
-    list.append(dd);
-  }
-  return list;
-}
+function facts(rows) { return FS.panel.facts(rows); }
 
-/* A table, stating its own total the way every list in this product does. */
 function pointTable(headings, rows, empty) {
-  if (!rows.length) return el("p", "muted small", empty);
-  const wrap = el("div", "table-wrap");
-  const table = el("table");
-  const head = el("thead");
-  const hr = el("tr");
-  for (const h of headings) hr.append(el("th", null, h));
-  head.append(hr);
-  table.append(head);
-  const body = el("tbody");
-  for (const row of rows) {
-    const tr = el("tr");
-    for (const cell of row) {
-      const td = el("td");
-      if (cell instanceof Node) td.append(cell);
-      else td.textContent = cell === null || cell === undefined ? "—" : String(cell);
-      tr.append(td);
-    }
-    body.append(tr);
-  }
-  table.append(body);
-  wrap.append(table);
-  return wrap;
+  return FS.panel.table(headings, rows, empty);
 }
 
 /* The chart off the page, with its footer on it. `FS.kit.export` is the one
@@ -1117,45 +1065,13 @@ const LINE_ROWS_SHOWN = 4;
    one click, with a summary line that says what is inside and how much of it
    - nothing is hidden without saying so (style rule 4).
 
-   The state is per block and per reader, in `localStorage`: somebody who
-   opens the trends on every reading should not have to open them again on the
-   next one. Wrapped, because a browser with storage switched off is a browser
-   this panel still has to work in. */
-function foldedByDefault(key) {
-  try {
-    const stored = localStorage.getItem(`fsmes-spc-fold-${key}`);
-    if (stored === "open") return false;
-    if (stored === "closed") return true;
-  } catch (e) { /* storage off: the default below stands */ }
-  return null;
-}
-
-function rememberFold(key, open) {
-  try {
-    localStorage.setItem(`fsmes-spc-fold-${key}`, open ? "open" : "closed");
-  } catch (e) { /* nothing to remember it in, which breaks nothing */ }
-}
-
-/* One built block, behind a summary that states what is inside it.
-
    The block's own heading becomes the summary's label and the sentence beside
    it is the count, so a folded block reads as "3 process values, 2 of 3
    drawn" rather than as a closed box. `data-fold` is the anchor a test and a
-   guide point at. */
+   guide point at, and the open/closed state is remembered per reader under
+   this screen's own key. */
 function foldable(section, key, summary, { open }) {
-  const box = el("details", "point-block point-fold");
-  box.dataset.fold = key;
-  const stored = foldedByDefault(key);
-  box.open = stored === null ? open : !stored;
-  const head = el("summary");
-  const title = section.querySelector("h3");
-  head.append(el("span", "point-fold-title", title ? title.textContent : key));
-  head.append(el("span", "point-fold-says", summary));
-  if (title) title.remove();
-  const inner = [...section.childNodes];
-  box.append(head, ...inner);
-  box.addEventListener("toggle", () => rememberFold(key, box.open));
-  return box;
+  return FS.panel.foldable(section, key, summary, { open, store: "spc" });
 }
 
 /* What the rest of the line was doing in the same window.
