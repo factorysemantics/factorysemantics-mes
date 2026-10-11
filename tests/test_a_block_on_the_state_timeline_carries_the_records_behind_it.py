@@ -57,6 +57,9 @@ from fsmes.services import (
     equipment as equipment_service,
 )
 
+# A local in this file is already called `moment`; the module keeps its own name.
+from fsmes.services import moment as moment_service
+
 #: The two orders of link 1 of the chain, in the words the lab's own answer key
 #: uses: `labs/multiplant/bottling/line.json` -> `_chain` -> link 1, *"the
 #: changeover brings order 4712 and the filler runs it faster"*.
@@ -393,7 +396,7 @@ def test_the_maintenance_orders_are_the_other_panels_own_list_and_not_a_second_r
     start, end = shift["down"]
     out = state_block.dossier(session, "MIX01", start, end)
     unit = shift["unit"]
-    same = spc_point.maintenance_orders(session, unit, start, end)
+    same = moment_service.maintenance_orders(session, unit, start, end)
     assert out["maintenance"]["orders"] == same["orders"]
     assert out["maintenance"]["total"] == same["total"]
 
@@ -520,7 +523,7 @@ def test_the_tags_either_side_are_the_spc_panels_own_read_through_the_same_bucke
         session, out, shift):
     start, end = shift["setup"]
     unit = shift["unit"]
-    same = spc_point.analog_trends(
+    same = moment_service.analog_trends(
         session, unit,
         start - timedelta(minutes=spc_point.BEFORE_MINUTES),
         end + timedelta(minutes=spc_point.AFTER_MINUTES),

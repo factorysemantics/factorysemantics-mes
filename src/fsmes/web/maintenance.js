@@ -843,6 +843,18 @@ function onTab(name) {
   machines = (await api("/equipment/states")).map((s) => s.equipment).sort();
   for (const id of ["cm-machine", "plan-machine"]) fillMachines($(`#${id}`), false);
   for (const id of ["work-machine", "history-machine", "plan-filter-machine"]) fillMachines($(`#${id}`), true);
+  /* `?equipment=FILL01#work` opens this screen already narrowed to one
+     machine. The trend and timeline panels on the machine page link here when
+     they name a maintenance order, and a reader arriving at the whole plant's
+     work list would have to find the machine again themselves. The pickers
+     show the code, so what is being filtered is on the screen. */
+  const asked = new URL(location).searchParams.get("equipment");
+  if (asked) {
+    for (const id of ["work-machine", "history-machine", "plan-filter-machine"]) {
+      const select = $(`#${id}`);
+      if ([...select.options].some((o) => o.value === asked)) select.value = asked;
+    }
+  }
   let typing = null;
   const reloadHistory = () => { historyOffset = 0; loadHistory().catch(fail); };
   $("#history-machine").addEventListener("change", reloadHistory);

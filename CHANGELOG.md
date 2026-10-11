@@ -55,6 +55,62 @@ goes under Honesty with a migration line, so plant people can find it.
   where a screen asks for it, so the four other screens that draw the same
   shape stay inert rather than growing buttons that open nothing.
 
+- **Two tags on one trend, a window that is not now, and a reading you can
+  press.** The machine page's Trend tab drew one tag at a time over a window
+  that ended at this second, so a shift that finished at two o'clock could not
+  be opened at all and two tags could not be put beside each other. The
+  product's own answer key says the walk back from a cold product to the
+  chiller nobody cleaned breaks here, and this is that break closed.
+
+  - **Two tags, two scales, one picture.** `?tag=ChillerOutletTemp&
+    tag=ProductTemp` draws both, each named and coloured the way every other chart
+    in the product names and colours a series. Degrees and bar do not share a
+    scale — one scale across a temperature and a pressure draws the pressure
+    as a flat line along the bottom, which is a picture of the units and not
+    of the plant — so the units decide the sides, the footer says *left axis:
+    degC · right axis: bar*, and two series with no unit recorded share a side
+    rather than being split on a guess — *2 signals on one scale*, with the
+    warning that the smaller range draws flat against the larger, which is
+    exactly what the lab's own filler does because its manifest names no
+    units at all.
+  - **A window with two ends.** *This shift*, *last shift*, the trailing hours
+    as before, or a start and an end somebody typed. `start=` and `end=` now
+    exist on the single-tag `GET /analysis/tag/{code}`, and the several-tag
+    read is new: `GET /analysis/trend/{code}?tag=&tag=`. The machinery behind
+    the window was already there
+    for the SPC panel and was simply not reachable from a browser. The chart
+    says which window it is showing **in words**, from the envelope's own
+    instants rather than from what was asked for — *Day, 06:00 to 14:00,
+    Europe/Berlin time* — so a window the read narrowed to the first reading
+    there has ever been is described as what was drawn and not as what was
+    typed.
+  - **Press a reading and the records behind that second open beside it**, the
+    same panel pattern as the control chart's (#143–#148): the reading and its
+    time; what the machine was doing then, with the reason and where the
+    reason came from; the job that was open; **any maintenance order open on
+    this machine in that window, with its state and why it is in that state**;
+    what the lab measured in the window with its chart's verdict; and the
+    machine's other tags at that instant. Every row links through to the page
+    that owns it, and each block says how much of its window anybody was
+    watching — including the blocks that are empty, which say so rather than
+    reading as a plant with nothing wrong.
+  - **One route, nothing recomputed.** `GET /analysis/trend/{code}/point`
+    gathers the records around one instant by calling the same services the
+    pages behind those links call, the way `spc_point.py` does; the blocks a
+    trend point and a control-chart point both need now come from one place
+    instead of two.
+  - The Trend tab draws through the kit's own line shape now, so it has the
+    hover frame, the keyboard and the data attributes every other chart has;
+    the legacy single-series `kit.trend()` helper still serves the analysis
+    screen's tag panel, which has no panel beside it to open.
+  - **One window control for the machine page.** The trailing-hours chip in
+    the page head is now that richer control, and the trend, the state
+    timeline, the OEE figures and the alarm list are all drawn over whatever
+    it says: a window set once is set for the screen. Two controls on one page
+    that disagreed would be the page telling two stories about the same shift.
+    The two panels on that page — a stop's and a reading's — share one set of
+    parts for the same reason.
+
 - **Maintenance work goes to the right trade by itself.** The filler's chiller
   comes due at two in the morning; until now the order sat at `due` with
   nobody's name on it until a person read the backlog. The plant now hands it

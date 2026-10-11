@@ -30,7 +30,12 @@
       <span id="m-state" class="pill unknown">—</span>
       <span id="m-since" class="muted small"></span>
       <span class="spacer"></span>
-      <label class="pick">Window <select id="hours"></select></label>
+      <!-- ONE window control for the whole page (`FS.span`): the trailing
+           spans this chip always had, this shift, last shift, or a start and
+           an end somebody typed. Every tab on this page is drawn over it —
+           the trend, the state timeline, the OEE figures and the alarm list
+           — so a reader who sets a window once sets it for the screen. -->
+      <div id="machine-span"></div>
     </div>
     <div class="object-facts">
       <span>Order <strong id="m-order">—</strong></span>
@@ -71,9 +76,44 @@
     </section>
 
     <section class="tab-panel" data-panel="trend">
+      <!-- The chart and the records behind one point on it, side by side, the
+           way the control chart does it. The panel's column is on the page
+           before anything is clicked, so opening a point fills a box that was
+           already there rather than moving the chart. -->
+      <div class="chart-split">
       <div class="panel">
-        <h2>Trend <label class="pick inline">of <select id="trend-tag"></select></label></h2>
+        <h2>Trend
+          <label class="pick inline">of <select id="trend-tag"></select></label>
+          <label class="pick inline">and <select id="trend-tag-2"></select></label>
+        </h2>
         <div id="trend" class="chart"></div>
+        <p id="trend-window" class="muted small"></p>
+        <p id="trend-hint" class="muted small">Two tags on one chart — a
+          side each where the plant records two units, one shared scale where
+          it records none, and the footer says which happened. Click a reading
+          to see what else was happening at that second — or tab to one and
+          press Enter.</p>
+      </div>
+
+      <!-- `data-point` is written only once the records have arrived and are
+           drawn, and it carries the instant it is about. A test waits on that
+           and not on the box existing: the box exists before the fetch does,
+           and on loopback the difference is six milliseconds. -->
+      <section class="panel point-panel" id="trend-point" data-assist="trend-point-panel"
+               data-state="idle" data-point="" aria-live="polite">
+        <h2><span id="trend-point-title">What else was happening</span>
+          <span id="trend-point-which" class="muted"></span></h2>
+        <p id="trend-point-idle" class="muted small">No reading is open. Click one
+          on the chart beside this and every record this MES holds about that
+          second appears here: what the machine was doing and who said so, the
+          job that was open, any maintenance order open on this machine in the
+          window and why it is sitting where it is, any quality sample taken in
+          the window with its chart's verdict, and this machine's other tags at
+          that instant. Nothing is modelled or guessed — every line is a
+          record, and each block says how much of its window anybody was
+          watching.</p>
+        <div id="trend-point-body" hidden></div>
+      </section>
       </div>
     </section>
 
@@ -177,7 +217,8 @@
   </main>
 
   <p class="screen-source">head /equipment/{code} · tags /equipment/{code}/tags · alarms /equipment/{code}/alarms ·
-    trend /analysis/tag/{code}?tag= · timeline /analysis/timeline?equipment= · one block /analysis/timeline/block/{code}?start=&end= ·
+    trend /analysis/trend/{code}?tag= · one point /analysis/trend/{code}/point ·
+    timeline /analysis/timeline?equipment= · one block /analysis/timeline/block/{code}?start=&end= ·
     naming a stop /equipment/{code}/stops/label · the plant's reasons /equipment/downtime-reasons ·
     oee /equipment/{code}/oee ·
     maintenance /maintenance/plans, /maintenance/orders · queue /workorders/dispatch ·

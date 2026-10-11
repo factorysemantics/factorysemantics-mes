@@ -17,6 +17,9 @@ const NOW_REFRESH_MS = 3000;
 let head = null;
 let snapshot = null;
 let trendTag = new URL(location).searchParams.get("tag");
+/* Whether a reader named the tag, or the screen chose it. A named one is
+   never second-guessed against the live snapshot below. */
+const trendTagAsked = Boolean(trendTag);
 let nowTimer = null;
 // The timeline envelope the bar is drawn from, the block the panel beside it
 // is open on, and this plant's own list of downtime reasons - read once.
@@ -36,7 +39,11 @@ function fail(error) {
   banner.classList.remove("hidden");
 }
 
-function hours() { return FS.window.hours(); }
+/* The width of the page's window, for the two reads that take only an
+   hours span (OEE and the alarm list). A shift and a typed start-and-end
+   still have a width, so those figures are over about the right amount of
+   time even where the route cannot be told which stretch of clock. */
+function hours() { return FS.span.hours(); }
 
 /* ---------- head ---------- */
 
@@ -133,13 +140,22 @@ function renderTags(snap) {
     $("#alarm-count").textContent = `— ${active.length} active`;
   }
 
-  // The trend picker offers every numeric tag, primary first.
-  const picker = $("#trend-tag");
+  // Which tag the trend opens on, if nobody has said: the primary one. The
+  // pickers themselves are built by the trend's own load from the chart's
+  // list of everything this machine has ever published - a tag that stopped
+  // arriving yesterday is missing from this snapshot and is exactly the tag
+  // somebody opening a finished shift is looking for.
+  //
+  // So a tag a LINK named is never checked against this snapshot: the snapshot
+  // is what the plant is publishing right now, through whatever tag map it was
+  // given, and on the lab's own filler that is four tags of twelve. Checking
+  // against it drew FillWeight for a reader who asked for ProductTemp and said
+  // nothing about the swap. Where the named tag really has no readings the
+  // chart says so, by name, out of `not_published`.
   const numeric = snap.tags.filter((t) => typeof t.value === "number" || t.kind === "pv" || t.kind === "sp");
-  if (!trendTag || !numeric.some((t) => t.tag === trendTag)) {
+  if (!trendTag || (!trendTagAsked && !numeric.some((t) => t.tag === trendTag))) {
     trendTag = (numeric.find((t) => t.primary) || numeric[0] || {}).tag || null;
   }
-  picker.replaceChildren(...numeric.map((t) => new Option(t.tag + (t.unit ? ` (${t.unit})` : ""), t.tag, false, t.tag === trendTag)));
 }
 
 function renderAlarmHistory(back) {
@@ -181,27 +197,410 @@ async function refreshNow() {
   }
 }
 
-/* ---------- trend ---------- */
+/* ---------- trend: two tags on one window, and the records behind a point ----
+
+   The chain the plant's own answer key says a person cannot walk: the chiller
+   outlet leaves 3.2 degC at 6:20 and the product temperature walks down from
+   8.4 behind it. One tag at a time over a window ending this second cannot
+   show that, so this draws several on one settled window - and a click on any
+   point opens the records around that second beside it.
+
+   The chart is `kit.chart("line")` and not the legacy `kit.trend()` helper:
+   the line shape already carries several series, the hover frame, the six
+   rules and the `data-` attributes, and growing a second helper to match it
+   would have been two charts to keep honest instead of one. */
+
+let trendTag2 = new URL(location).searchParams.get("tag2");
+let trendData = null;
+/* The point the panel is open on, as the series and the instant the chart
+   drew - so the ring goes back on the same dot after a redraw. */
+let trendOpen = null;
+
+function trendWanted() {
+  const wanted = [];
+  for (const name of [trendTag, trendTag2]) {
+    if (name && !wanted.includes(name)) wanted.push(name);
+  }
+  return wanted;
+}
 
 async function loadTrend() {
-  if (!trendTag) { kit.empty($("#trend"), "No numeric tag to trend."); return; }
-  $("#trend-tag").value = trendTag;
-  const meta = snapshot ? snapshot.tags.find((t) => t.tag === trendTag) : null;
-  const data = await api(`/analysis/tag/${encodeURIComponent(CODE)}?tag=${encodeURIComponent(trendTag)}&hours=${hours()}`);
-  kit.trend($("#trend"), data, {
-    label: `${trendTag}${meta && meta.unit ? ` (${meta.unit})` : ""}`,
-    limits: meta ? { min: meta.min, max: meta.max } : {},
+  const host = $("#trend");
+  const wanted = trendWanted();
+  if (!wanted.length) { kit.empty(host, "No numeric tag to trend."); return; }
+  const asked = wanted.map((name) => `tag=${encodeURIComponent(name)}`).join("&");
+  /* One template literal and not two concatenated: `test_route_coverage`
+     matches a route textually, and a path broken across a `+` is a path no
+     screen appears to call. */
+  const data = await api(`/analysis/trend/${encodeURIComponent(CODE)}?${asked}&${FS.span.query()}`);
+  trendData = data;
+  fillTrendPickers(data);
+  /* A panel open on a reading the new window or the new pair of tags no longer
+     draws is a panel about a different question. It shuts rather than sitting
+     there looking current. */
+  if (trendOpen && !drawnHere(data, trendOpen)) trendPointShut();
+  drawTrend();
+}
+
+function drawnHere(data, open) {
+  const series = (data.series || []).some((s) => s.label === open.series);
+  const win = data.window || {};
+  const at = String(open.at);
+  return series && (!win.start || at >= String(win.start))
+                && (!win.end || at <= String(win.end));
+}
+
+/* Back to "no reading is open" - the state the panel starts in, which says so
+   in words rather than going blank. */
+function trendPointShut() {
+  trendOpen = null;
+  const node = $("#trend-point");
+  if (!node) return;
+  node.dataset.state = "idle";
+  node.dataset.point = "";
+  $("#trend-point-which").textContent = "";
+  $("#trend-point-body").replaceChildren();
+  $("#trend-point-body").hidden = true;
+  $("#trend-point-idle").hidden = false;
+  window.__fsmesPointData = null;
+}
+
+/* Both pickers, from the chart's own list of what this machine has published
+   over all its history - not from the live snapshot, which cannot offer a tag
+   that stopped arriving yesterday and is exactly the tag somebody is looking
+   for. The second may be empty: two tags is the ask, one is the default. */
+function fillTrendPickers(data) {
+  const available = data.available || [];
+  const unit = (name) => {
+    const drawn = (data.series || []).find((s) => s.label === name);
+    return drawn && drawn.unit ? ` (${drawn.unit})` : "";
+  };
+  const first = $("#trend-tag");
+  first.replaceChildren(...available.map(
+    (name) => new Option(name + unit(name), name, false, name === trendTag)));
+  const second = $("#trend-tag-2");
+  second.replaceChildren(
+    new Option("— nothing —", "", false, !trendTag2),
+    ...available.filter((name) => name !== trendTag).map(
+      (name) => new Option(name + unit(name), name, false, name === trendTag2)));
+}
+
+function drawTrend() {
+  const data = trendData;
+  if (!data) return;
+  kit.draw($("#trend"), "line", data, {
+    /* The bucket's mean on the line, its lowest and highest behind it: a
+       one-second excursion inside a thirty-second bucket is then in the
+       picture rather than averaged out of it. */
+    value: "mean",
+    band: { low: "min", high: "max" },
+    /* A temperature chart forced to start at zero draws a one-degree ramp as
+       a flat line. The frame says "y starts at …, not 0" under it, which is
+       the honest axis rule, not a licence to hide the choice. */
+    zero: false,
+    height: 260,
+    y: { label: (data.axes || []).length > 1 ? null : (data.series || [{}])[0].label },
+    /* The opt-in. Without it a dot is inert, which is what keeps this shape
+       drawable on a page that has no panel to open. */
+    openable: true,
+    ringAt: trendOpen,
   });
+  /* The window in words, under the chart, and what a wide one cost: a mean
+     read as a reading is the whole of what this sentence prevents. */
+  $("#trend-window").textContent =
+    [`Showing ${FS.span.said(data.window)}.`, data.drawn_note, data.note]
+      .filter(Boolean).join(" ");
+}
+
+/* ONE listener, on the host and not on the chart: the chart node is replaced
+   on every redraw, and a listener on the node would stop working the first
+   time the window changed. The kit decides nothing - it says which series and
+   which instant was pressed, and this screen decides what opens. */
+function openTrendOnClick() {
+  $("#trend").addEventListener("fs-line-open", (event) => {
+    openTrendPoint(event.detail).catch(fail);
+  });
+}
+
+async function openTrendPoint({ tag, series, at, bucket_seconds }) {
+  const name = tag || series;
+  const node = $("#trend-point");
+  if (!name || !at) return;
+  node.dataset.state = "loading";
+  /* Cleared while the fetch is in flight: the attribute means "these records
+     are drawn", and leaving the last one on it would have a test — and a
+     reader on a slow connection — believing the panel beside them is about
+     the dot they just clicked. */
+  node.dataset.point = "";
+  $("#trend-point-which").textContent = "— opening…";
+  const asked = `at=${encodeURIComponent(at)}&tag=${encodeURIComponent(name)}`;
+  /* How wide the bucket is comes from the chart that drew the point, not from
+     the service guessing again: the panel has to say "this point is 40
+     readings over 30 s" about the dot the reader actually pressed. */
+  const bucket = bucket_seconds ? `&bucket_seconds=${bucket_seconds}` : "";
+  try {
+    const data = await api(`/analysis/trend/${encodeURIComponent(CODE)}/point?${asked}&${FS.span.query()}${bucket}`);
+    drawTrendPoint(data);
+    node.dataset.state = "open";
+    /* Written last, after every block is on the page: a test waits on the
+       thing it is about to assert, never on the box that will hold it. */
+    node.dataset.point = String(at);
+    window.__fsmesPointData = data;
+    /* The chart redraws so the dot the reader opened is ringed. Nothing else
+       moves: the panel's column was always there. */
+    trendOpen = { series: series || name, at };
+    drawTrend();
+  } catch (error) {
+    node.dataset.state = "error";
+    $("#trend-point-which").textContent = "";
+    $("#trend-point-body").replaceChildren(el("p", "empty",
+      `The records around that second could not be read: ${error.message}`));
+    $("#trend-point-body").hidden = false;
+    $("#trend-point-idle").hidden = true;
+  }
+}
+
+/* ---- the blocks ----
+   Scott's words throughout: what the machine was doing, the job that was
+   open, the maintenance the machine is owed. Every row that belongs to
+   another screen links to it. */
+
+function trendReadingBlock(d) {
+  const section = FS.panel.block("The reading");
+  const r = d.reading || {};
+  const bucket = r.bucket;
+  const value = el("p", "point-value");
+  if (bucket && bucket.mean !== null && bucket.mean !== undefined) {
+    value.append(fmt.qty(bucket.mean));
+    if (r.unit) value.append(el("span", "unit", r.unit));
+  } else {
+    value.append("—");
+  }
+  section.append(value);
+  section.append(FS.panel.facts([
+    ["Tag", r.tag, true],
+    ["At", fmt.stamp(r.at)],
+    ["This point is", bucket
+      ? `${bucket.n} reading${bucket.n === 1 ? "" : "s"} over ${kit.duration(bucket.seconds)}`
+      : null],
+    ["Lowest / highest in it", bucket && bucket.min !== null && bucket.min !== undefined
+      ? `${fmt.qty(bucket.min)} / ${fmt.qty(bucket.max)}` : null],
+    ["Last reading at or before", r.nearest
+      ? `${fmt.qty(r.nearest.value)}${r.unit ? ` ${r.unit}` : ""}, `
+        + `${fmt.clock(r.nearest.ts)} (${kit.duration(r.nearest.seconds_before)} before)`
+      : null],
+    ["Alarm limits", r.limits && (r.limits.min !== null || r.limits.max !== null)
+      ? `${r.limits.min ?? "—"} – ${r.limits.max ?? "—"}` : null],
+  ]));
+  if (bucket && bucket.note) section.append(el("p", "muted small", bucket.note));
+  if (r.note) section.append(el("p", "muted small", r.note));
+  return section;
+}
+
+function trendMachineBlock(d) {
+  const section = FS.panel.block("What the machine was doing");
+  const m = d.machine || {};
+  const state = m.state;
+  const previous = m.previous;
+  section.append(FS.panel.facts([
+    ["At that second", state
+      ? `${state.state}${state.reason ? ` — ${state.reason}` : ""}` : null],
+    ["In that state for", state ? kit.duration(m.seconds_in_state) : null],
+    ["Just before", previous
+      ? `${previous.state}${previous.reason ? ` — ${previous.reason}` : ""}` : null],
+    ["Which ended", m.seconds_since_previous_ended === null
+      || m.seconds_since_previous_ended === undefined
+      ? null : `${kit.duration(m.seconds_since_previous_ended)} before it`],
+  ]));
+  if (m.note) section.append(el("p", "muted small", m.note));
+  /* WHO SAID WHY. A reason this MES recorded carries no `reason_source`; a
+     word that came from the line's own HMI says so. Who typed it is not a
+     field this MES holds yet - it is in the audit log - and the panel says
+     that rather than leaving a reader to assume the plant named it. */
+  if (state && state.reason) {
+    section.append(el("p", "muted small", state.reason_source
+      ? `The word on that stretch came from ${state.reason_source}, not from this MES.`
+      : "The word on that stretch was recorded in this MES. Which person typed "
+        + "it is in the audit log and is not carried on the interval, so this "
+        + "panel will not name one."));
+  } else if (state) {
+    section.append(el("p", "muted small",
+      "Nobody has named a reason for that stretch — it is unlabelled, which is "
+      + "not the same as having no reason."));
+  }
+  const timeline = el("p", "muted small");
+  const link = el("a", "obj", "the state timeline");
+  link.href = "#timeline";
+  timeline.append("Every stretch of this window is on ", link, ".");
+  section.append(timeline);
+  const stops = d.stops || {};
+  if (stops.total !== undefined && stops.total !== null) {
+    section.append(el("p", "muted small",
+      `${stops.total} stretch${stops.total === 1 ? "" : "es"} not running in this `
+      + `window — ${stops.labelled ?? 0} named, ${stops.unlabelled ?? 0} unlabelled.`));
+  }
+  return FS.panel.closeWith(section, d.machine);
+}
+
+function trendOrderBlock(d) {
+  const section = FS.panel.block("The job that was open");
+  const o = (d.order || {}).order;
+  if (!o) {
+    section.append(el("p", "muted small", (d.order || {}).note || "No order recorded."));
+    return FS.panel.closeWith(section, d.order);
+  }
+  const code = el("a", "obj", o.code);
+  code.href = `/dashboard/orders?q=${encodeURIComponent(o.code)}`;
+  section.append(FS.panel.facts([
+    ["Order", code],
+    ["Making", o.material ? `${o.material}${o.material_name ? ` — ${o.material_name}` : ""}` : null],
+    ["Status", o.status],
+    ["Operation", o.seq === null || o.seq === undefined ? o.operation : `${o.seq} · ${o.operation}`],
+    ["Booked here", `${fmt.qty(o.good_qty)} good, ${fmt.qty(o.scrap_qty)} scrap`],
+    ["Open on this machine since", fmt.stamp(o.operation_started_at)],
+  ]));
+  if ((d.order || {}).note) section.append(el("p", "muted small", d.order.note));
+  return FS.panel.closeWith(section, d.order);
+}
+
+/* THE BLOCK THE CHAIN TURNS ON. A maintenance order open on this machine
+   across the window, its state, and the reason it is in that state - which is
+   how "the product went cold" reaches "the chiller clean nobody could stop
+   the line for". */
+function trendMaintenanceBlock(d) {
+  const section = FS.panel.block("Maintenance open on this machine");
+  const m = d.maintenance || {};
+  const rows = m.orders || [];
+  section.append(FS.panel.table(
+    ["Order", "What", "State", "Why it is there"],
+    rows.map((row) => {
+      const link = el("a", "obj", row.code);
+      link.href = `/dashboard/maintenance?equipment=${encodeURIComponent(CODE)}#work`;
+      return [
+        link,
+        row.summary,
+        /* Started, or not started at all. "assigned" and "assigned, never
+           started" are different facts about a plant and the second is the
+           one that explains a cold product. */
+        row.started_at ? `${row.status}, started ${fmt.clock(row.started_at)}`
+          : `${row.status}, never started`,
+        row.reason || el("span", "muted small", "no reason recorded"),
+      ];
+    }),
+    m.note || "No maintenance order on this machine touches this window."));
+  if (rows.length && m.note) section.append(el("p", "muted small", m.note));
+  section.append(el("p", "muted small",
+    `${m.total || 0} order${(m.total || 0) === 1 ? "" : "s"} touch this window — `
+    + "an order raised before it and still open is one of them, because that is "
+    + "what open means."));
+  return FS.panel.closeWith(section, m);
+}
+
+function trendQualityBlock(d) {
+  const section = FS.panel.block("What the lab measured in this window");
+  const q = d.quality || {};
+  const rows = q.measurements || [];
+  section.append(FS.panel.table(
+    ["Taken", "Characteristic", "Reading", "The chart's verdict then"],
+    rows.map((row) => {
+      const link = el("a", "obj", row.characteristic);
+      link.href = `/dashboard/spc?spec=${encodeURIComponent(`${row.material}|${row.characteristic}`)}`;
+      const reading = row.size > 1
+        ? `${fmt.qty(row.mean)}${row.unit ? ` ${row.unit}` : ""} (mean of ${row.size})`
+        : `${fmt.qty(row.mean)}${row.unit ? ` ${row.unit}` : ""}`;
+      return [
+        fmt.clock(row.ts),
+        link,
+        row.failed ? el("strong", null, `${reading} · ${row.failed} out of spec`) : reading,
+        row.signals_total
+          ? el("strong", null, `${row.signals_total} rule${row.signals_total === 1 ? "" : "s"} fired`)
+          : "no rule fired",
+      ];
+    }),
+    "Nothing was measured at this machine in this window."));
+  if (rows.length) {
+    section.append(el("p", "muted small",
+      `${q.shown} of ${q.total} shown · ${q.failed} with a reading out of spec · `
+      + `${q.with_signals} a rule fired on. ${q.says}`));
+  }
+  if (q.note) section.append(el("p", "muted small", q.note));
+  return FS.panel.closeWith(section, q);
+}
+
+function trendTagsBlock(d) {
+  const section = FS.panel.block("This machine's other tags at that instant");
+  const t = d.tags || {};
+  const rows = t.tags || [];
+  section.append(FS.panel.table(
+    ["Tag", "Value", "Last said"],
+    rows.map((row) => [
+      row.tag,
+      row.value === null || row.value === undefined
+        ? el("span", "muted small", row.note || "no sample at or before that second")
+        : `${fmt.qty(row.value)}${row.unit ? ` ${row.unit}` : ""}`,
+      row.seconds_before === null || row.seconds_before === undefined
+        ? "—" : `${kit.duration(row.seconds_before)} before`,
+    ]),
+    "This machine publishes no other numeric tag."));
+  if (rows.length) {
+    section.append(el("p", "muted small",
+      `${t.shown} of ${t.total} shown. ${t.says}`));
+  }
+  if (t.note) section.append(el("p", "muted small", t.note));
+  return FS.panel.closeWith(section, t);
+}
+
+function trendMaintSummary(d) {
+  const m = d.maintenance || {};
+  const open = (m.orders || []).filter((row) => !row.completed_at).length;
+  return `${m.total || 0} order${(m.total || 0) === 1 ? "" : "s"} in this window, `
+       + `${open} still open`;
+}
+
+function trendQualitySummary(d) {
+  const q = d.quality || {};
+  if (!q.total) return "nothing measured here in this window";
+  return `${q.total} reading${q.total === 1 ? "" : "s"}, ${q.failed} out of spec, `
+       + `${q.with_signals} a rule fired on`;
+}
+
+function trendTagsSummary(d) {
+  const t = d.tags || {};
+  if (!t.total) return "no other numeric tag on this machine";
+  return `${t.shown} of ${t.total} other tag${t.total === 1 ? "" : "s"}`;
+}
+
+function drawTrendPoint(d) {
+  const body = $("#trend-point-body");
+  body.replaceChildren();
+  $("#trend-point-which").textContent =
+    `— ${d.reading.tag} at ${fmt.stamp(d.at)}`;
+  body.append(trendReadingBlock(d));
+  body.append(trendMachineBlock(d));
+  body.append(trendOrderBlock(d));
+  /* The maintenance block is open, not folded: it is the answer the chain's
+     own key says a person cannot reach from here, and a closed box is a box
+     somebody has to know to open. */
+  body.append(trendMaintenanceBlock(d));
+  body.append(FS.panel.foldable(trendQualityBlock(d), "quality",
+                                trendQualitySummary(d),
+                                { open: Boolean((d.quality || {}).failed), store: "trend" }));
+  body.append(FS.panel.foldable(trendTagsBlock(d), "tags", trendTagsSummary(d),
+                                { open: false, store: "trend" }));
+  /* The window the whole panel is about, and how much of it anybody could see
+     the machine. Last, because it qualifies everything above it. */
+  body.append(el("p", "point-watched",
+    `${FS.span.said(d.window)}. ${FS.panel.watched(d) || ""}`));
+  $("#trend-point-idle").hidden = true;
+  body.hidden = false;
 }
 
 /* ---------- timeline / oee ---------- */
 
-/* The window this screen is drawn over, as a query. One control for the whole
-   page: where the trend tab's start-and-end window exists it is the window,
-   and this reads it rather than growing a second chip that could disagree
-   with the first. Where it does not, the hours chip is the window, as before. */
+/* The window this screen is drawn over, as a query - the page's one control,
+   in `FS.span`, which every tab reads. */
 function windowQuery() {
-  return window.FS.span ? FS.span.query() : `hours=${hours()}`;
+  return FS.span.query();
 }
 
 async function loadTimeline() {
@@ -306,85 +705,29 @@ function drawBlock(d) {
   body.append(ordersBlock(d));
   body.append(maintenanceBlock(d));
   body.append(eitherSideBlock(d));
-  body.append(foldable(tagsBlock(d), "tags", tagsSummary(d),
-                       { open: (d.tags.trends || []).length > 0 }));
-  body.append(foldable(qualityBlock(d), "quality", qualitySummary(d),
-                       { open: (d.quality.readings || []).length > 0 }));
-  body.append(foldable(watchedBlock(d), "watched", watchedSummary(d), { open: false }));
+  /* `store: "stop"` keeps this panel's folds in their own namespace: the two
+     panels on this page both have a "tags" fold, and one reader's choice on a
+     stop is not a choice about a reading. The stored keys are the ones #160
+     already wrote, so nobody's folds reset under them. */
+  const fold = { store: "stop" };
+  body.append(FS.panel.foldable(tagsBlock(d), "tags", tagsSummary(d),
+                                { ...fold, open: (d.tags.trends || []).length > 0 }));
+  body.append(FS.panel.foldable(qualityBlock(d), "quality", qualitySummary(d),
+                                { ...fold, open: (d.quality.readings || []).length > 0 }));
+  body.append(FS.panel.foldable(watchedBlock(d), "watched", watchedSummary(d),
+                                { ...fold, open: false }));
   $("#block-idle").hidden = true;
   body.hidden = false;
 }
 
 /* ---------- the panel's own small parts ----------
 
-   The same parts the control chart's panel has. Written again here rather
-   than shared because they are a page script's renderers and this page does
-   not load that one; when a third panel of this shape appears they belong in
-   the kit, which is where the charts they draw already live. */
-
-function stopBlock(title) {
-  const section = el("section", "stop-block");
-  section.append(el("h3", null, title));
-  return section;
-}
-
-function watchedLine(block) {
-  if (!block) return null;
-  if (block.coverage === "absent") {
-    return block.coverage_note || "No coverage figure: this is a list of records.";
-  }
-  if (!("coverage" in block)) return null;
-  if (block.coverage === null || block.coverage === undefined) {
-    return block.coverage_note || "How much of this window was watched is unknown.";
-  }
-  return `Watched ${fmt.pct(block.coverage)} of it`
-       + (block.coverage_note ? ` — ${block.coverage_note}` : "");
-}
-
-function closeWith(section, block) {
-  const said = watchedLine(block);
-  if (said) section.append(el("p", "stop-watched", said));
-  return section;
-}
-
-/* Label and value in two columns. A value nobody recorded prints "—" and its
-   label stays: a row that vanished would read as a question nobody asked. */
-function facts(rows) {
-  const list = el("dl", "stop-facts");
-  for (const [label, value, mono] of rows) {
-    list.append(el("dt", null, label));
-    const dd = el("dd", mono ? "mono" : null);
-    if (value instanceof Node) dd.append(value);
-    else dd.textContent = value === null || value === undefined || value === "" ? "—" : String(value);
-    list.append(dd);
-  }
-  return list;
-}
-
-function stopTable(headings, rows, empty) {
-  if (!rows.length) return el("p", "muted small", empty);
-  const wrap = el("div", "table-wrap");
-  const table = el("table");
-  const head = el("thead");
-  const hr = el("tr");
-  for (const h of headings) hr.append(el("th", null, h));
-  head.append(hr);
-  table.append(head);
-  const tbody = el("tbody");
-  for (const row of rows) {
-    const tr = el("tr");
-    for (const cell of row) {
-      const td = el("td");
-      if (cell instanceof Node) td.append(cell);
-      else td.textContent = cell === null || cell === undefined ? "—" : String(cell);
-      tr.append(td);
-    }
-    tbody.append(tr);
-  }
-  table.append(tbody);
-  wrap.append(table);
-  return wrap;
-}
+   A block, two columns of facts, a table that states its own total, a fold
+   that remembers itself and the line that says how much of the block anybody
+   watched are `FS.panel` in common.js. This panel and the trend graph's sit on
+   ONE page: written twice they would drift, and a reader who learned one
+   would have to learn the other. The folds keep their own namespace
+   (`store: "stop"`) so a reader's open tags here are not the trend's. */
 
 /* A row that belongs to another screen carries the link to it. The href is
    built here, on the screen, because the services lay out records and compute
@@ -393,34 +736,6 @@ function pageLink(text, href, mono = true) {
   const a = el("a", mono ? "mono" : null, text);
   a.href = href;
   return a;
-}
-
-function foldedByDefault(key) {
-  try {
-    const stored = localStorage.getItem(`fsmes-stop-fold-${key}`);
-    if (stored === "open") return false;
-    if (stored === "closed") return true;
-  } catch (e) { /* storage off: the default below stands */ }
-  return null;
-}
-
-function foldable(section, key, summary, { open }) {
-  const box = el("details", "stop-block stop-fold");
-  box.dataset.fold = key;
-  const stored = foldedByDefault(key);
-  box.open = stored === null ? open : !stored;
-  const head = el("summary");
-  const title = section.querySelector("h3");
-  head.append(el("span", "stop-fold-title", title ? title.textContent : key));
-  head.append(el("span", "stop-fold-says", summary));
-  if (title) title.remove();
-  box.append(head, ...[...section.childNodes]);
-  box.addEventListener("toggle", () => {
-    try {
-      localStorage.setItem(`fsmes-stop-fold-${key}`, box.open ? "open" : "closed");
-    } catch (e) { /* nothing to remember it in, which breaks nothing */ }
-  });
-  return box;
 }
 
 /* One small chart inside the panel. The kit refuses an envelope it cannot
@@ -449,7 +764,7 @@ const STATE_WORDS = {
 /* What it was and how long: the sentence the handoff asks for, in that order
    - "Setup, 4 minutes, 4:40 to 4:44 a.m." */
 function whatBlock(d) {
-  const section = stopBlock("What this block was");
+  const section = FS.panel.block("What this block was");
   const b = d.block;
   const words = STATE_WORDS[b.state] || b.state || "Not recorded";
   section.append(el("p", "stop-headline", `${words}, ${kit.duration(b.seconds)}`));
@@ -457,7 +772,7 @@ function whatBlock(d) {
     `${fmt.clock(b.started_at)} to ${fmt.clock(b.ended_at)}`
     + (b.open ? " — and still open: this stretch has not ended" : "")));
   const states = Object.entries(b.seconds_by_state || {});
-  section.append(facts([
+  section.append(FS.panel.facts([
     ["Shift", b.shift],
     /* What the reader clicked may be several records: `_merge_short` folds
        intervals too brief to draw into the block before them, so the panel
@@ -479,10 +794,10 @@ function whatBlock(d) {
 /* Why — the reason the floor gave it, who gave it and when, or plainly that
    nobody has, with the control to say it where the capability allows. */
 function whyBlock(d) {
-  const section = stopBlock("Why");
+  const section = FS.panel.block("Why");
   const why = d.why;
   section.append(el("p", "stop-says", why.says));
-  section.append(facts([
+  section.append(FS.panel.facts([
     ["Reason", why.reason],
     ["Code", why.reason_code, true],
     ["This plant's word for it", why.reason_label
@@ -495,7 +810,7 @@ function whyBlock(d) {
   ]));
   const by = why.labelled_by || [];
   section.append(el("h4", null, by.length ? "Who said so" : "Nobody is recorded as saying so"));
-  section.append(stopTable(["Who", "When", "What they did", "Matched by"],
+  section.append(FS.panel.table(["Who", "When", "What they did", "Matched by"],
     by.map((row) => [
       row.on_behalf_of ? `${row.actor} for ${row.on_behalf_of}` : row.actor,
       fmt.stamp(row.at),
@@ -598,9 +913,9 @@ async function fillReasons(select, button) {
 /* What it belonged to: the order before and the order after. Derived, and the
    block says so - nothing in this MES joins a stop to an order. */
 function ordersBlock(d) {
-  const section = stopBlock("The job that was on");
+  const section = FS.panel.block("The job that was on");
   const o = d.orders;
-  section.append(facts([
+  section.append(FS.panel.facts([
     ["Before it", side(o.before)],
     ["After it", side(o.after)],
     ["Open across it", o.during_total
@@ -621,7 +936,7 @@ function ordersBlock(d) {
         + "picked for you."));
     }
   }
-  section.append(stopTable(["Order", "Step", "Operation", "Status", "Started"],
+  section.append(FS.panel.table(["Order", "Step", "Operation", "Status", "Started"],
     (o.during || []).map((row) => [
       pageLink(row.order, `/dashboard/orders?q=${encodeURIComponent(row.order)}`),
       row.seq, row.name, row.status, fmt.stamp(row.started_at),
@@ -633,7 +948,7 @@ function ordersBlock(d) {
       + "landed inside the block itself."));
   }
   section.append(el("p", "muted small", `Derived: ${o.derived}.`));
-  return closeWith(section, o);
+  return FS.panel.closeWith(section, o);
 }
 
 function side(which) {
@@ -648,11 +963,11 @@ function side(which) {
    a down block: #158 put both the order's state and its reason in the data,
    and a planned stop has to read as planned. */
 function maintenanceBlock(d) {
-  const section = stopBlock("Planned work, or a breakdown");
+  const section = FS.panel.block("Planned work, or a breakdown");
   const m = d.maintenance;
   section.append(el("p", "stop-says", m.says));
   if (m.note) section.append(el("p", "muted small", m.note));
-  section.append(stopTable(["Order", "Kind", "State", "Needs a stop", "Given to", "Raised"],
+  section.append(FS.panel.table(["Order", "Kind", "State", "Needs a stop", "Given to", "Raised"],
     (m.orders || []).map((row) => [
       pageLink(row.code, "/dashboard/maintenance"),
       row.kind, row.status,
@@ -668,20 +983,20 @@ function maintenanceBlock(d) {
       `Raised and never started: ${m.never_started.join(", ")}. An order nobody `
       + "started does not explain a stop — it would explain every stop."));
   }
-  return closeWith(section, m);
+  return FS.panel.closeWith(section, m);
 }
 
 /* What the machine was doing either side, in words. The bar shows the shape;
    this says it, with the seconds between. */
 function eitherSideBlock(d) {
-  const section = stopBlock("What the machine was doing either side");
+  const section = FS.panel.block("What the machine was doing either side");
   const e = d.either_side;
-  section.append(facts([
+  section.append(FS.panel.facts([
     ["Just before", interval(e.before, "before")],
     ["Just after", interval(e.after, "after")],
   ]));
   section.append(el("p", "muted small", e.note.charAt(0).toUpperCase() + e.note.slice(1) + "."));
-  return closeWith(section, e);
+  return FS.panel.closeWith(section, e);
 }
 
 function interval(row, which) {
@@ -699,7 +1014,7 @@ function interval(row, which) {
    same bucketing the control chart's panel draws, through the same service
    call, so the two screens cannot draw one tag two ways. */
 function tagsBlock(d) {
-  const section = stopBlock("This machine's own signals, either side");
+  const section = FS.panel.block("This machine's own signals, either side");
   const tags = d.tags || {};
   const trends = tags.trends || [];
   if (!trends.length) {
@@ -725,14 +1040,14 @@ function tagsBlock(d) {
     });
     if (trend.samples === 0) {
       const last = trend.last_before_window;
-      box.append(el("p", "stop-watched", last
+      box.append(el("p", "point-watched", last
         ? `Nothing in the window drawn — it last reported ${last.value} at `
           + `${fmt.stamp(last.ts)}, ${kit.duration(last.seconds_before_window)} before `
           + "the window opened. A value that has not changed publishes nothing."
         : "Nothing in the window drawn, and this MES holds no earlier sample of it."));
     }
   }
-  return closeWith(section, tags);
+  return FS.panel.closeWith(section, tags);
 }
 
 function tagsSummary(d) {
@@ -744,9 +1059,9 @@ function tagsSummary(d) {
 /* What quality saw after it, with the chart's own verdict - "the setup was
    followed by two low means" in one glance instead of four screens. */
 function qualityBlock(d) {
-  const section = stopBlock("What quality saw after it");
+  const section = FS.panel.block("What quality saw after it");
   const q = d.quality;
-  section.append(stopTable(["Reading", "Characteristic", "Verdict", "After", "Chart"],
+  section.append(FS.panel.table(["Reading", "Characteristic", "Verdict", "After", "Chart"],
     (q.readings || []).map((row) => [
       `${row.value}${row.unit ? ` ${row.unit}` : ""}`
       + (row.below_spec ? " — under spec" : row.above_spec ? " — over spec" : ""),
@@ -771,7 +1086,7 @@ function qualityBlock(d) {
       + `specification, ${q.with_a_signal} with a control-chart rule on it.`));
   }
   section.append(el("p", "muted small", `Scope: ${q.scope}.`));
-  return closeWith(section, q);
+  return FS.panel.closeWith(section, q);
 }
 
 function qualitySummary(d) {
@@ -783,8 +1098,8 @@ function qualitySummary(d) {
 /* How much of the block's own stretch anybody was watching, and where the
    unwatched seconds went. Every chart in this product says this. */
 function watchedBlock(d) {
-  const section = stopBlock("How much of it anybody was watching");
-  section.append(el("p", "stop-says", watchedLine(d) || ""));
+  const section = FS.panel.block("How much of it anybody was watching");
+  section.append(el("p", "stop-says", FS.panel.watched(d) || ""));
   section.append(kit.ledgerSummary(d));
   return section;
 }
@@ -940,10 +1255,27 @@ function onTab(name) {
   FS.applyCapGates();
   wireCorrective();
   openOnClick();
-  // Awaited before the first refresh: this plant's own window is what the
-  // first load should be drawn over, not the product's eight hours.
-  await FS.window.bind($("#hours"), () => onTab(FS.tabs.current()));
-  $("#trend-tag").addEventListener("change", (e) => { trendTag = e.target.value; loadTrend().catch(fail); });
+  /* ONE window control, in the page head, for every tab. Awaited before the
+     first refresh: this plant's own window is what the first load should be
+     drawn over, not the product's eight hours. `FS.span` is a superset of the
+     hours chip that was here - the same trailing spans, plus this shift, last
+     shift and a start and an end - and it is shared state, so the trend, the
+     state timeline, the OEE figures and the alarm list are all drawn over the
+     window a reader set once. Two controls on one page is how two charts come
+     to show two different windows and nobody can tell which is which. */
+  await FS.span.bind($("#machine-span"), () => onTab(FS.tabs.current()));
+  $("#trend-tag").addEventListener("change", (e) => {
+    trendTag = e.target.value;
+    if (trendTag === trendTag2) trendTag2 = null;
+    trendPointShut();
+    loadTrend().catch(fail);
+  });
+  $("#trend-tag-2").addEventListener("change", (e) => {
+    trendTag2 = e.target.value || null;
+    trendPointShut();
+    loadTrend().catch(fail);
+  });
+  openTrendOnClick();
   await refreshNow();
   FS.tabs.init(document, onTab);
 })();

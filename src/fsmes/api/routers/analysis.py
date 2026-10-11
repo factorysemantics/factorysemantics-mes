@@ -2,21 +2,37 @@
 
 Read-only, so every endpoint is available to any signed-in role.
 
-Two ways to say which window. `hours=` is a trailing span, clamped server-side
-because a client asking for a year of 1 Hz tag history is a mistake, not a
-request. `shift=` is the plant's own wall-clock window — `current`, `previous`,
-or a day and a code such as `2026-09-14/NIGHT` — because a shift is the unit a
-plant is run and measured in, and a supervisor asking "how did my shift go"
-is asking about a boundary, not about the last eight hours. A request that
-names a shift gets that shift; `hours` is ignored rather than averaged in.
+Three ways to say which window. `hours=` is a trailing span, clamped
+server-side because a client asking for a year of 1 Hz tag history is a
+mistake, not a request. `shift=` is the plant's own wall-clock window —
+`current`, `previous`, or a day and a code such as `2026-09-14/NIGHT` —
+because a shift is the unit a plant is run and measured in, and a supervisor
+asking "how did my shift go" is asking about a boundary, not about the last
+eight hours. A request that names a shift gets that shift; `hours` is ignored
+rather than averaged in.
 
-A shift that names nothing here — the plant is between shifts, the code is not
-a pattern, the pattern does not run that day — is a 400 with one sentence, not
-a quiet fall-back to eight hours. A screen that said "night shift" over the
-last eight hours would be worse than an error.
+`start=` and `end=` name the two ends of a window, and that window sits
+wherever the caller put it — almost always in the past. Both of the others end
+at this second, because both answer *how is it going*; a shift that finished
+at two o'clock cannot be asked about with either, and *why did this happen*
+is a question about a stretch that is over. The machinery has been in
+`services.analysis` since the control-chart panel (`_around`, 2026-10-05) and
+is exposed here as of 2026-10-11.
+
+Timestamps are ISO 8601. One with an offset is converted; one without is read
+as UTC, which is this system's single timestamp convention. Both ends or
+neither — a half-named window is refused rather than guessed at — and never
+together with `shift=`, because then two parameters name the window and the
+answer would have to pick one quietly.
+
+A window that names nothing here — the plant is between shifts, the code is
+not a pattern, the pattern does not run that day, the end falls before the
+start — is a 400 with one sentence, not a quiet fall-back to eight hours. A
+screen that said "night shift" over the last eight hours would be worse than
+an error.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -47,6 +63,58 @@ _SHIFT = Query(
                 "or `YYYY-MM-DD/CODE` on the plant's own clock. Overrides `hours`.",
 )
 
+#: The third kind of window: the two ends of a stretch of the past. Both or
+#: neither, and never beside `shift=` — see `_between`, which is the only
+#: place that rule is written down.
+_START = Query(None, description="Window start, ISO 8601. Needs `end` too. An "
+                                 "offset is converted; none is read as UTC.")
+_END = Query(None, description="Window end, ISO 8601. Needs `start` too.")
+
+
+def _utc(value: datetime) -> datetime:
+    """Naive UTC, which is the only timestamp convention this system has.
+
+    A browser sending the window a person typed into two `datetime-local`
+    boxes sends it with an offset, because the person typed their own wall
+    clock; a script sending UTC sends none. Both are accepted and both become
+    the same thing here, rather than one of them being compared against stored
+    timestamps in the wrong hour.
+    """
+    return value.astimezone(UTC).replace(tzinfo=None) if value.tzinfo else value
+
+
+def _between(start: datetime | None, end: datetime | None,
+             shift: str | None) -> tuple[datetime, datetime] | None:
+    """`start=`/`end=` as a window, or None when the caller named neither.
+
+    Three refusals, each one sentence, because each of the three is a request
+    this read cannot answer rather than one it can answer approximately:
+
+    - half a window is not a window. "From six o'clock" with no end could mean
+      *until now* or *until the end of the shift*, and picking one would be
+      this product guessing at the question.
+    - `start=`/`end=` and `shift=` both name a window. Whichever one lost
+      would be dropped silently, and an unknown query parameter already
+      disappears without trace in HTTP — two that mean the same thing must not.
+    - an end before its start is nobody's window.
+
+    The far end is not clamped to now: a window running into the future is the
+    caller's to ask for, and the envelope's `window` block says how much of it
+    the MES actually holds.
+    """
+    if start is None and end is None:
+        return None
+    if start is None or end is None:
+        raise HTTPException(400, "a window needs both of its ends: give start and "
+                                 "end together, or neither")
+    if shift:
+        raise HTTPException(400, "start and end name a window and so does shift — "
+                                 "ask for one of them, not both")
+    first, last = _utc(start), _utc(end)
+    if last <= first:
+        raise HTTPException(400, "the end of a window has to come after its start")
+    return first, last
+
 
 @router.get("/lines")
 def lines(db: Session = Depends(get_read_db)) -> list[dict]:
@@ -76,6 +144,8 @@ def timeline(
     line: str | None = _LINE,
     hours: float | None = _HOURS,
     shift: str | None = _SHIFT,
+    start: datetime | None = _START,
+    end: datetime | None = _END,
     equipment: str | None = Query(None, description="Comma-separated machine codes."),
     # No default here either: left out, it is this plant's own screenful.
     limit: int | None = Query(None, ge=1, le=60,
@@ -91,7 +161,7 @@ def timeline(
     return analysis.state_timeline(
         db, line, hours,
         equipment=[c.strip() for c in equipment.split(",")] if equipment else None,
-        limit=limit, shift=shift)
+        limit=limit, shift=shift, window=_between(start, end, shift))
 
 
 #: The stretch of one machine's timeline a reader clicked. A window and not an
@@ -177,11 +247,105 @@ def tag(
     tag: str | None = Query(None, description="Tag name; omitted means the machine's process value."),
     hours: float | None = _HOURS,
     shift: str | None = _SHIFT,
+    start: datetime | None = _START,
+    end: datetime | None = _END,
     buckets: int = Query(240, ge=2, le=2000),
     db: Session = Depends(get_read_db),
 ) -> dict:
     """One machine's process value over the window, with min/max per bucket."""
-    return analysis.tag_trend(db, equipment_code, tag=tag, hours=hours, buckets=buckets, shift=shift)
+    return analysis.tag_trend(db, equipment_code, tag=tag, hours=hours, buckets=buckets,
+                              shift=shift, window=_between(start, end, shift))
+
+
+# ------------------------------------------- several tags, and one point of them
+#
+# The trend graph's own two reads. `/tag/{code}` above draws one tag; these two
+# draw several of one machine's tags on one window and then answer about one
+# second of it, which is the walk the product's own answer key says a person
+# cannot make today (`labs/.../line.json` -> `_chain`, link 3).
+#
+# Both are plant-computed reads served as envelopes (decision 0023), and
+# neither recomputes anything a read above computes: the bucketing is
+# `tag_trend`'s, the states are `/analysis/timeline`'s, and the blocks about a
+# machine and a window are the same code the control-chart panel reads
+# (`services.moment`).
+
+# `tag`, repeated, and not `tags`: the single-tag read next door is
+# `?tag=Temperature`, and one screen asking for two of them should not have to
+# spell the parameter differently to do it.
+_TAGS = Query(None, alias="tag",
+              description="Tag names, repeatable. Omitted means the machine's "
+                          "own process value.")
+
+
+@router.get("/trend/{equipment_code}")
+def trend(
+    equipment_code: str,
+    tags: list[str] | None = _TAGS,
+    hours: float | None = _HOURS,
+    shift: str | None = _SHIFT,
+    start: datetime | None = _START,
+    end: datetime | None = _END,
+    db: Session = Depends(get_read_db),
+) -> dict:
+    """Several of one machine's tags over one window, each with its own scale.
+
+    The window is settled once against the machine and handed to every tag, so
+    two signals wired up on different days still come back on one axis — which
+    is the only way a cause and the effect twenty minutes behind it can be
+    seen at all. Series are grouped into scales by unit, because degrees and
+    bar on one axis is a picture of the units and not of the plant.
+
+    Says what it drew and what it did not: the buckets nothing arrived in, the
+    share of the window each tag spoke in, the machine's watched share, and
+    any tag asked for that this machine has never published.
+    """
+    from fsmes.services import trend as trend_service
+
+    return trend_service.series(db, equipment_code, tags=tags, hours=hours,
+                                shift=shift, window=_between(start, end, shift))
+
+
+@router.get("/trend/{equipment_code}/point")
+def trend_point(
+    equipment_code: str,
+    at: datetime = Query(..., description="The instant clicked, ISO 8601. An "
+                                          "offset is converted; none is read "
+                                          "as UTC."),
+    tag: str = Query(..., description="The tag whose point was clicked."),
+    hours: float | None = _HOURS,
+    shift: str | None = _SHIFT,
+    start: datetime | None = _START,
+    end: datetime | None = _END,
+    bucket_seconds: float | None = Query(
+        None, gt=0, le=86400,
+        description="How wide the bucket the point stands for is, from the "
+                    "chart that drew it. Left out, only the nearest stored "
+                    "sample is reported and no bucket."),
+    db: Session = Depends(get_read_db),
+) -> dict:
+    """What else was happening — the records behind one point of a trend.
+
+    Six blocks, which are the six questions a person in front of a moving
+    number asks in order: what the reading was and when; what the machine was
+    doing at that second, with the reason and who labelled it; the job that was
+    open on it; every maintenance order open on it across the window, with its
+    state and why it is in that state; what the lab measured in the window and
+    what the control chart said at the time; and what every other tag said at
+    that instant.
+
+    The window is the chart's own, not one invented around the point: a panel
+    that quietly narrowed to ten minutes either side would answer a different
+    question from the one the reader asked, and the maintenance order raised at
+    the start of a shift is exactly the answer it would then miss.
+
+    No model, and nothing recomputed.
+    """
+    from fsmes.services import trend as trend_service
+
+    return trend_service.dossier(
+        db, equipment_code, tag=tag, at=_utc(at), hours=hours, shift=shift,
+        window=_between(start, end, shift), bucket_seconds=bucket_seconds)
 
 
 # --------------------------------------------------- the trace, the graph, MTTR

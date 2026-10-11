@@ -1191,6 +1191,205 @@ def test_a_dot_opens_a_point_only_where_the_screen_said_it_could(page):
     assert "open the readings behind it" in fired["label"]
 
 
+# --------------------------------- the line shape, where a reading is clicked
+
+#: The same two-series payload the machine page's Trend tab asks for: a
+#: temperature and a pressure, in units that are not each other's, over one
+#: window. Built from `LINE`'s own points so that the numbers pinned by rule 1
+#: above and the numbers clicked here are the same numbers.
+LINE_PAIR = {
+    "equipment": "MIX01",
+    "window": dict(WINDOW, clamped=False, hours=2.0, requested_hours=2),
+    "series": [
+        {"label": "Temperature", "tag": "Temperature", "unit": "degC",
+         "points": LINE["points"]},
+        {"label": "Pressure", "tag": "Pressure", "unit": "bar",
+         "points": [dict(p, mean=None if p["mean"] is None else 2.6)
+                    for p in LINE["points"]]},
+    ],
+    "coverage": 0.83,
+    "bucket_seconds": 1800.0,
+}
+
+#: Everything about a drawn line a test needs about pressing it, read in ONE
+#: pass inside the page, for the reason `DRAW` and `SPC_FACTS` are.
+LINE_FACTS = """([envelope, options]) => {
+    const host = document.getElementById('fs-chart-probe') || (() => {
+        const box = document.createElement('div');
+        box.id = 'fs-chart-probe';
+        box.style.width = '760px';
+        box.style.position = 'fixed';
+        box.style.top = '0';
+        box.style.left = '0';
+        box.style.zIndex = '9999';
+        box.style.background = 'var(--panel)';
+        document.body.appendChild(box);
+        return box;
+    })();
+    const node = FS.kit.draw(host, 'line', envelope, {width: 760, ...options});
+    const dots = [...node.querySelectorAll('circle:not(.spc-ring)')].map((d) => ({
+        value: d.getAttribute('data-value'), at: d.getAttribute('data-t'),
+        series: d.getAttribute('data-series'), cls: d.getAttribute('class'),
+        role: d.getAttribute('role'), tabindex: d.getAttribute('tabindex'),
+        aria: d.getAttribute('aria-label'),
+        cx: Math.round(Number(d.getAttribute('cx'))),
+        cy: Math.round(Number(d.getAttribute('cy'))),
+        r: Number(d.getAttribute('r')),
+    }));
+    return {
+        dots,
+        rings: [...node.querySelectorAll('circle.spc-ring')].map((c) => ({
+            series: c.getAttribute('data-ring-series'),
+            at: c.getAttribute('data-ring-at'),
+            value: c.getAttribute('data-value'),
+            fill: getComputedStyle(c).fill,
+            pointer: getComputedStyle(c).pointerEvents,
+            role: c.getAttribute('role'), tabindex: c.getAttribute('tabindex'),
+            hidden: c.getAttribute('aria-hidden'),
+            cx: Math.round(Number(c.getAttribute('cx'))),
+            cy: Math.round(Number(c.getAttribute('cy'))),
+            r: Number(c.getAttribute('r')),
+        })),
+        /* A stroke is a drawing of the gaps between readings, and it is laid
+           over the readings it joins. If it took the pointer it would swallow
+           the press on every dot underneath it. */
+        strokes: [...node.querySelectorAll('polyline.trend-line, polygon.trend-band,'
+                                           + ' line.chart-break')]
+            .map((s) => ({tag: s.tagName.toLowerCase(),
+                          pointer: getComputedStyle(s).pointerEvents})),
+    };
+}"""
+
+
+def line_facts(page, envelope=None, **options):
+    import copy
+    return page.evaluate(LINE_FACTS, [copy.deepcopy(envelope or LINE_PAIR),
+                                      {"value": "mean", **options}])
+
+
+def test_a_reading_opens_a_point_only_where_the_screen_said_it_could(page):
+    """The control chart's division of labour, kept by the shape the machine
+    page's Trend tab draws through - and the reason the AI tab can draw the
+    same two tags with no panel beside them. A reading is a button only where
+    the page asked for one (`openable`), and pressing it dispatches
+    `fs-line-open` for the page to act on: the kit fetches nothing and decides
+    nothing about what opening a reading means."""
+    plain = line_facts(page)
+    assert len(plain["dots"]) == 8, plain["dots"]
+    assert [d["role"] for d in plain["dots"]] == [None] * 8
+    assert [d["tabindex"] for d in plain["dots"]] == [None] * 8
+    assert [d["aria"] for d in plain["dots"]] == [None] * 8
+    # Both tags are on it, each reading named by the series it belongs to, so
+    # that a page with two tags up can tell which line was pressed.
+    assert {d["series"] for d in plain["dots"]} == {"Temperature", "Pressure"}
+
+    opened = line_facts(page, openable=True,
+                        ringAt={"series": "Temperature",
+                                "at": "2026-09-28T10:45:00Z"})
+    assert [d["role"] for d in opened["dots"]] == ["button"] * 8
+    assert all(d["tabindex"] == "0" for d in opened["dots"])
+    # The label a screen reader hears is the reading itself, in its own unit:
+    # rule 1 again, because a button that said "point 2" would be hiding the
+    # only number it exists to carry.
+    said = next(d["aria"] for d in opened["dots"]
+                if d["series"] == "Temperature" and d["value"] == "61.9")
+    assert said.startswith("Temperature 61.9 degC at "), said
+
+    # The reading the panel is open on wears a RING - the hollow circle the
+    # control chart settled on with Scott on 2026-10-08, not a fatter dot,
+    # which read as a bigger measurement rather than as the point he had
+    # open. One ring, named by the reading it rings, no `data-value` of its
+    # own (a ring is not a reading), and it takes neither pointer nor
+    # keyboard: the dot inside it is still the button.
+    rings = opened["rings"]
+    assert len(rings) == 1, rings
+    ring = rings[0]
+    assert (ring["series"], ring["at"]) == ("Temperature", "2026-09-28T10:45:00Z")
+    assert ring["value"] is None
+    assert ring["fill"] == "none"
+    assert ring["role"] is None and ring["tabindex"] is None
+    assert ring["hidden"] == "true"
+    assert ring["pointer"] == "none"
+    ringed = next(d for d in opened["dots"]
+                  if d["series"] == "Temperature" and d["value"] == "61.9")
+    assert (ring["cx"], ring["cy"]) == (ringed["cx"], ringed["cy"])
+    assert ring["r"] > ringed["r"]
+    assert ringed["r"] == opened["dots"][0]["r"], "the open reading is drawn no bigger"
+
+    # And nothing else drawn on the plot stands between a pointer and a
+    # reading. The line is painted over the dots it joins, so on 2026-10-11
+    # every click on an openable trend reading timed out with "polyline
+    # intercepts pointer events" until the strokes gave the pointer up.
+    assert opened["strokes"], "the probe found no strokes to check"
+    assert all(s["pointer"] == "none" for s in opened["strokes"]), opened["strokes"]
+
+    fired = page.evaluate(
+        """() => new Promise((resolve) => {
+            const host = document.getElementById('fs-chart-probe');
+            host.addEventListener('fs-line-open', (e) => resolve(e.detail), {once: true});
+            host.querySelector('circle[data-series="Pressure"][data-value="2.6"]')
+                .dispatchEvent(new MouseEvent('click', {bubbles: true}));
+            setTimeout(() => resolve(null), 2000);
+        })""")
+    # The event carries the reading, its stamp and the width of the bucket it
+    # stands for, so the page can ask one route what else was happening at
+    # that second without finding the point again by index in a payload whose
+    # two series are indexed separately.
+    assert fired == {"equipment": "MIX01", "series": "Pressure", "tag": "Pressure",
+                     "value": 2.6, "at": "2026-09-28T10:15:00Z",
+                     "bucket_seconds": 1800.0,
+                     "label": fired and fired.get("label")}, fired
+    assert fired["label"].startswith("Pressure 2.6 bar at ")
+
+    # A keyboard reaches the same reading and opens it the same way, because a
+    # panel only a mouse can open is a panel half the plant cannot read.
+    by_key = page.evaluate(
+        """() => new Promise((resolve) => {
+            const host = document.getElementById('fs-chart-probe');
+            host.addEventListener('fs-line-open', (e) => resolve(e.detail.series),
+                                  {once: true});
+            host.querySelector('circle[data-series="Temperature"]').dispatchEvent(
+                new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}));
+            setTimeout(() => resolve(null), 2000);
+        })""")
+    assert by_key == "Temperature"
+
+
+def test_a_real_press_on_a_reading_opens_it_and_does_not_brush_the_axis(page):
+    """The collision between the two things a reader does to a timed chart,
+    pinned with a real pointer rather than a dispatched event.
+
+    The axis can be brushed by dragging across the plot, and the drag is
+    caught on the whole frame - so on 2026-10-11, the first time a line chart
+    had both a brush and readings that open, a press on a dot was also a
+    zero-length brush: the pointer went up, the brush was cleared, the chart
+    was redrawn, and the redraw took away the very dot the click was about
+    before the click arrived. Nothing opened, and nothing said why. A press
+    that begins on a reading is that reading's.
+    """
+    line_facts(page, openable=True)
+    page.evaluate(
+        """() => {
+            window.__opened = null;
+            const host = document.getElementById('fs-chart-probe');
+            host.addEventListener('fs-line-open', (e) => { window.__opened = e.detail; });
+        }""")
+    page.click('#fs-chart-probe circle[data-series="Pressure"][data-value="2.6"]')
+    # Waiting on the state asserted, not on a sleep: the event is synchronous
+    # with the click, and this says so without a fixed wait.
+    page.wait_for_function("() => window.__opened !== null", timeout=5000)
+    opened = page.evaluate("() => window.__opened")
+    assert opened["series"] == "Pressure", opened
+    # And the axis is where it was: the press opened a reading and narrowed
+    # nothing, so no stretch is marked as the reader's own choice.
+    assert page.eval_on_selector_all(
+        "#fs-chart-probe [data-brush-from]", "els => els.length") == 0
+    # The surface that catches the drag is still there, so the chart has not
+    # traded one of the two gestures for the other.
+    assert page.eval_on_selector_all(
+        "#fs-chart-probe [data-brush-surface]", "els => els.length") == 1
+
+
 #: What a state block looks like to a reader and to a keyboard, read in one
 #: pass for the same reason `DRAW` is.
 STATE_FACTS = """([options]) => {

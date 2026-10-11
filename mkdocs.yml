@@ -91,6 +91,7 @@ nav:
           - For IT: onboarding/GUIDE-IT.md
           - For Engineering: onboarding/GUIDE-ENGINEERING.md
       - How-to — read OEE: plant/reading-oee.md
+      - How-to — follow a reading back to what caused it: plant/reading-a-trend.md
       - Explanation — when a control chart notices something: plant/quality-signals.md
       - Reference — shifts: plant/shifts.md
       - Explanation — never invent production: plant/never-invent-production.md

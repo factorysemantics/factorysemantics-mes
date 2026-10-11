@@ -22,8 +22,8 @@ five:
                                                   the chart's own verdict
 
 **No model, and nothing is computed twice.** The analogs come from
-`spc_point.analog_trends`, which is `analysis.tag_trend` with the panel's
-bucketing; the maintenance orders come from `spc_point.maintenance_orders`, the
+`moment.analog_trends`, which is `analysis.tag_trend` with the panel's
+bucketing; the maintenance orders come from `moment.maintenance_orders`, the
 same rows and the same bound the panel beside the control chart reads; the
 watched share comes from the ledger in `services.coverage`. The reason
 vocabulary is `services.reasons`, and the control that names a stop posts to
@@ -77,7 +77,15 @@ from fsmes.domain import (
     WorkOrder,
     WorkOrderOperation,
 )
-from fsmes.services import Invalid, capabilities, coverage, masterdata, reasons, spc_point
+from fsmes.services import (
+    Invalid,
+    capabilities,
+    coverage,
+    masterdata,
+    moment,
+    reasons,
+    spc_point,
+)
 from fsmes.services import connection as connection_service
 
 #: How far either side of the block its analogs are drawn. The same minutes the
@@ -616,7 +624,7 @@ def _maintenance(session: Session, unit: Equipment, block: dict, why: dict,
                  start: datetime, end: datetime) -> dict:
     """Any maintenance order covering the block, and whether this stop was planned.
 
-    The rows are `spc_point.maintenance_orders` - the same list, the same bound
+    The rows are `moment.maintenance_orders` - the same list, the same bound
     - with the one verdict this panel exists to give: a planned stop must read
     as planned work and not as a breakdown with a note attached.
 
@@ -627,7 +635,7 @@ def _maintenance(session: Session, unit: Equipment, block: dict, why: dict,
     not this stop. So is corrective work, which is raised after something broke
     and is therefore the repair of a stop rather than a reason for one.
     """
-    found = spc_point.maintenance_orders(session, unit, start, end)
+    found = moment.maintenance_orders(session, unit, start, end)
     orders = found["orders"]
     reason = (why.get("reason") or "").lower()
     in_progress = [o for o in orders
@@ -890,7 +898,7 @@ def dossier(session: Session, equipment_code: str, start: datetime, end: datetim
         # side, marked where the block begins and ends - drawn by the same
         # block the panel beside the control chart draws, through the same
         # bucketing, so the two screens cannot draw one tag two ways.
-        "tags": spc_point.analog_trends(
+        "tags": moment.analog_trends(
             session, unit,
             start - timedelta(minutes=before_minutes),
             end + timedelta(minutes=after_minutes), marks),

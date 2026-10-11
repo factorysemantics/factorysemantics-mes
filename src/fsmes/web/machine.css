@@ -121,50 +121,22 @@
   .block-panel { position: static; max-height: none; }
 }
 
-/* One block inside the panel: a heading, its records, then the one line
-   saying how much of its own window was watched. */
-.stop-block { border-top: 1px solid var(--line); padding-top: var(--s3); margin-top: var(--s3); }
-.stop-block:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
-.stop-block h3 { margin: 0 0 var(--s2); font-size: 13px; color: var(--muted); font-weight: 600; }
-
-/* A block that opens folded. `<details>`/`<summary>` are a button and a
-   disclosure to a keyboard and a screen reader without a line of script, and
-   the summary states what is inside and how much of it: a closed box that
-   says nothing is a list that reads complete. */
-.stop-fold > summary {
-  cursor: pointer;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px var(--s2);
-  align-items: baseline;
-}
-.stop-fold > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.stop-fold-title { font-size: 13px; color: var(--muted); font-weight: 600; }
-.stop-fold-says { font-size: 11px; color: var(--muted); }
-.stop-fold[open] > summary { margin-bottom: var(--s2); }
-.stop-fold[open] .stop-fold-title { color: var(--text); }
+/* The blocks, the folds, the two columns of facts and the watched line are
+   `.point-*` in styles.css: this panel is built by `FS.panel`, the same
+   primitives the control chart's panel and the trend graph's use, so there is
+   one set of shapes on the page rather than three. What stays here is what is
+   about a stop and nothing else. */
 
 /* What the block was, at the top, big enough to be the answer to "which block
    did I click". */
 .stop-headline { font-size: 18px; color: var(--text); font-weight: 600; margin: 0 0 2px; }
 .stop-says { margin: 0 0 var(--s2); font-size: 12px; color: var(--text); }
 
-/* Label and value in two columns. A value nobody recorded is "—" and the
-   label stays: a row that disappeared would read as a question nobody asked. */
-.stop-facts { display: grid; grid-template-columns: auto 1fr; gap: 3px var(--s3); margin: 0; }
-.stop-facts dt { color: var(--muted); font-size: 12px; }
-.stop-facts dd { margin: 0; font-size: 12px; color: var(--text); }
-.stop-facts dd.mono { font-family: var(--mono); }
-
 /* One small chart inside the panel. */
 .stop-chart { margin-top: var(--s3); }
 .stop-chart h4 { margin: 0 0 2px; font-size: 12px; font-weight: 600; color: var(--text); }
 .stop-chart .chart-host { overflow-x: auto; }
 .stop-chart .chart-host svg { display: block; max-width: 100%; }
-
-/* What a block says about its own window. Every block has one, including the
-   ones whose answer is that they are lists of records and have no such rate. */
-.stop-watched { margin: var(--s2) 0 0; font-size: 11px; color: var(--muted); }
 
 /* Naming a stop from here. The form only appears where the capability already
    allows it; where it does not, the refusal in its place names who may. */

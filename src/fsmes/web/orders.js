@@ -600,6 +600,16 @@ async function refresh() {
   wireFilters();
   wireNewOrder();
   wireHold();
+  /* `?q=CODE` opens this screen already looking at one order. The panels on
+     the machine page that name an order link here with it, so a reader who
+     clicked an order code lands on that order rather than on page one of
+     everything and a code to copy out by hand. The box shows the text, so it
+     is obvious what is being filtered and how to clear it. */
+  const asked = new URL(location).searchParams.get("q");
+  if (asked) {
+    filterText = asked.trim();
+    $("#f-text").value = filterText;
+  }
   await loadMaterials();
   await refresh();
   setInterval(refresh, REFRESH_MS);
