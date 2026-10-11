@@ -1320,6 +1320,55 @@ def test_a_block_opens_a_stop_only_where_the_screen_said_it_could(page):
     assert by_key and by_key["state"] == "running", by_key
 
 
+def test_a_real_mouse_press_on_a_block_opens_it_and_a_drag_still_brushes(page):
+    """Every check above dispatches its own event, and on 2026-10-11 all of
+    them passed while a person clicking a block on the machine page got
+    nothing. This shape is brushable - drag across it and the axis narrows -
+    and the brush catches the pointer on the frame: it called
+    `preventDefault()` on pointerdown, which cancels the mouse events a click
+    is made of, and redrew on pointerup, which replaced the very block the
+    press landed on. A synthetic `click` never met either.
+
+    So this one presses with the browser's own mouse. The rule the kit keeps is
+    that a press which does not move belongs to whatever was pressed, and a
+    press that travels belongs to the axis."""
+    page.evaluate("(envelope) => { window.__statesEnvelope = envelope; }", STATES)
+    page.evaluate(STATE_FACTS, [{"openable": True}])
+    page.evaluate(
+        """() => {
+             window.__opened = [];
+             document.getElementById('fs-chart-probe').addEventListener(
+               'fs-states-open', (e) => window.__opened.push(e.detail.state));
+           }""")
+    box = page.evaluate(
+        """() => {
+             const r = document.querySelector('#fs-chart-probe rect[data-state="down"]');
+             const b = r.getBoundingClientRect();
+             return {x: b.left + b.width / 2, y: b.top + b.height / 2,
+                     left: b.left, width: b.width};
+           }""")
+    page.mouse.move(box["x"], box["y"])
+    page.mouse.down()
+    page.mouse.up()
+    page.wait_for_function("() => window.__opened.length === 1", timeout=5000)
+    assert page.evaluate("() => window.__opened") == ["down"]
+    # The axis is untouched: pointing at a block says nothing about the window.
+    assert page.evaluate(
+        "() => document.querySelectorAll('#fs-chart-probe [data-brush-from]').length") == 0
+
+    # And a drag that starts on the same block still narrows the axis, which is
+    # the behaviour the brush exists for. It opens nothing.
+    page.mouse.move(box["left"] + 2, box["y"])
+    page.mouse.down()
+    page.mouse.move(box["left"] + 2 + max(box["width"], 40), box["y"], steps=6)
+    page.mouse.up()
+    page.wait_for_function(
+        "() => document.querySelectorAll('#fs-chart-probe [data-brush-from]').length === 1",
+        timeout=5000)
+    assert page.evaluate("() => window.__opened") == ["down"], (
+        "a drag across the plot opened a block as well as brushing the axis")
+
+
 # ----------------------------------------- and a screen draws through the kit
 
 def test_the_analysis_screen_draws_its_pareto_through_the_kit(page):

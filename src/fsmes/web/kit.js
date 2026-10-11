@@ -929,7 +929,23 @@
     node.addEventListener("pointerdown", (event) => {
       const start = atPointer(node, event);
       if (start.x < x || start.x > x + w || start.y < y || start.y > y + h) return;
-      event.preventDefault();
+      /* A press that landed on a mark the screen made openable may be a
+         reader pointing at it rather than the start of a drag, and on the
+         state timeline the plot is nothing BUT such marks. Two things here
+         would otherwise swallow the click before it is dispatched:
+         `preventDefault()` on pointerdown, which cancels the compatibility
+         mouse events a click is made of, and the redraw below, which replaces
+         the very node the press landed on. So a press on a mark is left alone
+         until the pointer comes up: if it moved, it was a drag and the brush
+         takes it; if it did not, nothing here happens and the mark's own
+         click runs. Found 2026-10-11 by a browser test that pressed a block
+         with a real mouse - every synthetic `dispatchEvent` in the suite had
+         passed. */
+      const mark = event.target instanceof Element
+        && event.target !== surface
+        && event.target.getAttribute("role") === "button"
+        ? event.target : null;
+      if (!mark) event.preventDefault();
       from = start.x;
       span = add(g, "rect", { x: from, y, width: 1, height: h, class: "chart-brush-span" });
       const move = (e) => {
@@ -944,7 +960,15 @@
         const now = atPointer(node, e).x;
         /* A drag narrows; a click gives the whole window back. Four pixels is
            the difference between the two, and it is a click otherwise. */
-        if (Math.abs(now - from) < 4) view.brush = null;
+        const dragged = Math.abs(now - from) >= 4;
+        if (mark && !dragged) {
+          /* The reader pointed at the mark. The axis is theirs and stays as
+             they left it; Escape on the surface is how the whole window comes
+             back. */
+          span.remove();
+          return;
+        }
+        if (!dragged) view.brush = null;
         else view.brush = [toDomain(Math.min(from, now)), toDomain(Math.max(from, now))];
         redraw();
       };
