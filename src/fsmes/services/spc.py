@@ -33,6 +33,22 @@ was always here, because sigma is estimated from it; since 2026-10-06 the
 series it is the mean of is on the chart too, with its own centre line, its
 own upper limit (`D4_N2` times the mean moving range) and a rule of its own.
 
+**Some characteristics are counted, not measured.** Nobody gauges whether a
+cap is on straight; somebody looks at a lot of bottles and says how many were
+sent back. There is no reading to plot, so there is no individuals chart and
+no X-bar: the point is a *share* - how many of how many - and its control
+limits move with the size of each lot, because a share out of two hundred is
+a steadier number than a share out of twenty. That chart is a **p chart**, the
+third word `kind` can carry, and a characteristic gets it because its
+specification says `counted`, never because this module guessed. Decision
+record 0041, amending 0040.
+
+Only rule 1 runs on a p chart, and the chart says so. Rules 2 to 4 are zone
+rules: they count points in bands measured in sigmas from the centre, and a p
+chart has a different sigma at every point. A rule set that silently meant one
+thing on a day of even lot sizes and another on a day of uneven ones is worse
+than a rule set that is one rule long.
+
 **A range beyond its upper limit is rule 5, on either chart.** The moving
 range between two readings here, the spread inside one sample on a sampled
 chart - one statement about a process, so one rule number for it, drawn and
@@ -59,6 +75,7 @@ from fsmes.domain import (
     NcStatus,
     NonConformance,
     QualityCheck,
+    QualityCount,
     QualitySample,
     QualitySpec,
     SpcSignal,
@@ -112,6 +129,11 @@ MAX_SAMPLE_SIZE = max(SUBGROUP)
 #: chart type from which keys happen to be present.
 INDIVIDUALS = "imr"
 XBAR_R = "xbar_r"
+#: The third word: a characteristic the plant counts rather than measures.
+#: The points are shares - rejected out of inspected, one point per
+#: inspection stretch - and each has control limits of its own, because the
+#: limits depend on how many units that stretch covered. Decision 0041.
+PROPORTION = "p"
 
 # The moving-range chart's own limits come from the table above, at n = 2,
 # because a moving range *is* a subgroup of two: the upper limit is `D4·R̄`
@@ -216,6 +238,26 @@ def plan_size(spec: QualitySpec) -> int:
     """
     size = spec.sample_size or 1
     return size if size in SUBGROUP else 1
+
+
+def chart_kind(spec: QualitySpec) -> str:
+    """Which chart this characteristic gets, in one word.
+
+    The only place the question is answered. `counted` wins, because a
+    counted characteristic has no readings at all and there is nothing for
+    the other two charts to plot; the write path refuses a specification that
+    is both counted and sampled, so the two cannot really disagree here, and
+    if a hand-edited row ever did, charting the thing that exists beats
+    charting the thing that does not.
+
+    Everything that has to behave differently per chart - this module, the
+    SPC page, the chart kit, the agent's reader, the simulator's score -
+    reads this word, and a reader that does not know a word must say so
+    rather than draw a share as if it were a millimetre.
+    """
+    if spec.counted:
+        return PROPORTION
+    return XBAR_R if plan_size(spec) > 1 else INDIVIDUALS
 
 
 @dataclass
@@ -702,17 +744,520 @@ RECORDS_NOT_A_RATE = (
 )
 
 
+# ------------------------------------------------- the chart for counted work
+
+#: The one rule a p chart runs, and the reason it is one.
+#:
+#: Rule 1 - a point beyond three sigma - is a statement about a single point
+#: against that point's own limits, and that is true whatever the limits are.
+#: Rules 2 to 4 are zone rules: they count how many of the last three, five
+#: or eight points sat beyond one or two sigma, which only means something
+#: when the bands are the same bands each time. On a p chart they are not: a
+#: lot of two hundred has a tighter sigma than a lot of twenty, so "two of
+#: three beyond two sigma" would be a different test on a day of even lot
+#: sizes than on a day of uneven ones, and a plant could not tell from the
+#: chart which test it had been given. One rule that means one thing beats
+#: four rules that mean whatever the shift happened to produce.
+#:
+#: Rule 5 has nothing to judge here either: there is no range beside a share.
+#: The chart says all of this in its footer rather than leaving a reader to
+#: notice that three numbers they are used to seeing are missing. Decision
+#: 0041, which amends 0036 only in this: the chart still draws every rule it
+#: runs, and now it also names the rules it does not run and why.
+P_RULES = (1,)
+
+#: Why rules 2 to 5 are not run, in the words the footer prints.
+P_RULES_NOT_RUN = (
+    "rules 2, 3 and 4 count points inside sigma bands, and on this chart "
+    "sigma changes with the size of each lot - the same test would mean "
+    "different things on different days, so they are not run; rule 5 judges a "
+    "range, and a share has none"
+)
+
+#: Why there is no Cpk on a counted characteristic. Said in words, every
+#: time, rather than printed as a dash: Cp and Cpk compare a spread measured
+#: in the characteristic's own unit against a tolerance in the same unit, and
+#: a share of units sent back has neither a unit nor a tolerance. A plant
+#: that wants to know whether the share is good enough is asking a different
+#: question - one about its own target - and this product will not answer it
+#: with an arithmetic that looks like the measured one.
+NO_CAPABILITY_FOR_A_COUNT = (
+    "there is no Cp or Cpk here: capability compares the spread of a "
+    "measurement against the tolerance it was given, and a share of units "
+    "sent back is neither a measurement nor inside a tolerance"
+)
+
+#: What a lot is, on a plant that does not ship lots yet. The screen says
+#: this rather than showing an empty link where a lot number would be: the
+#: stretch is real, it has a name the plant gave it, and it is simply not a
+#: shipped lot. House rule - unknown is not zero, and here it is not even
+#: unknown, it is a different thing.
+A_LOT_IS_A_STRETCH = (
+    "a lot here is one inspection stretch on one order until this plant "
+    "ships lots"
+)
+
+
+@dataclass
+class CountSeries:
+    """What a p chart plots: one share per inspection stretch.
+
+    Deliberately not `Series`. A `Series` carries `values` and `checks` -
+    readings and the rows they were stored in - and every function that takes
+    one is written for a chart whose sigma is the same at every point. A p
+    chart has neither: its point is two whole numbers, and its limits are
+    computed again at each point. Threading a third mode through `Series`
+    would have left `_limits`, `_western_electric` and `_moving_range`
+    quietly doing arithmetic on a share that looks right and is not.
+    """
+
+    kind: str
+    #: The share at each point - rejected over inspected, in order.
+    values: list[float]
+    #: How many were looked at, and how many were sent back, per point.
+    ns: list[int]
+    ks: list[int]
+    stamps: list[datetime]
+    #: The `quality_counts` id of each point. This is what a signal names and
+    #: what the dossier read takes.
+    keys: list[int]
+    counts: list[QualityCount]
+
+    @property
+    def inspected(self) -> int:
+        return sum(self.ns)
+
+    @property
+    def rejected(self) -> int:
+        return sum(self.ks)
+
+
+def _count_series(session: Session, spec: QualitySpec,
+                  limit: int | None = None) -> CountSeries:
+    """This characteristic's recent inspection counts, as the chart plots them.
+
+    A count of nothing - a stretch where nobody was looked at - is left out
+    and not plotted as a share of zero out of zero: there is no share, and
+    drawing one at the centre line would put a dot on the chart for a lot
+    that was never inspected.
+    """
+    limit = history(session) if limit is None else limit
+    rows = list(session.scalars(
+        select(QualityCount).where(QualityCount.spec_id == spec.id)
+        .order_by(QualityCount.id.desc()).limit(limit)))
+    rows.reverse()
+    series = CountSeries(kind=PROPORTION, values=[], ns=[], ks=[], stamps=[],
+                         keys=[], counts=[])
+    for row in rows:
+        if not row.inspected:
+            continue
+        series.values.append(row.rejected / row.inspected)
+        series.ns.append(row.inspected)
+        series.ks.append(row.rejected)
+        series.stamps.append(row.ts)
+        series.keys.append(row.id)
+        series.counts.append(row)
+    return series
+
+
+def _p_limits(series: CountSeries) -> dict | None:
+    """The centre line, and one pair of limits per point.
+
+    The centre is the **pooled** share: every rejected unit over every unit
+    looked at. Not the mean of the shares - that would weigh a lot of twenty
+    as heavily as a lot of two thousand, and the centre line of a p chart is
+    meant to be this process's actual reject rate.
+
+    Sigma at a point is `sqrt(p-bar * (1 - p-bar) / n)` for that point's own
+    n, so a small lot gets wide limits and a large one narrow ones. That is
+    the whole reason this chart exists in its own shape: one straight pair of
+    lines across a chart of uneven lots would flag the small lots and excuse
+    the big ones.
+
+    A limit outside `[0, 1]` is clamped, because a share cannot be negative
+    and cannot exceed one. Each point says whether its lower limit was
+    clamped, because a lower limit sitting at nought is not a limit a lot can
+    get below - no lot can be better than perfect - and a reader is owed that
+    rather than a line they might read as achievable.
+
+    None when there is nothing to judge: a centre of nought (nothing was ever
+    sent back) or of one (everything was) has no sigma to speak of, and a
+    chart of it would claim every lot was exactly on target.
+    """
+    if not series.values or not series.inspected:
+        return None
+    centre = series.rejected / series.inspected
+    if centre <= 0 or centre >= 1:
+        return None
+    spread = math.sqrt(centre * (1 - centre))
+    points: list[dict] = []
+    clamped = 0
+    for n in series.ns:
+        sigma = spread / math.sqrt(n)
+        upper = min(1.0, centre + 3 * sigma)
+        lower = centre - 3 * sigma
+        at_zero = lower <= 0
+        if at_zero:
+            clamped += 1
+        points.append({
+            "n": n,
+            "sigma": round(sigma, 6),
+            "upper": round(upper, 6),
+            "lower": round(max(0.0, lower), 6),
+            # True where three sigma below the centre line is below nought,
+            # so no lot however clean could fire rule 1 downward here.
+            "lower_at_zero": at_zero,
+        })
+    return {
+        "centre": round(centre, 6),
+        # One straight pair of limits does not exist on this chart, and
+        # nulls here are the honest answer rather than an average of the
+        # per-point ones. `limits` below is where the limits are.
+        "upper": None,
+        "lower": None,
+        "limits": points,
+        "limits_per_point": True,
+        "inspected": series.inspected,
+        "rejected": series.rejected,
+        "smallest_lot": min(series.ns),
+        "largest_lot": max(series.ns),
+        # How many points have no usable lower limit. Stated, not left to be
+        # counted out of the list.
+        "lower_at_zero": clamped,
+    }
+
+
+def _p_rule_one(series: CountSeries, control: dict) -> list[dict]:
+    """Each point beyond its own three-sigma limits. Rule 1, and only rule 1.
+
+    Judged against the limits of that point, which is the only honest way to
+    judge a chart whose limits move: a lot of twenty bottles with three sent
+    back is unremarkable, and a lot of two thousand with the same share is
+    not, and one straight line across both would have called them the same.
+    """
+    out: list[dict] = []
+    for i, share in enumerate(series.values):
+        band = control["limits"][i]
+        if share > band["upper"]:
+            out.append({"rule": 1, "index": i, "value": round(share, 6),
+                        "what": "a lot beyond its own upper limit"})
+        elif not band["lower_at_zero"] and share < band["lower"]:
+            # Below the lower limit is a signal too, and it is not good news
+            # dressed up: either something changed for the better and the
+            # chart should be recentred, or the inspection missed things.
+            out.append({"rule": 1, "index": i, "value": round(share, 6),
+                        "what": "a lot below its own lower limit"})
+    return out
+
+
+def _count_key(first_id: int, last_id: int) -> str:
+    """The window key for a firing on a count.
+
+    `c` in front, for the same reason a sampled chart's keys carry an `s`:
+    count ids and check ids are different numbers out of different tables,
+    and a key that could not tell them apart would swallow a new finding as a
+    duplicate of an old one that happened to share a number.
+    """
+    return f"c{first_id}-{last_id}"
+
+
+def _count_point(series: CountSeries, control: dict | None, i: int) -> dict:
+    """One dot on a p chart: the two numbers, the share, its own limits, the
+    lot it was taken on and what was wrong with it."""
+    row = series.counts[i]
+    band = (control or {}).get("limits", [])
+    band = band[i] if i < len(band) else {}
+    return {
+        # The two numbers first, because they are the record and the share is
+        # arithmetic on them.
+        "n": series.ns[i],
+        "k": series.ks[i],
+        "p": round(series.values[i], 6),
+        "ts": series.stamps[i],
+        "count": series.keys[i],
+        "lot_ref": row.lot_ref,
+        "lot_id": row.lot_id,
+        # The stretch of production this lot is, when the count recorded one.
+        # `ts` above is when the count was written down and is what the chart
+        # is drawn along, the same as on the other two kinds; these two are
+        # the minutes the count is *about*, which is what a reader asking
+        # "which half hour?" needs.
+        "started_at": row.started_at,
+        "ended_at": row.ended_at,
+        # This point's own limits, so a reader - or a drawn chart - never has
+        # to go and find which of the limits in `control` belongs to it.
+        "upper": band.get("upper"),
+        "lower": band.get("lower"),
+        "sigma": band.get("sigma"),
+        "lower_at_zero": band.get("lower_at_zero"),
+        # The breakdown, straight off the record. Null is *not broken down*
+        # and an empty list is *nothing recorded against the rejects*; the
+        # screen says which rather than drawing a clean lot.
+        "defects": row.defects,
+    }
+
+
+def _p_verdict(stable: bool | None, control: dict | None, signals: list[dict],
+               n: int) -> str:
+    """The p chart's sentence. It answers one question - is the share
+    behaving like itself - and says in the same breath that the other
+    question, capability, is not asked here."""
+    if n == 0:
+        return "no counts yet; the first inspected lot makes the first point"
+    if control is None:
+        return ("nothing to judge against yet - every lot in this window came "
+                "back with the same share, so there is no variation for "
+                "limits to be computed from")
+    if not stable:
+        return (f"out of control - rule 1 fired on {len(signals)} of {n} lots, "
+                f"each judged against its own limits. "
+                f"{_one_sentence(NO_CAPABILITY_FOR_A_COUNT)}.")
+    return (f"in control - all {n} lots sit inside their own limits around a "
+            f"reject share of {_pct(control['centre'])}. "
+            f"{_one_sentence(NO_CAPABILITY_FOR_A_COUNT)}.")
+
+
+def _one_sentence(words: str) -> str:
+    """A note written for the middle of a sentence, used at the start of one.
+
+    `str.capitalize` would lower-case the rest of it, which turned *Cp* and
+    *Cpk* into *cp* and *cpk* in the verdict under the chart.
+    """
+    return words[:1].upper() + words[1:]
+
+
+def _pct(share: float) -> str:
+    """A share as a percentage, for a sentence a person reads. Two decimals,
+    because a reject rate of 0.3% and one of 0.25% are different news."""
+    return f"{share * 100:.2f}%"
+
+
+def _p_chart(session: Session, spec: QualitySpec, material: str,
+             characteristic: str, limit: int | None) -> dict:
+    """The chart for a characteristic the plant counts.
+
+    Same envelope as the other two where the question is the same - `kind`,
+    `n`, `points`, `control`, `signals`, `stable`, `verdict`, the plant's
+    numbers - and openly different where the question is different: the
+    limits are per point, there is no capability and the footer says why, and
+    `rules` is one rule long with `rules_not_run` beside it.
+    """
+    fewest = min_points(session)
+    series = _count_series(session, spec, limit)
+    n = len(series.values)
+    base = {
+        "material": material,
+        "characteristic": characteristic,
+        # A share has no unit of measure. Empty rather than "%" because the
+        # numbers in `points` are shares, not percentages, and labelling them
+        # with a percent sign is how a chart comes to be drawn a hundred
+        # times too high.
+        "unit": "",
+        # A counted characteristic has no measured limits to be inside.
+        "lower_spec": None,
+        "upper_spec": None,
+        "kind": PROPORTION,
+        # No fixed sampling plan: the size is whatever each stretch covered,
+        # and that is the point of the chart. Stated as null rather than left
+        # out, so a reader that checks `sample_size` finds an answer.
+        "sample_size": None,
+        "n": n,
+        # Every list states its total: how many lots are drawn, how many
+        # units were looked at across them, and how many were sent back.
+        "inspected": series.inspected,
+        "rejected": series.rejected,
+        "points": [],
+        "rules": list(P_RULES),
+        "rules_not_run": [r for r in sorted(RULE_WINDOW) if r not in P_RULES],
+        "rules_not_run_note": P_RULES_NOT_RUN,
+        "hold_rules": [r for r in hold_rules(session) if r in P_RULES],
+        "major_rules": [r for r in major_rules(session) if r in P_RULES],
+        "capability": None,
+        "capability_note": NO_CAPABILITY_FOR_A_COUNT,
+        "lot_note": A_LOT_IS_A_STRETCH,
+        "coverage": "absent",
+        "coverage_note": RECORDS_NOT_A_RATE,
+        "min_points": fewest,
+        "history": n,
+    }
+    if n < fewest:
+        note = (f"{n} inspected lot(s); control limits need at least {fewest} "
+                f"to mean anything")
+        return {**base, "control": None, "signals": [], "stable": None,
+                "points": [_count_point(series, None, i) for i in range(n)],
+                "note": note,
+                "verdict": note if n else _p_verdict(None, None, [], 0)}
+
+    control = _p_limits(series)
+    if control is None:
+        return {**base, "control": None, "signals": [], "stable": None,
+                "points": [_count_point(series, None, i) for i in range(n)],
+                "verdict": _p_verdict(None, None, [], n)}
+
+    found = _p_rule_one(series, control)
+    signals = _count_acted_on(session, spec, found, series.keys)
+    stable = not signals
+    return {
+        **base,
+        "points": [_count_point(series, control, i) for i in range(n)],
+        "control": control,
+        "signals": signals,
+        "stable": stable,
+        "verdict": _p_verdict(stable, control, signals, n),
+    }
+
+
+def _count_acted_on(session: Session, spec: QualitySpec, signals: list[dict],
+                    ids: list[int]) -> list[dict]:
+    """Each firing on a count, with the hold it raised when it raised one.
+
+    `_acted_on`'s answer for this chart, and its own function for the same
+    reason `_mr_acted_on` is: the key is spelled differently (see
+    `_count_key`) and the point is a count rather than a check. One function
+    with two flags through it is how the keys would come to be confused.
+    """
+    if not signals:
+        return []
+    holds_on = hold_rules(session)
+    keys = {_count_key(ids[s["index"]], ids[s["index"]]) for s in signals}
+    holds: dict[str, str | None] = {}
+    for row in session.scalars(select(SpcSignal).where(
+            SpcSignal.spec_id == spec.id, SpcSignal.window_key.in_(keys))).all():
+        nc = session.get(NonConformance, row.nonconformance_id) if row.nonconformance_id else None
+        holds[row.window_key] = nc.code if nc else None
+    out = []
+    for signal in signals:
+        key = _count_key(ids[signal["index"]], ids[signal["index"]])
+        out.append({**signal,
+                    # The lot this fired on, by id, so the panel behind the
+                    # dot opens without counting dots.
+                    "count": ids[signal["index"]],
+                    "nonconformance": holds.get(key),
+                    "held": _holds(signal["rule"], holds_on)})
+    return out
+
+
+def _evaluate_counts(session: Session, spec: QualitySpec, *,
+                     since_count: int | None, limit: int | None,
+                     actor: str) -> list[dict]:
+    """Run rule 1 over this characteristic's counts and act on what fires.
+
+    `evaluate`'s job for a p chart. The same three guarantees: a rule acts
+    only on a lot just written (`since_count`), a window already recorded
+    raises nothing a second time, and the signal row is written whatever the
+    plant holds on - decision 0036.
+    """
+    from fsmes.services import quality
+
+    series = _count_series(session, spec, limit)
+    if len(series.values) < min_points(session):
+        return []
+    control = _p_limits(series)
+    if control is None:
+        return []
+    signals = _p_rule_one(series, control)
+    if since_count is not None:
+        signals = [s for s in signals if series.keys[s["index"]] >= since_count]
+    if not signals:
+        return []
+
+    material = spec.material.code
+    n = len(series.values)
+    keys = {_count_key(series.keys[s["index"]], series.keys[s["index"]])
+            for s in signals}
+    already = {
+        (row.rule, row.window_key) for row in session.scalars(
+            select(SpcSignal).where(SpcSignal.spec_id == spec.id,
+                                    SpcSignal.window_key.in_(keys)))
+    }
+    majors = major_rules(session)
+    holds_on = hold_rules(session)
+    raised: list[dict] = []
+    for signal in sorted(signals, key=lambda s: series.keys[s["index"]]):
+        index = signal["index"]
+        row_count = series.counts[index]
+        key = _count_key(series.keys[index], series.keys[index])
+        if (signal["rule"], key) in already:
+            continue
+        already.add((signal["rule"], key))
+        band = control["limits"][index]
+        window = {
+            "centre": control["centre"], "sigma": band["sigma"],
+            "upper": band["upper"], "lower": band["lower"],
+            "n": n, "lot": row_count.lot_ref,
+            "inspected": row_count.inspected, "rejected": row_count.rejected,
+            "defects": row_count.defects,
+        }
+        row = SpcSignal(
+            spec_id=spec.id, rule=signal["rule"], window_key=key,
+            count_id=row_count.id, value=signal["value"], what=signal["what"],
+            window=window)
+        session.add(row)
+        station = (session.scalar(select(Equipment.code)
+                                  .where(Equipment.id == row_count.equipment_id))
+                   if row_count.equipment_id else None)
+        order = (session.scalar(select(WorkOrder.code)
+                                .where(WorkOrder.id == row_count.work_order_id))
+                 if row_count.work_order_id else None)
+        if not _holds(signal["rule"], holds_on):
+            session.flush()
+            raised.append({"rule": signal["rule"], "what": signal["what"],
+                           "value": signal["value"], "material": material,
+                           "characteristic": spec.characteristic,
+                           "nonconformance": None, "held": False,
+                           "equipment": station, "lot": row_count.lot_ref,
+                           "window_key": key})
+            continue
+        nc = _hold_for(session, spec)
+        if nc is None:
+            nc = quality.open_nc(
+                session,
+                description=(
+                    f"SPC rule {signal['rule']} on {material}/"
+                    f"{spec.characteristic}: {signal['what']} - lot "
+                    f"{row_count.lot_ref}, {row_count.rejected} sent back of "
+                    f"{row_count.inspected} looked at "
+                    f"({_pct(signal['value'])}), against this lot's limits "
+                    f"[{_pct(band['lower'])}, {_pct(band['upper'])}] around "
+                    f"{_pct(control['centre'])} from {n} lots"),
+                severity=MAJOR if signal["rule"] in majors else MINOR,
+                work_order_code=order,
+                actor=actor,
+                evidence={"source": "spc", "rule": signal["rule"],
+                          "what": signal["what"], "material": material,
+                          "characteristic": spec.characteristic,
+                          "kind": PROPORTION, "value": signal["value"],
+                          "equipment": station, "lot": row_count.lot_ref,
+                          "count": row_count.id, "window": window},
+            )
+        session.flush()
+        row.nonconformance_id = nc.id
+        raised.append({"rule": signal["rule"], "what": signal["what"],
+                       "value": signal["value"], "material": material,
+                       "characteristic": spec.characteristic,
+                       "nonconformance": nc.code, "held": True,
+                       "equipment": station, "lot": row_count.lot_ref,
+                       "window_key": key})
+    return raised
+
+
 def chart(session: Session, material: str, characteristic: str,
           limit: int | None = None) -> dict:
     """A control chart with limits, capability, and what fired.
 
-    Individuals and moving range, or X-bar and R - whichever this
-    characteristic's sampling plan asks for. `kind` says which, in a word, so
+    Individuals and moving range, X-bar and R, or a p chart of shares -
+    whichever this characteristic asks for. `kind` says which, in a word, so
     nothing downstream has to infer it from which keys are present.
     """
     fewest = min_points(session)
     capable, marginal = cpk_bars(session)
     spec = _spec(session, material, characteristic)
+    if chart_kind(spec) == PROPORTION:
+        # A counted characteristic has no readings at all, so none of the
+        # arithmetic below applies to it: its own function, start to finish,
+        # rather than a third branch through limits written for a chart whose
+        # sigma does not move. Decision 0041.
+        return _p_chart(session, spec, material, characteristic, limit)
     series = _series(session, spec, limit)
     values = series.values
 
@@ -1218,8 +1763,8 @@ def _description(material: str, spec: QualitySpec, signal: dict, control: dict,
 
 
 def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None,
-             since_sample: int | None = None, limit: int | None = None,
-             actor: str = "spc") -> list[dict]:
+             since_sample: int | None = None, since_count: int | None = None,
+             limit: int | None = None, actor: str = "spc") -> list[dict]:
     """Run the rules over this characteristic's history and act on what fires.
 
     Called from the write path, so a rule that trips is acted on whether or
@@ -1229,15 +1774,17 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
     act, or a trigger the plant configured on `spc.signal`.
 
     `since_id` is the first of the readings just written, `since_sample` the
-    sample just recorded. A rule only acts on a window that ends on one of
-    them. Without that, one wild reading moves the centre line and every
-    settled reading behind it is suddenly eight in a row on one side of it -
-    two dozen signals about a fortnight nobody was worried about until a
-    moment ago. A rule fires *on a point*, and the point has to be new.
+    sample just recorded, `since_count` the inspected lot just counted. A rule
+    only acts on a window that ends on one of them. Without that, one wild
+    reading moves the centre line and every settled reading behind it is
+    suddenly eight in a row on one side of it - two dozen signals about a
+    fortnight nobody was worried about until a moment ago. A rule fires *on a
+    point*, and the point has to be new.
 
     On a sampled characteristic this runs **once per sample**, on the means,
     and at most one hold comes out of it: five readings posted together are
-    one observation of the process, not five.
+    one observation of the process, not five. On a counted one it runs once
+    per inspected lot, and only rule 1 runs at all - see `P_RULES`.
 
     Returns one entry per signal it raised, newest last. A signal whose
     window was already recorded returns nothing: the same points are the
@@ -1257,6 +1804,13 @@ def evaluate(session: Session, spec: QualitySpec, *, since_id: int | None = None
     and its history stays as it was judged at the time.
     """
     from fsmes.services import quality
+
+    if chart_kind(spec) == PROPORTION:
+        # Counted work goes to its own path: one rule, judged against each
+        # lot's own limits, recorded against the lot. `since_count` is the
+        # lot just written, and is the same gate the other two kinds have.
+        return _evaluate_counts(session, spec, since_count=since_count,
+                                limit=limit, actor=actor)
 
     series = _series(session, spec, limit)
     if len(series.values) < min_points(session):

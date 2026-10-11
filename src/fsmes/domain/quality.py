@@ -32,6 +32,15 @@ class QualitySpec(Base):
     #: readings are a *subgroup*: the chart's points are the sample means,
     #: and the rules run on those. See decision 0040.
     sample_size: Mapped[int | None]
+    #: Whether this characteristic is *counted* rather than measured. Null or
+    #: false is measured, which is every specification written before this
+    #: column existed: a gauge gives a number, and the chart is individuals or
+    #: X-bar and R by the sampling plan above. True is an inspector looking at
+    #: a lot and counting - how many were looked at, how many were sent back -
+    #: and the chart is a p chart. The two are exclusive, and the write path
+    #: says so: a count has no value to measure and a measurement has no
+    #: denominator. Decision 0041, amending 0040.
+    counted: Mapped[bool | None]
 
     material: Mapped[Material] = relationship()
 
@@ -105,6 +114,69 @@ class QualityCheck(ShiftStamped, Base):
 
     spec: Mapped[QualitySpec] = relationship()
     sample: Mapped[QualitySample | None] = relationship()
+
+
+class QualityCount(ShiftStamped, Base):
+    """One inspection count: how many were looked at, how many were sent back.
+
+    This is the record for a characteristic the plant *counts* rather than
+    measures. An inspector - or a camera station - watches a stretch of one
+    order, and what comes out of it is two whole numbers and a list of what
+    was wrong. There is no measured value anywhere in it, which is why it
+    cannot live in `quality_checks`: a check is one float against one
+    specification, and writing a row per unit inspected to make a count out
+    of it was refused in decision 0027 and is still refused here. Ten
+    thousand bottles looked at is one row.
+
+    `lot_ref` is what the plant calls the stretch, as text, because that is
+    what the plant has. `lot_id` points at a real material lot when this
+    plant tracks them and this count was taken on one; null is *this plant
+    does not ship lots yet*, not "no lot", and the screen says so in words
+    rather than showing an empty link.
+
+    `defects` is the breakdown - `[{"code": "low_fill", "count": 3}, ...]` -
+    and it is the whole of the answer to "which ones". It is a list and not
+    a set of columns because the codes are the plant's, not the product's,
+    and a new code must not need a migration. The counts in it are of
+    *defects*, which can exceed `rejected`: one bottle sent back can be
+    short-filled and badly capped at once. Nothing here assumes otherwise.
+    """
+
+    __tablename__ = "quality_counts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    spec_id: Mapped[int] = mapped_column(ForeignKey("quality_specs.id"), index=True)
+    work_order_id: Mapped[int | None] = mapped_column(ForeignKey("work_orders.id"), index=True)
+    # The station that did the counting, when a station did. Null is *not
+    # recorded*, exactly as on a check: a person with a clipboard does not
+    # name a machine, and naming one from the route would name a machine
+    # nobody stood at.
+    equipment_id: Mapped[int | None] = mapped_column(ForeignKey("equipment.id"), index=True)
+    # The stretch of production this count covers. Both are recorded because
+    # a count without its window cannot be put beside the line's own output:
+    # "50 of 1200" means nothing until you know which twenty minutes.
+    started_at: Mapped[datetime | None]
+    ended_at: Mapped[datetime | None]
+    #: How many units were looked at. The denominator of the chart's point.
+    inspected: Mapped[int]
+    #: How many of them were sent back. Never greater than `inspected`; the
+    #: write path refuses it rather than drawing a rate above one.
+    rejected: Mapped[int]
+    #: What the plant calls the lot or stretch this count was taken on, in
+    #: the plant's own text. Required: a count nobody can tie back to a
+    #: batch of product is a number without a subject.
+    lot_ref: Mapped[str] = mapped_column(String(60), index=True)
+    #: The material lot, when this plant tracks lots and this is one of them.
+    lot_id: Mapped[int | None] = mapped_column(ForeignKey("material_lots.id"), index=True)
+    checked_by: Mapped[str | None] = mapped_column(String(40))
+    #: `[{"code": ..., "count": ...}]`, the breakdown by defect. Null is *not
+    #: recorded* and an empty list is *nothing found* - the screen says which,
+    #: because a chart that showed "no defects" for a count nobody broke down
+    #: would be inventing a clean lot.
+    defects: Mapped[list | None] = mapped_column(JSON)
+    ts: Mapped[datetime] = mapped_column(default=utcnow)
+
+    spec: Mapped[QualitySpec] = relationship()
 
 
 class NcStatus(enum.StrEnum):
@@ -214,6 +286,11 @@ class SpcSignal(Base):
     window_key: Mapped[str] = mapped_column(String(60))
     # The reading the rule fired on, and the station that took it when one did.
     check_id: Mapped[int | None] = mapped_column(ForeignKey("quality_checks.id"))
+    # The inspection count the rule fired on, when the characteristic is
+    # counted rather than measured. Exactly one of these two is set, and
+    # `window_key` carries a prefix per kind so a count's ids and a check's
+    # ids can never be read as the same window.
+    count_id: Mapped[int | None] = mapped_column(ForeignKey("quality_counts.id"))
     value: Mapped[float]
     what: Mapped[str] = mapped_column(String(120))
     # The chart as it stood when the rule fired: centre, sigma, the limits and

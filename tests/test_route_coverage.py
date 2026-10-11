@@ -42,6 +42,11 @@ EXCLUDED = {
         "the sample panel and its form are the follow-up (spc-xbar-chart-and-panel); "
         "the simulated floor and the agent's record_sample tool are what post one "
         "today",
+    "POST /quality/counts":
+        "a count is written where it is taken - at the inspection station, by the "
+        "line's own system - not typed into the SPC page, which reads counts and "
+        "does not make them; the simulated floor's QI01 and the agent's "
+        "record_count tool are what post one today (decision 0041)",
     # the plant's non-conformance severities: the same two, for the same two
     # reasons. That the excuses read identically is the point - the second
     # vocabulary joined the panel without the panel being touched.

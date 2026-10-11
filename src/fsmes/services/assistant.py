@@ -2404,6 +2404,12 @@ WITHOUT_A_WALK: dict[str, str] = {
         "point, are the follow-up (spc-xbar-chart-and-panel). What posts a "
         "sample today is the simulated floor, over HTTP."
     ),
+    "record_count": (
+        "no control on any screen, and deliberately: a count is written where "
+        "it is taken - at the inspection station, by the line's own system - "
+        "and /dashboard/spc reads counts rather than making them. What posts "
+        "one today is the simulated floor's QI01, over HTTP (decision 0041)."
+    ),
     "dispatch_maintenance": (
         "the *Hand out what the rules cover* button in *Waiting, and why* on "
         "/dashboard/maintenance (maintenance-dispatch). The plant's own tick "

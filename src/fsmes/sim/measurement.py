@@ -186,6 +186,170 @@ def plans(script: dict) -> dict[str, Plan]:
     return out
 
 
+@dataclass(frozen=True)
+class Inspection:
+    """How a simulated floor counts one stretch of production.
+
+    The other half of a quality history, and the half this product could not
+    write down until there was a table for it. Fill height is *measured*: a
+    gauge, a number, a spread. Whether a bottle goes in the pallet or in the
+    bin is *counted*: somebody looks at every bottle that reaches the
+    inspection station and sends some of them back, and what the record holds
+    is two whole numbers - how many were looked at, how many went back - and
+    which defects they were sorted into.
+
+    Nothing here invents the two numbers. They come off the station's own
+    counters on the MES, which is what makes this a floor and not a story:
+    the units are the ones the line actually made in the stretch and the
+    rejects are the ones it actually scrapped. What the script does decide is
+    the part no counter publishes - **which defect each reject was sorted
+    into** - because that is an inspector putting bottles into bins and no
+    PLC on earth reports it.
+
+    The weights are therefore the only fiction, and they are the pack's. A
+    plant whose product runs cold sends back more bottles for low fill, and
+    a floor script that could not say so would have a p chart with no story
+    on it - which is the whole reason this exists.
+    """
+
+    characteristic: str
+    #: Line seconds between counts, divided by the replay speed by the caller
+    #: like every other cadence on a simulated floor.
+    every_line_s: float
+    #: The station that does the looking. Its own operation's counters are
+    #: the two numbers, and its code goes on the record so a reader can open
+    #: the machine the count was taken at.
+    equipment: str
+    #: What the plant calls one counted stretch, as a pattern: `{order}` is
+    #: the whole order code, `{tail}` its last segment, `{n}` the stretch's
+    #: number on this order. A naming convention is a plant boundary and
+    #: belongs in the pack, not in this module - and the record it produces
+    #: is honestly a reference this floor made up, which is what the screen
+    #: says about it until the plant ships lots of its own.
+    lot_ref_pattern: str = "{tail}-Q{n:02d}"
+    #: `(code, weight)` - the defects this plant sorts rejects into, and how
+    #: common each is when nothing is wrong. Relative, not percentages: a
+    #: weight of 5 against a weight of 1 is five times as likely, and a list
+    #: that happens to add to 100 is a coincidence and not a contract.
+    defects: tuple[tuple[str, float], ...] = ()
+    #: The planted cause: while this tag on this machine is below this value,
+    #: the weights in `when_below` replace the ones above. One tag, one
+    #: threshold, one set of replacements - a script that needed two causes
+    #: at once would be modelling a plant and not planting a story.
+    watch_equipment: str | None = None
+    watch_tag: str | None = None
+    watch_below: float | None = None
+    when_below: tuple[tuple[str, float], ...] = ()
+
+    def lot_ref(self, *, order: str, tail: str, n: int) -> str:
+        """What to write in `lot_ref` for this stretch.
+
+        A pattern the pack cannot get wrong by a typo: an unknown field falls
+        back to the default rather than raising in the middle of a shift, and
+        says so once by producing the reference the default would.
+        """
+        try:
+            return self.lot_ref_pattern.format(order=order, tail=tail, n=n)
+        except (KeyError, IndexError, ValueError):
+            return f"{tail}-Q{n:02d}"
+
+    @property
+    def watches(self) -> bool:
+        """Whether this inspection has a tag to look at before it sorts."""
+        return bool(self.watch_equipment and self.watch_tag
+                    and self.watch_below is not None)
+
+    def weights(self, *, below: bool) -> tuple[tuple[str, float], ...]:
+        """The defect weights to sort by, settled or with the cause running.
+
+        `when_below` is a patch, not a replacement: a script that said "low
+        fill is eighteen while the product is cold" should not have to repeat
+        the three defects it did not change, and a reader of the script should
+        not have to diff two lists to see which one moved.
+        """
+        if not below or not self.when_below:
+            return self.defects
+        patch = dict(self.when_below)
+        out = [(code, patch.pop(code, weight)) for code, weight in self.defects]
+        # A code the patch names and the settled list does not: a defect that
+        # only happens while the cause is running, which is a thing a plant
+        # genuinely has.
+        out.extend(patch.items())
+        return tuple(out)
+
+    def sort(self, rejected: int, *, rng: random.Random, below: bool) -> list[dict]:
+        """Put `rejected` units into defect bins, worst bin first.
+
+        One draw per unit, so the breakdown adds to exactly `rejected` - this
+        floor's inspector codes every bottle he sends back and codes it once.
+        The table can hold a breakdown that adds to more (a unit with two
+        defects) or to less (an inspector who coded some and not all), because
+        real ones do; this floor does not pretend to either, and the records
+        it writes say so by adding up.
+
+        `[]` for a stretch with nothing sent back, which is *nothing to sort*
+        and not *not broken down*. The empty list is the right record: the
+        screen says "nothing was coded against the 0 units sent back", which
+        is true.
+        """
+        weights = [(code, weight) for code, weight in self.weights(below=below)
+                   if weight > 0]
+        if rejected <= 0 or not weights:
+            return []
+        total = sum(weight for _code, weight in weights)
+        tally: dict[str, int] = {}
+        for _unit in range(rejected):
+            landed = rng.uniform(0.0, total)
+            picked = weights[-1][0]
+            for code, weight in weights:
+                landed -= weight
+                if landed <= 0:
+                    picked = code
+                    break
+            tally[picked] = tally.get(picked, 0) + 1
+        return [{"code": code, "count": count}
+                for code, count in sorted(tally.items(), key=lambda kv: (-kv[1], kv[0]))]
+
+
+def inspections(script: dict) -> dict[str, Inspection]:
+    """The inspection plans in one floor script, by characteristic.
+
+    A script with no `inspection` section has none, which is every pack
+    written before this existed and every plant that measures everything it
+    judges.
+    """
+    out: dict[str, Inspection] = {}
+    for characteristic, entry in (script.get("inspection") or {}).items():
+        if characteristic.startswith("_") or not isinstance(entry, dict):
+            continue
+        at = entry.get("at") or {}
+        if not at.get("equipment"):
+            continue
+        watch = entry.get("while_below") or {}
+        out[characteristic] = Inspection(
+            characteristic=characteristic,
+            every_line_s=float(entry.get("every_line_s") or 900.0),
+            equipment=str(at["equipment"]),
+            lot_ref_pattern=str(entry.get("lot_ref") or "{tail}-Q{n:02d}"),
+            defects=_weights(entry.get("defects")),
+            watch_equipment=(str(watch["equipment"]) if watch.get("equipment") else None),
+            watch_tag=(str(watch["tag"]) if watch.get("tag") else None),
+            watch_below=(None if watch.get("value") is None else float(watch["value"])),
+            when_below=_weights(watch.get("defects")),
+        )
+    return out
+
+
+def _weights(rows) -> tuple[tuple[str, float], ...]:
+    """`[{"code": …, "weight": …}]` as pairs, in the order the script wrote them."""
+    out: list[tuple[str, float]] = []
+    for row in rows or []:
+        if not isinstance(row, dict) or not row.get("code"):
+            continue
+        out.append((str(row["code"]), float(row.get("weight") or 0.0)))
+    return tuple(out)
+
+
 class Bench:
     """The gauges one simulated floor measures with, and how it picks one.
 

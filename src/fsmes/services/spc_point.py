@@ -74,6 +74,7 @@ from fsmes.domain import (
     Material,
     NonConformance,
     QualityCheck,
+    QualityCount,
     QualitySample,
     QualitySpec,
     Routing,
@@ -1032,5 +1033,262 @@ def sample_dossier(session: Session, material: str, characteristic: str,
         "coverage_note": (
             None if timeline is not None else
             "no station is recorded against this sample, so how much of this "
+            "window anybody watched is not a question this panel can answer"),
+    }
+
+
+def _count(session: Session, spec: QualitySpec, count_id: int) -> QualityCount:
+    """The inspection count, refused unless it is a count of *this*
+    characteristic.
+
+    The same refusal `_check` and `_sample` make, for the same reason: a URL
+    naming one characteristic and a row belonging to another would answer
+    about the wrong lot while looking right.
+    """
+    row = session.get(QualityCount, count_id)
+    if row is None or row.spec_id != spec.id:
+        raise NotFound(f"no inspection count {count_id} on "
+                       f"{spec.material.code}/{spec.characteristic}")
+    return row
+
+
+def _defects_block(count: QualityCount) -> dict:
+    """Which ones were sent back, in the plant's own codes, worst first.
+
+    This is the whole reason a p chart is worth opening: the dot says *more
+    of this lot came back than usual*, and the only useful next question is
+    *what was wrong with them*. Every list states its total, and the two
+    totals that can differ from `rejected` are both named rather than
+    reconciled: a bottle can carry two defects, and an inspector can code
+    some rejects and not all of them.
+
+    Null `defects` is *not broken down* and an empty list is *nothing
+    recorded against the rejects*. They are different facts and the sentence
+    says which, because drawing an empty list for the first would be this
+    screen telling a reader the lot was clean.
+    """
+    if count.defects is None:
+        return {"defects": [], "total": 0, "coded": None, "rejected": count.rejected,
+                "note": ("this count was recorded without a breakdown, so which "
+                         "defects were found is not something this MES knows "
+                         "about this lot"),
+                "coverage": "absent", "coverage_note": RECORDS_NOT_A_RATE}
+    rows = sorted(
+        ({"code": str(d.get("code")), "count": int(d.get("count") or 0)}
+         for d in count.defects if isinstance(d, dict)),
+        key=lambda d: (-d["count"], d["code"]))
+    coded = sum(d["count"] for d in rows)
+    if not rows:
+        note = (f"nothing was coded against the {count.rejected} unit(s) sent "
+                f"back from this lot")
+    elif coded > count.rejected:
+        note = (f"{coded} defects on {count.rejected} unit(s) sent back - a "
+                f"unit can carry more than one")
+    elif coded < count.rejected:
+        note = (f"{coded} of the {count.rejected} unit(s) sent back are coded; "
+                f"the rest were sent back without a defect recorded")
+    else:
+        note = None
+    return {"defects": rows, "total": len(rows), "coded": coded,
+            "rejected": count.rejected, "note": note,
+            "coverage": "absent", "coverage_note": RECORDS_NOT_A_RATE}
+
+
+def _count_on_the_chart(session: Session, material: str, characteristic: str,
+                        count: QualityCount) -> dict:
+    """The p chart this lot is a point on, and what fired on it.
+
+    Read from `spc.chart`, like the other two blocks of its kind: control
+    limits are computed in one place, and a second opinion here would be
+    slightly different numbers under the chart the reader just clicked.
+
+    The limits named are **this lot's own**, because on a p chart that is what
+    the point was judged against - a share of a lot of twenty is judged more
+    loosely than the same share of a lot of two thousand, and quoting one
+    pair of lines for the whole chart would tell the reader they were held to
+    a standard they were not.
+    """
+    drawn = spc.chart(session, material, characteristic)
+    keys = [p.get("count") for p in drawn.get("points", [])]
+    index = keys.index(count.id) if count.id in keys else None
+    point = drawn["points"][index] if index is not None else None
+    signals = ([s for s in drawn.get("signals", []) if s.get("index") == index]
+               if index is not None else [])
+    control = drawn.get("control") or {}
+    return {
+        "on_chart": index is not None,
+        "kind": drawn.get("kind"),
+        # One-based, the way the signals table on the page counts points.
+        "point": None if index is None else index + 1,
+        "points": drawn.get("n"),
+        # The chart's totals, so the reader can put this lot beside the rest.
+        "inspected": drawn.get("inspected"),
+        "rejected": drawn.get("rejected"),
+        "p": None if point is None else point.get("p"),
+        "centre": control.get("centre"),
+        # This point's own limits. Nulls when the chart has none to draw yet.
+        "upper": None if point is None else point.get("upper"),
+        "lower": None if point is None else point.get("lower"),
+        "sigma": None if point is None else point.get("sigma"),
+        "lower_at_zero": None if point is None else point.get("lower_at_zero"),
+        "stable": drawn.get("stable"),
+        "verdict": drawn.get("verdict") or drawn.get("note"),
+        "rules": drawn.get("rules"),
+        "rules_not_run": drawn.get("rules_not_run"),
+        "rules_not_run_note": drawn.get("rules_not_run_note"),
+        "hold_rules": drawn.get("hold_rules"),
+        "signals": signals,
+        # No capability, and the chart's own words for why, so the panel does
+        # not have to invent a sentence that would drift from the chart's.
+        "capability": None,
+        "capability_note": drawn.get("capability_note"),
+        "note": None if index is not None else (
+            f"this lot is not one of the {drawn.get('n')} points on the chart: "
+            f"either it is older than the history the chart draws, or nobody "
+            f"was inspected in it"),
+    }
+
+
+def _recorded_for_count(session: Session, count: QualityCount) -> dict:
+    """Every rule firing the MES wrote down against this lot, with its hold."""
+    rows = list(session.scalars(
+        select(SpcSignal).where(SpcSignal.count_id == count.id)
+        .order_by(SpcSignal.rule)))
+    out = []
+    for row in rows:
+        nc = session.get(NonConformance, row.nonconformance_id) if row.nonconformance_id else None
+        out.append({
+            "rule": row.rule, "what": row.what, "ts": row.ts,
+            "count": row.count_id, "value": row.value,
+            "window_key": row.window_key, "window": row.window,
+            "nonconformance": None if nc is None else nc.code,
+            "nonconformance_status": None if nc is None else nc.status.value,
+        })
+    return {"signals": out, "total": len(out),
+            "coverage": "absent", "coverage_note": RECORDS_NOT_A_RATE}
+
+
+def lot_dossier(session: Session, material: str, characteristic: str,
+                count_id: int, *,
+                before_minutes: float = BEFORE_MINUTES,
+                after_minutes: float = AFTER_MINUTES) -> dict:
+    """Everything this MES holds about why one LOT is where it is.
+
+    The same panel as `dossier` and `sample_dossier`, asked of a point that
+    is a share rather than a reading or an average. What is different:
+
+    - **The defects.** A dot above its limit says more of this lot came back
+      than usual; the only useful next question is which ones, and the
+      breakdown recorded with the count is the answer. It is the first block
+      here for that reason.
+    - **The window is the stretch, not an instant.** A count covers minutes
+      of production, so the telemetry runs from before the start of the
+      stretch to after its end. A window centred on when the count was
+      written down would put the half hour it is about outside the picture.
+    - **No gauge, and no capability.** Nobody gauged this; somebody looked.
+      Both absences are said in words rather than left as empty fields, which
+      is the one thing a reader must not have to infer.
+
+    Nothing here is computed twice: the limits and the firings are
+    `spc.chart`'s, the trends are `analysis.tag_trend`'s, the timeline is
+    `state_timeline`'s.
+    """
+    spec = _spec(session, material, characteristic)
+    count = _count(session, spec, count_id)
+
+    unit = None if not count.equipment_id else session.get(Equipment, count.equipment_id)
+    order = (None if not count.work_order_id else
+             moment.order_code_of(session, count.work_order_id))
+
+    # The stretch itself when the count recorded one, and the moment it was
+    # written down when it did not. A count with no window is still a count,
+    # and guessing a window for it would put trends either side of a time
+    # nobody claimed anything about.
+    first = count.started_at or count.ts
+    last = count.ended_at or count.ts
+    if last < first:
+        first, last = last, first
+    start = first - timedelta(minutes=before_minutes)
+    end = last + timedelta(minutes=after_minutes)
+
+    marks = [{"t": first, "label": "stretch starts"}]
+    if last != first:
+        marks.append({"t": last, "label": "stretch ends"})
+
+    tags: list[dict] = []
+    tags_total = 0
+    timeline: dict | None = None
+    machine: dict | None = None
+    if unit is not None:
+        analogs = moment.analog_trends(session, unit, start, end, marks)
+        tags, tags_total = analogs["trends"], analogs["total"]
+        timeline = moment.timeline_block(session, unit, start, end)
+        machine = moment.state_at(session, unit, last)
+
+    return {
+        "material": material,
+        "characteristic": characteristic,
+        # A share has no unit of measure. Empty, like the chart's.
+        "unit": "",
+        # Which question this envelope answers, so a screen drawing three
+        # panels from one layout never has to guess from which keys are here.
+        "subject": "lot",
+        "window": {
+            "start": start, "end": end,
+            "before_minutes": before_minutes, "after_minutes": after_minutes,
+            "at": count.ts,
+            "stretch_start": count.started_at, "stretch_end": count.ended_at,
+            "spanned_seconds": (None if count.started_at is None or count.ended_at is None
+                                else round((last - first).total_seconds(), 1)),
+            "note": (None if count.started_at and count.ended_at else
+                     "this count was recorded without the stretch it covers, so "
+                     "the window below is the minutes either side of when it was "
+                     "written down rather than the production it is about"),
+        },
+        "lot": {
+            "count": count.id,
+            "lot_ref": count.lot_ref,
+            "lot_id": count.lot_id,
+            # What a lot is on a plant that does not ship them yet, in words,
+            # rather than an empty link where a lot number would be.
+            "lot_note": (None if count.lot_id else spc.A_LOT_IS_A_STRETCH),
+            "ts": count.ts,
+            # The record, in the plant's words rather than in statistics.
+            "inspected": count.inspected,
+            "rejected": count.rejected,
+            "p": (round(count.rejected / count.inspected, 6)
+                  if count.inspected else None),
+            "checked_by": count.checked_by,
+            "work_order": order,
+            "shift": count.shift_code,
+            "shift_day": count.shift_day,
+            "equipment": None if unit is None else {"code": unit.code, "name": unit.name},
+            "gauge_note": ("nobody gauged this lot - it was looked at and "
+                           "counted, so there is no instrument to ask about"),
+        },
+        # First, because it is what the reader came for.
+        "defects": _defects_block(count),
+        "chart": _count_on_the_chart(session, material, characteristic, count),
+        "recorded": _recorded_for_count(session, count),
+        "machine": machine,
+        "timeline": timeline,
+        "stops": None if timeline is None else moment.stops(timeline),
+        "line": _line_block(session, unit, start, end, at=last,
+                            material_id=spec.material_id, noun="lot"),
+        "tags": {
+            "trends": tags,
+            "shown": len(tags),
+            "total": tags_total,
+            "note": (None if unit is None else (
+                None if tags_total <= len(tags) else
+                f"{len(tags)} of the {tags_total} signals this station published in "
+                f"this window are drawn")),
+        },
+        "maintenance": moment.maintenance_orders(session, unit, start, end),
+        "findings": moment.findings(session, order, start, end),
+        "coverage": None if timeline is None else timeline.get("coverage"),
+        "coverage_note": (
+            None if timeline is not None else
+            "no station is recorded against this count, so how much of this "
             "window anybody watched is not a question this panel can answer"),
     }

@@ -38,6 +38,16 @@ class SpecIn(BaseModel):
     #: chart is X-bar and R, its points are the sample means, and readings
     #: arrive together on `POST /quality/samples`. Decision 0040.
     sample_size: int | None = None
+    #: Whether this characteristic is counted rather than measured. Left out,
+    #: or false, is measured and is every specification written before this
+    #: field existed. True means an inspector looks at a lot and says how
+    #: many were sent back: the record is an inspection count on `POST
+    #: /quality/counts`, and the chart is a p chart whose limits are computed
+    #: again at each point from the size of that lot. Refused together with a
+    #: sample size above one or with a minimum or maximum, because a count
+    #: has no readings to average and no unit of measure to be inside.
+    #: Decision 0041, amending 0040.
+    counted: bool | None = None
 
 
 @router.get("/specs/facets")
@@ -121,6 +131,7 @@ def list_specs(
                 min_value=s.min_value,
                 max_value=s.max_value,
                 sample_size=s.sample_size,
+                counted=s.counted,
             )
             for s in rows
         ],
@@ -138,6 +149,7 @@ def create_spec(body: SpecIn, db: DbDep, actor: ActorDep) -> SpecIn:
         min_value=body.min_value,
         max_value=body.max_value,
         sample_size=body.sample_size,
+        counted=body.counted,
         actor=actor,
     )
     return body
@@ -236,6 +248,103 @@ def record_sample(body: SampleIn, db: DbDep, actor: ActorDep) -> dict:
         "results": [c.result for c in checks],
         "non_conformance": nc.code if nc else None,
         "gauge": body.gauge,
+        "spc": signals,
+    }
+
+
+class DefectIn(BaseModel):
+    """One kind of defect found in a lot, and how many of it.
+
+    The code is the plant's own word - `low_fill`, `cap_skew`, whatever its
+    inspectors actually sort rejects into - and this product does not police
+    the vocabulary. It does refuse a count of nought: a defect nobody found
+    is left out rather than recorded as zero of it.
+    """
+
+    code: str
+    count: int
+
+
+class CountIn(BaseModel):
+    material: str
+    characteristic: str
+    #: How many units were looked at in this stretch, and how many of them
+    #: were sent back. Both are the record; the share the chart plots is
+    #: arithmetic on them and is not posted.
+    inspected: int
+    rejected: int
+    #: What the plant calls the lot or stretch this count was taken on, in
+    #: its own text. Required: a count nobody can tie back to product is a
+    #: number with no subject.
+    lot_ref: str
+    #: Which defects were found, and how many of each. Left out is *not
+    #: broken down*, which is a different fact from nothing having been found
+    #: - the screen says which rather than drawing a clean lot. The counts
+    #: may add to more than `rejected`, because one unit can carry two
+    #: defects, and to less, because an inspector may code some rejects and
+    #: not all of them.
+    defects: list[DefectIn] | None = None
+    order: str | None = None
+    #: The station that did the counting. Left out is *not recorded*, which
+    #: is a different fact from nobody having counted.
+    equipment: str | None = None
+    #: The material lot, when this plant tracks lots and this stretch is one
+    #: of them. Left out is the usual answer on a plant that does not ship
+    #: lots yet, and `lot_ref` above is still what the plant calls it.
+    lot: str | None = None
+    #: The stretch of production this count covers. Worth sending: a count
+    #: without its window cannot be put beside what the line was doing, and
+    #: "50 of 1200" means nothing until you know which twenty minutes.
+    started_at: datetime | None = None
+    ended_at: datetime | None = None
+
+
+@router.post("/counts", status_code=201, dependencies=[require("quality.record")])
+def record_count(body: CountIn, db: DbDep, actor: ActorDep) -> dict:
+    """Record one inspection count, and say what it set off.
+
+    For a characteristic whose specification says `counted`. One row, however
+    many units were looked at: ten thousand bottles inspected is two whole
+    numbers and a list of what was wrong, not ten thousand readings, and a
+    row per unit was refused in decision 0027.
+
+    The point on the chart is the share - rejected over inspected - and the
+    rules run **once** on it, against this lot's own control limits. So at
+    most one hold comes out of this call however many units were in the lot:
+    a lot is one look at the process.
+
+    Answers 400 when the characteristic is measured rather than counted -
+    that one goes to `POST /quality/checks` or `/quality/samples` - and 400
+    when more units were sent back than were looked at, because a share of a
+    lot cannot be above one.
+    """
+    count, nc, signals = quality.record_count(
+        db,
+        material_code=body.material,
+        characteristic=body.characteristic,
+        inspected=body.inspected,
+        rejected=body.rejected,
+        lot_ref=body.lot_ref,
+        defects=None if body.defects is None else [d.model_dump() for d in body.defects],
+        work_order_code=body.order,
+        equipment_code=body.equipment,
+        lot_code=body.lot,
+        started_at=body.started_at,
+        ended_at=body.ended_at,
+        actor=actor,
+    )
+    return {
+        "count": count.id,
+        "lot_ref": count.lot_ref,
+        "lot": body.lot,
+        # The two numbers back as they were stored, and the share they make,
+        # so a caller that posted a lot does not have to compute what it just
+        # plotted.
+        "n": count.inspected,
+        "k": count.rejected,
+        "p": round(count.rejected / count.inspected, 6) if count.inspected else None,
+        "defects": count.defects,
+        "non_conformance": nc.code if nc else None,
         "spc": signals,
     }
 
@@ -470,16 +579,27 @@ def spc(material: str, characteristic: str, db: DbDep,
         limit: int | None = Query(
             None, description="How many readings back to look. The plant's own "
                               "`[quality] spc_history` when it is left out.")) -> dict:
-    """An individuals and moving-range control chart, with capability and what fired.
+    """A control chart with capability and what fired, in the shape this
+    characteristic asks for.
 
     Control limits come from the process's own variation, not the tolerance.
     A process can sit inside spec while drifting badly, and a chart drawn
     against the specification will never show it.
 
-    Two halves, under `points` and `moving_range`. The individuals half asks
-    whether a reading is where it should be; the moving-range half asks
-    whether the gap between consecutive readings is, and it is the series the
-    sigma behind both sets of limits is estimated from.
+    `kind` says which chart this is, in one word, so nothing downstream has
+    to infer it from which keys are present:
+
+    * `imr` - one piece at a time. Two halves, under `points` and
+      `moving_range`: whether a reading is where it should be, and whether
+      the gap between consecutive readings is.
+    * `xbar_r` - a sample of n pieces. The points are the sample means and
+      the lower half, `range_chart`, is the spread inside each sample.
+    * `p` - a characteristic the plant counts rather than measures. Each
+      point is one inspected lot with its own `n`, `k` and `p`, and **its own
+      control limits**, because the limits depend on how many units that lot
+      covered. Only rule 1 runs; `rules_not_run` and its note say which rules
+      do not and why, and `capability_note` says why there is no Cpk.
+      Decision 0041.
     """
     from fsmes.services import spc as spc_service
 
@@ -567,6 +687,44 @@ def spc_sample(
         ) if value is not None
     }
     return dossier.sample_dossier(db, material, characteristic, sample_id, **asked)
+
+
+@router.get("/spc/{material}/{characteristic}/lot/{count_id}")
+def spc_lot(
+    material: str, characteristic: str, count_id: int, db: DbDep,
+    before_minutes: float = Query(
+        None, gt=0, le=1440,
+        description="How many minutes of the station's process values to read "
+                    "before the stretch this count covers. Ten when it is "
+                    "left out."),
+    after_minutes: float = Query(
+        None, ge=0, le=1440,
+        description="How many minutes after the end of the stretch. Two when "
+                    "it is left out."),
+) -> dict:
+    """Why is this lot where it is — the records behind one point of a p chart.
+
+    The same question `/point/{check_id}` answers, of a point that is a share
+    rather than a reading. What is different is what the reader came for:
+    **which defects** were found in this lot, in the plant's own codes, with
+    the two totals that can differ from the number sent back both named. Then
+    the lot's own limits off the chart, the firings recorded against it, and
+    the station's own signals over the stretch the count covers rather than
+    over an instant.
+
+    No gauge and no capability, and both absences are said in words: nobody
+    gauged this lot, and a share of units sent back is neither a measurement
+    nor inside a tolerance.
+    """
+    from fsmes.services import spc_point as dossier
+
+    asked = {
+        name: value for name, value in (
+            ("before_minutes", before_minutes),
+            ("after_minutes", after_minutes),
+        ) if value is not None
+    }
+    return dossier.lot_dossier(db, material, characteristic, count_id, **asked)
 
 
 @router.get("/gauges")

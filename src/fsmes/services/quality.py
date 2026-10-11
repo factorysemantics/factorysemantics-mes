@@ -6,6 +6,8 @@ and `close` are the three steps, each recorded against the person who took it.
 Decision record 0024 says why closing without a disposition is refused.
 """
 
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -16,6 +18,7 @@ from fsmes.domain import (
     NcStatus,
     NonConformance,
     QualityCheck,
+    QualityCount,
     QualitySample,
     QualitySpec,
 )
@@ -26,6 +29,7 @@ from fsmes.services import (
     WrongSampleSize,
     audit,
     calendar,
+    execution,
     masterdata,
     workorders,
 )
@@ -63,6 +67,7 @@ def create_spec(
     min_value: float | None = None,
     max_value: float | None = None,
     sample_size: int | None = None,
+    counted: bool | None = None,
     actor: str = "system",
 ) -> QualitySpec:
     """One characteristic of one material, and how it is inspected.
@@ -75,12 +80,32 @@ def create_spec(
     being a decent estimate of spread there and this product has no constants
     past it - refused when the specification is written rather than when
     somebody opens the chart and finds it blank.
+
+    `counted` says this characteristic is counted rather than measured: an
+    inspector looks at a lot and says how many were sent back, the record is
+    an inspection count and the chart is a p chart (decision 0041). It is
+    refused together with a sample size above one, and refused together with
+    a minimum or maximum, because both of those describe a measurement this
+    characteristic does not have. Two fields that can disagree about what a
+    chart is are how a chart comes to lie, which is what 0040 said about a
+    hand-chosen chart type and is still true here.
     """
     if sample_size is not None and not 1 <= sample_size <= spc_max_sample_size():
         raise Invalid(
             f"a sample size of {sample_size} is not something this product can "
             f"chart; it inspects one piece at a time (1, or nothing) or a sample "
             f"of 2 to {spc_max_sample_size()}")
+    if counted:
+        if sample_size is not None and sample_size > 1:
+            raise Invalid(
+                f"{characteristic} cannot be both counted and measured "
+                f"{sample_size} pieces at a time: a count has no readings to "
+                f"average, so there would be no subgroup to chart")
+        if min_value is not None or max_value is not None:
+            raise Invalid(
+                f"{characteristic} is counted, so it has no minimum or maximum: "
+                f"what is recorded is how many of how many were sent back, and "
+                f"a limit in a unit of measure has nothing to judge")
     material = masterdata.get_material(session, material_code)
     existing = session.scalar(
         select(QualitySpec).where(QualitySpec.material_id == material.id, QualitySpec.characteristic == characteristic)
@@ -89,7 +114,7 @@ def create_spec(
         raise Conflict(f"spec for {material_code}/{characteristic} already exists")
     spec = QualitySpec(
         material=material, characteristic=characteristic, unit=unit, min_value=min_value,
-        max_value=max_value, sample_size=sample_size
+        max_value=max_value, sample_size=sample_size, counted=counted
     )
     session.add(spec)
     session.flush()
@@ -100,7 +125,7 @@ def create_spec(
         entity_type="material",
         entity_id=material_code,
         after={"characteristic": characteristic, "min": min_value, "max": max_value,
-               "sample_size": sample_size},
+               "sample_size": sample_size, "counted": counted},
     )
     return spec
 
@@ -180,6 +205,22 @@ def _store_reading(
     return check, in_spec
 
 
+def _not_measured(material_code: str, characteristic: str) -> str:
+    """Why a reading against a counted characteristic is refused.
+
+    Nothing measures it. There is no gauge, no unit and no limit for a
+    reading to be inside of, so a float recorded against it is a number
+    somebody or something made up - and in the quality history it would look
+    exactly like a measurement. The way in is the count, which is what this
+    plant actually knows about it. Decision 0041.
+    """
+    return (
+        f"{material_code}/{characteristic} is counted, not measured; nothing "
+        f"reads a value for it. Post how many were looked at and how many were "
+        f"sent back to /quality/counts, or take the counted declaration off the "
+        f"specification first")
+
+
 def record_check(
     session: Session,
     *,
@@ -212,8 +253,14 @@ def record_check(
     One reading of a subgroup of five is not a point on its chart, and
     storing it as if it were would put a single bottle on a chart of means
     and quietly widen every limit on it. `record_sample` is the way in.
+
+    A characteristic the plant *counts* is refused here too, and for a
+    harder reason: there is no reading to store. `record_count` is the way
+    in - see `_not_measured`.
     """
     spec = get_spec(session, material_code, characteristic)
+    if spec.counted:
+        raise Invalid(_not_measured(material_code, characteristic))
     size = spec.sample_size or 1
     if size > 1:
         raise Invalid(
@@ -272,8 +319,13 @@ def record_sample(
     the sentence. Fewer is not a smaller sample - a mean of three charted
     against limits built for five is wrong in a way nobody would see - and
     more is not a bigger one.
+
+    A counted characteristic is refused here as it is in `record_check`:
+    five readings of a thing nothing measures are five made-up numbers.
     """
     spec = get_spec(session, material_code, characteristic)
+    if spec.counted:
+        raise Invalid(_not_measured(material_code, characteristic))
     size = spec.sample_size or 1
     if size < 2:
         raise Invalid(
@@ -342,6 +394,161 @@ def record_sample(
 
     signals = spc_service.evaluate(session, spec, since_sample=sample.id)
     return sample, checks, nc, signals
+
+
+#: The most defect codes one count may carry. Not a limit on the plant's
+#: vocabulary - it may have a hundred codes - but on one inspection stretch:
+#: a record with forty kinds of defect in it was not filled in by a person
+#: watching a line, and silently storing it would put a list nobody can read
+#: behind a dot on a chart.
+MAX_DEFECT_CODES = 20
+
+
+def record_count(
+    session: Session,
+    *,
+    material_code: str,
+    characteristic: str,
+    inspected: int,
+    rejected: int,
+    lot_ref: str,
+    defects: list[dict] | None = None,
+    work_order_code: str | None = None,
+    equipment_code: str | None = None,
+    lot_code: str | None = None,
+    started_at: datetime | None = None,
+    ended_at: datetime | None = None,
+    actor: str = "system",
+) -> tuple[QualityCount, NonConformance | None, list[dict]]:
+    """One inspection count: how many were looked at, how many were sent back.
+
+    The mirror of `record_sample` for a characteristic the plant counts. One
+    row in `quality_counts`, one point on the p chart, and the rules run
+    **once** on it - a lot is one look at the process however many bottles
+    were in it, so at most one hold comes out of this call.
+
+    No `quality_checks` row is written. There is no measured value to put in
+    one, and a row per unit inspected was refused in decision 0027 and is
+    refused here: ten thousand bottles looked at is one record.
+
+    `rejected` above `inspected` is refused rather than stored, because the
+    chart's point is a share and a share above one is not a number this
+    process can produce - it is a typo, or two stretches added up wrong, and
+    storing it would put a dot off the top of a chart nobody could explain.
+
+    `defects` is `[{"code": ..., "count": ...}]` and is the answer to *which
+    ones*. Left out it stays null, which the screen reads as *not broken
+    down* rather than as *nothing found* - those are different facts and this
+    product does not turn the first into the second. The counts in it may add
+    to more than `rejected`: one bottle can be short-filled and badly capped
+    at once. They may add to less, too, and that is also honest: an inspector
+    who coded some of the rejects and not all of them recorded what they knew.
+    """
+    spec = get_spec(session, material_code, characteristic)
+    if not spec.counted:
+        raise Invalid(
+            f"{material_code}/{characteristic} is measured, not counted; post "
+            f"readings to /quality/checks or /quality/samples, or mark the "
+            f"specification counted first")
+    if inspected <= 0:
+        raise Invalid(
+            f"an inspection count has to say how many were looked at; "
+            f"{inspected} is not a lot anybody inspected")
+    if rejected < 0:
+        raise Invalid(f"{rejected} units sent back is not a number")
+    if rejected > inspected:
+        raise Invalid(
+            f"{rejected} sent back of {inspected} looked at is more than were "
+            f"inspected; a share of a lot cannot be above one")
+    if not lot_ref or not lot_ref.strip():
+        raise Invalid(
+            "an inspection count has to name the lot or stretch it was taken "
+            "on; a count nobody can tie back to product is a number with no "
+            "subject")
+    breakdown = _defect_list(defects) if defects is not None else None
+
+    wo = workorders.get(session, work_order_code) if work_order_code else None
+    station = masterdata.get_equipment(session, equipment_code) if equipment_code else None
+    lot = execution.get_lot(session, lot_code) if lot_code else None
+    now = utcnow()
+
+    count = QualityCount(
+        spec=spec,
+        work_order_id=wo.id if wo else None,
+        equipment_id=station.id if station else None,
+        started_at=started_at,
+        ended_at=ended_at,
+        inspected=inspected,
+        rejected=rejected,
+        lot_ref=lot_ref.strip(),
+        lot_id=lot.id if lot else None,
+        checked_by=actor,
+        defects=breakdown,
+        ts=now,
+    )
+    calendar.attribute(session, count, now, station.id if station else None)
+    session.add(count)
+    session.flush()
+
+    # The rules see this lot now, while the line is still running the order.
+    from fsmes.services import spc as spc_service
+
+    signals = spc_service.evaluate(session, spec, since_count=count.id)
+    # The hold the rules raised on this lot, when they raised one. There is no
+    # second hold for being "out of spec": a counted characteristic has no
+    # specification limits to be outside, so the chart is the only judge and
+    # one finding is the whole of the answer.
+    nc = None
+    for signal in signals:
+        if signal.get("nonconformance"):
+            nc = get_nc(session, signal["nonconformance"])
+            break
+    audit.record(
+        session,
+        actor=actor,
+        action="qualitycount.recorded",
+        entity_type="material",
+        entity_id=material_code,
+        after={"characteristic": characteristic, "lot": count.lot_ref,
+               "inspected": inspected, "rejected": rejected,
+               "defects": breakdown},
+    )
+    return count, nc, signals
+
+
+def _defect_list(defects: list[dict]) -> list[dict]:
+    """The breakdown, checked and tidied, or `Invalid` saying what was wrong.
+
+    A code and a count each, the code trimmed, the count a whole number above
+    nought. A code repeated is added up rather than stored twice, because two
+    rows saying `low_fill: 2` and `low_fill: 3` behind one dot is a list a
+    reader has to do arithmetic on before they can read it.
+    """
+    out: dict[str, int] = {}
+    for entry in defects:
+        if not isinstance(entry, dict):
+            raise Invalid("each defect is a code and a count, like "
+                          "{\"code\": \"low_fill\", \"count\": 3}")
+        code = str(entry.get("code") or "").strip()
+        if not code:
+            raise Invalid("a defect with no code says nothing about which "
+                          "ones were sent back")
+        try:
+            number = int(entry.get("count", 0))
+        except (TypeError, ValueError):
+            raise Invalid(f"the count for defect {code} is not a whole number") from None
+        if number <= 0:
+            raise Invalid(f"defect {code} is listed with a count of {number}; "
+                          f"leave out a defect nobody found rather than "
+                          f"recording nought of it")
+        out[code] = out.get(code, 0) + number
+    if len(out) > MAX_DEFECT_CODES:
+        raise Invalid(
+            f"{len(out)} different defect codes on one inspection count is "
+            f"more than this product will store against one lot (at most "
+            f"{MAX_DEFECT_CODES}); split the stretch, or code the rejects "
+            f"the plant actually sorts them into")
+    return [{"code": code, "count": number} for code, number in out.items()]
 
 
 def open_nc(

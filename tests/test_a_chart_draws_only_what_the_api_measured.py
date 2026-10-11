@@ -933,6 +933,7 @@ SPC_FACTS = """([envelope, options]) => {
     const dots = (sel) => [...node.querySelectorAll(sel)].map((d) => ({
         cls: d.getAttribute('class'), value: d.getAttribute('data-value'),
         sample: d.getAttribute('data-sample'), check: d.getAttribute('data-check'),
+        count: d.getAttribute('data-count'),
         series: d.getAttribute('data-series'), flagged: d.getAttribute('data-flagged'),
         role: d.getAttribute('role'), tabindex: d.getAttribute('tabindex'),
         aria: d.getAttribute('aria-label'),
@@ -959,9 +960,20 @@ SPC_FACTS = """([envelope, options]) => {
            own, so every dot probe here says "not the ring". */
         upperDots: dots('g.chart-plot > circle:not(.spc-ring)'),
         lowerDots: dots('[data-half] circle:not(.spc-ring)'),
+        /* A counted chart's limits are a step per lot and not a line
+           across the picture, so they are a polyline and `guide` above
+           cannot see them. Read whole: the key, the coordinates, and the
+           one label that names the last lot's own figure. */
+        steps: [...node.querySelectorAll('polyline.limit-step')].map((l) => ({
+            key: l.getAttribute('data-steps'),
+            points: l.getAttribute('points'),
+        })),
+        perLot: [...node.querySelectorAll('text.axis')]
+            .map((x) => x.textContent).filter((t) => t.includes('on this lot')),
         rings: [...node.querySelectorAll('circle.spc-ring')].map((c) => ({
             sample: c.getAttribute('data-ring-sample'),
             check: c.getAttribute('data-ring-check'),
+            count: c.getAttribute('data-ring-count'),
             fill: getComputedStyle(c).fill,
             stroke: getComputedStyle(c).strokeWidth,
             role: c.getAttribute('role'), tabindex: c.getAttribute('tabindex'),
@@ -1111,15 +1123,23 @@ def test_a_control_chart_says_its_x_axis_is_order_and_not_a_clock(page):
 
 def test_a_kind_this_shape_does_not_draw_is_refused_rather_than_plotted(page):
     """Decision 0040's whole point, as a refusal. A plant that charts a
-    characteristic some third way is a newer plant than this shape, and drawing
-    its points as individuals or as sample means would be a true picture of an
-    arithmetic nobody asked for. It draws nothing and names the two it has."""
+    characteristic some fourth way is a newer plant than this shape, and
+    drawing its points as individuals, as sample means or as shares would be a
+    true picture of an arithmetic nobody asked for. It draws nothing and names
+    the three it has.
+
+    `c` is the next chart a plant asks for - a count of defects per unit
+    rather than a share of units sent back - and decision 0041 declined to
+    build it. So it is the honest fourth word to be refused by.
+    """
     refused = page.evaluate(
         """(envelope) => { try { FS.kit.chart('spc', envelope); return null; }
                            catch (e) { return String(e); } }""",
-        dict(SPC, kind="p"))
+        dict(SPC, kind="c"))
     assert refused and "does not draw" in refused
     assert "imr" in refused and "xbar_r" in refused
+    assert "p (the share of each counted lot sent back)" in refused
+    assert "c" in refused, "and it says which word it was handed"
     # And a payload with no control-chart shape at all is refused too, rather
     # than drawn as an empty chart that looks like a settled process.
     bare = page.evaluate(
@@ -1566,6 +1586,272 @@ def test_a_real_mouse_press_on_a_block_opens_it_and_a_drag_still_brushes(page):
         timeout=5000)
     assert page.evaluate("() => window.__opened") == ["down"], (
         "a drag across the plot opened a block as well as brushing the axis")
+
+
+# ------------------------------- the counted control chart (`kind: "p"`)
+#
+# The third kind, and the first whose LIMITS ARE NOT ONE PAIR. Every lot is a
+# different number of units, so sigma at a point is the centre's own spread
+# over the root of that lot's size: the band is wide where little was looked
+# at and narrow where a lot was. One straight pair of lines across the picture
+# would flag the small lots and excuse the large ones, which is the error this
+# kind exists to prevent - so the two tests that matter most here are that the
+# limits are drawn as steps and that the step over the small lot is wider than
+# the step over the big one.
+#
+# Six lots, as `/quality/spc/{material}/{characteristic}` returns them for a
+# counted characteristic. The figures are the fixture of
+# `tests/test_a_characteristic_the_plant_counts.py`, which is worked out by
+# hand there: 730 sent back of 7,300 looked at is a pooled centre of 0.1
+# exactly, sqrt(0.1 * 0.9) is 0.3 exactly, and 3 * 0.3 / sqrt(n) comes out
+# exact at each of these sizes. The lot of a hundred sent back a fifth of
+# itself, which is past its OWN upper limit of 0.19 and the only rule 1
+# firing; the same share would be nothing at all on the lot of 2,500 below it.
+P_CHART = {
+    "material": "FG-BOTTLE",
+    "characteristic": "sent_back",
+    "unit": "",
+    "lower_spec": None,
+    "upper_spec": None,
+    "kind": "p",
+    "sample_size": None,
+    "n": 6,
+    "inspected": 7300,
+    "rejected": 730,
+    "points": [
+        {"n": 900, "k": 90, "p": 0.1, "count": 1, "lot_ref": "4711-Q01",
+         "lot_id": None, "ts": "2026-10-11T06:15:00Z",
+         "upper": 0.13, "lower": 0.07, "sigma": 0.01, "lower_at_zero": False,
+         "defects": [{"code": "cap_skew", "count": 48}]},
+        {"n": 400, "k": 40, "p": 0.1, "count": 2, "lot_ref": "4711-Q02",
+         "lot_id": None, "ts": "2026-10-11T06:30:00Z",
+         "upper": 0.145, "lower": 0.055, "sigma": 0.015, "lower_at_zero": False,
+         "defects": [{"code": "cap_skew", "count": 21}]},
+        {"n": 2500, "k": 250, "p": 0.1, "count": 3, "lot_ref": "4711-Q03",
+         "lot_id": None, "ts": "2026-10-11T06:45:00Z",
+         "upper": 0.118, "lower": 0.082, "sigma": 0.006, "lower_at_zero": False,
+         "defects": [{"code": "cap_skew", "count": 130}]},
+        {"n": 100, "k": 20, "p": 0.2, "count": 4, "lot_ref": "4711-Q04",
+         "lot_id": None, "ts": "2026-10-11T07:00:00Z",
+         "upper": 0.19, "lower": 0.01, "sigma": 0.03, "lower_at_zero": False,
+         "defects": [{"code": "low_fill", "count": 15}, {"code": "cap_skew", "count": 5}]},
+        {"n": 900, "k": 90, "p": 0.1, "count": 5, "lot_ref": "4711-Q05",
+         "lot_id": None, "ts": "2026-10-11T07:15:00Z",
+         "upper": 0.13, "lower": 0.07, "sigma": 0.01, "lower_at_zero": False,
+         "defects": [{"code": "low_fill", "count": 66}]},
+        {"n": 2500, "k": 240, "p": 0.096, "count": 6, "lot_ref": "4711-Q06",
+         "lot_id": None, "ts": "2026-10-11T07:30:00Z",
+         "upper": 0.118, "lower": 0.082, "sigma": 0.006, "lower_at_zero": False,
+         "defects": [{"code": "cap_skew", "count": 120}]},
+    ],
+    "control": {
+        "centre": 0.1, "upper": None, "lower": None, "limits_per_point": True,
+        "inspected": 7300, "rejected": 730,
+        "smallest_lot": 100, "largest_lot": 2500, "lower_at_zero": 0,
+    },
+    "signals": [{"rule": 1, "index": 3, "value": 0.2, "count": 4,
+                 "what": "a lot beyond its own upper limit",
+                 "nonconformance": 41, "held": True}],
+    "rules": [1],
+    "rules_not_run": [2, 3, 4, 5],
+    "rules_not_run_note": "rules 2, 3 and 4 count points inside sigma bands, and on "
+                          "this chart sigma changes with the size of each lot - the "
+                          "same test would mean different things on different days, "
+                          "so they are not run; rule 5 judges a range, and a share "
+                          "has none",
+    "hold_rules": [1],
+    "major_rules": [1],
+    "capability": None,
+    "capability_note": "there is no Cp or Cpk here: capability compares the spread of "
+                       "a measurement against the tolerance it was given, and a share "
+                       "of units sent back is neither a measurement nor inside a "
+                       "tolerance",
+    "lot_note": "a lot here is one inspection stretch on one order until this plant "
+                "ships lots",
+    "stable": False,
+    "verdict": "out of control - rule 1 fired on 1 of 6 lots, each judged against its "
+               "own limits.",
+    "coverage": "absent",
+    "coverage_note": "a list of the records in this window, not a rate over a watched "
+                     "one - so there is no coverage figure to give",
+    "min_points": 6,
+    "history": 10,
+}
+
+
+def test_a_counted_chart_plots_the_share_of_each_lot_and_nothing_else(page):
+    """Rule 1 on the third kind. Six dots, each carrying the share the server
+    computed, verbatim - and identified by the COUNT it came from, because a
+    count id, a check id and a sample id are all small integers and a chart
+    that carried the wrong one would open the wrong record without ever
+    looking wrong."""
+    got = spc_facts(page, P_CHART)
+    assert got["spcKind"] == "p"
+    assert [d["value"] for d in got["upperDots"]] == [
+        str(point["p"]) for point in P_CHART["points"]]
+    assert [d["count"] for d in got["upperDots"]] == ["1", "2", "3", "4", "5", "6"]
+    assert all(d["check"] is None and d["sample"] is None for d in got["upperDots"])
+    # And what a dot IS, on the end of the title, so a reader cannot take a
+    # share of a lot for a bottle somebody measured.
+    assert "p, the share of each lot sent back" in got["title"]
+
+
+def test_a_counted_charts_limits_are_a_step_for_every_lot_and_not_one_pair(page):
+    """The error this kind exists to prevent, as a picture. Each lot is judged
+    against its own pair, so the limits are steps: wide over the lot of a
+    hundred, narrow over the lot of two and a half thousand. One straight pair
+    of lines across both would have flagged every small lot and excused every
+    large one - and `guideAt`, which draws exactly that, must not have been
+    used here."""
+    got = spc_facts(page, P_CHART)
+    assert [step["key"] for step in got["steps"]] == ["upper", "lower"]
+    assert got["limit"] == [], "no straight control limit across a chart of uneven lots"
+    assert got["centre"] and "p" in got["centre"][0]["label"], \
+        "the centre IS one line: the pooled share is one number"
+
+    def flats(step):
+        pairs = [tuple(float(v) for v in pair.split(","))
+                 for pair in step["points"].split(" ")]
+        return [pairs[i][1] for i in range(0, len(pairs), 2)]
+
+    upper, lower = flats(got["steps"][0]), flats(got["steps"][1])
+    assert len(upper) == len(lower) == len(P_CHART["points"]), \
+        "one flat run per lot, held across that lot's own half of the gap"
+    small, big = 3, 5
+    # y grows downward, so a wider band is a smaller upper y and a bigger
+    # lower one. The lot of a hundred is three times the band of the lot of
+    # two and a half thousand, and the picture has to show that.
+    assert upper[small] < upper[big] and lower[small] > lower[big], (
+        f"the band over the lot of 100 is not wider than the band over the lot "
+        f"of 2500: upper {upper[small]} vs {upper[big]}")
+    # Named once, at the last lot, with that lot's own figure - "UCL 11.80%"
+    # over a chart where every point has a different one would be a number
+    # floating over the other five.
+    assert sorted(got["perLot"]) == ["LCL 8.20% on this lot", "UCL 11.80% on this lot"]
+
+
+def test_a_counted_chart_draws_nothing_below_the_points_and_says_why(page):
+    """A count has no range: a lot is one whole number and one share of it.
+    The space below is not left blank with a reader to wonder - rule 5 says
+    what was not drawn, in words."""
+    got = spc_facts(page, P_CHART)
+    assert got["halves"] == [] and got["lowerDots"] == []
+    assert "nothing drawn below: a count has no range" in got["total"]
+
+
+def test_a_counted_chart_states_how_many_were_looked_at_and_how_many_went_back(page):
+    """Rule 5 on a chart of shares, which needs three numbers and not one: a
+    share with no denominator is a figure nobody can check. Six lots drawn,
+    7,300 units looked at across them, 730 sent back."""
+    got = spc_facts(page, P_CHART)
+    assert "6 lots drawn" in got["total"]
+    assert "7,300 looked at, 730 sent back" in got["total"]
+    assert "1 flagged by 1 firing of rule 1" in got["total"]
+
+
+def test_a_counted_chart_says_its_limits_move_with_the_size_of_the_lot(page):
+    """Rule 4, and the sentence a reader of this chart has to have before they
+    read a single dot: a step up or down in the limits is a smaller or larger
+    lot and NOT a process that changed. With the two sizes it stepped
+    between, from the server's own figures."""
+    got = spc_facts(page, P_CHART)
+    axes = [f["text"] for f in got["footer"] if f["cls"] == "chart-axis-note"]
+    assert any("each lot has its own pair of limits" in a for a in axes)
+    assert any("The smallest here held 100 and the largest 2,500" in a for a in axes)
+    assert any("lot order, oldest first" in a for a in axes)
+    assert any("share of each lot sent back, drawn as a percentage" in a for a in axes)
+    # The centre is the pooled share and the chart says so, because the
+    # average of the shares is a different number and the obvious wrong one.
+    assert any("not the average of the shares" in a for a in axes)
+    # And the two sentences the server wrote about what it did not do.
+    assert any(P_CHART["rules_not_run_note"] in a for a in axes)
+    assert any(P_CHART["lot_note"] in a for a in axes)
+
+
+def test_a_counted_chart_withholds_capability_in_words(page):
+    """Rule 2's withheld half, on a figure that cannot exist here rather than
+    one this plant is short of data for. Never a dash, never a zero, and the
+    reason is the server's own sentence."""
+    got = spc_facts(page, P_CHART)
+    assert any(P_CHART["capability_note"] in f["text"] for f in got["footer"])
+    assert "Cp" not in got["total"]
+
+
+def test_lots_whose_lower_limit_sits_at_nought_are_said_rather_than_drawn_as_a_target(page):
+    """A lower limit on nought is not a limit a lot can get below - no lot can
+    be better than perfect - and the step there is flat along the bottom of
+    the picture where it is easiest to take for an achievable target. So the
+    chart says how many of its lots are in that position and why."""
+    import copy
+
+    tiny = copy.deepcopy(P_CHART)
+    for point in tiny["points"][:2]:
+        point.update(n=81, k=8, p=0.099, upper=0.2, lower=0.0, sigma=1 / 30,
+                     lower_at_zero=True)
+    tiny["control"]["lower_at_zero"] = 2
+    tiny["control"]["smallest_lot"] = 81
+    got = spc_facts(page, tiny)
+    assert any("2 of 6 lots have their lower limit at nought" in f["text"]
+               for f in got["footer"])
+    assert any("nothing on those lots can fire a rule downward" in f["text"]
+               for f in got["footer"])
+
+
+def test_the_one_rule_a_counted_chart_runs_is_flagged_on_the_lot_it_fired_on(page):
+    """Rule 1 is the whole of what this chart judges, and the lot it fired on
+    is the one marked. Flagged by id and not by counting along: the signal
+    names the count, and ringing the dot beside it would be a red mark against
+    a lot nobody faulted."""
+    got = spc_facts(page, P_CHART)
+    flagged = [d for d in got["upperDots"] if d["flagged"]]
+    assert [d["count"] for d in flagged] == ["4"]
+    assert [d["value"] for d in flagged] == ["0.2"]
+
+
+def test_a_lot_opens_as_a_lot_and_not_as_a_reading(page):
+    """What the SPC page listens for. The kit never fetches a dossier and
+    never decides what opening a lot means - it says which lot, by its count
+    id, and with the word `lot` so the page asks the plant the question a
+    counted characteristic answers."""
+    page.evaluate(
+        """(envelope) => {
+            const box = document.getElementById('fs-chart-probe') || (() => {
+                const made = document.createElement('div');
+                made.id = 'fs-chart-probe';
+                made.style.width = '760px';
+                document.body.appendChild(made);
+                return made;
+            })();
+            window.__lot = null;
+            box.addEventListener('fs-spc-open', (e) => { window.__lot = e.detail; });
+            FS.kit.draw(box, 'spc', envelope, {width: 760, openable: true});
+        }""",
+        P_CHART)
+    at = page.evaluate(
+        """() => {
+            const dot = document.querySelector('#fs-chart-probe [data-count="4"]');
+            /* Scrolled to before it is measured: the probe sits under a whole
+               screen on this page, and a pointer aimed at a dot below the fold
+               lands on whatever is there instead. */
+            dot.scrollIntoView({block: 'center'});
+            const box = dot.getBoundingClientRect();
+            return {x: box.left + box.width / 2, y: box.top + box.height / 2,
+                    role: dot.getAttribute('role'), aria: dot.getAttribute('aria-label')};
+        }""")
+    assert at["role"] == "button"
+    # What a screen reader is told it is about to open: the lot by the name
+    # the plant calls it, the two numbers, and what pressing it does.
+    assert at["aria"].startswith("Lot 4711-Q04, 20 of 100 sent back")
+    assert "which defects" in at["aria"]
+    page.mouse.click(at["x"], at["y"])
+    page.wait_for_function("() => window.__lot !== null", timeout=5000)
+    opened = page.evaluate("() => window.__lot")
+    assert opened["what"] == "lot" and opened["id"] == 4
+    assert opened["at"] == P_CHART["points"][3]["ts"]
+    # And a chart nobody made openable dispatches nothing, because a dot that
+    # looks pressable and is not is worse than one that plainly is not.
+    got = spc_facts(page, P_CHART)
+    assert all(d["role"] is None for d in got["upperDots"])
 
 
 # ----------------------------------------- and a screen draws through the kit

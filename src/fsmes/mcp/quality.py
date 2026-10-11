@@ -137,9 +137,19 @@ def register(mcp, call, write, identify) -> dict:
         capability (Cp, Cpk, Pp) - withheld while the process is out of control
         - and a one-sentence verdict. `kind` says which chart it is: `imr`,
         individuals and moving range, for a characteristic inspected one piece
-        at a time, or `xbar_r` for one inspected n at a time, whose points are
+        at a time; `xbar_r` for one inspected n at a time, whose points are
         the sample means, each carrying its own `range` and the `sample` id to
-        ask about.
+        ask about; or `p` for a characteristic the plant COUNTS rather than
+        measures.
+
+        On a `p` chart every point is one inspected lot, with its own `n`
+        (looked at), `k` (sent back), `p` (the share), the `count` id to ask
+        about and **its own control limits** - sigma there depends on the size
+        of the lot, so there is no single pair of limit lines and `control.
+        upper` and `control.lower` are null on purpose. Only rule 1 runs:
+        `rules_not_run` and `rules_not_run_note` say which rules do not and
+        why. There is no Cp or Cpk at all, and `capability_note` says why -
+        do not compute one, and do not describe the reject share as capability.
 
         On a sampled chart the n readings behind every point are left out by
         default and `samples_note` says how many and how to ask: they are what
@@ -230,6 +240,44 @@ def register(mcp, call, write, identify) -> dict:
                 **(answer if trends else _without_trend_points(answer))}
 
     @mcp.tool()
+    def spc_lot(plant: str, material: str, characteristic: str, count_id: int,
+                before_minutes: float | None = None, after_minutes: float | None = None,
+                trends: bool = False) -> dict:
+        """Why is this lot where it is - the records behind one point of a p
+        chart. The tool to use when an `spc_chart` answer has `kind` `p`: its
+        points carry `count`, and that is the `count_id` here.
+
+        The block to read first is `defects`: which kinds of defect were found
+        in this lot and how many of each, in the plant's own codes. A dot above
+        its limit only says that more of this lot came back than usual, and
+        which defects they were is the whole of the next question. It states
+        its own totals, and `note` says when the coded defects add to more than
+        the number sent back (one unit can carry two) or to fewer (some rejects
+        were sent back without a defect recorded). A null breakdown means the
+        count was recorded without one - that is *not known*, never *nothing
+        found*, and saying the lot was clean would be a lie about it.
+
+        Then `chart` - this lot's OWN upper and lower limits, which is what the
+        point was judged against - `recorded`, the firings written down against
+        this lot and any hold; `machine`, `timeline`, `stops`, `line`, `tags`,
+        `maintenance` and `findings` over the stretch the count covers rather
+        than over an instant, each with its own coverage.
+
+        There is no gauge and no capability here, and the answer says both in
+        words: nobody gauged the lot, and a share of units sent back is neither
+        a measurement nor inside a tolerance.
+
+        `trends=true` adds every bucket of every analog signal, which are left
+        out by default for the reason `spc_point` gives.
+        """
+        path = (f"/quality/spc/{quote(material, safe='')}/"
+                f"{quote(characteristic, safe='')}/lot/{int(count_id)}"
+                + _dossier_query(before_minutes, after_minutes, None))
+        answer = call(plant, "GET", path)
+        return {"plant": plant,
+                **(answer if trends else _without_trend_points(answer))}
+
+    @mcp.tool()
     def gauges(plant: str) -> dict:
         """The gauge register: every measuring instrument with its status,
         last calibration and due date, and which are out of calibration yet
@@ -252,7 +300,7 @@ def register(mcp, call, write, identify) -> dict:
     @mcp.tool()
     def create_spec(plant: str, material: str, characteristic: str, unit: str = "",
                     min_value: float | None = None, max_value: float | None = None,
-                    sample_size: int | None = None,
+                    sample_size: int | None = None, counted: bool | None = None,
                     dry_run: bool = False, on_behalf_of: str | None = None,
                     client_ref: str | None = None) -> dict:
         """Define a quality specification: a characteristic on a material with
@@ -260,12 +308,19 @@ def register(mcp, call, write, identify) -> dict:
         `sample_size` is the sampling plan - how many pieces are inspected at a
         time. Leave it out (or 1) for one at a time, charted as individuals and
         moving range; 2 to 10 makes it X-bar and R, whose readings arrive
-        together through record_sample."""
+        together through record_sample.
+
+        `counted=true` is the other kind: a characteristic nobody measures,
+        where an inspector looks at a lot and says how many were sent back.
+        Its records arrive on `POST /quality/counts` and its chart is a p
+        chart. It is refused together with a sample size above one or with a
+        minimum or maximum, because a count has no readings to average and no
+        unit of measure to be inside."""
         identify(on_behalf_of, client_ref)
         return write(plant, "/quality/specs",
                      {"material": material, "characteristic": characteristic, "unit": unit,
                       "min_value": min_value, "max_value": max_value,
-                      "sample_size": sample_size},
+                      "sample_size": sample_size, "counted": counted},
                      dry_run, f"define {characteristic} on {material}: {min_value}-{max_value} {unit}".strip())
 
     @mcp.tool()

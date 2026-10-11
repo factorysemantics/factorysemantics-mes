@@ -8,7 +8,8 @@
     "the nozzle the changeover left behind: for twenty-five line minutes after each changeover the fill-height sample means sit about a millimetre and a half high - 2.9 sigma of a sample mean - while the sample ranges stay where they were. Trace: on the fill_height chart the means after a labelled changeover stop are above centre, nearly all of them past the two-sigma line, and the range chart beside them is flat.",
     "the cold product, which is the line's story and this file's trace: for half an hour (7:00-7:30 of the shift in line.json) the cola reaching the filler is two degrees cold, so the bottles fill light and the fill-height sample means this file computes sit about a millimetre and a half LOW - the mirror of the changeover story above. Trace: the X-bar chart walks below its lower two-sigma line for two or three samples while the range chart stays flat, and the sample's own panel shows FILL01.ProductTemp down at 6.4 degC in the station's tags block.",
     "the maintenance order nobody starts: the filler's chiller condenser clean (PM-FILL-CHILLER) has never been serviced, so the supervisor raises it in the first minutes of the shift and then runs to the end of the order - the job sits at `due` in the backlog for eight hours. Trace: one preventive order on FILL01 on the Maintenance page, raised early, never started, with no `maintenance.started` audit row; and a chiller outlet temperature on the same machine that climbs all afternoon because of it. Link 2 of the chain in line.json.",
-    "the paperwork: the supervisor reviews a non-conformance, decides what happens to the material, and closes it - and leaves a few open on purpose, because a plant where every finding is closed by the end of the shift is not a plant."
+    "the paperwork: the supervisor reviews a non-conformance, decides what happens to the material, and closes it - and leaves a few open on purpose, because a plant where every finding is closed by the end of the shift is not a plant.",
+    "the chiller in the defect list: while the product reaching the filler is below 7.4 degC - the settled cold half hour of line.json's chain - the lots QI01 counts are sorted mostly into `low_fill`, where the lots either side of them are sorted mostly into `cap_skew`. Trace: on the `sent_back` p chart, open a lot in that window and the defects under it say low fill; open one an hour earlier and they say cap skew. The share sent back does not move, and `inspection._what_this_does_not_claim` says why."
   ],
   "_see_also": "The line's own stories - the nozzle-pressure dip, the first fills after a changeover, the tag that goes quiet, the washer running hot, and the product running cold - are in this pack's `line.json`, because they are things the machines do. This file is only what the people do. `labs/kepsim/line.json` is the same line as one hour, kept as the reference CI replays.",
 
@@ -89,6 +90,55 @@
       "_why_not_half_a_millimetre": "It was 0.5 mm until 2026-10-07, which on the same chart is 1.0 sigma of a sample mean and sits nearly three sigma inside the upper control limit: a shift a reader could find by splitting the means on the changeover, but one that effectively never fired a control rule where anybody was watching. It was raised on 2026-10-07 by somebody who wanted to watch a rule fire on fill height and could not. 1.5 mm is the smallest shift that fires inside an hour and still leaves the sample ranges alone and single bottles in spec - which is the whole point of the story: the process moved, its spread did not.",
       "_trace": "The sample means after a labelled `changeover` stop sit above the centre line, nearly all of them past the two-sigma line and the tallest past the upper control limit, and the range chart beside them shows no signal at all - every one of its points is inside its own upper limit. The process moved, the spread did not, which is exactly what an X-bar chart is for and what an individuals chart on fill weight never showed.",
       "_why_not_two_hours": "The handoff asked for about two hours. When this was written the plant replayed the reference hour, which changes over inside its own loop, so a two-hour window would never close and every sample on the chart would be a post-changeover one - the planted cause would have been the whole chart and visible as nothing. Since 2026-10-08 the plant replays an eight-hour shift (line.json beside this file) with one changeover in it, so that particular trap is gone; twenty-five line minutes stays, because it is still between one and two samples' worth after the changeover and that is a step a reader can see against the settled samples either side of it. A longer window now would only make the step harder to date."
+    }
+  },
+
+  "inspection": {
+    "_what": "How this floor COUNTS a stretch of production, for a characteristic that is not measured at all: QI01 looks at every bottle that reaches it and sends some back, and what the record holds is two whole numbers per stretch - how many were looked at, how many went back - plus which defects they were sorted into. The two numbers are the station's own counters differenced over the stretch; nothing here invents production. Read only by `fsmes run-operations`.",
+    "_why_data": "Because the only fiction in a count is the part no counter publishes: which bin an inspector put each reject in. That is one plant's vocabulary and one plant's story, so the codes and their weights are written here and `fsmes.sim.measurement` never changes when they do.",
+    "_the_story_planted_here": "The chiller's story, on the counted side. While the product reaching the filler is below 7.4 degC - the settled cold half hour at 7:00-7:30 of the shift in line.json, link 4 of its chain - low fill goes from the second least common defect to five times the commonest, so the lots counted in that window are sorted mostly into `low_fill` while the lots either side of them are sorted mostly into `cap_skew`. Trace: open a lot in that window on the p chart and the defects under it say low fill; open one at 6:00 and they say cap skew. Nothing is added to line.json and the chain's answer key is untouched - this reads the ProductTemp the chain already plants.",
+    "_what_this_does_not_claim": "That the SHARE sent back rises in the cold window. It does not: the number of rejects is the line's own scrap counter, and nothing in line.json makes QI01 scrap more when the product is cold. So the p chart is in control through the cold half hour and the story is in the breakdown under the points, not in the points. Making the share move would mean a scrap burst on QI01 in line.json, which moves the generated shift the chain's figures were measured on - a deliberate decision for whoever owns the pack, not a thing to slip in here.",
+    "_and_where_QI01_sits": "One simplification, said out loud rather than hidden: in this pack's routing QI01 is seq 40 and the filler is seq 50, so the bottles QI01 looks at have not been filled yet and `low_fill` is not a defect it could really find. The station is the pack's choice (`at.equipment`) and moving the count to a full-bottle inspector after the filler is a one-line edit here; what it would need is a station in line.json and an operation in the routing, which is a change to the plant and not to this script. Until somebody makes it, read QI01 here as the plant's one inspection point.",
+    "sent_back": {
+      "every_line_s": 900,
+      "_every_line_s": "Line seconds between counts: every fifteen minutes of line time, the same walk as the sample tray next door, which is what a plant with one inspector actually does. Divided by the replay speed like every other cadence on this floor.",
+      "at": {
+        "equipment": "QI01"
+      },
+      "_at": "Whose counters the two numbers come off, and the station written on the record. N is what the station put through in the stretch - what it passed on plus what it sent back - and k is what it sent back. Differenced against the end of the last stretch, so a counter that resets re-baselines and books nothing.",
+      "lot_ref": "{tail}-Q{n:02d}",
+      "_lot_ref": "What this plant calls one counted stretch: the order's number and the stretch's place in it - 4711-Q07 is the seventh quarter hour counted on WO-ACME-4711. It is a reference this floor made up, because this plant does not ship lots, and the screen says so under every lot it opens.",
+      "defects": [
+        {
+          "code": "cap_skew",
+          "weight": 5
+        },
+        {
+          "code": "label_crooked",
+          "weight": 4
+        },
+        {
+          "code": "low_fill",
+          "weight": 2
+        },
+        {
+          "code": "glass_chip",
+          "weight": 1
+        }
+      ],
+      "_defects": "The four bins this plant's inspectors sort rejects into, with how common each is when nothing is wrong. Relative weights, not percentages: 5 against 1 is five times as likely, and the list adding to twelve is arithmetic and not a contract. One draw per reject, so a lot's breakdown adds to exactly the number sent back - this inspector codes every bottle he sends back and codes it once.",
+      "while_below": {
+        "equipment": "FILL01",
+        "tag": "ProductTemp",
+        "value": 7.4,
+        "defects": [
+          {
+            "code": "low_fill",
+            "weight": 26
+          }
+        ]
+      },
+      "_while_below": "The planted cause, as a patch on the weights above rather than a second list: while FILL01's ProductTemp is under 7.4 degC, low fill weighs 26 against the other three's 5, 4 and 1, so about three quarters of what goes back in that window goes back for fill. 7.4 degC is the threshold because this line's product sits at 8.4 settled and 6.4 through the cold half hour (line.json, `_how_low_is_low`), and 7.4 is between them with a degree of room either side - it is not a limit anybody on the plant would recognise, which is the point: this is the script deciding when its own story is running, not a specification. A tag the floor cannot read is `unknown` and not `in band`: the settled weights are used and the log says it could not look."
     }
   },
 

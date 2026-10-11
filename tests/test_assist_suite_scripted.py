@@ -1292,6 +1292,16 @@ def test_the_scripted_run_arranges_every_fixture_the_suite_asks_for(scored):
     not arranged, with the sentence that says who can write it and where; the
     rule itself is proved by `tests/test_the_supervisor_writes_a_rule_as_a_
     sentence.py` and on the lab's own Maintenance tab.
+
+    Eight as of 2026-10-11, and the eighth is the sampling plan's twin.
+    Recording a count needs a characteristic the plant *counts* rather than
+    measures, and whether it does is written on the specification: master data
+    by the same decision (0035, amended by 0041). The demo plant measures brix
+    and names no counted characteristic, and a run that declared one counted to
+    make its own case runnable would be choosing which chart somebody's quality
+    record is drawn on. The count is proved by `tests/test_a_characteristic_
+    the_plant_counts.py` and on the bottling lab, where QI01 posts one every
+    quarter of an hour.
     """
     unmade = {o.case.id: o.missing for o in scored if not o.arranged}
     assert set(unmade) == {
@@ -1301,6 +1311,7 @@ def test_the_scripted_run_arranges_every_fixture_the_suite_asks_for(scored):
         "analyst-answers-the-managers-two-sentences-and-why-the-sample-is-high",
         "analyst-asks-which-workcenters-are-asking-what",
         "analyst-asks-why-a-flagged-sample-is-high",
+        "operator-records-a-count-of-rejects",
         "operator-records-a-sample-of-five"}, unmade
     assert unmade["admin-approves-an-adjustment"] == ("adjustment:MIX01",)
     assert unmade["admin-switches-off-a-dispatch-rule"] == \
@@ -1308,6 +1319,8 @@ def test_the_scripted_run_arranges_every_fixture_the_suite_asks_for(scored):
     assert unmade["analyst-asks-which-workcenters-are-asking-what"] == ("home:SCOTT",)
     assert unmade["operator-records-a-sample-of-five"] == \
         ("sampled_spec:FG-COLA/fill_height",)
+    assert unmade["operator-records-a-count-of-rejects"] == \
+        ("counted_spec:FG-COLA/sent_back",)
     # Both halves missing, and both named: the specification this plant does not
     # have, and the point no run may arrange on it.
     assert unmade["analyst-asks-why-a-flagged-sample-is-high"][0] == \

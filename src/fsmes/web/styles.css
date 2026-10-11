@@ -611,6 +611,19 @@ a.obj:hover { text-decoration: underline; }
 .row-label { fill: var(--text); font-size: 11px; font-family: var(--mono); }
 .bar-label { fill: var(--text); font-size: 11px; }
 .limit-line { stroke: var(--idle); stroke-width: 1; stroke-dasharray: 4 3; }
+/* A limit that is not one line. On a chart of counted lots every lot has its
+   own pair - wide where few units were looked at, narrow where many were - so
+   the pair is drawn as a step, flat across each lot and rising or falling
+   between two of them. The same quiet dashes as `.limit-line`, because it is
+   the same kind of line and a reader should not have to learn a second
+   vocabulary; `fill: none` because a step is a polyline and an unfilled
+   polyline is the only kind that is a line. */
+.limit-step {
+  fill: none;
+  stroke: var(--idle);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
 
 /* A trend: the band is the spread, the line is the mean drawn over it.
    Neither takes a pointer. The readings are the marks a person clicks, and a

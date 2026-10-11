@@ -251,8 +251,9 @@ def test_every_table_the_registry_names_is_a_real_table():
     # 22 since quality_samples joined the quality module on 2026-10-06: a
     # characteristic inspected n at a time keeps its subgroups there. 26 since
     # the maintenance crew joined it on 2026-10-09: skills, who holds them, the
-    # roster and the supervisor's dispatch rules.
-    assert optional == 26, (
+    # roster and the supervisor's dispatch rules. 27 since quality_counts joined
+    # on 2026-10-11: a characteristic the plant counts keeps its lots there too.
+    assert optional == 27, (
         f"{optional} of {len(known)} tables belong to a module a plant may switch off")
 
 

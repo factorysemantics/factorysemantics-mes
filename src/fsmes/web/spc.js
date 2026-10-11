@@ -63,6 +63,11 @@ let openCheck = null;
    and one variable holding either would ring the dot numbered 7 on the wrong
    chart the first time a reader switched characteristic. */
 let openSample = null;
+/* And which counted lot, on a p chart. A third variable for the reason there
+   is a second: three small integers that mean three different records, and
+   one field holding whichever would open the panel on the wrong thing the
+   first time a reader switched characteristic. */
+let openLot = null;
 
 function live(ok) {
   $("#live-dot").className = "dot" + (ok ? " ok" : " bad");
@@ -77,6 +82,12 @@ function fail(error) {
 }
 
 const num = (v, d = 3) => (v === null || v === undefined ? "—" : Number(v).toFixed(d));
+/* A share, read as a percentage. `FS.fmt.pct` rounds to whole percents, and
+   on a reject rate that is the difference between a line sending back one
+   bottle in a hundred and one in fifty - two decimal places so a reader can
+   tell those apart, and the number itself stays the share the server sent. */
+const share = (v) => (v === null || v === undefined ? "—"
+  : `${(Number(v) * 100).toFixed(2)}%`);
 
 /* The two halves, in one <svg>, drawn by the kit.
 
@@ -106,7 +117,15 @@ const num = (v, d = 3) => (v === null || v === undefined ? "—" : Number(v).toF
    rather than a thrown error in a console they will never open. */
 const INDIVIDUALS = "imr";
 const SAMPLED = "xbar_r";
+/* And the third, since decision 0041: a characteristic nobody measures. An
+   inspector looks at a stretch of a lot, counts how many units they sent
+   back, and the point is that share - with its own pair of control limits,
+   because every lot is a different number of units. The chart is a `p` chart
+   and the page says "counted, per lot" wherever it has to name it, because
+   "attribute data" is not a phrase anybody on a line uses. */
+const PROPORTION = "p";
 const sampledChart = (data) => (data && data.kind) === SAMPLED;
+const countedChart = (data) => (data && data.kind) === PROPORTION;
 
 /* The question this chart would be asked about, in the words Scott asked it in
    (2026-10-07): a plant manager who wants two sentences and one picture. The
@@ -123,6 +142,9 @@ function explainQuestion(data) {
     "I'm the plant manager and I don't understand the SPC tab. How does the "
     + `${chart} chart look? Two sentences for my boss and the one graph for a `
     + "slide.";
+  if (openLot !== null && openLot !== undefined) {
+    return `${question} And why is inspected lot ${openLot} where it is?`;
+  }
   if (openSample !== null && openSample !== undefined) {
     return `${question} And why is sample ${openSample} where it is?`;
   }
@@ -152,7 +174,9 @@ function explainLink(data) {
   if (data.material && data.characteristic) {
     query.set("spec", `${data.material}/${data.characteristic}`);
   }
-  if (openSample !== null && openSample !== undefined) {
+  if (openLot !== null && openLot !== undefined) {
+    query.set("lot", String(openLot));
+  } else if (openSample !== null && openSample !== undefined) {
     query.set("sample", String(openSample));
   } else if (openCheck !== null && openCheck !== undefined) {
     query.set("check", String(openCheck));
@@ -167,34 +191,42 @@ function draw(data) {
      can ask about - the honest answer being that there are none. */
   explainLink(data);
   const kind = data.kind || INDIVIDUALS;
-  if (kind !== INDIVIDUALS && kind !== SAMPLED) {
+  if (kind !== INDIVIDUALS && kind !== SAMPLED && kind !== PROPORTION) {
     return kit.empty(host,
       `${data.characteristic} is charted as “${kind}”, which this screen does not `
-      + `draw: it draws individuals and moving range, and X-bar and R. It draws `
-      + `nothing rather than plot these points as one of the two. The centre, the `
-      + `limits, the capability and the verdict below are the server's own.`);
+      + `draw: it draws individuals and moving range, X-bar and R, and the share `
+      + `of each counted lot. It draws nothing rather than plot these points as `
+      + `one of the three. The centre, the limits, the capability and the verdict `
+      + `below are the server's own.`);
   }
   const sampled = kind === SAMPLED;
+  const counted = kind === PROPORTION;
   if (!data.points.length) {
-    return kit.empty(host, sampled
-      ? `No samples of ${data.characteristic} yet. It is inspected `
-        + `${data.sample_size} pieces at a time, so the first point appears when `
-        + `${data.sample_size} readings are recorded together as one sample.`
-      : "No readings for this characteristic yet.");
+    return kit.empty(host, counted
+      ? `Nobody has counted ${data.characteristic} yet. A point here is one `
+        + `stretch of production somebody looked at — how many units they looked `
+        + `at and how many they sent back — so the first one appears when the `
+        + `first count is recorded.`
+      : sampled
+        ? `No samples of ${data.characteristic} yet. It is inspected `
+          + `${data.sample_size} pieces at a time, so the first point appears when `
+          + `${data.sample_size} readings are recorded together as one sample.`
+        : "No readings for this characteristic yet.");
   }
   const chart = kit.draw(host, "spc", data, {
     width: Math.max(host.clientWidth || 900, 620),
     /* The dots are buttons on this page and plain marks everywhere else. */
     openable: true,
     /* So a refresh every ten seconds redraws the selection rather than losing
-       it. Two keys and not one: a check id and a sample id are both small
-       integers, and one field holding either would ring the dot numbered 7 on
-       the wrong chart the first time a reader switched characteristic. */
-    selected: { sample: openSample, check: openCheck },
+       it. Three keys and not one: a check id, a sample id and a count id are
+       all small integers, and one field holding whichever would ring the dot
+       numbered 7 on the wrong chart the first time a reader switched
+       characteristic. */
+    selected: { sample: openSample, check: openCheck, lot: openLot },
   });
   exportTools($("#chart-tools"), chart,
               `${data.material} ${data.characteristic} `
-              + `${sampled ? "X-bar and R" : "IMR"} chart`);
+              + `${counted ? "p" : sampled ? "X-bar and R" : "IMR"} chart`);
 }
 
 /* A dot was pressed. Wired once, on the host rather than on the marks, because
@@ -207,7 +239,8 @@ function openOnClick() {
   host.addEventListener("fs-spc-open", (event) => {
     const { what, id } = event.detail || {};
     if (id === undefined || id === null) return;
-    if (what === "sample") openSamplePanel(id);
+    if (what === "lot") openLotPanel(id);
+    else if (what === "sample") openSamplePanel(id);
     else openPoint(id);
   });
 }
@@ -240,25 +273,70 @@ async function load() {
      label promises, with the sigma of a mean in the tooltip because that is
      what the control limits are drawn from. */
   const sampled = sampledChart(data);
+  const counted = countedChart(data);
   words(data);
-  $("#l-n").textContent = sampled ? "Samples" : "Readings";
+  $("#l-n").textContent = counted ? "Lots" : sampled ? "Samples" : "Readings";
   $("#f-n").textContent = data.n;
-  $("#f-n").title = sampled
-    ? `${data.n} samples of ${data.sample_size} — ${data.readings} readings`
+  /* Every list states its total, and on a counted chart the total is three
+     numbers: how many lots are drawn, how many units were looked at across
+     them, and how many of those were sent back. A share with no denominator
+     beside it is a number nobody can check. */
+  $("#f-n").title = counted
+    ? `${data.n} inspected lot(s) — ${(data.inspected || 0).toLocaleString()} units `
+      + `looked at, ${(data.rejected || 0).toLocaleString()} sent back`
+    : sampled
+      ? `${data.n} samples of ${data.sample_size} — ${data.readings} readings`
+      : "";
+  /* The centre of a counted chart is a share, and a share reads as a
+     percentage: 0.01 and 0.02 are a doubling that two decimal places hide. */
+  $("#f-centre").textContent = !data.control ? "—"
+    : counted ? share(data.control.centre) : num(data.control.centre, 2);
+  $("#f-centre").title = counted && data.control
+    ? "p̄ — every unit sent back over every unit looked at, and not the average "
+      + "of the lots' shares: a lot of twenty does not weigh as much as a lot "
+      + "of two thousand."
     : "";
-  $("#f-centre").textContent = data.control ? num(data.control.centre, 2) : "—";
+  /* Sigma on a counted chart is not one number. It is the centre's own spread
+     over the root of each lot's size, so the facts row says the span of them
+     and the label says per lot - printing one of the fourteen under the word
+     "sigma" would be a true number standing for thirteen others. */
+  $("#l-sigma").textContent = counted ? "Sigma (per lot)" : "Sigma (within)";
+  const perLot = counted && data.control ? (data.control.limits || []) : [];
+  const sigmas = perLot.map((row) => row.sigma).filter((v) => v !== null && v !== undefined);
   const within = data.control
     && (sampled ? data.control.sigma_within : data.control.sigma);
-  $("#f-sigma").textContent = data.control ? num(within, 3) : "—";
-  $("#f-sigma").title = sampled && data.control
-    ? `Within-process sigma, R̄/d2. A sample mean of ${data.sample_size} varies by `
-      + `${num(data.control.sigma, 3)}, and the control limits are drawn from that.`
-    : "";
+  $("#f-sigma").textContent = counted
+    ? (sigmas.length
+        ? (sigmas.length > 1
+            ? `${num(Math.min(...sigmas), 4)}–${num(Math.max(...sigmas), 4)}`
+            : num(sigmas[0], 4))
+        : "—")
+    : (data.control ? num(within, 3) : "—");
+  $("#f-sigma").title = counted && data.control
+    ? `One per lot: the smallest lot here held `
+      + `${(data.control.smallest_lot || 0).toLocaleString()} units and the largest `
+      + `${(data.control.largest_lot || 0).toLocaleString()}, so the limits are wide `
+      + `on the small ones and narrow on the large ones.`
+    : sampled && data.control
+      ? `Within-process sigma, R̄/d2. A sample mean of ${data.sample_size} varies by `
+        + `${num(data.control.sigma, 3)}, and the control limits are drawn from that.`
+      : "";
   // Capability is withheld while the chart is out of control: the verdict
   // says the number is not meaningful, so the facts row must not print it.
   // The value stays in the tooltip for the engineer who wants it anyway.
   const cap = data.capability;
   const unstable = data.stable === false;
+  /* On a counted chart there is no capability to withhold: a share of a lot
+     sent back has no spread to compare with a tolerance, and the characteristic
+     has no tolerance either. Said in the server's own words rather than left
+     as a dash, and said in the three cells rather than hidden - a row that
+     vanished would read as a question nobody asked. */
+  if (counted) {
+    for (const id of ["#f-cp", "#f-cpk", "#f-pp"]) {
+      $(id).textContent = "not for a count";
+      $(id).title = data.capability_note || "";
+    }
+  }
   const capCell = (id, value, absent) => {
     const node = $(id);
     node.title = "";
@@ -270,9 +348,11 @@ async function load() {
     }
     node.textContent = num(value, 2);
   };
-  capCell("#f-cp", cap && cap.cp, "withheld");
-  capCell("#f-cpk", cap && cap.cpk, "withheld");
-  capCell("#f-pp", cap && cap.pp, "—");
+  if (!counted) {
+    capCell("#f-cp", cap && cap.cp, "withheld");
+    capCell("#f-cpk", cap && cap.cpk, "withheld");
+    capCell("#f-pp", cap && cap.pp, "—");
+  }
   const verdict = $("#verdict");
   verdict.textContent = data.verdict || data.note || "—";
   // The bar is the plant's, and the server sends it. This line held its own
@@ -314,6 +394,16 @@ async function load() {
   const list = (numbers) => numbers.map((r) => `rule ${r}`)
     .reduce((text, one, i, all) =>
       text + (i === 0 ? "" : i === all.length - 1 ? " and " : ", ") + one, "");
+  /* And, on a counted chart, which rules are not drawn at all. Decision 0036
+     says the chart draws every rule it runs; this chart runs one of the five,
+     for a reason the payload states, and a reader who knows the other four
+     would otherwise be waiting for a zone rule that is never coming. Printed
+     under the hold sentence, in the server's own words. */
+  const notRun = $("#rules-not-run");
+  if (notRun) {
+    notRun.textContent = counted && data.rules_not_run_note
+      ? data.rules_not_run_note : "";
+  }
   $("#hold-rules").textContent = !rules.length ? ""
     : !off.length
       ? `Every rule this plant draws raises a hold: ${list(rules)}.`
@@ -336,7 +426,7 @@ async function load() {
     /* What a position on this chart counts. Samples on a sampled chart, and
        saying "reading 7" there would send a person looking for a bottle that
        is one of thirty-five. */
-    const noun = sampled ? "sample" : "reading";
+    const noun = counted ? "lot" : sampled ? "sample" : "reading";
     tr.append(el("td", "muted small", where.length ? `${noun} ${where.map((i) => i + 1).join(s.mr ? " to " : ", ")}` : (s.at !== undefined ? `${noun} ${s.at + 1}` : "")));
     tr.append(el("td", null, s.description || s.meaning || s.what || JSON.stringify(s)));
     // What it set off. A chart that says a rule fired and stops there leaves
@@ -360,7 +450,15 @@ async function load() {
   /* The moving-range half's own sentence, under the chart. Its own, because
      the two halves answer two questions and one sentence for both is how a
      reader comes to think a process that jumps is a process behaving. */
-  $("#mr-verdict").textContent = lower ? (lower.verdict || "") : "";
+  /* Nothing is drawn below a counted chart - a lot is one whole number and one
+     share of it, and there is no range to judge - so the sentence that belongs
+     to the lower half says that rather than staying behind as the last
+     characteristic's. */
+  $("#mr-verdict").textContent = counted
+    ? "There is no chart below this one: a count has no range. A lot is one "
+      + "number of units looked at and one number sent back, so there is no "
+      + "spread inside it to draw."
+    : lower ? (lower.verdict || "") : "";
   window.__fsmesPageData = data;
 
   /* A keyboard's way in, and a mouse's shortcut: the WORST point a rule fired
@@ -380,7 +478,7 @@ async function load() {
      different point every time a check is recorded; the sample is not. */
   const idAt = (index) => {
     const point = data.points[index] || {};
-    return sampled ? point.sample : point.check;
+    return counted ? point.count : sampled ? point.sample : point.check;
   };
   const flagged = data.signals
     .map((s) => ({ signal: s, id: idAt(s.index) }))
@@ -398,7 +496,7 @@ async function load() {
         || b.signal.index - a.signal.index)[0]
     : null;
   const target = best ? best.id : idAt(data.points.length - 1);
-  const noun = sampled ? "sample" : "reading";
+  const noun = counted ? "lot" : sampled ? "sample" : "reading";
   button.disabled = target === undefined;
   button.textContent = best
     ? `Open the rule ${best.signal.rule} ${noun}`
@@ -416,12 +514,16 @@ async function load() {
               + "press any dot on the chart for that one."
             : ".")
       : "Nothing fired a rule on this chart, so this opens the newest point.",
-    sampled
-      ? `A point here is the mean of ${data.sample_size} pieces, and the panel `
-        + `opens all ${data.sample_size} of them with the records around them.`
-      : "",
+    counted
+      ? "A point here is one stretch somebody looked at, and the panel opens "
+        + "which defects they sent it back for."
+      : sampled
+        ? `A point here is the mean of ${data.sample_size} pieces, and the panel `
+          + `opens all ${data.sample_size} of them with the records around them.`
+        : "",
   ].filter(Boolean).join(" ");
-  button.onclick = () => (sampled ? openSamplePanel(target) : openPoint(target));
+  button.onclick = () => (counted ? openLotPanel(target)
+    : sampled ? openSamplePanel(target) : openPoint(target));
 }
 
 /* The words on this screen that are about which chart it is, set in one place
@@ -432,10 +534,19 @@ async function load() {
    follow `kind` whether or not there is anything to draw. */
 function words(data) {
   const sampled = sampledChart(data);
+  const counted = countedChart(data);
   const n = data.sample_size;
-  $("#chart-heading").textContent = sampled
-    ? `Sample average and range (X̄ and R)` : "Individuals and moving range";
-  const legend = sampled ? [
+  $("#chart-heading").textContent = counted
+    ? "How much of each lot was sent back (p)"
+    : sampled
+      ? `Sample average and range (X̄ and R)` : "Individuals and moving range";
+  const legend = counted ? [
+    ["--accent", "share of the lot sent back"],
+    ["--running", "centre line (p̄, every unit sent back over every unit looked at)"],
+    ["--idle", "control limits — one pair per lot, because every lot is a "
+              + "different number of units"],
+    ["--quality", "rule fired"],
+  ] : sampled ? [
     ["--accent", `sample average (mean of ${n})`],
     ["--running", "centre line (X̿, R̄)"],
     ["--idle", "control limits (X̿ ± A2·R̄ above, D4·R̄ and D3·R̄ below)"],
@@ -455,7 +566,14 @@ function words(data) {
     span.append(swatch, label);
     return span;
   }));
-  $("#chart-explainer").textContent = sampled
+  $("#chart-explainer").textContent = counted
+    ? "There is no chart under this one. A lot is two whole numbers — how many "
+      + "units somebody looked at and how many they sent back — and a share of "
+      + "the first by the second; there is no spread inside it to draw. What "
+      + "moves instead are the limits: a step up or down in them is a lot of a "
+      + "different size, not a process that changed. Read the steps first, "
+      + "then the dots against the pair they sit between."
+    : sampled
     ? `The lower chart is how far apart the ${n} readings inside each sample `
       + "were. It is where the sigma behind both sets of limits comes from — "
       + "the mean of that series over d2 — so a process whose samples are "
@@ -466,7 +584,11 @@ function words(data) {
       + "of that series over d2 — so a process that jumps between consecutive "
       + "readings has limits worth less than they look, whatever the upper "
       + "chart says.";
-  $("#point-hint").textContent = sampled
+  $("#point-hint").textContent = counted
+    ? "Click a lot to see which defects it was sent back for — or tab to one "
+      + "and press Enter. The button opens the worst lot a rule fired on, and "
+      + "says which rule that is; the newest lot when none did."
+    : sampled
     ? `Click a sample to see the ${n} readings behind it — or tab to one and `
       + "press Enter. A dot on the lower chart is the same sample's spread and "
       + "opens the same readings. The button opens the worst sample a rule "
@@ -477,9 +599,18 @@ function words(data) {
       + "opens the later of them. The button opens the worst reading a rule "
       + "fired on — rule 1 before rule 5 before the rest, the newest of those "
       + "— and says which rule that is; the newest reading when none did.";
-  $("#point-title").textContent = sampled
-    ? "Why this sample is here" : "Why this reading is here";
-  $("#point-idle").textContent = sampled
+  $("#point-title").textContent = counted ? "Why this lot is here"
+    : sampled ? "Why this sample is here" : "Why this reading is here";
+  $("#point-idle").textContent = counted
+    ? "No lot is open. Click one on the chart beside this and what was wrong "
+      + "with it appears here: which defects it was sent back for and how many "
+      + "of each, the two numbers behind the share, the half hour of production "
+      + "the count covers, the station that counted it, what that machine was "
+      + "doing and its process values over the same minutes, and anything else "
+      + "that happened in the window. Nothing is modelled or guessed — every "
+      + "line is a record, and each block says how much of its window anybody "
+      + "was watching."
+    : sampled
     ? `No sample is open. Click one on the chart beside this and the ${n} `
       + "readings behind it appear here, each with its distance from the "
       + "sample's own mean and which of them is furthest out — with every "
@@ -825,17 +956,28 @@ function tagsBlock(d, station, noun = "reading") {
         : `No station is recorded against this ${noun}, so there are no tags to draw.`));
     return section;
   }
-  /* What the window is, which is not the same question on the two panels. A
-     reading is an instant and the window is ten minutes before it; a sample of
-     n pieces is a stretch, and the window runs from the minutes before the
-     FIRST of them to the last plus the tail. Every reading is marked. */
-  const spans = d.window.spanned_seconds !== undefined
-    ? `the ${kit.duration(d.window.spanned_seconds)} this sample spans, the `
-      + `${d.window.before_minutes} minutes before the first reading and the `
-      + `${d.window.after_minutes} after the last. All ${tags.marks || d.readings.total} `
-      + "readings are marked on each."
-    : `the ${d.window.before_minutes} minutes before the reading and the `
-      + `${d.window.after_minutes} after. The reading is marked on each.`;
+  /* What the window is, which is not the same question on the three panels.
+     A reading is an instant and the window is ten minutes before it; a sample
+     of n pieces is a stretch, and the window runs from the minutes before the
+     FIRST of them to the last plus the tail; a counted lot is a stretch too,
+     and what is marked on it is its two ends - there are no readings behind a
+     count to mark, which is the whole difference between that chart and the
+     other two. A count recorded without its stretch has neither, and says so
+     rather than printing a duration nobody claimed. */
+  const spanned = d.window.spanned_seconds;
+  const marked = noun === "lot"
+    ? "Both ends of the stretch are marked on each."
+    : `All ${tags.marks || (d.readings || {}).total || 0} readings are marked on each.`;
+  const spans = spanned
+    ? `the ${kit.duration(spanned)} this ${noun} spans, the `
+      + `${d.window.before_minutes} minutes before the first of it and the `
+      + `${d.window.after_minutes} after the last. ${marked}`
+    : `the ${d.window.before_minutes} minutes before the ${noun} and the `
+      + `${d.window.after_minutes} after. `
+      + (noun === "lot"
+          ? "This count was recorded without the stretch it covers, so what is "
+            + "marked on each is when it was written down."
+          : "The reading is marked on each.");
   section.append(el("p", "muted small",
     `${tags.shown} of ${tags.total} signal${tags.total === 1 ? "" : "s"} this station `
     + `published in this window, over ${spans}`));
@@ -1278,6 +1420,202 @@ function drawSample(d) {
   body.hidden = false;
 }
 
+/* ======================================================================
+   WHY THIS LOT IS HERE — the same panel, about a counted lot
+
+   A dot on a p chart says *more of this lot came back than usual*. The only
+   useful next question is *which ones*, so the defects are the first block
+   here rather than the fourth, and the two whole numbers the share came from
+   are above the share itself: "61 of 1,180 sent back" is the record and
+   0.0517 is arithmetic on it.
+
+   Everything below the first three blocks is the reading panel's, unchanged
+   and reading the same keys: the machine, its Gantt, the rest of the line,
+   the process values, the maintenance and the findings. Three panels that
+   drew the same records three ways would drift, and the one a reader of this
+   chart needs is the one they already know from the other two.
+   ====================================================================== */
+
+/* Which defects, worst first, with every total the answer gave. Three
+   different facts live in `coded` and the note, and none of them may be
+   drawn as a clean lot: a null breakdown is *this MES does not know*, an
+   empty list is *nothing was coded against the rejects*, and a coded total
+   that differs from the rejects is either a unit carrying two defects or an
+   inspector who coded some and not all. The server writes that sentence; this
+   prints it. */
+function defectsBlock(d) {
+  const section = pointBlock("Which defects");
+  const block = d.defects || {};
+  const rows = block.defects || [];
+  const lot = d.lot || {};
+  section.append(pointTable(
+    ["Defect", "How many", "Share of what was sent back"],
+    rows.map((row) => [
+      row.code,
+      row.count,
+      /* The share of the REJECTS, not of the lot: "which of the ones we sent
+         back was this" is the question a reader of this block is holding.
+         Printed only where there is a denominator to divide by - a lot with
+         nothing sent back has no such share, and 0 of 0 is not nought. */
+      lot.rejected ? share(row.count / lot.rejected) : null,
+    ]),
+    block.note || "No defect was coded against this lot."));
+  section.append(facts([
+    ["Defect codes", block.total],
+    ["Units sent back", lot.rejected === null || lot.rejected === undefined
+      ? null : lot.rejected.toLocaleString()],
+    /* Null is *nobody broke it down* and is not nought. The row stays and
+       says so, because a row that vanished would read as a question nobody
+       asked (style rule 8). */
+    ["Coded against them", block.coded === null || block.coded === undefined
+      ? "not broken down" : block.coded.toLocaleString()],
+  ]));
+  if (block.note) section.append(el("p", "muted small", block.note));
+  return closeWith(section, block);
+}
+
+/* The lot itself: the two numbers, the share, the stretch of production it
+   covers, and who looked at it. */
+function lotBlock(d) {
+  const lot = d.lot || {};
+  const window = d.window || {};
+  const section = pointBlock("The lot");
+  /* The record, at the top, big enough to be the answer to "which point did I
+     click" - and it is the two whole numbers, with the share after them. A
+     share alone at this size would be the arithmetic standing in for the
+     record it came from. */
+  const value = el("p", "point-value");
+  value.append(`${(lot.rejected || 0).toLocaleString()} of `
+               + `${(lot.inspected || 0).toLocaleString()}`);
+  value.append(el("span", "unit", `sent back — ${share(lot.p)}`));
+  section.append(value);
+  section.append(facts([
+    ["Lot", lot.lot_ref, true],
+    ["Stretch", window.stretch_start
+      ? `${fmt.clock(window.stretch_start)}–${fmt.clock(window.stretch_end)}`
+        + (window.spanned_seconds === null || window.spanned_seconds === undefined
+            ? "" : ` (${kit.duration(window.spanned_seconds)})`)
+      : null],
+    ["Counted at", fmt.stamp(lot.ts)],
+    ["By", lot.checked_by],
+    ["Order", lot.work_order, true],
+    ["Shift", lot.shift
+      ? `${lot.shift}${lot.shift_day ? ` (${fmt.day(lot.shift_day)})` : ""}` : null],
+    ["Station", lot.equipment
+      ? `${lot.equipment.code} — ${lot.equipment.name}` : null, true],
+  ]));
+  /* What a lot IS on a plant that does not ship them yet, in words, rather
+     than an empty link where a lot number would be. */
+  if (lot.lot_note) section.append(el("p", "muted small", lot.lot_note));
+  /* And that nobody gauged it. A reader who has used the other two panels
+     will look for the gauge block; it is not here, and an absence nobody
+     explained is one a reader fills in themselves. */
+  if (lot.gauge_note) section.append(el("p", "muted small", lot.gauge_note));
+  if (window.note) section.append(el("p", "muted small", window.note));
+  return section;
+}
+
+/* What the rules said about this lot - judged, as every other point on every
+   other chart is, against ITS OWN limits. Quoting one pair for the whole
+   chart would tell the reader they were held to a standard they were not. */
+function lotRuleBlock(d) {
+  const section = pointBlock("What the rules said");
+  const chart = d.chart || {};
+  const fired = chart.signals || [];
+  if (!chart.on_chart) {
+    section.append(el("p", "muted small", chart.note || "This lot is not on the chart."));
+  } else if (fired.length) {
+    for (const signal of fired) {
+      section.append(el("p", null, `Rule ${signal.rule}: ${signal.what}.`));
+    }
+  } else {
+    section.append(el("p", "muted small",
+      "No rule fired on this lot. It is on the chart and the rules were run "
+      + "when the count was recorded."));
+  }
+  section.append(facts([
+    ["Lot", chart.point ? `${chart.point} of ${chart.points}` : null],
+    ["Share sent back", share(chart.p), true],
+    ["Centre (p̄)", share(chart.centre), true],
+    /* This lot's own pair, named as its own. */
+    ["Its own limits", chart.upper === null || chart.upper === undefined
+      ? null : `${share(chart.lower)} to ${share(chart.upper)}`, true],
+    ["Its own sigma", chart.sigma === null || chart.sigma === undefined
+      ? null : num(chart.sigma, 4), true],
+  ]));
+  if (chart.lower_at_zero) {
+    section.append(el("p", "muted small",
+      "The lower limit on this lot sits at nought: too few units were looked "
+      + "at for a clean lot to be remarkable, so nothing here could fire a "
+      + "rule downward."));
+  }
+  if (chart.rules_not_run_note) {
+    section.append(el("p", "muted small", chart.rules_not_run_note));
+  }
+  if (chart.capability_note) {
+    section.append(el("p", "muted small", chart.capability_note));
+  }
+  /* What the MES acted on when the count arrived, which is not the same
+     question as what the chart says now: the chart is drawn over a history
+     that has moved since. */
+  const recorded = (d.recorded && d.recorded.signals) || [];
+  section.append(el("p", "muted small",
+    `${recorded.length} rule firing${recorded.length === 1 ? "" : "s"} recorded on this `
+    + "lot when the count arrived" + (recorded.length ? ":" : ".")));
+  if (recorded.length) {
+    section.append(pointTable(["Rule", "What it means", "What it raised"],
+      recorded.map((row) => {
+        let raised = el("span", "muted small", "no hold of its own");
+        if (row.nonconformance) {
+          const link = el("a", "obj", row.nonconformance);
+          link.href = `/dashboard/quality?n_q=${encodeURIComponent(row.nonconformance)}&n_status=`;
+          raised = el("span");
+          raised.append(`${row.nonconformance_status || "held"} — `, link);
+        }
+        return [`rule ${row.rule}`, row.what, raised];
+      }), ""));
+  }
+  return closeWith(section, d.recorded);
+}
+
+function drawLot(d) {
+  const body = $("#point-body");
+  body.replaceChildren();
+  const lot = d.lot || {};
+  $("#point-which").textContent =
+    `— lot ${lot.lot_ref || lot.count}, ${fmt.stamp(lot.ts)}`;
+  /* The defects FIRST. On the other two panels the reading is the first
+     block, because the question there is "what was measured"; here the
+     reading is two whole numbers the chart already drew, and the question is
+     "what was wrong with them". */
+  body.append(defectsBlock(d));
+  body.append(lotBlock(d));
+  body.append(lotRuleBlock(d));
+  body.append(machineBlock(d, "lot"));
+  /* The stretch marked on the timeline at both ends, not one instant in the
+     middle: a changeover that ended inside the half hour is the answer, and a
+     single marker would hide which side of it the lot was counted on. */
+  timelineChart(body, d, lot.equipment ? lot.equipment.code : null, [
+    { t: (d.window || {}).stretch_start || (d.window || {}).at, label: "stretch starts" },
+    { t: (d.window || {}).stretch_end || (d.window || {}).at, label: "stretch ends" },
+  ].filter((mark) => mark.t));
+  body.append(foldable(lineBlock(d, "lot"), "line", lineSummary(d),
+                       { open: (d.line && (d.line.stations || []).length) > 0 }));
+  /* Open, not folded, on a counted chart: *was the product cold while they
+     were sending bottles back* is the question a p chart sends a reader to
+     the process values with, and a reader who has to open a fold to ask it is
+     a reader who will not. */
+  body.append(foldable(tagsBlock(d, lot.equipment ? lot.equipment.code : null, "lot"),
+                       "tags", tagsSummary(d), { open: true }));
+  body.append(foldable(elseBlock(d), "else", elseSummary(d), { open: false }));
+  const foot = el("p", "point-watched",
+    `${fmt.clock(d.window.start)}–${fmt.clock(d.window.end)}. `
+    + (watchedLine(d) || ""));
+  body.append(foot);
+  $("#point-idle").hidden = true;
+  body.hidden = false;
+}
+
 async function openPoint(check) {
   const node = $("#point-panel");
   if (check === undefined || check === null) return;
@@ -1291,7 +1629,9 @@ async function openPoint(check) {
      a page carrying both would have a test - and a reader - believing the
      column beside them is about a sample when it is about a reading. */
   node.dataset.sample = "";
+  node.dataset.count = "";
   openSample = null;
+  openLot = null;
   $("#point-which").textContent = "— opening…";
   const [material, characteristic] = chosen.split("|");
   try {
@@ -1328,7 +1668,9 @@ async function openSamplePanel(sample) {
   node.dataset.state = "loading";
   node.dataset.sample = "";
   node.dataset.point = "";
+  node.dataset.count = "";
   openCheck = null;
+  openLot = null;
   $("#point-which").textContent = "— opening…";
   const [material, characteristic] = chosen.split("|");
   try {
@@ -1344,6 +1686,39 @@ async function openSamplePanel(sample) {
     $("#point-which").textContent = "";
     $("#point-body").replaceChildren(el("p", "empty",
       `This sample's records could not be read: ${error.message}`));
+    $("#point-body").hidden = false;
+    $("#point-idle").hidden = true;
+  }
+}
+
+/* The same three states, about a counted lot. `data-count` carries the
+   count's own id and is written LAST, after every block is on the page - so a
+   test waits on the thing it asserts rather than on the box that will hold it
+   (#112, 2026-09-26). */
+async function openLotPanel(countId) {
+  const node = $("#point-panel");
+  if (countId === undefined || countId === null) return;
+  node.dataset.state = "loading";
+  node.dataset.count = "";
+  node.dataset.point = "";
+  node.dataset.sample = "";
+  openCheck = null;
+  openSample = null;
+  $("#point-which").textContent = "— opening…";
+  const [material, characteristic] = chosen.split("|");
+  try {
+    const data = await api(`/quality/spc/${encodeURIComponent(material)}/${encodeURIComponent(characteristic)}/lot/${encodeURIComponent(countId)}`);
+    openLot = countId;
+    drawLot(data);
+    node.dataset.state = "open";
+    node.dataset.count = String(countId);
+    window.__fsmesPointData = data;
+    if (window.__fsmesPageData) draw(window.__fsmesPageData);
+  } catch (error) {
+    node.dataset.state = "error";
+    $("#point-which").textContent = "";
+    $("#point-body").replaceChildren(el("p", "empty",
+      `This lot's records could not be read: ${error.message}`));
     $("#point-body").hidden = false;
     $("#point-idle").hidden = true;
   }
@@ -1380,8 +1755,9 @@ async function openSamplePanel(sample) {
        one at a time: "the unlabelled ones are individuals" is a convention,
        and a convention is not a label. */
     group.append(...rows.map((s) => new Option(
-      `${s.characteristic} — ${(s.sample_size || 1) > 1
-        ? `${s.sample_size} at a time (X̄ and R)` : "one at a time"}`,
+      `${s.characteristic} — ${s.counted ? "counted, per lot (p)"
+        : (s.sample_size || 1) > 1
+          ? `${s.sample_size} at a time (X̄ and R)` : "one at a time"}`,
       `${s.material}|${s.characteristic}`)));
     return group;
   }));
@@ -1397,10 +1773,12 @@ async function openSamplePanel(sample) {
        page claiming a record it is not showing. */
     openCheck = null;
     openSample = null;
+    openLot = null;
     const panel = $("#point-panel");
     panel.dataset.state = "idle";
     panel.dataset.point = "";
     panel.dataset.sample = "";
+    panel.dataset.count = "";
     $("#point-which").textContent = "";
     $("#point-body").hidden = true;
     $("#point-body").replaceChildren();

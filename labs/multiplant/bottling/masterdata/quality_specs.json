@@ -13,5 +13,12 @@
     "min": 139.0,
     "max": 145.0,
     "sample_size": 5
+  },
+  {
+    "material": "FG-BOTTLE",
+    "characteristic": "sent_back",
+    "unit": "",
+    "counted": true,
+    "_counted": "Counted, not measured: QI01 looks at every bottle that reaches it and sends some back, so what this characteristic holds is two whole numbers per stretch of production - how many were looked at and how many went back - and its chart is a p chart. No `min`/`max`: there is nothing to be in spec about on one bottle, and what judges a stretch is the control limits of its own chart. No `sample_size` either; a count is not a sample."
   }
 ]

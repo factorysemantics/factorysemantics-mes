@@ -2354,10 +2354,21 @@
      Quality SPC screen draws and the one the `spc_chart` tool hands the
      analysis agent, unaltered. `kind` says which chart it is and nothing here
      infers it: `imr`, one piece at a time with the gap between consecutive
-     readings below it, or `xbar_r`, a sample of n pieces whose points are the
-     sample means with the spread inside each sample below (decision 0040). A
-     third word is a newer plant than this shape, and is refused by name rather
-     than drawn as one of the two.
+     readings below it, `xbar_r`, a sample of n pieces whose points are the
+     sample means with the spread inside each sample below (decision 0040), or
+     `p`, a lot somebody looked at whose point is the share of it sent back
+     (decision 0041). A fourth word is a newer plant than this shape, and is
+     refused by name rather than drawn as one of the three.
+
+     The counted chart differs in the picture and not only in the words, which
+     is why it is a kind here and not a flag on the measured one. Its LIMITS
+     ARE STEPS: every lot is a different number of units, so each point has
+     its own pair, wide on a small lot and narrow on a big one, and one
+     straight pair of lines across it would flag the small lots and excuse the
+     large ones. Nothing is drawn below it — a count has no range, because a
+     lot is one whole number and one share of it — and there is no capability,
+     because a share has no spread to compare with a tolerance. The footer says
+     all three rather than leaving a reader to notice what is missing.
 
      It is a SHAPE and not a second chart engine, for the reason the state
      timeline became one on 2026-09-28. Until 2026-10-07 this picture lived in
@@ -2386,6 +2397,7 @@
 
   const SPC_INDIVIDUALS = "imr";
   const SPC_SAMPLED = "xbar_r";
+  const SPC_PROPORTION = "p";
   /* Rule 5 of the Western Electric set is the RANGE rule, and the two kinds
      carry it in two places. On an individuals chart it fires on the gap
      between two readings — its own series with its own index space — and
@@ -2411,15 +2423,20 @@
         + "payload without them is one it would have to invent a process for");
     }
     const kind = envelope.kind || SPC_INDIVIDUALS;
-    if (kind !== SPC_INDIVIDUALS && kind !== SPC_SAMPLED) {
+    if (kind !== SPC_INDIVIDUALS && kind !== SPC_SAMPLED && kind !== SPC_PROPORTION) {
       throw new TypeError(
         `kit.chart('spc'): this characteristic is charted as “${kind}”, which this `
         + `shape does not draw: it draws ${SPC_INDIVIDUALS} (individuals and moving `
-        + `range) and ${SPC_SAMPLED} (X-bar and R). It draws nothing rather than `
-        + "plot these points as one of the two, which is the mistake decision 0040 "
-        + "exists to stop");
+        + `range), ${SPC_SAMPLED} (X-bar and R) and ${SPC_PROPORTION} (the share of `
+        + "each counted lot sent back). It draws nothing rather than plot these "
+        + "points as one of the three, which is the mistake decision 0040 exists "
+        + "to stop");
     }
     const sampled = kind === SPC_SAMPLED;
+    /* A lot an inspector looked at, rather than a piece somebody measured.
+       Its own word throughout, because every sentence this shape writes about
+       a measured point is the wrong sentence about a counted one. */
+    const counted = kind === SPC_PROPORTION;
     const points = envelope.points || [];
     const control = envelope.control || null;
     const signals = envelope.signals || [];
@@ -2428,9 +2445,21 @@
        limit, a lower one and a sentence. Two readings make the first moving
        range and n readings recorded together make the first sample range, so a
        chart with neither has an upper half and nothing below it. */
-    const lower = (sampled ? envelope.range_chart : envelope.moving_range) || null;
+    const lower = counted ? null
+      : (sampled ? envelope.range_chart : envelope.moving_range) || null;
     const lowerPoints = (lower && lower.points) || [];
-    const noun = sampled ? "sample" : "reading";
+    const noun = counted ? "lot" : sampled ? "sample" : "reading";
+    /* What a point IS, in one place: the number it plots, the id that names
+       it, the attribute that carries that id, and the word the open event
+       uses. Spelled out rather than branched at each use, because the three
+       kinds differ in all four and a chart that mixed two of them would ring
+       the wrong dot without ever looking wrong. */
+    const plotted = (point) => (counted ? point.p : point.value);
+    const idOf = (point) => (counted ? point.count
+      : sampled ? point.sample : point.check);
+    const idAttr = counted ? "data-count"
+      : sampled ? "data-sample" : "data-check";
+    const openWhat = counted ? "lot" : sampled ? "sample" : "check";
     const size = envelope.sample_size;
     const unit = envelope.unit ? ` ${envelope.unit}` : "";
     const named = `${envelope.material || ""} ${envelope.characteristic || ""}`.trim();
@@ -2449,7 +2478,16 @@
        `yScale` says on the chart that the axis does not start at nought. */
     const guides = [envelope.lower_spec, envelope.upper_spec,
                     control && control.lower, control && control.upper].filter(isNum);
-    const scale = yScale(points.map((p) => p.value).concat(guides), { zero: false });
+    /* On a counted chart the lines a reader judges the dots against are the
+       points' OWN limits, so the axis has to fit every one of them or the
+       step that matters goes off the top of the picture - which is the one
+       place it is needed. The centre is one line and goes in with them. */
+    if (counted) {
+      guides.push(...points.flatMap((point) => [point.upper, point.lower])
+                    .filter(isNum));
+      if (control && isNum(control.centre)) guides.push(control.centre);
+    }
+    const scale = yScale(points.map(plotted).concat(guides), { zero: false });
     const x = (i) => left + (i / Math.max(points.length - 1, 1)) * plot;
     const y = (v) => top + plotH - ((v - scale.lo) / (scale.hi - scale.lo)) * plotH;
 
@@ -2460,7 +2498,7 @@
        is one shorter than the readings it is the gaps between, and a sampled
        chart's two halves are one series of samples seen twice — an off-by-one
        either way rings the wrong dot. */
-    const lowerFired = new Set(sampled
+    const lowerFired = new Set(counted ? [] : sampled
       ? signals.filter((s) => s.rule === SPC_RANGE_RULE)
           .map((s) => (points[s.index] || {}).sample).filter((id) => id !== undefined)
       : ((lower && lower.signals) || []).map((s) => s.check)
@@ -2470,6 +2508,11 @@
       : ((lower && lower.signals) || []).length;
 
     const open = options.selected || {};
+    /* Which point the panel beside the chart is open on, by id. Three keys
+       and not one: a check id, a sample id and a count id are all small
+       integers, and one field holding whichever would ring the dot numbered 7
+       on the wrong chart the first time a reader switched characteristic. */
+    const openId = counted ? open.lot : sampled ? open.sample : open.check;
     const openable = options.openable === true;
     const aside = envelope.set_aside || 0;
 
@@ -2523,11 +2566,22 @@
         "aria-hidden": "true",
       });
       if (id !== undefined && id !== null) {
-        ring.setAttribute(what === "sample" ? "data-ring-sample" : "data-ring-check",
-                          String(id));
+        ring.setAttribute(what === "sample" ? "data-ring-sample"
+          : what === "lot" ? "data-ring-count" : "data-ring-check",
+          String(id));
       }
       return ring;
     }
+
+    /* A number on the y-axis, in the units the axis is in. A share is read
+       as a percentage - "1.3%", not "0.01" - because two lots at 1.2% and
+       1.8% both print as 0.01 at two decimal places, which is an axis a
+       reader cannot read a value off. The DOTS still carry the envelope's own
+       share in `data-value`: what is formatted here is the label, never the
+       number. */
+    const tick = (v) => (counted
+      ? `${(v * 100).toFixed(2)}%`
+      : v.toFixed(Math.abs(scale.hi - scale.lo) < 10 ? 2 : 0));
 
     /* A line a reader judges the dots against, with its own number on it. It
        carries no `data-value`: a specification limit is not a reading, and
@@ -2537,7 +2591,54 @@
       if (!isNum(v)) return;
       add(g, "line", { x1: left, y1: at(v), x2: left + plot, y2: at(v), class: cls });
       add(g, "text", { x: left + plot - 4, y: at(v) - 3, class: "axis",
-                       "text-anchor": "end" }, `${text} ${v}`);
+                       "text-anchor": "end" }, `${text} ${counted ? tick(v) : v}`);
+    }
+
+    /* ---- the limits on a counted chart, which are steps ----
+
+       One pair per lot, because a lot of 60 and a lot of 1,200 are not judged
+       against the same pair: sigma at a point is the centre's own spread over
+       the root of THAT lot's size, so the limits are wide where little was
+       looked at and narrow where a lot was. `guideAt` above draws one
+       straight line across the picture and is exactly what must not be used
+       here - a single pair of lines on a chart of uneven lots flags the small
+       lots and excuses the large ones, which is the error this kind exists to
+       avoid.
+
+       Drawn as a step rather than a sloped line through the limit values: a
+       sloped line would read as a limit that moves between two lots, and
+       nothing moves between them. Each lot's pair is held flat across its own
+       half of the gap to its neighbours, and the vertical riser between two
+       lots is where the size changed. Its own class, because a step is a
+       polyline and `.limit-line` is drawn for straight segments. */
+    function steppedLimit(g, key, text) {
+      let run = [];
+      const flush = () => {
+        if (run.length > 1) {
+          add(g, "polyline", { points: run.join(" "), class: "limit-step",
+                               "data-steps": key });
+        }
+        run = [];
+      };
+      points.forEach((point, i) => {
+        const v = point[key];
+        if (!isNum(v)) { flush(); return; }
+        const from = i === 0 ? left : (x(i - 1) + x(i)) / 2;
+        const to = i === points.length - 1 ? left + plot : (x(i) + x(i + 1)) / 2;
+        run.push(`${from},${y(v)}`, `${to},${y(v)}`);
+      });
+      flush();
+      /* Named once, at the last lot, with that lot's own figure - because
+         "UCL 2.3%" on a chart where every point has a different one would be
+         a number floating over the other thirteen. The footer says they are
+         per point. */
+      for (let i = points.length - 1; i >= 0; i -= 1) {
+        if (!isNum(points[i][key])) continue;
+        add(g, "text", { x: left + plot - 4, y: y(points[i][key]) - 3, class: "axis",
+                         "text-anchor": "end" },
+            `${text} ${tick(points[i][key])} on this lot`);
+        break;
+      }
     }
 
     /* The lower half of either kind, in the SAME node and against the same x
@@ -2634,9 +2735,11 @@
          it either way. A reader who takes a sample mean for one bottle reads
          every rule on the chart as something it is not, and that is a mistake
          no title the model chose is allowed to make possible. */
-      title: `${options.title || label || "control chart"} — ${sampled
-        ? `X̄ and R, the mean of each sample of ${count(size)}`
-        : "individuals and moving range"}`,
+      title: `${options.title || label || "control chart"} — ${counted
+        ? "p, the share of each lot sent back"
+        : sampled
+          ? `X̄ and R, the mean of each sample of ${count(size)}`
+          : "individuals and moving range"}`,
       /* The server's own conclusion, drawn with the picture so a chart that
          leaves this page still carries what the plant made of it. Rule 1: it
          is `verdict`, the sentence `services.spc` wrote, and never one
@@ -2644,7 +2747,17 @@
          there is no verdict and `note` says why instead. */
       verdict: envelope.verdict || envelope.note || null,
       /* Rule 5, on both halves and on what neither half drew. */
-      total: [
+      total: counted ? [
+        /* Rule 5 on a counted chart is three numbers and not one: how many
+           lots are drawn, how many units were looked at across them, and how
+           many of those were sent back. A share with no denominator is a
+           number nobody can check. */
+        `${things(points.length, "lot")} drawn`,
+        `${count(envelope.inspected)} looked at, ${count(envelope.rejected)} sent back`,
+        `${count(flagged.size)} flagged by ${things(upper.length, "firing")} of rule 1`,
+        "nothing drawn below: a count has no range — a lot is one whole number "
+          + "and one share of it",
+      ].filter(Boolean).join(" · ") : [
         sampled
           ? `${things(points.length, "sample")} of ${count(envelope.readings)} readings drawn`
           : `${things(points.length, "reading")} drawn`,
@@ -2680,10 +2793,32 @@
             + `how far apart those ${count(size)} were, and it is read first — the `
             + "limits above are computed from the mean of it"
           : null,
-        control
+        /* Rule 4, and the thing a reader of this chart has to be told before
+           they read a single dot: the limits are not one pair. A step up or
+           down in them is a smaller or larger lot and not a process that
+           changed. */
+        counted && control
+          ? `each lot has its own pair of limits — a step in them is a lot of a `
+            + `different size, not a process that moved. The smallest here held `
+            + `${count(control.smallest_lot)} and the largest `
+            + `${count(control.largest_lot)}`
+          : null,
+        counted
+          ? "y: the share of each lot sent back, drawn as a percentage. Not a "
+            + "clock and not a quantity — two lots side by side may be a hundred "
+            + "units apart in size"
+          : null,
+        counted && envelope.rules_not_run_note ? envelope.rules_not_run_note : null,
+        counted && envelope.lot_note ? envelope.lot_note : null,
+        !counted && control
           ? `${sampled ? "X̿" : "x̄"} is the centre and UCL/LCL are this process's own `
             + "variation; LSL/USL are the specification, which control limits are "
             + "never drawn from"
+          : null,
+        counted && control
+          ? "p̄ is the centre: every unit sent back over every unit looked at, "
+            + "and not the average of the shares — a lot of twenty does not "
+            + "weigh as much as a lot of two thousand"
           : null,
       ].filter(Boolean),
       /* Rule 2's withheld half: a figure this payload refuses, with the reason
@@ -2694,7 +2829,23 @@
           ? "Cp and Cpk are withheld while the process is out of control — a "
             + "capability figure describes a process that no longer exists"
           : null,
-        control && envelope.capability === null
+        /* The withheld capability on a counted chart is withheld for a
+           different reason from a measured one's, and the payload's own
+           sentence says which. Rule 2: the figure is refused in words, never
+           with a dash. */
+        counted && envelope.capability_note ? envelope.capability_note : null,
+        /* A lower limit sitting on nought is not a limit a lot can get below:
+           no lot can be better than perfect. A reader who took that line for
+           an achievable target would be reading the chart wrong, and the step
+           there is flat at the bottom of the picture where it is easiest to
+           take for one. */
+        counted && control && points.some((point) => point.lower_at_zero)
+          ? `${count(points.filter((point) => point.lower_at_zero).length)} of `
+            + `${count(points.length)} lots have their lower limit at nought — too `
+            + "few units were looked at for a clean lot to be remarkable, so "
+            + "nothing on those lots can fire a rule downward"
+          : null,
+        !counted && control && envelope.capability === null
           ? "no capability figure: this characteristic has no two-sided "
             + "specification to judge the spread against"
           : null,
@@ -2715,12 +2866,19 @@
           add(g, "line", { x1: left, y1: y(v), x2: left + plot, y2: y(v),
                            class: "grid-line" });
           add(g, "text", { x: left - 6, y: y(v) + 3, class: "axis",
-                           "text-anchor": "end" },
-              v.toFixed(Math.abs(scale.hi - scale.lo) < 10 ? 2 : 0));
+                           "text-anchor": "end" }, tick(v));
         }
         guideAt(g, y, envelope.lower_spec, "spec-line", "LSL");
         guideAt(g, y, envelope.upper_spec, "spec-line", "USL");
-        if (control) {
+        if (counted && control) {
+          /* Both steps, and the lower one even where it is flat on nought:
+             a reader who cannot see the line cannot tell "no lot here could
+             be below its limit" from "this chart forgot to draw one". */
+          steppedLimit(g, "upper", "UCL");
+          steppedLimit(g, "lower", "LCL");
+          guideAt(g, y, control.centre, "centre-line", "p̄");
+        }
+        if (control && !counted) {
           guideAt(g, y, control.lower, "limit-line", "LCL");
           guideAt(g, y, control.upper, "limit-line", "UCL");
           /* X-double-bar on a sampled chart, and it is not a flourish: the
@@ -2731,7 +2889,7 @@
         }
         if (points.length) {
           add(g, "polyline", {
-            points: points.map((p, i) => `${x(i)},${y(p.value)}`).join(" "),
+            points: points.map((p, i) => `${x(i)},${y(plotted(p))}`).join(" "),
             class: "trend-line" });
         }
         const ringLater = [];
@@ -2739,46 +2897,64 @@
           /* What this dot IS, by its own id: a sample on a sampled chart, a
              reading on an individuals one — and never the nth dot, which is a
              different point every time a check is recorded. */
-          const id = sampled ? point.sample : point.check;
-          const chosen = id !== undefined && id === (sampled ? open.sample : open.check);
+          const id = idOf(point);
+          const chosen = id !== undefined && id === openId;
           const hit = flagged.has(i);
+          const value = plotted(point);
+          /* What the two numbers behind a counted point are, said as the
+             plant wrote them down and never as the share alone: "3 of 1,200"
+             is the record, and 0.0025 is arithmetic on it. */
+          const ofLot = counted
+            ? `${count(point.k)} of ${count(point.n)} sent back`
+              + ` (${tick(value)})` : null;
           const dot = add(g, "circle", {
-            cx: x(i), cy: y(point.value), r: hit ? 4.5 : 2.5,
+            cx: x(i), cy: y(value), r: hit ? 4.5 : 2.5,
             class: (hit ? "spc-flag" : "spc-dot") + (chosen ? " spc-selected" : ""),
-            /* Rule 1: the envelope's own number, on the mark that drew it. */
-            "data-value": raw(point.value),
-            "data-label": (label || noun) + (sampled ? ` — mean of ${count(size)}` : ""),
-            "data-series": sampled ? "xbar" : "individuals",
+            /* Rule 1: the envelope's own number, on the mark that drew it. A
+               share stays a share here, whatever the axis label formats it
+               as. */
+            "data-value": raw(value),
+            "data-label": counted ? "share of the lot sent back"
+              : (label || noun) + (sampled ? ` — mean of ${count(size)}` : ""),
+            "data-series": counted ? "share" : sampled ? "xbar" : "individuals",
             ...(hit ? { "data-flagged": "true" } : {}),
-            ...(id === undefined ? {} : { [sampled ? "data-sample" : "data-check"]: id }),
+            ...(counted && point.lot_ref ? { "data-lot": point.lot_ref } : {}),
+            ...(id === undefined ? {} : { [idAttr]: id }),
           });
-          add(dot, "title", {}, (sampled
-            ? `Mean ${point.value}${unit} of ${size} · `
-            : `${point.value}${unit} · `)
+          add(dot, "title", {}, (counted
+            ? `${ofLot} · lot ${point.lot_ref || "not named"} · `
+            : sampled
+              ? `Mean ${point.value}${unit} of ${size} · `
+              : `${point.value}${unit} · `)
             + FS.fmt.stamp(point.ts)
             + (hit ? " — a rule fired here" : ""));
-          openWith(dot, sampled ? "sample" : "check", id,
-                   sampled ? "xbar" : "individuals",
-                   sampled
-                     ? `Sample ${i + 1}, mean ${point.value}${unit} of ${count(size)} `
-                       + `readings at ${FS.fmt.stamp(point.ts)} — open the readings `
-                       + "behind it"
-                     : `Reading ${i + 1}, ${point.value}${unit} at `
-                       + `${FS.fmt.stamp(point.ts)} — open the records behind it`,
+          openWith(dot, openWhat, id,
+                   counted ? "share" : sampled ? "xbar" : "individuals",
+                   counted
+                     ? `Lot ${point.lot_ref || i + 1}, ${ofLot} at `
+                       + `${FS.fmt.stamp(point.ts)} — open which defects they were`
+                     : sampled
+                       ? `Sample ${i + 1}, mean ${point.value}${unit} of ${count(size)} `
+                         + `readings at ${FS.fmt.stamp(point.ts)} — open the readings `
+                         + "behind it"
+                       : `Reading ${i + 1}, ${point.value}${unit} at `
+                         + `${FS.fmt.stamp(point.ts)} — open the records behind it`,
                    point.ts);
           /* Drawn after the whole series rather than beside its own dot: a
              ring the next dot painted over would be a mark the reader cannot
              see on exactly the chart that needs it most, a crowded one. */
-          if (chosen) ringLater.push([x(i), y(point.value), hit ? 4.5 : 2.5, id]);
+          if (chosen) ringLater.push([x(i), y(value), hit ? 4.5 : 2.5, id]);
         });
         for (const [cx, cy, r, id] of ringLater) {
-          ringAround(g, cx, cy, r, sampled ? "sample" : "check", id);
+          ringAround(g, cx, cy, r, openWhat, id);
         }
         /* What this picture is OF, on the picture. The frame's <title> is for a
            screen reader; a chart pasted into a slide has to name itself. */
-        if (label) {
+        if (label || counted) {
           add(g, "text", { x: left + 4, y: top + 10, class: "axis" },
-              label + (sampled ? ` — mean of ${count(size)}` : ""));
+              counted
+                ? `${named || "counted"} — share of each lot sent back`
+                : label + (sampled ? ` — mean of ${count(size)}` : ""));
         }
         /* The ends of the axis in the plant's own clock, so "oldest first" is
            a fact on the chart and not only in the footer. */
