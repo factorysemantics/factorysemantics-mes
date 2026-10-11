@@ -38,7 +38,14 @@ goes under Honesty with a migration line, so plant people can find it.
     order in progress reads as *planned work: this stop's own reason names
     MO-CHILL, a preventive maintenance order that is in_progress, done by
     Nils Berger. This is the job, not a breakdown* — the distinction #158 put
-    in the data, now on the screen.
+    in the data, now on the screen. Maintenance happening is not the same as
+    maintenance *planned*, and the panel keeps them apart: a corrective order
+    is raised after something broke, so it reads as the repair of the stop
+    rather than a reason for it, and a preventive job this plant says does not
+    need the line stopped cannot be what stopped it. Both are still listed,
+    named as what they are. Found on a replayed shift, where a greasing job
+    worked while the machine ran would otherwise have been offered as the
+    reason for a jam.
   - **What the machine was doing either side** as small charts with the
     block's start and end marked, **what quality saw after it** with each
     reading's verdict, and **how much of the block anybody was watching**.

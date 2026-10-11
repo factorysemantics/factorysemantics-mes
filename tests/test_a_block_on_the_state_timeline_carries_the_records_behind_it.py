@@ -424,6 +424,75 @@ def test_an_order_that_only_touches_the_window_is_not_said_to_have_been_the_stop
         "maintenance orders touch this window but none was in progress")
 
 
+def test_corrective_work_across_a_stop_is_the_repair_of_it_and_not_planned_work(
+        session, shift):
+    """A corrective order is raised *after* something broke. An order being
+    worked across a stop is therefore not proof that anybody planned the stop -
+    it is usually proof of the opposite, and the panel has to say which."""
+    session.add(MaintenanceOrder(
+        code="MO-JAM", equipment_id=shift["unit"].id, kind=MaintenanceKind.CORRECTIVE,
+        status=MaintenanceStatus.IN_PROGRESS, summary="Clear the jam",
+        raised_at=shift["unnamed"][0],
+        started_at=shift["unnamed"][0] + timedelta(minutes=1), performed_by="MARCO"))
+    session.flush()
+    out = state_block.dossier(session, "MIX01", *shift["unnamed"])
+    maintenance = out["maintenance"]
+    assert maintenance["in_progress"] == ["MO-JAM"]       # reported, as what it is
+    assert maintenance["planned"] is False
+    says = maintenance["says"]
+    assert says.startswith("MO-JAM, a corrective order that is in_progress, was in "
+                           "progress on this machine across this block (Clear the jam)")
+    assert says.endswith("corrective work is raised after something broke, so this "
+                         "reads as the repair of this stop and not as planned work")
+
+
+def test_a_planned_job_this_plant_says_needs_no_stop_is_not_what_stopped_the_line(
+        session, shift):
+    """Found 2026-10-11 on a replayed shift: a preventive order with `needs_stop`
+    false was worked for seven minutes while the machine ran. Offered as the
+    reason for a stop it would read as planned work, which is the one mistake
+    this panel exists to avoid. #158 put the fact in the data; use it."""
+    session.add(MaintenanceOrder(
+        code="MO-GREASE", equipment_id=shift["unit"].id,
+        kind=MaintenanceKind.PREVENTIVE, status=MaintenanceStatus.IN_PROGRESS,
+        summary="Grease the bearings", needs_stop=False,
+        raised_at=shift["now"] - timedelta(hours=4),
+        started_at=shift["unnamed"][0] - timedelta(minutes=1), performed_by="AMIRA"))
+    session.flush()
+    out = state_block.dossier(session, "MIX01", *shift["unnamed"])
+    maintenance = out["maintenance"]
+    assert maintenance["in_progress"] == ["MO-GREASE"]
+    assert maintenance["planned"] is False
+    says = maintenance["says"]
+    assert says.startswith("MO-GREASE, a preventive order that is in_progress, was in "
+                           "progress on this machine across this block "
+                           "(Grease the bearings), but this plant says that job does "
+                           "not need the line stopped")
+    assert says.endswith("so it is not what stopped it, and the stop's own reason does "
+                         "not name it")
+
+
+def test_a_reason_naming_an_order_worked_later_does_not_claim_the_order_was_unstarted(
+        session, shift):
+    """The down block's reason names MO-CHILL. If that order's own record puts
+    the work an hour after the block, the honest sentence is that the record
+    does not place the work here - not that the order was never started, which
+    would be false of a job somebody did."""
+    order = session.query(MaintenanceOrder).filter_by(code="MO-CHILL").one()
+    order.started_at = shift["down"][1] + timedelta(hours=1)
+    session.flush()
+    out = state_block.dossier(session, "MIX01", *shift["down"])
+    maintenance = out["maintenance"]
+    assert maintenance["named_in_the_reason"] == ["MO-CHILL"]
+    assert maintenance["in_progress"] == []
+    assert maintenance["never_started"] == []
+    assert maintenance["planned"] is False
+    assert maintenance["says"] == (
+        "this stop's own reason names maintenance order MO-CHILL, and that order's own "
+        "record places its work outside this block — so the reason says planned work "
+        "and the order record does not put that work here")
+
+
 def test_a_stretch_with_no_record_of_any_kind_is_neither_running_nor_a_breakdown(
         session, shift):
     """The hardest sentence in the panel to get right. A window this MES holds

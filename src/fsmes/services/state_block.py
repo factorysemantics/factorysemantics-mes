@@ -621,8 +621,11 @@ def _maintenance(session: Session, unit: Equipment, block: dict, why: dict,
     as planned work and not as a breakdown with a note attached.
 
     Planned means a recorded order that was *in progress* across the block, not
-    merely raised. An order raised for this machine and never started is
-    reported too, and named as what it is: not this stop.
+    merely raised, and one that could have been the stop: a preventive job this
+    plant says needs the line stopped, or one the stop's own reason names. An
+    order raised and never started is reported too, and named as what it is:
+    not this stop. So is corrective work, which is raised after something broke
+    and is therefore the repair of a stop rather than a reason for one.
     """
     found = spc_point.maintenance_orders(session, unit, start, end)
     orders = found["orders"]
@@ -633,7 +636,16 @@ def _maintenance(session: Session, unit: Equipment, block: dict, why: dict,
     waiting = [o for o in orders if o["started_at"] is None]
     named = [o["code"] for o in orders if o["code"] and o["code"].lower() in reason]
     stop = (block["state"] or "") in STOPPED
-    planned = None if not stop else bool(in_progress or named)
+    # Planned is not the same as "maintenance was happening". A corrective
+    # order is raised *after* something broke, and a preventive one this plant
+    # says does not need the line stopped cannot be why the line stopped - so
+    # neither of those makes a stop planned work. Both are still reported, as
+    # what they are. Found 2026-10-11 on a replayed shift, where a preventive
+    # order with `needs_stop` false was worked for seven minutes while the
+    # machine ran, and would have been offered as the reason for a jam.
+    planned = None if not stop else bool(
+        [o for o in in_progress if o["code"] in named and o["kind"] == "preventive"]
+        or [o for o in in_progress if o["kind"] == "preventive" and o["needs_stop"]])
     return {
         **found,
         "planned": planned,
@@ -651,22 +663,51 @@ def _planned_says(block: dict, orders: list[dict], in_progress: list[dict],
                 "stop here to place against a maintenance order")
     if not stop:
         return "the machine was running across this block, so there is no stop to place"
-    if named and in_progress:
-        order = next(o for o in in_progress if o["code"] in named)
+    named_live = [o for o in in_progress if o["code"] in named]
+    if named_live:
+        order = named_live[0]
+        by = (f", done by {order['performed_by']}" if order["performed_by"] else
+              (f", given to {order['assigned_to']}" if order["assigned_to"] else ""))
+        if order["kind"] != "preventive":
+            return (f"this stop's own reason names {order['code']}, a {order['kind']} "
+                    f"maintenance order that is {order['status']}{by} — and corrective "
+                    f"work is raised after something broke, so this stop is that repair "
+                    f"and not work anybody planned")
         return (f"planned work: this stop's own reason names {order['code']}, a "
-                f"{order['kind']} maintenance order that is {order['status']}"
-                + (f", done by {order['performed_by']}" if order["performed_by"] else
-                   (f", given to {order['assigned_to']}" if order["assigned_to"] else ""))
+                f"{order['kind']} maintenance order that is {order['status']}{by}"
                 + ". This is the job, not a breakdown")
     if named:
+        # The reason names an order whose own record does not place its work
+        # across the block. Saying "no start recorded" there would be false of a
+        # job that was started an hour later, so the two are separate sentences.
+        away = next((o for o in orders if o["code"] in named and o["started_at"]), None)
+        if away is not None:
+            return (f"this stop's own reason names maintenance order {away['code']}, and "
+                    f"that order's own record places its work outside this block — so "
+                    f"the reason says planned work and the order record does not put "
+                    f"that work here")
         return (f"this stop's own reason names maintenance order {named[0]}, and that "
                 f"order has no start recorded on it — so the reason says planned work "
                 f"and the order record does not confirm it")
     if in_progress:
-        order = in_progress[0]
+        # Preferring the order that could actually have stopped the line keeps
+        # this sentence about the stop rather than about whoever was nearest.
+        order = next((o for o in in_progress
+                      if o["kind"] == "preventive" and o["needs_stop"]), in_progress[0])
+        what = (f" ({order['summary']})" if order["summary"] else "")
+        if order["kind"] != "preventive":
+            return (f"{order['code']}, a {order['kind']} order that is "
+                    f"{order['status']}, was in progress on this machine across this "
+                    f"block{what} — corrective work is raised after something broke, so "
+                    f"this reads as the repair of this stop and not as planned work")
+        if not order["needs_stop"]:
+            return (f"{order['code']}, a preventive order that is {order['status']}, was "
+                    f"in progress on this machine across this block{what}, but this plant "
+                    f"says that job does not need the line stopped — so it is not what "
+                    f"stopped it, and the stop's own reason does not name it")
         return (f"planned work: {order['code']}, a {order['kind']} order that is "
                 f"{order['status']}, was in progress on this machine across this block"
-                + (f" ({order['summary']})" if order["summary"] else "")
+                + what
                 + ". The stop's own reason does not name it, so this is placed by time")
     if waiting:
         codes = ", ".join(o["code"] for o in waiting)
