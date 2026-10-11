@@ -200,7 +200,7 @@ def last_before(session: Session, unit: Equipment, tag: str,
 
 def tag_block(session: Session, unit: Equipment, tag: str, start: datetime,
                end: datetime, marks: list[dict], cadence: float | None,
-               cadence_source: str | None) -> dict:
+               cadence_source: str | None, clamp: bool = True) -> dict:
     """One of the station's analogs over the window, with the readings marked.
 
     The envelope is `analysis.tag_trend`'s own - its window, its bucketing, its
@@ -225,15 +225,20 @@ def tag_block(session: Session, unit: Equipment, tag: str, start: datetime,
     #
     # So the span is read off a deliberately coarse first pass, and the grid is
     # chosen against the window the second pass will draw.
+    #
+    # `clamp=False` is passed straight through: a caller drawing two of this
+    # machine's tags against each other has settled one window for both, and
+    # the bucket grid then comes out the same width for both as well, which is
+    # what lets a reader lay one line over the other and read the lag off it.
     probe = analysis.tag_trend(session, unit.code, tag=tag,
-                              window=(start, end), buckets=2)
+                              window=(start, end), buckets=2, clamp=clamp)
     drawn = probe.get("window") or {}
     span = (max((drawn["end"] - drawn["start"]).total_seconds(), 1.0)
             if drawn.get("start") and drawn.get("end")
             else max((end - start).total_seconds(), 1.0))
     buckets = buckets_for(span, cadence)
     envelope = analysis.tag_trend(session, unit.code, tag=tag,
-                                  window=(start, end), buckets=buckets)
+                                  window=(start, end), buckets=buckets, clamp=clamp)
     points, empty, width = bucketed(envelope, buckets)
     samples = sum(p.get("n", 0) for p in points)
     spoke = buckets - empty
@@ -512,3 +517,26 @@ def findings(session: Session, order: str | None, start: datetime,
 
 def order_code_of(session: Session, work_order_id: int) -> str | None:
     return session.scalar(select(WorkOrder.code).where(WorkOrder.id == work_order_id))
+
+
+def value_at(session: Session, unit: Equipment, tag: str,
+             at: datetime) -> dict | None:
+    """What this tag last said at or before one instant, or None.
+
+    `last_before` answers the same question about the start of a window;
+    this one answers it about a moment inside one, which is what *the
+    machine's other tags at that instant* means on a change-driven fabric.
+    There is no reading AT an instant: a tag publishes when it changes, so
+    the honest answer is the last thing it said and how long ago it said it.
+    Interpolating between two samples would be inventing a reading.
+    """
+    row = session.execute(
+        select(TagValue.ts, TagValue.value_num)
+        .where(TagValue.equipment_id == unit.id, TagValue.tag == tag,
+               TagValue.value_num.is_not(None), TagValue.ts <= at)
+        .order_by(TagValue.ts.desc()).limit(1)).first()
+    if row is None:
+        return None
+    ts, value = row
+    return {"value": value, "ts": ts,
+            "seconds_before": round((at - ts).total_seconds(), 1)}

@@ -247,6 +247,41 @@ def _window_json(start: datetime, end: datetime, hours: float,
     return window
 
 
+def machine_window(db: Session, equipment_code: str, hours: float | None = None,
+                   shift: str | None = None,
+                   window: tuple[datetime, datetime] | None = None
+                   ) -> tuple[datetime, datetime, dict]:
+    """The window ONE machine's reads are drawn on, resolved once.
+
+    All three kinds of window in one call, because a chart that draws two of a
+    machine's tags against each other has to draw both on the same axis - and
+    two tags resolved separately do not get the same axis. `tag_trend` clamps
+    its start forward to when the tag it is drawing was first recorded, so
+    `ChillerOutletTemp` wired up on Tuesday and `ProductTemp` wired up on
+    Thursday asked for one window come back on two, the lines twenty minutes
+    out of step, and the reader would have no way to see it.
+
+    So the window is settled here, against the MACHINE, and handed to each
+    tag's read. Each series still says what it realised of it - a tag with no
+    history in the first half of the window is a broken line, which is the
+    truth - but the axis under them is one axis.
+
+    Returns the two ends and the envelope's own window block.
+    """
+    hours = calendar_service.default_report_hours(db) if hours is None else hours
+    unit = masterdata.get_equipment(db, equipment_code)
+    the_shift = _shift(db, shift)
+    named = None
+    if window is not None:
+        start, end = _around(db, [unit], *window)
+        hours = _span_hours(*window)
+        the_shift = None
+        named = "between"
+    else:
+        start, end = _window(db, [unit], hours, the_shift)
+    return start, end, _window_json(start, end, hours, the_shift, named)
+
+
 def _overlap(state: EquipmentState, start: datetime, end: datetime) -> float:
     lo = max(state.started_at, start)
     hi = min(state.ended_at or end, end)
@@ -833,7 +868,7 @@ def downtime_pareto(db: Session, line_code: str | None = None, hours: float | No
 def tag_trend(
     db: Session, equipment_code: str, tag: str | None = None, hours: float | None = None,
     buckets: int = 240, shift: str | None = None,
-    window: tuple[datetime, datetime] | None = None
+    window: tuple[datetime, datetime] | None = None, clamp: bool = True
 ) -> dict:
     """One machine's process value over the window, averaged into buckets.
 
@@ -850,6 +885,17 @@ def tag_trend(
     span or a shift — see `_around`. The dossier of a point on a control chart
     reads this for each of the station's analogs, rather than bucketing a
     series of its own.
+
+    `clamp=False` says the window has already been settled against the machine
+    and is not to be narrowed again to this one tag's first reading. It is for
+    a caller drawing SEVERAL tags of one machine together: clamping is right
+    for one line and wrong for two, because `ChillerOutletTemp` wired up on
+    Tuesday and `ProductTemp` wired up on Thursday ask for one window, come
+    back on two, and the twenty minutes between a cause and its effect is then
+    an artefact of two axes rather than a fact about the plant. What the
+    unclamped answer loses is nothing: the empty stretch before a tag existed
+    comes back as buckets with no reading, which is what this product draws
+    when it has not got a number, and `coverage_note` says so in words.
     """
     # None is *this plant's own reporting window*, resolved here rather than
     # in the signature so a caller gets what the plant is running on now.
@@ -910,10 +956,14 @@ def tag_trend(
     # an eight-hour axis with everything crushed against the right edge, which
     # reads as "the line was idle all day" rather than "we just started
     # watching".
+    #
+    # Unless the caller has settled the window against the machine already and
+    # is drawing more than one tag on it (`clamp=False`), in which case
+    # narrowing to one tag's history would hand the two lines different axes.
     first_seen = db.scalar(
         select(func.min(TagValue.ts)).where(TagValue.equipment_id == unit.id, TagValue.tag == tag)
     )
-    if first_seen is not None and first_seen > start:
+    if clamp and first_seen is not None and first_seen > start:
         start = first_seen
 
     span = max((end - start).total_seconds(), 1.0)

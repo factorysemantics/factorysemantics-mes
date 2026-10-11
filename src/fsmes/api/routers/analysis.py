@@ -257,6 +257,93 @@ def tag(
                               shift=shift, window=_between(start, end, shift))
 
 
+# ------------------------------------------- several tags, and one point of them
+#
+# The trend graph's own two reads. `/tag/{code}` above draws one tag; these two
+# draw several of one machine's tags on one window and then answer about one
+# second of it, which is the walk the product's own answer key says a person
+# cannot make today (`labs/.../line.json` -> `_chain`, link 3).
+#
+# Both are plant-computed reads served as envelopes (decision 0023), and
+# neither recomputes anything a read above computes: the bucketing is
+# `tag_trend`'s, the states are `/analysis/timeline`'s, and the blocks about a
+# machine and a window are the same code the control-chart panel reads
+# (`services.moment`).
+
+_TAGS = Query(None, description="Tag names, repeatable. Omitted means the "
+                                "machine's own process value.")
+
+
+@router.get("/trend/{equipment_code}")
+def trend(
+    equipment_code: str,
+    tags: list[str] | None = _TAGS,
+    hours: float | None = _HOURS,
+    shift: str | None = _SHIFT,
+    start: datetime | None = _START,
+    end: datetime | None = _END,
+    db: Session = Depends(get_read_db),
+) -> dict:
+    """Several of one machine's tags over one window, each with its own scale.
+
+    The window is settled once against the machine and handed to every tag, so
+    two signals wired up on different days still come back on one axis — which
+    is the only way a cause and the effect twenty minutes behind it can be
+    seen at all. Series are grouped into scales by unit, because degrees and
+    bar on one axis is a picture of the units and not of the plant.
+
+    Says what it drew and what it did not: the buckets nothing arrived in, the
+    share of the window each tag spoke in, the machine's watched share, and
+    any tag asked for that this machine has never published.
+    """
+    from fsmes.services import trend as trend_service
+
+    return trend_service.series(db, equipment_code, tags=tags, hours=hours,
+                                shift=shift, window=_between(start, end, shift))
+
+
+@router.get("/trend/{equipment_code}/point")
+def trend_point(
+    equipment_code: str,
+    at: datetime = Query(..., description="The instant clicked, ISO 8601. An "
+                                          "offset is converted; none is read "
+                                          "as UTC."),
+    tag: str = Query(..., description="The tag whose point was clicked."),
+    hours: float | None = _HOURS,
+    shift: str | None = _SHIFT,
+    start: datetime | None = _START,
+    end: datetime | None = _END,
+    bucket_seconds: float | None = Query(
+        None, gt=0, le=86400,
+        description="How wide the bucket the point stands for is, from the "
+                    "chart that drew it. Left out, only the nearest stored "
+                    "sample is reported and no bucket."),
+    db: Session = Depends(get_read_db),
+) -> dict:
+    """What else was happening — the records behind one point of a trend.
+
+    Six blocks, which are the six questions a person in front of a moving
+    number asks in order: what the reading was and when; what the machine was
+    doing at that second, with the reason and who labelled it; the job that was
+    open on it; every maintenance order open on it across the window, with its
+    state and why it is in that state; what the lab measured in the window and
+    what the control chart said at the time; and what every other tag said at
+    that instant.
+
+    The window is the chart's own, not one invented around the point: a panel
+    that quietly narrowed to ten minutes either side would answer a different
+    question from the one the reader asked, and the maintenance order raised at
+    the start of a shift is exactly the answer it would then miss.
+
+    No model, and nothing recomputed.
+    """
+    from fsmes.services import trend as trend_service
+
+    return trend_service.dossier(
+        db, equipment_code, tag=tag, at=_utc(at), hours=hours, shift=shift,
+        window=_between(start, end, shift), bucket_seconds=bucket_seconds)
+
+
 # --------------------------------------------------- the trace, the graph, MTTR
 #
 # Three reads that answer the design page's worked example
