@@ -23,7 +23,7 @@
     
     
       
-        <title>Scrap needs a reason code - FactorySemantics MES</title>
+        <title>Scrap reason codes as master data, with a Pareto that rolls up - FactorySemantics MES</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#scrap-needs-a-reason-code" class="md-skip">
+        <a href="#scrap-reason-codes-as-master-data-with-a-pareto-that-rolls-up" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Scrap needs a reason code
+              Scrap reason codes as master data, with a Pareto that rolls up
             
           </span>
         </div>
@@ -3951,10 +3951,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#questions" class="md-nav__link">
+  <a href="#what-was-done" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Questions
+        What was done
       
     </span>
   </a>
@@ -3986,31 +3986,53 @@
   
 
 
-<h1 id="scrap-needs-a-reason-code">Scrap needs a reason code<a class="headerlink" href="#scrap-needs-a-reason-code" title="Permanent link">&para;</a></h1>
-<p><strong>needs-guidance</strong> — ProductionLog has no reason column, so every scrap figure is unattributed. Schema change.</p>
+<h1 id="scrap-reason-codes-as-master-data-with-a-pareto-that-rolls-up">Scrap reason codes as master data, with a Pareto that rolls up<a class="headerlink" href="#scrap-reason-codes-as-master-data-with-a-pareto-that-rolls-up" title="Permanent link">&para;</a></h1>
+<p><strong>approved</strong> — the companion to
+<a href="../../../decisions/0041-a-characteristic-the-plant-counts/">0041</a> and
+deliberately out of its scope. Named here so nobody builds it by accident
+inside something else.</p>
 <h2 id="the-idea">The idea<a class="headerlink" href="#the-idea" title="Permanent link">&para;</a></h2>
-<p>Split out of the "Report production" message: scrap is recorded as a bare
-number.</p>
+<p>A counted characteristic now carries a breakdown: <code>quality_counts.defects</code>
+holds <code>[{code, count}]</code> in <strong>the plant's own words</strong> — <code>low_fill</code>,
+<code>cap_skew</code>, whatever its inspectors actually sort rejects into. The product
+does not police the vocabulary, does not keep a list of the codes, and does
+not refuse one it has not seen. The lot dossier prints the codes it was
+given, worst first, with its three totals.</p>
+<p>That is enough to chart a count honestly. It is not enough to run a scrap
+programme. A scrap programme needs the codes to be a <em>list</em>.</p>
 <h2 id="assessment">Assessment<a class="headerlink" href="#assessment" title="Permanent link">&para;</a></h2>
-<p><code>ProductionLog</code> has <code>good_qty</code> and <code>scrap_qty</code> and <strong>no reason column</strong>
-(<code>src/fsmes/domain/execution.py</code>). <code>WorkOrderOperation.scrap_qty</code> is likewise a
-float with nothing attached. So every scrap figure this MES holds is
-unattributed, and scrap without a reason is a number nobody can act on — it
-tells a supervisor that something is wrong and nothing about what.</p>
-<p>It is probably the highest-value single field missing from the product. It is
-also a schema change, so by rule it stops here for a decision rather than
-becoming a branch.</p>
-<h2 id="questions">Questions<a class="headerlink" href="#questions" title="Permanent link">&para;</a></h2>
-<ol>
-<li>A reason-code list as <strong>master data per plant</strong> (principle 7 — config, not
-   code), or a fixed enum in the product? Per-plant is consistent with
-   everything else here and is more work.</li>
-<li>Required when scrap &gt; 0, or optional? Required is right and will annoy
-   operators on day one. That is your call, not mine.</li>
-<li>What happens to scrap already booked — a null reason, or an explicit
-   "not recorded" code? Principle 4 argues for the explicit code: a blank reads
-   as an omission, where the truth is that the field did not exist.</li>
-</ol>
+<p>What exists: <code>QualityCount.defects</code> (JSON, nullable) written by
+<code>POST /quality/counts</code> and read by <code>services.spc_point._defects_block</code>,
+which already distinguishes the three facts a breakdown can carry — a null
+breakdown is <em>not broken down</em>, an empty list is <em>nothing coded against the
+rejects</em>, and a coded total differing from <code>rejected</code> is a unit with two
+defects or an inspector who coded some and not all.</p>
+<p>What is missing:</p>
+<ul>
+<li><strong>A managed list.</strong> Codes as master data, in the pack
+  (<code>masterdata/scrap_reasons.json</code>, beside <code>downtime_reasons.json</code> which is
+  the precedent) and on a screen, so two inspectors coding the same defect
+  use the same word. Today a typo is a new defect.</li>
+<li><strong>A hierarchy.</strong> <code>fill/low</code>, <code>fill/high</code>, <code>closure/skew</code> — so a Pareto can
+  be read at the level somebody is working at and rolled up for the weekly
+  review. <code>downtime_reasons</code> is flat and has not needed one; a defect list
+  will.</li>
+<li><strong>A Pareto that rolls up.</strong> Across lots, orders, shifts, stations and
+  weeks. Every list states its total, and the uncoded remainder is named
+  rather than dropped — all three of the facts above have to survive the
+  rollup, or it is a chart that quietly rounds the unknown to nought.</li>
+<li><strong>Where the reason sits on a non-conformance.</strong> A hold raised by a rule
+  firing (0027) and a reject coded by an inspector are two different records
+  about the same bottles. Which one carries the reason, and whether a
+  disposition changes it, needs deciding before anything is written —
+  <code>nonconformance-lifecycle.md</code> is next door and touches the same question.</li>
+</ul>
+<h2 id="what-was-done">What was done<a class="headerlink" href="#what-was-done" title="Permanent link">&para;</a></h2>
+<p>Nothing. The questions above are the work, and the first of them is not a
+schema question: <strong>ask a plant for its list.</strong> A reason-code hierarchy
+invented in this repository would be the first thing a plant replaced, and
+inventing it would put a vocabulary nobody uses into the master data of
+every plant that installs this.</p>
 
 
 
