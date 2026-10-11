@@ -648,6 +648,36 @@ def _tag_block(session: Session, unit: Equipment, tag: str, start: datetime,
     }
 
 
+def analog_trends(session: Session, unit: Equipment, start: datetime,
+                  end: datetime, marks: list[dict]) -> dict:
+    """One station's analogs over a window, as a panel beside a chart draws them.
+
+    The block behind "what were the process values doing" — the tags chosen,
+    each one bucketed through `analysis.tag_trend`, the marks laid on them, and
+    the sentence that says how many of the station's signals are drawn.
+
+    Public because a second panel asks the same question of a stretch of time
+    rather than of an instant (`services.state_block`, the panel behind a block
+    on the state timeline). The two must draw the same tag the same way, and a
+    tag drawn twice from two bucketers is the one thing this file exists to
+    make impossible.
+    """
+    cadence, cadence_source = coverage.analog_sample_interval()
+    names, total = _analog_tags(session, unit, start, end)
+    trends = [_tag_block(session, unit, name, start, end, marks,
+                         cadence, cadence_source) for name in names]
+    return {
+        "trends": trends,
+        "shown": len(trends),
+        # Every list states its total: how many of the station's signals are
+        # drawn, and how many it published in this window.
+        "total": total,
+        "note": (None if total <= len(trends) else
+                 f"{len(trends)} of the {total} signals this station published in "
+                 f"this window are drawn"),
+    }
+
+
 def _timeline_block(session: Session, unit: Equipment, start: datetime,
                     end: datetime) -> dict:
     """What the machine was doing across the window, and who watched it.
@@ -958,14 +988,19 @@ def _line_block(session: Session, unit: Equipment | None, start: datetime,
 # ------------------------------------------------- what else was in the window
 
 
-def _maintenance(session: Session, unit: Equipment | None, start: datetime,
-                 end: datetime) -> dict:
+def maintenance_orders(session: Session, unit: Equipment | None, start: datetime,
+                       end: datetime) -> dict:
     """Maintenance orders on this station that touch the window.
 
     Touching, not raised in: a job that started an hour earlier and was still
     open when the reading was taken is the answer, and one scoped to orders
     raised inside twelve minutes would never find it. An order with no
     completion is open and treated as reaching the end of the window.
+
+    Public for the same reason `analog_trends` is: the panel behind a block on
+    the state timeline asks this of a stop, where it decides whether the stop
+    was planned work — so it reads the same rows, with the same bound, rather
+    than a second list of the same orders that could disagree with this one.
     """
     if unit is None:
         return {"orders": [], "total": 0, "note": "no station is recorded against "
@@ -986,6 +1021,16 @@ def _maintenance(session: Session, unit: Equipment | None, start: datetime,
             "raised_at": row.raised_at, "started_at": row.started_at,
             "completed_at": row.completed_at, "performed_by": row.performed_by,
             "findings": row.findings, "downtime_minutes": row.downtime_minutes,
+            # Whether the job asks for the machine to be stopped, and which
+            # stretch of the plant's week it was allowed in. These are what
+            # make a down block readable as planned work rather than as a
+            # breakdown with a note on it (#158 put both in the data).
+            "needs_stop": row.needs_stop,
+            "window": None if row.window is None else row.window.value,
+            # Who it was given to, when, and by what - a rule's code or a
+            # person. Null throughout on an order nobody has handed out.
+            "assigned_to": row.assigned_to, "assigned_at": row.assigned_at,
+            "assigned_by": row.assigned_by,
         } for row in rows],
         "total": len(rows),
         "note": None,
@@ -1057,12 +1102,10 @@ def dossier(session: Session, material: str, characteristic: str, check_id: int,
     tags_total = 0
     timeline: dict | None = None
     machine: dict | None = None
-    cadence, cadence_source = coverage.analog_sample_interval()
     if unit is not None:
-        names, tags_total = _analog_tags(session, unit, start, end)
         marks = [{"t": check.ts, "label": "this reading"}]
-        tags = [_tag_block(session, unit, name, start, end, marks,
-                           cadence, cadence_source) for name in names]
+        analogs = analog_trends(session, unit, start, end, marks)
+        tags, tags_total = analogs["trends"], analogs["total"]
         timeline = _timeline_block(session, unit, start, end)
         machine = _state_at(session, unit, check.ts)
 
@@ -1102,7 +1145,7 @@ def dossier(session: Session, material: str, characteristic: str, check_id: int,
                 f"{len(tags)} of the {tags_total} signals this station published in "
                 f"this window are drawn")),
         },
-        "maintenance": _maintenance(session, unit, start, end),
+        "maintenance": maintenance_orders(session, unit, start, end),
         "findings": _findings(session, _order_code(session, check), start, end),
         # The station's window, as the one figure the panel's own header states.
         # Null when no station is recorded: there is no machine whose watched
@@ -1354,11 +1397,9 @@ def sample_dossier(session: Session, material: str, characteristic: str,
     tags_total = 0
     timeline: dict | None = None
     machine: dict | None = None
-    cadence, cadence_source = coverage.analog_sample_interval()
     if unit is not None:
-        names, tags_total = _analog_tags(session, unit, start, end)
-        tags = [_tag_block(session, unit, name, start, end, marks,
-                           cadence, cadence_source) for name in names]
+        analogs = analog_trends(session, unit, start, end, marks)
+        tags, tags_total = analogs["trends"], analogs["total"]
         timeline = _timeline_block(session, unit, start, end)
         # The state at the sample's own stamp - the moment the plant recorded
         # the act of measuring - with what it had just come out of, which is
@@ -1442,7 +1483,7 @@ def sample_dossier(session: Session, material: str, characteristic: str,
                 f"{len(tags)} of the {tags_total} signals this station published in "
                 f"this window are drawn")),
         },
-        "maintenance": _maintenance(session, unit, start, end),
+        "maintenance": maintenance_orders(session, unit, start, end),
         "findings": _findings(session, order, start, end),
         "coverage": None if timeline is None else timeline.get("coverage"),
         "coverage_note": (

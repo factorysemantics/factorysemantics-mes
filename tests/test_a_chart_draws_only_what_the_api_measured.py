@@ -1191,6 +1191,184 @@ def test_a_dot_opens_a_point_only_where_the_screen_said_it_could(page):
     assert "open the readings behind it" in fired["label"]
 
 
+#: What a state block looks like to a reader and to a keyboard, read in one
+#: pass for the same reason `DRAW` is.
+STATE_FACTS = """([options]) => {
+    const host = document.getElementById('fs-chart-probe') || (() => {
+        const box = document.createElement('div');
+        box.id = 'fs-chart-probe';
+        box.style.width = '760px';
+        box.style.position = 'fixed';
+        box.style.top = '0';
+        box.style.left = '0';
+        box.style.zIndex = '9999';
+        document.body.appendChild(box);
+        return box;
+    })();
+    const envelope = JSON.parse(JSON.stringify(window.__statesEnvelope));
+    const node = FS.kit.draw(host, 'states', envelope, {width: 760, ...options});
+    const read = (el) => ({
+        state: el.getAttribute('data-state'),
+        role: el.getAttribute('role'),
+        tabindex: el.getAttribute('tabindex'),
+        aria: el.getAttribute('aria-label'),
+    });
+    return {
+        blocks: [...node.querySelectorAll(
+            'rect.state-mark, rect.chart-unknown:not([data-withheld])')].map(read),
+        /* A machine whose window was watched less than this plant's floor is
+           withheld as a whole row rather than drawn as intervals. It is not a
+           block and never becomes a button: the floor is the plant saying
+           these minutes must not be read as a measurement. */
+        withheld: [...node.querySelectorAll('[data-withheld="true"]')].map(read),
+        outlines: [...node.querySelectorAll('[data-open-block="true"]')].map((el) => ({
+            fill: el.getAttribute('fill'),
+            cls: el.getAttribute('class'),
+            role: el.getAttribute('role'),
+            tabindex: el.getAttribute('tabindex'),
+            hidden: el.getAttribute('aria-hidden'),
+            x: Number(el.getAttribute('x')),
+            width: Number(el.getAttribute('width')),
+        })),
+    };
+}"""
+
+
+def test_a_block_opens_a_stop_only_where_the_screen_said_it_could(page):
+    """The same division of labour the control chart's dots keep, on the state
+    timeline. A block is a button only where the page asked for one
+    (`openable`), and pressing it dispatches `fs-states-open` for the page to
+    act on — the kit never fetches a dossier and never decides what opening a
+    block means. Four screens draw this shape with no panel to open (the
+    Analysis tab, the Line page, the schedule and the timeline inside the SPC
+    panel), and on those the blocks stay marks with the frame's own hover,
+    because a button that opens nothing is worse than no button.
+
+    The detail carries the block's WINDOW and not an id: a drawn block is
+    clipped to the window on screen and may be several records folded
+    together, so an id would address one of them and the panel would be about
+    something other than what was clicked."""
+    page.evaluate("(envelope) => { window.__statesEnvelope = envelope; }", STATES)
+
+    plain = page.evaluate(STATE_FACTS, [{}])
+    assert len(plain["blocks"]) == 3, plain["blocks"]
+    assert [b["role"] for b in plain["blocks"]] == [None] * 3
+    assert [b["tabindex"] for b in plain["blocks"]] == [None] * 3
+    assert not plain["outlines"]
+
+    opened = page.evaluate(STATE_FACTS, [{"openable": True}])
+    assert [b["role"] for b in opened["blocks"]] == ["button"] * 3
+    assert [b["tabindex"] for b in opened["blocks"]] == ["0"] * 3
+    assert [b["role"] for b in opened["withheld"]] == [None]
+    assert all("open the records behind it" in b["aria"] for b in opened["blocks"])
+    # The label says what the block IS before it says what pressing it does:
+    # a screen reader going along the bar hears the machine, the state, the
+    # reason and the duration, which is the row read aloud.
+    assert opened["blocks"][0]["aria"].startswith("MIX01 running, ")
+    assert "down (jam)" in opened["blocks"][2]["aria"]
+    # A stretch nobody could see is a block like any other and opens like one:
+    # the answer behind it is "nobody was looking", which is an answer.
+    assert opened["blocks"][1]["state"] == "disconnected"
+    assert opened["blocks"][1]["role"] == "button"
+    assert not opened["outlines"]
+
+    # The block the panel is open on, outlined — addressed by its start, the
+    # way the read that filled the panel was. A hollow outline and not a
+    # colour: the state is what the bar is for, and a block that changed
+    # colour when it was opened would read as a different state.
+    ringed = page.evaluate(STATE_FACTS, [
+        {"openable": True,
+         "selected": {"code": "MIX01", "start": "2026-09-28T11:20:00Z"}}])
+    assert len(ringed["outlines"]) == 1, ringed["outlines"]
+    ring = ringed["outlines"][0]
+    assert ring["fill"] is None and "state-open" in ring["cls"]
+    # It takes no pointer and no keyboard: the block underneath is the button,
+    # and two buttons on one stop is one button too many.
+    assert ring["role"] is None and ring["tabindex"] is None
+    assert ring["hidden"] == "true"
+
+    fired = page.evaluate(
+        """() => new Promise((resolve) => {
+            const host = document.getElementById('fs-chart-probe');
+            host.addEventListener('fs-states-open', (e) => resolve(e.detail), {once: true});
+            host.querySelector('rect[data-state="down"]').dispatchEvent(
+                new MouseEvent('click', {bubbles: true}));
+            setTimeout(() => resolve(null), 2000);
+        })""")
+    assert fired, "a block the screen made openable fired nothing"
+    assert fired["code"] == "MIX01" and fired["state"] == "down"
+    assert fired["reason"] == "jam"
+    assert fired["start"] == "2026-09-28T11:20:00Z"
+    assert fired["end"] == "2026-09-28T12:06:00Z"
+    assert fired["seconds"] == 2760.0
+    # How many records the drawn block stands for, from the envelope. One
+    # here; `_merge_short` on the server adds to it when it folds intervals
+    # too brief to draw, and the panel says so rather than letting one word
+    # cover nine.
+    assert fired["records"] == 1
+
+    # And a keyboard, because a bar only a mouse can open is a bar half this
+    # plant cannot use.
+    by_key = page.evaluate(
+        """() => new Promise((resolve) => {
+            const host = document.getElementById('fs-chart-probe');
+            host.addEventListener('fs-states-open', (e) => resolve(e.detail), {once: true});
+            host.querySelector('rect[data-state="setup"], rect[data-state="running"]')
+                .dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}));
+            setTimeout(() => resolve(null), 2000);
+        })""")
+    assert by_key and by_key["state"] == "running", by_key
+
+
+def test_a_real_mouse_press_on_a_block_opens_it_and_a_drag_still_brushes(page):
+    """Every check above dispatches its own event, and on 2026-10-11 all of
+    them passed while a person clicking a block on the machine page got
+    nothing. This shape is brushable - drag across it and the axis narrows -
+    and the brush catches the pointer on the frame: it called
+    `preventDefault()` on pointerdown, which cancels the mouse events a click
+    is made of, and redrew on pointerup, which replaced the very block the
+    press landed on. A synthetic `click` never met either.
+
+    So this one presses with the browser's own mouse. The rule the kit keeps is
+    that a press which does not move belongs to whatever was pressed, and a
+    press that travels belongs to the axis."""
+    page.evaluate("(envelope) => { window.__statesEnvelope = envelope; }", STATES)
+    page.evaluate(STATE_FACTS, [{"openable": True}])
+    page.evaluate(
+        """() => {
+             window.__opened = [];
+             document.getElementById('fs-chart-probe').addEventListener(
+               'fs-states-open', (e) => window.__opened.push(e.detail.state));
+           }""")
+    box = page.evaluate(
+        """() => {
+             const r = document.querySelector('#fs-chart-probe rect[data-state="down"]');
+             const b = r.getBoundingClientRect();
+             return {x: b.left + b.width / 2, y: b.top + b.height / 2,
+                     left: b.left, width: b.width};
+           }""")
+    page.mouse.move(box["x"], box["y"])
+    page.mouse.down()
+    page.mouse.up()
+    page.wait_for_function("() => window.__opened.length === 1", timeout=5000)
+    assert page.evaluate("() => window.__opened") == ["down"]
+    # The axis is untouched: pointing at a block says nothing about the window.
+    assert page.evaluate(
+        "() => document.querySelectorAll('#fs-chart-probe [data-brush-from]').length") == 0
+
+    # And a drag that starts on the same block still narrows the axis, which is
+    # the behaviour the brush exists for. It opens nothing.
+    page.mouse.move(box["left"] + 2, box["y"])
+    page.mouse.down()
+    page.mouse.move(box["left"] + 2 + max(box["width"], 40), box["y"], steps=6)
+    page.mouse.up()
+    page.wait_for_function(
+        "() => document.querySelectorAll('#fs-chart-probe [data-brush-from]').length === 1",
+        timeout=5000)
+    assert page.evaluate("() => window.__opened") == ["down"], (
+        "a drag across the plot opened a block as well as brushing the axis")
+
+
 # ----------------------------------------- and a screen draws through the kit
 
 def test_the_analysis_screen_draws_its_pareto_through_the_kit(page):
@@ -1228,6 +1406,14 @@ def test_the_analysis_screen_draws_its_timeline_through_the_same_shape(page):
     assert chart.get_attribute("data-kind") == "states"
     total = chart.get_attribute("data-total")
     assert "machines drawn" in total, f"the timeline states no total: {total!r}"
+    # And this screen has no panel to open, so its blocks are marks and not
+    # buttons. The machine page's timeline asks for `openable` and gets it;
+    # nothing else does, and a product that grew four screens of buttons
+    # opening nothing would be worse off than before the panel existed.
+    inert = page.evaluate(
+        """() => [...document.querySelectorAll('#timeline rect.state-mark')]
+                 .map((el) => el.getAttribute('role'))""")
+    assert inert and set(inert) == {None}, inert
 
 
 # ------------------------------------------------ the network graph (§7)

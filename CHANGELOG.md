@@ -12,6 +12,49 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ### Added
 
+- **Click a stop on a machine's timeline and the plant says what it was.** The
+  bar of running / idle / down / setup was a picture; now every block on it is
+  a button a keyboard can reach, and opening one lays out the records behind
+  it beside the bar — one read, `GET /analysis/timeline/block/{code}?start=&end=`,
+  which computes nothing the rest of the product does not already answer.
+
+  - **What it was and how long**, and how many records the drawn block stands
+    for: intervals too brief to draw are folded together, and the panel says
+    so rather than letting one word cover nine.
+  - **Why, and who said so.** The reason the floor gave it, the person who
+    named it and when — read out of the audit log by time, because nothing
+    joins a labeller to an interval — or plainly *nobody has said why yet*,
+    with the control to name it from this plant's own approved list. That is
+    the write the product already had (`POST /equipment/{code}/stops/label`),
+    not a second way to label a stop; where the capability does not allow it,
+    the refusal in its place names who may.
+  - **The job that was on**: the order before the block and the order after,
+    so a changeover reads as the hand-over it is. Derived, and the panel says
+    it is derived: nothing in this schema links a stop to an order, so the
+    answer is read off what the machine booked and which operation records
+    were open, and where the two kinds of record really disagree both are
+    reported and neither is picked.
+  - **Planned work, or a breakdown.** A down block covered by a maintenance
+    order in progress reads as *planned work: this stop's own reason names
+    MO-CHILL, a preventive maintenance order that is in_progress, done by
+    Nils Berger. This is the job, not a breakdown* — the distinction #158 put
+    in the data, now on the screen. Maintenance happening is not the same as
+    maintenance *planned*, and the panel keeps them apart: a corrective order
+    is raised after something broke, so it reads as the repair of the stop
+    rather than a reason for it, and a preventive job this plant says does not
+    need the line stopped cannot be what stopped it. Both are still listed,
+    named as what they are. Found on a replayed shift, where a greasing job
+    worked while the machine ran would otherwise have been offered as the
+    reason for a jam.
+  - **What the machine was doing either side** as small charts with the
+    block's start and end marked, **what quality saw after it** with each
+    reading's verdict, and **how much of the block anybody was watching**.
+  - Every row that belongs to another page links to it.
+
+  The bar itself is unchanged: a block carries what a button carries only
+  where a screen asks for it, so the four other screens that draw the same
+  shape stay inert rather than growing buttons that open nothing.
+
 - **Maintenance work goes to the right trade by itself.** The filler's chiller
   comes due at two in the morning; until now the order sat at `due` with
   nobody's name on it until a person read the backlog. The plant now hands it

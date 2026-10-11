@@ -929,7 +929,23 @@
     node.addEventListener("pointerdown", (event) => {
       const start = atPointer(node, event);
       if (start.x < x || start.x > x + w || start.y < y || start.y > y + h) return;
-      event.preventDefault();
+      /* A press that landed on a mark the screen made openable may be a
+         reader pointing at it rather than the start of a drag, and on the
+         state timeline the plot is nothing BUT such marks. Two things here
+         would otherwise swallow the click before it is dispatched:
+         `preventDefault()` on pointerdown, which cancels the compatibility
+         mouse events a click is made of, and the redraw below, which replaces
+         the very node the press landed on. So a press on a mark is left alone
+         until the pointer comes up: if it moved, it was a drag and the brush
+         takes it; if it did not, nothing here happens and the mark's own
+         click runs. Found 2026-10-11 by a browser test that pressed a block
+         with a real mouse - every synthetic `dispatchEvent` in the suite had
+         passed. */
+      const mark = event.target instanceof Element
+        && event.target !== surface
+        && event.target.getAttribute("role") === "button"
+        ? event.target : null;
+      if (!mark) event.preventDefault();
       from = start.x;
       span = add(g, "rect", { x: from, y, width: 1, height: h, class: "chart-brush-span" });
       const move = (e) => {
@@ -944,7 +960,15 @@
         const now = atPointer(node, e).x;
         /* A drag narrows; a click gives the whole window back. Four pixels is
            the difference between the two, and it is a click otherwise. */
-        if (Math.abs(now - from) < 4) view.brush = null;
+        const dragged = Math.abs(now - from) >= 4;
+        if (mark && !dragged) {
+          /* The reader pointed at the mark. The axis is theirs and stays as
+             they left it; Escape on the surface is how the whole window comes
+             back. */
+          span.remove();
+          return;
+        }
+        if (!dragged) view.brush = null;
         else view.brush = [toDomain(Math.min(from, now)), toDomain(Math.max(from, now))];
         redraw();
       };
@@ -1346,6 +1370,52 @@
     const end = brush ? Math.min(whole.end, brush[1]) : whole.end;
     const span = Math.max(end - start, 1);
     const UNKNOWN = new Set(["disconnected", "unknown"]);
+    /* A block the reader can open, and the one that is open. Opt-in, and
+       nothing else opts in: four other screens draw this shape - the Analysis
+       tab, the Line page, the schedule and the timeline inside the SPC panel -
+       and a kit that made every block a button would grow four screens of
+       buttons that do nothing. */
+    const openable = options.openable === true;
+    const open = options.selected || {};
+    const openAt = open.start ? utc(open.start).getTime() : null;
+    const outlines = [];
+
+    /* There is no <button> inside an SVG, so a block carries what one would
+       carry and answers a keyboard - the same way an openable dot on the
+       control chart does. What opening it MEANS is the page's business, so
+       this dispatches and stops.
+
+       The detail carries a WINDOW where the dot carries an id, because a
+       block is a stretch and not a point: it is clipped to the window on
+       screen and may be several records folded together, so an id would
+       address one of them and the panel would be about something other than
+       what was clicked. The stamps are the envelope's own and not the
+       brushed clip, for the same reason `data-value` keeps the whole
+       duration: the seconds are the envelope's number and the picture is
+       the reader's choice (rule 1). */
+    function openBlock(rect, code, interval, say) {
+      if (!openable) return;
+      rect.setAttribute("role", "button");
+      rect.setAttribute("tabindex", "0");
+      rect.setAttribute("aria-label", `${say} — open the records behind it`);
+      const fire = (event) => {
+        event.stopPropagation();
+        rect.dispatchEvent(new CustomEvent("fs-states-open", {
+          bubbles: true,
+          detail: { code, state: interval.state, reason: interval.reason || null,
+                    reason_code: interval.reason_code || null,
+                    start: interval.start, end: interval.end,
+                    seconds: interval.seconds, records: interval.records || 1,
+                    label: say },
+        }));
+      };
+      rect.addEventListener("click", fire);
+      rect.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        fire(event);
+      });
+    }
     /* An interval that only overlaps the brushed stretch is DRAWN clipped and
        still carries its own full duration in `data-value`: the seconds are the
        envelope's number and the picture is the reader's choice, and rule 1
@@ -1430,12 +1500,35 @@
               "data-label": row.code || row.label || "",
               ...(unknown ? { "data-unknown": "true" } : {}),
             });
+            const code = row.code || row.label || "";
+            const say = `${code} ${interval.state}`
+              + `${interval.reason ? ` (${interval.reason})` : ""}, `
+              + `${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`;
             add(rect, "title", {},
-                `${row.code || row.label || ""} ${interval.state}`
+                `${code} ${interval.state}`
                 + `${interval.reason ? ` (${interval.reason})` : ""}\n`
                 + `${duration(interval.seconds)} from ${FS.fmt.clock(interval.start)}`);
+            openBlock(rect, code, interval, say);
+            /* The block the panel beside this one is open on, outlined. A
+               reader who opens one block and then another has to be able to
+               see which the words belong to, and an outline keeps the block
+               its own colour - the state is the thing the bar is FOR. */
+            if (openable && openAt !== null && (!open.code || open.code === code)
+                && utc(interval.start).getTime() === openAt) {
+              outlines.push({ x: x0, y, width: Math.max(x1 - x0, 1) });
+            }
           }
         });
+        /* Over the rows, so the outline is not half-hidden by the block after
+           it. It is a mark on the picture and never a target: the block under
+           it is the button. */
+        for (const box of outlines) {
+          add(g, "rect", {
+            x: box.x - 1.5, y: box.y - 1.5, width: box.width + 3, height: rowH + 3,
+            rx: 3, class: "state-open", "pointer-events": "none", "aria-hidden": "true",
+            "data-open-block": "true",
+          });
+        }
         /* Last, over the rows: the moment the reader came here about. */
         paintMarkers(g, markers, { left, plot, top,
                                    height: rows.length * (rowH + gap), start, end });

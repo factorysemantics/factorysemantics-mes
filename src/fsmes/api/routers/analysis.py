@@ -16,6 +16,8 @@ a quiet fall-back to eight hours. A screen that said "night shift" over the
 last eight hours would be worse than an error.
 """
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -90,6 +92,64 @@ def timeline(
         db, line, hours,
         equipment=[c.strip() for c in equipment.split(",")] if equipment else None,
         limit=limit, shift=shift)
+
+
+#: The stretch of one machine's timeline a reader clicked. A window and not an
+#: id: what is drawn is clipped to the window on screen and may be several
+#: records folded together where they were too brief to draw, so an id would
+#: address one of them and the panel would be about something other than the
+#: block. Both ends are required - there is no sensible default for "which
+#: block", and a missing end that quietly meant *now* would answer about a
+#: different stretch than the one that was clicked.
+_BLOCK_START = Query(..., description="Start of the block, as it was drawn.")
+_BLOCK_END = Query(..., description="End of the block, as it was drawn.")
+_BEFORE = Query(None, gt=0, le=240,
+                description="Minutes of the machine's own tags drawn before the "
+                            "block. Left out, this panel's default.")
+_AFTER = Query(None, gt=0, le=240,
+               description="Minutes of the machine's own tags drawn after the "
+                           "block. Left out, this panel's default.")
+_QUALITY_MINUTES = Query(None, gt=0, le=1440,
+                         description="How long after the block quality readings are "
+                                     "looked for. Left out, this panel's default.")
+
+
+@router.get("/timeline/block/{equipment_code}")
+def timeline_block(
+    equipment_code: str,
+    user: UserDep,
+    start: datetime = _BLOCK_START,
+    end: datetime = _BLOCK_END,
+    before_minutes: float | None = _BEFORE,
+    after_minutes: float | None = _AFTER,
+    quality_minutes: float | None = _QUALITY_MINUTES,
+    db: Session = Depends(get_read_db),
+) -> dict:
+    """One block of a machine's state timeline, with every record behind it.
+
+    What it was and how long; the reason the floor gave it and who named it,
+    or that nobody has; the order either side and any maintenance order
+    covering it, so a planned stop reads as planned; the machine's own tags
+    across it; what quality saw after it; and how much of the stretch anybody
+    was watching.
+
+    Read-only, like every analysis. Whether the person asking may *name* an
+    unlabelled stop from the panel is answered here as well, because a panel
+    that offered the control and then met a 403 would be the product keeping a
+    rule it had not told anybody about: the answer carries whether they may
+    and, where they may not, who does.
+    """
+    from fsmes.services import auth, state_block
+
+    role = auth.current_role(db, user)
+    return state_block.dossier(
+        db, equipment_code, start, end,
+        **{name: value for name, value in (
+            ("before_minutes", before_minutes),
+            ("after_minutes", after_minutes),
+            ("quality_minutes", quality_minutes)) if value is not None},
+        may_label=bool(role and auth.can(db, role, state_block.LABEL_CAPABILITY)),
+        roles=auth.role_bundles(db))
 
 
 @router.get("/downtime")
