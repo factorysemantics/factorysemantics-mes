@@ -437,11 +437,19 @@ def _wall(window: tuple[float, float], t0: datetime, speed: float) -> tuple[date
 
 
 def _points_in(points: list[dict], start: datetime, end: datetime,
-               before: bool = False) -> list[dict]:
+               before: bool = False,
+               keys: tuple[str, ...] = ("mean", "value")) -> list[dict]:
+    """The points inside the window that carry a number worth reading.
+
+    `keys` names where that number lives. A tag trend keeps it under `mean`
+    when the MES rolled readings up and `value` when it did not; a control
+    chart keeps it where its `kind` says (see `_plots`). A point with a stamp
+    and no number is not a point yet.
+    """
     out = []
     for point in points:
         stamp = point.get("t") or point.get("ts")
-        if not stamp or (point.get("mean") is None and point.get("value") is None):
+        if not stamp or all(point.get(key) is None for key in keys):
             continue
         when = _parse(stamp)
         if (when < start) if before else (start <= when < end):
@@ -593,6 +601,24 @@ def _score_maintenance(record: dict, start: datetime, end: datetime,
     }
 
 
+def _plots(kind: str | None) -> str | None:
+    """The key a chart's points keep the plotted number under.
+
+    Three chart kinds, two keys: an individuals chart and an X-bar/R chart
+    both plot `value` - one reading on the first, a sample's mean on the
+    second, which only the chart's own `kind` tells apart - and a p chart
+    plots `p`, the share of a lot sent back, with the two whole numbers it
+    came from beside it. Read by `kind` rather than by whichever key happens
+    to be present, so a chart this scorer has not been taught is reported
+    unknown instead of scored on the wrong number.
+    """
+    if kind in (None, "imr", "xbar_r"):
+        return "value"
+    if kind == "p":
+        return "p"
+    return None
+
+
 def _score_sample(record: dict, start: datetime, end: datetime,
                   evidence: dict) -> dict:
     material = record.get("material")
@@ -611,12 +637,22 @@ def _score_sample(record: dict, start: datetime, end: datetime,
         return {"recorded": None,
                 "why": f"the MES holds no {characteristic} checks on {material} at all, "
                        "so there is no chart to read"}
-    inside = _points_in(points, start, end)
-    if not inside:
+    plots = _plots(chart.get("kind"))
+    if plots is None:
         return {"recorded": None,
-                "why": f"nobody measured {material} {characteristic} inside this window, "
+                "why": f"the {material} {characteristic} chart is a "
+                       f"{chart.get('kind')!r} chart and this scorer does not know "
+                       "which number its points plot"}
+    inside = _points_in(points, start, end, keys=(plots,))
+    if not inside:
+        # Nobody MEASURED a measured characteristic; nobody LOOKED AT a counted
+        # one. An inspector counting a lot measures nothing, and telling a
+        # reader otherwise names the wrong missing record.
+        did = "looked at" if plots == "p" else "measured"
+        return {"recorded": None,
+                "why": f"nobody {did} {material} {characteristic} inside this window, "
                        "so there is no point on the chart to be right or wrong about"}
-    values = [float(p["value"]) for p in inside]
+    values = [float(point[plots]) for point in inside]
     if record.get("below") is not None:
         bound = float(record["below"])
         past = [v for v in values if v < bound]
