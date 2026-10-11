@@ -664,10 +664,10 @@ rect.series-1, rect.series-2, rect.series-3 { fill: var(--series); }
 .span-says { margin: 0; font-size: 11px; width: 100%; }
 
 /* ---------- a chart, and the records behind one point on it ----------
-   #143 built this beside the control chart; the trend graph and the state
-   timeline open the same panel on the machine page, from the same primitives
-   in common.js (`FS.panel`). One set of shapes, so a reader who learns the
-   control chart's panel has learned all three.
+   The control chart's point panel built this (PR 143); the trend graph
+   and the state timeline open the same panel on the machine page, from
+   the same primitives in common.js (`FS.panel`). One set of shapes, so a
+   reader who learns the control chart's panel has learned all three.
 
    Palette only (rule 6): every colour here resolves to a variable in
    themes.css, so all four themes follow without this file knowing they
