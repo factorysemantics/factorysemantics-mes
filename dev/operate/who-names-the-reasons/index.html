@@ -1253,6 +1253,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="On the floor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#naming-a-stop-after-it-is-over-from-the-timeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Naming a stop after it is over, from the timeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -4310,6 +4327,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="On the floor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#naming-a-stop-after-it-is-over-from-the-timeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Naming a stop after it is over, from the timeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -4753,6 +4787,22 @@ says how much of the window came from each rather than pretending. (The OPC
 agent is a fifth thing and supplies no reason at all: every stop a machine
 reports by itself lands unlabelled. That is the cold start, and it is why the
 vocabulary has to come from somewhere other than the machines.)</p>
+<h3 id="naming-a-stop-after-it-is-over-from-the-timeline">Naming a stop after it is over, from the timeline<a class="headerlink" href="#naming-a-stop-after-it-is-over-from-the-timeline" title="Permanent link">&para;</a></h3>
+<p>The station screen names a stop as it happens. A stop nobody was at is named
+afterwards, from the machine page's <strong>Timeline</strong> tab: click the block — or tab
+to it and press Enter — and a panel opens beside the bar with the records
+behind it. Where the reason is missing it says so in those words, <em>nobody has
+said why yet</em>, and offers the same approved list the station screen offers,
+over the block's own window.</p>
+<p>It is the same write (<code>POST /equipment/{code}/stops/label</code>), so the same two
+rules hold: the code has to be on the approved list, and <strong>a label never
+overwrites a reason somebody already gave</strong>. The panel says how many records
+it named, because one drawn block can be several intervals folded together.</p>
+<p>Naming a stop needs <code>equipment.state</code>. A reader without it is told that, and
+told which roles hold it, rather than shown a control that will refuse —
+the panel also names the person who labelled a stop and when, read out of the
+audit log by time, and says <em>labelled here, by whom is not recorded</em> where
+that record does not exist.</p>
 <h2 id="what-the-pareto-says-afterwards">What the pareto says afterwards<a class="headerlink" href="#what-the-pareto-says-afterwards" title="Permanent link">&para;</a></h2>
 <p><code>GET /analysis/downtime</code> groups by code where there is one and by text where
 there is not — the two never merge — and states <strong>both totals</strong>:</p>
