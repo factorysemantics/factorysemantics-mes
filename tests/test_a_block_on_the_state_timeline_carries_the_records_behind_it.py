@@ -346,6 +346,26 @@ def test_where_the_booking_and_the_step_name_different_orders_both_are_reported(
     assert before["operation_names_another_order"] == "4713"
 
 
+def test_an_order_still_open_across_the_block_is_not_reported_as_a_disagreement(
+        session, shift):
+    """The chiller stop, and the reason this check exists: the last operation
+    record to COMPLETE before that stop is 4711, while the machine was booking
+    4712 - and 4712's own step is open across the stop, right there under *open
+    across it*. Two records naming one job are not a conflict, and saying they
+    disagree would teach a reader to distrust the sentence that matters.
+
+    Found 2026-10-11 in a browser, reading the panel the fixture below draws."""
+    out = state_block.dossier(session, "MIX01", *shift["down"])
+    before = out["orders"]["before"]
+    assert before["order"] == AFTER_ORDER                  # what it was booking
+    assert before["operation"]["order"] == BEFORE_ORDER    # the step that finished
+    assert [row["order"] for row in out["orders"]["during"]] == [AFTER_ORDER]
+    assert before["operation_names_another_order"] is None
+    # And the words only claim the two agree where they do.
+    assert before["from"] == "a quantity this machine booked before the block"
+    assert out["orders"]["after"] is None
+
+
 # ------------------------------------------------ planned work, or a breakdown
 
 

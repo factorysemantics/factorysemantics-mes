@@ -511,17 +511,27 @@ def _operations(session: Session, unit: Equipment, floor: datetime,
     } for row in rows]
 
 
-def _side(booking: dict | None, operation: dict | None, which: str) -> dict | None:
-    """One side of the block: the order, and what says so."""
+def _side(booking: dict | None, operation: dict | None, which: str,
+          *, open_across: frozenset[str] = frozenset()) -> dict | None:
+    """One side of the block: the order, and what says so.
+
+    `open_across` is the orders whose operation records were open across the
+    block itself. They settle a disagreement that is not one: the last
+    operation record to COMPLETE before a stop is often an earlier order than
+    the one the machine was booking, because the newer order is still running
+    - and it is right there in "open across it". Only a conflict the records
+    really hold is reported as one.
+    """
     if booking is None and operation is None:
         return None
     order = booking["order"] if booking else operation["order"]
     material = booking["material"] if booking else operation["material"]
-    if booking and operation:
-        from_what = (f"the last quantity this machine booked {which} the block, and an "
-                     f"operation record open then" if which == "before" else
-                     f"the first quantity this machine booked {which} the block, and an "
-                     f"operation record open then")
+    agrees = bool(booking and operation and operation["order"] == order)
+    if booking and agrees:
+        from_what = (f"the last quantity this machine booked {which} the block, and the "
+                     f"operation record that ran up to it" if which == "before" else
+                     f"the first quantity this machine booked {which} the block, and the "
+                     f"operation record that started after it")
     elif booking:
         from_what = f"a quantity this machine booked {which} the block"
     else:
@@ -533,11 +543,13 @@ def _side(booking: dict | None, operation: dict | None, which: str) -> dict | No
         "booked": booking,
         "operation": operation,
         "from": from_what,
-        # Where the two kinds of record name different orders. A changeover is
-        # exactly where that happens, and picking one silently would make the
-        # panel's cleanest sentence its least trustworthy.
+        # Where the two kinds of record name different orders AND nothing says
+        # they are the same job seen twice. A changeover is exactly where that
+        # happens, and picking one silently would make the panel's cleanest
+        # sentence its least trustworthy.
         "operation_names_another_order": (
-            operation["order"] if operation and operation["order"] != order else None),
+            operation["order"] if operation and operation["order"] != order
+            and order not in open_across else None),
     }
 
 
@@ -574,9 +586,12 @@ def _orders(session: Session, unit: Equipment, start: datetime,
         "last_booking": row[3], "good_qty": row[4], "scrap_qty": row[5],
         "bookings": row[6],
     } for row in during]
+    open_across = frozenset(o["order"] for o in during_ops)
     return {
-        "before": _side(before_booking, before_ops[-1] if before_ops else None, "before"),
-        "after": _side(after_booking, after_ops[0] if after_ops else None, "after"),
+        "before": _side(before_booking, before_ops[-1] if before_ops else None, "before",
+                        open_across=open_across),
+        "after": _side(after_booking, after_ops[0] if after_ops else None, "after",
+                       open_across=open_across),
         # Across the block itself: an order can be open through a stop without
         # booking anything, which is what a changeover looks like from here.
         "during": during_ops[:MOST_ROWS],
