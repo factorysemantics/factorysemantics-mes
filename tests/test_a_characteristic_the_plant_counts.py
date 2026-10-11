@@ -259,6 +259,30 @@ def test_a_count_posted_to_a_measured_characteristic_is_refused_and_names_the_wa
     assert "/quality/checks" in said and "/quality/samples" in said
 
 
+def test_a_reading_recorded_against_a_counted_characteristic_is_refused(session):
+    """The mistake the other way round, and the one a floor makes by accident:
+    nothing measures this, so a float against it is a number somebody made
+    up, and in the quality history it would read exactly like a measurement.
+    The refusal names the count, which is what this plant does know."""
+    _spec(session)
+    with pytest.raises(Invalid) as refused:
+        quality.record_check(session, material_code="FG-COLA", characteristic="sent_back",
+                             value=12.0, actor="tester")
+    said = str(refused.value)
+    assert "counted, not measured" in said
+    assert "/quality/counts" in said
+
+
+def test_five_readings_of_a_counted_characteristic_are_refused_too(session):
+    """One made-up number is a mistake; five of them averaged is a mistake
+    with limits drawn round it."""
+    _spec(session)
+    with pytest.raises(Invalid) as refused:
+        quality.record_sample(session, material_code="FG-COLA", characteristic="sent_back",
+                              values=[1.0, 2.0, 3.0, 4.0, 5.0], actor="tester")
+    assert "/quality/counts" in str(refused.value)
+
+
 def test_a_breakdown_left_out_is_not_broken_down_and_not_nothing_found(session):
     """Two different facts, and this product does not turn the first into the
     second. Null is nobody coded the rejects; the empty list is nobody found

@@ -205,6 +205,22 @@ def _store_reading(
     return check, in_spec
 
 
+def _not_measured(material_code: str, characteristic: str) -> str:
+    """Why a reading against a counted characteristic is refused.
+
+    Nothing measures it. There is no gauge, no unit and no limit for a
+    reading to be inside of, so a float recorded against it is a number
+    somebody or something made up - and in the quality history it would look
+    exactly like a measurement. The way in is the count, which is what this
+    plant actually knows about it. Decision 0041.
+    """
+    return (
+        f"{material_code}/{characteristic} is counted, not measured; nothing "
+        f"reads a value for it. Post how many were looked at and how many were "
+        f"sent back to /quality/counts, or take the counted declaration off the "
+        f"specification first")
+
+
 def record_check(
     session: Session,
     *,
@@ -237,8 +253,14 @@ def record_check(
     One reading of a subgroup of five is not a point on its chart, and
     storing it as if it were would put a single bottle on a chart of means
     and quietly widen every limit on it. `record_sample` is the way in.
+
+    A characteristic the plant *counts* is refused here too, and for a
+    harder reason: there is no reading to store. `record_count` is the way
+    in - see `_not_measured`.
     """
     spec = get_spec(session, material_code, characteristic)
+    if spec.counted:
+        raise Invalid(_not_measured(material_code, characteristic))
     size = spec.sample_size or 1
     if size > 1:
         raise Invalid(
@@ -297,8 +319,13 @@ def record_sample(
     the sentence. Fewer is not a smaller sample - a mean of three charted
     against limits built for five is wrong in a way nobody would see - and
     more is not a bigger one.
+
+    A counted characteristic is refused here as it is in `record_check`:
+    five readings of a thing nothing measures are five made-up numbers.
     """
     spec = get_spec(session, material_code, characteristic)
+    if spec.counted:
+        raise Invalid(_not_measured(material_code, characteristic))
     size = spec.sample_size or 1
     if size < 2:
         raise Invalid(

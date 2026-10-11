@@ -1319,6 +1319,11 @@ class Floor:
         # rightly: one reading is not a point on an X-bar chart. `inspect_a_sample`
         # is what records those.
         specs = [s for s in specs if (s.get("sample_size") or 1) <= 1]
+        # And a characteristic the plant COUNTS is not inspected here at all.
+        # Nothing measures it, so there is no reading to offer: a floor that
+        # sent one would be offering the plant a number it made up, and the
+        # plant refuses it. `inspect_a_lot` is what records those.
+        specs = [s for s in specs if not s.get("counted")]
         if not specs:
             return
         chosen = specs if every_spec else [self.rng.choice(specs)]
