@@ -451,6 +451,25 @@ def _line_coverage(accounts) -> float | None:
     return sum(a.observed_seconds for a in accounts) / total
 
 
+def _absorb(last: dict, interval: dict) -> None:
+    """Take one interval into the block before it, counting the records.
+
+    `records` is how many state rows the drawn block stands for. A reader who
+    clicks a block gets a panel about a stretch of time, and that stretch is
+    one record or several; the panel says which, because "Setup, 4 minutes"
+    drawn from nine folded rows is a different claim from one row.
+    """
+    last["end"] = interval["end"]
+    last["seconds"] = round(last["seconds"] + interval["seconds"], 1)
+    last["records"] = last.get("records", 1) + interval.get("records", 1)
+    # An absorbed interval of another state leaves the block no longer pure:
+    # the block keeps its own state (it is the one drawn) and says so.
+    if interval["state"] != last["state"]:
+        last["mixed"] = True
+    # The block ends when its last record does, open or not.
+    last["open"] = interval["open"]
+
+
 def _merge_short(intervals: list[dict], floor_seconds: float) -> list[dict]:
     """Fold intervals too short to see into the one before them.
 
@@ -471,14 +490,12 @@ def _merge_short(intervals: list[dict], floor_seconds: float) -> list[dict]:
     for interval in intervals[1:]:
         last = out[-1]
         if interval["seconds"] < floor_seconds and interval["state"] == last["state"]:
-            last["end"] = interval["end"]
-            last["seconds"] = round(last["seconds"] + interval["seconds"], 1)
+            _absorb(last, interval)
             merged += 1
         elif interval["seconds"] < floor_seconds and out and last["seconds"] >= floor_seconds:
             # Too brief to draw and a different state: absorb it into the
             # neighbour rather than drop it, so the timeline stays continuous.
-            last["end"] = interval["end"]
-            last["seconds"] = round(last["seconds"] + interval["seconds"], 1)
+            _absorb(last, interval)
             merged += 1
         else:
             out.append(dict(interval))
@@ -550,7 +567,8 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float | Non
         # tens of thousands of intervals, and hydrating each one was most of
         # this chart's cost.
         states = db.execute(
-            select(EquipmentState.state, EquipmentState.reason, EquipmentState.reason_source,
+            select(EquipmentState.id, EquipmentState.state, EquipmentState.reason,
+                   EquipmentState.reason_code, EquipmentState.reason_source,
                    EquipmentState.started_at, EquipmentState.ended_at,
                    EquipmentState.shift_code)
             .where(
@@ -562,8 +580,19 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float | Non
         ).all()
         drawn = [
                     {
+                        # The first record of the block, so a click can address
+                        # the stretch it drew. Not a key the client may join on:
+                        # a drawn block can be several records folded together
+                        # (see `_merge_short`), and the panel is read by the
+                        # window, not by this id.
+                        "id": state_id,
                         "state": getattr(state, "value", state),
                         "reason": reason,
+                        # The plant's own code for the reason, where a person
+                        # or a system chose one from the vocabulary. The free
+                        # text above is what was written; this is what was
+                        # picked, and only this one joins to the catalogue.
+                        "reason_code": reason_code,
                         # Null means this MES named it. The interval is
                         # always its own observation either way.
                         "reason_source": reason_source,
@@ -577,13 +606,21 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float | Non
                         "seconds": round(max(0.0, (min(ended_at or end, end)
                                                    - max(started_at, start)).total_seconds()), 1),
                         "open": ended_at is None,
+                        # How many state records this interval stands for. One
+                        # here; `_merge_short` adds to it when it folds.
+                        "records": 1,
                     }
-                    for state, reason, reason_source, started_at, ended_at, shift_code in states
+                    for (state_id, state, reason, reason_code, reason_source,
+                         started_at, ended_at, shift_code) in states
         ]
         drawn += [
             {
+                # A gap is this MES's own record of not looking, not a state
+                # row: it has no state id to address.
+                "id": None,
                 "state": "disconnected",
                 "reason": gap.reason,
+                "reason_code": None,
                 # Not a stop anybody named: it is this MES saying it lost
                 # sight of the machine, so the source is the connection.
                 "reason_source": "connection",
@@ -595,6 +632,7 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float | Non
                 # When the MES noticed, as against when the evidence stops.
                 # The seconds between them belong to neither side.
                 "detected_at": gap.detected_at,
+                "records": 1,
             }
             for gap in gaps.get(unit.id, [])
         ]
