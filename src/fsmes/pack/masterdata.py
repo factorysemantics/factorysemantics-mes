@@ -140,7 +140,11 @@ OPTIONAL: dict[str, tuple[str, ...]] = {
     # characteristic is inspected at a time. Left out, or 1, is one piece at
     # a time, which is what every pack written before this field existed
     # says. Decision 0040.
-    "quality_specs": ("unit", "min", "max", "sample_size"),
+    # `counted` is the third word: this characteristic is a count of units
+    # sent back out of units looked at, not a measurement, and its chart is
+    # a p chart. A spec that says it has no `min`/`max`/`sample_size` to
+    # give - there is nothing to be in spec about on one unit. Decision 0041.
+    "quality_specs": ("unit", "min", "max", "sample_size", "counted"),
     "gauges": ("kind", "location", "interval_days", "warn_days", "resolution",
                "calibrated_days_ago"),
     "lots": (),
@@ -308,6 +312,26 @@ def problems(directory: Path) -> list[str]:
             out.append(f"{where} wants samples of {size}, which this product cannot "
                        f"chart. Leave it out (or write 1) for one piece at a time, or "
                        f"write 2 to {MAX_SAMPLE_SIZE} for a sample of that many.")
+
+    # Counted and sampled are two different plants' answers to the same
+    # question, and a specification that claims both is a pack nobody can
+    # chart: the write path refuses one, so a pack is told here rather than
+    # at the first inspection. A counted characteristic with specification
+    # limits is the same mistake more quietly - there is nothing to be in
+    # spec about on one unit of a count - so that is said too.
+    for index, row in enumerate(data.rows("quality_specs"), start=1):
+        if not row.get("counted"):
+            continue
+        where = f"quality_specs.json #{index}"
+        if (row.get("sample_size") or 1) > 1:
+            out.append(f"{where} is counted and asks for samples of "
+                       f"{row.get('sample_size')}. A counted characteristic is units "
+                       f"sent back out of units looked at; it has no readings to take "
+                       f"several of. Drop one of the two.")
+        if row.get("min") is not None or row.get("max") is not None:
+            out.append(f"{where} is counted and carries specification limits. A count "
+                       f"has nothing to be in or out of spec about on one unit - what "
+                       f"judges it is the control limits of its own chart. Drop them.")
 
     for index, row in enumerate(data.rows("work_orders"), start=1):
         due = row.get("due_in_hours")
@@ -715,6 +739,7 @@ def seed(session, directory: Path, cycles: dict[str, float] | None = None) -> di
         session.add(QualitySpec(material=material, characteristic=row["characteristic"],
                                 unit=row.get("unit", ""), min_value=row.get("min"),
                                 max_value=row.get("max"),
+                                counted=bool(row.get("counted")),
                                 sample_size=None if size is None else int(size)))
         count("quality_specs", made=True)
 

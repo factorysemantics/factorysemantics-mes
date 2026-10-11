@@ -136,6 +136,14 @@ def seed_kepsim_line(session: Session, tag_map: Path | None = None) -> bool:
             # individuals (decision 0040).
             QualitySpec(material=bottle, characteristic="fill_height", unit="mm",
                         min_value=139.0, max_value=145.0, sample_size=5),
+            # And one characteristic nobody measures at all: the inspection
+            # station looks at every bottle that reaches it and sends some
+            # back, so what this holds is two whole numbers per stretch of
+            # production and its chart is a p chart (decision 0041). No
+            # min/max - there is nothing to be in or out of spec about on one
+            # bottle - and no sample size, because a count is not a sample.
+            QualitySpec(material=bottle, characteristic="sent_back", unit="",
+                        counted=True),
             MaterialLot(code="LOT-PREFORM-001", material=preform, quantity=100000, original_quantity=100000),
             MaterialLot(code="LOT-WATER-001", material=water, quantity=50000, original_quantity=50000),
             MaterialLot(code="LOT-CAP-001", material=cap, quantity=100000,

@@ -433,6 +433,26 @@ class Floor:
         # chart two identical points collapse the mean range the limits are
         # built from.
         self._sampled_through: dict[str, datetime] = {}
+        # The characteristics this floor *counts* rather than measures, and
+        # the station whose counters the two numbers come off. Empty for a
+        # plant whose script has no `inspection` section.
+        self.inspections = measurement.inspections(self.script)
+        # Where each counted characteristic's last stretch ended: the order
+        # it was on, what the station's counters read, and when. The next
+        # count is the difference, which is why the first pass of a restarted
+        # floor posts nothing - a count whose stretch began before anybody
+        # was watching would be the whole shift called fifteen minutes.
+        self._counted_at: dict[str, tuple[str, float, float, datetime]] = {}
+        # How many stretches each characteristic has been counted for, so the
+        # lot reference the plant will read carries a sequence rather than a
+        # timestamp. Restarts from one on a restart, and the order code in
+        # front of it keeps two runs of this floor from colliding on one
+        # order; two runs on the SAME order would, and the record says
+        # honestly that this is a reference the floor made up.
+        self._counted_stretches: dict[str, int] = {}
+        # That the station has made nothing since the last count is said
+        # once, not every fifteen minutes of a stopped line.
+        self._said_nothing_counted: set[str] = set()
         # That there is not yet five pieces' worth of history is said once
         # per characteristic, not every fifteen minutes until there is.
         self._said_no_pieces: set[str] = set()
@@ -1509,6 +1529,179 @@ class Floor:
                         equipment=signal.get("equipment"))
         return True
 
+    async def _below_the_band(self, inspection) -> bool | None:
+        """Whether the tag this inspection watches is under its threshold.
+
+        `None` is *nobody can say*: the tag has published nothing this floor
+        can read, and a floor that treated silence as "not cold" would be
+        sorting rejects by a fact it had invented. The caller sorts by the
+        settled weights and says in its log that it could not look.
+        """
+        if not inspection.watches:
+            return False
+        try:
+            trend = await self.get(f"/analysis/tag/{inspection.watch_equipment}",
+                                   tag=inspection.watch_tag, hours=0.25, buckets=200)
+        except httpx.HTTPError as exc:
+            log.warning("could not read the tag an inspection sorts by",
+                        equipment=inspection.watch_equipment, tag=inspection.watch_tag,
+                        error=str(exc)[:160])
+            return None
+        latest = [point["mean"] for point in trend.get("points") or []
+                  if point.get("mean") is not None]
+        if not latest:
+            return None
+        return float(latest[-1]) < float(inspection.watch_below)
+
+    async def inspect_a_lot(self, inspection, specs: list[dict],
+                            orders: list[dict]) -> bool:
+        """Count one stretch of production and post it as one lot.
+
+        Two whole numbers and a breakdown. The numbers are **the station's
+        own counters**, differenced against what they read at the end of the
+        last stretch: the units are the ones the line actually put through
+        the inspection station and the rejects are the ones it actually sent
+        back. Nothing here invents either, which is why a stretch in which
+        the line made nothing posts nothing rather than a clean lot - a p
+        chart with a point at nought on it, for a quarter of an hour when the
+        machine was down, is a chart that says the plant was perfect while it
+        was stopped.
+
+        Three things are refused on purpose:
+
+        - **The first stretch after this floor starts.** There is a baseline
+          to take before there is a difference to post, and a count whose
+          stretch began before anybody was watching would be a whole shift
+          recorded as fifteen minutes.
+        - **A counter that went backwards.** That is the PLC reset the pack
+          plants, and the honest answer is to re-baseline and book nothing.
+        - **A stretch that crossed onto another order.** The lot is one
+          stretch on one order; a count spanning a changeover belongs to
+          neither, so the baseline moves to the new order and the stretch
+          after it is the first one posted.
+
+        What the script decides is the one thing no counter publishes: which
+        defect each reject was sorted into. The weights are the pack's, and
+        while the tag the pack names is below the band it names, the patched
+        weights apply - which is how a chiller nobody cleaned turns up in a
+        list of defects rather than only in a temperature trend.
+        """
+        name = inspection.characteristic
+        spec = next((s for s in specs if s.get("characteristic") == name), None)
+        if spec is None:
+            return False
+        if not spec.get("counted"):
+            # A measured characteristic has readings, and this would post a
+            # share of a lot against a chart that plots millimetres.
+            log.warning("the pack asks this floor to count a characteristic the plant "
+                        "measures; nothing counted",
+                        characteristic=name, material=spec.get("material"))
+            return False
+
+        # The operation at the inspection station, on an order that is
+        # running. The counters are per operation, so a plant with the same
+        # station in two routings keeps two counts, which is correct.
+        here: tuple[str, dict] | None = None
+        for order in orders:
+            if order.get("status") not in ACTIVE_STATUSES:
+                continue
+            if order.get("material") != spec.get("material"):
+                continue
+            for op in order.get("operations") or []:
+                if op.get("equipment") == inspection.equipment:
+                    here = (order["code"], op)
+                    break
+            if here:
+                break
+        if here is None:
+            return False
+        order_code, op = here
+        good = float(op.get("good_qty") or 0)
+        scrap = float(op.get("scrap_qty") or 0)
+        now = _utcnow()
+
+        was = self._counted_at.get(name)
+        self._counted_at[name] = (order_code, good, scrap, now)
+        if was is None:
+            log.info("took the baseline for a counted characteristic; nothing posted",
+                     characteristic=name, equipment=inspection.equipment,
+                     order=order_code, good=good, scrap=scrap,
+                     note="the first stretch has no difference to post yet")
+            return False
+        was_order, was_good, was_scrap, since = was
+        if was_order != order_code:
+            log.info("the inspection station moved onto another order; re-baselined",
+                     characteristic=name, was=was_order, now=order_code,
+                     note="a lot is one stretch on one order, and a count across a "
+                          "changeover belongs to neither")
+            return False
+        if good < was_good or scrap < was_scrap:
+            log.warning("the inspection station's counters went backwards; re-baselined "
+                        "and booked nothing",
+                        characteristic=name, equipment=inspection.equipment,
+                        good=(was_good, good), scrap=(was_scrap, scrap),
+                        note="a counter that snaps to zero is a reset, not production")
+            return False
+
+        rejected = round(scrap - was_scrap)
+        # Everything the station put through: what it passed on plus what it
+        # sent back. "Looked at" is the whole stream, which is what the
+        # denominator of a reject rate has to be.
+        inspected = round(good - was_good) + rejected
+        if inspected <= 0:
+            if name not in self._said_nothing_counted:
+                self._said_nothing_counted.add(name)
+                log.info("nothing went through the inspection station in this stretch; "
+                         "nothing counted",
+                         characteristic=name, equipment=inspection.equipment,
+                         note="a count of nought looked at is not a lot, and a point at "
+                              "nought rejects would say the plant was perfect while it "
+                              "was stopped")
+            return False
+        self._said_nothing_counted.discard(name)
+
+        below = await self._below_the_band(inspection)
+        defects = inspection.sort(rejected, rng=self.rng, below=bool(below))
+        sequence = self._counted_stretches.get(name, 0) + 1
+        self._counted_stretches[name] = sequence
+        tail = order_code.rsplit("-", 1)[-1]
+        body: dict = {
+            "material": spec["material"],
+            "characteristic": name,
+            "inspected": inspected,
+            "rejected": rejected,
+            "lot_ref": inspection.lot_ref(order=order_code, tail=tail, n=sequence),
+            "order": order_code,
+            "equipment": inspection.equipment,
+            "started_at": since.isoformat(),
+            "ended_at": now.isoformat(),
+        }
+        if defects:
+            body["defects"] = defects
+        try:
+            response = await self.post("/quality/counts", json=body)
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            log.warning("count refused", characteristic=name,
+                        status=exc.response.status_code, detail=exc.response.text[:160])
+            return False
+        out = response.json()
+        log.info("counted a lot", characteristic=name, lot=body["lot_ref"],
+                 inspected=inspected, rejected=rejected, p=out.get("p"),
+                 defects=defects, order=order_code, equipment=inspection.equipment,
+                 # Whether the planted cause was running while these rejects
+                 # were sorted, and said as three answers rather than two: a
+                 # tag nobody could read is not a tag that was in band.
+                 watched=(None if not inspection.watches else
+                          f"{inspection.watch_equipment}.{inspection.watch_tag} "
+                          + ("below" if below else "unknown" if below is None else "above")
+                          + f" {inspection.watch_below:g}"))
+        for signal in out.get("spc") or []:
+            log.warning("spc signal", rule=signal.get("rule"), what=signal.get("what"),
+                        characteristic=name, lot=body["lot_ref"],
+                        nonconformance=signal.get("nonconformance"))
+        return True
+
     # ---------------------------------------------------------------- stops
 
     async def watch_the_stops(self) -> list[str]:
@@ -2148,7 +2341,15 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
                  # otherwise look like a floor that had quietly stopped
                  # sampling.
                  sampling=[f"{name} every {plan.every_line_s:g} line s"
-                           for name, plan in floor.plans.items()])
+                           for name, plan in floor.plans.items()],
+                 # And which it counts rather than measures, with the station
+                 # whose counters the numbers come off - for the same reason:
+                 # a pack naming a characteristic the specifications do not
+                 # carry as counted would otherwise look like a floor that
+                 # had quietly stopped inspecting.
+                 inspection=[f"{name} at {plan.equipment} every "
+                             f"{plan.every_line_s:g} line s"
+                             for name, plan in floor.inspections.items()])
 
         async def every(seconds: float, work) -> None:
             while True:
@@ -2199,6 +2400,40 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
                         await floor.inspect_a_sample(plan, specs, orders)
                     except httpx.HTTPError as exc:
                         log.warning("the sampling step failed", characteristic=name,
+                                    error=str(exc)[:160])
+
+        async def count_what_went_back() -> None:
+            """Its own loop, like the bench's, on each plan's own cadence.
+
+            A count is not an inspection with fewer numbers in it: nothing is
+            measured, the two numbers are the station's own counters
+            differenced over the stretch, and the cadence is the pack's -
+            fifteen line minutes on the bottling line, the same walk as the
+            sample tray.
+            """
+            if not floor.inspections:
+                return
+            due = {name: 0.0 for name in floor.inspections}
+            while True:
+                wait = min(plan.every_line_s / floor.speed
+                           for plan in floor.inspections.values())
+                await asyncio.sleep(max(wait, 1.0))
+                now = time.monotonic()
+                try:
+                    specs = await floor.every("/quality/specs")
+                    orders = (await floor.get("/workorders", status=["released", "running"],
+                                              limit=500))["items"]
+                except httpx.HTTPError as exc:
+                    log.warning("the counting step failed", error=str(exc)[:160])
+                    continue
+                for name, plan in floor.inspections.items():
+                    if now < due[name]:
+                        continue
+                    due[name] = now + plan.every_line_s / floor.speed
+                    try:
+                        await floor.inspect_a_lot(plan, specs, orders)
+                    except httpx.HTTPError as exc:
+                        log.warning("the counting step failed", characteristic=name,
                                     error=str(exc)[:160])
 
         async def do_issue(summary, orders):
@@ -2286,6 +2521,7 @@ async def run(settings: Settings, *, inspect_every: float = 8.0,
             every(supervise_every, do_supervise),
             watch_the_stops(),
             sample_the_bench(),
+            count_what_went_back(),
             plan_ahead(),
             do_the_work(),
         )
