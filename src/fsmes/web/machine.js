@@ -17,6 +17,9 @@ const NOW_REFRESH_MS = 3000;
 let head = null;
 let snapshot = null;
 let trendTag = new URL(location).searchParams.get("tag");
+/* Whether a reader named the tag, or the screen chose it. A named one is
+   never second-guessed against the live snapshot below. */
+const trendTagAsked = Boolean(trendTag);
 let nowTimer = null;
 // The timeline envelope the bar is drawn from, the block the panel beside it
 // is open on, and this plant's own list of downtime reasons - read once.
@@ -142,8 +145,15 @@ function renderTags(snap) {
   // list of everything this machine has ever published - a tag that stopped
   // arriving yesterday is missing from this snapshot and is exactly the tag
   // somebody opening a finished shift is looking for.
+  //
+  // So a tag a LINK named is never checked against this snapshot: the snapshot
+  // is what the plant is publishing right now, through whatever tag map it was
+  // given, and on the lab's own filler that is four tags of twelve. Checking
+  // against it drew FillWeight for a reader who asked for ProductTemp and said
+  // nothing about the swap. Where the named tag really has no readings the
+  // chart says so, by name, out of `not_published`.
   const numeric = snap.tags.filter((t) => typeof t.value === "number" || t.kind === "pv" || t.kind === "sp");
-  if (!trendTag || !numeric.some((t) => t.tag === trendTag)) {
+  if (!trendTag || (!trendTagAsked && !numeric.some((t) => t.tag === trendTag))) {
     trendTag = (numeric.find((t) => t.primary) || numeric[0] || {}).tag || null;
   }
 }

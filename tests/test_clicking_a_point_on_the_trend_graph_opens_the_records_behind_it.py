@@ -775,6 +775,43 @@ def test_an_operator_opens_a_reading_the_way_a_supervisor_does(chromium, plant):
         context.close()
 
 
+def test_a_tag_a_link_named_is_drawn_even_where_the_plant_publishes_few_of_them(
+        admin, plant):
+    """Found on the lab and not in a test. The filler there publishes four tags
+    of twelve through its tag map, and the screen was checking the tag a LINK
+    named against that live snapshot: a reader who opened `?tag=ProductTemp`
+    got FillWeight drawn instead, with nothing on the screen saying so. The
+    pickers were always built from everything the machine has ever published;
+    the tag the chart opens on is now too, and a named tag with no readings is
+    reported by name instead of quietly swapped."""
+    base, start, end = plant
+    page = admin.new_page()
+
+    def thin(route):
+        """The snapshot cut down the way a tag map cuts it down: one tag,
+        which is not the one the link asked for."""
+        route.fulfill(status=200, content_type="application/json",
+                      body=json.dumps({"source": "tag map", "tags": [
+                          {"tag": "Temperature", "value": 41.0,
+                           "primary": True, "kind": "pv"}]}))
+
+    page.route("**/equipment/*/tags*", thin)
+    try:
+        page.goto(f"{base}/dashboard/machine/MIX01"
+                  f"?tag=Pressure&start={start.isoformat()}Z"
+                  f"&end={end.isoformat()}Z#trend",
+                  wait_until="load", timeout=30000)
+        page.wait_for_function(
+            """() => document.querySelectorAll(
+                 '#trend circle[data-series="Pressure"]').length > 5""",
+            timeout=30000)
+        assert page.input_value("#trend-tag") == "Pressure"
+        assert "Pressure" in _footer(page)
+    finally:
+        page.unroute_all(behavior="ignoreErrors")
+        page.close()
+
+
 # ------------------------------------------------------------ in all four themes
 
 
