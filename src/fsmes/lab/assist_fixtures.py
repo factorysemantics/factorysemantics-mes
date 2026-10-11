@@ -260,6 +260,15 @@ _SET_A_PLAN = ("set the sample size on the characteristic, on the Specifications
                "Master data, as somebody who holds masterdata.write - or ask this case "
                "on a plant that already inspects something n at a time")
 
+_COUNTED = ("whether a characteristic is counted or measured is master data like the "
+            "specification it is part of: it is the plant's decision, not a run's "
+            "(decisions 0035 and 0041), and a run that declared one counted would be "
+            "changing which chart somebody's quality record is drawn on")
+
+_DECLARE_A_COUNT = ("tick counted on the characteristic, on the Specifications tab of "
+                    "Master data, as somebody who holds masterdata.write - or ask this "
+                    "case on a plant that already counts something")
+
 _SEED_IT = ("put the code on the plant yourself, or run with `--seed-masterdata`, which "
             "puts the demo plant's master data there over the plant's own API as the "
             "account you signed in as - never as the agent")
@@ -312,6 +321,20 @@ def _has_sampled_spec(plant: str, code: str) -> bool:
     material, _, characteristic = code.partition("/")
     return any(s.get("material") == material and s.get("characteristic") == characteristic
                and (s.get("sample_size") or 1) > 1
+               for s in _rows(_ok(_tools().quality(plant)).get("specs") or {}, "items"))
+
+
+def _has_counted_spec(plant: str, code: str) -> bool:
+    """`counted_spec:FG-COLA/sent_back` - a characteristic the plant counts
+    rather than measures, which is what a count can be recorded against.
+
+    A measured specification is not one of these: posting a count to it is
+    refused (decision 0041), and a case arranged against it would be scored on
+    a refusal nobody asked for.
+    """
+    material, _, characteristic = code.partition("/")
+    return any(s.get("material") == material and s.get("characteristic") == characteristic
+               and bool(s.get("counted"))
                for s in _rows(_ok(_tools().quality(plant)).get("specs") or {}, "items"))
 
 
@@ -689,6 +712,8 @@ KINDS: dict[str, Kind] = {k.name: k for k in (
     Kind("spec", _has_spec, cannot=_MASTER_DATA, fix=_SEED_IT),
     Kind("sampled_spec", _has_sampled_spec,
          cannot=_SAMPLING_PLAN, fix=_SET_A_PLAN),
+    Kind("counted_spec", _has_counted_spec,
+         cannot=_COUNTED, fix=_DECLARE_A_COUNT),
     Kind("flagged_sample", _has_flagged_sample,
          cannot=_FLAGGED_SAMPLE, fix=_RUN_IT_UNTIL_IT_FIRES),
     Kind("order", _has_order, _make_order),

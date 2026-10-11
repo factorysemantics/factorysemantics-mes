@@ -106,6 +106,7 @@ HIDDEN = {"list_plants"}
 NEEDS: dict[str, str] = {
     "record_check": "quality.record",
     "record_sample": "quality.record",
+    "record_count": "quality.record",
     "close_nonconformance": "quality.close_nc",
     "review_nonconformance": "quality.close_nc",
     "disposition_nonconformance": "quality.close_nc",
