@@ -78,8 +78,13 @@
     </section>
 
     <section class="tab-panel" data-panel="timeline">
+      <!-- The bar and the records behind one block of it, side by side. The
+           panel's column is here whether or not a block is open, so clicking
+           a block moves nothing else on the page - it fills the box that was
+           already there, the way the control chart's panel does. -->
+      <div class="tl-split">
       <div class="panel">
-        <h2>State timeline</h2>
+        <h2>State timeline <span id="tl-window" class="muted"></span></h2>
         <div id="tl" class="chart"></div>
         <p class="legend">
           <span><i class="sw" style="background:var(--running)"></i>running</span>
@@ -87,6 +92,33 @@
           <span><i class="sw" style="background:var(--down)"></i>down</span>
           <span><i class="sw" style="background:var(--setup)"></i>setup</span>
         </p>
+        <p id="tl-hint" class="muted small">Click a block to see what it was and
+          what the records say about it — or tab to one and press Enter. A thin
+          block may be several records folded together to stay visible; the panel
+          says how many it stands for.</p>
+      </div>
+
+      <!-- `data-block` is written only once the records have arrived and are
+           drawn, and it carries the block's own window - `start/end`, the way
+           the read is addressed, because a block is a stretch and not a row.
+           A test waits on that rather than on the box existing: the box
+           exists before the fetch does, and on loopback the difference is six
+           milliseconds (#112, 2026-09-26). -->
+      <section class="panel block-panel" id="block-panel" data-assist="machine-block-panel"
+               data-state="idle" data-block="" aria-live="polite">
+        <h2><span id="block-title">What this block was</span>
+          <span id="block-which" class="muted"></span></h2>
+        <p id="block-idle" class="muted small">No block is open. Click one on the
+          bar beside this and every record this MES holds about it appears here:
+          what it was and how long, the reason the floor gave it and who gave it
+          — or plainly that nobody has — the order running either side, any
+          maintenance order covering it so planned work reads as planned, this
+          machine's own signals before and after as small charts, and the quality
+          readings taken after it with the chart's verdict. Nothing is modelled
+          or guessed: every line is a record, and each block says how much of its
+          window anybody was watching.</p>
+        <div id="block-body" hidden></div>
+      </section>
       </div>
     </section>
 
@@ -145,7 +177,9 @@
   </main>
 
   <p class="screen-source">head /equipment/{code} · tags /equipment/{code}/tags · alarms /equipment/{code}/alarms ·
-    trend /analysis/tag/{code}?tag= · timeline /analysis/timeline?equipment= · oee /equipment/{code}/oee ·
+    trend /analysis/tag/{code}?tag= · timeline /analysis/timeline?equipment= · one block /analysis/timeline/block/{code}?start=&end= ·
+    naming a stop /equipment/{code}/stops/label · the plant's reasons /equipment/downtime-reasons ·
+    oee /equipment/{code}/oee ·
     maintenance /maintenance/plans, /maintenance/orders · queue /workorders/dispatch ·
     unassigned /execution/unassigned?equipment=</p>
 </div>
