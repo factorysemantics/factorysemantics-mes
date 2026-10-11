@@ -1207,3 +1207,439 @@ def test_a_sampled_characteristic_is_not_also_inspected_one_piece_at_a_time(plan
     on_the_floor(plant, inspect_everything)
     assert the_heights(plant) == [], "no single reading of a sampled characteristic"
     assert the_checks(plant), "and fill weight was still inspected"
+
+
+# --------------------------------------- and one behind a lot on the
+#                                         p chart
+#
+# The seventh cause, and the first on a characteristic nothing measures. QI01
+# looks at every bottle that reaches it and sends some back; what the record
+# holds is two whole numbers for the stretch - how many were looked at, how
+# many went back - and which defects they were sorted into. The numbers are
+# **the station's own counters**, differenced over the stretch, so a floor
+# that counted a quarter of an hour in which the line made nothing posts
+# nothing rather than a lot at nought rejects.
+#
+# The planted cause is the chiller's, read from the other end. While the
+# product reaching the filler is below the band the pack names, the pack's
+# patched weights apply and about three quarters of what goes back goes back
+# for low fill; either side of that window it goes back mostly for skewed
+# caps. Nothing is added to `line.json` for it - the cold half hour is
+# already there, link 4 of the shift's own chain, and this reads the
+# ProductTemp the chain plants. What the pack does **not** claim is that the
+# share sent back rises in that window: it does not, and the last two tests
+# here are the two halves of that sentence.
+
+#: The bottling shift itself, which plants the cold half hour this cause
+#: reads. `LINE` above is the reference hour; this is the pack's own shift.
+BOTTLING_LINE = BOTTLING / "line.json"
+
+#: The station the pack counts at, and the order the pack ships released.
+INSPECTOR = "QI01"
+FIRST_ORDER = "WO-ACME-4711"
+
+
+def the_inspection():
+    """The pack's own inspection plan for the counted characteristic."""
+    return measurement.inspections(script())["sent_back"]
+
+
+def the_station(session: Session, order: str = FIRST_ORDER):
+    from fsmes.domain import WorkOrder
+
+    work_order = session.scalar(select(WorkOrder).where(WorkOrder.code == order))
+    return next(op for op in work_order.operations if op.equipment.code == INSPECTOR)
+
+
+def the_station_has_counted(session: Session, *, good: float, scrap: float,
+                            order: str = FIRST_ORDER) -> None:
+    """Move the inspection station's own counters, as execution bookings do.
+
+    Written on the operation rather than posted through `/execution`, because
+    what is pinned here is the floor differencing two counters it reads - the
+    bookings that move them are `test_execution.py`'s subject.
+    """
+    operation = the_station(session, order)
+    operation.good_qty, operation.scrap_qty = float(good), float(scrap)
+    session.commit()
+
+
+def the_product_is(session: Session, degrees: float, *, seconds_ago: float = 0.0) -> None:
+    """A product temperature arriving from the filler, as the OPC agent books it."""
+    machine = equipment_service.masterdata.get_equipment(session, FILLER)
+    row = TagValue(equipment_id=machine.id, tag=f"{FILLER}.ProductTemp", value_num=degrees)
+    row.ts = datetime.now(UTC).replace(tzinfo=None) - timedelta(seconds=seconds_ago)
+    session.add(row)
+    session.commit()
+
+
+async def count_once(floor: Floor) -> bool:
+    return await floor.inspect_a_lot(the_inspection(), await the_specs(floor),
+                                     await the_orders(floor))
+
+
+def the_counts(session: Session) -> list:
+    from fsmes.domain import QualityCount
+
+    return list(session.scalars(select(QualityCount).order_by(QualityCount.id)))
+
+
+def the_codes(count) -> dict[str, int]:
+    return {row["code"]: row["count"] for row in count.defects or []}
+
+
+# ----------------------------------------------- the plan, without a plant
+
+
+def test_the_inspection_this_floor_counts_with_is_the_packs_and_not_this_codes():
+    """Every number of it comes out of `floor.json`: the cadence, the station,
+    what a lot is called, the four bins and how common each is. A floor whose
+    defect list lived in Python would ship one plant's vocabulary to every
+    plant that ran it."""
+    entry = script()["inspection"]["sent_back"]
+    plan = the_inspection()
+    assert plan.every_line_s == entry["every_line_s"] == 900
+    assert plan.equipment == entry["at"]["equipment"] == INSPECTOR
+    assert plan.lot_ref_pattern == entry["lot_ref"]
+    assert [code for code, _weight in plan.defects] == [d["code"] for d in entry["defects"]]
+    assert [weight for _code, weight in plan.defects] == [
+        float(d["weight"]) for d in entry["defects"]]
+    watch = entry["while_below"]
+    assert (plan.watch_equipment, plan.watch_tag) == (watch["equipment"], watch["tag"])
+    assert plan.watch_below == watch["value"] and plan.watches
+
+
+def test_a_plant_whose_script_says_nothing_about_counting_counts_nothing():
+    """Which is every pack written before this existed, and every plant that
+    measures everything it judges. Not an error, and not an empty chart: no
+    inspection loop at all."""
+    assert measurement.inspections({}) == {}
+    assert measurement.inspections({"inspection": {}}) == {}
+
+
+def test_an_inspection_with_no_station_to_count_at_is_not_a_plan():
+    """The two numbers are a station's counters. An entry that does not say
+    whose would have to invent them, so it is skipped rather than guessed at."""
+    assert measurement.inspections({"inspection": {"sent_back": {"every_line_s": 900}}}) == {}
+    assert "sent_back" in measurement.inspections(
+        {"inspection": {"sent_back": {"at": {"equipment": INSPECTOR}}}})
+
+
+def test_the_pack_declares_the_characteristic_counted_and_gives_it_no_limits(plant):
+    """On the plant, through the API the floor reads: counted, with no limits
+    and no sample size. A counted characteristic has no millimetres to be
+    inside of, and a spec that carried both would be two charts of one thing."""
+
+    async def read_the_specs(floor: Floor) -> None:
+        spec = next(s for s in await the_specs(floor) if s["characteristic"] == "sent_back")
+        assert spec["counted"] is True
+        assert spec["min_value"] is None and spec["max_value"] is None
+        assert not spec.get("sample_size")
+        assert all(s["counted"] is not True for s in await the_specs(floor)
+                   if s["characteristic"] in ("fill_weight", "fill_height")), \
+            "the two measured characteristics on this plant are still measured"
+
+    on_the_floor(plant, read_the_specs)
+
+
+# -------------------------------------------- the counters, on a plant
+
+
+def test_the_first_stretch_takes_a_baseline_and_posts_nothing(plant):
+    """There is a baseline to take before there is a difference to post. A
+    count whose stretch began before anybody was watching would book a whole
+    shift's production as a quarter of an hour."""
+    the_station_has_counted(plant, good=4000, scrap=120)
+
+    async def once(floor: Floor) -> None:
+        assert await count_once(floor) is False
+
+    on_the_floor(plant, once)
+    assert the_counts(plant) == []
+
+
+def test_the_second_stretch_posts_what_the_station_put_through_and_sent_back(plant):
+    """One lot, two numbers, both differences. *Looked at* is the whole
+    stream the station handled - what it passed on plus what it sent back -
+    because that is what the denominator of a reject rate has to be."""
+    the_station_has_counted(plant, good=4000, scrap=120)
+
+    async def two_stretches(floor: Floor) -> None:
+        assert await count_once(floor) is False
+        the_station_has_counted(plant, good=4950, scrap=170)
+        assert await count_once(floor) is True
+
+    on_the_floor(plant, two_stretches)
+    counts = the_counts(plant)
+    assert len(counts) == 1
+    assert (counts[0].inspected, counts[0].rejected) == (1000, 50)
+
+
+def test_a_stretch_with_nothing_through_the_station_posts_nothing(plant):
+    """A point at nought rejects, for a quarter of an hour when the machine
+    was stopped, is a chart saying the plant was perfect while it made
+    nothing."""
+    the_station_has_counted(plant, good=4000, scrap=120)
+
+    async def nothing_moved(floor: Floor) -> None:
+        assert await count_once(floor) is False
+        assert await count_once(floor) is False
+
+    on_the_floor(plant, nothing_moved)
+    assert the_counts(plant) == []
+
+
+def test_a_counter_that_went_backwards_re_baselines_and_books_nothing(plant):
+    """The PLC reset the pack plants, met honestly: a counter that snaps back
+    is not production, and the difference it would book is a negative lot."""
+    the_station_has_counted(plant, good=4000, scrap=120)
+
+    async def after_a_reset(floor: Floor) -> None:
+        assert await count_once(floor) is False
+        the_station_has_counted(plant, good=0, scrap=0)
+        assert await count_once(floor) is False
+        the_station_has_counted(plant, good=900, scrap=100)
+        assert await count_once(floor) is True, "the stretch after the reset is a lot again"
+
+    on_the_floor(plant, after_a_reset)
+    counts = the_counts(plant)
+    assert len(counts) == 1
+    assert (counts[0].inspected, counts[0].rejected) == (1000, 100), \
+        "counted from the reset, not from before it"
+
+
+def test_a_stretch_that_crossed_onto_another_order_belongs_to_neither(plant):
+    """A lot is one stretch on one order. The baseline moves to the new order
+    and the stretch after the changeover is the first one posted.
+
+    The baseline is set here rather than by releasing a second order, because
+    which order a plant with two released would put through QI01 is the
+    dispatcher's subject and not this one's.
+    """
+    the_station_has_counted(plant, good=4000, scrap=120)
+
+    async def across_a_changeover(floor: Floor) -> None:
+        assert await count_once(floor) is False
+        was = floor._counted_at["sent_back"]
+        floor._counted_at["sent_back"] = ("WO-ACME-4799", *was[1:])
+        the_station_has_counted(plant, good=4900, scrap=220)
+        assert await count_once(floor) is False
+        the_station_has_counted(plant, good=5400, scrap=270)
+        assert await count_once(floor) is True
+
+    on_the_floor(plant, across_a_changeover)
+    counts = the_counts(plant)
+    assert len(counts) == 1
+    assert (counts[0].inspected, counts[0].rejected) == (550, 50)
+
+
+def test_a_count_names_the_lot_the_order_and_the_station_that_did_the_counting(plant):
+    """What a person opening the point has to be able to go and look at. The
+    lot's name is the pack's pattern - the order's number and the stretch's
+    place in it - because this plant does not ship lots, and the record says
+    so by having `lot_id` empty rather than by inventing one."""
+    the_station_has_counted(plant, good=0, scrap=0)
+
+    async def two_stretches(floor: Floor) -> None:
+        assert await count_once(floor) is False
+        the_station_has_counted(plant, good=900, scrap=100)
+        assert await count_once(floor) is True
+        the_station_has_counted(plant, good=1800, scrap=200)
+        assert await count_once(floor) is True
+
+    on_the_floor(plant, two_stretches)
+    counts = the_counts(plant)
+    assert [c.lot_ref for c in counts] == ["4711-Q01", "4711-Q02"]
+    assert all(c.lot_id is None for c in counts), "this plant does not ship lots yet"
+    assert all(c.checked_by == SUPERVISOR for c in counts)
+    equipment = {c.id: the_station(plant).equipment_id for c in counts}
+    assert all(c.equipment_id == equipment[c.id] for c in counts)
+    order = the_station(plant).work_order_id
+    assert all(c.work_order_id == order for c in counts)
+    assert all(c.started_at is not None and c.ended_at is not None for c in counts), \
+        "a lot is a stretch, and a stretch has two ends"
+
+
+def test_every_bottle_sent_back_is_coded_and_the_breakdown_adds_up(plant):
+    """This inspector codes every bottle he sends back, and codes it once, so
+    a lot's breakdown adds to exactly the number that went back. A breakdown
+    that came to less would be a chart with "and the rest" in it."""
+    the_station_has_counted(plant, good=0, scrap=0)
+
+    async def one_lot(floor: Floor) -> None:
+        assert await count_once(floor) is False
+        the_station_has_counted(plant, good=900, scrap=100)
+        assert await count_once(floor) is True
+
+    on_the_floor(plant, one_lot)
+    count = the_counts(plant)[-1]
+    codes = the_codes(count)
+    assert sum(codes.values()) == count.rejected == 100
+    known = {code for code, _weight in the_inspection().defects}
+    assert set(codes) <= known, "no code this plant's inspectors do not have"
+    assert all(n > 0 for n in codes.values()), "a defect nobody found is left out"
+
+
+def test_a_floor_that_cannot_read_the_tag_sorts_by_the_settled_weights(plant):
+    """Nobody published a product temperature, so nobody can say whether the
+    story was running. The settled weights are used and the log says it could
+    not look - which is *unknown*, and not *in band*."""
+    the_station_has_counted(plant, good=0, scrap=0)
+
+    async def with_no_tag(floor: Floor) -> None:
+        assert await floor._below_the_band(the_inspection()) is None
+        assert await count_once(floor) is False
+        the_station_has_counted(plant, good=900, scrap=100)
+        assert await count_once(floor) is True
+
+    on_the_floor(plant, with_no_tag)
+    codes = the_codes(the_counts(plant)[-1])
+    assert codes["cap_skew"] > codes.get("low_fill", 0), \
+        "sorted by the settled weights, where skewed caps are the commonest"
+
+
+def test_while_the_product_is_cold_most_of_what_goes_back_goes_back_for_fill(plant):
+    """The planted cause in the records it leaves. The same two numbers, the
+    same station, the same lot: what changes is which bin the rejects were
+    sorted into, which is the only part of a count no counter publishes."""
+    band = the_inspection().watch_below
+    the_station_has_counted(plant, good=0, scrap=0)
+
+    async def one_cold_lot(floor: Floor) -> None:
+        the_product_is(plant, band - 1.0)
+        assert await floor._below_the_band(the_inspection()) is True
+        assert await count_once(floor) is False
+        the_station_has_counted(plant, good=900, scrap=100)
+        assert await count_once(floor) is True
+
+    on_the_floor(plant, one_cold_lot)
+    cold = the_codes(the_counts(plant)[-1])
+    assert cold["low_fill"] > sum(cold.values()) / 2, \
+        f"most of what went back should have gone back for fill; {cold}"
+
+    async def one_warm_lot(floor: Floor) -> None:
+        the_product_is(plant, band + 1.0)
+        assert await floor._below_the_band(the_inspection()) is False
+        assert await count_once(floor) is False
+        the_station_has_counted(plant, good=1800, scrap=200)
+        assert await count_once(floor) is True
+
+    on_the_floor(plant, one_warm_lot)
+    warm = the_codes(the_counts(plant)[-1])
+    assert warm.get("low_fill", 0) < sum(warm.values()) / 4, \
+        f"and a quarter of an hour later, with the product back in band, {warm}"
+    assert max(warm, key=lambda code: warm[code]) == "cap_skew"
+
+
+# ------------------------------- the cold half hour, on the shift itself
+
+
+@pytest.fixture(scope="module")
+def the_shift() -> tuple[dict, dict]:
+    """The bottling shift, simulated once for this section. No disk, no port."""
+    config = generate.load_config(BOTTLING_LINE)
+    return config, generate.simulate(config)
+
+
+def the_product_temperatures(config: dict, rows: dict) -> list[tuple[int, float]]:
+    station = next(s for s in config["stations"] if s["name"] == "Refill")
+    header = ["TSec", "State", "GoodCount", "ScrapCount", "TotalCount", "AlarmWord",
+              "CycleTimeMs", "RunMinutes", "ReadyBit",
+              *[a["name"] for a in generate.station_analogs(station)]]
+    at = header.index("ProductTemp")
+    return [(int(row[0]), float(row[at])) for row in rows["Refill"]
+            if row[at] is not None and row[at] != ""]
+
+
+def test_the_cold_half_hour_the_shift_plants_is_under_the_band_the_pack_watches(the_shift):
+    """The two scripts meeting, each keyed on its own declaration. The shift
+    says where its cold window is (link 4 of its chain) and holds the product
+    two degrees low through it; the floor script says which temperature its
+    story runs below. Neither number is repeated here, and the test is that
+    the window the chain plants is on the cold side of the band the pack
+    watches - with room, so a degree of noise cannot flip the answer."""
+    config, rows = the_shift
+    link = next(x for x in config["_chain"]["links"] if x["link"] == 4)
+    start, end = link["window_s"]
+    band = the_inspection().watch_below
+    temps = the_product_temperatures(config, rows)
+    cold = [value for second, value in temps if start <= second < end]
+    settled = [value for second, value in temps if second < start - 3600]
+    assert cold and settled
+
+    def average(of: list[float]) -> float:
+        return sum(of) / len(of)
+
+    assert average(cold) < band - 0.5 < band + 0.5 < average(settled), (
+        f"the cold window averages {average(cold):.2f} degC and the hours before it "
+        f"{average(settled):.2f}; the pack's story runs below {band:g}")
+    # Reading by reading, not only on the averages, because the floor sorts by
+    # the latest bucket of the trend and not by an average: all but a handful
+    # of the moments in the window are on the cold side of the band, and all
+    # but a handful of the settled ones are above it. The handful either way is
+    # the analog's own noise, and what it costs is one lot in a few hundred
+    # sorted by the other weights - which the floor says in its log rather
+    # than smoothing away.
+    assert sum(value >= band for value in cold) < 0.01 * len(cold)
+    assert sum(value < band for value in settled) < 0.01 * len(settled)
+
+
+def test_the_cold_window_sorts_rejects_for_fill_and_the_hours_either_side_for_caps(the_shift):
+    """The same arithmetic the floor runs, keyed off the shift's own window.
+    Below the band, about three quarters of what goes back goes back for low
+    fill; above it, skewed caps are the commonest and low fill is rare. This
+    is the trace a person follows: open a lot in the cold half hour and the
+    defects under it say fill; open one at 6:00 and they say caps."""
+    config, rows = the_shift
+    start, _end = next(x for x in config["_chain"]["links"] if x["link"] == 4)["window_s"]
+    plan = the_inspection()
+    temps = dict(the_product_temperatures(config, rows))
+    inside = temps[start + 900]
+    outside = temps[start - 3600]
+    assert inside < plan.watch_below < outside
+
+    rng = random.Random(11)
+    cold = {row["code"]: row["count"]
+            for row in plan.sort(200, rng=rng, below=inside < plan.watch_below)}
+    warm = {row["code"]: row["count"]
+            for row in plan.sort(200, rng=rng, below=outside < plan.watch_below)}
+    assert max(cold, key=lambda code: cold[code]) == "low_fill"
+    assert cold["low_fill"] > 0.6 * sum(cold.values()), f"{cold}"
+    assert max(warm, key=lambda code: warm[code]) == "cap_skew"
+    assert warm.get("low_fill", 0) < 0.25 * sum(warm.values()), f"{warm}"
+
+
+def test_the_share_sent_back_does_not_move_in_the_cold_window_and_the_pack_says_so(the_shift):
+    """The half of this cause the pack refuses to claim, pinned so nobody
+    reads the p chart as saying more than it does.
+
+    The rejects are the station's own scrap counter and nothing in the shift
+    ties that counter to the product's temperature: the only burst of scrap
+    in the shift is the washer's, in its own window hours earlier. So the
+    share sent back is flat through the cold half hour, the p chart stays in
+    control across it, and the story is in the breakdown under the points
+    rather than in the points. Making the share move would mean a scrap burst
+    on QI in `line.json`, which moves the shift the chain's own figures were
+    measured on - a decision for whoever owns the pack, and said out loud
+    here rather than slipped in.
+    """
+    config, rows = the_shift
+    start, end = next(x for x in config["_chain"]["links"] if x["link"] == 4)["window_s"]
+    bursts = [e for e in config["events"] if e["type"] == "scrap_burst"]
+    assert bursts and all(e["station"] != "QI" for e in bursts), \
+        "nothing makes the inspection station send more back"
+    assert all(e["end"] <= start or e["start"] >= end for e in bursts), \
+        "and no burst anywhere overlaps the cold window"
+
+    def share(station: str, first: int, last: int) -> float:
+        window = [row for row in rows[station] if first <= int(row[0]) < last]
+        good = float(window[-1][2]) - float(window[0][2])
+        scrap = float(window[-1][3]) - float(window[0][3])
+        assert good + scrap > 0, "nothing went through the station in this stretch"
+        return scrap / (good + scrap)
+
+    cold = share("QI", start, end)
+    before = share("QI", start - 3600, start)
+    assert abs(cold - before) < 0.005, (
+        f"{cold:.4f} sent back in the cold window against {before:.4f} in the hour "
+        f"before it; the pack claims no move and a move would be a different story")
