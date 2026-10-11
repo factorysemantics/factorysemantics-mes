@@ -211,13 +211,23 @@ def _asked_window(hours: float, shift: calendar_service.Shift | None) -> tuple[d
 
 
 def _window_json(start: datetime, end: datetime, hours: float,
-                 shift: calendar_service.Shift | None) -> dict:
+                 shift: calendar_service.Shift | None,
+                 named: str | None = None) -> dict:
     """What every panel says about the window it drew.
 
     `hours` is always what was realised, `requested_hours` what was asked for,
     and `clamped` is true only when the MES had not been watching that long.
     A shift adds itself, so a screen can name the window rather than describe
     it as a span, and says whether it is still running.
+
+    `named` is which of the three kinds of window this is - `span`, `shift` or
+    `between` - and it is here because a screen that has to say in words what
+    it is showing cannot work that out from two timestamps: a window from
+    06:00 to 14:00 is a shift or a stretch somebody typed, and those read
+    differently to the person looking at them. The *times* in that sentence
+    are still formatted by whoever draws it, on the clock of the person
+    reading, because a server sentence carrying 06:00 UTC beside an axis
+    labelled in local time is two answers to one question.
     """
     now = utcnow()
     # Never negative: a named shift that has not started yet is an empty
@@ -230,6 +240,7 @@ def _window_json(start: datetime, end: datetime, hours: float,
         "start": start,
         "end": end,
         "clamped": round(realised, 4) < asked - 0.001,
+        "named": named or ("shift" if shift is not None else "span"),
     }
     if shift is not None:
         window["shift"] = shift.as_json() | {"in_progress": shift.ends_at > now}
@@ -553,8 +564,10 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float | Non
         # different number of hours".
         hours = _span_hours(*window)
         the_shift = None
+        named = "between"
     else:
         start, end = _window(db, units, hours, the_shift)
+        named = None
 
     rows = []
     # The gaps: stretches where the MES could not see the machine at all. They
@@ -646,7 +659,7 @@ def state_timeline(db: Session, line_code: str | None = None, hours: float | Non
                      "intervals": _merge_short(drawn, floor_seconds)})
     return {
         "line": {"code": centre.code, "name": centre.name},
-        "window": _window_json(start, end, hours, the_shift),
+        "window": _window_json(start, end, hours, the_shift, named),
         "machines": rows,
         # Say what is not on the chart, rather than letting a partial picture
         # look like the whole line.
@@ -844,10 +857,12 @@ def tag_trend(
     unit = masterdata.get_equipment(db, equipment_code)
     the_shift = _shift(db, shift)
     end = utcnow()
+    named = None
     if window is not None:
         start, end = _around(db, [unit], *window)
         hours = _span_hours(*window)
         the_shift = None
+        named = "between"
     elif the_shift is not None:
         start, end = the_shift.starts_at, min(the_shift.ends_at, end)
         start = min(start, end)
@@ -886,7 +901,7 @@ def tag_trend(
             )
         if tag is None:
             return {"equipment": equipment_code, "tag": None, "points": [],
-                    "window": _window_json(start, end, hours, the_shift)}
+                    "window": _window_json(start, end, hours, the_shift, named)}
     elif "." not in tag:
         tag = f"{equipment_code}.{tag}"
 
@@ -932,7 +947,7 @@ def tag_trend(
     return {
         "equipment": equipment_code,
         "tag": tag.split(".", 1)[-1],
-        "window": _window_json(start, end, hours, the_shift),
+        "window": _window_json(start, end, hours, the_shift, named),
         "points": points,
     }
 
