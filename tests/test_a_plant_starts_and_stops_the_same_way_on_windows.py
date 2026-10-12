@@ -227,3 +227,28 @@ def test_a_stream_that_will_not_be_retuned_does_not_take_the_command_with_it(mon
     monkeypatch.setattr(sys, "stdout", Stubborn())
     monkeypatch.setattr(sys, "stderr", Stubborn())
     cli._words_that_survive_a_windows_console()
+
+
+def test_the_words_an_inner_command_prints_come_through_as_it_wrote_them():
+    """`fsmes demo <plant>` does its work by running `fsmes fleet ...` and
+    passing that command's lines through to the person watching. It has to read
+    them as UTF-8, which is what the inner command writes: asking only for text
+    decodes in the console's code page, and on Windows that is cp1252, which
+    turned `instance 471ffac1...` into `instance 471ffac1` plus three wrong
+    characters in the first CI log that ever showed it (2026-10-12).
+
+    So: a child that writes UTF-8 with an ellipsis and a degree sign in it, and
+    the same characters out the other side, on either platform."""
+    from fsmes import standalone
+
+    written = "instance 471ffac1… at 6.4 °C"
+    child = [sys.executable, "-c",
+             "import sys; sys.stdout.buffer.write("
+             f"{written!r}.encode('utf-8') + b'\\n')"]
+
+    passed_on: list[str] = []
+    code, said = standalone._through(child, echo=passed_on.append)
+
+    assert code == 0
+    assert said == written
+    assert passed_on == [f"    {written}"]

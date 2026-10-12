@@ -246,10 +246,17 @@ def _through(cmd: list[str], *, cwd: Path | None = None, env: dict | None = None
     a couple of minutes generating a shift and a command that says nothing for
     two minutes is a command a person kills. Returns the exit code and
     everything it said, for the caller that needs to quote it in an error.
+
+    Read as UTF-8, which is what the command on the other end writes: `text=True`
+    alone decodes in the console's code page, and on Windows that is cp1252, so
+    `instance 471ffac1... written to ...` reached the log on 2026-10-12 as the
+    three cp1252 characters that one UTF-8 ellipsis spells. These are the inner
+    command's own words on their way to a person; pass them through unchanged.
     """
     said: list[str] = []
     with subprocess.Popen(cmd, cwd=cwd, env=env, stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT, text=True, bufsize=1) as child:
+                          stderr=subprocess.STDOUT, bufsize=1,
+                          encoding="utf-8", errors="replace") as child:
         assert child.stdout is not None
         for line in child.stdout:
             said.append(line.rstrip())
