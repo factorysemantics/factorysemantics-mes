@@ -141,6 +141,34 @@ packages = ["src/fsmes"]
 "config/inbound_mapping.json" = "fsmes/data/config/inbound_mapping.json"
 "config/inbound_sql.json" = "fsmes/data/config/inbound_sql.json"
 
+# THE TWO LAB PLANTS, AS PACKS. So that `pip install factorysemantics-mes` and
+# then `fsmes demo bottling` brings the bottling plant up on a machine with no
+# checkout anywhere - which is what a customer's site is. Before this, the
+# 0.2.0 wheel carried no file under `labs/`, `fsmes plant` wanted a repository
+# root and a fleet file, and everything the plant demonstrates lived only in a
+# checkout.
+#
+# These are copies at build time and never a second source of truth. Two things
+# keep them honest: `tests/test_the_wheel_ships_the_lab_packs.py` fails when a
+# file is added to either pack and not listed here, and the `wheel-plant` CI job
+# diffs the shipped tree against `labs/multiplant/<name>` byte for byte.
+#
+# Listed file by file rather than as two directories because hatchling's
+# force-include copies whatever is on disk and honours neither `exclude` nor
+# `.gitignore` (measured 2026-10-12, hatchling 1.x) - and `out/`, the generated
+# replay, is 9.7 MB for bottling and must not ship. `masterdata/` is a directory
+# because nothing generated is ever written into it.
+"labs/multiplant/bottling/plant.toml" = "fsmes/data/packs/bottling/plant.toml"
+"labs/multiplant/bottling/line.json" = "fsmes/data/packs/bottling/line.json"
+"labs/multiplant/bottling/floor.json" = "fsmes/data/packs/bottling/floor.json"
+"labs/multiplant/bottling/tag_map.json" = "fsmes/data/packs/bottling/tag_map.json"
+"labs/multiplant/bottling/masterdata" = "fsmes/data/packs/bottling/masterdata"
+"labs/multiplant/machining/plant.toml" = "fsmes/data/packs/machining/plant.toml"
+"labs/multiplant/machining/line.json" = "fsmes/data/packs/machining/line.json"
+"labs/multiplant/machining/floor.json" = "fsmes/data/packs/machining/floor.json"
+"labs/multiplant/machining/tag_map.json" = "fsmes/data/packs/machining/tag_map.json"
+"labs/multiplant/machining/masterdata" = "fsmes/data/packs/machining/masterdata"
+
 [tool.hatch.build.targets.sdist]
 exclude = [".claude/", "site/", "docs/reference/"]
 

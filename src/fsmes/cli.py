@@ -1268,8 +1268,118 @@ def _order_completion(confirmations: list[dict], order_code: str) -> dict | None
     return None
 
 
+#: What `fsmes demo <plant> <action>` understands. Named once: the command
+#: reads it to tell a plant from a verb, and `_shipped_plant` reads it to
+#: refuse a third thing.
+_SHIPPED_ACTIONS = ("start", "stop", "status")
+
+
+def _shipped_names() -> str:
+    """The packs this installation carries, for the help text and the errors.
+
+    Read from the package, never typed here: a pack's name belongs to the
+    pack, not to the product (house rule 4), and a checkout carries none -
+    the packs are copied in at build time - so this is routinely empty and
+    says so rather than naming a plant that is not there.
+    """
+    from fsmes import standalone
+
+    names = standalone.shipped()
+    return ", ".join(names) if names else "none in this installation"
+
+
+def _an_example_plant() -> str:
+    """A name to show in a sentence that needs one. The first pack this
+    installation carries, or a placeholder when it carries none."""
+    from fsmes import standalone
+
+    names = standalone.shipped()
+    return names[0] if names else "<plant>"
+
+
 @app.command()
-def demo(duration: int = 90) -> None:
+def demo(
+    plant: str | None = typer.Argument(
+        None, help=f"A plant this package ships ({_shipped_names()}). Left out: the "
+                   f"two-station twin in one process."),
+    action: str = typer.Argument("start", help="start | stop | status. A shipped plant only."),
+    duration: int = typer.Option(90, help="Seconds the twin watches for. The twin only."),
+    speed: float | None = typer.Option(
+        None, help="Replay speed for a shipped plant. 60 replays a scripted hour in a minute."),
+    refresh: bool = typer.Option(
+        False, "--refresh", help="Replace this home's copy of the pack with the one "
+                                 "this installation ships, losing any edits to it."),
+    home: Path | None = typer.Option(
+        None, help="Where a shipped plant keeps its pack, database, logs and replay "
+                   "(default: this platform's per-user data directory, or FSMES_HOME)."),
+) -> None:
+    """Run a plant from this package, with no checkout anywhere.
+
+    Named a plant, this copies the pack out of the package into a per-user
+    directory, generates the shift once from its `line.json`, builds the plant
+    and starts it - the simulated floor, a real OPC UA server, the dashboard
+    on its own port. Nothing under site-packages is written to and no
+    repository is needed. Named nothing, it runs the older twin story in this
+    process and ends when that story ends.
+
+        fsmes demo                the twin: one order, ERP -> MES -> machines -> MES -> ERP
+        fsmes demo <plant>        a plant this package ships: its shift, floor and screens
+        fsmes demo <plant> stop   that plant, down
+    """
+    # `fsmes demo stop` reads as a plant called "stop", because the plant is
+    # the first argument. Said back as "there is no plant called 'stop'" it is
+    # a true sentence that helps nobody: what the person meant is plain, and
+    # the twin has nothing to stop - it runs in this process and ends when it
+    # ends.
+    if plant in _SHIPPED_ACTIONS:
+        typer.echo(f"`fsmes demo {plant}` needs to know which plant to {plant}: "
+                   f"`fsmes demo {_an_example_plant()} {plant}`. "
+                   f"`fsmes demo` on its own runs the twin in this process, which "
+                   f"stops when it is done.")
+        raise typer.Exit(2)
+    if plant is not None:
+        raise typer.Exit(_shipped_plant(plant, action, speed=speed, refresh=refresh,
+                                        where=home))
+    _demo_twin(duration)
+
+
+def _shipped_plant(name: str, action: str, *, speed: float | None,
+                   refresh: bool, where: Path | None) -> int:
+    """`fsmes demo <plant>`: one of the packs this package carries.
+
+    Thin on purpose. Everything here is arranging - a home, a writable copy of
+    the pack, a fleet file, the generated replay - and then the same
+    `fsmes fleet` commands a checkout runs. See `fsmes.standalone`.
+    """
+    from fsmes import standalone
+
+    if action not in _SHIPPED_ACTIONS:
+        typer.echo(f"Unknown action {action!r}. Expected one of: "
+                   f"{', '.join(sorted(_SHIPPED_ACTIONS))}.")
+        return 2
+    try:
+        if action == "stop":
+            return standalone.stop(name, where=where, echo=typer.echo)
+        if action == "status":
+            return standalone.status(name, where=where, echo=typer.echo)
+        typer.echo(f"Starting {name} from this installation's own copy of the pack.")
+        code = standalone.start(name, where=where, speed=speed, refresh=refresh,
+                                echo=typer.echo)
+    except LookupError as exc:
+        typer.echo(str(exc))
+        return 2
+    except (RuntimeError, OSError) as exc:
+        typer.echo(str(exc))
+        return 1
+    if code:
+        return code
+    for line in standalone.how_to_sign_in(
+            name, standalone.packs_dir((where or standalone.home()).expanduser()) / name):
+        typer.echo(line)
+    return 0
+
+
+def _demo_twin(duration: int) -> None:
     """Run the entire twin in one process and push one order through the full loop:
     ERP -> MES -> machines -> MES -> ERP."""
     from fsmes import shadow
@@ -4196,6 +4306,29 @@ def _say_case(outcome) -> None:
                   else f"   not arranged: {', '.join(outcome.missing)}"))
 
 
+def _words_that_survive_a_windows_console() -> None:
+    """Print this CLI's own punctuation on Windows, not a replacement mark.
+
+    Windows writes a console or a pipe in the system code page, and the
+    sentences this CLI prints are full of em dashes and ellipses - so
+    `instance 492c5047... written to ...` came back as `492c5047?` from
+    GitHub's Windows runner, the first time a plant was ever started there
+    (2026-10-12). Retuning the stream is cheap and it only ever happens on
+    Windows; a stream that will not be retuned is left alone rather than
+    taking the command down with it.
+    """
+    import sys
+
+    if sys.platform != "win32":
+        return
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        with contextlib.suppress(OSError, ValueError):
+            reconfigure(encoding="utf-8", errors="replace")
+
+
 def run() -> None:
     """The console script.
 
@@ -4209,6 +4342,7 @@ def run() -> None:
 
     from fsmes.identity import Misconfigured
 
+    _words_that_survive_a_windows_console()
     try:
         app()
     except Misconfigured as exc:

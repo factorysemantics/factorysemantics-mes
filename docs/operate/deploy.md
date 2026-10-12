@@ -1,11 +1,77 @@
 # Deploy
 
-*Tutorial. Two ways: Docker Compose for a trial on one box, systemd units for a host that runs test and promoted environments side by side.*
+*Tutorial. Three ways: a package install for one box with no checkout, Docker Compose for a trial, systemd units for a host that runs test and promoted environments side by side.*
 
 !!! warning "Not hardened for the public internet"
     The MES is designed to sit on a plant network behind a firewall. Put a
     reverse proxy with TLS in front of it, set the passwords, and do not
     expose the MCP servers. See [security](security.md).
+
+## From the package, with no checkout
+
+The shortest way to a plant on a machine that has Python and nothing else.
+The package carries the two lab plant packs, so there is nothing to clone.
+
+=== "Linux and macOS"
+
+    ```bash
+    pipx install factorysemantics-mes   # or: uv tool install factorysemantics-mes
+    fsmes demo bottling
+    ```
+
+=== "Windows"
+
+    ```powershell
+    pipx install factorysemantics-mes
+    fsmes demo bottling
+    ```
+
+!!! note "Not on PyPI yet"
+    The release on PyPI today, 0.2.0, carries no plant packs, so
+    `fsmes demo bottling` needs the next one. From a checkout it works now:
+    `python -m build --wheel`, then install that wheel into a fresh
+    environment.
+
+It says where the plant is — `http://127.0.0.1:8010/dashboard` — and which
+account to sign in with. `fsmes demo bottling stop` puts it down,
+`fsmes demo bottling status` says whether it is up, and `fsmes demo machining`
+is a second plant on 8020.
+
+What it does, once, on first start: copies the pack out of the package into a
+per-user directory, generates that plant's eight-hour shift from the seed in
+its `line.json` (seconds, and it is not shipped because it is 9.7 MB of CSV a
+seed already states), writes a [fleet file](fleet.md) listing the copy, and
+then runs the same `fsmes fleet create` and `fsmes fleet start` a checkout
+runs. Afterwards it starts straight away.
+
+Everything it writes is under one directory:
+
+| | |
+|---|---|
+| Windows | `%LOCALAPPDATA%\fsmes` |
+| Linux | `$XDG_DATA_HOME/fsmes`, or `~/.local/share/fsmes` |
+| macOS | `~/Library/Application Support/fsmes` |
+| Anywhere | `FSMES_HOME`, which moves all of it together |
+
+Nothing under the installed package is written to, which is what makes this
+work on a locked-down plant PC and in a read-only container.
+
+The pack copy is yours to edit — the port, the host, the time zone, the
+accounts are all in `packs/<name>/plant.toml` under that directory, and the
+[pack page](packs.md) says what each key means. A later start says your copy
+differs from the one the package ships and keeps yours; `--refresh` is the
+one thing that replaces it.
+
+This is an evaluation plant: it listens on loopback and its accounts are the
+lab's, with lab passwords in the open. A plant other people reach needs its
+own `[[accounts]]` in the pack, a real `MES_SECRET_KEY`, and the reverse
+proxy in the warning above. For a plant that is meant to stay up, run it from
+a [systemd unit](#systemd-test-and-promoted-environments-on-one-host)
+pointed at that fleet file rather than from `fsmes demo`.
+
+The AI tab's chat and the floor assistant need an `ANTHROPIC_API_KEY` (or a
+local model through Ollama — see [the AI page](ai.md)); without
+one the command says so and every other screen is unaffected.
 
 ## Compose
 

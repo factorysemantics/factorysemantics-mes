@@ -243,6 +243,49 @@ jobs:
       - name: The wheel upgrades a database made by the previous release
         run: .github/scripts/upgrade_from_previous_release.sh "$(ls dist/*.whl)"
 
+  wheel-plant:
+    # The check behind the pivot of 2026-10-12: *could a customer spin this up
+    # on their own site?* `wheel-demo` above proves the twin runs from a wheel;
+    # this proves the plant we actually demonstrate does - the six-station
+    # bottling line, its eight-hour shift, the simulated floor and the
+    # dashboard - from `pip install` and one command, in a directory holding
+    # none of this repository's files.
+    #
+    # On Windows as well as Linux, and that is the point of the second cell.
+    # `docs/operate/compatibility.md` promises plant PCs are Windows; nobody on
+    # this project owns one; and until this job existed no plant had ever been
+    # started on Windows by anybody. `fsmes plant` had three bugs that only
+    # showed there - a detach flag silently ignored, a SIGKILL that does not
+    # exist, and a console script looked for in `bin` - and the suite was green
+    # the whole time, because the suite never starts a plant.
+    #
+    # Facts, never seconds: every wait in the script is a poll for a state with
+    # a generous ceiling, and the times it prints are information for a release
+    # note, not gates. A shared runner makes an absolute bound flaky and says
+    # nothing about the code.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    # First start generates the shift (seconds), builds the plant and replays
+    # until a lot has been counted. Generous on purpose: a runner that is
+    # merely slow should not look like a plant that does not come up.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip build
+      - run: python -m build --wheel
+      # One script for both runners rather than a bash step and a PowerShell
+      # step: two spellings of one check is how the two drift until only one
+      # of them is really run.
+      - name: The wheel brings the bottling plant up, and puts it down
+        shell: bash
+        run: python .github/scripts/plant_from_wheel.py --wheel "$(ls dist/*.whl)" --speed 60
+
   lab:
     # The lab's starter experiments, on a runner.
     #

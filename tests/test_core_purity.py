@@ -83,6 +83,13 @@ LADDER: tuple[tuple[str, tuple[str, ...]], ...] = (
         # sits beside it rather than above it because nothing below may
         # import it.
         "fleet",
+        # A plant out of the package itself, with no checkout anywhere
+        # (`fsmes demo <plant>`): it reads the packs the wheel carries, copies
+        # one into a per-user directory, generates that line's data and then
+        # hands starting and stopping to the `fsmes fleet` commands. Beside
+        # `pack` and `fleet` because it reads both, and above nothing: only
+        # the CLI imports it.
+        "standalone",
         # The lab: one experiment plan, run to a directory. It reads packs,
         # generates a line's data, runs a plant through `sim`'s own runner and
         # reads the MES back over HTTP - four edges and no rule of its own, so
