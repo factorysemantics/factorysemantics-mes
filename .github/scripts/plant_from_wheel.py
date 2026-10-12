@@ -37,6 +37,7 @@ Usage:  python .github/scripts/plant_from_wheel.py --wheel dist/<name>.whl
 from __future__ import annotations
 
 import argparse
+import contextlib
 import filecmp
 import json
 import os
@@ -62,6 +63,14 @@ SIGN_IN = {"code": "SCOTT", "password": "operator"}
 #: Where in the wheel the packs live.
 SHIPPED = "fsmes/data/packs"
 PACKS = ("bottling", "machining")
+#: How to read what the plant prints, and how to print it again. The CLI
+#: writes UTF-8 - `instance 492c5047... written to ...` has an ellipsis in it -
+#: and `text=True` alone decodes a child in the console's code page, which on
+#: Windows is cp1252: the first run of this check on windows-latest logged
+#: that ellipsis as the three cp1252 characters its UTF-8 bytes spell - the
+#: plant's own words, read wrongly by this script and written back out again
+#: (2026-10-12). Say the encoding and the words survive the trip to the log.
+AS_WORDS = {"encoding": "utf-8", "errors": "replace"}
 
 
 def say(what: str) -> None:
@@ -256,7 +265,19 @@ def the_plant_is_what_the_lab_runs(speed: float) -> None:
           a_counted_lot, ceiling=600)
 
 
+def print_in_the_words_the_plant_used() -> None:
+    """Let this script print what it read. Python writes stdout in the console's
+    code page on Windows, where an ellipsis read correctly would raise
+    `UnicodeEncodeError` on its way to the log."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            with contextlib.suppress(OSError, ValueError):
+                reconfigure(**AS_WORDS)
+
+
 def main() -> int:
+    print_in_the_words_the_plant_used()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--wheel", required=True, help="the built wheel to prove")
     parser.add_argument("--speed", type=float, default=60.0,
@@ -290,7 +311,7 @@ def main() -> int:
     venv = install(wheel, work)
     fsmes = venv_bin(venv, "fsmes")
     reported = subprocess.run([str(fsmes), "--version"], check=True, cwd=work,
-                              capture_output=True, text=True)
+                              capture_output=True, **AS_WORDS)
     say(f"installed: {reported.stdout.strip()}")
 
     say("== one command ==")
@@ -298,7 +319,7 @@ def main() -> int:
     started = time.monotonic()
     first_start = subprocess.run(
         [str(fsmes), "demo", PLANT, "--speed", str(args.speed)],
-        cwd=work, env=environment, text=True, capture_output=True, timeout=2700)
+        cwd=work, env=environment, capture_output=True, timeout=2700, **AS_WORDS)
     took = time.monotonic() - started
     say(first_start.stdout)
     if first_start.stderr.strip():
@@ -314,8 +335,8 @@ def main() -> int:
     finally:
         say("== stopping ==")
         stopped = subprocess.run([str(fsmes), "demo", PLANT, "stop"],
-                                 cwd=work, env=environment, text=True,
-                                 capture_output=True, timeout=600)
+                                 cwd=work, env=environment,
+                                 capture_output=True, timeout=600, **AS_WORDS)
         say(stopped.stdout + stopped.stderr)
         if stopped.returncode != 0:
             fail(f"`fsmes demo {PLANT} stop` exited {stopped.returncode}")
