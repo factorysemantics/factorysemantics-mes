@@ -989,6 +989,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#from-the-package-with-no-checkout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From the package, with no checkout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#compose" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4031,6 +4042,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#from-the-package-with-no-checkout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From the package, with no checkout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#compose" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4100,13 +4122,90 @@
 
 
 <h1 id="deploy">Deploy<a class="headerlink" href="#deploy" title="Permanent link">&para;</a></h1>
-<p><em>Tutorial. Two ways: Docker Compose for a trial on one box, systemd units for a host that runs test and promoted environments side by side.</em></p>
+<p><em>Tutorial. Three ways: a package install for one box with no checkout, Docker Compose for a trial, systemd units for a host that runs test and promoted environments side by side.</em></p>
 <div class="admonition warning">
 <p class="admonition-title">Not hardened for the public internet</p>
 <p>The MES is designed to sit on a plant network behind a firewall. Put a
 reverse proxy with TLS in front of it, set the passwords, and do not
 expose the MCP servers. See <a href="../security/">security</a>.</p>
 </div>
+<h2 id="from-the-package-with-no-checkout">From the package, with no checkout<a class="headerlink" href="#from-the-package-with-no-checkout" title="Permanent link">&para;</a></h2>
+<p>The shortest way to a plant on a machine that has Python and nothing else.
+The package carries the two lab plant packs, so there is nothing to clone.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Linux and macOS</label><label for="__tabbed_1_2">Windows</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code>pipx<span class="w"> </span>install<span class="w"> </span>factorysemantics-mes<span class="w">   </span><span class="c1"># or: uv tool install factorysemantics-mes</span>
+fsmes<span class="w"> </span>demo<span class="w"> </span>bottling
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="n">pipx</span> <span class="n">install</span> <span class="n">factorysemantics-mes</span>
+<span class="n">fsmes</span> <span class="n">demo</span> <span class="n">bottling</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Not on PyPI yet</p>
+<p>The release on PyPI today, 0.2.0, carries no plant packs, so
+<code>fsmes demo bottling</code> needs the next one. From a checkout it works now:
+<code>python -m build --wheel</code>, then install that wheel into a fresh
+environment.</p>
+</div>
+<p>It says where the plant is — <code>http://127.0.0.1:8010/dashboard</code> — and which
+account to sign in with. <code>fsmes demo bottling stop</code> puts it down,
+<code>fsmes demo bottling status</code> says whether it is up, and <code>fsmes demo machining</code>
+is a second plant on 8020.</p>
+<p>What it does, once, on first start: copies the pack out of the package into a
+per-user directory, generates that plant's eight-hour shift from the seed in
+its <code>line.json</code> (seconds, and it is not shipped because it is 9.7 MB of CSV a
+seed already states), writes a <a href="../fleet/">fleet file</a> listing the copy, and
+then runs the same <code>fsmes fleet create</code> and <code>fsmes fleet start</code> a checkout
+runs. Afterwards it starts straight away.</p>
+<p>Everything it writes is under one directory:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Windows</td>
+<td><code>%LOCALAPPDATA%\fsmes</code></td>
+</tr>
+<tr>
+<td>Linux</td>
+<td><code>$XDG_DATA_HOME/fsmes</code>, or <code>~/.local/share/fsmes</code></td>
+</tr>
+<tr>
+<td>macOS</td>
+<td><code>~/Library/Application Support/fsmes</code></td>
+</tr>
+<tr>
+<td>Anywhere</td>
+<td><code>FSMES_HOME</code>, which moves all of it together</td>
+</tr>
+</tbody>
+</table>
+<p>Nothing under the installed package is written to, which is what makes this
+work on a locked-down plant PC and in a read-only container.</p>
+<p>The pack copy is yours to edit — the port, the host, the time zone, the
+accounts are all in <code>packs/&lt;name&gt;/plant.toml</code> under that directory, and the
+<a href="../packs/">pack page</a> says what each key means. A later start says your copy
+differs from the one the package ships and keeps yours; <code>--refresh</code> is the
+one thing that replaces it.</p>
+<p>This is an evaluation plant: it listens on loopback and its accounts are the
+lab's, with lab passwords in the open. A plant other people reach needs its
+own <code>[[accounts]]</code> in the pack, a real <code>MES_SECRET_KEY</code>, and the reverse
+proxy in the warning above. For a plant that is meant to stay up, run it from
+a <a href="#systemd-test-and-promoted-environments-on-one-host">systemd unit</a>
+pointed at that fleet file rather than from <code>fsmes demo</code>.</p>
+<p>The AI tab's chat and the floor assistant need an <code>ANTHROPIC_API_KEY</code> (or a
+local model through Ollama — see <a href="../ai/">the AI page</a>); without
+one the command says so and every other screen is unaffected.</p>
 <h2 id="compose">Compose<a class="headerlink" href="#compose" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/factorysemantics/factorysemantics-mes.git
 <span class="nb">cd</span><span class="w"> </span>factorysemantics-mes

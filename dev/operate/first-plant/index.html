@@ -4392,17 +4392,56 @@ And it is pre-alpha software that has never run a real plant in production —
 which is why it runs beside yours and not instead of it.</p>
 <h2 id="2-install-it-and-see-it-run">2. Install it and see it run<a class="headerlink" href="#2-install-it-and-see-it-run" title="Permanent link">&para;</a></h2>
 <p>Nothing plant-specific yet. Prove the software works on the machine before
-you point it at anything real.</p>
+you point it at anything real. No checkout, no clone, no Docker: the package
+carries two complete example plants inside it.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Windows</label><label for="__tabbed_1_2">Linux and macOS</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="n">pipx</span> <span class="n">install</span> <span class="n">factorysemantics-mes</span>
+<span class="n">fsmes</span> <span class="n">info</span>
+<span class="n">fsmes</span> <span class="n">demo</span> <span class="n">bottling</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
 <div class="highlight"><pre><span></span><code>pipx<span class="w"> </span>install<span class="w"> </span>factorysemantics-mes<span class="w">     </span><span class="c1"># or: uv tool install factorysemantics-mes</span>
 fsmes<span class="w"> </span>info
-fsmes<span class="w"> </span>demo
+fsmes<span class="w"> </span>demo<span class="w"> </span>bottling
 </code></pre></div>
-<p><code>fsmes demo</code> runs a whole simulated line in one process for about ninety
-seconds — two stations over a real OPC UA server, one order released, booked
-and completed — and prints a verdict at the end.</p>
-<p><strong>Done looks like:</strong> <code>Demo result: full loop closed - order booked, ERP
-confirmed, OEE reported.</code> If that line does not appear, stop here; nothing
-later will work either.</p>
+</div>
+</div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Not on PyPI yet</p>
+<p>The release on PyPI today, 0.2.0, carries no plant packs, so
+<code>fsmes demo bottling</code> needs the next one. From a checkout it works now:
+<code>python -m build --wheel</code>, then install that wheel.</p>
+</div>
+<p><code>fsmes demo bottling</code> brings up a six-station beverage line the way a plant
+runs: an eight-hour shift replayed over a real OPC UA server, a simulated
+floor booking lots and naming its stops, and the operator screens reading it.
+It prints the address — <code>http://127.0.0.1:8010/dashboard</code> — and an account to
+sign in with, and it keeps running until <code>fsmes demo bottling stop</code>.
+<code>fsmes demo bottling status</code> says whether it is up.</p>
+<p><strong>Done looks like:</strong> that dashboard on screen, with the six machines on the
+floor plan and a shift's worth of readings behind them. First start takes a
+little longer than later ones: it copies the pack out of the package and
+generates the shift from the seed in its <code>line.json</code>, which is seconds.</p>
+<p>Everything it writes — the pack copy, the database, the logs, the generated
+line data — goes to one per-user directory: <code>%LOCALAPPDATA%\fsmes</code> on
+Windows, <code>$XDG_DATA_HOME/fsmes</code> or <code>~/.local/share/fsmes</code> on Linux,
+<code>~/Library/Application Support/fsmes</code> on macOS, or wherever <code>FSMES_HOME</code> says.
+Nothing under the installed package is written to, so a locked-down plant PC
+is fine. <code>fsmes demo machining</code> is a second example plant, on 8020.</p>
+<p>That plant is for evaluation: it listens on loopback and its accounts are the
+example pack's, with their passwords in the open. Step 4 is where you draft a
+pack for your own plant; <a href="../deploy/">deploy</a> is where one that is meant to
+stay up gets a service and a real secret key.</p>
+<p><code>fsmes demo</code> with no plant name is the shorter, older check: a whole
+simulated line in one process for about ninety seconds — two stations over a
+real OPC UA server, one order released, booked and completed — printing
+<code>Demo result: full loop closed - order booked, ERP confirmed, OEE reported.</code>
+at the end. If that line does not appear, stop here; nothing later will work
+either.</p>
 <p><strong>Database:</strong> SQLite is the default and needs no setup — one file, and it is
 fine for one line. Use PostgreSQL when you have more than one plant on the
 box, or when your IT department wants the backups in their existing regime:
