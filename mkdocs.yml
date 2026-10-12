@@ -197,6 +197,7 @@ nav:
       - Explanation — does the assistant do what people ask: ai/ASSIST-EVAL.md
   - Releases:
       - releases/index.md
+      - 0.3.0: releases/0.3.0.md
       - 0.2.0: releases/0.2.0.md
   - History:
       - Landscape: LANDSCAPE.md
