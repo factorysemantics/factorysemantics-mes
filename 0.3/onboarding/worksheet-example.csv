@@ -1,0 +1,6 @@
+equipment,name,node_state,node_good,node_scrap,node_analog,analog_name,state_map,cycle_seconds,notes
+DEP01,Depalletizer,ns=2;s=Line1.Depal.MachineStatus,ns=2;s=Line1.Depal.CasesIn,,ns=2;s=Line1.Depal.HydraulicPressure,HydraulicPressure,0=idle; 1=running; 2=down; 3=setup,1.2,No scrap counter on this machine
+FIL01,Filler,ns=2;s=Line1.Filler.State,ns=2;s=Line1.Filler.ProdCount,ns=2;s=Line1.Filler.RejectCount,ns=2;s=Line1.Filler.FillTemp,FillTemp,0=idle; 1=running; 2=idle; 3=idle; 4=down; 5=setup,0.6,States 2/3 are starved/blocked = idle
+CAP01,Capper,ns=2;s=Line1.Capper.Sts,ns=2;s=Line1.Capper.GoodParts,ns=2;s=Line1.Capper.BadParts,ns=2;s=Line1.Capper.TorqueAvg,CapTorque,1=running; 0=idle; 9=down,0.6,
+LAB01,Labeller,ns=2;s=Line1.Labeler.Status,ns=2;s=Line1.Labeler.Count,,,,0=idle; 1=running; 2=down,,Cycle time unknown - performance will read unknown until Engineering confirms
+PCK01,Case Packer,ns=2;s=Line1.Packer.MachState,ns=2;s=Line1.Packer.CaseCount,ns=2;s=Line1.Packer.RejectCt,ns=2;s=Line1.Packer.AirPressure,AirPressure,0=idle; 1=running; 4=down; 5=setup,4.8,Counts cases not bottles

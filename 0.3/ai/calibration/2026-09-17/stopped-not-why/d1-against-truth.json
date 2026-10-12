@@ -1,0 +1,532 @@
+{
+ "_what": "What D1's run-log battery said about each run, beside what the hour was scripted to do. Built by `fsmes jev calibrate`; nothing was asked of any model here.",
+ "runs": [
+  {
+   "results": "2026-09-17-lost-connection-2",
+   "plant": "bottling",
+   "note": "asked and answered",
+   "model": "jev-1.13.0",
+   "conditions": 6
+  },
+  {
+   "results": "2026-09-17-one-line-bad-hour-2",
+   "plant": "bottling",
+   "note": "asked and answered",
+   "model": "jev-1.13.0",
+   "conditions": 6
+  },
+  {
+   "results": "2026-09-17-over-run-2",
+   "plant": "bottling",
+   "note": "asked and answered",
+   "model": "jev-1.13.0",
+   "conditions": 6
+  },
+  {
+   "results": "2026-09-17-scrap-burst",
+   "plant": "bottling",
+   "note": "asked and answered",
+   "model": "jev-1.13.0",
+   "conditions": 6
+  },
+  {
+   "results": "2026-09-17-starved-and-blocked",
+   "plant": "bottling",
+   "note": "asked and answered",
+   "model": "jev-1.13.0",
+   "conditions": 6
+  },
+  {
+   "results": "2026-09-17-two-plants-two-zones",
+   "plant": "bottling",
+   "note": "asked and answered",
+   "model": "jev-1.13.0",
+   "conditions": 6
+  },
+  {
+   "results": "2026-09-17-two-plants-two-zones",
+   "plant": "machining",
+   "note": "asked and answered",
+   "model": "jev-1.13.0",
+   "conditions": 6
+  }
+ ],
+ "runs_total": 7,
+ "pairs": [
+  {
+   "results": "2026-09-17-lost-connection-2",
+   "experiment": "lost-connection",
+   "plant": "bottling",
+   "question": "retry_storm",
+   "probability": 0.06,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts how this MES retries"
+  },
+  {
+   "results": "2026-09-17-lost-connection-2",
+   "experiment": "lost-connection",
+   "plant": "bottling",
+   "question": "counter_went_backwards",
+   "probability": 0.12,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": false,
+   "truth_says": "no counter reset was scripted, and the generator's counters only ever go backwards when one is"
+  },
+  {
+   "results": "2026-09-17-lost-connection-2",
+   "experiment": "lost-connection",
+   "plant": "bottling",
+   "question": "component_stopped_reporting",
+   "probability": 0.41,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": true,
+   "truth_says": "2 scripted disconnect(s) (360-600s, 1080-1260s): the machine layer went silent while the rest of the run carried on. The question says \"stopped logging before the run ended\", and a disconnect that later reconnects only half meets that wording - the windows are printed so a reader can judge it"
+  },
+  {
+   "results": "2026-09-17-lost-connection-2",
+   "experiment": "lost-connection",
+   "plant": "bottling",
+   "question": "silent_exception",
+   "probability": 0.06,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts an exception in this MES"
+  },
+  {
+   "results": "2026-09-17-lost-connection-2",
+   "experiment": "lost-connection",
+   "plant": "bottling",
+   "question": "deadlock",
+   "probability": 0.07,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts a deadlock in this MES"
+  },
+  {
+   "results": "2026-09-17-lost-connection-2",
+   "experiment": "lost-connection",
+   "plant": "bottling",
+   "question": "worst_problem",
+   "probability": 0.68,
+   "level": "none",
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "a scenario scripts events, not a severity for them"
+  },
+  {
+   "results": "2026-09-17-one-line-bad-hour-2",
+   "experiment": "one-line-bad-hour",
+   "plant": "bottling",
+   "question": "retry_storm",
+   "probability": 0.06,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts how this MES retries"
+  },
+  {
+   "results": "2026-09-17-one-line-bad-hour-2",
+   "experiment": "one-line-bad-hour",
+   "plant": "bottling",
+   "question": "counter_went_backwards",
+   "probability": 0.11,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": true,
+   "truth_says": "1 scripted counter reset(s): bottling/RD at 3000s"
+  },
+  {
+   "results": "2026-09-17-one-line-bad-hour-2",
+   "experiment": "one-line-bad-hour",
+   "plant": "bottling",
+   "question": "component_stopped_reporting",
+   "probability": 0.34,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": false,
+   "truth_says": "nothing in this hour was scripted to go silent: no disconnect, so no component stopped reporting"
+  },
+  {
+   "results": "2026-09-17-one-line-bad-hour-2",
+   "experiment": "one-line-bad-hour",
+   "plant": "bottling",
+   "question": "silent_exception",
+   "probability": 0.06,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts an exception in this MES"
+  },
+  {
+   "results": "2026-09-17-one-line-bad-hour-2",
+   "experiment": "one-line-bad-hour",
+   "plant": "bottling",
+   "question": "deadlock",
+   "probability": 0.08,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts a deadlock in this MES"
+  },
+  {
+   "results": "2026-09-17-one-line-bad-hour-2",
+   "experiment": "one-line-bad-hour",
+   "plant": "bottling",
+   "question": "worst_problem",
+   "probability": 0.69,
+   "level": "none",
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "a scenario scripts events, not a severity for them"
+  },
+  {
+   "results": "2026-09-17-over-run-2",
+   "experiment": "over-run",
+   "plant": "bottling",
+   "question": "retry_storm",
+   "probability": 0.07,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts how this MES retries"
+  },
+  {
+   "results": "2026-09-17-over-run-2",
+   "experiment": "over-run",
+   "plant": "bottling",
+   "question": "counter_went_backwards",
+   "probability": 0.12,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": false,
+   "truth_says": "no counter reset was scripted, and the generator's counters only ever go backwards when one is"
+  },
+  {
+   "results": "2026-09-17-over-run-2",
+   "experiment": "over-run",
+   "plant": "bottling",
+   "question": "component_stopped_reporting",
+   "probability": 0.34,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": false,
+   "truth_says": "nothing in this hour was scripted to go silent: no disconnect, so no component stopped reporting"
+  },
+  {
+   "results": "2026-09-17-over-run-2",
+   "experiment": "over-run",
+   "plant": "bottling",
+   "question": "silent_exception",
+   "probability": 0.06,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts an exception in this MES"
+  },
+  {
+   "results": "2026-09-17-over-run-2",
+   "experiment": "over-run",
+   "plant": "bottling",
+   "question": "deadlock",
+   "probability": 0.07,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts a deadlock in this MES"
+  },
+  {
+   "results": "2026-09-17-over-run-2",
+   "experiment": "over-run",
+   "plant": "bottling",
+   "question": "worst_problem",
+   "probability": 0.48,
+   "level": "none",
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "a scenario scripts events, not a severity for them"
+  },
+  {
+   "results": "2026-09-17-scrap-burst",
+   "experiment": "scrap-burst",
+   "plant": "bottling",
+   "question": "retry_storm",
+   "probability": 0.15,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts how this MES retries"
+  },
+  {
+   "results": "2026-09-17-scrap-burst",
+   "experiment": "scrap-burst",
+   "plant": "bottling",
+   "question": "counter_went_backwards",
+   "probability": 0.14,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": false,
+   "truth_says": "no counter reset was scripted, and the generator's counters only ever go backwards when one is"
+  },
+  {
+   "results": "2026-09-17-scrap-burst",
+   "experiment": "scrap-burst",
+   "plant": "bottling",
+   "question": "component_stopped_reporting",
+   "probability": 0.33,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": false,
+   "truth_says": "nothing in this hour was scripted to go silent: no disconnect, so no component stopped reporting"
+  },
+  {
+   "results": "2026-09-17-scrap-burst",
+   "experiment": "scrap-burst",
+   "plant": "bottling",
+   "question": "silent_exception",
+   "probability": 0.12,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts an exception in this MES"
+  },
+  {
+   "results": "2026-09-17-scrap-burst",
+   "experiment": "scrap-burst",
+   "plant": "bottling",
+   "question": "deadlock",
+   "probability": 0.1,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts a deadlock in this MES"
+  },
+  {
+   "results": "2026-09-17-scrap-burst",
+   "experiment": "scrap-burst",
+   "plant": "bottling",
+   "question": "worst_problem",
+   "probability": 0.91,
+   "level": "medium",
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "a scenario scripts events, not a severity for them"
+  },
+  {
+   "results": "2026-09-17-starved-and-blocked",
+   "experiment": "starved-and-blocked",
+   "plant": "bottling",
+   "question": "retry_storm",
+   "probability": 0.05,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts how this MES retries"
+  },
+  {
+   "results": "2026-09-17-starved-and-blocked",
+   "experiment": "starved-and-blocked",
+   "plant": "bottling",
+   "question": "counter_went_backwards",
+   "probability": 0.12,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": false,
+   "truth_says": "no counter reset was scripted, and the generator's counters only ever go backwards when one is"
+  },
+  {
+   "results": "2026-09-17-starved-and-blocked",
+   "experiment": "starved-and-blocked",
+   "plant": "bottling",
+   "question": "component_stopped_reporting",
+   "probability": 0.33,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": false,
+   "truth_says": "nothing in this hour was scripted to go silent: no disconnect, so no component stopped reporting"
+  },
+  {
+   "results": "2026-09-17-starved-and-blocked",
+   "experiment": "starved-and-blocked",
+   "plant": "bottling",
+   "question": "silent_exception",
+   "probability": 0.06,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts an exception in this MES"
+  },
+  {
+   "results": "2026-09-17-starved-and-blocked",
+   "experiment": "starved-and-blocked",
+   "plant": "bottling",
+   "question": "deadlock",
+   "probability": 0.07,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts a deadlock in this MES"
+  },
+  {
+   "results": "2026-09-17-starved-and-blocked",
+   "experiment": "starved-and-blocked",
+   "plant": "bottling",
+   "question": "worst_problem",
+   "probability": 0.84,
+   "level": "none",
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "a scenario scripts events, not a severity for them"
+  },
+  {
+   "results": "2026-09-17-two-plants-two-zones",
+   "experiment": "two-plants-two-zones",
+   "plant": "bottling",
+   "question": "retry_storm",
+   "probability": 0.06,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts how this MES retries"
+  },
+  {
+   "results": "2026-09-17-two-plants-two-zones",
+   "experiment": "two-plants-two-zones",
+   "plant": "bottling",
+   "question": "counter_went_backwards",
+   "probability": 0.13,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": true,
+   "truth_says": "1 scripted counter reset(s): bottling/RD at 3000s"
+  },
+  {
+   "results": "2026-09-17-two-plants-two-zones",
+   "experiment": "two-plants-two-zones",
+   "plant": "bottling",
+   "question": "component_stopped_reporting",
+   "probability": 0.37,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": false,
+   "truth_says": "nothing in this hour was scripted to go silent: no disconnect, so no component stopped reporting"
+  },
+  {
+   "results": "2026-09-17-two-plants-two-zones",
+   "experiment": "two-plants-two-zones",
+   "plant": "bottling",
+   "question": "silent_exception",
+   "probability": 0.06,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts an exception in this MES"
+  },
+  {
+   "results": "2026-09-17-two-plants-two-zones",
+   "experiment": "two-plants-two-zones",
+   "plant": "bottling",
+   "question": "deadlock",
+   "probability": 0.07,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts a deadlock in this MES"
+  },
+  {
+   "results": "2026-09-17-two-plants-two-zones",
+   "experiment": "two-plants-two-zones",
+   "plant": "bottling",
+   "question": "worst_problem",
+   "probability": 0.79,
+   "level": "none",
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "a scenario scripts events, not a severity for them"
+  },
+  {
+   "results": "2026-09-17-two-plants-two-zones",
+   "experiment": "two-plants-two-zones",
+   "plant": "machining",
+   "question": "retry_storm",
+   "probability": 0.06,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts how this MES retries"
+  },
+  {
+   "results": "2026-09-17-two-plants-two-zones",
+   "experiment": "two-plants-two-zones",
+   "plant": "machining",
+   "question": "counter_went_backwards",
+   "probability": 0.14,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": true,
+   "truth_says": "1 scripted counter reset(s): bottling/RD at 3000s"
+  },
+  {
+   "results": "2026-09-17-two-plants-two-zones",
+   "experiment": "two-plants-two-zones",
+   "plant": "machining",
+   "question": "component_stopped_reporting",
+   "probability": 0.61,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": false,
+   "truth_says": "nothing in this hour was scripted to go silent: no disconnect, so no component stopped reporting"
+  },
+  {
+   "results": "2026-09-17-two-plants-two-zones",
+   "experiment": "two-plants-two-zones",
+   "plant": "machining",
+   "question": "silent_exception",
+   "probability": 0.06,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts an exception in this MES"
+  },
+  {
+   "results": "2026-09-17-two-plants-two-zones",
+   "experiment": "two-plants-two-zones",
+   "plant": "machining",
+   "question": "deadlock",
+   "probability": 0.08,
+   "level": null,
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "nothing in a scenario scripts a deadlock in this MES"
+  },
+  {
+   "results": "2026-09-17-two-plants-two-zones",
+   "experiment": "two-plants-two-zones",
+   "plant": "machining",
+   "question": "worst_problem",
+   "probability": 0.72,
+   "level": "none",
+   "model": "jev-1.13.0",
+   "truth": null,
+   "truth_says": "a scenario scripts events, not a severity for them"
+  }
+ ],
+ "pairs_total": 42,
+ "labelled": 14,
+ "unlabelled": 28,
+ "questions_with_a_truth": [
+  "component_stopped_reporting",
+  "counter_went_backwards"
+ ],
+ "questions_without_one": [
+  "deadlock",
+  "retry_storm",
+  "silent_exception",
+  "worst_problem"
+ ]
+}
