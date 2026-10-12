@@ -286,6 +286,93 @@ jobs:
         shell: bash
         run: python .github/scripts/plant_from_wheel.py --wheel "$(ls dist/*.whl)" --speed 60
 
+  image:
+    # The container, built and then run, on every pull request.
+    #
+    # It did not used to be built here at all. `release.yml` has an `image` job
+    # of its own and for months that was the only one, so the Dockerfile was
+    # built by a tag or by a release rehearsal and by nothing else. On
+    # 2026-10-12 #163 force-included the two plant packs into the wheel, passed
+    # all eighteen checks, and left the image unbuildable: `pip install .`
+    # inside it could not find `labs/multiplant/bottling/floor.json`, because
+    # the Dockerfile copied `src/` and `config/` and no part of `labs/`. The
+    # rehearsal found it five hours after the merge. On a tag instead of a
+    # dispatch, the same fault would have published 0.3.0 to PyPI and then
+    # failed on the image - decision 0018's incident over again, from the other
+    # end. A wheel that cannot be installed inside the image is now red on the
+    # pull request that breaks it.
+    #
+    # What this job does that `release.yml`'s cannot: it loads the image and
+    # runs the CLI inside it. `load: true` takes a single platform, so this is
+    # amd64 - what every runner here and a plant PC have. The second platform
+    # is release night's: `release.yml`'s `image` job builds amd64 and arm64
+    # through this same Dockerfile and the same buildx, pushes nothing, and
+    # keeps the cache its push job reads after the reviewer approves.
+    #
+    # The two are not a copy of each other and cannot be shared: a single job
+    # cannot be `uses:`d, only a whole workflow can. They do not need to be,
+    # because `release.yml`'s `test` job already calls this whole file - so on
+    # a tag this job runs as well, and the pair reads "it builds for both
+    # platforms" and "it runs and carries both packs" rather than one build
+    # done twice.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64
+          push: false
+          # Loaded into the daemon, because the steps below run it. Nothing is
+          # pushed from this file, ever; `push: false` is not conditional.
+          load: true
+          tags: fsmes:pr
+          # A cache scope of its own. `release.yml`'s `image` job writes the
+          # default scope and its `image-push` job reads it, and a pull request
+          # must not be able to evict release night's layers.
+          cache-from: type=gha,scope=ci-image
+          cache-to: type=gha,mode=max,scope=ci-image
+
+      - name: What the image weighs
+        # Information, never a gate. A number in the log is how anyone reading
+        # a release note knows what a `docker pull` costs; a threshold here
+        # would be an absolute bound on a shared runner, which says nothing
+        # about the code.
+        run: |
+          set -euo pipefail
+          bytes=$(docker image inspect fsmes:pr --format '{{.Size}}')
+          echo "image: $bytes bytes ($((bytes / 1024 / 1024)) MB)"
+
+      - name: The image states its version
+        run: docker run --rm fsmes:pr fsmes --version
+
+      - name: The image carries both plant packs
+        # `fsmes demo --help` names the packs the installation carries, read out
+        # of `fsmes/data/packs` and never typed into the CLI - so this asserts
+        # the wheel's force-include list from inside the container, which is
+        # the exact thing that was broken. A checkout carries no pack and the
+        # same help says "none in this installation"; the image must name both.
+        #
+        # The width is said out loud and the help is squashed to one line
+        # before it is read: the help is painted, it wraps to the terminal, and
+        # the names sit inside a parenthesis in the middle of a sentence.
+        # Asserting on painted output without pinning the width is how #163
+        # spent a CI round (2026-10-12).
+        run: |
+          set -euo pipefail
+          help=$(docker run --rm -e COLUMNS=200 fsmes:pr fsmes demo --help)
+          echo "$help"
+          flat=$(printf '%s' "$help" | tr -s '[:space:]' ' ')
+          for pack in bottling machining; do
+            case "$flat" in
+              *"$pack"*) echo "  the image names $pack" ;;
+              *) echo "::error::fsmes demo --help inside the image does not name $pack - the image is missing that pack"; exit 1 ;;
+            esac
+          done
+
   lab:
     # The lab's starter experiments, on a runner.
     #
