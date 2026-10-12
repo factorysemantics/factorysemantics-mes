@@ -10,6 +10,10 @@ goes under Honesty with a migration line, so plant people can find it.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.3.0] — 2026-10-12
+
 ### Added
 
 - **Click a stop on a machine's timeline and the plant says what it was.** The
@@ -4815,5 +4819,7 @@ number in it comes from a simulated plant.
   MES was not watching. Unlabelled downtime is reported as unlabelled. These
   are the house rules and they are tested.
 
-[Unreleased]: https://github.com/factorysemantics/factorysemantics-mes/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/factorysemantics/factorysemantics-mes/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.3.0
+[0.2.0]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.2.0
 [0.1.0]: https://github.com/factorysemantics/factorysemantics-mes/releases/tag/v0.1.0
