@@ -286,3 +286,40 @@ def test_a_plant_whose_database_needs_no_password_is_printed_whole(nowhere):
     assert database.shown == database.url
     assert database.shown.endswith("machining.db")
     assert "the file this fleet gives machining" in database.source
+
+
+# ------------------------------- what it says about the fleet file afterwards
+
+
+def test_a_created_plant_is_told_to_join_the_fleet_file_only_when_it_is_missing(
+        tmp_path, monkeypatch):
+    """The nudge at the end of `fleet create` is a nudge, not a chant.
+
+    `fsmes demo bottling` writes its own fleet file listing the pack it is
+    about to create, and then `create` told it to add the pack the file
+    already listed - a command telling a person to undo work it did itself
+    (seen 2026-10-12). Asked of the file's own `packs` list, resolved the way
+    every reader resolves it.
+    """
+    pack = tmp_path / "packs" / "bottling"
+    pack.mkdir(parents=True)
+    fleet = tmp_path / "fleet.toml"
+    monkeypatch.setenv(plants.REGISTRY_ENV, str(fleet))
+
+    fleet.write_text('packs = ["packs/bottling"]\n', encoding="utf-8")
+    assert commands._fleet_lists(pack, tmp_path)
+
+    fleet.write_text('packs = ["packs/machining"]\n', encoding="utf-8")
+    assert not commands._fleet_lists(pack, tmp_path)
+
+
+def test_a_fleet_file_that_cannot_be_read_gets_the_nudge(tmp_path, monkeypatch):
+    """Nothing can be confirmed, so the nudge is the right thing to print."""
+    pack = tmp_path / "packs" / "bottling"
+    pack.mkdir(parents=True)
+    fleet = tmp_path / "fleet.toml"
+    monkeypatch.setenv(plants.REGISTRY_ENV, str(fleet))
+
+    assert not commands._fleet_lists(pack, tmp_path)
+    fleet.write_text("this is not toml = = =\n", encoding="utf-8")
+    assert not commands._fleet_lists(pack, tmp_path)

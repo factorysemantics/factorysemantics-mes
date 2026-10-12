@@ -38,6 +38,7 @@ forgets the gate fails a test rather than shipping.
 from __future__ import annotations
 
 import secrets
+import tomllib
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -163,9 +164,31 @@ def create(directory: Path, *, root: Path, echo=print) -> owned.Entry:
         pack_fingerprint=fmt.fingerprint(pack))
     file = owned.remember(where, entry)
     echo(f"  {pack.name}: owned by this installation, recorded in {file}")
-    echo(f"  {pack.name}: `fsmes plant` reads the fleet file, not this one - add "
-         f"{directory.name!r} to {packs.path(root)} to see it there too")
+    if not _fleet_lists(directory, root):
+        # Only when it is actually missing. Said unconditionally it told an
+        # installation that had just written its own fleet file to add a pack
+        # the file already listed, which is a command telling a person to undo
+        # work it did itself (seen in `fsmes demo bottling`, 2026-10-12).
+        echo(f"  {pack.name}: `fsmes plant` reads the fleet file, not this one - add "
+             f"{directory.name!r} to {packs.path(root)} to see it there too")
     return entry
+
+
+def _fleet_lists(directory: Path, root: Path) -> bool:
+    """Does this fleet file already list this pack directory?
+
+    Asked of the file's own `packs` list, resolved against the file as every
+    reader resolves it. A fleet file that cannot be read is answered `False`:
+    the notice is a nudge, and a nudge is the right thing to print when
+    nothing can be confirmed.
+    """
+    file = packs.path(root)
+    try:
+        listed = tomllib.loads(file.read_text(encoding="utf-8")).get("packs") or []
+        wanted = directory.resolve()
+        return any((file.parent / str(entry)).resolve() == wanted for entry in listed)
+    except (OSError, tomllib.TOMLDecodeError, TypeError):
+        return False
 
 
 def start(name: str, *, root: Path, speed: float | None = None, echo=print) -> owned.Ownership:

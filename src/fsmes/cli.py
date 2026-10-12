@@ -1268,8 +1268,94 @@ def _order_completion(confirmations: list[dict], order_code: str) -> dict | None
     return None
 
 
+#: What `fsmes demo <plant> <action>` understands. Named once: the command
+#: reads it to tell a plant from a verb, and `_shipped_plant` reads it to
+#: refuse a third thing.
+_SHIPPED_ACTIONS = ("start", "stop", "status")
+
+
 @app.command()
-def demo(duration: int = 90) -> None:
+def demo(
+    plant: str | None = typer.Argument(
+        None, help="A plant this package ships (bottling, machining). Left out: the "
+                   "two-station twin in one process."),
+    action: str = typer.Argument("start", help="start | stop | status. A shipped plant only."),
+    duration: int = typer.Option(90, help="Seconds the twin watches for. The twin only."),
+    speed: float | None = typer.Option(
+        None, help="Replay speed for a shipped plant. 60 replays a scripted hour in a minute."),
+    refresh: bool = typer.Option(
+        False, "--refresh", help="Replace this home's copy of the pack with the one "
+                                 "this installation ships, losing any edits to it."),
+    home: Path | None = typer.Option(
+        None, help="Where a shipped plant keeps its pack, database, logs and replay "
+                   "(default: this platform's per-user data directory, or FSMES_HOME)."),
+) -> None:
+    """Run a plant from this package, with no checkout anywhere.
+
+        fsmes demo               the twin: one order, ERP -> MES -> machines -> MES -> ERP
+        fsmes demo bottling      the six-station bottling line, an eight-hour shift
+        fsmes demo bottling stop that plant, down
+
+    Named a plant, this copies the pack out of the package into a per-user
+    directory, generates the shift once from its `line.json`, builds the plant
+    and starts it - the simulated floor, a real OPC UA server, the dashboard
+    on its own port. Nothing under site-packages is written to and no
+    repository is needed.
+    """
+    # `fsmes demo stop` reads as a plant called "stop", because the plant is
+    # the first argument. Said back as "there is no plant called 'stop'" it is
+    # a true sentence that helps nobody: what the person meant is plain, and
+    # the twin has nothing to stop - it runs in this process and ends when it
+    # ends.
+    if plant in _SHIPPED_ACTIONS:
+        typer.echo(f"`fsmes demo {plant}` needs to know which plant to {plant}: "
+                   f"`fsmes demo bottling {plant}`. "
+                   f"`fsmes demo` on its own runs the twin in this process, which "
+                   f"stops when it is done.")
+        raise typer.Exit(2)
+    if plant is not None:
+        raise typer.Exit(_shipped_plant(plant, action, speed=speed, refresh=refresh,
+                                        where=home))
+    _demo_twin(duration)
+
+
+def _shipped_plant(name: str, action: str, *, speed: float | None,
+                   refresh: bool, where: Path | None) -> int:
+    """`fsmes demo <plant>`: one of the packs this package carries.
+
+    Thin on purpose. Everything here is arranging - a home, a writable copy of
+    the pack, a fleet file, the generated replay - and then the same
+    `fsmes fleet` commands a checkout runs. See `fsmes.standalone`.
+    """
+    from fsmes import standalone
+
+    if action not in _SHIPPED_ACTIONS:
+        typer.echo(f"Unknown action {action!r}. Expected one of: "
+                   f"{', '.join(sorted(_SHIPPED_ACTIONS))}.")
+        return 2
+    try:
+        if action == "stop":
+            return standalone.stop(name, where=where, echo=typer.echo)
+        if action == "status":
+            return standalone.status(name, where=where, echo=typer.echo)
+        typer.echo(f"Starting {name} from this installation's own copy of the pack.")
+        code = standalone.start(name, where=where, speed=speed, refresh=refresh,
+                                echo=typer.echo)
+    except LookupError as exc:
+        typer.echo(str(exc))
+        return 2
+    except (RuntimeError, OSError) as exc:
+        typer.echo(str(exc))
+        return 1
+    if code:
+        return code
+    for line in standalone.how_to_sign_in(
+            name, standalone.packs_dir((where or standalone.home()).expanduser()) / name):
+        typer.echo(line)
+    return 0
+
+
+def _demo_twin(duration: int) -> None:
     """Run the entire twin in one process and push one order through the full loop:
     ERP -> MES -> machines -> MES -> ERP."""
     from fsmes import shadow
