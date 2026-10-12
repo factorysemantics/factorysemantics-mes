@@ -182,3 +182,48 @@ def test_the_log_sink_does_not_hold_the_console_of_the_command_that_started_it(
         "the log sink inherited the caller's stdout and will hold it until the "
         "plant stops")
     assert Path(sink["stdout"].name) == tmp_path / "logs" / "bottling" / "sink.log"
+
+
+def test_the_words_this_cli_prints_survive_a_windows_console(monkeypatch):
+    """The first plant ever started on Windows printed `instance 492c5047?`
+    where it meant an ellipsis: GitHub's runner writes the system code page,
+    and this CLI's sentences are full of em dashes. On Windows the streams are
+    retuned to UTF-8 before a command runs; everywhere else they are left
+    exactly as they are."""
+    from fsmes import cli
+
+    class Stream:
+        def __init__(self) -> None:
+            self.asked: list[dict] = []
+
+        def reconfigure(self, **how) -> None:
+            self.asked.append(how)
+
+    out, err = Stream(), Stream()
+    monkeypatch.setattr(sys, "stdout", out)
+    monkeypatch.setattr(sys, "stderr", err)
+
+    monkeypatch.setattr(sys, "platform", "linux")
+    cli._words_that_survive_a_windows_console()
+    assert out.asked == [] and err.asked == []
+
+    monkeypatch.setattr(sys, "platform", "win32")
+    cli._words_that_survive_a_windows_console()
+    assert out.asked == [{"encoding": "utf-8", "errors": "replace"}]
+    assert err.asked == [{"encoding": "utf-8", "errors": "replace"}]
+
+
+def test_a_stream_that_will_not_be_retuned_does_not_take_the_command_with_it(monkeypatch):
+    """A redirected or closed stream raises instead of retuning. The command
+    is about to print; losing the punctuation is a cost, losing the command is
+    not one worth paying."""
+    from fsmes import cli
+
+    class Stubborn:
+        def reconfigure(self, **how) -> None:
+            raise OSError("not this stream")
+
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(sys, "stdout", Stubborn())
+    monkeypatch.setattr(sys, "stderr", Stubborn())
+    cli._words_that_survive_a_windows_console()

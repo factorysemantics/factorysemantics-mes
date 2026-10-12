@@ -4306,6 +4306,29 @@ def _say_case(outcome) -> None:
                   else f"   not arranged: {', '.join(outcome.missing)}"))
 
 
+def _words_that_survive_a_windows_console() -> None:
+    """Print this CLI's own punctuation on Windows, not a replacement mark.
+
+    Windows writes a console or a pipe in the system code page, and the
+    sentences this CLI prints are full of em dashes and ellipses - so
+    `instance 492c5047... written to ...` came back as `492c5047?` from
+    GitHub's Windows runner, the first time a plant was ever started there
+    (2026-10-12). Retuning the stream is cheap and it only ever happens on
+    Windows; a stream that will not be retuned is left alone rather than
+    taking the command down with it.
+    """
+    import sys
+
+    if sys.platform != "win32":
+        return
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        with contextlib.suppress(OSError, ValueError):
+            reconfigure(encoding="utf-8", errors="replace")
+
+
 def run() -> None:
     """The console script.
 
@@ -4319,6 +4342,7 @@ def run() -> None:
 
     from fsmes.identity import Misconfigured
 
+    _words_that_survive_a_windows_console()
     try:
         app()
     except Misconfigured as exc:
