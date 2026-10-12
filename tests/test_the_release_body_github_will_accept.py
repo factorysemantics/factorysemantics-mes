@@ -16,6 +16,7 @@ assertion runs in `build`, which a rehearsal does run.
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -25,6 +26,17 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / ".github" / "scripts" / "release_notes.sh"
 LIMIT = 125_000
+
+# The script under test is a shell script, and Windows cannot execute one: the
+# whole file read `WinError 193, %1 is not a valid Win32 application` on the
+# `windows-latest` cells of CI. Skipped there rather than rewritten, because
+# the thing being tested only ever runs on one machine - the Ubuntu runner that
+# `release.yml` composes the body on - and a Python rewrite of it would be a
+# second copy of the logic, tested, beside the copy that ships.
+pytestmark = pytest.mark.skipif(
+    os.name != "posix",
+    reason="release_notes.sh is a shell script; the release workflow runs it on Ubuntu",
+)
 
 
 def notes(version: str, cwd: Path = REPO) -> subprocess.CompletedProcess[str]:
