@@ -16,7 +16,7 @@
         <link rel="prev" href="../tls/">
       
       
-        <link rel="next" href="../confirmation-files/">
+        <link rel="next" href="../releasing/">
       
       
         
@@ -1661,6 +1661,56 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#020-to-030" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.2.0 to 0.3.0
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.2.0 to 0.3.0">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-was-actually-tried-and-on-what" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What was actually tried, and on what
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#read-this-before-anyone-reads-numbers-off-the-plant" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read this before anyone reads numbers off the plant
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-the-gate-proves-for-this-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the gate proves for this release
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#012-to-020" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1814,6 +1864,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releasing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — cutting a release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -3967,6 +4045,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../releases/0.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.3.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../releases/0.2.0/" class="md-nav__link">
         
   
@@ -4135,6 +4241,56 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#020-to-030" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.2.0 to 0.3.0
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.2.0 to 0.3.0">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-was-actually-tried-and-on-what" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What was actually tried, and on what
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#read-this-before-anyone-reads-numbers-off-the-plant" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read this before anyone reads numbers off the plant
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-the-gate-proves-for-this-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the gate proves for this release
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#012-to-020" class="md-nav__link">
@@ -4320,6 +4476,192 @@ carries an <strong>Honesty</strong> section for anything that changed what a num
 <em>means</em> — a KPI formula, a state mapping, a counter rule. Read that section
 before upgrading a plant that anyone reads numbers off, because a number that
 changes meaning without anyone noticing is worse than one that breaks.</p>
+<h2 id="020-to-030">0.2.0 to 0.3.0<a class="headerlink" href="#020-to-030" title="Permanent link">&para;</a></h2>
+<p>Fifteen migrations, all of them additive in shape — twelve new tables and a
+set of nullable columns — and two of them write to rows that already exist.
+In order:</p>
+<div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>backup<span class="w"> </span>--out<span class="w"> </span>/mnt/nas/fsmes<span class="w">                 </span><span class="c1"># first, always</span>
+<span class="c1"># stop the agent and the API</span>
+pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>factorysemantics-mes
+fsmes<span class="w"> </span>db-status<span class="w"> </span>--pack<span class="w"> </span>packs/yourplant<span class="w">            </span><span class="c1"># what you are at, and what 0.3.0 expects</span>
+fsmes<span class="w"> </span>init-db<span class="w">   </span>--pack<span class="w"> </span>packs/yourplant<span class="w">            </span><span class="c1"># runs the migrations the wheel carries</span>
+fsmes<span class="w"> </span>db-status<span class="w"> </span>--pack<span class="w"> </span>packs/yourplant<span class="w">            </span><span class="c1"># should now agree; it exits non-zero if not</span>
+<span class="c1"># start them again</span>
+</code></pre></div>
+<p><strong>Pass the pack</strong> (or <code>--plant &lt;name&gt;</code>). Everything the
+<a href="#012-to-020">0.1.2 to 0.2.0</a> section says about that first line — read it,
+it is about <em>this process's</em> database until you name a plant's — is true here
+unchanged, and so is <code>fsmes plant &lt;name&gt; migrate</code> for a plant that comes from
+a fleet file.</p>
+<p><code>c8b1e40d7a92</code> is the 0.2.0 schema and <code>d4e8a1c93b70</code> is head.</p>
+<table>
+<thead>
+<tr>
+<th>Revision</th>
+<th>What it adds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>b1f4c73a9e08</code></td>
+<td>eight nullable columns on <code>non_conformances</code>: who reviewed it, what was decided, who closed it</td>
+</tr>
+<tr>
+<td><code>a9c4e17b3d60</code></td>
+<td><code>spc_signals</code> — one row per Western Electric rule firing with the window it judged — and <code>non_conformances.evidence</code></td>
+</tr>
+<tr>
+<td><code>c6a4b81f39d7</code></td>
+<td><code>shift_code</code> and <code>shift_day</code> on <code>production_logs</code>, <code>equipment_states</code>, <code>quality_checks</code> and <code>non_conformances</code>. <strong>This one writes to existing rows</strong> — see below</td>
+</tr>
+<tr>
+<td><code>c3d7e91a4b28</code></td>
+<td><code>equipment_connections</code>: whether the MES can see a machine, as a second interval history beside what the machine is doing</td>
+</tr>
+<tr>
+<td><code>b1f4c7a2e903</code></td>
+<td>two indexes — <code>production_logs (equipment_id, ts)</code> and <code>tag_values (equipment_id, id)</code> — that the floor screen's own questions ask for</td>
+</tr>
+<tr>
+<td><code>c1e7a04b93d5</code></td>
+<td><code>downtime_reasons</code>, the plant's own downtime vocabulary, and <code>equipment_states.reason_code</code> beside the free text, never in place of it</td>
+</tr>
+<tr>
+<td><code>d2b7e51c9a04</code></td>
+<td><code>nc_severities</code>, the plant's non-conformance severity vocabulary. The existing <code>severity</code> column keeps every value already in it</td>
+</tr>
+<tr>
+<td><code>e3c8a17d5b46</code></td>
+<td><code>gauges.warn_days</code> and <code>materials.counted_in_pieces</code>. <strong>This one writes to existing rows</strong> — see below</td>
+</tr>
+<tr>
+<td><code>a1c5e70b2d94</code></td>
+<td><code>plant_settings</code>, empty on every existing plant, so a plant goes on running on the values it was running on</td>
+</tr>
+<tr>
+<td><code>b3f9c07e51ad</code></td>
+<td><code>ai_turns</code>: one row per turn of every conversation the assistant and the design chat have had on this plant</td>
+</tr>
+<tr>
+<td><code>c7a2e94b16d3</code></td>
+<td>five nullable columns the plant already had and threw away — <code>ai_turns.screen</code>, and <code>shift_code</code>/<code>shift_day</code> on <code>ai_turns</code> and <code>audit_log</code></td>
+</tr>
+<tr>
+<td><code>b9f31c7a4e50</code></td>
+<td><code>quality_specs.sample_size</code> and <code>quality_samples</code>: a characteristic inspected n pieces at a time, which is an X̄/R chart instead of an I-MR one</td>
+</tr>
+<tr>
+<td><code>d7b4e92a1c58</code></td>
+<td><code>skills</code>, <code>personnel_skills</code>, <code>roster</code>, <code>dispatch_rules</code>, and nine nullable columns across the two maintenance tables: which trade a job needs, how much it matters, who has it</td>
+</tr>
+<tr>
+<td><code>a1c47f8b2d93</code></td>
+<td><code>needs_stop</code> and <code>window</code> on both maintenance tables: whether the machine has to be stopped, and when the job may be done</td>
+</tr>
+<tr>
+<td><code>d4e8a1c93b70</code></td>
+<td><code>quality_specs.counted</code> and <code>quality_counts</code>: a characteristic an inspector counts rather than measures, drawn as a p chart</td>
+</tr>
+</tbody>
+</table>
+<p>That is fifteen, in that order. <strong>The two that write:</strong></p>
+<ul>
+<li><code>c6a4b81f39d7</code> <strong>backfills <code>shift_code</code> and <code>shift_day</code></strong> on the four floor
+  tables from the shift patterns <strong>as they stand on the day you upgrade</strong>,
+  read on the plant's clock (<code>MES_PLANT_TIMEZONE</code>). There is no history of
+  shift patterns in this product, so a plant that has changed its roster
+  since those rows were written will have some of them attributed to the
+  pattern it runs now rather than the one it ran then. An instant no pattern
+  covers is left null, which is the honest answer and not a failure. A plant
+  with no shift patterns at all gets nulls everywhere and nothing changes.</li>
+<li><code>e3c8a17d5b46</code> <strong>sets <code>gauges.warn_days</code> to 30</strong> on every gauge that
+  already exists. Thirty is exactly what the gauges screen had been inventing
+  for itself in JavaScript, so nothing anybody looks at changes; from here it
+  is the gauge's own number to set.</li>
+</ul>
+<h3 id="what-was-actually-tried-and-on-what">What was actually tried, and on what<a class="headerlink" href="#what-was-actually-tried-and-on-what" title="Permanent link">&para;</a></h3>
+<p>On 2026-10-12, before this release was tagged: <code>pip install
+factorysemantics-mes==0.2.0</code> into a scratch virtual environment, <code>fsmes
+init-db</code>, <code>fsmes seed</code>, then <code>fsmes demo --duration 180</code> — a real 0.2.0
+database with an order pushed through the full loop in it, 38 tables and 152
+rows, stamped <code>c8b1e40d7a92</code>. A copy of that file, upgraded with the 0.3.0
+wheel:</p>
+<div class="highlight"><pre><span></span><code>Database schema upgraded: c8b1e40d7a92 -&gt; d4e8a1c93b70.
+Current: d4e8a1c93b70
+Head:    d4e8a1c93b70
+The database is at the current schema.
+</code></pre></div>
+<p>Twelve tables appeared — <code>ai_turns</code>, <code>dispatch_rules</code>, <code>downtime_reasons</code>,
+<code>equipment_connections</code>, <code>nc_severities</code>, <code>personnel_skills</code>,
+<code>plant_settings</code>, <code>quality_counts</code>, <code>quality_samples</code>, <code>roster</code>, <code>skills</code>,
+<code>spc_signals</code> — <strong>no table was lost, and all 152 rows were still there, none
+of them moved.</strong> Then <code>fsmes demo</code> from the 0.3.0 wheel against that same
+upgraded file closed the loop: the software carried on over the data, which is
+a different claim from "the migrations ran".</p>
+<p><strong>What that run did not exercise</strong>, because the built-in demo plant has
+neither: the shift backfill attributed nothing — 0 of 29 production bookings
+got a <code>shift_code</code>, correctly, because the plant defines no shift patterns —
+and <code>gauges</code> was empty, so the <code>warn_days</code> write had no row to touch. Those
+two are covered by the suite and by the lab's own plants; they have not been
+run against a 0.2.0 file on a plant that has shift patterns and gauges in it,
+and nobody should read this section as saying they have. It is also SQLite:
+nobody has upgraded a populated PostgreSQL plant.</p>
+<h3 id="read-this-before-anyone-reads-numbers-off-the-plant">Read this before anyone reads numbers off the plant<a class="headerlink" href="#read-this-before-anyone-reads-numbers-off-the-plant" title="Permanent link">&para;</a></h3>
+<p><a href="https://github.com/factorysemantics/factorysemantics-mes/blob/main/CHANGELOG.md">CHANGELOG 0.3.0 → Honesty</a>
+is the whole list, and every entry carries its own migration line. The ones
+that change what something already deployed will see:</p>
+<ul>
+<li><strong>A performance or OEE figure above 100 % is no longer printed anywhere.</strong>
+  Where the counted work will not fit inside the run time, <code>performance</code> and
+  <code>oee</code> come back <code>null</code> with a sentence naming both numbers. The ratio is
+  still published, as <code>performance_ratio</code> with <code>counts_outrun_run_time</code> beside
+  it. Anything consuming <code>performance</code> as a number reads <code>performance_ratio</code>
+  now.</li>
+<li><strong>Availability's denominator changed meaning.</strong> It is the time this MES
+  watched, all causes together. Availability figures go <strong>up</strong> on a window
+  with a hole in the state history that no disconnection covered, and are
+  unchanged where the history is contiguous. Read <code>coverage</code> beside every
+  figure from now on.</li>
+<li><strong>An order no longer finishes itself when the count reaches its quantity.</strong>
+  Somebody completes it — a person, the orders screen, or the ERP — and the
+  ERP completion, the finished-goods lot and the certificate of analysis are
+  all issued then. A plant that relied on an order closing itself now needs
+  someone to close it.</li>
+<li><strong>A non-conformance cannot be closed without a disposition.</strong>
+  <code>POST /quality/nonconformances/{code}/close</code> returns <strong>409</strong> on a record
+  nobody has dispositioned; anything that closed one in a single call takes
+  two now. The Quality tile is "Non-conformances not closed" and counts three
+  unclosed states, so it reads higher than the old "Open" tile did.</li>
+<li><strong>Every floor row now says which shift it fell in</strong>, and <code>/analysis/*</code> can
+  be asked for a shift. See the backfill note above for what that means about
+  rows written before the upgrade.</li>
+<li><strong>An upgraded plant starts recording moving-range (rule 5) SPC signals on
+  every plant</strong>, from its next reading, whatever <code>[quality] hold_rules</code> says.
+  No hold and no non-conformance is raised unless that list names <code>5</code>, and
+  nothing is backfilled — so what is new in the records is <code>spc_signals</code> rows
+  with <code>rule = 5</code> and a null <code>nonconformance_id</code>.</li>
+<li><strong>The fleet console's default port is 8090</strong>, not 8100, because 8100 is the
+  first port <code>fsmes score</code> hands an ephemeral plant. Anything pointing at
+  8100 moves.</li>
+<li><strong><code>fsmes pack apply</code> refuses to seed master data into a database that is
+  not at head</strong>, rather than writing rows through the ORM into a half-migrated
+  file. Migrate first, then apply.</li>
+<li><strong>Screen numbers that were wrong are now right</strong>, so some tiles move without
+  the plant changing: "Active orders" counted more than the orders listed
+  under it, the downtime pareto now states both totals, and production a
+  machine counted is no longer lost when the write that books it fails.</li>
+</ul>
+<h3 id="what-the-gate-proves-for-this-release">What the gate proves for this release<a class="headerlink" href="#what-the-gate-proves-for-this-release" title="Permanent link">&para;</a></h3>
+<p><code>upgrade_from_previous_release.sh</code> runs on every pull request and installs
+<strong>whatever PyPI serves today</strong>, which for this release is 0.2.0: it makes a
+database with that wheel, upgrades it with the wheel under test, asks the
+database whether it is at head, counts the rows before and after, and then
+runs the demo on the upgraded file. So the 0.2.0 → 0.3.0 path above is proven
+in CI on the bytes that ship, not only by hand.</p>
+<p>The limits are the same ones the <a href="#what-the-gate-proves-and-what-it-does-not">0.2.0 section</a>
+states, and they still apply: one plant's shape, on SQLite. If <code>init-db</code>
+refuses on yours it names the nearest revision, lists every difference and
+changes nothing. Take the backup first.</p>
 <h2 id="012-to-020">0.1.2 to 0.2.0<a class="headerlink" href="#012-to-020" title="Permanent link">&para;</a></h2>
 <p>The first upgrade this project has had to describe. In order:</p>
 <div class="highlight"><pre><span></span><code>fsmes<span class="w"> </span>backup<span class="w"> </span>--out<span class="w"> </span>/mnt/nas/fsmes<span class="w">                 </span><span class="c1"># first, always</span>
@@ -4348,7 +4690,9 @@ migrations since. The exact-match case is the one below; the no-match case is
 <a href="#if-your-database-was-made-by-012-or-earlier">further down</a>, and it changes
 nothing at all.</p>
 <p><strong>Five migrations</strong> have landed since 0.1.2 — <code>153379d6cf19</code> is the 0.1.2
-schema and <code>c8b1e40d7a92</code> is head — and every one of them is additive.
+schema and <code>c8b1e40d7a92</code> is the 0.2.0 one — and every one of them is
+additive. (Head moved on from <code>c8b1e40d7a92</code> in 0.3.0; the section above
+carries the fifteen since.)
 Nothing existing is rewritten and no row is rebuilt:</p>
 <table>
 <thead>
@@ -4627,13 +4971,13 @@ caught by looking, not by a command.</p>
         
         
           
-          <a href="../confirmation-files/" class="md-footer__link md-footer__link--next" aria-label="Next: Explanation — the confirmation handoff">
+          <a href="../releasing/" class="md-footer__link md-footer__link--next" aria-label="Next: How-to — cutting a release">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Explanation — the confirmation handoff
+                How-to — cutting a release
               </div>
             </div>
             <div class="md-footer__button md-icon">

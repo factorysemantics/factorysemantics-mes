@@ -513,6 +513,10 @@
          <lastmod>2026-10-12</lastmod>
     </url>
     <url>
+         <loc>https://docs.factorysemantics.com/dev/operate/releasing/</loc>
+         <lastmod>2026-10-12</lastmod>
+    </url>
+    <url>
          <loc>https://docs.factorysemantics.com/dev/operate/security/</loc>
          <lastmod>2026-10-12</lastmod>
     </url>
@@ -598,6 +602,10 @@
     </url>
     <url>
          <loc>https://docs.factorysemantics.com/dev/releases/0.2.0/</loc>
+         <lastmod>2026-10-12</lastmod>
+    </url>
+    <url>
+         <loc>https://docs.factorysemantics.com/dev/releases/0.3.0/</loc>
          <lastmod>2026-10-12</lastmod>
     </url>
 </urlset>

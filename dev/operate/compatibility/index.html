@@ -1629,6 +1629,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../releasing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to — cutting a release
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../confirmation-files/" class="md-nav__link">
         
   
@@ -3828,6 +3856,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../releases/0.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0.3.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../releases/0.2.0/" class="md-nav__link">
         
   
@@ -4034,7 +4090,7 @@
 
 
 <h1 id="compatibility">Compatibility<a class="headerlink" href="#compatibility" title="Permanent link">&para;</a></h1>
-<p><em>Explanation. What has actually been tested against what, as of 2026-09-14 — the state of <code>main</code> that 0.2.0 is cut from. "Untested" is a fact, not a warning label.</em></p>
+<p><em>Explanation. What has actually been tested against what, as of 2026-10-12 — the state of <code>main</code> that 0.3.0 is cut from. "Untested" is a fact, not a warning label.</em></p>
 <p><strong>Every row states the date it was last checked and what was run on that
 date.</strong> A row with no date is a row nobody can age.</p>
 <table>
@@ -4056,7 +4112,7 @@ date.</strong> A row with no date is a row nobody can age.</p>
 <tr>
 <td><strong>The bundled OPC UA replay server</strong></td>
 <td>tested continuously</td>
-<td>2026-09-14</td>
+<td>2026-10-12</td>
 <td>every scored run, and CI on every pull request</td>
 </tr>
 <tr>
@@ -4074,19 +4130,19 @@ date.</strong> A row with no date is a row nobody can age.</p>
 <tr>
 <td><strong>PostgreSQL 16.15</strong></td>
 <td>tested continuously</td>
-<td>2026-09-14</td>
+<td>2026-10-12</td>
 <td>the <code>postgres</code> cell in CI: <code>alembic upgrade head</code> from an empty database and then the whole suite, against a PostgreSQL 16.15 service container pinned by digest, on every pull request. Also the Compose file and the cutlery plant's public demo</td>
 </tr>
 <tr>
 <td><strong>SQLite</strong></td>
 <td>tested continuously</td>
-<td>2026-09-14</td>
-<td>the default. The whole suite runs on in-memory SQLite on every pull request, on Ubuntu and Windows, Python 3.12 and 3.13; <code>wheel-demo</code> runs <code>fsmes demo</code> on a SQLite file from the built wheel, and <code>upgrade_from_previous_release.sh</code> upgrades a database made by the 0.1.2 wheel from PyPI. Version: whatever CPython ships</td>
+<td>2026-10-12</td>
+<td>the default. The whole suite runs on in-memory SQLite on every pull request, on Ubuntu and Windows, Python 3.12 and 3.13; <code>wheel-demo</code> runs <code>fsmes demo</code> on a SQLite file from the built wheel, and <code>upgrade_from_previous_release.sh</code> upgrades a database made by whatever wheel PyPI serves that day, which is 0.2.0 until 0.3.0 is tagged; <code>wheel-plant</code> starts the bottling plant on a SQLite file from the built wheel on Ubuntu and on Windows. Version: whatever CPython ships</td>
 </tr>
 <tr>
 <td><strong>Claude Code</strong> as an MCP client</td>
 <td>tested</td>
-<td>scoring 2026-09-14; <strong>the live-model run's date is not recorded</strong></td>
+<td>scoring 2026-10-12; <strong>the live-model run's date is not recorded</strong></td>
 <td>the agent evals drive it headless. <code>tests/test_agent_eval.py</code> scores them on every pull request; the run that puts a real model against the live tool surface is <code>fsmes agent-eval</code>, a command a person types, and nothing records when it last ran</td>
 </tr>
 <tr>
@@ -4116,13 +4172,13 @@ date.</strong> A row with no date is a row nobody can age.</p>
 <tr>
 <td>Windows (plant PCs)</td>
 <td>tested continuously</td>
-<td>2026-09-14</td>
-<td>CI runs <code>ruff</code> and the whole suite on <code>windows-latest</code>, Python 3.12 and 3.13, on every pull request. <code>tzdata</code> is a Windows-only dependency so <code>zoneinfo</code> can resolve a plant's zone. No plant PC in a real plant has run it</td>
+<td>2026-10-12</td>
+<td>CI runs <code>ruff</code> and the whole suite on <code>windows-latest</code>, Python 3.12 and 3.13, on every pull request — and, since <a href="https://github.com/factorysemantics/factorysemantics-mes/pull/163">#163</a> on 2026-10-12, the <code>wheel-plant</code> job (<code>.github/scripts/plant_from_wheel.py</code>) installs the built wheel on <code>windows-latest</code> in a directory holding none of this repository's files, starts the bottling plant and asks it whether sign-in works, the specifications are there, the OPC port answers, the floor is watching and a lot has been counted. That job is why three Windows-only bugs are fixed — a detach flag ignored, a signal that does not exist on Windows, a console script looked for in <code>bin</code> — none of which the green suite could see, because the suite never starts a plant. <code>tzdata</code> is a Windows-only dependency so <code>zoneinfo</code> can resolve a plant's zone. <strong>No plant PC in a real plant has run it</strong>: the only Windows this has started on is GitHub's runner, with no domain policy and no antivirus</td>
 </tr>
 <tr>
 <td>Python</td>
 <td>3.12, 3.13</td>
-<td>2026-09-14</td>
+<td>2026-10-12</td>
 <td>CI, both on Ubuntu and on Windows. 3.11 and earlier are not supported; 3.14 is untested</td>
 </tr>
 </tbody>
@@ -4178,14 +4234,14 @@ rather than read is a table that misleads.</p>
 <td><strong>file exchange</strong> (B2MML-lite)</td>
 <td>supported</td>
 <td>not applicable — the far side is a folder</td>
-<td>2026-09-14</td>
+<td>2026-10-12</td>
 <td><code>tests/test_file_erp.py</code>, <code>tests/test_erp_confirmation_files.py</code> and the conformance suite. The folder layout, the published schema and <code>fsmes erp validate</code> are on <a href="../confirmation-files/">the confirmation handoff</a></td>
 </tr>
 <tr>
 <td><strong>REST</strong> (against the bundled mock ERP)</td>
 <td>supported</td>
 <td>not applicable — the far side ships with it</td>
-<td>2026-09-14</td>
+<td>2026-10-12</td>
 <td><code>tests/test_erp_contract.py</code> and the conformance suite. Against a <em>real</em> ERP's REST API it is <strong>untested</strong>, and the three endpoints it needs are in <code>fsmes erp requirements</code></td>
 </tr>
 <tr>
