@@ -119,8 +119,20 @@ LAB_USERS = [
 
 
 def find_root(start: Path | None = None) -> Path:
-    """Walk up until the registry is found; fall back to the current directory."""
+    """Walk up until the registry is found; fall back to the current directory.
+
+    A fleet file named outright is not a fleet file to be searched for. The
+    walk below exists to find the repository's own from somewhere inside the
+    checkout; when `FSMES_PLANT_REGISTRY` says where the fleet file is, the
+    root is only *where this plant's logs and data go*, and a root given
+    explicitly is that - whatever happens to sit in the directories above it.
+    Without this, a per-user home that was made inside a checkout (which is
+    where `fsmes demo <plant>` can legitimately be pointed) would have its
+    logs written to the checkout instead.
+    """
     here = (start or Path.cwd()).resolve()
+    if start is not None and os.environ.get(REGISTRY_ENV):
+        return here
     for candidate in [here, *here.parents]:
         if (candidate / REGISTRY).is_file():
             return candidate
@@ -217,10 +229,24 @@ def plant_env(name: str, cfg: dict, root: Path, speed: float | None = None) -> d
 
 
 def fsmes_bin() -> str:
-    """The fsmes console script belonging to the interpreter running this."""
-    candidate = Path(sys.executable).parent / "fsmes"
-    if candidate.exists():
-        return str(candidate)
+    """The fsmes console script belonging to the interpreter running this.
+
+    Beside the interpreter first, and never by assuming the directory is
+    called `bin` or the file has no extension: a venv on Windows puts the
+    console script in `Scripts\\fsmes.exe`, which `Path(sys.executable).parent
+    / "fsmes"` does not name and `.exists()` therefore denied - so every
+    plant started on Windows fell through to `shutil.which`, and found
+    nothing at all unless the venv happened to be on PATH. Windows is a
+    first-class target; a plant PC that installed the package and never
+    activated the venv is the normal case there, not an edge one.
+    """
+    beside = Path(sys.executable).parent
+    names = ["fsmes.exe", "fsmes"] if sys.platform == "win32" else ["fsmes"]
+    for where in (beside, beside / "Scripts", beside / "bin"):
+        for name in names:
+            candidate = where / name
+            if candidate.is_file():
+                return str(candidate)
     found = shutil.which("fsmes")
     if not found:
         raise FileNotFoundError(
@@ -228,6 +254,47 @@ def fsmes_bin() -> str:
             "    uv pip install -e '.[dev]'"
         )
     return found
+
+
+# How a plant's processes are detached from the terminal that started them.
+# On POSIX that is `setsid()`, which `start_new_session` asks for. On Windows
+# there is no such call and `start_new_session` is accepted and silently
+# ignored, so until 2026-10-12 every child of `fsmes plant <name> start` there
+# stayed in the launching console's process group - and a Ctrl-C in that
+# console, or closing the window, took the whole plant down with it. A new
+# process group is the nearest honest equivalent: the console's control
+# events no longer reach the plant.
+def _detached() -> dict:
+    if sys.platform == "win32":
+        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+    return {"start_new_session": True}
+
+
+def _ask_to_stop(pid: int) -> None:
+    """Ask this process to finish, by the nearest thing the platform has.
+
+    POSIX gets SIGTERM, which uvicorn, the OPC server and the log sink all
+    handle. Windows has no SIGTERM to deliver: `os.kill` there calls
+    `TerminateProcess`, which is immediate and cannot be handled, so a plant
+    stopped on Windows loses whatever its processes had buffered. That is the
+    honest state of it rather than a quiet pretence - there is no portable way
+    to ask a process in *another* console's group to shut down politely, and
+    `GenerateConsoleCtrlEvent` only reaches the caller's own console.
+    """
+    os.kill(pid, signal.SIGTERM)
+
+
+def _force_stop(pid: int) -> None:
+    """Take this process away, for one that would not go on being asked.
+
+    `signal.SIGKILL` does not exist on Windows - reading the attribute raises
+    `AttributeError` - so `stop` used to crash there the moment a process
+    outlived the ten-second deadline, leaving the pid file behind and the
+    plant half down. On Windows the first ask was already a `TerminateProcess`
+    and there is nothing stronger to escalate to, so this repeats it: a
+    process that is gone raises, and the caller suppresses that.
+    """
+    os.kill(pid, getattr(signal, "SIGKILL", signal.SIGTERM))
 
 
 def pid_file(root: Path, name: str) -> Path:
@@ -551,8 +618,20 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
     #
     # Deliberately not a context manager: this handle is inherited by the
     # detached children and must outlive this function.
-    sink = subprocess.Popen([mes, "run-log-sink", str(log_path)], cwd=root, env=env,
-                            stdin=subprocess.PIPE, start_new_session=True)
+    #
+    # THE SINK GETS A FILE, NOT OUR CONSOLE. It outlives this command by
+    # design, so anything it inherits it holds for the life of the plant -
+    # and a caller that reads this command's output (`subprocess.run(...,
+    # capture_output=True)`, a shell pipeline) then waits for a pipe that
+    # only closes when the plant stops. `fsmes demo bottling` hung for ten
+    # minutes on exactly that, 2026-10-12, with the plant up and answering
+    # the whole time. Its own words are few and go beside the plant log, so
+    # a sink that cannot open that log still says why somewhere.
+    sink_log = (root / "logs" / name / "sink.log").open("a", encoding="utf-8")
+    with contextlib.closing(sink_log):
+        sink = subprocess.Popen([mes, "run-log-sink", str(log_path)], cwd=root, env=env,
+                                stdin=subprocess.PIPE, stdout=sink_log,
+                                stderr=subprocess.STDOUT, **_detached())
     log = sink.stdin
 
     procs = []
@@ -562,20 +641,20 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
     if simulates(cfg):
         procs.append(subprocess.Popen([mes, "run-opc-sim", "--replay"], cwd=root, env=env,
                                       stdout=log, stderr=subprocess.STDOUT,
-                                      start_new_session=True))
+                                      **_detached()))
         time.sleep(2.5)
         procs.append(subprocess.Popen([mes, "run-opc-agent"], cwd=root, env=env,
                                       stdout=log, stderr=subprocess.STDOUT,
-                                      start_new_session=True))
+                                      **_detached()))
     procs.append(subprocess.Popen([mes, "run-api"], cwd=root, env=env,
                                   stdout=log, stderr=subprocess.STDOUT,
-                                  start_new_session=True))
+                                  **_detached()))
     # The people part of the plant. It signs in over HTTP, so it waits for the
     # API rather than racing it.
     if simulates(cfg):
         procs.append(subprocess.Popen([mes, "run-operations"], cwd=root, env=env,
                                       stdout=log, stderr=subprocess.STDOUT,
-                                      start_new_session=True))
+                                      **_detached()))
         # A scenario's own post-boot script: what the seeding cannot do
         # because the API did not exist yet, plus any floor activity the
         # scenario scripts beyond run-operations. **No pack can ask for
@@ -586,7 +665,7 @@ def start(name: str, cfg: dict, root: Path, speed: float | None = None, echo=pri
         if cfg.get("post_boot"):
             procs.append(subprocess.Popen([sys.executable, cfg["post_boot"]], cwd=root, env=env,
                                           stdout=log, stderr=subprocess.STDOUT,
-                                          start_new_session=True))
+                                          **_detached()))
 
     # Let go of our own end of the pipe, so the sink sees EOF when the last
     # of the plant's processes has gone and can finish writing and exit.
@@ -609,14 +688,14 @@ def stop(name: str, cfg: dict, root: Path, echo=print) -> None:
 
     for pid in pids:
         with contextlib.suppress(OSError):
-            os.kill(pid, signal.SIGTERM)
+            _ask_to_stop(pid)
 
     deadline = time.time() + 10
     while time.time() < deadline and any(_alive(p) for p in pids):
         time.sleep(0.2)
     for pid in (p for p in pids if _alive(p)):
         with contextlib.suppress(OSError):
-            os.kill(pid, signal.SIGKILL)
+            _force_stop(pid)
 
     pid_file(root, name).unlink(missing_ok=True)
     echo(f"  {name} stopped ({len(pids)} process(es)).")
