@@ -75,13 +75,53 @@ The MES makes the data; the semantic layer names it; the intelligence layer lear
 
 ## Getting started
 
-Install from PyPI into an isolated environment and run the built-in story: one order released against a routing, run down a simulated two-station line over a real OPC UA server, booked honestly, and completed. CI builds the wheel, installs it into a fresh virtual environment in an empty directory and runs exactly this, on every pull request — the `wheel-demo` job (`.github/scripts/demo_from_wheel.sh`), which also refuses a wheel whose `fsmes --version` disagrees with its own metadata, and a wheel that cannot upgrade a database made by the release before it.
+A plant in one command. `bottling` is the six-station ACME beverage line this
+project demonstrates: an eight-hour shift replayed over a real OPC UA server,
+a simulated floor booking lots and naming its stops, and the operator screens
+reading it.
+
+On Linux or macOS:
 
 ```bash
 pipx install factorysemantics-mes   # or: uv tool install factorysemantics-mes
-fsmes info
-fsmes demo
+fsmes demo bottling
 ```
+
+On Windows:
+
+```powershell
+pipx install factorysemantics-mes
+fsmes demo bottling
+```
+
+It prints where the plant is — `http://127.0.0.1:8010/dashboard` — and an
+account to sign in with. `fsmes demo bottling stop` puts it down;
+`fsmes demo machining` is a second plant on 8020. First start copies the pack
+out of the package and generates the shift from its seed, which takes seconds;
+after that it starts straight away. Everything it writes — the pack copy, the
+database, the logs, the generated line data — goes to one per-user directory
+(`%LOCALAPPDATA%\fsmes` on Windows, `~/.local/share/fsmes` on Linux,
+`~/Library/Application Support/fsmes` on macOS, or wherever `FSMES_HOME`
+says). Nothing under the installed package is written to.
+
+> **Not on PyPI yet.** The release there today, 0.2.0, carries no plant packs,
+> so `fsmes demo bottling` needs the next one. From a checkout it works now:
+> `python -m build --wheel`, then install that wheel.
+
+`fsmes demo` with no plant is the older built-in story — one order released
+against a routing, run down a simulated two-station line over a real OPC UA
+server, booked honestly, and completed, all in one process.
+
+CI proves both from the artifact rather than the source, on every pull
+request: the `wheel-demo` job (`.github/scripts/demo_from_wheel.sh`) builds
+the wheel, installs it into a fresh virtual environment in an empty directory
+and runs the story — and refuses a wheel whose `fsmes --version` disagrees
+with its own metadata, or that cannot upgrade a database made by the release
+before it. The `wheel-plant` job
+(`.github/scripts/plant_from_wheel.py`) does the same for the bottling plant,
+on **Ubuntu and on Windows**, and then asks the running plant whether sign-in
+works, the specifications are there, the OPC port answers, the floor is
+watching, and a lot has been counted.
 
 From a checkout, on Linux or macOS:
 

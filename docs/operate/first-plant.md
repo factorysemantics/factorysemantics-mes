@@ -73,21 +73,60 @@ which is why it runs beside yours and not instead of it.
 ## 2. Install it and see it run
 
 Nothing plant-specific yet. Prove the software works on the machine before
-you point it at anything real.
+you point it at anything real. No checkout, no clone, no Docker: the package
+carries two complete example plants inside it.
 
-```bash
-pipx install factorysemantics-mes     # or: uv tool install factorysemantics-mes
-fsmes info
-fsmes demo
-```
+=== "Windows"
 
-`fsmes demo` runs a whole simulated line in one process for about ninety
-seconds — two stations over a real OPC UA server, one order released, booked
-and completed — and prints a verdict at the end.
+    ```powershell
+    pipx install factorysemantics-mes
+    fsmes info
+    fsmes demo bottling
+    ```
 
-**Done looks like:** `Demo result: full loop closed - order booked, ERP
-confirmed, OEE reported.` If that line does not appear, stop here; nothing
-later will work either.
+=== "Linux and macOS"
+
+    ```bash
+    pipx install factorysemantics-mes     # or: uv tool install factorysemantics-mes
+    fsmes info
+    fsmes demo bottling
+    ```
+
+!!! note "Not on PyPI yet"
+    The release on PyPI today, 0.2.0, carries no plant packs, so
+    `fsmes demo bottling` needs the next one. From a checkout it works now:
+    `python -m build --wheel`, then install that wheel.
+
+`fsmes demo bottling` brings up a six-station beverage line the way a plant
+runs: an eight-hour shift replayed over a real OPC UA server, a simulated
+floor booking lots and naming its stops, and the operator screens reading it.
+It prints the address — `http://127.0.0.1:8010/dashboard` — and an account to
+sign in with, and it keeps running until `fsmes demo bottling stop`.
+`fsmes demo bottling status` says whether it is up.
+
+**Done looks like:** that dashboard on screen, with the six machines on the
+floor plan and a shift's worth of readings behind them. First start takes a
+little longer than later ones: it copies the pack out of the package and
+generates the shift from the seed in its `line.json`, which is seconds.
+
+Everything it writes — the pack copy, the database, the logs, the generated
+line data — goes to one per-user directory: `%LOCALAPPDATA%\fsmes` on
+Windows, `$XDG_DATA_HOME/fsmes` or `~/.local/share/fsmes` on Linux,
+`~/Library/Application Support/fsmes` on macOS, or wherever `FSMES_HOME` says.
+Nothing under the installed package is written to, so a locked-down plant PC
+is fine. `fsmes demo machining` is a second example plant, on 8020.
+
+That plant is for evaluation: it listens on loopback and its accounts are the
+example pack's, with their passwords in the open. Step 4 is where you draft a
+pack for your own plant; [deploy](deploy.md) is where one that is meant to
+stay up gets a service and a real secret key.
+
+`fsmes demo` with no plant name is the shorter, older check: a whole
+simulated line in one process for about ninety seconds — two stations over a
+real OPC UA server, one order released, booked and completed — printing
+`Demo result: full loop closed - order booked, ERP confirmed, OEE reported.`
+at the end. If that line does not appear, stop here; nothing later will work
+either.
 
 **Database:** SQLite is the default and needs no setup — one file, and it is
 fine for one line. Use PostgreSQL when you have more than one plant on the
