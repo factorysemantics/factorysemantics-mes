@@ -1274,11 +1274,34 @@ def _order_completion(confirmations: list[dict], order_code: str) -> dict | None
 _SHIPPED_ACTIONS = ("start", "stop", "status")
 
 
+def _shipped_names() -> str:
+    """The packs this installation carries, for the help text and the errors.
+
+    Read from the package, never typed here: a pack's name belongs to the
+    pack, not to the product (house rule 4), and a checkout carries none -
+    the packs are copied in at build time - so this is routinely empty and
+    says so rather than naming a plant that is not there.
+    """
+    from fsmes import standalone
+
+    names = standalone.shipped()
+    return ", ".join(names) if names else "none in this installation"
+
+
+def _an_example_plant() -> str:
+    """A name to show in a sentence that needs one. The first pack this
+    installation carries, or a placeholder when it carries none."""
+    from fsmes import standalone
+
+    names = standalone.shipped()
+    return names[0] if names else "<plant>"
+
+
 @app.command()
 def demo(
     plant: str | None = typer.Argument(
-        None, help="A plant this package ships (bottling, machining). Left out: the "
-                   "two-station twin in one process."),
+        None, help=f"A plant this package ships ({_shipped_names()}). Left out: the "
+                   f"two-station twin in one process."),
     action: str = typer.Argument("start", help="start | stop | status. A shipped plant only."),
     duration: int = typer.Option(90, help="Seconds the twin watches for. The twin only."),
     speed: float | None = typer.Option(
@@ -1292,15 +1315,16 @@ def demo(
 ) -> None:
     """Run a plant from this package, with no checkout anywhere.
 
-        fsmes demo               the twin: one order, ERP -> MES -> machines -> MES -> ERP
-        fsmes demo bottling      the six-station bottling line, an eight-hour shift
-        fsmes demo bottling stop that plant, down
-
     Named a plant, this copies the pack out of the package into a per-user
     directory, generates the shift once from its `line.json`, builds the plant
     and starts it - the simulated floor, a real OPC UA server, the dashboard
     on its own port. Nothing under site-packages is written to and no
-    repository is needed.
+    repository is needed. Named nothing, it runs the older twin story in this
+    process and ends when that story ends.
+
+        fsmes demo                the twin: one order, ERP -> MES -> machines -> MES -> ERP
+        fsmes demo <plant>        a plant this package ships: its shift, floor and screens
+        fsmes demo <plant> stop   that plant, down
     """
     # `fsmes demo stop` reads as a plant called "stop", because the plant is
     # the first argument. Said back as "there is no plant called 'stop'" it is
@@ -1309,7 +1333,7 @@ def demo(
     # ends.
     if plant in _SHIPPED_ACTIONS:
         typer.echo(f"`fsmes demo {plant}` needs to know which plant to {plant}: "
-                   f"`fsmes demo bottling {plant}`. "
+                   f"`fsmes demo {_an_example_plant()} {plant}`. "
                    f"`fsmes demo` on its own runs the twin in this process, which "
                    f"stops when it is done.")
         raise typer.Exit(2)

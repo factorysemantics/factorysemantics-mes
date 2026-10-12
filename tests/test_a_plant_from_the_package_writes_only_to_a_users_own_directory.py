@@ -260,13 +260,21 @@ def test_fsmes_demo_with_a_plant_runs_that_plant(monkeypatch):
 
 def test_a_verb_with_no_plant_is_read_as_a_verb_and_not_as_a_plant(monkeypatch):
     """`fsmes demo stop` means something plain; "there is no plant called
-    'stop'" is a true answer that helps nobody."""
-    from fsmes import cli
+    'stop'" is a true answer that helps nobody. The example in the sentence is
+    a pack this installation actually carries, and a placeholder when it
+    carries none - a checkout carries none."""
+    from fsmes import cli, standalone
 
+    monkeypatch.setattr(standalone, "shipped", lambda: ["bottling", "machining"])
     result = runner().invoke(cli.app, ["demo", "stop"])
     assert result.exit_code == 2
     assert "fsmes demo bottling stop" in result.output
     assert "no packs" not in result.output
+
+    monkeypatch.setattr(standalone, "shipped", list)
+    bare = runner().invoke(cli.app, ["demo", "stop"])
+    assert bare.exit_code == 2
+    assert "fsmes demo <plant> stop" in bare.output
 
 
 def test_an_unknown_action_on_a_shipped_plant_names_the_ones_there_are():
@@ -282,5 +290,21 @@ def test_the_help_says_what_the_one_command_is():
     result = runner().invoke(cli.app, ["demo", "--help"])
     assert result.exit_code == 0
     words = " ".join(result.output.split())
-    assert "fsmes demo bottling" in words
+    assert "fsmes demo <plant>" in words
     assert "no checkout" in words
+
+
+def test_the_help_names_the_packs_this_installation_carries_and_no_others(monkeypatch):
+    """A pack's name belongs to the pack, so the help reads it rather than
+    carrying it: two packs are named, and an installation with none - every
+    release up to and including 0.2.0, and every checkout - says so instead of
+    naming a plant that is not there."""
+    from fsmes import cli, standalone
+
+    monkeypatch.setattr(standalone, "shipped", lambda: ["bottling", "machining"])
+    assert cli._shipped_names() == "bottling, machining"
+    assert cli._an_example_plant() == "bottling"
+
+    monkeypatch.setattr(standalone, "shipped", list)
+    assert cli._shipped_names() == "none in this installation"
+    assert cli._an_example_plant() == "<plant>"
