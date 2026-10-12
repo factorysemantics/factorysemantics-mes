@@ -14,6 +14,7 @@ running on it.
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -231,6 +232,24 @@ def runner():
     return CliRunner()
 
 
+#: The colour rich paints help text with. Stripped before anything is read.
+PAINT = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def as_read(output: str) -> str:
+    """The help as a person reads it: no colour, no line breaks.
+
+    Rich paints and wraps the help whenever it believes it is writing to a
+    terminal, and on GitHub's runners it believes that: `FORCE_COLOR` is set
+    in the environment there, which rich takes over its own tty check. So the
+    same assertion passes on a laptop, where nothing is painted, and fails on
+    the runner with the words there all along and an escape sequence through
+    the middle of them - all four `test` legs, 2026-10-12. Reproduce it with
+    `FORCE_COLOR=1 pytest <this file>`.
+    """
+    return " ".join(PAINT.sub("", output).split())
+
+
 def test_fsmes_demo_with_no_plant_still_runs_the_two_station_twin(monkeypatch):
     """`fsmes demo` is what it was. The shipped plants are new, not a swap."""
     from fsmes import cli
@@ -268,13 +287,13 @@ def test_a_verb_with_no_plant_is_read_as_a_verb_and_not_as_a_plant(monkeypatch):
     monkeypatch.setattr(standalone, "shipped", lambda: ["bottling", "machining"])
     result = runner().invoke(cli.app, ["demo", "stop"])
     assert result.exit_code == 2
-    assert "fsmes demo bottling stop" in result.output
+    assert "fsmes demo bottling stop" in as_read(result.output)
     assert "no packs" not in result.output
 
     monkeypatch.setattr(standalone, "shipped", list)
     bare = runner().invoke(cli.app, ["demo", "stop"])
     assert bare.exit_code == 2
-    assert "fsmes demo <plant> stop" in bare.output
+    assert "fsmes demo <plant> stop" in as_read(bare.output)
 
 
 def test_an_unknown_action_on_a_shipped_plant_names_the_ones_there_are():
@@ -289,7 +308,7 @@ def test_the_help_says_what_the_one_command_is():
 
     result = runner().invoke(cli.app, ["demo", "--help"])
     assert result.exit_code == 0
-    words = " ".join(result.output.split())
+    words = as_read(result.output)
     assert "fsmes demo <plant>" in words
     assert "no checkout" in words
 
