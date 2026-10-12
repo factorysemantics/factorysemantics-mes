@@ -32,6 +32,17 @@ name: Release
 # ghcr.io already served `fsmes:0.2.0` and pointed `latest` at it, with PyPI
 # still on 0.1.2 and no GitHub Release: for the length of that wait, anyone
 # pulling `latest` got a version nothing else in the project acknowledged.
+#
+# THE RELEASE BODY IS COMPOSED TWICE, ON PURPOSE.
+#
+# `.github/scripts/release_notes.sh` makes it out of the release's own page
+# under `docs/releases/`. `github-release` publishes that; `build` composes the
+# same thing and throws it away. The second one exists because the first is
+# tag-only and downstream of PyPI and ghcr.io, and a GitHub release body may be
+# 125,000 characters: 0.3.0's changelog section, which is what the body used to
+# be, is 256,271. That would have been a 422 with the version already public on
+# two registries. A dispatch rehearsal on 2026-10-12 found it instead, which is
+# the whole argument of this file.
 
 on:
   push:
@@ -96,6 +107,14 @@ jobs:
           missing = [n for n in need if n not in names]
           sys.exit(f"::error::wheel lacks {missing}" if missing else 0)
           PY
+      # The body `github-release` will publish, composed here by the same
+      # script. That job is tag-only and runs after PyPI and ghcr.io, so a
+      # body GitHub will not accept is discovered at the one point in this
+      # workflow where a failure cannot be retried from the top -- which is
+      # how 0.3.0's 256,271-character changelog section was nearly published.
+      # Composing it here makes it a red `build` on a Tuesday instead.
+      - name: The release body can be published
+        run: .github/scripts/release_notes.sh "${{ steps.v.outputs.version }}" > /dev/null
       - uses: actions/upload-artifact@v7
         with:
           name: dist
@@ -264,11 +283,8 @@ jobs:
         with:
           name: skills
           path: skills-dist/
-      - name: Release notes from CHANGELOG
-        run: |
-          v="${GITHUB_REF_NAME#v}"
-          awk -v v="$v" '$0 ~ "^## \\["v"\\]" {p=1; next} /^## \[/ {if(p) exit} p' CHANGELOG.md > notes.md
-          test -s notes.md || echo "See CHANGELOG.md." > notes.md
+      - name: The release body
+        run: .github/scripts/release_notes.sh "${GITHUB_REF_NAME#v}" > notes.md
       - uses: softprops/action-gh-release@v3
         with:
           body_path: notes.md
