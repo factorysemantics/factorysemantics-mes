@@ -10,6 +10,156 @@ carries an **Honesty** section for anything that changed what a number
 before upgrading a plant that anyone reads numbers off, because a number that
 changes meaning without anyone noticing is worse than one that breaks.
 
+## 0.2.0 to 0.3.0
+
+Fifteen migrations, all of them additive in shape — twelve new tables and a
+set of nullable columns — and two of them write to rows that already exist.
+In order:
+
+```bash
+fsmes backup --out /mnt/nas/fsmes                 # first, always
+# stop the agent and the API
+pip install --upgrade factorysemantics-mes
+fsmes db-status --pack packs/yourplant            # what you are at, and what 0.3.0 expects
+fsmes init-db   --pack packs/yourplant            # runs the migrations the wheel carries
+fsmes db-status --pack packs/yourplant            # should now agree; it exits non-zero if not
+# start them again
+```
+
+**Pass the pack** (or `--plant <name>`). Everything the
+[0.1.2 to 0.2.0](#012-to-020) section says about that first line — read it,
+it is about *this process's* database until you name a plant's — is true here
+unchanged, and so is `fsmes plant <name> migrate` for a plant that comes from
+a fleet file.
+
+`c8b1e40d7a92` is the 0.2.0 schema and `d4e8a1c93b70` is head.
+
+| Revision | What it adds |
+|---|---|
+| `b1f4c73a9e08` | eight nullable columns on `non_conformances`: who reviewed it, what was decided, who closed it |
+| `a9c4e17b3d60` | `spc_signals` — one row per Western Electric rule firing with the window it judged — and `non_conformances.evidence` |
+| `c6a4b81f39d7` | `shift_code` and `shift_day` on `production_logs`, `equipment_states`, `quality_checks` and `non_conformances`. **This one writes to existing rows** — see below |
+| `c3d7e91a4b28` | `equipment_connections`: whether the MES can see a machine, as a second interval history beside what the machine is doing |
+| `b1f4c7a2e903` | two indexes — `production_logs (equipment_id, ts)` and `tag_values (equipment_id, id)` — that the floor screen's own questions ask for |
+| `c1e7a04b93d5` | `downtime_reasons`, the plant's own downtime vocabulary, and `equipment_states.reason_code` beside the free text, never in place of it |
+| `d2b7e51c9a04` | `nc_severities`, the plant's non-conformance severity vocabulary. The existing `severity` column keeps every value already in it |
+| `e3c8a17d5b46` | `gauges.warn_days` and `materials.counted_in_pieces`. **This one writes to existing rows** — see below |
+| `a1c5e70b2d94` | `plant_settings`, empty on every existing plant, so a plant goes on running on the values it was running on |
+| `b3f9c07e51ad` | `ai_turns`: one row per turn of every conversation the assistant and the design chat have had on this plant |
+| `c7a2e94b16d3` | five nullable columns the plant already had and threw away — `ai_turns.screen`, and `shift_code`/`shift_day` on `ai_turns` and `audit_log` |
+| `b9f31c7a4e50` | `quality_specs.sample_size` and `quality_samples`: a characteristic inspected n pieces at a time, which is an X̄/R chart instead of an I-MR one |
+| `d7b4e92a1c58` | `skills`, `personnel_skills`, `roster`, `dispatch_rules`, and nine nullable columns across the two maintenance tables: which trade a job needs, how much it matters, who has it |
+| `a1c47f8b2d93` | `needs_stop` and `window` on both maintenance tables: whether the machine has to be stopped, and when the job may be done |
+| `d4e8a1c93b70` | `quality_specs.counted` and `quality_counts`: a characteristic an inspector counts rather than measures, drawn as a p chart |
+
+That is fifteen, in that order. **The two that write:**
+
+- `c6a4b81f39d7` **backfills `shift_code` and `shift_day`** on the four floor
+  tables from the shift patterns **as they stand on the day you upgrade**,
+  read on the plant's clock (`MES_PLANT_TIMEZONE`). There is no history of
+  shift patterns in this product, so a plant that has changed its roster
+  since those rows were written will have some of them attributed to the
+  pattern it runs now rather than the one it ran then. An instant no pattern
+  covers is left null, which is the honest answer and not a failure. A plant
+  with no shift patterns at all gets nulls everywhere and nothing changes.
+- `e3c8a17d5b46` **sets `gauges.warn_days` to 30** on every gauge that
+  already exists. Thirty is exactly what the gauges screen had been inventing
+  for itself in JavaScript, so nothing anybody looks at changes; from here it
+  is the gauge's own number to set.
+
+### What was actually tried, and on what
+
+On 2026-10-12, before this release was tagged: `pip install
+factorysemantics-mes==0.2.0` into a scratch virtual environment, `fsmes
+init-db`, `fsmes seed`, then `fsmes demo --duration 180` — a real 0.2.0
+database with an order pushed through the full loop in it, 38 tables and 152
+rows, stamped `c8b1e40d7a92`. A copy of that file, upgraded with the 0.3.0
+wheel:
+
+```text
+Database schema upgraded: c8b1e40d7a92 -> d4e8a1c93b70.
+Current: d4e8a1c93b70
+Head:    d4e8a1c93b70
+The database is at the current schema.
+```
+
+Twelve tables appeared — `ai_turns`, `dispatch_rules`, `downtime_reasons`,
+`equipment_connections`, `nc_severities`, `personnel_skills`,
+`plant_settings`, `quality_counts`, `quality_samples`, `roster`, `skills`,
+`spc_signals` — **no table was lost, and all 152 rows were still there, none
+of them moved.** Then `fsmes demo` from the 0.3.0 wheel against that same
+upgraded file closed the loop: the software carried on over the data, which is
+a different claim from "the migrations ran".
+
+**What that run did not exercise**, because the built-in demo plant has
+neither: the shift backfill attributed nothing — 0 of 29 production bookings
+got a `shift_code`, correctly, because the plant defines no shift patterns —
+and `gauges` was empty, so the `warn_days` write had no row to touch. Those
+two are covered by the suite and by the lab's own plants; they have not been
+run against a 0.2.0 file on a plant that has shift patterns and gauges in it,
+and nobody should read this section as saying they have. It is also SQLite:
+nobody has upgraded a populated PostgreSQL plant.
+
+### Read this before anyone reads numbers off the plant
+
+[CHANGELOG 0.3.0 → Honesty](https://github.com/factorysemantics/factorysemantics-mes/blob/main/CHANGELOG.md)
+is the whole list, and every entry carries its own migration line. The ones
+that change what something already deployed will see:
+
+- **A performance or OEE figure above 100 % is no longer printed anywhere.**
+  Where the counted work will not fit inside the run time, `performance` and
+  `oee` come back `null` with a sentence naming both numbers. The ratio is
+  still published, as `performance_ratio` with `counts_outrun_run_time` beside
+  it. Anything consuming `performance` as a number reads `performance_ratio`
+  now.
+- **Availability's denominator changed meaning.** It is the time this MES
+  watched, all causes together. Availability figures go **up** on a window
+  with a hole in the state history that no disconnection covered, and are
+  unchanged where the history is contiguous. Read `coverage` beside every
+  figure from now on.
+- **An order no longer finishes itself when the count reaches its quantity.**
+  Somebody completes it — a person, the orders screen, or the ERP — and the
+  ERP completion, the finished-goods lot and the certificate of analysis are
+  all issued then. A plant that relied on an order closing itself now needs
+  someone to close it.
+- **A non-conformance cannot be closed without a disposition.**
+  `POST /quality/nonconformances/{code}/close` returns **409** on a record
+  nobody has dispositioned; anything that closed one in a single call takes
+  two now. The Quality tile is "Non-conformances not closed" and counts three
+  unclosed states, so it reads higher than the old "Open" tile did.
+- **Every floor row now says which shift it fell in**, and `/analysis/*` can
+  be asked for a shift. See the backfill note above for what that means about
+  rows written before the upgrade.
+- **An upgraded plant starts recording moving-range (rule 5) SPC signals on
+  every plant**, from its next reading, whatever `[quality] hold_rules` says.
+  No hold and no non-conformance is raised unless that list names `5`, and
+  nothing is backfilled — so what is new in the records is `spc_signals` rows
+  with `rule = 5` and a null `nonconformance_id`.
+- **The fleet console's default port is 8090**, not 8100, because 8100 is the
+  first port `fsmes score` hands an ephemeral plant. Anything pointing at
+  8100 moves.
+- **`fsmes pack apply` refuses to seed master data into a database that is
+  not at head**, rather than writing rows through the ORM into a half-migrated
+  file. Migrate first, then apply.
+- **Screen numbers that were wrong are now right**, so some tiles move without
+  the plant changing: "Active orders" counted more than the orders listed
+  under it, the downtime pareto now states both totals, and production a
+  machine counted is no longer lost when the write that books it fails.
+
+### What the gate proves for this release
+
+`upgrade_from_previous_release.sh` runs on every pull request and installs
+**whatever PyPI serves today**, which for this release is 0.2.0: it makes a
+database with that wheel, upgrades it with the wheel under test, asks the
+database whether it is at head, counts the rows before and after, and then
+runs the demo on the upgraded file. So the 0.2.0 → 0.3.0 path above is proven
+in CI on the bytes that ship, not only by hand.
+
+The limits are the same ones the [0.2.0 section](#what-the-gate-proves-and-what-it-does-not)
+states, and they still apply: one plant's shape, on SQLite. If `init-db`
+refuses on yours it names the nearest revision, lists every difference and
+changes nothing. Take the backup first.
+
 ## 0.1.2 to 0.2.0
 
 The first upgrade this project has had to describe. In order:
@@ -47,7 +197,9 @@ migrations since. The exact-match case is the one below; the no-match case is
 nothing at all.
 
 **Five migrations** have landed since 0.1.2 — `153379d6cf19` is the 0.1.2
-schema and `c8b1e40d7a92` is head — and every one of them is additive.
+schema and `c8b1e40d7a92` is the 0.2.0 one — and every one of them is
+additive. (Head moved on from `c8b1e40d7a92` in 0.3.0; the section above
+carries the fifteen since.)
 Nothing existing is rewritten and no row is rebuilt:
 
 | Revision | What it adds |

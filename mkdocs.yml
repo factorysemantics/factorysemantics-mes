@@ -123,6 +123,7 @@ nav:
       - How-to — backup and restore: operate/backup.md
       - How-to — TLS in front of the API: operate/tls.md
       - How-to — upgrading between versions: operate/upgrade.md
+      - How-to — cutting a release: operate/releasing.md
       - Explanation — the confirmation handoff: operate/confirmation-files.md
       - Reference — the ERP confirmation contract: reference/erp-confirmations.md
 
@@ -197,6 +198,7 @@ nav:
       - Explanation — does the assistant do what people ask: ai/ASSIST-EVAL.md
   - Releases:
       - releases/index.md
+      - 0.3.0: releases/0.3.0.md
       - 0.2.0: releases/0.2.0.md
   - History:
       - Landscape: LANDSCAPE.md
