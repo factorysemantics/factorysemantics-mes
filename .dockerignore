@@ -1,0 +1,78 @@
+# What never goes into an image's build context.
+#
+# Every `docker build` here reads this file, and `docker/Dockerfile` copies
+# named paths rather than the whole tree, so this is about the context that is
+# sent to the builder, not about what ends up in the image. Two reasons it is
+# worth having: a plant's own data must never be able to reach a published
+# image by accident, and the generated replay under `labs/multiplant/*/out/` is
+# 9.7 MB for bottling alone - it is generated from the seed in `line.json` on
+# first start and is never shipped.
+#
+# What this excludes:
+#
+#   */out/, .data/        generated line data and plant state, written at run
+#                         time, regenerated from a seed, never shipped
+#   *.db, *.sqlite, *-wal a plant's own database, in every spelling the code
+#                         writes, plus its write-ahead files
+#   logs/, *.log          a plant's logs
+#   .env, *.pem, *.key,   credentials and certificates. `.env.*` as well as
+#   certs/, .secrets/     `.env`, because an editor's `.env.bak` is a
+#                         committable copy of a credentials file
+#   .venv/, __pycache__/, a developer machine's build leavings, which are for
+#   *.egg-info/, .git/    this platform and this interpreter, not the image's
+#   lab-results/,         evidence from one machine on one day
+#   backups/
+#
+# Wholesale rules rather than an enumerated list of directories, for the reason
+# `.gitignore` gives at the same place: an enumerated rule goes stale silently
+# the first time the code writes somewhere new.
+#
+# Nothing here may match a path `docker/Dockerfile` copies, and nothing here
+# may match a path `pyproject.toml` force-includes into the wheel. The day one
+# does, the image loses a plant pack and `pip install` inside it fails - which
+# is what happened on 2026-10-12 for the other reason, and is why
+# `tests/test_the_docker_image_carries_the_packs.py` reads this file too.
+
+# Generated line data and plant state
+**/out/
+**/.data/
+lab-results/
+backups/
+
+# A plant's own database and logs
+**/*.db
+**/*.db-wal
+**/*.db-shm
+**/*.sqlite
+**/*.sqlite3
+**/*.parquet
+**/logs/
+**/*.log
+
+# Credentials and certificates
+.env
+.env.*
+!.env.example
+**/.secrets/
+**/certs/
+**/*.pem
+**/*.key
+**/*.token
+
+# This machine's build leavings
+.git/
+.venv/
+venv/
+**/__pycache__/
+**/*.py[cod]
+**/*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+site/
+skills-dist/
+*.zip

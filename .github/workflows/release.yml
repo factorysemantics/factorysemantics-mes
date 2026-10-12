@@ -172,6 +172,16 @@ jobs:
     # buildx as the real push, so a broken Dockerfile or a platform that no
     # longer compiles is a red job here: on a dispatch, before a tag exists;
     # on a tag, before the reviewer is asked to approve anything.
+    #
+    # Not the only job that builds the image any more. `ci.yml` has one too
+    # since 2026-10-12, and because `test` above calls that whole file, this
+    # run has both: the CI job loads an amd64 image and runs `fsmes --version`
+    # and `fsmes demo --help` inside it, and this job is the one that proves
+    # arm64 still compiles and leaves the cache `image-push` reads. A job
+    # cannot be `uses:`d on its own, so the two are two jobs rather than one
+    # shared — different platforms, different purpose, and neither a copy of
+    # the other. They exist because #163 was green on eighteen checks with an
+    # image that could not be built: nothing in `ci.yml` built it then.
     needs: build
     runs-on: ubuntu-latest
     steps:
