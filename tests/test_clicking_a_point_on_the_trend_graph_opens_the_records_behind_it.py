@@ -508,12 +508,13 @@ def test_this_shift_and_last_shift_are_offered_and_named_in_words(page):
     assert any(word in said for word in ("Day", "Evening", "Night")), said
 
 
-def test_a_start_and_an_end_typed_in_redraws_the_chart_on_that_stretch(page, plant):
-    """The control is two boxes and an Apply, and nothing is reloaded until
-    Apply: a half-typed start is not a question."""
-    _base, start, _end = plant
-    narrow_start = start + timedelta(minutes=10)
-    narrow_end = start + timedelta(minutes=70)
+def _type_window(page, first, last):
+    """Type a start and an end into the control's two boxes and press Apply.
+
+    The boxes are `datetime-local`, so the moments go in in the browser's own
+    time zone - the runner's, which is not the plant's - and the page hands
+    them back to the plant in UTC.
+    """
     page.select_option('#machine-span select[data-span="kind"]', "between")
     local = page.evaluate(
         """(isos) => isos.map((iso) => {
@@ -522,11 +523,20 @@ def test_a_start_and_an_end_typed_in_redraws_the_chart_on_that_stretch(page, pla
              return `${at.getFullYear()}-${pad(at.getMonth() + 1)}`
                   + `-${pad(at.getDate())}T${pad(at.getHours())}`
                   + `:${pad(at.getMinutes())}`;
-           })""", [narrow_start.isoformat(), narrow_end.isoformat()])
+           })""", [first.isoformat(), last.isoformat()])
     page.fill('#machine-span input[data-span="start"]', local[0])
     page.fill('#machine-span input[data-span="end"]', local[1])
-    before = page.inner_text("#trend-window")
     page.click('#machine-span button[data-span="apply"]')
+
+
+def test_a_start_and_an_end_typed_in_redraws_the_chart_on_that_stretch(page, plant):
+    """The control is two boxes and an Apply, and nothing is reloaded until
+    Apply: a half-typed start is not a question."""
+    _base, start, _end = plant
+    narrow_start = start + timedelta(minutes=10)
+    narrow_end = start + timedelta(minutes=70)
+    before = page.inner_text("#trend-window")
+    _type_window(page, narrow_start, narrow_end)
     page.wait_for_function(
         "(was) => document.querySelector('#trend-window').textContent !== was",
         arg=before, timeout=30000)
@@ -720,13 +730,34 @@ def test_a_keyboard_reaches_a_reading_and_opens_it(page, plant):
 def test_changing_the_window_shuts_a_panel_that_is_no_longer_about_it(page, plant):
     """A panel open on a reading the new window does not draw is a panel about a
     different question. It shuts, back to the sentence that says what the column
-    is for, rather than sitting there looking current."""
+    is for, rather than sitting there looking current.
+
+    **The new window is typed in, and that is what makes this test true at any
+    hour.** It used to choose "last shift", which made the fixture's clock part
+    of the question: the data ends ninety minutes ago and the shifts here run
+    06-14, 14-22, 22-06, so for the first two hours or so of any shift the
+    reading clicked below is still *inside* the previous shift - that window
+    really does draw it, the panel is right to stay open, and the test was
+    wrong, not the page. It failed on runners that started at 14:18, 15:24 and
+    16:00 UTC on 2026-10-12 and passed on one that started at 19:25. The first
+    thirty minutes of the fixture's own window have readings in them and never
+    this one, which is taken between minute 40 and minute 50; that is a fact
+    about the fixture's data and not about the hour anybody runs it at.
+    """
+    _base, start, _end = plant
     at = _reading_during_the_changeover(page, plant)
     _click(page, "Temperature", at)
-    page.select_option('#machine-span select[data-span="kind"]', "shift:previous")
+    _type_window(page, start, start + timedelta(minutes=STOP_AT))
+    # Wait on all three things this asserts at once: the panel shut, the
+    # clicked reading gone from the chart, and other readings still drawn - a
+    # panel that shut because the chart went empty would prove nothing.
     page.wait_for_function(
-        "() => document.querySelector('#trend-point').getAttribute('data-point')"
-        " === ''", timeout=30000)
+        """(t) => document.querySelector('#trend-point')
+                    .getAttribute('data-point') === ''
+                && !document.querySelector(`#trend circle[data-t="${t}"]`)
+                && document.querySelectorAll(
+                     '#trend circle[data-series="Temperature"]').length > 5""",
+        arg=at, timeout=30000)
     assert page.query_selector("#trend-point").get_attribute("data-state") == "idle"
     assert page.query_selector("#trend-point-body").is_hidden()
     assert "No reading is open" in page.inner_text("#trend-point-idle")
