@@ -101,6 +101,13 @@ LADDER: tuple[tuple[str, tuple[str, ...]], ...] = (
         # all, and nothing in the product imports it — only the CLI and CI do.
         # An edge because what it meets is a release artifact.
         "skills",
+        # The shape file a customer's own MES wrote, turned into a plant pack:
+        # it reads one TOML file and writes a directory of JSON. Like `skills`
+        # it imports nothing from this package at all - the typed plant model
+        # in the middle is plain dataclasses - and nothing in the product
+        # imports it; only the CLI does. An edge because what it meets is a
+        # file written on somebody else's box.
+        "shape",
     )),
     ("cli", (
         # The top of the ladder: everything may be imported by the CLI and
