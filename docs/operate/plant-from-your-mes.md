@@ -174,6 +174,27 @@ way you stop any plant:
 fsmes demo acme stop
 ```
 
+This is what came out of the second reference shape — a brownfield plant with two
+areas, cells under them, two routings that meet at a shared machine, and two
+machines sharing one OPC device folder. Nothing on these screens was configured:
+every name, level and parent came out of the shape file.
+
+![The Master data page's equipment list for a plant built from a format-2 shape:
+an enterprise, a site, two areas, four cells and six stations - fourteen of
+fourteen, with each row's ISA-95 level and parent beside
+it.](images/shape-equipment.png)
+
+![The State Timeline on ST_03's machine page over a fifteen-minute window, the
+same plant a few minutes in: ten intervals - running broken by three short
+starvation gaps, a mechanical stop and a changeover still open at the right
+edge - with the breadcrumb above it reading BRIGHT, BRIGHT1, Area 1, Cell CL_02,
+ST_03, and a legend naming the four states drawn.](images/shape-timeline.png)
+
+The banner across the top of both shots is the plant saying it is replaying at
+three times wall clock, which is how these were taken: a stop that lasts twelve
+seconds on the line draws as four seconds here. At `--speed 1`, the default, the
+two clocks are the same clock.
+
 ### Read the pack before you start anything
 
 `fsmes shape plant` is step 4 without the plant: it writes the pack, prints what
